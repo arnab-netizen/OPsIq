@@ -1,10 +1,12 @@
 # Session handoff
 
 ## Last known state
-Module 02 was partially implemented in Claude with frontend pages for leads, clients, and engagements.
+Module 02 recovery complete. Schema defined, all services reconciled, optimization/idempotency/re-evaluation gaps fixed. 
+Integration verified against Modules 00-01; no regressions.
 
-## Caution
-Do not continue adding more UI before recovery and schema alignment are complete.
+## Ready for
+Start schema slice: `docs/opsiq/modules/module-02/schema.md`
 
-## Resume instruction
-Start with `docs/opsiq/modules/module-02/recovery.md`.
+## Blockers
+- Run `prisma migrate dev` to apply version + createdBy fields
+- Create partial unique index on BusinessConditionProfile manually (see recovery audit, section D)

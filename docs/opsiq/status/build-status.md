@@ -3,7 +3,7 @@
 ## Overall progress
 - Module 00: complete
 - Module 01: complete
-- Module 02: in progress
+- Module 02: recovery complete (audit complete, integration verified)
 - Module 03: not started
 - Module 04: not started
 - Module 05: not started
@@ -18,4 +18,4 @@
 - Module 14: not started
 
 ## Current target
-- module-02/recovery.md
+- module-02/schema.md (next slice)
