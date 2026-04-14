@@ -98,13 +98,14 @@ const ENGAGEMENT_TRANSITIONS: TransitionMap<EngagementStatus> = {
 };
 
 const DELIVERABLE_TRANSITIONS: TransitionMap<DeliverableStatus> = {
-  draft: ["in_progress", "cancelled" as DeliverableStatus],
-  in_progress: ["submitted"],
-  submitted: ["under_review"],
+  draft: ["in_progress", "cancelled"],
+  in_progress: ["submitted", "cancelled"],
+  submitted: ["under_review", "cancelled"],
   under_review: ["approved", "rejected"],
   approved: ["superseded"],
   rejected: ["in_progress"],
   superseded: [],
+  cancelled: [],
 };
 
 function validateTransitionGeneric<T extends string>(

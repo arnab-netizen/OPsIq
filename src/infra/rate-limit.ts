@@ -4,7 +4,7 @@ import { logger } from "@/infra/logger";
 export class RateLimitError extends AppError {
   constructor(retryAfterSeconds: number) {
     super(
-      "POLICY_VIOLATION",
+      "RATE_LIMITED",
       `Rate limit exceeded. Retry after ${retryAfterSeconds} seconds.`,
       429,
       { retryAfterSeconds }

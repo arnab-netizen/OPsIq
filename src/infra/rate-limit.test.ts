@@ -40,6 +40,13 @@ describe("Rate limiting", () => {
     expect(() => requireRateLimit(key, config)).toThrow(RateLimitError);
   });
 
+  it("RateLimitError has RATE_LIMITED code and 429 status", () => {
+    const err = new RateLimitError(30);
+    expect(err.code).toBe("RATE_LIMITED");
+    expect(err.statusCode).toBe(429);
+    expect(err.details?.retryAfterSeconds).toBe(30);
+  });
+
   it("resets after window expires", async () => {
     const config = { windowMs: 50, maxAttempts: 1 }; // 50ms window
     const key = `test-reset-${Date.now()}`;

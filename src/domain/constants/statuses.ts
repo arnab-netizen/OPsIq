@@ -148,6 +148,7 @@ export const DELIVERABLE_STATUSES = [
   "approved",
   "rejected",
   "superseded",
+  "cancelled",
 ] as const;
 
 export type DeliverableStatus = (typeof DELIVERABLE_STATUSES)[number];

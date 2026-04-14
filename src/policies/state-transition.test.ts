@@ -163,8 +163,22 @@ describe("State transition validation", () => {
       expect(() => validateDeliverableTransition("rejected", "in_progress")).not.toThrow();
     });
 
+    it("allows draft → cancelled", () => {
+      expect(() => validateDeliverableTransition("draft", "cancelled")).not.toThrow();
+    });
+
+    it("allows in_progress → cancelled", () => {
+      expect(() => validateDeliverableTransition("in_progress", "cancelled")).not.toThrow();
+    });
+
     it("rejects superseded → anything (terminal)", () => {
       expect(() => validateDeliverableTransition("superseded", "draft")).toThrow(
+        InvalidStateTransitionError
+      );
+    });
+
+    it("rejects cancelled → anything (terminal)", () => {
+      expect(() => validateDeliverableTransition("cancelled", "draft")).toThrow(
         InvalidStateTransitionError
       );
     });

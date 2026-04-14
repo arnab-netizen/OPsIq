@@ -46,8 +46,7 @@ export async function optimisticUpdate<T>(
  * Merges the caller's data with version increment.
  */
 export function withVersionIncrement<T extends Record<string, unknown>>(
-  data: T,
-  expectedVersion: number
+  data: T
 ): T & { version: { increment: number } } {
   return {
     ...data,
