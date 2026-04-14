@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
-import { withIdempotency } from "@/infra/idempotency";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import {
@@ -112,50 +111,40 @@ export async function assessCondition(
 
   validateConditionInput(input);
 
-  const idempotencyKey = `condition-assess:${input.engagementId}:${JSON.stringify(input)}:${actorId}`;
+  // Mark previous current profile as non-current
+  await db.businessConditionProfile.updateMany({
+    where: { engagementId: input.engagementId, isCurrent: true },
+    data: { isCurrent: false },
+  });
 
-  const result = await withIdempotency(
-    idempotencyKey,
-    "business_condition.assess",
-    async () => {
-      // Mark previous current profile as non-current
-      await db.businessConditionProfile.updateMany({
-        where: { engagementId: input.engagementId, isCurrent: true },
-        data: { isCurrent: false },
-      });
-
-      const profile = await db.businessConditionProfile.create({
-        data: {
-          engagementId: input.engagementId,
-          businessStatus: input.businessStatus,
-          severityScore: input.severityScore,
-          urgencyLevel: input.urgencyLevel,
-          cashPressureLevel: input.cashPressureLevel,
-          marginPressureLevel: input.marginPressureLevel,
-          clientConcentrationRisk: input.clientConcentrationRisk,
-          ownerDependencyRisk: input.ownerDependencyRisk,
-          keyPersonDependencyRisk: input.keyPersonDependencyRisk,
-          processMaturityLevel: input.processMaturityLevel,
-          managementMaturityLevel: input.managementMaturityLevel,
-          executionCapacityLevel: input.executionCapacityLevel,
-          moraleFragilityLevel: input.moraleFragilityLevel,
-          resilienceLevel: input.resilienceLevel,
-          growthReadinessLevel: input.growthReadinessLevel,
-          notes: input.notes ?? null,
-          assessedBy: actorId,
-          isCurrent: true,
-        },
-      });
-
-      return { id: profile.id, severityScore: profile.severityScore };
-    }
-  );
+  const profile = await db.businessConditionProfile.create({
+    data: {
+      engagementId: input.engagementId,
+      businessStatus: input.businessStatus,
+      severityScore: input.severityScore,
+      urgencyLevel: input.urgencyLevel,
+      cashPressureLevel: input.cashPressureLevel,
+      marginPressureLevel: input.marginPressureLevel,
+      clientConcentrationRisk: input.clientConcentrationRisk,
+      ownerDependencyRisk: input.ownerDependencyRisk,
+      keyPersonDependencyRisk: input.keyPersonDependencyRisk,
+      processMaturityLevel: input.processMaturityLevel,
+      managementMaturityLevel: input.managementMaturityLevel,
+      executionCapacityLevel: input.executionCapacityLevel,
+      moraleFragilityLevel: input.moraleFragilityLevel,
+      resilienceLevel: input.resilienceLevel,
+      growthReadinessLevel: input.growthReadinessLevel,
+      notes: input.notes ?? null,
+      assessedBy: actorId,
+      isCurrent: true,
+    },
+  });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.CONDITION_ASSESSED,
     actorId,
     entityType: "business_condition_profile",
-    entityId: result.result.id,
+    entityId: profile.id,
     payload: {
       engagementId: input.engagementId,
       businessStatus: input.businessStatus,
@@ -168,21 +157,21 @@ export async function assessCondition(
   await triggerReEvaluation({
     changeType: "new_critical_evidence",
     entityType: "business_condition_profile",
-    entityId: result.result.id,
+    entityId: profile.id,
     engagementId: input.engagementId,
-    severity: result.result.severityScore >= 7 ? "high" : "medium",
-    description: `Business condition assessed: ${input.businessStatus} (severity ${result.result.severityScore}/10)`,
+    severity: profile.severityScore >= 7 ? "high" : "medium",
+    description: `Business condition assessed: ${input.businessStatus} (severity ${profile.severityScore}/10)`,
     triggeredBy: actorId,
   });
 
   logger.info("Business condition assessed", {
-    profileId: result.result.id,
+    profileId: profile.id,
     engagementId: input.engagementId,
     businessStatus: input.businessStatus,
     severityScore: input.severityScore,
   });
 
-  return { id: result.result.id };
+  return { id: profile.id };
 }
 
 export async function getConditionHistory(engagementId: string) {
