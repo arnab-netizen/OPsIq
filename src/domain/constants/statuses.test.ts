@@ -39,10 +39,12 @@ describe("Domain status constants", () => {
   });
 
   it("INTERVENTION_MODES has all required modes", () => {
-    expect(INTERVENTION_MODES).toHaveLength(7);
-    expect(INTERVENTION_MODES).toContain("diagnostic");
+    expect(INTERVENTION_MODES).toHaveLength(5);
+    expect(INTERVENTION_MODES).toContain("recovery");
     expect(INTERVENTION_MODES).toContain("stabilization");
-    expect(INTERVENTION_MODES).toContain("exit_transition");
+    expect(INTERVENTION_MODES).toContain("growth");
+    expect(INTERVENTION_MODES).toContain("shock_response");
+    expect(INTERVENTION_MODES).toContain("mixed");
   });
 
   it("INTERVENTION_PHASES has all required phases", () => {

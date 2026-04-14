@@ -75,12 +75,160 @@ model EngagementMembership {
   removedAt     DateTime? @map("removed_at")
   isActive      Boolean   @default(true) @map("is_active")
 
-  user User @relation(fields: [userId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+  engagement Engagement @relation(fields: [engagementId], references: [id])
 
   @@unique([userId, engagementId, role])
   @@index([engagementId, isActive])
   @@index([userId, isActive])
   @@map("engagement_memberships")
+}
+
+// ─── Module 2: Lead ────────────────────────────────────────────────────────
+
+model LeadRecord {
+  id              String    @id @default(uuid()) @db.Uuid
+  companyName     String    @map("company_name")
+  contactName     String?   @map("contact_name")
+  contactEmail    String?   @map("contact_email")
+  contactPhone    String?   @map("contact_phone")
+  source          String?   // e.g. "referral", "website", "outbound"
+  status          String    @default("new") // "new" | "qualifying" | "qualified" | "converted" | "lost"
+  notes           String?
+  estimatedValue  Float?    @map("estimated_value")
+  convertedToClientId String? @map("converted_to_client_id") @db.Uuid
+  engagementId    String?   @map("engagement_id") @db.Uuid
+  assignedTo      String?   @map("assigned_to") @db.Uuid
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  client          ClientAccount? @relation(fields: [convertedToClientId], references: [id])
+  engagement      Engagement?    @relation(fields: [engagementId], references: [id])
+
+  @@index([status])
+  @@index([assignedTo])
+  @@index([convertedToClientId])
+  @@map("lead_records")
+}
+
+// ─── Module 2: Client Account ──────────────────────────────────────────────
+
+model ClientAccount {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String
+  legalName       String?   @map("legal_name")
+  industry        String?
+  size            String?   // "micro" | "small" | "medium" | "large"
+  status          String    @default("active") // "active" | "inactive" | "archived"
+  website         String?
+  address         String?
+  notes           String?
+  version         Int       @default(1)
+  visibility      String    @default("internal") // "internal" | "client_visible"
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  archivedAt      DateTime? @map("archived_at")
+
+  contacts        ClientContact[]
+  engagements     Engagement[]
+  leads           LeadRecord[]
+
+  @@index([status])
+  @@map("client_accounts")
+}
+
+model ClientContact {
+  id              String    @id @default(uuid()) @db.Uuid
+  clientId        String    @map("client_id") @db.Uuid
+  name            String
+  email           String?
+  phone           String?
+  role            String?   // e.g. "owner", "cfo", "operations_manager"
+  isPrimary       Boolean   @default(false) @map("is_primary")
+  isActive        Boolean   @default(true) @map("is_active")
+  notes           String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  client          ClientAccount @relation(fields: [clientId], references: [id])
+
+  @@index([clientId, isActive])
+  @@map("client_contacts")
+}
+
+// ─── Module 2: Engagement ──────────────────────────────────────────────────
+
+model Engagement {
+  id                    String    @id @default(uuid()) @db.Uuid
+  code                  String    @unique // human-readable engagement code
+  title                 String
+  clientId              String    @map("client_id") @db.Uuid
+  serviceTier           String    @map("service_tier") // "standard" | "premium" | "enterprise"
+  engagementMode        String    @map("engagement_mode") // "beginner" | "expert"
+  status                String    @default("draft") // governed by ENGAGEMENT_STATUSES
+  healthStatus          String    @default("healthy") @map("health_status") // "healthy" | "at_risk" | "critical" | "unknown"
+  interventionMode      String    @default("recovery") @map("intervention_mode") // governed by INTERVENTION_MODES
+  description           String?
+  startDate             DateTime? @map("start_date")
+  targetEndDate         DateTime? @map("target_end_date")
+  actualEndDate         DateTime? @map("actual_end_date")
+  ownerId               String?   @map("owner_id") @db.Uuid // primary consultant
+  assignedConsultantId  String?   @map("assigned_consultant_id") @db.Uuid
+  currentScopeVersionId String?   @map("current_scope_version_id") @db.Uuid // placeholder for future scope module
+  parentEngagementId    String?   @map("parent_engagement_id") @db.Uuid // retainer/micro-engagement lineage
+  version               Int       @default(1)
+  visibility            String    @default("internal") // "internal" | "client_visible"
+  createdBy             String?   @map("created_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  client                ClientAccount         @relation(fields: [clientId], references: [id])
+  parent                Engagement?           @relation("EngagementLineage", fields: [parentEngagementId], references: [id])
+  children              Engagement[]          @relation("EngagementLineage")
+  conditionProfiles     BusinessConditionProfile[]
+  memberships           EngagementMembership[]
+  leads                 LeadRecord[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([ownerId])
+  @@index([parentEngagementId])
+  @@map("engagements")
+}
+
+// ─── Module 2: Business Condition Profile ──────────────────────────────────
+
+model BusinessConditionProfile {
+  id                      String    @id @default(uuid()) @db.Uuid
+  engagementId            String    @map("engagement_id") @db.Uuid
+  businessStatus          String    @map("business_status") // governed by BUSINESS_CONDITION_RATINGS
+  severityScore           Int       @map("severity_score") // 1-10
+  urgencyLevel            String    @map("urgency_level") // "low" | "medium" | "high" | "critical"
+  cashPressureLevel       String    @map("cash_pressure_level") // "low" | "medium" | "high" | "critical"
+  marginPressureLevel     String    @map("margin_pressure_level") // "low" | "medium" | "high" | "critical"
+  clientConcentrationRisk String    @map("client_concentration_risk") // "low" | "medium" | "high" | "critical"
+  ownerDependencyRisk     String    @map("owner_dependency_risk") // "low" | "medium" | "high" | "critical"
+  keyPersonDependencyRisk String    @map("key_person_dependency_risk") // "low" | "medium" | "high" | "critical"
+  processMaturityLevel    String    @map("process_maturity_level") // "low" | "medium" | "high"
+  managementMaturityLevel String    @map("management_maturity_level") // "low" | "medium" | "high"
+  executionCapacityLevel  String    @map("execution_capacity_level") // "low" | "medium" | "high"
+  moraleFragilityLevel    String    @map("morale_fragility_level") // "low" | "medium" | "high" | "critical"
+  resilienceLevel         String    @map("resilience_level") // "low" | "medium" | "high"
+  growthReadinessLevel    String    @map("growth_readiness_level") // "low" | "medium" | "high"
+  notes                   String?
+  assessedBy              String?   @map("assessed_by") @db.Uuid
+  version                 Int       @default(1)
+  isCurrent               Boolean   @default(true) @map("is_current") // only one current per engagement
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  engagement              Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId, isCurrent])
+  @@index([engagementId])
+  @@map("business_condition_profiles")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────

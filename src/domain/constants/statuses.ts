@@ -82,13 +82,11 @@ export const VISIBILITY_LEVELS = [
 export type VisibilityLevel = (typeof VISIBILITY_LEVELS)[number];
 
 export const INTERVENTION_MODES = [
-  "diagnostic",
+  "recovery",
   "stabilization",
-  "restructuring",
-  "growth_acceleration",
-  "optimization",
-  "monitoring",
-  "exit_transition",
+  "growth",
+  "shock_response",
+  "mixed",
 ] as const;
 
 export type InterventionMode = (typeof INTERVENTION_MODES)[number];
@@ -139,6 +137,65 @@ export const ENGAGEMENT_STATUSES = [
 ] as const;
 
 export type EngagementStatus = (typeof ENGAGEMENT_STATUSES)[number];
+
+export const LEAD_STATUSES = [
+  "new",
+  "qualifying",
+  "qualified",
+  "converted",
+  "lost",
+] as const;
+
+export type LeadStatus = (typeof LEAD_STATUSES)[number];
+
+export const CLIENT_ACCOUNT_STATUSES = [
+  "active",
+  "inactive",
+  "archived",
+] as const;
+
+export type ClientAccountStatus = (typeof CLIENT_ACCOUNT_STATUSES)[number];
+
+export const SERVICE_TIERS = [
+  "standard",
+  "premium",
+  "enterprise",
+] as const;
+
+export type ServiceTier = (typeof SERVICE_TIERS)[number];
+
+export const ENGAGEMENT_MODES = [
+  "beginner",
+  "expert",
+] as const;
+
+export type EngagementMode = (typeof ENGAGEMENT_MODES)[number];
+
+export const HEALTH_STATUSES = [
+  "healthy",
+  "at_risk",
+  "critical",
+  "unknown",
+] as const;
+
+export type HealthStatus = (typeof HEALTH_STATUSES)[number];
+
+export const PRESSURE_LEVELS = [
+  "low",
+  "medium",
+  "high",
+  "critical",
+] as const;
+
+export type PressureLevel = (typeof PRESSURE_LEVELS)[number];
+
+export const MATURITY_LEVELS = [
+  "low",
+  "medium",
+  "high",
+] as const;
+
+export type MaturityLevel = (typeof MATURITY_LEVELS)[number];
 
 export const DELIVERABLE_STATUSES = [
   "draft",

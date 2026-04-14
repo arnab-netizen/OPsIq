@@ -10,6 +10,11 @@ export const CAPABILITIES = {
   USER_VIEW: "user:view",
   USER_ASSIGN_ROLE: "user:assign_role",
 
+  // Leads
+  LEAD_CREATE: "lead:create",
+  LEAD_UPDATE: "lead:update",
+  LEAD_VIEW: "lead:view",
+
   // Clients
   CLIENT_CREATE: "client:create",
   CLIENT_UPDATE: "client:update",

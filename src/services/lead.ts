@@ -1,0 +1,222 @@
+import { db } from "@/lib/db";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { withIdempotency } from "@/infra/idempotency";
+import { NotFoundError, ValidationError } from "@/infra/errors";
+import { logger } from "@/infra/logger";
+import type { LeadStatus } from "@/domain/constants/statuses";
+import { LEAD_STATUSES } from "@/domain/constants/statuses";
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+export interface CreateLeadInput {
+  companyName: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  source?: string;
+  notes?: string;
+  estimatedValue?: number;
+  assignedTo?: string;
+}
+
+export interface UpdateLeadInput {
+  companyName?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  source?: string;
+  notes?: string;
+  estimatedValue?: number;
+  status?: LeadStatus;
+  assignedTo?: string;
+}
+
+// ─── Transition Map ────────────────────────────────────────────────────────
+
+const LEAD_TRANSITIONS: Partial<Record<LeadStatus, readonly LeadStatus[]>> = {
+  new: ["qualifying", "lost"],
+  qualifying: ["qualified", "lost"],
+  qualified: ["converted", "lost"],
+  converted: [],
+  lost: ["new"],
+};
+
+function validateLeadTransition(from: LeadStatus, to: LeadStatus): void {
+  const allowed = LEAD_TRANSITIONS[from];
+  if (!allowed || !allowed.includes(to)) {
+    throw new ValidationError(
+      `Invalid lead status transition: ${from} → ${to}`
+    );
+  }
+}
+
+// ─── Service ───────────────────────────────────────────────────────────────
+
+export async function createLead(
+  input: CreateLeadInput,
+  actorId: string
+): Promise<{ id: string }> {
+  const idempotencyKey = `lead-create:${input.companyName}:${actorId}`;
+
+  const result = await withIdempotency(
+    idempotencyKey,
+    "lead.create",
+    async () => {
+      const lead = await db.leadRecord.create({
+        data: {
+          companyName: input.companyName,
+          contactName: input.contactName ?? null,
+          contactEmail: input.contactEmail ?? null,
+          contactPhone: input.contactPhone ?? null,
+          source: input.source ?? null,
+          notes: input.notes ?? null,
+          estimatedValue: input.estimatedValue ?? null,
+          assignedTo: input.assignedTo ?? null,
+          createdBy: actorId,
+          status: "new",
+        },
+      });
+      return { id: lead.id, companyName: lead.companyName };
+    }
+  );
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.LEAD_CREATED,
+    actorId,
+    entityType: "lead_record",
+    entityId: result.result.id,
+    payload: { companyName: result.result.companyName },
+    visibility: "internal",
+  });
+
+  logger.info("Lead created", {
+    leadId: result.result.id,
+    companyName: result.result.companyName,
+  });
+
+  return { id: result.result.id };
+}
+
+export async function updateLead(
+  leadId: string,
+  input: UpdateLeadInput,
+  actorId: string
+): Promise<void> {
+  const lead = await db.leadRecord.findUnique({ where: { id: leadId } });
+  if (!lead) throw new NotFoundError("LeadRecord", leadId);
+
+  if (lead.status === "converted") {
+    throw new ValidationError("Cannot update a converted lead");
+  }
+
+  if (input.status && input.status !== lead.status) {
+    validateLeadTransition(lead.status as LeadStatus, input.status);
+  }
+
+  const data: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (v !== undefined) data[k] = v;
+  }
+
+  await db.leadRecord.update({
+    where: { id: leadId },
+    data,
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.LEAD_UPDATED,
+    actorId,
+    entityType: "lead_record",
+    entityId: leadId,
+    payload: data,
+    visibility: "internal",
+  });
+
+  logger.info("Lead updated", { leadId });
+}
+
+export async function linkLeadToEngagement(
+  leadId: string,
+  engagementId: string,
+  clientId: string,
+  actorId: string
+): Promise<void> {
+  const lead = await db.leadRecord.findUnique({ where: { id: leadId } });
+  if (!lead) throw new NotFoundError("LeadRecord", leadId);
+
+  if (lead.status !== "qualified") {
+    throw new ValidationError(
+      "Lead must be in 'qualified' status to link to an engagement"
+    );
+  }
+
+  await db.leadRecord.update({
+    where: { id: leadId },
+    data: {
+      status: "converted",
+      convertedToClientId: clientId,
+      engagementId,
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.LEAD_LINKED_TO_ENGAGEMENT,
+    actorId,
+    entityType: "lead_record",
+    entityId: leadId,
+    payload: { engagementId, clientId },
+    visibility: "internal",
+  });
+
+  logger.info("Lead linked to engagement", { leadId, engagementId, clientId });
+}
+
+export async function getLeadById(leadId: string) {
+  const lead = await db.leadRecord.findUnique({
+    where: { id: leadId },
+    include: {
+      client: { select: { id: true, name: true } },
+      engagement: { select: { id: true, code: true, title: true } },
+    },
+  });
+  if (!lead) throw new NotFoundError("LeadRecord", leadId);
+  return lead;
+}
+
+export async function listLeads(params: {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  search?: string;
+} = {}) {
+  const { limit = 25, offset = 0, status, search } = params;
+
+  const where = {
+    ...(status && { status }),
+    ...(search && {
+      companyName: { contains: search, mode: "insensitive" as const },
+    }),
+  };
+
+  const [leads, total] = await Promise.all([
+    db.leadRecord.findMany({
+      where,
+      select: {
+        id: true,
+        companyName: true,
+        contactName: true,
+        status: true,
+        source: true,
+        estimatedValue: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+    }),
+    db.leadRecord.count({ where }),
+  ]);
+
+  return { leads, total, limit, offset };
+}

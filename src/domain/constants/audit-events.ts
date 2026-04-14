@@ -17,7 +17,18 @@ export const AUDIT_EVENTS = {
   SESSION_EXPIRED: "session.expired",
   SESSION_REVOKED: "session.revoked",
 
+  // Lead
+  LEAD_CREATED: "lead.created",
+  LEAD_UPDATED: "lead.updated",
+  LEAD_LINKED_TO_ENGAGEMENT: "lead.linked_to_engagement",
+
   // Client
+  CLIENT_ACCOUNT_CREATED: "client_account.created",
+  CLIENT_ACCOUNT_UPDATED: "client_account.updated",
+  CLIENT_ACCOUNT_ARCHIVED: "client_account.archived",
+  CLIENT_CONTACT_CREATED: "client_contact.created",
+
+  // Legacy aliases (Module 0 forward declarations)
   CLIENT_CREATED: "client.created",
   CLIENT_UPDATED: "client.updated",
   CLIENT_ARCHIVED: "client.archived",
