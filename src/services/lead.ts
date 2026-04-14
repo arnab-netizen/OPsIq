@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import type { LeadStatus } from "@/domain/constants/statuses";
 import { LEAD_STATUSES } from "@/domain/constants/statuses";
@@ -161,9 +162,14 @@ export async function linkLeadToEngagement(
   }
 
   if (lead.convertedToClientId) {
-    throw new ValidationError(
-      "Lead is already converted to a client; cannot link to a different client"
-    );
+    // Already converted; check if it's to the same engagement (idempotency)
+    if (lead.engagementId !== engagementId || lead.convertedToClientId !== clientId) {
+      throw new ValidationError(
+        "Lead is already converted to a different engagement or client"
+      );
+    }
+    // Idempotent: already in desired state, no-op
+    return;
   }
 
   // Validate that the engagement belongs to the specified client
@@ -178,14 +184,23 @@ export async function linkLeadToEngagement(
     );
   }
 
-  await db.leadRecord.update({
-    where: { id: leadId },
-    data: {
-      status: "converted",
-      convertedToClientId: clientId,
-      engagementId,
-    },
-  });
+  const idempotencyKey = `lead-link:${leadId}:${engagementId}:${clientId}`;
+
+  await withIdempotency(
+    idempotencyKey,
+    "lead.link_to_engagement",
+    async () => {
+      await db.leadRecord.update({
+        where: { id: leadId },
+        data: {
+          status: "converted",
+          convertedToClientId: clientId,
+          engagementId,
+        },
+      });
+      return { id: leadId };
+    }
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_LINKED_TO_ENGAGEMENT,
@@ -194,6 +209,17 @@ export async function linkLeadToEngagement(
     entityId: leadId,
     payload: { engagementId, clientId },
     visibility: "internal",
+  });
+
+  // Lead conversion is significant client/engagement event
+  await triggerReEvaluation({
+    changeType: "new_critical_evidence",
+    entityType: "lead_record",
+    entityId: leadId,
+    engagementId,
+    severity: "medium",
+    description: `Lead converted to client and linked to engagement ${engagementId}`,
+    triggeredBy: actorId,
   });
 
   logger.info("Lead linked to engagement", { leadId, engagementId, clientId });

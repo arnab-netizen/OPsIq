@@ -228,6 +228,8 @@ model BusinessConditionProfile {
 
   engagement              Engagement @relation(fields: [engagementId], references: [id])
 
+  // NOTE: Requires database-level partial unique constraint:
+  // CREATE UNIQUE INDEX idx_bcp_current ON business_condition_profiles(engagement_id) WHERE is_current = true
   @@index([engagementId, isCurrent])
   @@index([engagementId])
   @@map("business_condition_profiles")

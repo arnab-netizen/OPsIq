@@ -95,7 +95,7 @@ export async function updateContact(
   });
 
   await emitAuditEvent({
-    eventName: "client_contact.updated",
+    eventName: AUDIT_EVENTS.CLIENT_CONTACT_UPDATED,
     actorId,
     entityType: "client_contact",
     entityId: contactId,
@@ -125,7 +125,7 @@ export async function deactivateContact(
   });
 
   await emitAuditEvent({
-    eventName: "client_contact.deactivated",
+    eventName: AUDIT_EVENTS.CLIENT_CONTACT_DEACTIVATED,
     actorId,
     entityType: "client_contact",
     entityId: contactId,
