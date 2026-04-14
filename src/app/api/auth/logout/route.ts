@@ -9,7 +9,11 @@ export const POST = withRequestContext(async () => {
   const session = await getSession();
 
   if (session) {
-    await db.session.delete({ where: { id: session.sessionId } });
+    // Soft-revoke: preserve session record for forensic/audit trail
+    await db.session.update({
+      where: { id: session.sessionId },
+      data: { revokedAt: new Date() },
+    });
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.USER_LOGGED_OUT,

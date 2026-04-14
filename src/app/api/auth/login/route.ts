@@ -4,6 +4,7 @@ import { parseRequestBody } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { UnauthorizedError } from "@/infra/errors";
+import { requireRateLimit, LOGIN_RATE_LIMIT } from "@/infra/rate-limit";
 import { getSessionCookieName, getSessionDurationMs } from "@/services/auth";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
@@ -17,6 +18,11 @@ const loginSchema = z.object({
 export const POST = withRequestContext(async (request) => {
   const { email, password } = await parseRequestBody(request, loginSchema);
 
+  // Rate limit by IP + email to prevent brute force
+  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+  requireRateLimit(`login:${ip}`, LOGIN_RATE_LIMIT);
+  requireRateLimit(`login:${email}`, LOGIN_RATE_LIMIT);
+
   const user = await db.user.findUnique({ where: { email } });
 
   if (!user || !user.isActive || !user.hashedPassword) {
@@ -27,9 +33,8 @@ export const POST = withRequestContext(async (request) => {
     throw new UnauthorizedError("Invalid email or password");
   }
 
-  // Password verification: In production, use bcrypt/argon2.
-  // For the foundation scaffold, we store hashed passwords and compare directly.
-  // The hashing implementation will be added with the user management module.
+  // Password verification: In production, upgrade to bcrypt/argon2.
+  // SHA-256 is used as a transitional placeholder for the foundation scaffold.
   const { createHash } = await import("crypto");
   const hash = createHash("sha256").update(password).digest("hex");
 
@@ -50,7 +55,7 @@ export const POST = withRequestContext(async (request) => {
       userId: user.id,
       token,
       expiresAt,
-      ipAddress: request.headers.get("x-forwarded-for") ?? null,
+      ipAddress: ip !== "unknown" ? ip : null,
       userAgent: request.headers.get("user-agent") ?? null,
     },
   });

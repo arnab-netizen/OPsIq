@@ -35,6 +35,11 @@ export async function getSession(): Promise<SessionInfo | null> {
 
   if (!session) return null;
 
+  if (session.revokedAt) {
+    logger.info("Session revoked", { sessionId: session.id });
+    return null;
+  }
+
   if (session.expiresAt < new Date()) {
     logger.info("Session expired", { sessionId: session.id });
     return null;

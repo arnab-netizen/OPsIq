@@ -18,3 +18,10 @@ export { emitAuditEvent, queryAuditEvents, type AuditEventInput, type Visibility
 export { getStorageProvider, type StorageProvider, type StoredFile } from "./storage";
 export { getScheduler, type SchedulerProvider, type ScheduleTaskInput, type TaskHandler } from "./scheduler";
 export { withIdempotency, type IdempotencyResult } from "./idempotency";
+export {
+  checkRateLimit,
+  requireRateLimit,
+  RateLimitError,
+  LOGIN_RATE_LIMIT,
+  MUTATION_RATE_LIMIT,
+} from "./rate-limit";
