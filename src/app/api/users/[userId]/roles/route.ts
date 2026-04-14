@@ -6,7 +6,7 @@ import {
   revokeRole,
   getRolesForUser,
 } from "@/services/role-assignment";
-import { parseRequestBody } from "@/lib/validation";
+import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { z } from "zod/v4";
 import { ROLES } from "@/domain/constants/roles";
 
@@ -26,6 +26,7 @@ const revokeRoleSchema = z.object({
 
 export const GET = withRequestContext(async (_request, context) => {
   const { userId } = await context.params;
+  parseOrThrow(uuidSchema, userId);
   await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true });
 
   const roles = await getRolesForUser(userId);
@@ -34,6 +35,7 @@ export const GET = withRequestContext(async (_request, context) => {
 
 export const POST = withRequestContext(async (request, context) => {
   const { userId } = await context.params;
+  parseOrThrow(uuidSchema, userId);
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.USER_ASSIGN_ROLE,
     internalOnly: true,
@@ -53,6 +55,7 @@ export const POST = withRequestContext(async (request, context) => {
 
 export const DELETE = withRequestContext(async (request, context) => {
   const { userId } = await context.params;
+  parseOrThrow(uuidSchema, userId);
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.USER_ASSIGN_ROLE,
     internalOnly: true,

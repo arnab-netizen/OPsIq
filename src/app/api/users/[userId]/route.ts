@@ -8,6 +8,8 @@ import {
   reactivateUser,
 } from "@/services/user";
 import { parseRequestBody } from "@/lib/validation";
+import { uuidSchema } from "@/lib/validation";
+import { parseOrThrow } from "@/lib/validation";
 import { z } from "zod/v4";
 
 const updateUserSchema = z.object({
@@ -33,6 +35,7 @@ const actionSchema = z.discriminatedUnion("action", [
 
 export const GET = withRequestContext(async (_request, context) => {
   const { userId } = await context.params;
+  parseOrThrow(uuidSchema, userId);
   await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true });
 
   const user = await getUserById(userId);
@@ -41,6 +44,7 @@ export const GET = withRequestContext(async (_request, context) => {
 
 export const PATCH = withRequestContext(async (request, context) => {
   const { userId } = await context.params;
+  parseOrThrow(uuidSchema, userId);
   const { session } = await withAuth({
     capability: CAPABILITIES.USER_UPDATE,
     internalOnly: true,
@@ -55,22 +59,22 @@ export const PATCH = withRequestContext(async (request, context) => {
 
 export const POST = withRequestContext(async (request, context) => {
   const { userId } = await context.params;
+  parseOrThrow(uuidSchema, userId);
+
+  // Auth check BEFORE body parse
+  const { session } = await withAuth({
+    capability: CAPABILITIES.USER_DEACTIVATE,
+    internalOnly: true,
+  });
+
   const body = await parseRequestBody(request, actionSchema);
 
   if (body.action === "deactivate") {
-    const { session } = await withAuth({
-      capability: CAPABILITIES.USER_DEACTIVATE,
-      internalOnly: true,
-    });
     await deactivateUser(userId, session.user.id, body.version);
     return Response.json({ status: "deactivated" });
   }
 
   // reactivate
-  const { session } = await withAuth({
-    capability: CAPABILITIES.USER_DEACTIVATE, // reactivation requires same permission
-    internalOnly: true,
-  });
   await reactivateUser(userId, session.user.id, body.version);
   return Response.json({ status: "reactivated" });
 });

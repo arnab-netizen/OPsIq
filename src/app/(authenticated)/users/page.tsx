@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Table, Badge, Button, LoadingState, ErrorState } from "@/ui/primitives";
+import { Table, Badge, LoadingState, ErrorState } from "@/ui/primitives";
+import { formatRole } from "@/domain/constants/role-labels";
 
 interface UserRow {
   id: string;
@@ -16,21 +17,6 @@ interface UsersResponse {
   total: number;
   limit: number;
   offset: number;
-}
-
-const ROLE_LABELS: Record<string, string> = {
-  system_admin: "System Admin",
-  admin_or_portfolio_manager: "Admin / Portfolio Mgr",
-  experienced_consultant: "Experienced Consultant",
-  beginner_consultant: "Beginner Consultant",
-  analyst: "Analyst",
-  client_owner: "Client Owner",
-  client_team_member: "Client Team Member",
-  viewer: "Viewer",
-};
-
-function formatRole(role: string): string {
-  return ROLE_LABELS[role] ?? role;
 }
 
 interface UserRoleRow {

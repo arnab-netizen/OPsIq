@@ -6,7 +6,7 @@ import {
   removeMember,
   getMembershipsForUser,
 } from "@/services/engagement-membership";
-import { parseRequestBody } from "@/lib/validation";
+import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { z } from "zod/v4";
 import { ROLES } from "@/domain/constants/roles";
 
@@ -24,6 +24,7 @@ const removeMemberSchema = z.object({
 
 export const GET = withRequestContext(async (_request, context) => {
   const { userId } = await context.params;
+  parseOrThrow(uuidSchema, userId);
   await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true });
 
   const memberships = await getMembershipsForUser(userId);
@@ -32,6 +33,7 @@ export const GET = withRequestContext(async (_request, context) => {
 
 export const POST = withRequestContext(async (request, context) => {
   const { userId } = await context.params;
+  parseOrThrow(uuidSchema, userId);
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
     internalOnly: true,
@@ -49,6 +51,7 @@ export const POST = withRequestContext(async (request, context) => {
 
 export const DELETE = withRequestContext(async (request, context) => {
   const { userId } = await context.params;
+  parseOrThrow(uuidSchema, userId);
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
     internalOnly: true,

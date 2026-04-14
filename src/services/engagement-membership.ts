@@ -8,6 +8,7 @@ import {
   ValidationError,
 } from "@/infra/errors";
 import { ROLES, type RoleName } from "@/domain/constants/roles";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -124,6 +125,18 @@ export async function addMember(
       engagementId: input.engagementId,
       role: input.role,
     },
+    visibility: "internal",
+  });
+
+  // V3 adaptive: membership changes affect engagement dynamics
+  await triggerReEvaluation({
+    changeType: "scope_change",
+    entityType: "engagement_membership",
+    entityId: result.result.id,
+    engagementId: input.engagementId,
+    severity: "low",
+    description: `Member added: user ${input.userId} as "${input.role}"`,
+    triggeredBy: actorId,
   });
 
   logger.info("Engagement member added", {
@@ -176,6 +189,18 @@ export async function removeMember(
       engagementId: input.engagementId,
       role: input.role,
     },
+    visibility: "internal",
+  });
+
+  // V3 adaptive: losing a team member may affect engagement capacity
+  await triggerReEvaluation({
+    changeType: "key_employee_loss",
+    entityType: "engagement_membership",
+    entityId: membership.id,
+    engagementId: input.engagementId,
+    severity: "medium",
+    description: `Member removed: user ${input.userId} from role "${input.role}"`,
+    triggeredBy: actorId,
   });
 
   logger.info("Engagement member removed", {

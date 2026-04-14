@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { withIdempotency } from "@/infra/idempotency";
 import {
   NotFoundError,
   ConflictError,
@@ -40,33 +41,47 @@ export async function createUser(
   input: CreateUserInput,
   actorId: string
 ): Promise<{ id: string }> {
-  const existing = await db.user.findUnique({
-    where: { email: input.email },
-  });
+  const idempotencyKey = `user-create:${input.email}`;
 
-  if (existing) {
-    throw new ConflictError(`User with email ${input.email} already exists`);
-  }
+  const result = await withIdempotency(
+    idempotencyKey,
+    "user.create",
+    async () => {
+      const existing = await db.user.findUnique({
+        where: { email: input.email },
+      });
 
-  const user = await db.user.create({
-    data: {
-      email: input.email,
-      name: input.name ?? null,
-      hashedPassword: input.hashedPassword ?? null,
-    },
-  });
+      if (existing) {
+        throw new ConflictError(`User with email ${input.email} already exists`);
+      }
+
+      const user = await db.user.create({
+        data: {
+          email: input.email,
+          name: input.name ?? null,
+          hashedPassword: input.hashedPassword ?? null,
+        },
+      });
+
+      return { id: user.id, email: user.email, name: user.name };
+    }
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.USER_CREATED,
     actorId,
     entityType: "user",
-    entityId: user.id,
-    payload: { email: user.email, name: user.name },
+    entityId: result.result.id,
+    payload: { email: result.result.email, name: result.result.name },
+    visibility: "internal",
   });
 
-  logger.info("User created", { userId: user.id, email: user.email });
+  logger.info("User created", {
+    userId: result.result.id,
+    email: result.result.email,
+  });
 
-  return { id: user.id };
+  return { id: result.result.id };
 }
 
 export async function updateUser(
@@ -112,6 +127,7 @@ export async function updateUser(
       ...(input.name !== undefined && { name: input.name }),
       ...(input.email !== undefined && { email: input.email }),
     },
+    visibility: "internal",
   });
 
   logger.info("User updated", { userId });
@@ -147,19 +163,19 @@ export async function deactivateUser(
   );
 
   // Revoke all active sessions
-  await db.session.updateMany({
+  const sessionResult = await db.session.updateMany({
     where: { userId, revokedAt: null },
     data: { revokedAt: new Date() },
   });
 
   // Revoke all active role assignments
-  await db.userRoleAssignment.updateMany({
+  const roleResult = await db.userRoleAssignment.updateMany({
     where: { userId, isActive: true },
     data: { isActive: false, revokedAt: new Date() },
   });
 
   // Remove from active engagement memberships
-  await db.engagementMembership.updateMany({
+  const membershipResult = await db.engagementMembership.updateMany({
     where: { userId, isActive: true },
     data: { isActive: false, removedAt: new Date() },
   });
@@ -169,9 +185,22 @@ export async function deactivateUser(
     actorId,
     entityType: "user",
     entityId: userId,
+    payload: {
+      deactivatedBy: actorId,
+      sessionsRevoked: sessionResult.count,
+      rolesRevoked: roleResult.count,
+      membershipsRemoved: membershipResult.count,
+    },
+    visibility: "internal",
   });
 
-  logger.info("User deactivated", { userId, deactivatedBy: actorId });
+  logger.info("User deactivated", {
+    userId,
+    deactivatedBy: actorId,
+    sessionsRevoked: sessionResult.count,
+    rolesRevoked: roleResult.count,
+    membershipsRemoved: membershipResult.count,
+  });
 }
 
 export async function reactivateUser(
@@ -204,6 +233,8 @@ export async function reactivateUser(
     actorId,
     entityType: "user",
     entityId: userId,
+    payload: { reactivatedBy: actorId },
+    visibility: "internal",
   });
 
   logger.info("User reactivated", { userId, reactivatedBy: actorId });

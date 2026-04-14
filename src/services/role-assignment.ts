@@ -9,6 +9,7 @@ import {
   ForbiddenError,
 } from "@/infra/errors";
 import { ROLES, ROLE_HIERARCHY, type RoleName } from "@/domain/constants/roles";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -61,6 +62,11 @@ export async function assignRole(
 ): Promise<{ id: string; isNew: boolean }> {
   validateRoleName(input.role);
   assertHierarchyAuthority(actorHighestLevel, input.role);
+
+  // Prevent self-assignment (privilege escalation vector)
+  if (input.userId === actorId) {
+    throw new ForbiddenError("Cannot assign roles to yourself");
+  }
 
   // Verify target user exists and is active
   const targetUser = await db.user.findUnique({
@@ -148,7 +154,21 @@ export async function assignRole(
       scope: input.scope ?? null,
       scopeId: input.scopeId ?? null,
     },
+    visibility: "internal",
   });
+
+  // V3 adaptive: engagement-scoped role changes trigger re-evaluation
+  if (input.scope === "engagement" && input.scopeId) {
+    await triggerReEvaluation({
+      changeType: "scope_change",
+      entityType: "user_role_assignment",
+      entityId: result.result.id,
+      engagementId: input.scopeId,
+      severity: "medium",
+      description: `Role "${input.role}" assigned to user ${input.userId} in engagement`,
+      triggeredBy: actorId,
+    });
+  }
 
   logger.info("Role assigned", {
     userId: input.userId,
@@ -166,6 +186,11 @@ export async function revokeRole(
 ): Promise<void> {
   validateRoleName(input.role);
   assertHierarchyAuthority(actorHighestLevel, input.role);
+
+  // Prevent self-revocation
+  if (input.userId === actorId) {
+    throw new ForbiddenError("Cannot revoke your own roles");
+  }
 
   const assignment = await db.userRoleAssignment.findFirst({
     where: {
@@ -204,7 +229,21 @@ export async function revokeRole(
       scope: input.scope ?? null,
       scopeId: input.scopeId ?? null,
     },
+    visibility: "internal",
   });
+
+  // V3 adaptive: engagement-scoped role changes trigger re-evaluation
+  if (input.scope === "engagement" && input.scopeId) {
+    await triggerReEvaluation({
+      changeType: "scope_change",
+      entityType: "user_role_assignment",
+      entityId: assignment.id,
+      engagementId: input.scopeId,
+      severity: "medium",
+      description: `Role "${input.role}" revoked from user ${input.userId} in engagement`,
+      triggeredBy: actorId,
+    });
+  }
 
   logger.info("Role revoked", {
     userId: input.userId,
