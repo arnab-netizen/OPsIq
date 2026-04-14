@@ -157,6 +157,7 @@ export async function triggerReEvaluation(
       engagementId: event.engagementId,
       reEvaluationTargets: targets,
     },
+    visibility: "internal",
   });
 
   // Domain modules will subscribe to this event and execute their

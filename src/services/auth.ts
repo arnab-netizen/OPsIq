@@ -111,6 +111,18 @@ export function getSessionDurationMs(): number {
   return SESSION_DURATION_MS;
 }
 
+export async function revokeSession(
+  sessionId: string,
+  actorId: string
+): Promise<void> {
+  await db.session.update({
+    where: { id: sessionId },
+    data: { revokedAt: new Date() },
+  });
+
+  logger.info("Session revoked", { sessionId, revokedBy: actorId });
+}
+
 export function getSessionCookieName(): string {
   return SESSION_COOKIE_NAME;
 }

@@ -29,6 +29,7 @@ export const POST = withRequestContext(async (request) => {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
       payload: { email, reason: "user_not_found_or_inactive" },
+      visibility: "internal",
     });
     throw new UnauthorizedError("Invalid email or password");
   }
@@ -43,6 +44,7 @@ export const POST = withRequestContext(async (request) => {
       eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
       actorId: user.id,
       payload: { reason: "invalid_password" },
+      visibility: "internal",
     });
     throw new UnauthorizedError("Invalid email or password");
   }
@@ -65,6 +67,7 @@ export const POST = withRequestContext(async (request) => {
     actorId: user.id,
     entityType: "session",
     entityId: session.id,
+    visibility: "internal",
   });
 
   const cookieStore = await cookies();
