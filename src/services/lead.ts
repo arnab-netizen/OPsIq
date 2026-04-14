@@ -6,6 +6,11 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import type { LeadStatus } from "@/domain/constants/statuses";
 import { LEAD_STATUSES } from "@/domain/constants/statuses";
+import {
+  optimisticUpdate,
+  withVersionCheck,
+  withVersionIncrement,
+} from "@/lib/optimistic-lock";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -30,6 +35,7 @@ export interface UpdateLeadInput {
   estimatedValue?: number;
   status?: LeadStatus;
   assignedTo?: string;
+  version: number;
 }
 
 // ─── Transition Map ────────────────────────────────────────────────────────
@@ -114,15 +120,18 @@ export async function updateLead(
     validateLeadTransition(lead.status as LeadStatus, input.status);
   }
 
+  const { version, ...fields } = input;
   const data: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(input)) {
+  for (const [k, v] of Object.entries(fields)) {
     if (v !== undefined) data[k] = v;
   }
 
-  await db.leadRecord.update({
-    where: { id: leadId },
-    data,
-  });
+  await optimisticUpdate("lead_record", leadId, version, () =>
+    db.leadRecord.update({
+      where: withVersionCheck({ id: leadId }, version),
+      data: withVersionIncrement(data),
+    })
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_UPDATED,
@@ -148,6 +157,24 @@ export async function linkLeadToEngagement(
   if (lead.status !== "qualified") {
     throw new ValidationError(
       "Lead must be in 'qualified' status to link to an engagement"
+    );
+  }
+
+  if (lead.convertedToClientId) {
+    throw new ValidationError(
+      "Lead is already converted to a client; cannot link to a different client"
+    );
+  }
+
+  // Validate that the engagement belongs to the specified client
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: { clientId: true },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+  if (engagement.clientId !== clientId) {
+    throw new ValidationError(
+      "Engagement does not belong to the specified client"
     );
   }
 
