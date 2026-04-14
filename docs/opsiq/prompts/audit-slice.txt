@@ -1,0 +1,29 @@
+Audit the slice you just implemented against its file specification and `CLAUDE.md`.
+
+Check all of the following and fix gaps before declaring it complete:
+- objective coverage
+- entity completeness
+- schema completeness
+- relation correctness
+- validation
+- authorization
+- audit events
+- unhappy paths
+- duplicate submission / conflict handling where relevant
+- internal vs client-visible data handling where relevant
+- adaptive trigger pathway where relevant
+- automated tests appropriate to the slice
+- integration with prior modules
+
+Return exactly:
+A. Missing or weak areas found
+B. Exact fixes applied
+C. Remaining real limitations
+D. Updated manual verification steps
+E. Added or updated tests
+F. Trigger and event updates
+
+Ambiguity rule:
+- Do not treat vague wording as permission to skip work.
+- If the slice contains a governed write path, validation, authorization, audit events, and unhappy paths are required.
+- If unsure, choose the stricter governed implementation and state any real limitation explicitly.

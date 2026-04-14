@@ -1,0 +1,19 @@
+Read `CLAUDE.md`.
+Read `docs/opsiq/status/build-status.md`.
+Read `docs/opsiq/status/current-module.md`.
+Read the slice file I name below.
+
+Implement only this slice:
+<REPLACE_WITH_SLICE_PATH>
+
+Rules:
+- Do not do other slices.
+- Do not expand scope.
+- Do not skip validation, authorization, audit events, idempotency, or failure handling where relevant.
+- Keep business logic out of UI.
+- Return using the required format from `CLAUDE.md`.
+
+Ambiguity rule:
+- Do not treat vague wording as permission to skip work.
+- If the slice contains a governed write path, validation, authorization, audit events, and unhappy paths are required.
+- If unsure, choose the stricter governed implementation and state any real limitation explicitly.

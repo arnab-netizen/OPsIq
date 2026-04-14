@@ -1,0 +1,28 @@
+Verify the slice you just completed integrates correctly with all prior completed slices.
+
+Check:
+- schema consistency
+- migrations
+- type consistency
+- route/import consistency
+- centralized policies still centralized
+- no new UI-side business logic
+- audit event consistency
+- no silent mutation of governed records
+- no broken status names or enums
+- adaptive trigger compatibility where relevant
+- regression risk to earlier completed slices
+
+Fix any integration issues without expanding scope.
+
+Return exactly:
+A. Issues found
+B. Fixes applied
+C. Migration and test implications
+D. Manual verification steps
+E. Trigger and event impacts
+
+Ambiguity rule:
+- Do not treat vague wording as permission to skip work.
+- If the slice contains a governed write path, validation, authorization, audit events, and unhappy paths are required.
+- If unsure, choose the stricter governed implementation and state any real limitation explicitly.
