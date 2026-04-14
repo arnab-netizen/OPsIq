@@ -76,9 +76,14 @@ export async function getPolicyContext(): Promise<PolicyContext | null> {
   const session = await getSession();
   if (!session) return null;
 
-  const roleAssignments = await db.userRoleAssignment.findMany({
-    where: { userId: session.user.id, isActive: true, revokedAt: null },
-  });
+  const [roleAssignments, engagementMemberships] = await Promise.all([
+    db.userRoleAssignment.findMany({
+      where: { userId: session.user.id, isActive: true, revokedAt: null },
+    }),
+    db.engagementMembership.findMany({
+      where: { userId: session.user.id, isActive: true },
+    }),
+  ]);
 
   return {
     userId: session.user.id,
@@ -86,6 +91,10 @@ export async function getPolicyContext(): Promise<PolicyContext | null> {
       role: ra.role as RoleName,
       scope: ra.scope,
       scopeId: ra.scopeId,
+    })),
+    engagementMemberships: engagementMemberships.map((em) => ({
+      engagementId: em.engagementId,
+      role: em.role as RoleName,
     })),
   };
 }

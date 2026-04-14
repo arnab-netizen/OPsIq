@@ -16,16 +16,21 @@ export const CAPABILITIES = {
   CLIENT_VIEW: "client:view",
   CLIENT_ARCHIVE: "client:archive",
 
-  // Engagements
+  // Engagements (Module 1 required capabilities)
   ENGAGEMENT_CREATE: "engagement:create",
   ENGAGEMENT_UPDATE: "engagement:update",
   ENGAGEMENT_VIEW: "engagement:view",
   ENGAGEMENT_MANAGE_MEMBERS: "engagement:manage_members",
+  ENGAGEMENT_CLOSE: "engagement:close",
 
-  // Stages
+  // Stages (Module 1 required capabilities)
   STAGE_CREATE: "stage:create",
   STAGE_TRANSITION: "stage:transition",
   STAGE_VIEW: "stage:view",
+  STAGE_RESOLVE_SOFT_BLOCKER: "stage:resolve_soft_blocker",
+
+  // Findings (Module 1 required capabilities)
+  FINDING_VALIDATE: "finding:validate",
 
   // Evidence
   EVIDENCE_SUBMIT: "evidence:submit",
@@ -56,6 +61,7 @@ export const CAPABILITIES = {
   DELIVERABLE_CREATE: "deliverable:create",
   DELIVERABLE_SUBMIT_VERSION: "deliverable:submit_version",
   DELIVERABLE_APPROVE: "deliverable:approve",
+  DELIVERABLE_ISSUE: "deliverable:issue",
   DELIVERABLE_VIEW: "deliverable:view",
 
   // Approvals

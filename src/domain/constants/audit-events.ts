@@ -22,6 +22,10 @@ export const AUDIT_EVENTS = {
   CLIENT_UPDATED: "client.updated",
   CLIENT_ARCHIVED: "client.archived",
 
+  // Engagement Membership
+  ENGAGEMENT_MEMBER_ADDED: "engagement.member_added",
+  ENGAGEMENT_MEMBER_REMOVED: "engagement.member_removed",
+
   // Engagement
   ENGAGEMENT_CREATED: "engagement.created",
   ENGAGEMENT_UPDATED: "engagement.updated",

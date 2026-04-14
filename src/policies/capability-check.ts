@@ -1,11 +1,14 @@
 import type { CapabilityName } from "@/domain/constants/capabilities";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { ROLES, ROLE_HIERARCHY, type RoleName } from "@/domain/constants/roles";
+import { ROLES, ROLE_HIERARCHY, type RoleName, isClientRole } from "@/domain/constants/roles";
 import { ForbiddenError } from "@/infra/errors";
+
+// ─── Role → Capability Mapping ─────────────────────────────────────────────
 
 const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
   [ROLES.SYSTEM_ADMIN]: Object.values(CAPABILITIES),
-  [ROLES.PRINCIPAL_CONSULTANT]: [
+
+  [ROLES.ADMIN_OR_PORTFOLIO_MANAGER]: [
     CAPABILITIES.USER_VIEW,
     CAPABILITIES.USER_CREATE,
     CAPABILITIES.USER_UPDATE,
@@ -18,15 +21,18 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.ENGAGEMENT_UPDATE,
     CAPABILITIES.ENGAGEMENT_VIEW,
     CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
+    CAPABILITIES.ENGAGEMENT_CLOSE,
     CAPABILITIES.STAGE_CREATE,
     CAPABILITIES.STAGE_TRANSITION,
     CAPABILITIES.STAGE_VIEW,
+    CAPABILITIES.STAGE_RESOLVE_SOFT_BLOCKER,
     CAPABILITIES.EVIDENCE_SUBMIT,
     CAPABILITIES.EVIDENCE_VALIDATE,
     CAPABILITIES.EVIDENCE_VIEW,
     CAPABILITIES.FINDING_CREATE,
     CAPABILITIES.FINDING_UPDATE,
     CAPABILITIES.FINDING_VIEW,
+    CAPABILITIES.FINDING_VALIDATE,
     CAPABILITIES.RECOMMENDATION_CREATE,
     CAPABILITIES.RECOMMENDATION_APPROVE,
     CAPABILITIES.RECOMMENDATION_VIEW,
@@ -39,6 +45,7 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.DELIVERABLE_CREATE,
     CAPABILITIES.DELIVERABLE_SUBMIT_VERSION,
     CAPABILITIES.DELIVERABLE_APPROVE,
+    CAPABILITIES.DELIVERABLE_ISSUE,
     CAPABILITIES.DELIVERABLE_VIEW,
     CAPABILITIES.APPROVAL_REQUEST,
     CAPABILITIES.APPROVAL_DECIDE,
@@ -58,22 +65,26 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.FILE_VIEW,
     CAPABILITIES.FILE_DELETE,
   ],
-  [ROLES.SENIOR_CONSULTANT]: [
+
+  [ROLES.EXPERIENCED_CONSULTANT]: [
     CAPABILITIES.USER_VIEW,
     CAPABILITIES.CLIENT_VIEW,
     CAPABILITIES.CLIENT_UPDATE,
     CAPABILITIES.ENGAGEMENT_CREATE,
     CAPABILITIES.ENGAGEMENT_UPDATE,
     CAPABILITIES.ENGAGEMENT_VIEW,
+    CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
     CAPABILITIES.STAGE_CREATE,
     CAPABILITIES.STAGE_TRANSITION,
     CAPABILITIES.STAGE_VIEW,
+    CAPABILITIES.STAGE_RESOLVE_SOFT_BLOCKER,
     CAPABILITIES.EVIDENCE_SUBMIT,
     CAPABILITIES.EVIDENCE_VALIDATE,
     CAPABILITIES.EVIDENCE_VIEW,
     CAPABILITIES.FINDING_CREATE,
     CAPABILITIES.FINDING_UPDATE,
     CAPABILITIES.FINDING_VIEW,
+    CAPABILITIES.FINDING_VALIDATE,
     CAPABILITIES.RECOMMENDATION_CREATE,
     CAPABILITIES.RECOMMENDATION_VIEW,
     CAPABILITIES.ACTION_CREATE,
@@ -84,8 +95,10 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.KPI_VIEW,
     CAPABILITIES.DELIVERABLE_CREATE,
     CAPABILITIES.DELIVERABLE_SUBMIT_VERSION,
+    CAPABILITIES.DELIVERABLE_ISSUE,
     CAPABILITIES.DELIVERABLE_VIEW,
     CAPABILITIES.APPROVAL_REQUEST,
+    CAPABILITIES.OVERRIDE_REQUEST,
     CAPABILITIES.CONDITION_ASSESS,
     CAPABILITIES.CONDITION_VIEW,
     CAPABILITIES.INTERVENTION_VIEW,
@@ -96,7 +109,8 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.FILE_UPLOAD,
     CAPABILITIES.FILE_VIEW,
   ],
-  [ROLES.CONSULTANT]: [
+
+  [ROLES.BEGINNER_CONSULTANT]: [
     CAPABILITIES.USER_VIEW,
     CAPABILITIES.CLIENT_VIEW,
     CAPABILITIES.ENGAGEMENT_VIEW,
@@ -121,6 +135,7 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.FILE_UPLOAD,
     CAPABILITIES.FILE_VIEW,
   ],
+
   [ROLES.ANALYST]: [
     CAPABILITIES.USER_VIEW,
     CAPABILITIES.CLIENT_VIEW,
@@ -139,6 +154,7 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.FILE_UPLOAD,
     CAPABILITIES.FILE_VIEW,
   ],
+
   [ROLES.CLIENT_OWNER]: [
     CAPABILITIES.ENGAGEMENT_VIEW,
     CAPABILITIES.STAGE_VIEW,
@@ -156,7 +172,8 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.SCOPE_VIEW,
     CAPABILITIES.FILE_VIEW,
   ],
-  [ROLES.CLIENT_STAKEHOLDER]: [
+
+  [ROLES.CLIENT_TEAM_MEMBER]: [
     CAPABILITIES.ENGAGEMENT_VIEW,
     CAPABILITIES.STAGE_VIEW,
     CAPABILITIES.EVIDENCE_VIEW,
@@ -167,6 +184,7 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
     CAPABILITIES.DELIVERABLE_VIEW,
     CAPABILITIES.FILE_VIEW,
   ],
+
   [ROLES.VIEWER]: [
     CAPABILITIES.ENGAGEMENT_VIEW,
     CAPABILITIES.STAGE_VIEW,
@@ -175,6 +193,41 @@ const ROLE_CAPABILITIES: Record<RoleName, readonly CapabilityName[]> = {
   ],
 };
 
+// ─── Internal-only capability guard ─────────────────────────────────────────
+
+/** Capabilities that client roles must never access */
+const INTERNAL_ONLY_CAPABILITIES: readonly CapabilityName[] = [
+  CAPABILITIES.SYSTEM_ADMIN,
+  CAPABILITIES.SYSTEM_VIEW_AUDIT,
+  CAPABILITIES.USER_CREATE,
+  CAPABILITIES.USER_UPDATE,
+  CAPABILITIES.USER_DEACTIVATE,
+  CAPABILITIES.USER_ASSIGN_ROLE,
+  CAPABILITIES.CLIENT_CREATE,
+  CAPABILITIES.CLIENT_UPDATE,
+  CAPABILITIES.CLIENT_ARCHIVE,
+  CAPABILITIES.ENGAGEMENT_CREATE,
+  CAPABILITIES.ENGAGEMENT_UPDATE,
+  CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
+  CAPABILITIES.ENGAGEMENT_CLOSE,
+  CAPABILITIES.STAGE_CREATE,
+  CAPABILITIES.EVIDENCE_VALIDATE,
+  CAPABILITIES.FINDING_CREATE,
+  CAPABILITIES.FINDING_UPDATE,
+  CAPABILITIES.FINDING_VALIDATE,
+  CAPABILITIES.RECOMMENDATION_CREATE,
+  CAPABILITIES.RECOMMENDATION_APPROVE,
+  CAPABILITIES.OVERRIDE_DECIDE,
+  CAPABILITIES.CONDITION_ASSESS,
+  CAPABILITIES.INTERVENTION_MANAGE,
+  CAPABILITIES.RISK_MANAGE,
+  CAPABILITIES.SCOPE_MANAGE,
+  CAPABILITIES.REVIEW_MANAGE,
+  CAPABILITIES.FILE_DELETE,
+];
+
+// ─── Policy Context ─────────────────────────────────────────────────────────
+
 export interface PolicyContext {
   userId: string;
   roles: Array<{
@@ -182,6 +235,16 @@ export interface PolicyContext {
     scope?: string | null;
     scopeId?: string | null;
   }>;
+  engagementMemberships?: Array<{
+    engagementId: string;
+    role: RoleName;
+  }>;
+}
+
+// ─── Capability Resolution ──────────────────────────────────────────────────
+
+export function getCapabilitiesForRole(role: RoleName): readonly CapabilityName[] {
+  return ROLE_CAPABILITIES[role] ?? [];
 }
 
 export function hasCapability(
@@ -189,20 +252,34 @@ export function hasCapability(
   capability: CapabilityName,
   scope?: { type: string; id: string }
 ): boolean {
+  // Check global role assignments
   for (const assignment of ctx.roles) {
     const caps = ROLE_CAPABILITIES[assignment.role];
     if (!caps) continue;
-
     if (!caps.includes(capability)) continue;
 
+    // Enforce internal-only guard: client roles cannot access internal capabilities
+    if (isClientRole(assignment.role) && INTERNAL_ONLY_CAPABILITIES.includes(capability)) {
+      continue;
+    }
+
     if (!scope) return true;
-
     if (!assignment.scope) return true;
+    if (assignment.scope === scope.type && assignment.scopeId === scope.id) {
+      return true;
+    }
+  }
 
-    if (
-      assignment.scope === scope.type &&
-      assignment.scopeId === scope.id
-    ) {
+  // Check engagement memberships for engagement-scoped capabilities
+  if (scope?.type === "engagement" && ctx.engagementMemberships) {
+    for (const membership of ctx.engagementMemberships) {
+      if (membership.engagementId !== scope.id) continue;
+      const caps = ROLE_CAPABILITIES[membership.role];
+      if (!caps) continue;
+      if (!caps.includes(capability)) continue;
+      if (isClientRole(membership.role) && INTERNAL_ONLY_CAPABILITIES.includes(capability)) {
+        continue;
+      }
       return true;
     }
   }
@@ -235,4 +312,9 @@ export function highestRole(ctx: PolicyContext): RoleName | null {
   }
 
   return highest;
+}
+
+/** Check if a context has any internal (non-client) role */
+export function hasInternalAccess(ctx: PolicyContext): boolean {
+  return ctx.roles.some((r) => !isClientRole(r.role));
 }
