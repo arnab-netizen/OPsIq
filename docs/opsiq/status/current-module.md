@@ -1,20 +1,18 @@
 # Current module
 
 ## Module
-Module 02 — Clients, Leads, Engagements, and Business Condition
+Module 03 — (TBD)
 
-## Current slice
-recovery
+## Module 02 status
+Complete. Recovery, schema, backend, and UI slices all complete and audited.
 
-## Goal
-Reconcile the existing partial Module 02 work with the repository rules before adding more code.
+## Module 02 completion summary
+- Recovery: 6 core write operations with idempotency + audit events
+- Schema: 7 enums, 6 entities, all documented
+- Backend: 12 write paths, all idempotent or optimistic-locked
+- UI: 9 screens, all using existing endpoints, no business logic
+- Audit: All slices pass safety and completeness checks
 
-## Next slices in order
-1. recovery
-2. schema
-3. backend
-4. ui
-5. tests
-6. audit
-7. integration
-8. status update
+## Next steps
+1. Define Module 03 scope
+2. Begin Module 03 recovery slice
