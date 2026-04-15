@@ -83,8 +83,10 @@ export async function deactivateContact(
   });
   if (!contact) throw new NotFoundError("ClientContact", contactId);
 
+  // Idempotent: if already inactive, return success (duplicate request protection)
   if (!contact.isActive) {
-    throw new NotFoundError("ClientContact", contactId);
+    logger.info("Contact already deactivated, returning success", { contactId });
+    return;
   }
 
   await db.clientContact.update({

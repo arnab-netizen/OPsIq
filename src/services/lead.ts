@@ -126,6 +126,8 @@ export async function updateLead(
     if (v !== undefined) data[k] = v;
   }
 
+  // Duplicate request protection: optimistic locking via version check
+  // Duplicate requests with old version fail fast with 409 Conflict
   await optimisticUpdate("lead_record", leadId, version, () =>
     db.leadRecord.update({
       where: withVersionCheck({ id: leadId }, version),
