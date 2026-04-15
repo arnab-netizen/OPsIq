@@ -1,10 +1,10 @@
 # Session handoff
 
 ## Last known state
-Module 02 was partially implemented in Claude with frontend pages for leads, clients, and engagements.
+Module 03 (Intervention State) is complete: schema, backend, and UI fully implemented and audited SAFE.
 
-## Caution
-Do not continue adding more UI before recovery and schema alignment are complete.
+## Current work
+Module 04 (Engagement Actions and Deliverables) schema design phase.
 
 ## Resume instruction
-Start with `docs/opsiq/modules/module-02/recovery.md`.
+Start with `docs/opsiq/modules/module-04/schema.md`.

@@ -1,20 +1,19 @@
 # Current module
 
 ## Module
-Module 02 — Clients, Leads, Engagements, and Business Condition
+Module 04 — Engagement Actions and Deliverables
 
 ## Current slice
-recovery
+schema
 
 ## Goal
-Reconcile the existing partial Module 02 work with the repository rules before adding more code.
+Define schema for tracked actions, deliverables, and their state.
 
 ## Next slices in order
-1. recovery
-2. schema
-3. backend
-4. ui
-5. tests
-6. audit
-7. integration
-8. status update
+1. schema
+2. backend
+3. ui
+4. tests
+5. audit
+6. integration
+7. status update
