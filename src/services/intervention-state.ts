@@ -1,0 +1,235 @@
+import { db } from "@/lib/db";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { NotFoundError, ValidationError } from "@/infra/errors";
+import { triggerReEvaluation } from "@/services/re-evaluation";
+import { logger } from "@/infra/logger";
+import {
+  INTERVENTION_PHASES,
+  INTERVENTION_MODES,
+  type InterventionPhase,
+  type InterventionMode,
+} from "@/domain/constants/statuses";
+import {
+  optimisticUpdate,
+  withVersionCheck,
+  withVersionIncrement,
+} from "@/lib/optimistic-lock";
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+export interface InterventionState {
+  engagementId: string;
+  interventionMode: string;
+  interventionPhase: string;
+  version: number;
+}
+
+export interface UpdateInterventionPhaseInput {
+  interventionPhase: string;
+  version: number;
+}
+
+export interface UpdateInterventionModeInput {
+  interventionMode: string;
+  version: number;
+}
+
+// ─── Validation ────────────────────────────────────────────────────────────
+
+function validateInterventionPhase(phase: string): void {
+  if (!INTERVENTION_PHASES.includes(phase as InterventionPhase)) {
+    throw new ValidationError(
+      `Invalid intervention phase: ${phase}. Must be one of: ${INTERVENTION_PHASES.join(", ")}`
+    );
+  }
+}
+
+function validateInterventionMode(mode: string): void {
+  if (!INTERVENTION_MODES.includes(mode as InterventionMode)) {
+    throw new ValidationError(
+      `Invalid intervention mode: ${mode}. Must be one of: ${INTERVENTION_MODES.join(", ")}`
+    );
+  }
+}
+
+// ─── Service ───────────────────────────────────────────────────────────────
+
+/**
+ * Get current intervention state for an engagement.
+ * Note: interventionMode and interventionPhase are stored on Engagement model.
+ */
+export async function getInterventionState(
+  engagementId: string
+): Promise<InterventionState> {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: {
+      id: true,
+      interventionMode: true,
+      interventionPhase: true,
+      version: true,
+    },
+  });
+
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  return {
+    engagementId: engagement.id,
+    interventionMode: engagement.interventionMode,
+    interventionPhase: engagement.interventionPhase,
+    version: engagement.version,
+  };
+}
+
+/**
+ * Update intervention phase for an engagement.
+ * Separates intervention phase (where we are in the structured approach)
+ * from consulting stage (a separate lifecycle entity in future modules).
+ */
+export async function updateInterventionPhase(
+  engagementId: string,
+  input: UpdateInterventionPhaseInput,
+  actorId: string
+): Promise<void> {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: {
+      id: true,
+      status: true,
+      interventionPhase: true,
+      interventionMode: true,
+      version: true,
+    },
+  });
+
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  if (engagement.status === "archived") {
+    throw new ValidationError("Cannot update intervention state for an archived engagement");
+  }
+
+  // Validate the new phase value
+  validateInterventionPhase(input.interventionPhase);
+
+  // Check if phase is actually changing
+  if (input.interventionPhase === engagement.interventionPhase) {
+    logger.info("Intervention phase unchanged", { engagementId });
+    return;
+  }
+
+  const previousPhase = engagement.interventionPhase;
+
+  await optimisticUpdate("engagement", engagementId, input.version, () =>
+    db.engagement.update({
+      where: withVersionCheck({ id: engagementId }, input.version),
+      data: withVersionIncrement({ interventionPhase: input.interventionPhase }),
+    })
+  );
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.INTERVENTION_PHASE_CHANGED,
+    actorId,
+    entityType: "engagement",
+    entityId: engagementId,
+    payload: {
+      previousPhase,
+      newPhase: input.interventionPhase,
+      mode: engagement.interventionMode,
+    },
+    visibility: "internal",
+  });
+
+  // Trigger re-evaluation when phase changes
+  await triggerReEvaluation({
+    changeType: "intervention_override",
+    entityType: "engagement",
+    entityId: engagementId,
+    engagementId,
+    severity: "medium",
+    description: `Intervention phase changed from ${previousPhase} to ${input.interventionPhase}`,
+    triggeredBy: actorId,
+  });
+
+  logger.info("Intervention phase updated", {
+    engagementId,
+    previousPhase,
+    newPhase: input.interventionPhase,
+  });
+}
+
+/**
+ * Update intervention mode for an engagement.
+ * Note: Mode changes also trigger re-evaluation and should be coordinated
+ * with business condition and other factors.
+ */
+export async function updateInterventionMode(
+  engagementId: string,
+  input: UpdateInterventionModeInput,
+  actorId: string
+): Promise<void> {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: {
+      id: true,
+      status: true,
+      interventionMode: true,
+      interventionPhase: true,
+      version: true,
+    },
+  });
+
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  if (engagement.status === "archived") {
+    throw new ValidationError("Cannot update intervention state for an archived engagement");
+  }
+
+  // Validate the new mode value
+  validateInterventionMode(input.interventionMode);
+
+  // Check if mode is actually changing
+  if (input.interventionMode === engagement.interventionMode) {
+    logger.info("Intervention mode unchanged", { engagementId });
+    return;
+  }
+
+  const previousMode = engagement.interventionMode;
+
+  await optimisticUpdate("engagement", engagementId, input.version, () =>
+    db.engagement.update({
+      where: withVersionCheck({ id: engagementId }, input.version),
+      data: withVersionIncrement({ interventionMode: input.interventionMode }),
+    })
+  );
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.INTERVENTION_MODE_CHANGED,
+    actorId,
+    entityType: "engagement",
+    entityId: engagementId,
+    payload: {
+      previousMode,
+      newMode: input.interventionMode,
+      phase: engagement.interventionPhase,
+    },
+    visibility: "internal",
+  });
+
+  // Trigger re-evaluation when mode changes
+  await triggerReEvaluation({
+    changeType: "intervention_override",
+    entityType: "engagement",
+    entityId: engagementId,
+    engagementId,
+    severity: "high",
+    description: `Intervention mode changed from ${previousMode} to ${input.interventionMode}`,
+    triggeredBy: actorId,
+  });
+
+  logger.info("Intervention mode updated", {
+    engagementId,
+    previousMode,
+    newMode: input.interventionMode,
+  });
+}

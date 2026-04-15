@@ -11,8 +11,8 @@ import {
 import { validateEngagementTransition } from "@/policies/state-transition";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
-import type { EngagementStatus, InterventionMode } from "@/domain/constants/statuses";
-import { ENGAGEMENT_STATUSES, INTERVENTION_MODES } from "@/domain/constants/statuses";
+import type { EngagementStatus, InterventionMode, InterventionPhase } from "@/domain/constants/statuses";
+import { ENGAGEMENT_STATUSES, INTERVENTION_MODES, INTERVENTION_PHASES } from "@/domain/constants/statuses";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -42,6 +42,7 @@ export interface UpdateEngagementInput {
   healthStatus?: string;
   status?: EngagementStatus;
   interventionMode?: InterventionMode;
+  interventionPhase?: string;
   version: number;
 }
 
@@ -188,6 +189,16 @@ export async function updateEngagement(
     );
   }
 
+  // Validate intervention phase if changing
+  if (
+    input.interventionPhase &&
+    !INTERVENTION_PHASES.includes(input.interventionPhase as InterventionPhase)
+  ) {
+    throw new ValidationError(
+      `Invalid intervention phase: ${input.interventionPhase}. Must be one of: ${INTERVENTION_PHASES.join(", ")}`
+    );
+  }
+
   const { version, ...fields } = input;
   const data: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(fields)) {
@@ -203,6 +214,11 @@ export async function updateEngagement(
   const interventionModeChanged =
     input.interventionMode &&
     input.interventionMode !== engagement.interventionMode;
+
+  // Track if intervention phase is changing for re-evaluation
+  const interventionPhaseChanged =
+    input.interventionPhase &&
+    input.interventionPhase !== engagement.interventionPhase;
 
   // Track if status is changing for specific audit events
   const statusChanged = input.status && input.status !== currentStatus;
@@ -271,6 +287,31 @@ export async function updateEngagement(
     });
   }
 
+  // Trigger re-evaluation if intervention phase changed
+  if (interventionPhaseChanged) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.INTERVENTION_PHASE_CHANGED,
+      actorId,
+      entityType: "engagement",
+      entityId: engagementId,
+      payload: {
+        previousPhase: engagement.interventionPhase,
+        newPhase: input.interventionPhase,
+      },
+      visibility: "internal",
+    });
+
+    await triggerReEvaluation({
+      changeType: "intervention_override",
+      entityType: "engagement",
+      entityId: engagementId,
+      engagementId,
+      severity: "medium",
+      description: `Intervention phase changed from ${engagement.interventionPhase} to ${input.interventionPhase}`,
+      triggeredBy: actorId,
+    });
+  }
+
   logger.info("Engagement updated", { engagementId });
 }
 
@@ -330,6 +371,7 @@ export async function listEngagements(params: {
         status: true,
         healthStatus: true,
         interventionMode: true,
+        interventionPhase: true,
         serviceTier: true,
         createdAt: true,
         client: { select: { id: true, name: true } },
