@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
@@ -111,44 +112,65 @@ export async function assessCondition(
 
   validateConditionInput(input);
 
-  // Mark previous current profile as non-current
-  await db.businessConditionProfile.updateMany({
-    where: { engagementId: input.engagementId, isCurrent: true },
-    data: { isCurrent: false },
-  });
+  const idempotencyKey = `condition-assess:${input.engagementId}:${input.businessStatus}:${input.severityScore}:${actorId}`;
 
-  const profile = await db.businessConditionProfile.create({
-    data: {
-      engagementId: input.engagementId,
-      businessStatus: input.businessStatus,
-      severityScore: input.severityScore,
-      urgencyLevel: input.urgencyLevel,
-      cashPressureLevel: input.cashPressureLevel,
-      marginPressureLevel: input.marginPressureLevel,
-      clientConcentrationRisk: input.clientConcentrationRisk,
-      ownerDependencyRisk: input.ownerDependencyRisk,
-      keyPersonDependencyRisk: input.keyPersonDependencyRisk,
-      processMaturityLevel: input.processMaturityLevel,
-      managementMaturityLevel: input.managementMaturityLevel,
-      executionCapacityLevel: input.executionCapacityLevel,
-      moraleFragilityLevel: input.moraleFragilityLevel,
-      resilienceLevel: input.resilienceLevel,
-      growthReadinessLevel: input.growthReadinessLevel,
-      notes: input.notes ?? null,
-      assessedBy: actorId,
-      isCurrent: true,
-    },
-  });
+  const result = await withIdempotency(
+    idempotencyKey,
+    "business_condition.assess",
+    async () => {
+      // Use transaction to prevent race condition on isCurrent flag
+      // Both updateMany and create happen atomically
+      const profile = await db.$transaction(async (tx) => {
+        // Mark previous current profile as non-current
+        await tx.businessConditionProfile.updateMany({
+          where: { engagementId: input.engagementId, isCurrent: true },
+          data: { isCurrent: false },
+        });
+
+        // Create new profile as current
+        const newProfile = await tx.businessConditionProfile.create({
+          data: {
+            engagementId: input.engagementId,
+            businessStatus: input.businessStatus,
+            severityScore: input.severityScore,
+            urgencyLevel: input.urgencyLevel,
+            cashPressureLevel: input.cashPressureLevel,
+            marginPressureLevel: input.marginPressureLevel,
+            clientConcentrationRisk: input.clientConcentrationRisk,
+            ownerDependencyRisk: input.ownerDependencyRisk,
+            keyPersonDependencyRisk: input.keyPersonDependencyRisk,
+            processMaturityLevel: input.processMaturityLevel,
+            managementMaturityLevel: input.managementMaturityLevel,
+            executionCapacityLevel: input.executionCapacityLevel,
+            moraleFragilityLevel: input.moraleFragilityLevel,
+            resilienceLevel: input.resilienceLevel,
+            growthReadinessLevel: input.growthReadinessLevel,
+            notes: input.notes ?? null,
+            assessedBy: actorId,
+            isCurrent: true,
+          },
+        });
+
+        return newProfile;
+      });
+
+      return {
+        id: profile.id,
+        businessStatus: profile.businessStatus,
+        severityScore: profile.severityScore,
+      };
+    }
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.CONDITION_ASSESSED,
     actorId,
     entityType: "business_condition_profile",
-    entityId: profile.id,
+    entityId: result.result.id,
     payload: {
       engagementId: input.engagementId,
-      businessStatus: input.businessStatus,
-      severityScore: input.severityScore,
+      businessStatus: result.result.businessStatus,
+      severityScore: result.result.severityScore,
     },
     visibility: "internal",
   });
@@ -157,21 +179,21 @@ export async function assessCondition(
   await triggerReEvaluation({
     changeType: "new_critical_evidence",
     entityType: "business_condition_profile",
-    entityId: profile.id,
+    entityId: result.result.id,
     engagementId: input.engagementId,
-    severity: input.severityScore >= 7 ? "high" : "medium",
-    description: `Business condition assessed: ${input.businessStatus} (severity ${input.severityScore}/10)`,
+    severity: result.result.severityScore >= 7 ? "high" : "medium",
+    description: `Business condition assessed: ${result.result.businessStatus} (severity ${result.result.severityScore}/10)`,
     triggeredBy: actorId,
   });
 
   logger.info("Business condition assessed", {
-    profileId: profile.id,
+    profileId: result.result.id,
     engagementId: input.engagementId,
-    businessStatus: input.businessStatus,
-    severityScore: input.severityScore,
+    businessStatus: result.result.businessStatus,
+    severityScore: result.result.severityScore,
   });
 
-  return { id: profile.id };
+  return { id: result.result.id };
 }
 
 export async function getConditionHistory(engagementId: string) {
