@@ -18,4 +18,4 @@
 - Module 14: not started
 
 ## Current target
-- module-03 (not started)
+- module-03/schema.md
