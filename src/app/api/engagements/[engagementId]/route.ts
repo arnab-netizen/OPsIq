@@ -7,7 +7,6 @@ import { z } from "zod/v4";
 import {
   ENGAGEMENT_STATUSES,
   INTERVENTION_MODES,
-  INTERVENTION_PHASES,
   SERVICE_TIERS,
   ENGAGEMENT_MODES,
   HEALTH_STATUSES,
@@ -25,7 +24,6 @@ const updateEngagementSchema = z.object({
   healthStatus: z.enum(HEALTH_STATUSES).optional(),
   status: z.enum(ENGAGEMENT_STATUSES).optional(),
   interventionMode: z.enum(INTERVENTION_MODES).optional(),
-  interventionPhase: z.enum(INTERVENTION_PHASES).optional(),
   version: z.number().int().min(1),
 });
 
@@ -45,6 +43,17 @@ export const PATCH = withRequestContext(async (request, context) => {
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
     internalOnly: true,
   });
+
+  // Check for interventionPhase in raw request body to provide clear error
+  const rawBody = await request.clone().json().catch(() => ({}));
+  if ("interventionPhase" in rawBody) {
+    return Response.json(
+      {
+        error: "interventionPhase updates are not allowed here. Use PATCH /engagements/[id]/intervention instead.",
+      },
+      { status: 400 }
+    );
+  }
 
   const body = await parseRequestBody(request, updateEngagementSchema);
   await updateEngagement(engagementId, body, session.user.id);
