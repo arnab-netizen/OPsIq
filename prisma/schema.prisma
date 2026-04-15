@@ -100,6 +100,7 @@ model LeadRecord {
   engagementId    String?   @map("engagement_id") @db.Uuid
   assignedTo      String?   @map("assigned_to") @db.Uuid
   createdBy       String?   @map("created_by") @db.Uuid
+  version         Int       @default(1)
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 

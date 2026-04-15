@@ -60,6 +60,39 @@ export async function createContact(
   return { id: contact.id };
 }
 
+export async function deactivateContact(
+  contactId: string,
+  actorId: string
+): Promise<void> {
+  const contact = await db.clientContact.findUnique({
+    where: { id: contactId },
+  });
+  if (!contact) throw new NotFoundError("ClientContact", contactId);
+
+  if (!contact.isActive) {
+    throw new NotFoundError("ClientContact", contactId);
+  }
+
+  await db.clientContact.update({
+    where: { id: contactId },
+    data: { isActive: false },
+  });
+
+  await emitAuditEvent({
+    eventName: "contact.deactivated",
+    actorId,
+    entityType: "client_contact",
+    entityId: contactId,
+    payload: { clientId: contact.clientId },
+    visibility: "internal",
+  });
+
+  logger.info("Client contact deactivated", {
+    contactId,
+    clientId: contact.clientId,
+  });
+}
+
 export async function getContactsForClient(clientId: string) {
   return db.clientContact.findMany({
     where: { clientId, isActive: true },
