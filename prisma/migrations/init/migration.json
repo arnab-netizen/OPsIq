@@ -1,0 +1,235 @@
+{
+  "version": "1.1.8",
+  "dialect": "postgresql",
+  "steps": [
+    {
+      "stepType": "CreateEnum",
+      "enumName": "shock_event_types",
+      "values": [
+        "KEY_EMPLOYEE_LOSS",
+        "MAJOR_CLIENT_LOSS",
+        "PAYROLL_PRESSURE",
+        "MARGIN_COLLAPSE",
+        "SUPPLIER_FAILURE",
+        "SERVICE_BREAKDOWN",
+        "COMPLIANCE_ISSUE",
+        "REPUTATION_DAMAGE",
+        "INTERNAL_CONFLICT",
+        "OWNER_WITHDRAWAL",
+        "EXECUTION_STALL"
+      ]
+    },
+    {
+      "stepType": "CreateEnum",
+      "enumName": "shock_event_severities",
+      "values": [
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+      ]
+    },
+    {
+      "stepType": "CreateModel",
+      "model": "ShockEvent",
+      "primaryKey": {
+        "name": null,
+        "fields": [
+          "id"
+        ]
+      },
+      "uniqueConstraints": [],
+      "indexes": [
+        {
+          "model": "ShockEvent",
+          "type": "BTREE",
+          "isDefinedInOneLine": true,
+          "fields": [
+            "engagementId"
+          ]
+        },
+        {
+          "model": "ShockEvent",
+          "type": "BTREE",
+          "isDefinedInOneLine": true,
+          "fields": [
+            "happenedAt"
+          ]
+        }
+      ],
+      "fields": [
+        {
+          "name": "id",
+          "kind": "scalar",
+          "isList": false,
+          "isRequired": true,
+          "isUnique": false,
+          "isId": true,
+          "type": "String",
+          "default": {
+            "name": "uuid()",
+            "args": []
+          },
+          "isGenerated": false,
+          "isUpdatedAt": false,
+          "relationName": null,
+          "relationFromFields": [],
+          "relationToFields": [],
+          "isImplicitBackRelationField": false
+        },
+        {
+          "name": "engagementId",
+          "kind": "scalar",
+          "isList": false,
+          "isRequired": true,
+          "isUnique": false,
+          "isId": false,
+          "type": "String",
+          "default": null,
+          "isGenerated": false,
+          "isUpdatedAt": false,
+          "relationName": null,
+          "relationFromFields": [
+            "engagement_id"
+          ],
+          "relationToFields": [
+            "id"
+          ],
+          "isImplicitBackRelationField": false
+        },
+        {
+          "name": "type",
+          "kind": "enum",
+          "isList": false,
+          "isRequired": true,
+          "isUnique": false,
+          "isId": false,
+          "type": "ShockEventType",
+          "default": null,
+          "isGenerated": false,
+          "isUpdatedAt": false,
+          "relationName": null,
+          "relationFromFields": [],
+          "relationToFields": [],
+          "isImplicitBackRelationField": false
+        },
+        {
+          "name": "severity",
+          "kind": "enum",
+          "isList": false,
+          "isRequired": true,
+          "isUnique": false,
+          "isId": false,
+          "type": "ShockEventSeverity",
+          "default": null,
+          "isGenerated": false,
+          "isUpdatedAt": false,
+          "relationName": null,
+          "relationFromFields": [],
+          "relationToFields": [],
+          "isImplicitBackRelationField": false
+        },
+        {
+          "name": "happenedAt",
+          "kind": "scalar",
+          "isList": false,
+          "isRequired": true,
+          "isUnique": false,
+          "isId": false,
+          "type": "DateTime",
+          "default": null,
+          "isGenerated": false,
+          "isUpdatedAt": false,
+          "relationName": null,
+          "relationFromFields": [],
+          "relationToFields": [],
+          "isImplicitBackRelationField": false
+        },
+        {
+          "name": "notes",
+          "kind": "scalar",
+          "isList": false,
+          "isRequired": false,
+          "isUnique": false,
+          "isId": false,
+          "type": "String",
+          "default": null,
+          "isGenerated": false,
+          "isUpdatedAt": false,
+          "relationName": null,
+          "relationFromFields": [],
+          "relationToFields": [],
+          "isImplicitBackRelationField": false
+        },
+        {
+          "name": "createdBy",
+          "kind": "scalar",
+          "isList": false,
+          "isRequired": false,
+          "isUnique": false,
+          "isId": false,
+          "type": "String",
+          "default": null,
+          "isGenerated": false,
+          "isUpdatedAt": false,
+          "relationName": null,
+          "relationFromFields": [
+            "created_by"
+          ],
+          "relationToFields": [],
+          "isImplicitBackRelationField": false
+        },
+        {
+          "name": "createdAt",
+          "kind": "scalar",
+          "isList": false,
+          "isRequired": true,
+          "isUnique": false,
+          "isId": false,
+          "type": "DateTime",
+          "default": {
+            "name": "now()",
+            "args": []
+          },
+          "isGenerated": false,
+          "isUpdatedAt": false,
+          "relationName": null,
+          "relationFromFields": [],
+          "relationToFields": [],
+          "isImplicitBackRelationField": false
+        },
+        {
+          "name": "engagement",
+          "kind": "object",
+          "isList": false,
+          "isRequired": true,
+          "isUnique": false,
+          "isId": false,
+          "type": "Engagement",
+          "relationName": "EngagementToShockEvent",
+          "relationFromFields": [
+            "engagement_id"
+          ],
+          "relationToFields": [
+            "id"
+          ],
+          "isImplicitBackRelationField": false
+        }
+      ]
+    },
+    {
+      "stepType": "AddField",
+      "model": "Engagement",
+      "name": "shockEvents",
+      "type": "ShockEvent",
+      "isList": true,
+      "isRequired": false,
+      "isUnique": false,
+      "isId": false,
+      "kind": "object",
+      "relationName": "EngagementToShockEvent",
+      "relationToFields": []
+    }
+  ],
+  "done": true
+}

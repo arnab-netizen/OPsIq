@@ -190,6 +190,7 @@ model Engagement {
   conditionProfiles     BusinessConditionProfile[]
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
+  shockEvents           ShockEvent[]
 
   @@index([clientId])
   @@index([status])
@@ -292,4 +293,48 @@ model ScheduledTask {
   @@index([status, scheduledFor])
   @@index([taskName])
   @@map("scheduled_tasks")
+}
+
+// ─── Module 4: Shock Events ────────────────────────────────────────────────
+
+enum ShockEventType {
+  KEY_EMPLOYEE_LOSS
+  MAJOR_CLIENT_LOSS
+  PAYROLL_PRESSURE
+  MARGIN_COLLAPSE
+  SUPPLIER_FAILURE
+  SERVICE_BREAKDOWN
+  COMPLIANCE_ISSUE
+  REPUTATION_DAMAGE
+  INTERNAL_CONFLICT
+  OWNER_WITHDRAWAL
+  EXECUTION_STALL
+
+  @@map("shock_event_types")
+}
+
+enum ShockEventSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+  @@map("shock_event_severities")
+}
+
+model ShockEvent {
+  id           String   @id @default(uuid()) @db.Uuid
+  engagementId String   @map("engagement_id") @db.Uuid
+  type         ShockEventType
+  severity     ShockEventSeverity
+  happenedAt   DateTime @map("happened_at")
+  notes        String?
+  createdBy    String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  engagement   Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@index([happenedAt])
+  @@map("shock_events")
 }
