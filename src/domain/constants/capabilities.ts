@@ -97,6 +97,10 @@ export const CAPABILITIES = {
   REVIEW_MANAGE: "review:manage",
   REVIEW_VIEW: "review:view",
 
+  // Shock Events
+  SHOCK_EVENT_CREATE: "shock_event:create",
+  SHOCK_EVENT_VIEW: "shock_event:view",
+
   // Files
   FILE_UPLOAD: "file:upload",
   FILE_VIEW: "file:view",
