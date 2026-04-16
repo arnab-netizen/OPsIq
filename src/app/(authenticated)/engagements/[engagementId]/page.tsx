@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/ui/primitives";
+import ShockEventList from "./shock-event-list";
 
 const STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   draft: "muted",
@@ -255,6 +256,11 @@ export default async function EngagementDetailPage({
           </div>
         )}
       </div>
+      {/* ─── Shock Events ──────────────────────────────────────────── */}
+      <div className="mt-8">
+        <ShockEventList engagementId={engagementId} />
+      </div>
     </div>
+
   );
 }
