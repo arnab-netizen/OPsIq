@@ -24,6 +24,9 @@ model User {
   roleAssignments       UserRoleAssignment[]
   auditEvents           AuditEvent[]
   engagementMemberships EngagementMembership[]
+  evidenceItemsAsSourceOwner EvidenceItem[] @relation("EvidenceItemSourceOwner")
+  evidenceBundlesAsSubmitter EvidenceBundle[] @relation("EvidenceBundleSubmitter")
+  evidenceFilesAsUploader EvidenceFile[] @relation("EvidenceFileUploader")
 
   @@map("users")
 }
@@ -191,6 +194,8 @@ model Engagement {
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
   shockEvents           ShockEvent[]
+  evidenceItems         EvidenceItem[]
+  evidenceBundles       EvidenceBundle[]
 
   @@index([clientId])
   @@index([status])
@@ -337,4 +342,123 @@ model ShockEvent {
   @@index([engagementId])
   @@index([happenedAt])
   @@map("shock_events")
+}
+
+// ─── Module 5: Evidence Vault ───────────────────────────────────────────────
+
+enum EvidenceCategory {
+  FINANCIAL
+  OPERATIONAL
+  HUMAN
+  RESILIENCE
+  CLIENT
+  COMMERCIAL
+  LEADERSHIP
+  EXECUTION
+
+  @@map("evidence_categories")
+}
+
+enum EvidenceValidationStatus {
+  DRAFT
+  SUBMITTED
+  VALIDATED
+  REJECTED
+
+  @@map("evidence_validation_statuses")
+}
+
+enum EvidenceTraceabilityStatus {
+  TRACED
+  UNTRACED
+  DISPUTED
+
+  @@map("evidence_traceability_statuses")
+}
+
+enum EvidenceBundleStatus {
+  DRAFT
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+
+  @@map("evidence_bundle_statuses")
+}
+
+model EvidenceItem {
+  id                      String                     @id @default(uuid()) @db.Uuid
+  engagementId            String                     @map("engagement_id") @db.Uuid
+  bundleId                String?                    @map("bundle_id") @db.Uuid
+  sourceOwnerId           String?                    @map("source_owner_id") @db.Uuid
+  category                EvidenceCategory
+  evidenceType            String                     @map("evidence_type")
+  sourceType              String                     @map("source_type")
+  sourceLabel             String                     @map("source_label")
+  captureMethod           String                     @map("capture_method")
+  capturedAt              DateTime                   @map("captured_at")
+  validationStatus        EvidenceValidationStatus   @default(DRAFT) @map("validation_status")
+  traceabilityStatus      EvidenceTraceabilityStatus @default(UNTRACED) @map("traceability_status")
+  visibility              String                     @default("internal")
+  title                   String
+  description             String?
+  findings                String?
+  version                 Int                        @default(1)
+  createdBy               String?                    @map("created_by") @db.Uuid
+  createdAt               DateTime                   @default(now()) @map("created_at")
+  updatedAt               DateTime                   @updatedAt @map("updated_at")
+
+  engagement              Engagement @relation(fields: [engagementId], references: [id])
+  bundle                  EvidenceBundle? @relation(fields: [bundleId], references: [id])
+  sourceOwner             User? @relation("EvidenceItemSourceOwner", fields: [sourceOwnerId], references: [id])
+  files                   EvidenceFile[]
+
+  @@index([engagementId])
+  @@index([bundleId])
+  @@index([validationStatus])
+  @@index([traceabilityStatus])
+  @@index([capturedAt])
+  @@map("evidence_items")
+}
+
+model EvidenceBundle {
+  id                      String                @id @default(uuid()) @db.Uuid
+  engagementId            String                @map("engagement_id") @db.Uuid
+  submittedBy             String?               @map("submitted_by") @db.Uuid
+  title                   String
+  description             String?
+  submittedAt             DateTime?             @map("submitted_at")
+  status                  EvidenceBundleStatus  @default(DRAFT)
+  version                 Int                   @default(1)
+  visibility              String                @default("internal")
+  createdBy               String?               @map("created_by") @db.Uuid
+  createdAt               DateTime              @default(now()) @map("created_at")
+  updatedAt               DateTime              @updatedAt @map("updated_at")
+
+  engagement              Engagement @relation(fields: [engagementId], references: [id])
+  items                   EvidenceItem[]
+  submitter               User? @relation("EvidenceBundleSubmitter", fields: [submittedBy], references: [id])
+
+  @@index([engagementId])
+  @@index([status])
+  @@index([submittedAt])
+  @@map("evidence_bundles")
+}
+
+model EvidenceFile {
+  id                      String   @id @default(uuid()) @db.Uuid
+  evidenceItemId          String   @map("evidence_item_id") @db.Uuid
+  fileName                String   @map("file_name")
+  fileSize                Int      @map("file_size")
+  mimeType                String   @map("mime_type")
+  storageKey              String   @unique @map("storage_key")
+  checksum                String?
+  uploadedBy              String?  @map("uploaded_by") @db.Uuid
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  evidenceItem            EvidenceItem @relation(fields: [evidenceItemId], references: [id], onDelete: Cascade)
+  uploader                User? @relation("EvidenceFileUploader", fields: [uploadedBy], references: [id])
+
+  @@index([evidenceItemId])
+  @@index([storageKey])
+  @@map("evidence_files")
 }
