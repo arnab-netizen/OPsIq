@@ -54,6 +54,10 @@ export const AUDIT_EVENTS = {
   EVIDENCE_SUBMITTED: "evidence.submitted",
   EVIDENCE_VALIDATED: "evidence.validated",
   EVIDENCE_REJECTED: "evidence.rejected",
+  EVIDENCE_BUNDLE_CREATED: "evidence_bundle.created",
+  EVIDENCE_BUNDLE_UPDATED: "evidence_bundle.updated",
+  EVIDENCE_BUNDLE_ITEM_ADDED: "evidence_bundle.evidence_added",
+  EVIDENCE_BUNDLE_ITEM_REMOVED: "evidence_bundle.evidence_removed",
 
   // Finding
   FINDING_CREATED: "finding.created",
