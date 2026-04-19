@@ -1,10 +1,10 @@
 # Session handoff
 
 ## Last known state
-Module 02 was partially implemented in Claude with frontend pages for leads, clients, and engagements.
+Modules 02-05 complete. Ready to implement Module 06.
 
-## Caution
-Do not continue adding more UI before recovery and schema alignment are complete.
+## Current focus
+Schema and service layer for review cadence and health status.
 
 ## Resume instruction
-Start with `docs/opsiq/modules/module-02/recovery.md`.
+Start with `docs/opsiq/modules/module-06/schema.md`.

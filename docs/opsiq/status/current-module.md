@@ -1,13 +1,13 @@
 # Current module
 
 ## Module
-Module 02 — Clients, Leads, Engagements, and Business Condition
+Module 06 — Review Cadence and Health Status
 
 ## Current slice
-recovery
+schema
 
 ## Goal
-Reconcile the existing partial Module 02 work with the repository rules before adding more code.
+Define schema and service layer for review cadence and health status governance.
 
 ## Next slices in order
 1. recovery
