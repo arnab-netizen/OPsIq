@@ -233,38 +233,65 @@ model BusinessConditionProfile {
 }
 
 // ─── Module 6: Finding ─────────────────────────────────────────────────────
+// Finding: Core entity for recording and tracking business-critical findings
+// across engagement lifecycle. Supports linear supersession chains and strict
+// state transitions from open→in_progress→validated→closed (or superseded).
+// See docs/opsiq/modules/module-06/finding-invariants.md for full contract.
 
 model Finding {
+  // Identity & Scope
   id                    String    @id @default(uuid()) @db.Uuid
-  engagementId          String    @map("engagement_id") @db.Uuid
-  stageId               String?   @map("stage_id") @db.Uuid // optional reference to future lifecycle stage
-  title                 String
-  statement             String
-  severity              String    // "low" | "medium" | "high" | "critical"
-  severityValidatedAt   DateTime? @map("severity_validated_at") // when severity was locked; immutable after this
-  status                String    @default("open") // "open" | "in_progress" | "validated" | "closed" | "superseded" (terminal)
-  statusUpdatedAt       DateTime? @map("status_updated_at") // track when status transitions occur
-  supersededAt          DateTime? @map("superseded_at") // when finding was superseded; immutable after this
-  confidenceLabel       String    @map("confidence_label") // "low" | "medium" | "high" (severity confidence)
-  confidenceStatus      String    @default("provisional") @map("confidence_status") // "provisional" | "final" (validation state)
-  clientVisibilityStatus String   @default("internal") @map("client_visibility_status") // "internal" | "client_visible"
-  supersedesFindingId   String?   @map("supersedes_finding_id") @db.Uuid // link to finding this supersedes; cannot be self-ref or cyclic
-  issueId               String?   @map("issue_id") @db.Uuid // optional reference for "one active per issue" constraint (future module)
-  version               Int       @default(1)
+  engagementId          String    @map("engagement_id") @db.Uuid // must belong to engagement; immutable
+  stageId               String?   @map("stage_id") @db.Uuid // optional lifecycle stage reference
+
+  // Content
+  title                 String    // finding summary; mutable until validated
+  statement             String    // finding description; mutable until validated
+
+  // Severity & Confidence (separate dimensions)
+  severity              String    // "low" | "medium" | "high" | "critical"; locked after severityValidatedAt
+  severityValidatedAt   DateTime? @map("severity_validated_at") // null=unvalidated, set=immutable
+  confidenceLabel       String    @map("confidence_label") // "low" | "medium" | "high" = confidence in severity
+  confidenceStatus      String    @default("provisional") @map("confidence_status") // "provisional" | "final"; one-way transition
+
+  // Lifecycle: Status (ordered progression)
+  status                String    @default("open") // "open" | "in_progress" | "validated" | "closed" | "superseded"
+  statusUpdatedAt       DateTime? @map("status_updated_at") // tracks when status last transitioned; for audit trail
+
+  // Visibility & Access
+  clientVisibilityStatus String   @default("internal") @map("client_visibility_status") // "internal" | "client_visible"; immutable
+
+  // Supersession (linear chain, no cycles)
+  supersedesFindingId   String?   @map("supersedes_finding_id") @db.Uuid // finding this supersedes (if any)
+  supersededAt          DateTime? @map("superseded_at") // when finding became superseded; null=active, set=immutable
+
+  // Governance & Querying
+  issueId               String?   @map("issue_id") @db.Uuid // link to issue (future module); for one-active-per-issue constraint
+  version               Int       @default(1) // optimistic locking; must increment on every mutation
   createdBy             String?   @map("created_by") @db.Uuid
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
+  // Relations
   engagement            Engagement      @relation(fields: [engagementId], references: [id])
   supersededBy          Finding?        @relation("FindingSupersession", fields: [supersedesFindingId], references: [id])
   supersedes            Finding[]       @relation("FindingSupersession")
   evidenceLinks         FindingEvidenceLink[]
 
-  @@index([engagementId])
-  @@index([engagementId, status])
-  @@index([engagementId, severity])
-  @@index([engagementId, confidenceStatus])
-  @@index([issueId, status])
+  // Indexes for critical query patterns
+  @@index([engagementId]) // basic engagement queries
+  @@index([engagementId, status]) // list active/validated findings in engagement
+  @@index([engagementId, severity]) // list critical/high findings in engagement
+  @@index([engagementId, confidenceStatus]) // list provisional findings in engagement
+  @@index([engagementId, severityValidatedAt]) // find unvalidated findings
+  @@index([issueId, status]) // enforce one-active-per-issue
+  @@index([supersedesFindingId]) // traverse supersession chain
+
+  // Constraints enforced by database (see finding-invariants.md)
+  // - findings_no_self_supersession: supersedesFindingId != id
+  // - findings_superseded_requires_chain: status='superseded' → supersedesFindingId NOT NULL
+  // - backend enforces: no cycles, one-way confidence, strict status transitions
+
   @@map("findings")
 }
 

@@ -39,17 +39,23 @@ CREATE TABLE "finding_evidence_links" (
 -- CreateIndex
 CREATE INDEX "findings_engagement_id_idx" ON "findings"("engagement_id");
 
--- CreateIndex
+-- CreateIndex (engagement-scoped queries)
 CREATE INDEX "findings_engagement_id_status_idx" ON "findings"("engagement_id", "status");
 
--- CreateIndex
+-- CreateIndex (severity filtering by engagement)
 CREATE INDEX "findings_engagement_id_severity_idx" ON "findings"("engagement_id", "severity");
 
--- CreateIndex
+-- CreateIndex (confidence status by engagement)
 CREATE INDEX "findings_engagement_id_confidence_status_idx" ON "findings"("engagement_id", "confidence_status");
 
--- CreateIndex
+-- CreateIndex (find unvalidated findings)
+CREATE INDEX "findings_engagement_id_severity_validated_at_idx" ON "findings"("engagement_id", "severity_validated_at");
+
+-- CreateIndex (enforce one-active-per-issue constraint)
 CREATE INDEX "findings_issue_id_status_idx" ON "findings"("issue_id", "status");
+
+-- CreateIndex (traverse supersession chains)
+CREATE INDEX "findings_supersedes_finding_id_idx" ON "findings"("supersedes_finding_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "finding_evidence_links_finding_id_evidence_id_key" ON "finding_evidence_links"("finding_id", "evidence_id");
