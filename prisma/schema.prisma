@@ -242,10 +242,11 @@ model Finding {
   statement             String
   severity              String    // "low" | "medium" | "high" | "critical"
   severityValidatedAt   DateTime? @map("severity_validated_at") // when severity was locked; immutable after this
-  status                String    @default("draft") // "draft" | "active" | "archived" | "superseded"
+  status                String    @default("open") // "open" | "in_progress" | "validated" | "closed" | "superseded" (terminal)
+  statusUpdatedAt       DateTime? @map("status_updated_at") // track when status transitions occur
   supersededAt          DateTime? @map("superseded_at") // when finding was superseded; immutable after this
-  confidenceLabel       String    @map("confidence_label") // "low" | "medium" | "high"
-  provisionalFlag       Boolean   @default(false) @map("provisional_flag")
+  confidenceLabel       String    @map("confidence_label") // "low" | "medium" | "high" (severity confidence)
+  confidenceStatus      String    @default("provisional") @map("confidence_status") // "provisional" | "final" (validation state)
   clientVisibilityStatus String   @default("internal") @map("client_visibility_status") // "internal" | "client_visible"
   supersedesFindingId   String?   @map("supersedes_finding_id") @db.Uuid // link to finding this supersedes; cannot be self-ref or cyclic
   issueId               String?   @map("issue_id") @db.Uuid // optional reference for "one active per issue" constraint (future module)
@@ -262,7 +263,7 @@ model Finding {
   @@index([engagementId])
   @@index([engagementId, status])
   @@index([engagementId, severity])
-  @@index([engagementId, provisionalFlag])
+  @@index([engagementId, confidenceStatus])
   @@index([issueId, status])
   @@map("findings")
 }

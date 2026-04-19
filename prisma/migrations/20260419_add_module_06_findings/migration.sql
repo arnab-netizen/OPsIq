@@ -7,10 +7,11 @@ CREATE TABLE "findings" (
     "statement" TEXT NOT NULL,
     "severity" TEXT NOT NULL,
     "severity_validated_at" TIMESTAMP(3),
-    "status" TEXT NOT NULL DEFAULT 'draft',
+    "status" TEXT NOT NULL DEFAULT 'open',
+    "status_updated_at" TIMESTAMP(3),
     "superseded_at" TIMESTAMP(3),
     "confidence_label" TEXT NOT NULL,
-    "provisional_flag" BOOLEAN NOT NULL DEFAULT false,
+    "confidence_status" TEXT NOT NULL DEFAULT 'provisional',
     "client_visibility_status" TEXT NOT NULL DEFAULT 'internal',
     "supersedes_finding_id" UUID,
     "issue_id" UUID,
@@ -45,7 +46,7 @@ CREATE INDEX "findings_engagement_id_status_idx" ON "findings"("engagement_id", 
 CREATE INDEX "findings_engagement_id_severity_idx" ON "findings"("engagement_id", "severity");
 
 -- CreateIndex
-CREATE INDEX "findings_engagement_id_provisional_flag_idx" ON "findings"("engagement_id", "provisional_flag");
+CREATE INDEX "findings_engagement_id_confidence_status_idx" ON "findings"("engagement_id", "confidence_status");
 
 -- CreateIndex
 CREATE INDEX "findings_issue_id_status_idx" ON "findings"("issue_id", "status");
