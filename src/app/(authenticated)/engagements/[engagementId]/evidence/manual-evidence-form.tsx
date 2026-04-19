@@ -1,12 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Button, Input, Textarea, Select } from "@/ui/primitives";
+import { useState, useEffect } from "react";
+import { Button, Input, Textarea, Select, LoadingState } from "@/ui/primitives";
 
 interface ManualEvidenceFormProps {
   engagementId: string;
   onSuccess: () => void;
   onCancel: () => void;
+}
+
+interface ClientContact {
+  id: string;
+  name: string;
+  role: string | null;
 }
 
 export function ManualEvidenceForm({
@@ -16,6 +22,36 @@ export function ManualEvidenceForm({
 }: ManualEvidenceFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sourceType, setSourceType] = useState<string>("");
+  const [contacts, setContacts] = useState<ClientContact[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+
+  // Fetch client contacts when component mounts
+  useEffect(() => {
+    async function fetchContacts() {
+      setIsLoadingContacts(true);
+      try {
+        const engRes = await fetch(
+          `/api/engagements/${engagementId}`
+        );
+        if (!engRes.ok) return;
+        const engagement = await engRes.json();
+
+        const clientRes = await fetch(
+          `/api/clients/${engagement.clientId}/contacts`
+        );
+        if (!clientRes.ok) return;
+        const { contacts } = await clientRes.json();
+        setContacts(contacts ?? []);
+      } catch {
+        // Silent fail - contacts are optional
+      } finally {
+        setIsLoadingContacts(false);
+      }
+    }
+
+    fetchContacts();
+  }, [engagementId]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -23,12 +59,21 @@ export function ManualEvidenceForm({
     setError(null);
 
     const formData = new FormData(e.currentTarget);
+    const selectedSourceType = formData.get("sourceType") as string;
+    const sourceContactId = formData.get("sourceContactId") as string;
 
-    const body = {
+    // Validate: PERSON requires sourceContactId
+    if (selectedSourceType === "PERSON" && !sourceContactId) {
+      setError("Please select a contact when source type is Person");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const body: Record<string, any> = {
       engagementId,
       category: formData.get("category"),
       evidenceType: "FREE_TEXT",
-      sourceType: formData.get("sourceType"),
+      sourceType: selectedSourceType,
       sourceLabel: formData.get("sourceLabel"),
       captureMethod: formData.get("captureMethod"),
       title: formData.get("title"),
@@ -37,6 +82,11 @@ export function ManualEvidenceForm({
       traceabilityStatus: formData.get("traceabilityStatus"),
       visibility: formData.get("visibility"),
     };
+
+    // Only include sourceContactId if PERSON
+    if (selectedSourceType === "PERSON" && sourceContactId) {
+      body.sourceContactId = sourceContactId;
+    }
 
     try {
       const res = await fetch("/api/evidence", {
@@ -108,6 +158,7 @@ export function ManualEvidenceForm({
             label="Source Type"
             required
             placeholder="Select source type..."
+            onChange={(e) => setSourceType(e.currentTarget.value)}
             options={[
               { value: "PERSON", label: "Person" },
               { value: "DOCUMENT", label: "Document" },
@@ -123,6 +174,29 @@ export function ManualEvidenceForm({
           required
           placeholder="e.g., John Doe, Financial Report Q4"
         />
+
+        {sourceType === "PERSON" && (
+          <div>
+            {isLoadingContacts ? (
+              <LoadingState message="Loading contacts..." />
+            ) : contacts.length === 0 ? (
+              <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+                No contacts available for this engagement. You can still create evidence, but must contact your system administrator to link a source contact later.
+              </div>
+            ) : (
+              <Select
+                name="sourceContactId"
+                label="Source Contact"
+                required
+                placeholder="Select a contact..."
+                options={contacts.map((contact) => ({
+                  value: contact.id,
+                  label: `${contact.name}${contact.role ? ` (${contact.role})` : ""}`,
+                }))}
+              />
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <Select
