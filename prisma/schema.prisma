@@ -261,9 +261,8 @@ model Finding {
 
   @@index([engagementId])
   @@index([engagementId, status])
-  @@index([status])
-  @@index([severity])
-  @@index([provisionalFlag])
+  @@index([engagementId, severity])
+  @@index([engagementId, provisionalFlag])
   @@index([issueId, status])
   @@map("findings")
 }

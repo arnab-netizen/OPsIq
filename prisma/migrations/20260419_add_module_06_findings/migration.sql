@@ -42,13 +42,10 @@ CREATE INDEX "findings_engagement_id_idx" ON "findings"("engagement_id");
 CREATE INDEX "findings_engagement_id_status_idx" ON "findings"("engagement_id", "status");
 
 -- CreateIndex
-CREATE INDEX "findings_status_idx" ON "findings"("status");
+CREATE INDEX "findings_engagement_id_severity_idx" ON "findings"("engagement_id", "severity");
 
 -- CreateIndex
-CREATE INDEX "findings_severity_idx" ON "findings"("severity");
-
--- CreateIndex
-CREATE INDEX "findings_provisional_flag_idx" ON "findings"("provisional_flag");
+CREATE INDEX "findings_engagement_id_provisional_flag_idx" ON "findings"("engagement_id", "provisional_flag");
 
 -- CreateIndex
 CREATE INDEX "findings_issue_id_status_idx" ON "findings"("issue_id", "status");
