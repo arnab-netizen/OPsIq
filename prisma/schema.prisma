@@ -190,6 +190,7 @@ model Engagement {
   conditionProfiles     BusinessConditionProfile[]
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
+  findings              Finding[]
 
   @@index([clientId])
   @@index([status])
@@ -229,6 +230,52 @@ model BusinessConditionProfile {
   @@index([engagementId, isCurrent])
   @@index([engagementId])
   @@map("business_condition_profiles")
+}
+
+// ─── Module 6: Finding ─────────────────────────────────────────────────────
+
+model Finding {
+  id                    String    @id @default(uuid()) @db.Uuid
+  engagementId          String    @map("engagement_id") @db.Uuid
+  stageId               String?   @map("stage_id") @db.Uuid // optional reference to future lifecycle stage
+  title                 String
+  statement             String
+  severity              String    // "low" | "medium" | "high" | "critical"
+  status                String    @default("draft") // "draft" | "active" | "archived" | "superseded"
+  confidenceLabel       String    @map("confidence_label") // "low" | "medium" | "high"
+  provisionalFlag       Boolean   @default(false) @map("provisional_flag")
+  clientVisibilityStatus String   @default("internal") @map("client_visibility_status") // "internal" | "client_visible"
+  supersedesFindingId   String?   @map("supersedes_finding_id") @db.Uuid // optional link to finding this supersedes
+  version               Int       @default(1)
+  createdBy             String?   @map("created_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  engagement            Engagement      @relation(fields: [engagementId], references: [id])
+  supersededBy          Finding?        @relation("FindingSupersession", fields: [supersedesFindingId], references: [id])
+  supersedes            Finding[]       @relation("FindingSupersession")
+  evidenceLinks         FindingEvidenceLink[]
+
+  @@index([engagementId])
+  @@index([status])
+  @@index([severity])
+  @@index([provisionalFlag])
+  @@map("findings")
+}
+
+model FindingEvidenceLink {
+  id          String    @id @default(uuid()) @db.Uuid
+  findingId   String    @map("finding_id") @db.Uuid
+  evidenceId  String    @map("evidence_id") @db.Uuid // references future Evidence entity
+  linkedAt    DateTime  @default(now()) @map("linked_at")
+  notes       String?
+
+  finding     Finding   @relation(fields: [findingId], references: [id])
+
+  @@unique([findingId, evidenceId])
+  @@index([findingId])
+  @@index([evidenceId])
+  @@map("finding_evidence_links")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────
