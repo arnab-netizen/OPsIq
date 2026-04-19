@@ -19,7 +19,9 @@ CREATE TABLE "findings" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "findings_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "findings_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "findings_no_self_supersession" CHECK ("supersedes_finding_id" IS NULL OR "supersedes_finding_id" != "id"),
+    CONSTRAINT "findings_superseded_requires_chain" CHECK ("status" != 'superseded' OR "supersedes_finding_id" IS NOT NULL)
 );
 
 -- CreateTable finding_evidence_links
