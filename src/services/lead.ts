@@ -119,10 +119,19 @@ export async function updateLead(
     if (v !== undefined) data[k] = v;
   }
 
-  await db.leadRecord.update({
-    where: { id: leadId },
-    data,
-  });
+  const idempotencyKey = `lead-update:${leadId}:${JSON.stringify(data)}:${actorId}`;
+
+  await withIdempotency(
+    idempotencyKey,
+    "lead.update",
+    async () => {
+      await db.leadRecord.update({
+        where: { id: leadId },
+        data,
+      });
+      return null;
+    }
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_UPDATED,
