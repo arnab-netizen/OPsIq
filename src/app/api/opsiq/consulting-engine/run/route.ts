@@ -1,28 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runConsultingEngine } from "@/services/consulting-engine/orchestrator";
-import { ConsultingEngineInputSchema } from "@/domain/consulting-engine/types";
+import { runConsultingPipeline } from "@/services/consulting-engine/pipeline";
 import { db } from "@/lib/db";
-import { emitAuditEvent } from "@/infra/audit";
+import { z } from "zod";
 
 /**
  * POST /api/opsiq/consulting-engine/run
  *
- * Thin route handler that:
- * 1. Validates input
- * 2. Checks engagement exists and user has access
- * 3. Delegates to consulting engine service
- * 4. Persists decision memo (future: when FindingRecord/RecommendationRecord queries exist)
- * 5. Returns decision memo
+ * Integrated pipeline that:
+ * 1. Accepts engagementId
+ * 2. Loads engagement and validated findings
+ * 3. Runs consulting engine
+ * 4. Persists recommendations and actions
+ * 5. Returns complete results with persisted records
  *
  * No business logic here; all logic in services.
  */
+
+const RequestSchema = z.object({
+  engagementId: z.string().uuid(),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
     // Validate input structure
-    const validation = ConsultingEngineInputSchema.safeParse(body);
+    const validation = RequestSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
         {
@@ -33,11 +36,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const input = validation.data;
+    const { engagementId } = validation.data;
 
     // Verify engagement exists
     const engagement = await db.engagement.findUnique({
-      where: { id: input.engagementId },
+      where: { id: engagementId },
       select: { id: true, clientId: true },
     });
 
@@ -48,28 +51,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run consulting engine (pure service, no side effects yet)
-    const output = await runConsultingEngine(input);
+    // Run consulting pipeline (loads findings, runs engine, persists results)
+    const result = await runConsultingPipeline(engagementId, "system");
 
-    // Emit audit event
-    await emitAuditEvent({
-      eventName: "CONSULTING_ENGINE_RUN",
-      actorId: "system", // TODO: Get from session context
-      entityType: "Engagement",
-      entityId: input.engagementId,
-      payload: {
-        businessProblem: input.businessProblem,
-        rootCause: output.decisionMemo.rootCauseDiagnosis.primary,
-        diagnosisConfidence: output.decisionMemo.diagnosisConfidence,
-        interventionCount: output.decisionMemo.recommendedInterventions.length,
-        status: output.status,
-      },
-      visibility: "internal",
-    });
+    // Return appropriate status code based on pipeline result
+    const statusCode =
+      result.status === "SUCCESS"
+        ? 200
+        : result.status === "INSUFFICIENT_DATA"
+          ? 400
+          : 500;
 
-    return NextResponse.json(output, { status: 200 });
+    return NextResponse.json(result, { status: statusCode });
   } catch (error) {
-    console.error("Consulting engine error:", error);
+    console.error("Consulting pipeline error:", error);
     return NextResponse.json(
       {
         error: "Internal server error",
