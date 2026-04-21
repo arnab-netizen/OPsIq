@@ -27,6 +27,8 @@ export const AUDIT_EVENTS = {
   CLIENT_ACCOUNT_UPDATED: "client_account.updated",
   CLIENT_ACCOUNT_ARCHIVED: "client_account.archived",
   CLIENT_CONTACT_CREATED: "client_contact.created",
+  CLIENT_CONTACT_UPDATED: "client_contact.updated",
+  CLIENT_CONTACT_DEACTIVATED: "client_contact.deactivated",
 
   // Legacy aliases (Module 0 forward declarations)
   CLIENT_CREATED: "client.created",
