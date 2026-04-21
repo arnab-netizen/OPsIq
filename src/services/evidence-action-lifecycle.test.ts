@@ -4,7 +4,7 @@ import { createEvidence, getEvidenceById } from "@/services/evidence";
 import { createFinding } from "@/services/finding";
 import { createRecommendation, approveRecommendation } from "@/services/recommendation";
 import { createAction, getActionById } from "@/services/action";
-import { createClientAccount } from "@/services/client-account";
+import { createClient } from "@/services/client-account";
 import { createEngagement } from "@/services/engagement";
 import { createUser } from "@/services/user";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -24,14 +24,14 @@ describe("Evidence → Finding → Recommendation → Action Lifecycle", () => {
       {
         email: `lifecycle-test-${Date.now()}@example.com`,
         name: "Lifecycle Tester",
-        password: "test-password-123",
+        hashedPassword: "hashed-test-password",
       },
       "system"
     );
     userId = userResult.id;
 
     // Create test client
-    const clientResult = await createClientAccount(
+    const clientResult = await createClient(
       {
         name: "Lifecycle Test Client",
         industry: "Technology",
