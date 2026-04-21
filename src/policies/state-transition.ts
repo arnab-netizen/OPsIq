@@ -14,6 +14,10 @@ import {
   type EngagementStatus,
   DELIVERABLE_STATUSES,
   type DeliverableStatus,
+  FINDING_STATUSES,
+  type FindingStatus,
+  RECOMMENDATION_STATUSES,
+  type RecommendationStatus,
 } from "@/domain/constants/statuses";
 
 type TransitionMap<T extends string> = Partial<Record<T, readonly T[]>>;
@@ -108,6 +112,22 @@ const DELIVERABLE_TRANSITIONS: TransitionMap<DeliverableStatus> = {
   cancelled: [],
 };
 
+const FINDING_TRANSITIONS: TransitionMap<FindingStatus> = {
+  identified: ["validated", "dismissed"],
+  validated: ["prioritized", "dismissed"],
+  prioritized: ["resolved", "dismissed"],
+  resolved: [],
+  dismissed: [],
+};
+
+const RECOMMENDATION_TRANSITIONS: TransitionMap<RecommendationStatus> = {
+  proposed: ["endorsed", "rejected", "withdrawn"],
+  endorsed: ["converted", "withdrawn"],
+  rejected: [],
+  converted: [],
+  withdrawn: [],
+};
+
 function validateTransitionGeneric<T extends string>(
   entityType: string,
   transitions: TransitionMap<T>,
@@ -153,6 +173,14 @@ export function validateEngagementTransition(from: EngagementStatus, to: Engagem
 
 export function validateDeliverableTransition(from: DeliverableStatus, to: DeliverableStatus): void {
   validateTransitionGeneric("Deliverable", DELIVERABLE_TRANSITIONS, DELIVERABLE_STATUSES, from, to);
+}
+
+export function validateFindingTransition(from: FindingStatus, to: FindingStatus): void {
+  validateTransitionGeneric("Finding", FINDING_TRANSITIONS, FINDING_STATUSES, from, to);
+}
+
+export function validateRecommendationTransition(from: RecommendationStatus, to: RecommendationStatus): void {
+  validateTransitionGeneric("Recommendation", RECOMMENDATION_TRANSITIONS, RECOMMENDATION_STATUSES, from, to);
 }
 
 export function getAllowedTransitions<T extends string>(

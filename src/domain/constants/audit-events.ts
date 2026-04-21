@@ -58,10 +58,15 @@ export const AUDIT_EVENTS = {
   // Finding
   FINDING_CREATED: "finding.created",
   FINDING_UPDATED: "finding.updated",
+  FINDING_STATUS_CHANGED: "finding.status_changed",
+  FINDING_ARCHIVED: "finding.archived",
   FINDING_LINKED: "finding.linked",
 
   // Recommendation
   RECOMMENDATION_CREATED: "recommendation.created",
+  RECOMMENDATION_UPDATED: "recommendation.updated",
+  RECOMMENDATION_STATUS_CHANGED: "recommendation.status_changed",
+  RECOMMENDATION_ARCHIVED: "recommendation.archived",
   RECOMMENDATION_APPROVED: "recommendation.approved",
   RECOMMENDATION_SUPERSEDED: "recommendation.superseded",
 

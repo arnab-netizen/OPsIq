@@ -209,3 +209,92 @@ export const DELIVERABLE_STATUSES = [
 ] as const;
 
 export type DeliverableStatus = (typeof DELIVERABLE_STATUSES)[number];
+
+export const FINDING_STATUSES = [
+  "identified",
+  "validated",
+  "prioritized",
+  "resolved",
+  "dismissed",
+] as const;
+
+export type FindingStatus = (typeof FINDING_STATUSES)[number];
+
+export const FINDING_SEVERITIES = [
+  "low",
+  "medium",
+  "high",
+  "critical",
+] as const;
+
+export type FindingSeverity = (typeof FINDING_SEVERITIES)[number];
+
+export const FINDING_IMPACTS = [
+  "revenue",
+  "cost",
+  "cashflow",
+  "growth",
+  "retention",
+  "operations",
+  "people",
+  "risk",
+  "customer",
+  "compliance",
+] as const;
+
+export type FindingImpact = (typeof FINDING_IMPACTS)[number];
+
+export const RECOMMENDATION_STATUSES = [
+  "proposed",
+  "endorsed",
+  "rejected",
+  "converted",
+  "withdrawn",
+] as const;
+
+export type RecommendationStatus = (typeof RECOMMENDATION_STATUSES)[number];
+
+export const RECOMMENDATION_PRIORITIES = [
+  "low",
+  "medium",
+  "high",
+  "urgent",
+] as const;
+
+export type RecommendationPriority =
+  (typeof RECOMMENDATION_PRIORITIES)[number];
+
+export const RECOMMENDATION_TYPES = [
+  "fix",
+  "improve",
+  "stabilize",
+  "reduce_cost",
+  "increase_revenue",
+  "de_risk",
+  "investigate",
+  "sequence",
+] as const;
+
+export type RecommendationType = (typeof RECOMMENDATION_TYPES)[number];
+
+export const BLOCKER_SEVERITIES = [
+  "low",
+  "medium",
+  "high",
+  "critical",
+] as const;
+
+export type BlockerSeverity = (typeof BLOCKER_SEVERITIES)[number];
+
+export const BLOCKER_TYPES = [
+  "dependency",
+  "decision",
+  "resource",
+  "technical",
+  "client",
+  "compliance",
+  "financial",
+  "operational",
+] as const;
+
+export type BlockerType = (typeof BLOCKER_TYPES)[number];
