@@ -2,6 +2,7 @@ import type { EvidenceItem, RootCause } from "@/domain/consulting-engine/types";
 import {
   DiagnosisConfidence,
   ConfidenceLevel,
+  DiagnosisType,
 } from "@/domain/consulting-engine/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -18,7 +19,7 @@ interface RootCausePattern {
   name: string;
   pattern: (evidence: EvidenceItem[]) => boolean;
   confidence: (evidence: EvidenceItem[]) => DiagnosisConfidence;
-  diagnosis: (evidence: EvidenceItem[], problem: string) => RootCause;
+  diagnosis: (evidence: EvidenceItem[]) => RootCause;
 }
 
 const rootCausePatterns: RootCausePattern[] = [
@@ -40,32 +41,34 @@ const rootCausePatterns: RootCausePattern[] = [
             e.finding.toLowerCase().includes("defect"))
       ),
     confidence: (evidence) => {
-      const efficiencyCount = evidence.filter(
+      const efficiencyEvidence = evidence.filter(
         (e) => e.dimension === "operational_efficiency"
-      ).length;
-      const retentionCount = evidence.filter(
+      );
+      const retentionEvidence = evidence.filter(
         (e) => e.dimension === "customer_retention"
+      );
+      const highConfidenceEfficiency = efficiencyEvidence.filter(
+        (e) => e.confidence === ConfidenceLevel.HIGH
+      ).length;
+      const highConfidenceRetention = retentionEvidence.filter(
+        (e) => e.confidence === ConfidenceLevel.HIGH
       ).length;
 
       if (
-        efficiencyCount >= 2 &&
-        retentionCount >= 2 &&
-        evidence.some((e) => e.confidence === ConfidenceLevel.HIGH)
+        highConfidenceEfficiency >= 1 &&
+        highConfidenceRetention >= 1
       ) {
         return DiagnosisConfidence.HIGH;
-      } else if (efficiencyCount >= 1 && retentionCount >= 1) {
+      } else if (efficiencyEvidence.length >= 1 && retentionEvidence.length >= 1) {
         return DiagnosisConfidence.MODERATE;
       }
       return DiagnosisConfidence.PROVISIONAL;
     },
-    diagnosis: (evidence, problem) => ({
+    diagnosis: (evidence) => ({
       id: uuidv4(),
-      primary:
+      type: DiagnosisType.OPERATIONAL_BOTTLENECK,
+      description:
         "Operational bottleneck limiting speed of service delivery",
-      secondary: [
-        "Customer experience degradation from delays",
-        "Competitive disadvantage vs faster providers",
-      ],
       mechanismDescription:
         "High turnaround time prevents customers from using service frequently, driving them to alternatives. Bottleneck creates queue, which increases errors and complaints.",
       evidenceIds: evidence
@@ -117,14 +120,11 @@ const rootCausePatterns: RootCausePattern[] = [
       }
       return DiagnosisConfidence.INSUFFICIENT_EVIDENCE;
     },
-    diagnosis: (evidence, problem) => ({
+    diagnosis: (evidence) => ({
       id: uuidv4(),
-      primary:
+      type: DiagnosisType.QUALITY_CONTROL_FAILURE,
+      description:
         "Absence of quality control process or quality assurance checkpoints",
-      secondary: [
-        "Inconsistent output quality",
-        "No systematic problem detection",
-      ],
       mechanismDescription:
         "Without QA checkpoints, defects reach customers. Each complaint damages reputation and reduces repeat business.",
       evidenceIds: evidence
@@ -170,13 +170,10 @@ const rootCausePatterns: RootCausePattern[] = [
       }
       return DiagnosisConfidence.PROVISIONAL;
     },
-    diagnosis: (evidence, problem) => ({
+    diagnosis: (evidence) => ({
       id: uuidv4(),
-      primary: "No systematic customer retention mechanism",
-      secondary: [
-        "Customers treat as transaction, not relationship",
-        "No incentive to return",
-      ],
+      type: DiagnosisType.CUSTOMER_RETENTION_EROSION,
+      description: "No systematic customer retention mechanism",
       mechanismDescription:
         "Without follow-up, loyalty program, or service innovation, customers default to shopping for best price on each transaction.",
       evidenceIds: evidence
@@ -239,8 +236,8 @@ export function diagnoseRootCause(
     return {
       primaryRootCause: {
         id: uuidv4(),
-        primary: "Evidence insufficient for definitive diagnosis",
-        secondary: [],
+        type: DiagnosisType.UNKNOWN,
+        description: "Evidence insufficient for definitive diagnosis",
         mechanismDescription:
           "The evidence provided does not clearly match known root cause patterns.",
         evidenceIds: evidence.map((e) => e.id),

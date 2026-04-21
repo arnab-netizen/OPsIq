@@ -1,5 +1,5 @@
-import type { RootCause, Intervention, InterventionStep } from "@/domain/consulting-engine/types";
-import { InterventionClass, ConfidenceLevel } from "@/domain/consulting-engine/types";
+import type { RootCause, Intervention } from "@/domain/consulting-engine/types";
+import { InterventionClass } from "@/domain/consulting-engine/types";
 import type { EvidenceItem } from "@/domain/consulting-engine/types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -24,16 +24,13 @@ import { v4 as uuidv4 } from "uuid";
 
 interface InterventionTemplate {
   rootCauseKeyword: string;
-  generateInterventions: (
-    diagnosis: RootCause,
-    evidence: EvidenceItem[]
-  ) => Intervention[];
+  generateInterventions: (diagnosis: RootCause) => Intervention[];
 }
 
 const interventionTemplates: InterventionTemplate[] = [
   {
     rootCauseKeyword: "operational_bottleneck",
-    generateInterventions: (diagnosis, evidence) => [
+    generateInterventions: (diagnosis) => [
       // Containment: Quick buffer to reduce impact
       {
         id: uuidv4(),
@@ -228,7 +225,7 @@ const interventionTemplates: InterventionTemplate[] = [
   },
   {
     rootCauseKeyword: "quality_control",
-    generateInterventions: (diagnosis, evidence) => [
+    generateInterventions: (diagnosis) => [
       // Containment: Prevent further damage
       {
         id: uuidv4(),
@@ -354,7 +351,7 @@ const interventionTemplates: InterventionTemplate[] = [
   },
   {
     rootCauseKeyword: "retention_erosion",
-    generateInterventions: (diagnosis, evidence) => [
+    generateInterventions: (diagnosis) => [
       {
         id: uuidv4(),
         title: "Design and launch customer loyalty program",
@@ -428,12 +425,12 @@ export function designInterventions(
   // Find matching template
   for (const template of interventionTemplates) {
     if (
-      diagnosis.primary
+      diagnosis.type
         .toLowerCase()
         .includes(template.rootCauseKeyword)
     ) {
       interventions.push(
-        ...template.generateInterventions(diagnosis, evidence)
+        ...template.generateInterventions(diagnosis)
       );
       break;
     }

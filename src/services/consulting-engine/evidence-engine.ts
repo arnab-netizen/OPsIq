@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
 import type { EvidenceItem } from "@/domain/consulting-engine/types";
 import { ConfidenceLevel } from "@/domain/consulting-engine/types";
 

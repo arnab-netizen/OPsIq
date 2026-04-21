@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import { runConsultingEngine } from "../orchestrator";
-import type { ConsultingEngineInput, EvidenceItem } from "@/domain/consulting-engine/types";
+import type { ConsultingEngineInput } from "@/domain/consulting-engine/types";
 import { ConfidenceLevel } from "@/domain/consulting-engine/types";
 
 const engagementId = uuidv4();
@@ -57,7 +57,7 @@ describe("Consulting Engine Orchestrator", () => {
       const output = await runConsultingEngine(input);
 
       expect(output.status).toBe("SUCCESS");
-      expect(output.decisionMemo.rootCauseDiagnosis.primary).toContain(
+      expect(output.decisionMemo.rootCauseDiagnosis.type).toBe(
         "operational_bottleneck"
       );
       expect(output.decisionMemo.diagnosisConfidence).toBe("HIGH");
@@ -149,11 +149,14 @@ describe("Consulting Engine Orchestrator", () => {
       const output = await runConsultingEngine(input);
       const interventions = output.decisionMemo.recommendedInterventions;
 
-      // Verify descending priority score
-      for (let i = 1; i < interventions.length; i++) {
-        expect(interventions[i - 1].priorityScore).toBeGreaterThanOrEqual(
-          interventions[i].priorityScore
-        );
+      // Verify correct sequencing: CONTAINMENT → STABILIZATION → STRUCTURAL_REPAIR
+      const classSequence = ["CONTAINMENT", "STABILIZATION", "STRUCTURAL_REPAIR"];
+      const interventionClasses = interventions.map((i) => i.intervention.class);
+
+      for (let i = 1; i < interventionClasses.length; i++) {
+        const prevIndex = classSequence.indexOf(interventionClasses[i - 1]);
+        const currIndex = classSequence.indexOf(interventionClasses[i]);
+        expect(prevIndex).toBeLessThanOrEqual(currIndex);
       }
     });
   });
@@ -203,7 +206,7 @@ describe("Consulting Engine Orchestrator", () => {
 
       // Should identify quality as potential root cause
       expect(
-        output.decisionMemo.rootCauseDiagnosis.primary.toLowerCase()
+        output.decisionMemo.rootCauseDiagnosis.type.toLowerCase()
       ).toMatch(/quality|retention/);
 
       // Should still provide actionable interventions

@@ -3,7 +3,6 @@ import { runConsultingEngine } from "@/services/consulting-engine/orchestrator";
 import { ConsultingEngineInputSchema } from "@/domain/consulting-engine/types";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
-import { withVersionCheck } from "@/lib/optimistic-lock";
 
 /**
  * POST /api/opsiq/consulting-engine/run

@@ -1,5 +1,5 @@
 import type { Constraint, EvidenceItem } from "@/domain/consulting-engine/types";
-import { ConstraintType } from "@/domain/consulting-engine/types";
+import { ConstraintType, ConstraintSeverity } from "@/domain/consulting-engine/types";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -13,9 +13,15 @@ import { v4 as uuidv4 } from "uuid";
  * Deterministic: no external calls, pure function.
  */
 
+interface ConstraintContext {
+  industryRequiresCapital?: boolean;
+  businessSize?: string;
+  currentTeamSize?: number;
+}
+
 interface ConstraintPattern {
-  pattern: (evidence: EvidenceItem[], context: any) => boolean;
-  constraint: (evidence: EvidenceItem[], context: any) => Constraint;
+  pattern: (evidence: EvidenceItem[], context: ConstraintContext) => boolean;
+  constraint: (evidence: EvidenceItem[], context: ConstraintContext) => Constraint;
 }
 
 const constraintPatterns: ConstraintPattern[] = [
@@ -33,7 +39,7 @@ const constraintPatterns: ConstraintPattern[] = [
       type: ConstraintType.RESOURCE,
       description:
         "Limited production/service capacity requires capital investment",
-      severity: "HIGH",
+      severity: ConstraintSeverity.HIGH,
       blocksActions: [
         "volume_increase",
         "market_expansion",
@@ -60,7 +66,7 @@ const constraintPatterns: ConstraintPattern[] = [
       type: ConstraintType.SKILL,
       description:
         "Quality control processes not documented; team quality assurance capability limited",
-      severity: "MEDIUM",
+      severity: ConstraintSeverity.MEDIUM,
       blocksActions: ["scale_quality", "automated_quality"],
       releasableVia: ["training_program", "process_documentation"],
     }),
@@ -78,7 +84,7 @@ const constraintPatterns: ConstraintPattern[] = [
       type: ConstraintType.ORGANIZATIONAL,
       description:
         "No customer relationship management system or loyalty program infrastructure",
-      severity: "MEDIUM",
+      severity: ConstraintSeverity.MEDIUM,
       blocksActions: ["retention_focus", "relationship_marketing"],
       releasableVia: ["crm_implementation", "loyalty_program_design"],
     }),
@@ -95,7 +101,7 @@ const constraintPatterns: ConstraintPattern[] = [
       id: uuidv4(),
       type: ConstraintType.PROCESS,
       description: "Manual processes limit scalability and consistency",
-      severity: "MEDIUM",
+      severity: ConstraintSeverity.MEDIUM,
       blocksActions: ["scale", "automate"],
       releasableVia: ["process_redesign", "system_implementation"],
     }),
@@ -111,11 +117,7 @@ export interface ConstraintAnalysis {
 
 export function identifyConstraints(
   evidence: EvidenceItem[],
-  context: {
-    industryRequiresCapital?: boolean;
-    businessSize?: string;
-    currentTeamSize?: number;
-  }
+  context: ConstraintContext
 ): ConstraintAnalysis {
   const identifiedConstraints: Constraint[] = [];
 

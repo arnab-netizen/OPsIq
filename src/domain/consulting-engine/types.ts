@@ -1,5 +1,36 @@
 import { z } from "zod";
 
+// ─── Canonical Enums ──────────────────────────────────────────────────────
+
+export enum DiagnosisType {
+  OPERATIONAL_BOTTLENECK = "operational_bottleneck",
+  QUALITY_CONTROL_FAILURE = "quality_control_failure",
+  CUSTOMER_RETENTION_EROSION = "customer_retention_erosion",
+  UNKNOWN = "unknown",
+}
+
+export enum InterventionType {
+  CONTAINMENT = "CONTAINMENT",
+  STABILIZATION = "STABILIZATION",
+  STRUCTURAL_REPAIR = "STRUCTURAL_REPAIR",
+  GROWTH_ENABLEMENT = "GROWTH_ENABLEMENT",
+  RESILIENCE_PROTECTION = "RESILIENCE_PROTECTION",
+}
+
+export enum ConstraintSeverity {
+  LOW = "LOW",
+  MEDIUM = "MEDIUM",
+  HIGH = "HIGH",
+  CRITICAL = "CRITICAL",
+}
+
+export enum PriorityLevel {
+  CRITICAL = "CRITICAL",
+  HIGH = "HIGH",
+  MEDIUM = "MEDIUM",
+  LOW = "LOW",
+}
+
 // ─── Evidence Types ────────────────────────────────────────────────────────
 
 export enum ConfidenceLevel {
@@ -8,6 +39,8 @@ export enum ConfidenceLevel {
   HIGH = "HIGH",
   PROVISIONAL = "PROVISIONAL",
 }
+
+export const SupportingDataSchema = z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]));
 
 export const EvidenceItemSchema = z.object({
   id: z.string().uuid(),
@@ -25,7 +58,7 @@ export const EvidenceItemSchema = z.object({
   source: z.string().min(1),
   timestamp: z.date(),
   isCritical: z.boolean().default(false),
-  supportingData: z.record(z.any()).optional(),
+  supportingData: SupportingDataSchema.optional(),
 });
 
 export type EvidenceItem = z.infer<typeof EvidenceItemSchema>;
@@ -45,7 +78,7 @@ export const ConstraintSchema = z.object({
   id: z.string().uuid(),
   type: z.nativeEnum(ConstraintType),
   description: z.string().min(1),
-  severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
+  severity: z.nativeEnum(ConstraintSeverity),
   blocksActions: z.array(z.string()),
   releasableVia: z.array(z.string()),
 });
@@ -64,8 +97,8 @@ export enum DiagnosisConfidence {
 
 export const RootCauseSchema = z.object({
   id: z.string().uuid(),
-  primary: z.string().min(1),
-  secondary: z.array(z.string()),
+  type: z.nativeEnum(DiagnosisType),
+  description: z.string().min(1),
   mechanismDescription: z.string().min(1),
   evidenceIds: z.array(z.string().uuid()),
   confidence: z.nativeEnum(DiagnosisConfidence),

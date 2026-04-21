@@ -1,4 +1,4 @@
-import type { Scenario, PrioritizedIntervention } from "@/domain/consulting-engine/types";
+import type { Scenario, PrioritizedIntervention, Constraint } from "@/domain/consulting-engine/types";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from "uuid";
 
 export function generateScenarios(
   prioritizedInterventions: PrioritizedIntervention[],
-  constraints: any[]
+  constraints: Constraint[]
 ): Scenario[] {
   const scenarios: Scenario[] = [];
 

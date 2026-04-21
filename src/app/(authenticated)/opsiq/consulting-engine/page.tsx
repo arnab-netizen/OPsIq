@@ -4,7 +4,6 @@ import { useState } from "react";
 import type {
   ConsultingEngineInput,
   ConsultingEngineOutput,
-  EvidenceItem,
 } from "@/domain/consulting-engine/types";
 import { ConfidenceLevel } from "@/domain/consulting-engine/types";
 import { v4 as uuidv4 } from "uuid";

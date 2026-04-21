@@ -243,19 +243,21 @@ function applySequencingConstraints(
   scored: PrioritizedIntervention[],
   constraints: Constraint[]
 ): PrioritizedIntervention[] {
-  // Constraints block certain intervention types
-  // Reorder to ensure releases happen first
+  // Enforce natural intervention class sequence: CONTAINMENT → STABILIZATION → STRUCTURAL_REPAIR
+  const classSequence: Record<string, number> = {
+    CONTAINMENT: 1,
+    STABILIZATION: 2,
+    STRUCTURAL_REPAIR: 3,
+    RESILIENCE_PROTECTION: 2,
+    GROWTH_ENABLEMENT: 3,
+  };
 
   const blockingConstraints = constraints.filter(
     (c) => c.blocksActions && c.blocksActions.length > 0
   );
 
-  if (blockingConstraints.length === 0) {
-    return scored;
-  }
-
-  // For now, simple reordering: constraint-releasing interventions come first
   return scored.sort((a, b) => {
+    // First, check if either releases a constraint
     const aReleasesConstraint = blockingConstraints.some((c) =>
       c.releasableVia.some((release) =>
         a.intervention.title.toLowerCase().includes(release.toLowerCase())
@@ -271,6 +273,15 @@ function applySequencingConstraints(
     if (aReleasesConstraint && !bReleasesConstraint) return -1;
     if (!aReleasesConstraint && bReleasesConstraint) return 1;
 
+    // Then, enforce class sequence
+    const aSequence = classSequence[a.intervention.class] || 999;
+    const bSequence = classSequence[b.intervention.class] || 999;
+
+    if (aSequence !== bSequence) {
+      return aSequence - bSequence;
+    }
+
+    // Finally, sort by score within the same class
     return b.priorityScore - a.priorityScore;
   });
 }

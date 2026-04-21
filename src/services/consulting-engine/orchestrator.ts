@@ -1,8 +1,6 @@
 import type {
   ConsultingEngineInput,
   ConsultingEngineOutput,
-  EvidenceItem,
-  Constraint,
 } from "@/domain/consulting-engine/types";
 import { ConsultingEngineOutputSchema } from "@/domain/consulting-engine/types";
 import { analyzeEvidence } from "./evidence-engine";
