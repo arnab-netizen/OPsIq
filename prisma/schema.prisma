@@ -99,6 +99,7 @@ model LeadRecord {
   convertedToClientId String? @map("converted_to_client_id") @db.Uuid
   engagementId    String?   @map("engagement_id") @db.Uuid
   assignedTo      String?   @map("assigned_to") @db.Uuid
+  visibility      String    @default("internal") @map("visibility") // "internal" | "client_visible"
   createdBy       String?   @map("created_by") @db.Uuid
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -149,6 +150,7 @@ model ClientContact {
   isPrimary       Boolean   @default(false) @map("is_primary")
   isActive        Boolean   @default(true) @map("is_active")
   notes           String?
+  visibility      String    @default("internal") @map("visibility") // "internal" | "client_visible"
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
