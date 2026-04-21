@@ -12,7 +12,7 @@ export interface CreateActionInput {
   fallbackOption?: string;
   criticalityLevel: number;
   executionRisk: number;
-  ownerUserId?: string;
+  ownerUserId: string;
   dueDate?: Date;
   recommendationId?: string;
   createdByUserId?: string;
@@ -43,6 +43,7 @@ export async function createAction(input: CreateActionInput): Promise<ActionReco
 export async function createActionsFromInterventions(
   engagementId: string,
   interventions: PrioritizedIntervention[],
+  ownerUserId: string,
   createdByUserId?: string
 ): Promise<ActionRecord[]> {
   const actions: ActionRecord[] = [];
@@ -61,8 +62,9 @@ export async function createActionsFromInterventions(
         criticalityLevel: item.priorityScore > 70 ? 9 : item.priorityScore > 50 ? 7 : 5,
         executionRisk: Math.min(
           10,
-          intervention.failureRisks.length + step.dependsOn?.length || 0
+          intervention.failureRisks.length + (step.dependsOn?.length || 0)
         ),
+        ownerUserId,
         dueDate: new Date(Date.now() + step.estimatedDays * 24 * 60 * 60 * 1000),
         createdByUserId,
       });

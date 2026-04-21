@@ -373,11 +373,11 @@ model RecommendationRecord {
 
 enum ActionStatus {
   DRAFT
-  ASSIGNED
+  READY
   IN_PROGRESS
   BLOCKED
   COMPLETED
-  CANCELLED
+  FAILED
 }
 
 model ActionRecord {
@@ -387,18 +387,25 @@ model ActionRecord {
   title            String
   description      String
   phase            String
-  ownerUserId      String?      @map("owner_user_id") @db.Uuid
+  ownerUserId      String       @map("owner_user_id") @db.Uuid
   dueDate          DateTime?    @map("due_date")
-  status           ActionStatus
+  status           ActionStatus @default(DRAFT)
   contingencyPlan  String?      @map("contingency_plan")
   fallbackOption   String?      @map("fallback_option")
   criticalityLevel Int          @map("criticality_level")
   executionRisk    Int          @map("execution_risk")
+  notes            String?
+  blockReason      String?      @map("block_reason")
+  assignedAt       DateTime?    @map("assigned_at")
+  completedAt      DateTime?    @map("completed_at")
   createdByUserId  String?      @map("created_by_user_id") @db.Uuid
   createdAt        DateTime     @default(now()) @map("created_at")
   updatedAt        DateTime     @updatedAt @map("updated_at")
 
+  dependencies     ActionDependencyRecord[] @relation("action")
+
   @@index([engagementId, status])
+  @@index([ownerUserId, status])
   @@map("action_records")
 }
 
@@ -408,7 +415,11 @@ model ActionDependencyRecord {
   dependsOnId String   @map("depends_on_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
 
+  action ActionRecord @relation("action", fields: [actionId], references: [id])
+
   @@unique([actionId, dependsOnId])
+  @@index([actionId])
+  @@index([dependsOnId])
   @@map("action_dependency_records")
 }
 
