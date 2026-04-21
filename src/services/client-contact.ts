@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -98,6 +99,8 @@ export async function updateContact(
     if (v !== undefined) data[k] = v;
   }
 
+  const roleChanged = input.role && input.role !== contact.role;
+
   await db.clientContact.update({
     where: { id: contactId },
     data,
@@ -111,6 +114,17 @@ export async function updateContact(
     payload: data,
     visibility: "internal",
   });
+
+  if (roleChanged) {
+    await triggerReEvaluation({
+      changeType: "scope_change",
+      entityType: "client_contact",
+      entityId: contactId,
+      severity: "low",
+      description: `Contact role changed from ${contact.role} to ${input.role}`,
+      triggeredBy: actorId,
+    });
+  }
 
   logger.info("Client contact updated", { contactId });
 }
@@ -139,6 +153,15 @@ export async function deactivateContact(
     entityType: "client_contact",
     entityId: contactId,
     visibility: "internal",
+  });
+
+  await triggerReEvaluation({
+    changeType: "key_employee_loss",
+    entityType: "client_contact",
+    entityId: contactId,
+    severity: "medium",
+    description: `Contact deactivated: ${contact.name} (role: ${contact.role})`,
+    triggeredBy: actorId,
   });
 
   logger.info("Client contact deactivated", { contactId });
