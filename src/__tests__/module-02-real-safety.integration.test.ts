@@ -1,8 +1,9 @@
-import { db } from "@/lib/db";
-import { createClient } from "@/services/client-account";
-import { createContact, updateContact } from "@/services/client-contact";
-import { createLead, updateLead } from "@/services/lead";
-import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { test, expect } from "vitest";
+import { db } from "../lib/db";
+import { createClient } from "../services/client-account";
+import { createContact, updateContact } from "../services/client-contact";
+import { createLead, updateLead } from "../services/lead";
+import { AUDIT_EVENTS } from "../domain/constants/audit-events";
 
 const ACTOR_ID = "real-safety-test";
 
@@ -272,16 +273,12 @@ async function validateTrueSafety() {
   };
 }
 
-validateTrueSafety()
-  .then((result) => {
-    console.log("\n=== Safety Validation Summary ===");
-    console.log(`Tests run: ${result.totalTests}`);
-    console.log(`Tests failed: ${result.failedTests}`);
-    console.log(`Data corruption detected: ${result.dataCorruption ? "YES" : "NO"}`);
-    console.log(`System truly safe: ${result.systemSafe ? "YES" : "NO"}`);
-    process.exit(result.systemSafe && !result.dataCorruption ? 0 : 1);
-  })
-  .catch((error) => {
-    console.error("✗ Safety validation crashed:", error);
-    process.exit(1);
-  });
+test("Module 02 Real Safety Validation", async () => {
+  const result = await validateTrueSafety();
+  console.log("\n=== Safety Validation Summary ===");
+  console.log(`Tests run: ${result.totalTests}`);
+  console.log(`Tests failed: ${result.failedTests}`);
+  console.log(`Data corruption detected: ${result.dataCorruption ? "YES" : "NO"}`);
+  console.log(`System truly safe: ${result.systemSafe ? "YES" : "NO"}`);
+  expect(result.systemSafe && !result.dataCorruption).toBe(true);
+});
