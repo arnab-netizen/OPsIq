@@ -8,7 +8,6 @@ import {
   withVersionCheck,
   withVersionIncrement,
 } from "@/lib/optimistic-lock";
-import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -146,17 +145,6 @@ export async function approveRecommendation(
     entityId: recommendationId,
     payload: { previousStatus: recommendation.status },
     visibility: "internal",
-  });
-
-  // Trigger re-evaluation when recommendation is approved
-  await triggerReEvaluation({
-    changeType: "recommendation_approved",
-    entityType: "recommendation",
-    entityId: recommendationId,
-    engagementId: recommendation.engagementId,
-    severity: "medium",
-    description: `Recommendation approved: ${recommendation.title}`,
-    triggeredBy: actorId,
   });
 
   logger.info("Recommendation approved", { recommendationId });

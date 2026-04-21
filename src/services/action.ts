@@ -8,7 +8,6 @@ import {
   withVersionCheck,
   withVersionIncrement,
 } from "@/lib/optimistic-lock";
-import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import type { ActionStatus } from "@/domain/constants/statuses";
 import { ACTION_STATUSES } from "@/domain/constants/statuses";
@@ -189,17 +188,6 @@ export async function updateAction(
       entityId: actionId,
       payload: { previousStatus: action.status },
       visibility: "internal",
-    });
-
-    // Trigger re-evaluation when action is completed
-    await triggerReEvaluation({
-      changeType: "action_completed",
-      entityType: "action",
-      entityId: actionId,
-      engagementId: action.engagementId,
-      severity: "medium",
-      description: `Action completed: ${action.title}`,
-      triggeredBy: actorId,
     });
   }
 
