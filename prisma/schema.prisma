@@ -190,6 +190,7 @@ model Engagement {
   conditionProfiles     BusinessConditionProfile[]
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
+  healthChecks          HealthCheckRecord[]
 
   @@index([clientId])
   @@index([status])
@@ -292,4 +293,364 @@ model ScheduledTask {
   @@index([status, scheduledFor])
   @@index([taskName])
   @@map("scheduled_tasks")
+}
+
+// ─── Module 3: Findings & Evidence ──────────────────────────────────────────
+
+enum FindingStatus {
+  DRAFT
+  VALIDATED
+  CLOSED
+  DISPUTED
+  SUPERSEDED
+}
+
+enum ConfidenceLabel {
+  LOW
+  MEDIUM
+  HIGH
+  PROVISIONAL
+}
+
+model FindingRecord {
+  id                  String          @id @default(uuid()) @db.Uuid
+  engagementId        String          @map("engagement_id") @db.Uuid
+  title               String
+  statement           String
+  severity            String
+  status              FindingStatus
+  confidenceLabel     ConfidenceLabel @map("confidence_label")
+  provisionalFlag     Boolean         @default(false) @map("provisional_flag")
+  clientVisibility    String          @map("client_visibility")
+  issueKey            String?         @map("issue_key")
+  supersedesFindingId String?         @map("supersedes_finding_id") @db.Uuid
+  createdByUserId     String?         @map("created_by_user_id") @db.Uuid
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+
+  @@index([engagementId, status])
+  @@index([engagementId, severity])
+  @@index([engagementId, provisionalFlag])
+  @@map("finding_records")
+}
+
+// ─── Module 3: Recommendations ──────────────────────────────────────────────
+
+enum RecommendationClass {
+  CONTAINMENT
+  STABILIZATION
+  STRUCTURAL_REPAIR
+  GROWTH_ENABLEMENT
+  RESILIENCE_PROTECTION
+}
+
+model RecommendationRecord {
+  id                      String              @id @default(uuid()) @db.Uuid
+  engagementId            String              @map("engagement_id") @db.Uuid
+  findingId               String?             @map("finding_id") @db.Uuid
+  recommendationCode      String              @map("recommendation_code")
+  title                   String
+  recommendationClass     RecommendationClass @map("recommendation_class")
+  rationale               String
+  businessCriticality     Int                 @map("business_criticality")
+  timeToEffect            Int                 @map("time_to_effect")
+  cashRequirement         Int                 @map("cash_requirement")
+  ownerDependency         Int                 @map("owner_dependency")
+  staffingDependency      Int                 @map("staffing_dependency")
+  resistanceRisk          Int                 @map("resistance_risk")
+  executionFeasibility    Int                 @map("execution_feasibility")
+  failureConsequence      Int                 @map("failure_consequence")
+  contingencyAvailability Int                 @map("contingency_availability")
+  createdByUserId         String?             @map("created_by_user_id") @db.Uuid
+  createdAt               DateTime            @default(now()) @map("created_at")
+  updatedAt               DateTime            @updatedAt @map("updated_at")
+
+  @@index([engagementId, recommendationClass])
+  @@map("recommendation_records")
+}
+
+// ─── Module 3: Actions & Execution ──────────────────────────────────────────
+
+enum ActionStatus {
+  DRAFT
+  ASSIGNED
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+model ActionRecord {
+  id               String       @id @default(uuid()) @db.Uuid
+  engagementId     String       @map("engagement_id") @db.Uuid
+  recommendationId String?      @map("recommendation_id") @db.Uuid
+  title            String
+  description      String
+  phase            String
+  ownerUserId      String?      @map("owner_user_id") @db.Uuid
+  dueDate          DateTime?    @map("due_date")
+  status           ActionStatus
+  contingencyPlan  String?      @map("contingency_plan")
+  fallbackOption   String?      @map("fallback_option")
+  criticalityLevel Int          @map("criticality_level")
+  executionRisk    Int          @map("execution_risk")
+  createdByUserId  String?      @map("created_by_user_id") @db.Uuid
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  @@index([engagementId, status])
+  @@map("action_records")
+}
+
+model ActionDependencyRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  actionId    String   @map("action_id") @db.Uuid
+  dependsOnId String   @map("depends_on_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([actionId, dependsOnId])
+  @@map("action_dependency_records")
+}
+
+// ─── Module 3: KPI Tracking ─────────────────────────────────────────────────
+
+enum KpiCategory {
+  SURVIVAL
+  EXECUTION
+  STABILITY
+  GROWTH_READINESS
+}
+
+model KpiDefinitionRecord {
+  id                String      @id @default(uuid()) @db.Uuid
+  engagementId      String      @map("engagement_id") @db.Uuid
+  name              String
+  category          KpiCategory
+  unit              String
+  targetDescription String?     @map("target_description")
+  createdByUserId   String?     @map("created_by_user_id") @db.Uuid
+  createdAt         DateTime    @default(now()) @map("created_at")
+
+  @@index([engagementId, category])
+  @@map("kpi_definition_records")
+}
+
+model KpiSnapshotRecord {
+  id              String          @id @default(uuid()) @db.Uuid
+  kpiDefinitionId String          @map("kpi_definition_id") @db.Uuid
+  periodStart     DateTime?       @map("period_start")
+  periodEnd       DateTime?       @map("period_end")
+  value           Float
+  sourceNote      String?         @map("source_note")
+  confidenceLabel ConfidenceLabel @map("confidence_label")
+  recordedAt      DateTime        @default(now()) @map("recorded_at")
+  createdByUserId String?         @map("created_by_user_id") @db.Uuid
+
+  @@index([kpiDefinitionId, recordedAt])
+  @@map("kpi_snapshot_records")
+}
+
+// ─── Module 3: Deliverables ─────────────────────────────────────────────────
+
+enum DeliverableState {
+  DRAFT
+  READY_FOR_REVIEW
+  UNDER_REVIEW
+  APPROVED
+  ISSUED
+  SUPERSEDED
+  ARCHIVED
+  WITHDRAWN
+  RETURNED_FOR_REVISION
+  CONDITIONALLY_APPROVED
+}
+
+model DeliverableRecord {
+  id               String   @id @default(uuid()) @db.Uuid
+  engagementId     String   @map("engagement_id") @db.Uuid
+  deliverableType  String   @map("deliverable_type")
+  currentVersionId String?  @map("current_version_id") @db.Uuid
+  visibility       String
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([engagementId, deliverableType])
+  @@map("deliverable_records")
+}
+
+model DeliverableVersionRecord {
+  id              String           @id @default(uuid()) @db.Uuid
+  deliverableId   String           @map("deliverable_id") @db.Uuid
+  versionNumber   Int              @map("version_number")
+  sourceManifest  Json             @map("source_manifest")
+  payload         Json
+  state           DeliverableState
+  revisionType    String?          @map("revision_type")
+  createdByUserId String?          @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  @@unique([deliverableId, versionNumber])
+  @@map("deliverable_version_records")
+}
+
+// ─── Module 3: Stage Management ──────────────────────────────────────────────
+
+enum StageState {
+  DRAFT
+  NOT_STARTED
+  ACTIVE
+  PENDING_INPUT
+  AWAITING_CLIENT
+  AWAITING_CONSULTANT
+  AWAITING_VALIDATION
+  AWAITING_APPROVAL
+  BLOCKED
+  DEFERRED
+  PARTIALLY_COMPLETED
+  COMPLETED
+  CANCELLED
+  REOPENED
+  DISPUTED
+  PROVISIONAL_OUTPUT_ONLY
+  FORCED_CLOSURE_REVIEW
+  DORMANT
+}
+
+model StageInstanceRecord {
+  id           String    @id @default(uuid()) @db.Uuid
+  engagementId String    @map("engagement_id") @db.Uuid
+  stageKey     String    @map("stage_key")
+  state        StageState
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@unique([engagementId, stageKey])
+  @@map("stage_instance_records")
+}
+
+model StageBlockerRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  stageInstanceId String   @map("stage_instance_id") @db.Uuid
+  severity        String
+  summary         String
+  resolved        Boolean  @default(false)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([stageInstanceId, resolved])
+  @@map("stage_blocker_records")
+}
+
+// ─── Module 3: Governance & Approvals ────────────────────────────────────────
+
+model ApprovalRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  engagementId    String   @map("engagement_id") @db.Uuid
+  objectType      String   @map("object_type")
+  objectId        String   @map("object_id") @db.Uuid
+  decision        String
+  reason          String?
+  createdByUserId String?  @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([engagementId, objectType])
+  @@map("approval_records")
+}
+
+model OverrideRecord {
+  id               String   @id @default(uuid()) @db.Uuid
+  engagementId     String   @map("engagement_id") @db.Uuid
+  objectType       String   @map("object_type")
+  objectId         String   @map("object_id") @db.Uuid
+  reason           String
+  approvedByUserId String?  @map("approved_by_user_id") @db.Uuid
+  createdByUserId  String?  @map("created_by_user_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([engagementId, objectType])
+  @@map("override_records")
+}
+
+// ─── Module 3: Review Cycles & Retainers ────────────────────────────────────
+
+enum ReviewLens {
+  SURVIVAL
+  EXECUTION
+  STABILITY
+  GROWTH_READINESS
+}
+
+model ReviewCycleRecord {
+  id              String     @id @default(uuid()) @db.Uuid
+  engagementId    String     @map("engagement_id") @db.Uuid
+  reviewLens      ReviewLens @map("review_lens")
+  summary         String
+  createdByUserId String?    @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime   @default(now()) @map("created_at")
+
+  @@index([engagementId, reviewLens])
+  @@map("review_cycle_records")
+}
+
+model RetainerRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  clientId        String   @map("client_id") @db.Uuid
+  engagementId    String?  @map("engagement_id") @db.Uuid
+  status          String
+  cadence         String
+  nextReviewAt    DateTime? @map("next_review_at")
+  createdByUserId String?  @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([clientId, status])
+  @@map("retainer_records")
+}
+
+// ─── Module 3: Operations & Health ──────────────────────────────────────────
+
+model NotificationRuleRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  engagementId String? @map("engagement_id") @db.Uuid
+  ruleKey     String   @map("rule_key")
+  enabled     Boolean  @default(true)
+  config      Json
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([engagementId, ruleKey])
+  @@map("notification_rule_records")
+}
+
+enum HealthStatus {
+  OK
+  WARNING
+  CRITICAL
+}
+
+enum HealthScope {
+  SYSTEM
+  ENGAGEMENT
+  MODULE
+}
+
+model HealthCheckRecord {
+  id            String        @id @default(uuid()) @db.Uuid
+
+  scope         HealthScope
+  status        HealthStatus
+  details       Json
+
+  engagementId  String?       @map("engagement_id") @db.Uuid
+  engagement    Engagement?   @relation(fields: [engagementId], references: [id])
+
+  version       Int           @default(1)
+
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  createdBy     String?       @map("created_by")
+
+  checkedAt     DateTime      @default(now()) @map("checked_at")
+
+  @@index([scope, checkedAt])
+  @@index([engagementId])
+  @@map("health_check_records")
 }
