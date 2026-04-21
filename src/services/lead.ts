@@ -160,14 +160,23 @@ export async function linkLeadToEngagement(
     );
   }
 
-  await db.leadRecord.update({
-    where: { id: leadId },
-    data: {
-      status: "converted",
-      convertedToClientId: clientId,
-      engagementId,
-    },
-  });
+  const idempotencyKey = `lead-link:${leadId}:${engagementId}:${actorId}`;
+
+  await withIdempotency(
+    idempotencyKey,
+    "lead.link_to_engagement",
+    async () => {
+      await db.leadRecord.update({
+        where: { id: leadId },
+        data: {
+          status: "converted",
+          convertedToClientId: clientId,
+          engagementId,
+        },
+      });
+      return null;
+    }
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_LINKED_TO_ENGAGEMENT,
