@@ -18,13 +18,13 @@ beforeAll(async () => {
     process.exit(1);
   }
 
-  // Run migrations on test database with SQLite schema
+  // Run Prisma db push to initialize test database with real schema
   try {
     execSync(
       `npx prisma db push --schema=${schemaPath} --accept-data-loss`,
       {
         cwd: process.cwd(),
-        stdio: "pipe",
+        stdio: "inherit",
         env: {
           ...process.env,
           DATABASE_URL: `file:./prisma/test.db`,
@@ -32,10 +32,35 @@ beforeAll(async () => {
         },
       }
     );
-    console.log("✓ Test database initialized");
+    console.log("✓ Real SQLite test database initialized");
+
+    // Create test users to satisfy foreign key constraints
+    const { db } = await import("../lib/db");
+    const testActorIds = ["real-safety-test"];
+
+    // Add all actor IDs used in tests
+    for (let i = 0; i < 20; i++) {
+      testActorIds.push(`actor-${i}`);
+    }
+    testActorIds.push("real-safety-test-different");
+
+    for (const actorId of testActorIds) {
+      try {
+        await db.user.create({
+          data: {
+            id: actorId,
+            email: `${actorId}@test.example.com`,
+            isActive: true,
+          },
+        });
+      } catch (e) {
+        // Ignore duplicate key errors
+      }
+    }
+    console.log("✓ Test users created for FK constraints");
   } catch (e) {
-    console.error("Failed to initialize test database - continuing with mock DB");
-    // Continue without database - will use mock DB
+    console.error("Failed to initialize test database:", e);
+    throw e;
   }
 });
 

@@ -1,6 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaSqlite } from "prisma-adapter-sqlite";
 import * as PrismaPostgres from "../generated/prisma/client";
-import { mockDb } from "./db.mock";
+import * as PrismaSQLite from "../generated/prisma-sqlite/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: any | undefined;
@@ -8,7 +9,10 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient(): any {
   if (process.env.NODE_ENV === "test") {
-    return mockDb;
+    const { PrismaClient } = PrismaSQLite as any;
+    const dbUrl = process.env.DATABASE_URL || "file:./prisma/test.db";
+    const adapter = new PrismaSqlite({ url: dbUrl });
+    return new PrismaClient({ adapter }) as any;
   }
   const { PrismaClient } = PrismaPostgres as any;
   const adapter = new PrismaPg({
