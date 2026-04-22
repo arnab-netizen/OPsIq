@@ -11,6 +11,11 @@ import {
   type BusinessConditionRating,
 } from "@/domain/constants/statuses";
 
+// Safety guards for re-evaluation
+const requestDebounceMap = new Map<string, Set<string>>();
+const reEvaluationInProgress = new Set<string>();
+const processedCorrelationIds = new Set<string>();
+
 export const SIGNIFICANT_CHANGE_TYPES = [
   "new_critical_evidence",
   "kpi_deterioration",
@@ -445,7 +450,59 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     throw new Error("engagementId required for re-evaluation");
   }
 
-  const targets = determineReEvaluationTargets(event.changeType);
+  // Safety Guard 1: Debounce - prevent duplicate within same request
+  const requestKey = `${Date.now()}`;
+  if (!requestDebounceMap.has(requestKey)) {
+    requestDebounceMap.set(requestKey, new Set());
+  }
+  const debounceKey = `${event.engagementId}:${event.changeType}`;
+  const debouncedKeys = requestDebounceMap.get(requestKey)!;
+  if (debouncedKeys.has(debounceKey)) {
+    logger.info("Re-evaluation debounced (duplicate in request)", {
+      engagementId: event.engagementId,
+      changeType: event.changeType,
+      entityId: event.entityId,
+    });
+    throw new Error(`Re-evaluation already triggered for ${debounceKey} in this request`);
+  }
+  debouncedKeys.add(debounceKey);
+
+  // Safety Guard 2: Idempotency - check correlationId
+  if (event.correlationId && processedCorrelationIds.has(event.correlationId)) {
+    logger.info("Re-evaluation skipped (idempotent duplicate)", {
+      engagementId: event.engagementId,
+      changeType: event.changeType,
+      correlationId: event.correlationId,
+    });
+    throw new Error(`Re-evaluation already processed for correlationId: ${event.correlationId}`);
+  }
+  if (event.correlationId) {
+    processedCorrelationIds.add(event.correlationId);
+  }
+
+  // Safety Guard 3: Recursion guard - prevent re-eval triggering itself
+  if (reEvaluationInProgress.has(event.engagementId)) {
+    logger.warn("Re-evaluation recursion detected", {
+      engagementId: event.engagementId,
+      changeType: event.changeType,
+      entityId: event.entityId,
+    });
+    throw new Error(`Re-evaluation already in progress for engagement ${event.engagementId}`);
+  }
+  reEvaluationInProgress.add(event.engagementId);
+
+  try {
+    // Structured logging with context
+    logger.info("Re-evaluation triggered", {
+      engagementId: event.engagementId,
+      triggerType: event.changeType,
+      entityType: event.entityType,
+      entityId: event.entityId,
+      severity: event.severity,
+      description: event.description,
+    });
+
+    const targets = determineReEvaluationTargets(event.changeType);
 
   const businessConditionImpact = targets.businessConditionProfile
     ? await evaluateBusinessConditionImpact(event.engagementId)
@@ -617,26 +674,39 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     return eventId;
   });
 
-  logger.info("Re-evaluation completed and persisted", {
-    changeType: event.changeType,
-    entityType: event.entityType,
-    entityId: event.entityId,
-    engagementId: event.engagementId,
-    severity: event.severity,
-    targets,
-    businessConditionImpact: businessConditionImpact.recommendedRating,
-    interventionModeImpact: interventionModeImpact.recommendedMode,
-    healthStatus: healthStatusImpact.recommendedStatus,
-  });
+    logger.info("Re-evaluation completed and persisted", {
+      changeType: event.changeType,
+      triggerType: event.changeType,
+      engagementId: event.engagementId,
+      entityType: event.entityType,
+      entityId: event.entityId,
+      severity: event.severity,
+      businessConditionImpact: businessConditionImpact.recommendedRating,
+      interventionModeImpact: interventionModeImpact.recommendedMode,
+      healthStatus: healthStatusImpact.recommendedStatus,
+    });
 
-  return {
-    targets,
-    businessConditionImpact,
-    interventionModeImpact,
-    interventionPhaseImpact,
-    priorityImpact,
-    reviewCadenceImpact,
-    healthStatusImpact,
-    auditEventId,
-  };
+    return {
+      targets,
+      businessConditionImpact,
+      interventionModeImpact,
+      interventionPhaseImpact,
+      priorityImpact,
+      reviewCadenceImpact,
+      healthStatusImpact,
+      auditEventId,
+    };
+  } catch (error) {
+    // Safety Guard 4: Failure handling - propagate error to fail transaction
+    logger.error("Re-evaluation failed", {
+      engagementId: event.engagementId,
+      triggerType: event.changeType,
+      entityId: event.entityId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  } finally {
+    // Safety Guard 3 cleanup: Remove recursion guard
+    reEvaluationInProgress.delete(event.engagementId);
+  }
 }
