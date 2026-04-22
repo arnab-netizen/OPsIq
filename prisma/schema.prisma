@@ -190,6 +190,10 @@ model Engagement {
   conditionProfiles     BusinessConditionProfile[]
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
+  shockEvents           ShockEvent[]
+  evidenceItems         EvidenceItem[]
+  evidenceBundles       EvidenceBundle[]
+  findings              Finding[]
 
   @@index([clientId])
   @@index([status])
@@ -271,6 +275,152 @@ model IdempotencyRecord {
   @@index([idempotencyKey])
   @@index([expiresAt])
   @@map("idempotency_records")
+}
+
+// ─── Module 04: Shock Events ───────────────────────────────────────────────
+
+model ShockEvent {
+  id            String    @id @default(uuid()) @db.Uuid
+  engagementId  String    @map("engagement_id") @db.Uuid
+  type          String    // key_employee_loss | major_client_loss | payroll_pressure | margin_collapse | supplier_failure | service_breakdown | compliance_issue | reputation_damage | internal_conflict | owner_withdrawal | execution_stall
+  severity      String    // low | medium | high | critical
+  happenedAt    DateTime  @map("happened_at")
+  notes         String?
+  version       Int       @default(1)
+  visibility    String    @default("internal") @map("visibility")
+  createdBy     String?   @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  engagement    Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@index([type])
+  @@index([severity])
+  @@index([happenedAt])
+  @@map("shock_events")
+}
+
+// ─── Module 05: Evidence Vault ─────────────────────────────────────────────
+
+model FileBlob {
+  id            String    @id @default(uuid()) @db.Uuid
+  storageKey    String    @unique @map("storage_key")
+  fileName      String    @map("file_name")
+  mimeType      String    @map("mime_type")
+  size          Int
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  evidenceItems EvidenceItemFileLink[]
+
+  @@index([storageKey])
+  @@map("file_blobs")
+}
+
+model EvidenceItem {
+  id                    String    @id @default(uuid()) @db.Uuid
+  engagementId          String    @map("engagement_id") @db.Uuid
+  stageId               String?   @map("stage_id") @db.Uuid
+  category              String    // financial | operational | human | resilience | client | commercial | leadership | execution
+  type                  String    @map("type") // structured type
+  sourceType            String    @map("source_type") // interview | document | metric | observation | client_feedback | external_report
+  sourceLabel           String    @map("source_label")
+  sourceOwner           String?   @map("source_owner")
+  captureMethod         String    @map("capture_method") // manual | uploaded | extracted | synthesized
+  capturedAt            DateTime  @map("captured_at")
+  validationStatus      String    @default("submitted") @map("validation_status") // submitted | under_review | validated | rejected | superseded
+  traceabilityStatus    String    @default("traceable") @map("traceability_status") // traceable | partial | lost
+  visibilityClassification String  @default("internal") @map("visibility_classification") // internal | client_visible
+  statement             String?   // evidence summary/statement
+  version               Int       @default(1)
+  createdBy             String?   @map("created_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  engagement            Engagement @relation(fields: [engagementId], references: [id])
+  fileLinks             EvidenceItemFileLink[]
+  findingLinks          FindingEvidenceLink[]
+
+  @@index([engagementId])
+  @@index([category])
+  @@index([validationStatus])
+  @@index([capturedAt])
+  @@map("evidence_items")
+}
+
+model EvidenceItemFileLink {
+  id              String    @id @default(uuid()) @db.Uuid
+  evidenceItemId  String    @map("evidence_item_id") @db.Uuid
+  fileBlobId      String    @map("file_blob_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  evidenceItem    EvidenceItem @relation(fields: [evidenceItemId], references: [id])
+  fileBlob        FileBlob @relation(fields: [fileBlobId], references: [id])
+
+  @@unique([evidenceItemId, fileBlobId])
+  @@index([fileBlobId])
+  @@map("evidence_item_file_links")
+}
+
+model EvidenceBundle {
+  id              String    @id @default(uuid()) @db.Uuid
+  engagementId    String    @map("engagement_id") @db.Uuid
+  title           String
+  description     String?
+  version         Int       @default(1)
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  engagement      Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@map("evidence_bundles")
+}
+
+// ─── Module 06: Findings ───────────────────────────────────────────────────
+
+model Finding {
+  id                       String    @id @default(uuid()) @db.Uuid
+  engagementId             String    @map("engagement_id") @db.Uuid
+  stageId                  String?   @map("stage_id") @db.Uuid
+  title                    String
+  statement                String
+  severity                 String    // low | medium | high | critical
+  status                   String    @default("draft") // draft | under_review | validated | disputed | superseded | closed
+  confidenceLabel          String    @map("confidence_label") // low | medium | high
+  provisionalFlag          Boolean   @default(false) @map("provisional_flag")
+  clientVisibilityStatus   String    @default("internal") @map("client_visibility_status") // internal | client_visible
+  supersedesFindingId      String?   @map("supersedes_finding_id") @db.Uuid
+  version                  Int       @default(1)
+  createdBy                String?   @map("created_by") @db.Uuid
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  engagement               Engagement @relation(fields: [engagementId], references: [id])
+  supersedes               Finding? @relation("FindingSupersession", fields: [supersedesFindingId], references: [id])
+  supersededBy             Finding[] @relation("FindingSupersession")
+  evidenceLinks            FindingEvidenceLink[]
+
+  @@index([engagementId])
+  @@index([status])
+  @@index([severity])
+  @@map("findings")
+}
+
+model FindingEvidenceLink {
+  id              String    @id @default(uuid()) @db.Uuid
+  findingId       String    @map("finding_id") @db.Uuid
+  evidenceItemId  String    @map("evidence_item_id") @db.Uuid
+  linkType        String    @default("supports") @map("link_type") // supports | contradicts | context
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  finding         Finding @relation(fields: [findingId], references: [id])
+  evidenceItem    EvidenceItem @relation(fields: [evidenceItemId], references: [id])
+
+  @@unique([findingId, evidenceItemId])
+  @@index([evidenceItemId])
+  @@map("finding_evidence_links")
 }
 
 // ─── Foundation: Scheduler ──────────────────────────────────────────────────
