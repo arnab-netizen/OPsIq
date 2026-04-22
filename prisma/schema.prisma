@@ -190,6 +190,11 @@ model Engagement {
   conditionProfiles     BusinessConditionProfile[]
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
+  findings              Finding[]
+  recommendations       Recommendation[]
+  actions               Action[]
+  kpis                  KPI[]
+  deliverables          Deliverable[]
 
   @@index([clientId])
   @@index([status])
@@ -292,4 +297,166 @@ model ScheduledTask {
   @@index([status, scheduledFor])
   @@index([taskName])
   @@map("scheduled_tasks")
+}
+
+// ─── Module 3: Finding ─────────────────────────────────────────────────────
+
+model Finding {
+  id             String    @id @default(uuid()) @db.Uuid
+  engagementId   String    @map("engagement_id") @db.Uuid
+  title          String
+  description    String?
+  severity       String    // "low" | "medium" | "high" | "critical"
+  category       String?   // e.g. "operational", "financial", "strategic", "technical"
+  status         String    @default("draft") // "draft" | "reviewed" | "validated"
+  validatedBy    String?   @map("validated_by") @db.Uuid
+  validatedAt    DateTime? @map("validated_at")
+  visibility     String    @default("internal") // "internal" | "client_visible"
+  createdBy      String?   @map("created_by") @db.Uuid
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  engagement              Engagement          @relation(fields: [engagementId], references: [id])
+  recommendationsLinked   Recommendation[]    @relation("FindingRecommendations")
+  deliverableFindings     DeliverableContent[] @relation("FindingDeliverables")
+
+  @@index([engagementId, severity])
+  @@index([engagementId, status])
+  @@map("findings")
+}
+
+// ─── Module 3: Recommendation ──────────────────────────────────────────────
+
+model Recommendation {
+  id                  String    @id @default(uuid()) @db.Uuid
+  engagementId        String    @map("engagement_id") @db.Uuid
+  linkedFindingId     String?   @map("linked_finding_id") @db.Uuid
+  title               String
+  description         String?
+  rationale           String?
+  priority            String    // "low" | "medium" | "high" | "critical"
+  estimatedEffort     String?   @map("estimated_effort") // e.g. "1 week", "2 months"
+  estimatedImpact     String?   @map("estimated_impact")
+  status              String    @default("draft") // "draft" | "approved" | "superseded" | "implemented"
+  approvedBy          String?   @map("approved_by") @db.Uuid
+  approvedAt          DateTime? @map("approved_at")
+  supersededBy        String?   @map("superseded_by") @db.Uuid
+  visibility          String    @default("internal") // "internal" | "client_visible"
+  createdBy           String?   @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  engagement              Engagement           @relation(fields: [engagementId], references: [id])
+  linkedFinding           Finding?             @relation("FindingRecommendations", fields: [linkedFindingId], references: [id])
+  actions                 Action[]
+  deliverableFindings     DeliverableContent[] @relation("RecommendationDeliverables")
+
+  @@index([engagementId, status])
+  @@index([linkedFindingId])
+  @@map("recommendations")
+}
+
+// ─── Module 3: Action ──────────────────────────────────────────────────────
+
+model Action {
+  id                  String    @id @default(uuid()) @db.Uuid
+  engagementId        String    @map("engagement_id") @db.Uuid
+  recommendationId    String?   @map("recommendation_id") @db.Uuid
+  title               String
+  description         String?
+  status              String    @default("open") // "open" | "in_progress" | "completed" | "overdue" | "cancelled"
+  dueDate             DateTime? @map("due_date")
+  completedDate       DateTime? @map("completed_date")
+  owner               String?   @map("owner") @db.Uuid
+  priority            String    // "low" | "medium" | "high" | "critical"
+  visibility          String    @default("internal") // "internal" | "client_visible"
+  createdBy           String?   @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  engagement              Engagement          @relation(fields: [engagementId], references: [id])
+  recommendation          Recommendation?     @relation(fields: [recommendationId], references: [id])
+  deliverableActions      DeliverableContent[] @relation("ActionDeliverables")
+
+  @@index([engagementId, status])
+  @@index([recommendationId])
+  @@index([dueDate])
+  @@map("actions")
+}
+
+// ─── Module 3: KPI ─────────────────────────────────────────────────────────
+
+model KPI {
+  id                  String    @id @default(uuid()) @db.Uuid
+  engagementId        String    @map("engagement_id") @db.Uuid
+  name                String
+  description         String?
+  unit                String?   // e.g. "%", "dollars", "days"
+  baselineValue       Float?    @map("baseline_value")
+  baselineDate        DateTime? @map("baseline_date")
+  currentValue        Float?    @map("current_value")
+  currentDate         DateTime? @map("current_date")
+  targetValue         Float?    @map("target_value")
+  targetDate          DateTime? @map("target_date")
+  direction           String?   // "increase" | "decrease"
+  status              String    @default("active") // "active" | "paused" | "completed"
+  visibility          String    @default("internal") // "internal" | "client_visible"
+  createdBy           String?   @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  engagement              Engagement          @relation(fields: [engagementId], references: [id])
+  deliverableKpis         DeliverableContent[] @relation("KPIDeliverables")
+
+  @@index([engagementId, status])
+  @@map("kpis")
+}
+
+// ─── Module 3: Deliverable ─────────────────────────────────────────────────
+
+model Deliverable {
+  id              String    @id @default(uuid()) @db.Uuid
+  engagementId    String    @map("engagement_id") @db.Uuid
+  title           String
+  type            String    // "report" | "summary" | "alert"
+  status          String    @default("draft") // "draft" | "final"
+  generatedAt     DateTime  @default(now()) @map("generated_at")
+  generatedBy     String?   @map("generated_by") @db.Uuid
+  snapshotData    Json?     @map("snapshot_data") // full report JSON snapshot
+  visibility      String    @default("internal") // "internal" | "client_visible"
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  engagement          Engagement             @relation(fields: [engagementId], references: [id])
+  contents            DeliverableContent[]
+
+  @@index([engagementId, status])
+  @@index([engagementId, generatedAt])
+  @@map("deliverables")
+}
+
+// ─── Module 3: Deliverable Content (junction) ──────────────────────────────
+
+model DeliverableContent {
+  id                  String    @id @default(uuid()) @db.Uuid
+  deliverableId       String    @map("deliverable_id") @db.Uuid
+  findingId           String?   @map("finding_id") @db.Uuid
+  recommendationId    String?   @map("recommendation_id") @db.Uuid
+  actionId            String?   @map("action_id") @db.Uuid
+  kpiId               String?   @map("kpi_id") @db.Uuid
+  contentType         String    // "finding" | "recommendation" | "action" | "kpi"
+  sequenceOrder       Int       @map("sequence_order") @default(0)
+
+  deliverable         Deliverable      @relation(fields: [deliverableId], references: [id])
+  finding             Finding?          @relation("FindingDeliverables", fields: [findingId], references: [id])
+  recommendation      Recommendation?   @relation("RecommendationDeliverables", fields: [recommendationId], references: [id])
+  action              Action?           @relation("ActionDeliverables", fields: [actionId], references: [id])
+  kpi                 KPI?              @relation("KPIDeliverables", fields: [kpiId], references: [id])
+
+  @@index([deliverableId])
+  @@index([findingId])
+  @@index([recommendationId])
+  @@index([actionId])
+  @@index([kpiId])
+  @@map("deliverable_contents")
 }
