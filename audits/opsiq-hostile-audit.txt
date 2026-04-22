@@ -519,3 +519,166 @@ P2: Engagement Phase Transitions Not Validated
   Trigger: Direct API call to transitionPhase with out-of-order phase.
 
 5. UX IMPROVEMENTS
+
+Build Intervention Workflow UI
+  Pages Needed:
+    - /engagements/[id]/shock-events
+      List: Shock events by date, severity, type. Quick stats (total, critical, resolved).
+      Detail: ShockEvent title, description, eventType, severity, detectedAt, recordedBy.
+              Linked evidence count. Linked findings count. Related recommendations.
+              Action: Mark resolved (SHOCK_EVENT_RESOLVED audit). Edit details.
+      Create: Form for eventType, severity, title, description, detectedAt.
+
+    - /engagements/[id]/evidence
+      List: Evidence by category, sourceType, capturedAt. Filter by shock, finding links.
+      Detail: Title, description, sourceType, category, capturedAt, visibility.
+              List findings linked. Option to link/unlink findings.
+      Create: Form with shockEventId (optional), category, sourceType, title, description,
+              capturedAt, visibility. Multifile upload support.
+
+    - /engagements/[id]/findings
+      List: Findings by severity, status, createdAt. Filter by shock, evidence count.
+      Detail: Title, statement, severity, status, rationale, createdBy.
+              Evidence links (with remove option). Related recommendations.
+              Action: Change status (draft→validated→closed state machine UI).
+      Create: Form with shockEventId (optional), title, statement, severity, rationale.
+              Evidence link selector (multi-select from evidence list).
+
+    - /engagements/[id]/recommendations
+      List: Recommendations by priority, status, createdAt. Filter by finding, action count.
+      Detail: Title, description, priority, status, findingId, shockEventId, createdBy.
+              Related actions. Evidence trail (show finding it came from).
+              Action: Approve/reject (capability-gated). Change priority.
+      Create: Form with findingId (optional), shockEventId (optional), priority, title, description.
+
+    - /engagements/[id]/actions
+      List: Actions by status, owner, dueAt (sort by due date ascending). Filter by priority,
+            recommendation, owner. Show overdue indicator (red).
+      Detail: Title, description, status, owner, dueAt, priority, recommendationId,
+              version. Linked KPI events (show impact). Created by, createdAt.
+              Action: Change status (with version check popup). Reassign owner. Change due date.
+                      Change priority. Mark complete. Delete (if allowed).
+      Create: Form with recommendationId, title, description, owner (user selector),
+              dueAt (date picker), priority.
+
+    - /engagements/[id]/kpis
+      List: KPIs by status (improving/worsening/target_met/stagnant). Show current value,
+            baseline, target. Sparkline of recent changes (if KPI events exist).
+      Detail: Name, unit, baselineValue, currentValue, targetValue, status (computed).
+              KPI event timeline (show who changed when to what). Linked actions.
+              Trend chart (currentValue over time by KPIEvent.createdAt).
+              Action: Record value change (date picker + numeric input + optional action link).
+      Create: Form with name, unit, baselineValue, currentValue, targetValue (optional).
+
+    - /engagements/[id]/intervention
+      State Overview: Current phase badge (assessment/planning/execution/review/handover/closed).
+                      Previous phase. Last transition date/time. Transitioned by.
+      Phase Transition: Dropdown to next allowed phase. Confirm dialog. Emit INTERVENTION_PHASE_CHANGED.
+                        Show blockers (e.g., "must complete all actions before execution→review").
+      Mode: Display current intervention mode (recovery/stabilization/growth/shock_response/mixed).
+            Show if mode should change based on business condition (re-evaluation result).
+
+Dashboard / Overview
+  Engagement Summary Page:
+    - Key metrics: # open actions (with overdue count), # KPIs (improving/worsening/deteriorated),
+      # evidence collected, # findings, # recommendations, health status.
+    - Quick actions: Create shock, record evidence, create finding, create recommendation, assign action.
+    - Recent activity: Last 10 audit events (type, entity, actor, timestamp).
+    - Status indicators: Phase, mode, business condition rating, health status.
+
+Status Visibility Improvements
+  Action List:
+    - Overdue actions highlighted in red. Show days overdue.
+    - Owner avatar/name visible at a glance.
+    - Due date displayed prominently.
+    - Status color-coded (open=blue, in_progress=yellow, completed=green).
+
+  KPI List:
+    - Status icon + color (improving=green up arrow, worsening=red down arrow, stagnant=gray dash, target_met=gold check).
+    - Current vs baseline delta displayed (e.g., "+15 from baseline 100").
+    - Target progress bar (if target exists).
+
+  Finding/Recommendation/Shock Lists:
+    - Severity icon + color (critical=red, high=orange, medium=yellow, low=blue).
+    - Status badge (draft/proposed/approved/completed/closed).
+    - Count of linked items (evidence, actions).
+
+Form Usability
+  Action Create/Edit:
+    - Owner selector: Searchable user dropdown (not free text). Show user availability/workload.
+    - Due date: Calendar picker. "Quick set" buttons (1 day, 1 week, 2 weeks, 30 days from today).
+    - Priority: Radio buttons (Low/Medium/High) with descriptions. Suggest based on recommendation priority.
+
+  Evidence Create:
+    - Drag-and-drop file upload for file-based evidence (when storage integrated).
+    - Category/sourceType dropdowns with descriptions.
+    - Shock link: Searchable dropdown of open shocks.
+    - Visibility: Toggle internal/client-visible with explanation of impact.
+
+  Finding Create:
+    - Severity selector with examples (critical = "business failure", high = "major risk", etc.).
+    - Evidence link: Multi-select with evidence preview (title, sourceType, category).
+    - Shock link: Auto-populate if creating from shock detail page.
+
+Navigation Improvements
+  Breadcrumbs: Home → Engagement → ShockEvent → Evidence (show hierarchy).
+  Tab Interface:
+    - Engagement detail has tabs: Overview | ShockEvents | Evidence | Findings | Recommendations | Actions | KPIs | InterventionState
+  Sidebar: Quick links to open actions, overdue actions, deteriorated KPIs, pending approvals.
+  Search: Global search for action titles, finding statements, recommendation descriptions.
+  Links: Evidence linked to findings clickable from finding detail. Findings linked to recommendations, etc.
+
+Audit Readability
+  Audit Event List:
+    - Filter by entity type (Action, KPI, Finding, etc.), event type (created, updated, etc.), actor, date range.
+    - Display: "Actor X [event] [entity]" (e.g., "John Doe assigned action 'Implement fix'").
+    - Show payload highlight (what changed: "priority: low → high", "status: open → in_progress").
+    - Timeline view: Chronological chain of related events (e.g., action created → assigned → due date set → overdue).
+
+Reporting / Dashboard
+  Engagement Health Dashboard:
+    - KPI trends chart (line graph of KPI values over time, one line per KPI).
+    - Action completion rate (% complete).
+    - Evidence submitted vs validated.
+    - Finding severity distribution (pie chart or bar).
+    - Recommendation approval rate.
+    - Days in current phase (counter).
+    - Mode/phase change history (small timeline).
+
+  Action Reports:
+    - By owner: Who has most open actions, most overdue, best completion rate.
+    - By priority: How many high/medium/low? What % of high are complete?
+    - By due date: Actions due in next 7/14/30 days. Overdue count.
+    - By status: Funnel of open → in_progress → completed.
+
+Workflow Improvements
+  Shock → Evidence → Finding Flow:
+    - On shock detail, quick button "Add Evidence" (pre-fills shockEventId).
+    - On evidence detail, quick button "Link to Finding" (multi-select findings).
+    - On finding detail, quick button "Create Recommendation" (pre-fills findingId).
+    - On recommendation detail, quick button "Create Action" (pre-fills recommendationId).
+
+  Phase Transition Guidance:
+    - On intervention state detail, show checklist of things to complete before next phase.
+    - Example: "Before execution→review, complete these actions: [list of open actions]".
+    - Warn if attempting transition with blockers.
+
+  Conflict Resolution UI:
+    - If concurrent edit detected (version mismatch), show conflict dialog:
+      "This action was updated by someone else. Your changes: [summary]. Their changes: [summary].
+       Choose: Keep yours / Keep theirs / Merge manually."
+
+Error Messages
+  API Errors Translated to User-Friendly Language:
+    - "Cross-engagement access not allowed" → "You don't have access to that finding (it's in a different engagement)."
+    - "Phase CLOSED" → "This engagement is closed. No more changes allowed. Contact an admin to reopen."
+    - "Version mismatch" → "Someone else updated this action. Reload the page and try again."
+    - "Not found" → "This action/finding/etc. was deleted or you don't have access."
+
+Accessibility
+  - Color not only indicator (add icon: up arrow for improving, down arrow for worsening).
+  - Form labels associated with inputs (proper <label> tags).
+  - Keyboard navigation (tab through all fields and buttons).
+  - High contrast theme option.
+
+6. EXTERNAL DEPENDENCIES
