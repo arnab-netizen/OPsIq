@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError } from "@/infra/errors";
+import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -15,9 +16,38 @@ export interface CreateActionInput {
 }
 
 export interface UpdateActionInput {
-  status?: string;
+  status?: ActionStatus;
   blockageReason?: string;
   version: number;
+}
+
+// State machine: allowed transitions per status
+const ACTION_TRANSITIONS: Partial<Record<ActionStatus, readonly ActionStatus[]>> = {
+  draft: ["assigned", "cancelled"],
+  assigned: ["in_progress", "blocked", "cancelled"],
+  in_progress: ["blocked", "completed", "assigned"],
+  blocked: ["assigned", "cancelled"],
+  completed: [],
+  verified: [],
+  cancelled: [],
+  overdue: ["assigned", "blocked", "cancelled"],
+};
+
+function validateActionStatus(status: unknown): asserts status is ActionStatus {
+  if (!ACTION_STATUSES.includes(status as ActionStatus)) {
+    throw new ValidationError(
+      `Invalid action status: ${status}. Must be one of: ${ACTION_STATUSES.join(", ")}`
+    );
+  }
+}
+
+function validateActionTransition(fromStatus: ActionStatus, toStatus: ActionStatus): void {
+  const allowed = ACTION_TRANSITIONS[fromStatus];
+  if (!allowed || !allowed.includes(toStatus)) {
+    throw new ValidationError(
+      `Invalid action transition: ${fromStatus} → ${toStatus}. Allowed from ${fromStatus}: ${allowed?.join(", ") || "none"}`
+    );
+  }
 }
 
 export async function createAction(
@@ -78,14 +108,50 @@ export async function updateActionStatus(
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
-  const updated = await db.action.update({
-    where: { id: actionId },
+  // Validate version for optimistic locking
+  if (action.version !== input.version) {
+    throw new ConflictError(
+      "Action has been modified by another process. Current version: " + action.version,
+      "STALE_VERSION"
+    );
+  }
+
+  const newStatus = input.status ?? action.status;
+  const previousStatus = action.status as ActionStatus;
+
+  // Validate new status value
+  if (newStatus) {
+    validateActionStatus(newStatus);
+    // Only validate transition if status is actually changing
+    if (newStatus !== previousStatus) {
+      validateActionTransition(previousStatus, newStatus);
+    }
+  }
+
+  // Optimistic locking: update only if version matches
+  const updateResult = await db.action.updateMany({
+    where: {
+      id: actionId,
+      version: input.version,
+    },
     data: {
-      status: input.status ?? action.status,
+      status: newStatus,
       blockageReason: input.blockageReason ?? action.blockageReason,
-      version: input.version + 1,
+      version: { increment: 1 },
     },
   });
+
+  if (updateResult.count === 0) {
+    throw new ConflictError(
+      "Action has been modified by another process",
+      "OPTIMISTIC_LOCK_FAILED"
+    );
+  }
+
+  const updated = await db.action.findUnique({
+    where: { id: actionId },
+  });
+  if (!updated) throw new NotFoundError("Action", actionId);
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ACTION_UPDATED,
@@ -93,9 +159,18 @@ export async function updateActionStatus(
     entityType: "action",
     entityId: actionId,
     payload: {
-      status: input.status,
+      previousStatus,
+      newStatus,
+      blockageReason: input.blockageReason,
     },
     visibility: "internal",
+  });
+
+  logger.info("Action status updated", {
+    actionId,
+    previousStatus,
+    newStatus,
+    updatedBy: actorId,
   });
 
   return updated;
