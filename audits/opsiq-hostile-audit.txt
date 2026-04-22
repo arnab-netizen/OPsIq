@@ -682,3 +682,215 @@ Accessibility
   - High contrast theme option.
 
 6. EXTERNAL DEPENDENCIES
+
+Required Now (Core System)
+
+Database
+  Current: PostgreSQL via Prisma ORM
+  Status: INTEGRATED
+  Usage: All entity persistence, audit log storage, idempotency records, scheduled tasks
+  Risk if absent: System cannot start
+  Evidence: prisma/schema.prisma defines all models, migrations applied
+
+Auth Provider / Session Management
+  Current: In-memory session store (Session model in DB)
+  Status: INTEGRATED (basic)
+  Usage: User login, session validation, token storage
+  Missing: OAuth integration, SSO, 2FA, password reset service
+  Risk if absent: No user authentication. All APIs exposed.
+  Notes: Current implementation stores hashed passwords in User.hashedPassword. Session tokens in Session table.
+
+Required Before Go-Live
+
+Notification Service
+  Purpose: Alert users to overdue actions, KPI deterioration, phase changes, recommendation approvals
+  Current Status: NOT INTEGRATED
+  Missing Events:
+    - Action due date approaching → email/SMS/in-app notification
+    - Action overdue → alert owner + manager
+    - KPI deteriorated below threshold → alert engagement owner
+    - Phase transition → notify team
+    - Recommendation approved/rejected → notify assignee
+  Options:
+    - Email: SendGrid, AWS SES, Mailgun
+    - SMS: Twilio, AWS SNS
+    - In-app: Pusher, Firebase Cloud Messaging, custom WebSocket
+    - Notification service: Firebase Cloud Messaging, OneSignal
+  Risk if absent: Users miss critical deadlines and events. No workflow awareness.
+  Go-Live Blocker: At minimum, email notifications for overdue actions required.
+
+User/Team Directory Integration
+  Purpose: Populate user list, team hierarchy, availability/workload, org structure
+  Current Status: NOT INTEGRATED. Users manually created via API.
+  Missing: No bulk user import, no LDAP/Active Directory sync, no team structure
+  Options:
+    - LDAP/Active Directory
+    - OAuth (Google Workspace, Azure AD, Okta)
+    - CSV import
+    - Workday, BambooHR API
+  Risk if absent: Cannot scale to multiple users efficiently. No org hierarchy awareness.
+  Impact: Action assignment requires manual user search. No team workload balancing.
+
+File Storage
+  Purpose: Store evidence attachments, exported reports, audit logs
+  Current Status: NOT INTEGRATED
+  Missing: No evidence file upload, no PDF/Excel export capability
+  Options:
+    - AWS S3
+    - Google Cloud Storage
+    - Azure Blob Storage
+    - MinIO (self-hosted S3 clone)
+  Risk if absent: Cannot attach files to evidence. Cannot generate reports. Audit logs grow large in DB.
+  Impact: Evidence must be text-only. No document evidence.
+
+Document Export / PDF Generation
+  Purpose: Export findings, recommendations, action plans as PDF/Word
+  Current Status: NOT INTEGRATED
+  Missing: No PDF export, no report generation, no evidence bundle
+  Options:
+    - wkhtmltopdf (open source)
+    - puppeteer (headless Chrome)
+    - pdfkit (Node.js)
+    - AWS Textract (extract from uploaded documents)
+  Risk if absent: Cannot generate compliance reports, action plans, handover documentation.
+  Impact: End-to-end reports must be manually compiled.
+
+Logging / Observability
+  Purpose: Track application errors, performance, API latency, background job status
+  Current Status: NOT INTEGRATED. Only console.log via logger service.
+  Missing: No log aggregation, no performance monitoring, no alerting
+  Options:
+    - Datadog
+    - New Relic
+    - Elastic Stack (ELK)
+    - Splunk
+    - CloudWatch (AWS)
+    - Sentry (error tracking)
+  Risk if absent: Cannot debug production issues. Cannot see performance bottlenecks.
+  Impact: Slow issue resolution. No visibility into re-evaluation service failures.
+
+Error Tracking / Crash Reporting
+  Purpose: Capture unhandled exceptions, stack traces, user context, breadcrumbs
+  Current Status: NOT INTEGRATED
+  Options:
+    - Sentry
+    - Rollbar
+    - Bugsnag
+    - AWS Xray
+  Risk if absent: Production errors go unnoticed. Cannot fix bugs users encounter.
+  Impact: API failures silently return 500 without investigation.
+
+Background Job Queue
+  Purpose: Async processing of re-evaluations, notifications, report generation, data aggregation
+  Current Status: NOT INTEGRATED. No queue, no async jobs.
+  Missing: Re-evaluation runs synchronously in request → slow requests. Notifications not sent.
+           Report generation not async.
+  Options:
+    - Bull/BullMQ (Redis-based, Node.js)
+    - RabbitMQ
+    - AWS SQS
+    - Google Cloud Tasks
+    - Celery (Python)
+  Risk if absent: Long-running operations (re-evaluation, report export) block API. Requests timeout.
+  Impact: Re-evaluation service stub stays stub (runs in request, too slow to be useful).
+
+Analytics / Usage Tracking
+  Purpose: Understand how consultants use the system, what workflows are most common, where they get stuck
+  Current Status: NOT INTEGRATED
+  Options:
+    - Segment
+    - Amplitude
+    - Google Analytics
+    - Mixpanel
+    - Custom event logging
+  Risk if absent: No data on usage patterns, feature adoption, pain points.
+  Impact: Cannot optimize workflow based on real usage.
+
+Required Later (Post-MVP)
+
+CRM Integration
+  Purpose: Sync ClientAccount, contact info, engagement history with CRM
+  Options:
+    - Salesforce API
+    - HubSpot API
+    - Pipedrive API
+    - Microsoft Dynamics
+  Risk if absent: Manual sync between CRM and OPSIQ. Duplicate client records.
+
+BI / Data Warehouse
+  Purpose: Aggregate engagement data for dashboards, trends, forecasting
+  Options:
+    - Looker (Google Cloud)
+    - Tableau
+    - Power BI (Microsoft)
+    - Metabase
+    - dbt + Snowflake
+  Risk if absent: No executive dashboards. Cannot slice data by engagement type, consultant, client.
+
+Time Tracking Integration
+  Purpose: Link actions/KPI changes to consultant time spent
+  Options:
+    - Toggl API
+    - Harvest API
+    - Clockify API
+  Risk if absent: Cannot calculate ROI of actions, consultant utilization.
+
+Calendar / Scheduling
+  Purpose: Schedule interventions, reviews, phase transitions
+  Options:
+    - Google Calendar API
+    - Outlook API
+    - Calendly
+  Risk if absent: Manual calendar management. Double-booking possible.
+
+Legal / Compliance
+  Purpose: Evidence collection and retention for regulatory compliance
+  Options:
+    - Automated evidence categorization (tagging)
+    - Retention policies
+    - GDPR/CCPA compliance (data deletion, export)
+  Risk if absent: Cannot prove compliance. Evidence retention unclear.
+
+Third-Party Integrations (Optional)
+
+Slack / Teams Integration
+  Purpose: Notifications, alerts, action item status updates in team chat
+  Current Status: NOT INTEGRATED
+  Impact: Users must check OPSIQ manually for updates.
+
+Zapier / Make
+  Purpose: Connect OPSIQ to other tools (e.g., trigger Slack message on action overdue)
+  Current Status: NOT INTEGRATED
+  Impact: Manual integration workflows required.
+
+Dependency Status Summary
+
+Usable Now:
+  - PostgreSQL (integrated)
+  - Session store (integrated, basic)
+  - User/Auth (integrated, basic)
+
+Must Add Before Go-Live:
+  - Email/notification service (at least for overdue actions)
+  - File storage (for evidence attachments)
+  - Logging/observability (at minimum debug-level logs to persistent storage)
+  - Error tracking (Sentry or equivalent)
+  - Background job queue (for async re-evaluation, notifications)
+
+Strongly Recommended Before Go-Live:
+  - PDF/report export
+  - User directory integration (LDAP/OAuth for bulk user onboarding)
+  - Analytics tracking
+
+Can Defer Post-MVP:
+  - CRM integration
+  - BI/data warehouse
+  - Time tracking
+  - Calendar integration
+  - Compliance automation
+  - Slack/Teams
+  - Zapier
+
+Critical Gap: None of these (except DB, session, auth) are integrated. System cannot send notifications,
+             store evidence files, generate reports, track errors, or run async jobs. These must be added
+             before production use.
