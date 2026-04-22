@@ -4,6 +4,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { INTERVENTION_PHASES, type InterventionPhase } from "@/domain/constants/statuses";
 import { logger } from "@/infra/logger";
+import { triggerReEvaluation } from "./re-evaluation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -150,6 +151,17 @@ export async function transitionPhase(
       newPhase: targetPhase,
     },
     visibility: "internal",
+  });
+
+  await triggerReEvaluation({
+    changeType: "intervention_override",
+    entityType: "intervention_state",
+    entityId: updated.id,
+    engagementId,
+    severity: "medium",
+    description: `Phase transitioned from ${currentPhase} to ${targetPhase}`,
+    triggeredBy: actorId,
+    correlationId: updated.id,
   });
 
   logger.info("Intervention phase transitioned", {

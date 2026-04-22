@@ -15,6 +15,22 @@ vi.mock("@/lib/db", () => ({
       create: vi.fn(),
       update: vi.fn(),
     },
+    businessConditionProfile: {
+      findFirst: vi.fn(),
+    },
+    kpi: {
+      findMany: vi.fn(),
+    },
+    action: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
+    shockEvent: {
+      findMany: vi.fn(),
+    },
+    recommendation: {
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -189,6 +205,24 @@ describe("Intervention State Service", () => {
         currentPhase: "planning",
         previousPhase: "assessment",
       });
+
+      mockDb.businessConditionProfile.findFirst.mockResolvedValue({
+        businessStatus: "stable",
+        severityScore: 5,
+        cashPressureLevel: "low",
+        marginPressureLevel: "low",
+        ownerDependencyRisk: "low",
+        moraleFragilityLevel: "low",
+      });
+      mockDb.kpi.findMany.mockResolvedValue([]);
+      mockDb.action.findMany.mockResolvedValue([]);
+      mockDb.action.count.mockResolvedValue(0);
+      mockDb.shockEvent.findMany.mockResolvedValue([]);
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+        interventionMode: "stabilization",
+      });
+      mockDb.recommendation.findMany.mockResolvedValue([]);
 
       const { transitionPhase } = await import("./intervention-state");
       const result = await transitionPhase(
