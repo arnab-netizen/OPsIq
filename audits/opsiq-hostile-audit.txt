@@ -214,3 +214,159 @@ Constraints Enforced:
   Cross-engagement validation enforced in all services (recommendation→engagement, action→engagement, etc.)
 
 3. MISSING
+
+Critical Missing: CLAUDE.md Mandatory Adaptive Rule
+  Requirement: Every significant change must route into governed re-evaluation of BusinessCondition,
+               InterventionMode, InterventionPhase, recommendation/action priority, review cadence, health.
+  Current State: re-evaluation service exists (src/services/re-evaluation.ts) but is stub only.
+                 Triggers no actual re-evaluation logic. Service comment says "Domain modules will subscribe"
+                 but no subscriptions implemented.
+  Where NOT called: shock-event.ts (0 calls), evidence-item.ts (0 calls), finding.ts (0 calls),
+                    recommendation.ts (0 calls), action.ts (0 calls), kpi.ts (0 calls),
+                    kpi-event.ts (0 calls), intervention-state.ts (0 calls).
+  Where called: business-condition.ts, engagement-membership.ts, engagement.ts, role-assignment.ts
+                (non-intervention modules only).
+  Risk: Business logic correctness requirement completely unimplemented for intervention workflow.
+
+UI Layer
+  Missing: All intervention workflow pages:
+    - /engagements/[id]/shock-events (list, detail, create)
+    - /engagements/[id]/evidence (list, detail, create)
+    - /engagements/[id]/findings (list, detail, create, link evidence)
+    - /engagements/[id]/recommendations (list, detail, create)
+    - /engagements/[id]/actions (list, detail, create, assign, set due date, set priority, change status)
+    - /engagements/[id]/kpis (list, detail, create, record change)
+    - /engagements/[id]/intervention (state detail, phase transition UI)
+  Impact: No end-to-end workflow usable from UI. All testing must be API-only.
+
+API Route Tests
+  Missing: 0 API route tests exist (0 of 22 intervention endpoints tested at API layer).
+  Missing coverage:
+    - Request validation (invalid UUIDs, missing required fields, enum validation)
+    - Authentication enforcement (withAuth actually called and capability checked)
+    - Response format (correct status codes, payload structure)
+    - Error handling (NotFoundError, ValidationError returned as HTTP 404/400)
+    - Engagement ownership enforcement (cross-engagement access rejected)
+    - Phase gating (writes rejected when phase CLOSED)
+    - Audit event emission (correct events emitted with correct payloads)
+  Tests exist for: Services only (135 tests). No API integration tests.
+
+DELETE Operations
+  Missing: No DELETE endpoints for any intervention entities (shock, evidence, finding, recommendation, action, KPI).
+  Workaround: None. Cannot delete. Orphan/duplicate/correction scenarios have no resolution path.
+  Only DELETE endpoints: /users/[id]/roles, /users/[id]/memberships (non-intervention).
+  Risk: Invalid data persists forever. Cannot remove duplicate actions/findings/recommendations.
+
+State Machines
+  Missing: No formal state machine for Finding status transitions.
+  Defined states: draft, under_review, validated, superseded, closed (in FINDING_STATUSES).
+  Missing: No service enforcing valid transitions. Example: can transition from validated directly
+           to draft? Unknown (probably invalid but not enforced).
+  Missing: No FINDING_VALIDATED/FINDING_SUPERSEDED audit event emission in services.
+  Missing: No Finding.status update endpoint or service function.
+
+Batch/Bulk Operations
+  Missing: No batch endpoints.
+    - No bulk link evidence to finding (must call link endpoint for each evidence)
+    - No bulk create findings
+    - No bulk assign actions
+    - No bulk update KPI values
+  Impact: Slow for multi-item workflows.
+
+Audit Event Emission Gaps
+  Defined but Never Emitted:
+    - ACTION_OVERDUE (defined in audit-events.ts, no code checks overdue or emits)
+    - KPI_DETERIORATED (defined, no code checks deterioration or emits)
+    - EVIDENCE_SUBMITTED (defined, no POST evidence endpoint emits it; only VALIDATED/REJECTED)
+    - FINDING_LINKED (defined in constants but never emitted; FindingEvidenceLink created without event)
+    - FINDING_VALIDATED, FINDING_SUPERSEDED (defined but no service function calls them)
+    - RECOMMENDATION_REJECTED (defined but no reject endpoint exists)
+  Impact: Audit trail incomplete. Cannot reconstruct true sequence of events.
+
+Visibility/Filtering Gaps
+  Missing: No read-side visibility filtering for client_visible vs internal audit events.
+  Missing: No filtering of intervention state/phase from client UI (if UI existed).
+  Missing: No client-visible dashboard of their own KPIs/recommendations/actions.
+  Missing: No audit event query endpoints (cannot list audit by entity, date, actor, etc.).
+
+Soft Deletes
+  Missing: All deletes are hard (if DELETE existed). No soft delete for governed records.
+  Schema: No deleted_at timestamp on entities.
+  Impact: Cannot restore deleted shock events, findings, etc. Audit trail of deletion unclear.
+
+Concurrency / Conflict Detection
+  Missing: No detection of concurrent assignments (two users assigning action owner simultaneously).
+  Missing: No locking for finding while linking evidence (concurrent link/unlink).
+  Missing: No conflict resolution for simultaneous KPI value updates.
+  Only protection: Version field on Action for optimistic locking. Not on other entities.
+
+Idempotency Integration
+  Missing: IdempotencyRecord model exists but never used.
+  Missing: No service function checks idempotency key or stores result.
+  Missing: API routes do not require idempotency key header.
+  Risk: POST /actions, POST /shock-events, etc. not idempotent. Duplicate submissions create duplicates.
+
+Notification / Alert Triggers
+  Missing: No service triggers notifications for:
+    - Action due date approaching
+    - Action overdue
+    - KPI deteriorating below threshold
+    - Phase transition
+    - Recommendation created (notify assignee)
+    - Evidence submitted (notify reviewer)
+  Impact: No alerting mechanism. Users must poll manually.
+
+Linking / Relationship Operations
+  Missing: No endpoint to link evidence to finding after finding creation.
+  Missing: No endpoint to unlink evidence from finding.
+  Missing: No endpoint to link recommendation to finding after creation.
+  Missing: No batch link operations.
+  Current: Can only link evidence→finding at finding creation time (linkedEvidenceIds array).
+
+Full Update (PATCH)
+  Missing: No PATCH endpoints. Only specialized POST endpoints for assign/due-date/priority.
+  Missing: Cannot update action title/description after creation (only status/owner/deadline/priority).
+  Missing: Cannot update KPI name/unit/baseline/target after creation (only currentValue).
+  Missing: Cannot update finding statement/severity after creation.
+  Impact: Correction workflows require delete (not available) + recreate.
+
+Audit Event Reconstruction
+  Missing: ACTION_CREATED payload missing: engagement context, recommendation context.
+  Missing: KPI_CHANGE_RECORDED audit includes actionId but no actor context if triggered automatically.
+  Missing: No audit trace linking re-evaluation to the change that triggered it (no correlationId usage).
+  Missing: SHOCK_EVENT_RECORDED does not include root cause or expected duration.
+  Missing: EVIDENCE_SUBMITTED vs EVIDENCE_VALIDATED—unclear which represents final validation.
+
+Phase Change Notifications
+  Missing: When phase transitions to CLOSED, no automatic cleanup or notification.
+  Missing: No audit event ACTION_COMPLETED or ACTION_OVERDUE emitted when phase changes.
+  Missing: No validation that all open actions are completed before phase transition.
+
+Cross-Engagement Boundaries
+  Missing: No test verifying action owner (User) cannot be from different organization if engagement is org-scoped.
+  Missing: No test blocking read of recommendation from different engagement.
+  Missing: No read-only access control (can see engagement A, cannot see engagement B recommendations).
+
+Constraint Gaps
+  Missing: No check constraint ensuring KPI.currentValue is numeric (Float type allows any float, no bounds).
+  Missing: No check constraint on Finding.severity matching RISK_SEVERITIES enum.
+  Missing: No check constraint on Action.dueAt > now at DB level (only checked in service).
+  Missing: No NOT NULL on createdBy for: EvidenceItem, Finding, Recommendation, ShockEvent.
+  Missing: No FK from EvidenceItem.recordedBy to User.
+  Missing: No ON DELETE cascade strategy defined for ShockEvent→Recommendation links.
+
+Reporting / Analytics
+  Missing: No aggregate query endpoints:
+    - Actions by status/owner/priority
+    - KPI trend over time
+    - Evidence by category/source
+    - Finding severity distribution
+    - Recommendation approval rate
+  Missing: No export/report generation (PDF, Excel, CSV).
+
+Search / Filter
+  Missing: No full-text search on finding statement, recommendation description, action title.
+  Missing: No advanced filtering (date range, multiple statuses, owner list, severity levels).
+  Missing: No sort options beyond default order.
+
+4. RISKS
