@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import type { LeadStatus } from "@/domain/constants/statuses";
 import { LEAD_STATUSES } from "@/domain/constants/statuses";
@@ -151,14 +152,37 @@ export async function linkLeadToEngagement(
     );
   }
 
-  await db.leadRecord.update({
-    where: { id: leadId },
-    data: {
-      status: "converted",
-      convertedToClientId: clientId,
-      engagementId,
-    },
+  // Verify engagement exists and belongs to the specified client
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: { id: true, clientId: true },
   });
+
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  if (engagement.clientId !== clientId) {
+    throw new ValidationError(
+      "Engagement must belong to the specified client"
+    );
+  }
+
+  const idempotencyKey = `lead-convert:${leadId}:${engagementId}:${actorId}`;
+
+  const result = await withIdempotency(
+    idempotencyKey,
+    "lead.link_to_engagement",
+    async () => {
+      await db.leadRecord.update({
+        where: { id: leadId },
+        data: {
+          status: "converted",
+          convertedToClientId: clientId,
+          engagementId,
+        },
+      });
+      return { leadId, engagementId, clientId };
+    }
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_LINKED_TO_ENGAGEMENT,
@@ -169,7 +193,22 @@ export async function linkLeadToEngagement(
     visibility: "internal",
   });
 
-  logger.info("Lead linked to engagement", { leadId, engagementId, clientId });
+  // Trigger re-evaluation: lead conversion is a scope change that may affect engagement planning
+  await triggerReEvaluation({
+    changeType: "scope_change",
+    entityType: "lead_record",
+    entityId: leadId,
+    engagementId,
+    severity: "medium",
+    description: `Lead ${leadId} converted and linked to engagement ${engagementId}`,
+    triggeredBy: actorId,
+  });
+
+  logger.info("Lead linked to engagement", {
+    leadId,
+    engagementId,
+    clientId,
+  });
 }
 
 export async function getLeadById(leadId: string) {
