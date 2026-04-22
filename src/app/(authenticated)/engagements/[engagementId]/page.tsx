@@ -27,6 +27,15 @@ const CONDITION_VARIANTS: Record<string, "default" | "success" | "warning" | "de
   strong: "success",
 };
 
+const PHASE_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  assessment: "default",
+  planning: "default",
+  execution: "success",
+  review: "warning",
+  handover: "warning",
+  closed: "muted",
+};
+
 async function fetchEngagement(engagementId: string) {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}`,
@@ -190,6 +199,35 @@ export default async function EngagementDetailPage({
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">
               No business condition assessment has been recorded yet.
+            </p>
+          )}
+        </div>
+
+        {/* Intervention Phase */}
+        <div className="rounded-lg border border-border p-6">
+          <h2 className="text-lg font-semibold text-foreground">Intervention Phase</h2>
+          {engagement.interventionState ? (
+            <dl className="mt-4 space-y-2">
+              <div className="flex justify-between">
+                <dt className="text-sm text-muted-foreground">Current Phase</dt>
+                <dd>
+                  <Badge variant={PHASE_VARIANTS[engagement.interventionState.currentPhase] ?? "muted"}>
+                    {engagement.interventionState.currentPhase.replace("_", " ")}
+                  </Badge>
+                </dd>
+              </div>
+              {engagement.interventionState.previousPhase && (
+                <div className="flex justify-between">
+                  <dt className="text-sm text-muted-foreground">Previous Phase</dt>
+                  <dd className="text-sm text-muted-foreground">
+                    {engagement.interventionState.previousPhase.replace("_", " ")}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Intervention phase not yet initialized.
             </p>
           )}
         </div>

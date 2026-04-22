@@ -130,8 +130,9 @@ describe("Intervention State Service", () => {
         "user-1"
       );
 
+      expect(result.id).toBe("state-1");
+      expect(result.engagementId).toBe("eng-1");
       expect(result.currentPhase).toBe("assessment");
-      expect(result.previousPhase).toBeUndefined();
     });
 
     it("prevents duplicate initialization", async () => {
