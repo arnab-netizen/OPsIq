@@ -195,6 +195,9 @@ model Engagement {
   evidenceBundles       EvidenceBundle[]
   findings              Finding[]
   recommendations       Recommendation[]
+  actions               Action[]
+  kpis                  KPI[]
+  reviewCycles          ReviewCycle[]
 
   @@index([clientId])
   @@index([status])
@@ -377,6 +380,119 @@ model EvidenceBundle {
 
   @@index([engagementId])
   @@map("evidence_bundles")
+}
+
+// ─── Module 08: Actions ───────────────────────────────────────────────────
+
+model Action {
+  id                    String    @id @default(uuid()) @db.Uuid
+  engagementId          String    @map("engagement_id") @db.Uuid
+  recommendationId      String?   @map("recommendation_id") @db.Uuid
+  title                 String
+  description           String
+  priority              Int       // 1=critical, 2=high, 3=medium, 4=low
+  status                String    @default("open") // open | in_progress | done | blocked
+  owner                 String    // user ID or role
+  dueDate               DateTime  @map("due_date")
+  completedAt           DateTime? @map("completed_at")
+  visibilityStatus      String    @default("internal") @map("visibility_status") // internal | client_visible
+  version               Int       @default(1)
+  createdBy             String?   @map("created_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  engagement            Engagement @relation(fields: [engagementId], references: [id])
+  kpiImpacts            KPIImpact[]
+
+  @@index([engagementId])
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@map("actions")
+}
+
+// ─── Module 09: KPI Tracking ───────────────────────────────────────────────
+
+model KPI {
+  id                    String    @id @default(uuid()) @db.Uuid
+  engagementId          String    @map("engagement_id") @db.Uuid
+  name                  String
+  description           String?
+  metricType            String    @map("metric_type") // revenue | cost | efficiency | satisfaction | other
+  baselineValue         Float     @map("baseline_value")
+  currentValue          Float     @map("current_value")
+  targetValue           Float     @map("target_value")
+  unit                  String    // percentage | dollars | count | rating | other
+  direction             String    // up | down (target direction)
+  visibilityStatus      String    @default("internal") @map("visibility_status") // internal | client_visible
+  version               Int       @default(1)
+  createdBy             String?   @map("created_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  engagement            Engagement @relation(fields: [engagementId], references: [id])
+  snapshots             KPISnapshot[]
+  impacts               KPIImpact[]
+
+  @@index([engagementId])
+  @@index([metricType])
+  @@map("kpis")
+}
+
+model KPISnapshot {
+  id                    String    @id @default(uuid()) @db.Uuid
+  kpiId                 String    @map("kpi_id") @db.Uuid
+  value                 Float
+  recordedAt            DateTime  @map("recorded_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  kpi                   KPI @relation(fields: [kpiId], references: [id])
+
+  @@index([kpiId])
+  @@index([recordedAt])
+  @@map("kpi_snapshots")
+}
+
+model KPIImpact {
+  id                    String    @id @default(uuid()) @db.Uuid
+  kpiId                 String    @map("kpi_id") @db.Uuid
+  actionId              String    @map("action_id") @db.Uuid
+  impactAmount          Float     @map("impact_amount") // change in KPI value
+  impactRationale       String    @map("impact_rationale")
+  version               Int       @default(1)
+  createdBy             String?   @map("created_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  kpi                   KPI @relation(fields: [kpiId], references: [id])
+  action                Action @relation(fields: [actionId], references: [id])
+
+  @@unique([kpiId, actionId])
+  @@index([actionId])
+  @@map("kpi_impacts")
+}
+
+// ─── Module 12: Review Loop ───────────────────────────────────────────────
+
+model ReviewCycle {
+  id                    String    @id @default(uuid()) @db.Uuid
+  engagementId          String    @map("engagement_id") @db.Uuid
+  status                String    // improving | stagnant | worsening
+  kpiProgressSummary    String    @map("kpi_progress_summary")
+  unresolvedFindingsCount Int    @map("unresolved_findings_count")
+  completedActionsCount Int      @map("completed_actions_count")
+  blockedActionsCount   Int      @map("blocked_actions_count")
+  rationale             String
+  visibilityStatus      String    @default("internal") @map("visibility_status") // internal | client_visible
+  version               Int       @default(1)
+  createdBy             String?   @map("created_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+
+  engagement            Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("review_cycles")
 }
 
 // ─── Module 06: Findings ───────────────────────────────────────────────────
