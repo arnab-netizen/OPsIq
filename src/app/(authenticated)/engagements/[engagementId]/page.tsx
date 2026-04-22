@@ -28,7 +28,6 @@ const CONDITION_VARIANTS: Record<string, "default" | "success" | "warning" | "de
   strong: "success",
 };
 
-<<<<<<< HEAD
 const PHASE_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   assessment: "default",
   planning: "default",
@@ -36,23 +35,6 @@ const PHASE_VARIANTS: Record<string, "default" | "success" | "warning" | "destru
   review: "warning",
   handover: "warning",
   closed: "muted",
-=======
-const SEVERITY_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  low: "muted",
-  medium: "warning",
-  high: "warning",
-  critical: "destructive",
-};
-
-const STATUS_BADGE_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
-  open: "warning",
-  in_progress: "warning",
-  completed: "success",
-  deferred: "muted",
-  resolved: "success",
-  active: "success",
-  blocked: "destructive",
->>>>>>> origin/claude/operator-dashboard-pages-P9fwP
 };
 
 async function fetchEngagement(engagementId: string) {

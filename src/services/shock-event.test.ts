@@ -289,4 +289,33 @@ describe("ShockEvent Service", () => {
       }
     });
   });
+
+  describe("createShockEvent transaction behavior", () => {
+    it("should create shock event atomically with audit event", async () => {
+      const input: CreateShockEventInput = {
+        engagementId,
+        type: "margin_collapse",
+        severity: "critical",
+        happenedAt: "2026-04-22T15:00:00Z",
+        notes: "Transaction test",
+      };
+
+      const result = await createShockEvent(input, actorId);
+      expect(result.id).toBeDefined();
+
+      // Verify the shock event was created
+      const event = await getShockEventDetail(result.id);
+      expect(event.type).toBe("margin_collapse");
+
+      // Verify audit event was emitted
+      const auditEvents = await db.auditEvent.findMany({
+        where: {
+          entityId: result.id,
+          eventName: "shock_event.recorded",
+        },
+      });
+      expect(auditEvents.length).toBeGreaterThan(0);
+      expect(auditEvents[0].payload).toBeDefined();
+    });
+  });
 });

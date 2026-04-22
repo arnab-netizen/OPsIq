@@ -86,42 +86,46 @@ export async function createFinding(
     );
   }
 
-  const finding = await db.finding.create({
-    data: {
-      engagementId: input.engagementId,
-      stageId: input.stageId,
-      title: input.title,
-      statement: input.statement,
-      severity: input.severity,
-      confidenceLabel: input.confidenceLabel,
-      provisionalFlag: input.provisionalFlag ?? false,
-      clientVisibilityStatus: visibility,
-      createdBy: actorId,
-    },
-    select: { id: true, engagementId: true },
-  });
+  const finding = await db.$transaction(async (tx) => {
+    const newFinding = await tx.finding.create({
+      data: {
+        engagementId: input.engagementId,
+        stageId: input.stageId,
+        title: input.title,
+        statement: input.statement,
+        severity: input.severity,
+        confidenceLabel: input.confidenceLabel,
+        provisionalFlag: input.provisionalFlag ?? false,
+        clientVisibilityStatus: visibility,
+        createdBy: actorId,
+      },
+      select: { id: true, engagementId: true },
+    });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.FINDING_CREATED,
-    actorId,
-    entityType: "Finding",
-    entityId: finding.id,
-    payload: {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.FINDING_CREATED,
+      actorId,
+      entityType: "Finding",
+      entityId: newFinding.id,
+      payload: {
+        engagementId: input.engagementId,
+        severity: input.severity,
+        title: input.title,
+      },
+    });
+
+    // Trigger re-evaluation due to new finding
+    await triggerReEvaluation({
+      changeType: "new_critical_evidence",
+      entityType: "Finding",
+      entityId: newFinding.id,
       engagementId: input.engagementId,
       severity: input.severity,
-      title: input.title,
-    },
-  });
+      description: `Finding created: ${input.title}`,
+      triggeredBy: actorId,
+    });
 
-  // Trigger re-evaluation due to new finding
-  await triggerReEvaluation({
-    changeType: "new_critical_evidence",
-    entityType: "Finding",
-    entityId: finding.id,
-    engagementId: input.engagementId,
-    severity: input.severity,
-    description: `Finding created: ${input.title}`,
-    triggeredBy: actorId,
+    return newFinding;
   });
 
   return finding;

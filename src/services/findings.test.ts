@@ -557,4 +557,37 @@ describe("Findings Service", () => {
       }
     });
   });
+
+  describe("createFinding transaction behavior", () => {
+    it("should create finding atomically with audit event", async () => {
+      const input: CreateFindingInput = {
+        engagementId,
+        title: "Transaction Test Finding",
+        statement: "This finding was created within a transaction",
+        severity: "critical",
+        confidenceLabel: "high",
+        clientVisibilityStatus: "client_visible",
+      };
+
+      const result = await createFinding(input, actorId);
+      expect(result.id).toBeDefined();
+
+      // Verify the finding was created
+      const finding = await getFindingDetail(result.id);
+      expect(finding.title).toBe("Transaction Test Finding");
+      expect(finding.severity).toBe("critical");
+
+      // Verify audit event was emitted
+      const auditEvents = await db.auditEvent.findMany({
+        where: {
+          entityId: result.id,
+          eventName: "finding.created",
+        },
+      });
+      expect(auditEvents.length).toBeGreaterThan(0);
+      expect(auditEvents[0].payload).toBeDefined();
+      expect(auditEvents[0].payload).toHaveProperty("severity");
+      expect(auditEvents[0].payload).toHaveProperty("title");
+    });
+  });
 });

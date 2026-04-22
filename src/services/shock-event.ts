@@ -60,45 +60,49 @@ export async function createShockEvent(
   const detection = await detectShockFromCurrentState(input.engagementId);
   const detectionConfirmed = detection.shockDetected;
 
-  const shockEvent = await db.shockEvent.create({
-    data: {
+  const result = await db.$transaction(async (tx) => {
+    const shockEvent = await tx.shockEvent.create({
+      data: {
+        engagementId: input.engagementId,
+        type: input.type,
+        severity: input.severity,
+        happenedAt: happenedAtDate,
+        notes: input.notes,
+        createdBy: actorId,
+      },
+      select: { id: true, engagementId: true },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.SHOCK_EVENT_RECORDED,
+      actorId,
+      entityType: "ShockEvent",
+      entityId: shockEvent.id,
+      payload: {
+        engagementId: input.engagementId,
+        type: input.type,
+        severity: input.severity,
+        detectionConfirmed,
+        detectionSeverity: detection.severity,
+        detectionIndicators: detection.indicators,
+      },
+    });
+
+    // Trigger re-evaluation due to shock event
+    await triggerReEvaluation({
+      changeType: "shock_event",
+      entityType: "ShockEvent",
+      entityId: shockEvent.id,
       engagementId: input.engagementId,
-      type: input.type,
       severity: input.severity,
-      happenedAt: happenedAtDate,
-      notes: input.notes,
-      createdBy: actorId,
-    },
-    select: { id: true, engagementId: true },
+      description: `Shock event recorded: ${input.type}${detectionConfirmed ? " (detection confirmed)" : ""}`,
+      triggeredBy: actorId,
+    });
+
+    return { id: shockEvent.id, engagementId: shockEvent.engagementId, detectionConfirmed };
   });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.SHOCK_EVENT_RECORDED,
-    actorId,
-    entityType: "ShockEvent",
-    entityId: shockEvent.id,
-    payload: {
-      engagementId: input.engagementId,
-      type: input.type,
-      severity: input.severity,
-      detectionConfirmed,
-      detectionSeverity: detection.severity,
-      detectionIndicators: detection.indicators,
-    },
-  });
-
-  // Trigger re-evaluation due to shock event
-  await triggerReEvaluation({
-    changeType: "shock_event",
-    entityType: "ShockEvent",
-    entityId: shockEvent.id,
-    engagementId: input.engagementId,
-    severity: input.severity,
-    description: `Shock event recorded: ${input.type}${detectionConfirmed ? " (detection confirmed)" : ""}`,
-    triggeredBy: actorId,
-  });
-
-  return { id: shockEvent.id, engagementId: shockEvent.engagementId, detectionConfirmed };
+  return result;
 }
 
 export async function updateShockEvent(
