@@ -116,11 +116,13 @@ describe("client-account service", () => {
         findUnique: vi.fn().mockResolvedValue({
           id: mockClientId,
           name: "Test Corp",
+          visibility: "internal",
           contacts: [],
+          _count: { engagements: 0 },
         }),
       };
 
-      const result = await clientService.getClientById(mockClientId);
+      const result = await clientService.getClientById(mockClientId, true);
 
       expect(result.id).toBe(mockClientId);
     });

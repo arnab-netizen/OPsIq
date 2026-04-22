@@ -198,13 +198,17 @@ describe("engagement service", () => {
         findUnique: vi.fn().mockResolvedValue({
           id: mockEngagementId,
           code: "TEST-001",
+          visibility: "internal",
           client: { id: mockClientId },
           conditionProfiles: [],
           memberships: [],
+          parent: null,
+          children: [],
+          _count: { leads: 0 },
         }),
       };
 
-      const result = await engagementService.getEngagementById(mockEngagementId);
+      const result = await engagementService.getEngagementById(mockEngagementId, true);
 
       expect(result.id).toBe(mockEngagementId);
     });

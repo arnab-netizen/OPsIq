@@ -1,5 +1,6 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createEngagement, listEngagements } from "@/services/engagement";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
@@ -28,10 +29,10 @@ const listEngagementsSchema = paginationSchema.extend({
 });
 
 export const GET = withRequestContext(async (request) => {
-  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+  const { policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
   const params = parseSearchParams(request.url, listEngagementsSchema);
-  const result = await listEngagements(params);
+  const result = await listEngagements(params, hasInternalAccess(policy));
 
   return Response.json(result);
 });

@@ -274,7 +274,7 @@ export async function updateEngagement(
   logger.info("Engagement updated", { engagementId });
 }
 
-export async function getEngagementById(engagementId: string) {
+export async function getEngagementById(engagementId: string, hasInternalAccess: boolean = false) {
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
     include: {
@@ -297,19 +297,29 @@ export async function getEngagementById(engagementId: string) {
   });
 
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
+  if (!hasInternalAccess && engagement.visibility !== "client_visible") {
+    throw new NotFoundError("Engagement", engagementId);
+  }
+
   return engagement;
 }
 
-export async function listEngagements(params: {
-  limit?: number;
-  offset?: number;
-  status?: string;
-  clientId?: string;
-  search?: string;
-} = {}) {
+export async function listEngagements(
+  params: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    clientId?: string;
+    search?: string;
+  } = {},
+  hasInternalAccess: boolean = false
+) {
   const { limit = 25, offset = 0, status, clientId, search } = params;
 
+  const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
+
   const where = {
+    ...visibilityFilter,
     ...(status && { status }),
     ...(clientId && { clientId }),
     ...(search && {
