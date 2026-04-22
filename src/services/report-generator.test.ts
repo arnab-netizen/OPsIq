@@ -11,7 +11,7 @@ import {
 } from "./engagement";
 import { createClient } from "./client-account";
 import { assessCondition } from "./business-condition";
-import { createFinding } from "./finding";
+import { createFinding } from "./findings";
 import { createRecommendation } from "./recommendation";
 import { createAction } from "./action";
 import { defineKPI, recordKPISnapshot } from "./kpi";

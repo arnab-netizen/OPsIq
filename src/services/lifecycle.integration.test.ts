@@ -3,9 +3,9 @@ import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 import {
   createFinding,
-  getFinding,
+  getFindingDetail,
   updateFinding,
-} from "@/services/finding";
+} from "@/services/findings";
 import {
   createRecommendation,
   getRecommendation,
@@ -91,7 +91,7 @@ describe("Evidence → Finding → Recommendation → Action lifecycle", () => {
     expect(result.id).toBeDefined();
     findingId = result.id;
 
-    const finding = await getFinding(findingId);
+    const finding = await getFindingDetail(findingId);
     expect(finding.status).toBe("identified");
     expect(finding.severity).toBe("high");
     expect(finding.impactArea).toBe("cashflow");
@@ -120,7 +120,7 @@ describe("Evidence → Finding → Recommendation → Action lifecycle", () => {
       actorId
     );
 
-    const updated = await getFinding(incompleteFinding.id);
+    const updated = await getFindingDetail(incompleteFinding.id);
     expect(updated.status).toBe("prioritized");
   });
 
@@ -136,7 +136,7 @@ describe("Evidence → Finding → Recommendation → Action lifecycle", () => {
       actorId
     );
 
-    let finding = await getFinding(findingId);
+    let finding = await getFindingDetail(findingId);
     expect(finding.status).toBe("validated");
 
     // validated → prioritized
@@ -150,7 +150,7 @@ describe("Evidence → Finding → Recommendation → Action lifecycle", () => {
       actorId
     );
 
-    finding = await getFinding(findingId);
+    finding = await getFindingDetail(findingId);
     expect(finding.status).toBe("prioritized");
   });
 
@@ -265,7 +265,7 @@ describe("Evidence → Finding → Recommendation → Action lifecycle", () => {
   it("emits audit events on transitions", async () => {
     // Events are emitted during service calls
     // In a real test, we would query the audit log and verify
-    const finding = await getFinding(findingId);
+    const finding = await getFindingDetail(findingId);
 
     // Verify finding exists and has audit trail entries
     expect(finding.id).toBe(findingId);

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/lib/db";
 import { createEvidence, getEvidenceById } from "@/services/evidence";
-import { createFinding } from "@/services/finding";
+import { createFinding } from "@/services/findings";
 import { createRecommendation, approveRecommendation } from "@/services/recommendation";
 import { createAction, getActionById } from "@/services/action";
 import { createClient } from "@/services/client-account";

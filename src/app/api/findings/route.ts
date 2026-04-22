@@ -1,7 +1,7 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { createFinding } from "@/services/finding";
+import { createFinding } from "@/services/findings";
 import { parseRequestBody } from "@/lib/validation";
 import { z } from "zod/v4";
 import {
