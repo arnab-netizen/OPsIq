@@ -156,6 +156,17 @@ export async function createEngagement(
     visibility: "internal",
   });
 
+  // New engagement is significant intervention scope change
+  await triggerReEvaluation({
+    changeType: "scope_change",
+    entityType: "engagement",
+    entityId: result.result.id,
+    engagementId: result.result.id,
+    severity: "high",
+    description: `New engagement created: ${result.result.code} (${input.interventionMode})`,
+    triggeredBy: actorId,
+  });
+
   logger.info("Engagement created", {
     engagementId: result.result.id,
     code: result.result.code,

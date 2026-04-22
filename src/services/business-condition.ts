@@ -181,8 +181,8 @@ export async function assessCondition(
     entityType: "business_condition_profile",
     entityId: result.result.id,
     engagementId: input.engagementId,
-    severity: result.result.severityScore >= 7 ? "high" : "medium",
-    description: `Business condition assessed: ${result.result.businessStatus} (severity ${result.result.severityScore}/10)`,
+    severity: profile.severityScore >= 7 ? "high" : "medium",
+    description: `Business condition assessed: ${input.businessStatus} (severity ${profile.severityScore}/10)`,
     triggeredBy: actorId,
   });
 

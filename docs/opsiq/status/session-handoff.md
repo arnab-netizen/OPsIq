@@ -1,10 +1,12 @@
 # Session handoff
 
 ## Last known state
-Module 03 (Intervention State) is complete: schema, backend, and UI fully implemented and audited SAFE.
+Module 02 recovery complete. Schema defined, all services reconciled, optimization/idempotency/re-evaluation gaps fixed. 
+Integration verified against Modules 00-01; no regressions.
 
-## Current work
-Module 04 (Engagement Actions and Deliverables) schema design phase.
+## Ready for
+Start schema slice: `docs/opsiq/modules/module-02/schema.md`
 
-## Resume instruction
-Start with `docs/opsiq/modules/module-04/schema.md`.
+## Blockers
+- Run `prisma migrate dev` to apply version + createdBy fields
+- Create partial unique index on BusinessConditionProfile manually (see recovery audit, section D)

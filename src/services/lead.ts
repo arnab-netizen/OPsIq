@@ -3,15 +3,15 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { triggerReEvaluation } from "@/services/re-evaluation";
+import { logger } from "@/infra/logger";
+import type { LeadStatus } from "@/domain/constants/statuses";
+import { LEAD_STATUSES } from "@/domain/constants/statuses";
 import {
   optimisticUpdate,
   withVersionCheck,
   withVersionIncrement,
 } from "@/lib/optimistic-lock";
-import { triggerReEvaluation } from "@/services/re-evaluation";
-import { logger } from "@/infra/logger";
-import type { LeadStatus } from "@/domain/constants/statuses";
-import { LEAD_STATUSES } from "@/domain/constants/statuses";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -127,8 +127,6 @@ export async function updateLead(
     if (v !== undefined) data[k] = v;
   }
 
-  // Duplicate request protection: optimistic locking via version check
-  // Duplicate requests with old version fail fast with 409 Conflict
   await optimisticUpdate("lead_record", leadId, version, () =>
     db.leadRecord.update({
       where: withVersionCheck({ id: leadId }, version),
@@ -163,33 +161,32 @@ export async function linkLeadToEngagement(
     );
   }
 
-  // Verify engagement exists and belongs to the specified client
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
-    select: { id: true, clientId: true },
-  });
-  if (!engagement) throw new NotFoundError("Engagement", engagementId);
-
-  // Validate client exists and is not archived
-  const client = await db.clientAccount.findUnique({
-    where: { id: clientId },
-    select: { id: true, status: true },
-  });
-  if (!client) throw new NotFoundError("ClientAccount", clientId);
-  if (client.status === "archived") {
-    throw new ValidationError("Cannot link lead to an archived client");
+  if (lead.convertedToClientId) {
+    // Already converted; check if it's to the same engagement (idempotency)
+    if (lead.engagementId !== engagementId || lead.convertedToClientId !== clientId) {
+      throw new ValidationError(
+        "Lead is already converted to a different engagement or client"
+      );
+    }
+    // Idempotent: already in desired state, no-op
+    return;
   }
 
-  // Verify engagement belongs to the provided client
+  // Validate that the engagement belongs to the specified client
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: { clientId: true },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
   if (engagement.clientId !== clientId) {
     throw new ValidationError(
       "Engagement does not belong to the specified client"
     );
   }
 
-  const idempotencyKey = `lead-convert:${leadId}:${engagementId}:${actorId}`;
+  const idempotencyKey = `lead-link:${leadId}:${engagementId}:${clientId}`;
 
-  const result = await withIdempotency(
+  await withIdempotency(
     idempotencyKey,
     "lead.link_to_engagement",
     async () => {
@@ -201,7 +198,7 @@ export async function linkLeadToEngagement(
           engagementId,
         },
       });
-      return { leadId, engagementId, clientId };
+      return { id: leadId };
     }
   );
 
@@ -214,22 +211,18 @@ export async function linkLeadToEngagement(
     visibility: "internal",
   });
 
-  // Trigger re-evaluation: lead conversion is a scope change that may affect engagement planning
+  // Lead conversion is significant client/engagement event
   await triggerReEvaluation({
-    changeType: "scope_change",
+    changeType: "new_critical_evidence",
     entityType: "lead_record",
     entityId: leadId,
     engagementId,
     severity: "medium",
-    description: `Lead ${leadId} converted and linked to engagement ${engagementId}`,
+    description: `Lead converted to client and linked to engagement ${engagementId}`,
     triggeredBy: actorId,
   });
 
-  logger.info("Lead linked to engagement", {
-    leadId,
-    engagementId,
-    clientId,
-  });
+  logger.info("Lead linked to engagement", { leadId, engagementId, clientId });
 }
 
 export async function getLeadById(leadId: string) {

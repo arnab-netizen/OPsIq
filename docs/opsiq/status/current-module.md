@@ -4,16 +4,15 @@
 Module 04 — Engagement Actions and Deliverables
 
 ## Current slice
-schema
+schema (readiness: schema complete, migrations pending)
 
-## Goal
-Define schema for tracked actions, deliverables, and their state.
+## Completed
+1. recovery ✅ — Reconciled existing work; fixed validation, idempotency, re-evaluation gaps
 
 ## Next slices in order
-1. schema
-2. backend
-3. ui
-4. tests
-5. audit
-6. integration
-7. status update
+1. schema (Prisma migrations, database constraints)
+2. backend (additional services/policies as needed)
+3. ui (forms, edit pages, member management)
+4. tests (service layer unit tests)
+5. integration (cross-module verification)
+6. status (KPI tracking, health monitoring)
