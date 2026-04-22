@@ -79,6 +79,7 @@ export const AUDIT_EVENTS = {
   // KPI
   KPI_CREATED: "kpi.created",
   KPI_UPDATED: "kpi.updated",
+  KPI_CHANGE_RECORDED: "kpi.change_recorded",
   KPI_DEFINED: "kpi.defined",
   KPI_SNAPSHOT_RECORDED: "kpi.snapshot_recorded",
   KPI_DETERIORATED: "kpi.deteriorated",

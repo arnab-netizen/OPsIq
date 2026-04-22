@@ -401,6 +401,7 @@ model Action {
   engagement     Engagement     @relation(fields: [engagementId], references: [id])
   recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Restrict)
   owner          User           @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  kpiEvents      KPIEvent[]
 
   @@index([engagementId])
   @@index([recommendationId])
@@ -425,11 +426,31 @@ model KPI {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  engagement Engagement @relation(fields: [engagementId], references: [id])
+  engagement  Engagement  @relation(fields: [engagementId], references: [id])
+  kpiEvents   KPIEvent[]
 
   @@index([engagementId])
   @@index([status])
   @@map("kpis")
+}
+
+// ─── Module 12: KPI Event ───────────────────────────────────────────────────
+
+model KPIEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  kpiId           String   @map("kpi_id") @db.Uuid
+  actionId        String?  @map("action_id") @db.Uuid
+  previousValue   Float    @map("previous_value")
+  newValue        Float    @map("new_value")
+  delta           Float
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  kpi    KPI     @relation(fields: [kpiId], references: [id], onDelete: Restrict)
+  action Action? @relation(fields: [actionId], references: [id], onDelete: Restrict)
+
+  @@index([kpiId])
+  @@index([actionId])
+  @@map("kpi_events")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────
