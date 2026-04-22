@@ -77,6 +77,15 @@ export const RISK_STATUSES = [
 
 export type RiskStatus = (typeof RISK_STATUSES)[number];
 
+export const KPI_STATUSES = [
+  "improving",
+  "stagnant",
+  "worsening",
+  "target_met",
+] as const;
+
+export type KPIStatus = (typeof KPI_STATUSES)[number];
+
 export const VISIBILITY_LEVELS = [
   "internal",
   "client_visible",

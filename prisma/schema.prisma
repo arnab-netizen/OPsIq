@@ -196,6 +196,7 @@ model Engagement {
   findings              Finding[]
   recommendations       Recommendation[]
   actions               Action[]
+  kpis                  KPI[]
 
   @@index([clientId])
   @@index([status])
@@ -408,6 +409,27 @@ model Action {
   @@index([priority])
   @@index([status])
   @@map("actions")
+}
+
+// ─── Module 11: KPI ─────────────────────────────────────────────────────────
+
+model KPI {
+  id              String   @id @default(uuid()) @db.Uuid
+  engagementId    String   @map("engagement_id") @db.Uuid
+  name            String
+  unit            String
+  baselineValue   Float    @map("baseline_value")
+  currentValue    Float    @map("current_value")
+  targetValue     Float?   @map("target_value")
+  status          String   // "improving" | "stagnant" | "worsening" | "target_met"
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@index([status])
+  @@map("kpis")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────

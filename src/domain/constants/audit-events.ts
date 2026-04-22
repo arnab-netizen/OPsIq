@@ -77,6 +77,8 @@ export const AUDIT_EVENTS = {
   ACTION_OVERDUE: "action.overdue",
 
   // KPI
+  KPI_CREATED: "kpi.created",
+  KPI_UPDATED: "kpi.updated",
   KPI_DEFINED: "kpi.defined",
   KPI_SNAPSHOT_RECORDED: "kpi.snapshot_recorded",
   KPI_DETERIORATED: "kpi.deteriorated",
