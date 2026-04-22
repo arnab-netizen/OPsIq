@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
-import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses";
+import { ACTION_STATUSES, ACTION_PRIORITIES, type ActionStatus, type ActionPriority } from "@/domain/constants/statuses";
 import { logger } from "@/infra/logger";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -345,5 +345,136 @@ export async function assignOwner(
     actionId: action.id,
     ownerId,
     previousOwnerId: action.ownerId,
+  });
+}
+
+export async function setDueDate(
+  actionId: string,
+  dueAt: Date,
+  actorId: string,
+  engagementId?: string
+) {
+  const action = await db.action.findUnique({
+    where: { id: actionId },
+  });
+
+  if (!action) {
+    throw new NotFoundError("Action", actionId);
+  }
+
+  if (engagementId && action.engagementId !== engagementId) {
+    throw new ValidationError(
+      "Action does not belong to the specified engagement"
+    );
+  }
+
+  // Validate due date is in the future
+  if (dueAt <= new Date()) {
+    throw new ValidationError(
+      "Due date must be in the future"
+    );
+  }
+
+  // Check intervention phase (reject if closed)
+  const interventionState = await db.interventionState.findUnique({
+    where: { engagementId: action.engagementId },
+  });
+
+  if (interventionState && interventionState.currentPhase === "closed") {
+    throw new ValidationError(
+      "Cannot set due date when intervention is in closed phase"
+    );
+  }
+
+  const updatedAction = await db.action.update({
+    where: { id: actionId },
+    data: {
+      dueAt,
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.ACTION_DUE_SET,
+    actorId,
+    entityType: "action",
+    entityId: action.id,
+    payload: {
+      actionId: action.id,
+      engagementId: action.engagementId,
+      dueAt: dueAt.toISOString(),
+      previousDueAt: action.dueAt?.toISOString() || null,
+    },
+    visibility: "internal",
+  });
+
+  logger.info("Action due date set", {
+    actionId: action.id,
+    dueAt: dueAt.toISOString(),
+  });
+}
+
+export async function setPriority(
+  actionId: string,
+  priority: ActionPriority,
+  actorId: string,
+  engagementId?: string
+) {
+  // Validate priority
+  if (!ACTION_PRIORITIES.includes(priority)) {
+    throw new ValidationError(
+      `Invalid priority: ${priority}. Must be one of: ${ACTION_PRIORITIES.join(", ")}`
+    );
+  }
+
+  const action = await db.action.findUnique({
+    where: { id: actionId },
+  });
+
+  if (!action) {
+    throw new NotFoundError("Action", actionId);
+  }
+
+  if (engagementId && action.engagementId !== engagementId) {
+    throw new ValidationError(
+      "Action does not belong to the specified engagement"
+    );
+  }
+
+  // Check intervention phase (reject if closed)
+  const interventionState = await db.interventionState.findUnique({
+    where: { engagementId: action.engagementId },
+  });
+
+  if (interventionState && interventionState.currentPhase === "closed") {
+    throw new ValidationError(
+      "Cannot set priority when intervention is in closed phase"
+    );
+  }
+
+  const updatedAction = await db.action.update({
+    where: { id: actionId },
+    data: {
+      priority,
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.ACTION_PRIORITY_SET,
+    actorId,
+    entityType: "action",
+    entityId: action.id,
+    payload: {
+      actionId: action.id,
+      engagementId: action.engagementId,
+      priority,
+      previousPriority: action.priority,
+    },
+    visibility: "internal",
+  });
+
+  logger.info("Action priority set", {
+    actionId: action.id,
+    priority,
+    previousPriority: action.priority,
   });
 }

@@ -48,6 +48,14 @@ export const ACTION_STATUSES = [
 
 export type ActionStatus = (typeof ACTION_STATUSES)[number];
 
+export const ACTION_PRIORITIES = [
+  "low",
+  "medium",
+  "high",
+] as const;
+
+export type ActionPriority = (typeof ACTION_PRIORITIES)[number];
+
 export const RISK_SEVERITIES = [
   "low",
   "medium",

@@ -391,6 +391,8 @@ model Action {
   version           Int      @default(1)
   ownerId           String   @map("owner_id") @db.Uuid
   assignedAt        DateTime @map("assigned_at") @db.Timestamp
+  dueAt             DateTime @map("due_at")
+  priority          String   @default("medium") // "low" | "medium" | "high"
   createdBy         String?  @map("created_by") @db.Uuid
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
@@ -402,6 +404,8 @@ model Action {
   @@index([engagementId])
   @@index([recommendationId])
   @@index([ownerId])
+  @@index([dueAt])
+  @@index([priority])
   @@index([status])
   @@map("actions")
 }

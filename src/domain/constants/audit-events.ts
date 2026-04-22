@@ -71,6 +71,8 @@ export const AUDIT_EVENTS = {
   ACTION_UPDATED: "action.updated",
   ACTION_STATUS_UPDATED: "action.status_updated",
   ACTION_ASSIGNED: "action.assigned",
+  ACTION_DUE_SET: "action.due_set",
+  ACTION_PRIORITY_SET: "action.priority_set",
   ACTION_COMPLETED: "action.completed",
   ACTION_OVERDUE: "action.overdue",
 

@@ -554,4 +554,151 @@ describe("Action Service", () => {
       }
     });
   });
+
+  describe("Set due date", () => {
+    it("sets due date successfully", async () => {
+      const { db } = await import("@/lib/db");
+      const { emitAuditEvent } = await import("@/infra/audit");
+      const mockDb = db as any;
+      const mockEmit = emitAuditEvent as any;
+
+      const futureDate = new Date(Date.now() + 86400000); // 1 day from now
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+        dueAt: null,
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+      mockDb.action.update.mockResolvedValue({
+        id: "action-1",
+        dueAt: futureDate,
+      });
+
+      const { setDueDate } = await import("./action");
+      await setDueDate("action-1", futureDate, "user-1", "eng-1");
+
+      expect(mockDb.action.update).toHaveBeenCalled();
+      expect(mockEmit).toHaveBeenCalled();
+      const auditCall = mockEmit.mock.calls[0][0];
+      expect(auditCall.eventName).toBe("action.due_set");
+      expect(auditCall.payload.actionId).toBe("action-1");
+    });
+
+    it("rejects past due date", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+
+      const pastDate = new Date(Date.now() - 86400000); // 1 day ago
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+      });
+
+      const { setDueDate } = await import("./action");
+
+      try {
+        await setDueDate("action-1", pastDate, "user-1");
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("future");
+      }
+    });
+
+    it("rejects if intervention phase is closed", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+
+      const futureDate = new Date(Date.now() + 86400000);
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "closed",
+      });
+
+      const { setDueDate } = await import("./action");
+
+      try {
+        await setDueDate("action-1", futureDate, "user-1");
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("closed phase");
+      }
+    });
+  });
+
+  describe("Set priority", () => {
+    it("sets priority successfully", async () => {
+      const { db } = await import("@/lib/db");
+      const { emitAuditEvent } = await import("@/infra/audit");
+      const mockDb = db as any;
+      const mockEmit = emitAuditEvent as any;
+
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+        priority: "low",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+      mockDb.action.update.mockResolvedValue({
+        id: "action-1",
+        priority: "high",
+      });
+
+      const { setPriority } = await import("./action");
+      await setPriority("action-1", "high", "user-1", "eng-1");
+
+      expect(mockDb.action.update).toHaveBeenCalled();
+      expect(mockEmit).toHaveBeenCalled();
+      const auditCall = mockEmit.mock.calls[0][0];
+      expect(auditCall.eventName).toBe("action.priority_set");
+      expect(auditCall.payload.priority).toBe("high");
+      expect(auditCall.payload.previousPriority).toBe("low");
+    });
+
+    it("rejects invalid priority", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+
+      const { setPriority } = await import("./action");
+
+      try {
+        await setPriority("action-1", "invalid" as any, "user-1");
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("Invalid priority");
+      }
+    });
+
+    it("rejects if intervention phase is closed", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "closed",
+      });
+
+      const { setPriority } = await import("./action");
+
+      try {
+        await setPriority("action-1", "high", "user-1");
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("closed phase");
+      }
+    });
+  });
 });
