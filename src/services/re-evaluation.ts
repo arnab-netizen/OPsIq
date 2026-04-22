@@ -491,13 +491,9 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         recommendedStatus: "unknown" as const,
       };
 
-  const auditEventId = await emitAuditEvent({
-    eventName: AUDIT_EVENTS.CONDITION_CHANGED,
-    actorId: event.triggeredBy,
-    entityType: event.entityType,
-    entityId: event.entityId,
-    correlationId: event.correlationId,
-    payload: {
+  // Persist results in a transaction
+  const auditEventId = await db.$transaction(async (tx) => {
+    const auditPayload: Record<string, unknown> = {
       changeType: event.changeType,
       severity: event.severity,
       description: event.description,
@@ -509,11 +505,119 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       priorityImpact,
       reviewCadenceImpact,
       healthStatusImpact,
-    },
-    visibility: "internal",
+    };
+
+    // Fetch current values
+    const engagement = await tx.engagement.findUnique({
+      where: { id: event.engagementId },
+      select: { id: true, healthStatus: true },
+    });
+
+    const condition = await tx.businessConditionProfile.findFirst({
+      where: { engagementId: event.engagementId, isCurrent: true },
+      select: { id: true, businessStatus: true },
+    });
+
+    // 1. Update engagement health status if changed
+    if (targets.healthStatus && engagement && engagement.healthStatus !== healthStatusImpact.recommendedStatus) {
+      auditPayload.healthStatusChange = {
+        oldValue: engagement.healthStatus,
+        newValue: healthStatusImpact.recommendedStatus,
+      };
+
+      await tx.engagement.update({
+        where: { id: event.engagementId },
+        data: { healthStatus: healthStatusImpact.recommendedStatus },
+      });
+    }
+
+    // 2. Update business condition profile if changed
+    if (targets.businessConditionProfile && condition && condition.businessStatus !== businessConditionImpact.recommendedRating) {
+      auditPayload.businessConditionChange = {
+        oldValue: condition.businessStatus,
+        newValue: businessConditionImpact.recommendedRating,
+      };
+
+      await tx.businessConditionProfile.update({
+        where: { id: condition.id },
+        data: { businessStatus: businessConditionImpact.recommendedRating },
+      });
+    }
+
+    // 3. Update intervention phase if changed and allowed
+    if (targets.interventionPhase && interventionPhaseImpact.recommendedPhase) {
+      const state = await tx.interventionState.findUnique({
+        where: { engagementId: event.engagementId },
+        select: { id: true, currentPhase: true },
+      });
+
+      if (state && state.currentPhase !== interventionPhaseImpact.recommendedPhase) {
+        auditPayload.interventionPhaseChange = {
+          oldValue: state.currentPhase,
+          newValue: interventionPhaseImpact.recommendedPhase,
+          canAdvance: interventionPhaseImpact.canAdvance,
+        };
+
+        await tx.interventionState.update({
+          where: { id: state.id },
+          data: { currentPhase: interventionPhaseImpact.recommendedPhase },
+        });
+      }
+    }
+
+    // 4. Update recommendation priorities if shift detected
+    if (targets.recommendationPriority && priorityImpact.recommendationPriorityShift !== "maintain") {
+      const recs = await tx.recommendation.findMany({
+        where: { engagementId: event.engagementId },
+        select: { id: true, priority: true },
+      });
+
+      const priorityMap: Record<string, string> = {
+        low: "medium",
+        medium: "high",
+        high: "critical",
+        critical: "critical",
+      };
+      const deprioritizeMap: Record<string, string> = {
+        critical: "high",
+        high: "medium",
+        medium: "low",
+        low: "low",
+      };
+
+      const shiftMap =
+        priorityImpact.recommendationPriorityShift === "escalate" ? priorityMap : deprioritizeMap;
+
+      const updated = await Promise.all(
+        recs.map((r) =>
+          tx.recommendation.update({
+            where: { id: r.id },
+            data: { priority: shiftMap[r.priority] || r.priority },
+          })
+        )
+      );
+
+      if (updated.length > 0) {
+        auditPayload.recommendationPriorityShift = priorityImpact.recommendationPriorityShift;
+        auditPayload.recommendationsAffected = updated.length;
+      }
+    }
+
+    // Emit comprehensive audit event
+    const eventId = await emitAuditEvent({
+      eventName: AUDIT_EVENTS.CONDITION_CHANGED,
+      actorId: event.triggeredBy,
+      entityType: event.entityType,
+      entityId: event.entityId,
+      correlationId: event.correlationId,
+      payload: auditPayload,
+      visibility: "internal",
+    });
+
+    return eventId;
   });
 
-  logger.info("Re-evaluation completed", {
+  logger.info("Re-evaluation completed and persisted", {
     changeType: event.changeType,
     entityType: event.entityType,
     entityId: event.entityId,
@@ -522,6 +626,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     targets,
     businessConditionImpact: businessConditionImpact.recommendedRating,
     interventionModeImpact: interventionModeImpact.recommendedMode,
+    healthStatus: healthStatusImpact.recommendedStatus,
   });
 
   return {
