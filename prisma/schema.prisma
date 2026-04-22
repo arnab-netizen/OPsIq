@@ -192,6 +192,7 @@ model Engagement {
   leads                 LeadRecord[]
   interventionState     InterventionState?
   shockEvents           ShockEvent[]
+  evidenceItems         EvidenceItem[]
 
   @@index([clientId])
   @@index([status])
@@ -266,11 +267,39 @@ model ShockEvent {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   engagement    Engagement @relation(fields: [engagementId], references: [id])
+  evidenceItems EvidenceItem[]
 
   @@index([engagementId])
   @@index([severity])
   @@index([eventType])
   @@map("shock_events")
+}
+
+// ─── Module 5: Evidence Item ────────────────────────────────────────────────
+
+model EvidenceItem {
+  id                      String    @id @default(uuid()) @db.Uuid
+  engagementId            String    @map("engagement_id") @db.Uuid
+  shockEventId            String?   @map("shock_event_id") @db.Uuid
+  category                String    // governed by EVIDENCE_CATEGORIES
+  sourceType              String    @map("source_type") // governed by EVIDENCE_SOURCE_TYPES
+  title                   String
+  description             String?
+  capturedAt              DateTime  @map("captured_at")
+  visibilityClassification String   @map("visibility_classification") // "internal" | "client_visible"
+  recordedBy              String?   @map("recorded_by") @db.Uuid
+  version                 Int       @default(1)
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  engagement              Engagement @relation(fields: [engagementId], references: [id])
+  shockEvent              ShockEvent? @relation(fields: [shockEventId], references: [id])
+
+  @@index([engagementId])
+  @@index([category])
+  @@index([sourceType])
+  @@index([shockEventId])
+  @@map("evidence_items")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────

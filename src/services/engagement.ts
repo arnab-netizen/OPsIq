@@ -319,6 +319,19 @@ export async function getEngagementById(engagementId: string) {
         orderBy: { detectedAt: "desc" },
         take: 10,
       },
+      evidenceItems: {
+        select: {
+          id: true,
+          category: true,
+          sourceType: true,
+          title: true,
+          capturedAt: true,
+          visibilityClassification: true,
+          createdAt: true,
+        },
+        orderBy: { capturedAt: "desc" },
+        take: 10,
+      },
       _count: { select: { leads: true } },
     },
   });

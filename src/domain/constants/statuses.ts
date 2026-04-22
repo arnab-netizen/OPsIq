@@ -224,3 +224,29 @@ export const SHOCK_EVENT_TYPES = [
 ] as const;
 
 export type ShockEventType = (typeof SHOCK_EVENT_TYPES)[number];
+
+export const EVIDENCE_CATEGORIES = [
+  "financial",
+  "operational",
+  "market",
+  "customer",
+  "employee",
+  "compliance",
+  "technical",
+  "strategic",
+] as const;
+
+export type EvidenceCategory = (typeof EVIDENCE_CATEGORIES)[number];
+
+export const EVIDENCE_SOURCE_TYPES = [
+  "document",
+  "interview",
+  "metric",
+  "observation",
+  "report",
+  "feedback",
+  "system_log",
+  "external_source",
+] as const;
+
+export type EvidenceSourceType = (typeof EVIDENCE_SOURCE_TYPES)[number];
