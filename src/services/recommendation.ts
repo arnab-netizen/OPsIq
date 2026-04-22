@@ -1,34 +1,48 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
-import {
-  optimisticUpdate,
-  withVersionCheck,
-  withVersionIncrement,
-} from "@/lib/optimistic-lock";
+import { withVersionIncrement } from "@/lib/optimistic-lock";
+import { validateRecommendationTransition } from "@/policies/state-transition";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
+import type {
+  RecommendationStatus,
+  RecommendationPriority,
+  RecommendationType,
+} from "@/domain/constants/statuses";
+import { RECOMMENDATION_STATUSES } from "@/domain/constants/statuses";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export interface CreateRecommendationInput {
   engagementId: string;
+  stageId?: string;
   findingId: string;
   title: string;
-  description?: string;
-  rationale?: string;
-  priority: "low" | "medium" | "high" | "critical";
-  estimatedImpact?: "low" | "medium" | "high";
+  summary: string;
+  priority: RecommendationPriority;
+  type: RecommendationType;
+  rationale: string;
+  expectedImpact?: string;
+  estimatedEffort?: string;
+  targetMetric?: string;
+  ownerId?: string;
+  dueAt?: string;
 }
 
 export interface UpdateRecommendationInput {
   title?: string;
-  description?: string;
+  summary?: string;
+  priority?: RecommendationPriority;
+  type?: RecommendationType;
   rationale?: string;
-  priority?: "low" | "medium" | "high" | "critical";
-  estimatedImpact?: "low" | "medium" | "high";
-  status?: "pending" | "approved" | "rejected" | "superseded";
+  expectedImpact?: string;
+  estimatedEffort?: string;
+  targetMetric?: string;
+  ownerId?: string;
+  dueAt?: string;
+  status?: RecommendationStatus;
   version: number;
 }
 
@@ -38,225 +52,230 @@ export async function createRecommendation(
   input: CreateRecommendationInput,
   actorId: string
 ): Promise<{ id: string }> {
-  // Validate engagement exists
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
-  // Validate finding exists and belongs to engagement
   const finding = await db.finding.findUnique({
     where: { id: input.findingId },
   });
   if (!finding) throw new NotFoundError("Finding", input.findingId);
-  if (finding.engagementId !== input.engagementId) {
-    throw new ValidationError(
-      "Finding does not belong to the specified engagement"
-    );
+
+  if (input.stageId) {
+    const stage = await db.stage.findUnique({
+      where: { id: input.stageId },
+    });
+    if (!stage) throw new NotFoundError("Stage", input.stageId);
   }
 
-  // Validate priority
-  const validPriorities = ["low", "medium", "high", "critical"];
-  if (!validPriorities.includes(input.priority)) {
-    throw new ValidationError(
-      `Invalid priority: ${input.priority}. Must be one of: ${validPriorities.join(", ")}`
-    );
-  }
-
-  const idempotencyKey = `recommendation-create:${input.findingId}:${input.title}:${actorId}`;
-
-  const result = await withIdempotency(
-    idempotencyKey,
-    "recommendation.create",
-    async () => {
-      const recommendation = await db.recommendation.create({
-        data: {
-          engagementId: input.engagementId,
-          findingId: input.findingId,
-          title: input.title,
-          description: input.description ?? null,
-          rationale: input.rationale ?? null,
-          priority: input.priority,
-          estimatedImpact: input.estimatedImpact ?? null,
-          status: "pending",
-        },
-      });
-      return { id: recommendation.id };
-    }
-  );
+  const recommendation = await db.recommendation.create({
+    data: {
+      engagementId: input.engagementId,
+      stageId: input.stageId ?? null,
+      findingId: input.findingId,
+      title: input.title,
+      summary: input.summary,
+      priority: input.priority,
+      type: input.type,
+      rationale: input.rationale,
+      status: "proposed",
+      expectedImpact: input.expectedImpact ?? null,
+      estimatedEffort: input.estimatedEffort ?? null,
+      targetMetric: input.targetMetric ?? null,
+      ownerId: input.ownerId ?? null,
+      dueAt: input.dueAt ? new Date(input.dueAt) : null,
+    },
+  });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
     actorId,
     entityType: "recommendation",
-    entityId: result.result.id,
+    entityId: recommendation.id,
     payload: {
       engagementId: input.engagementId,
       findingId: input.findingId,
-      priority: input.priority,
       title: input.title,
+      priority: input.priority,
+      type: input.type,
     },
     visibility: "internal",
   });
 
   logger.info("Recommendation created", {
-    recommendationId: result.result.id,
-    engagementId: input.engagementId,
+    recommendationId: recommendation.id,
     findingId: input.findingId,
   });
 
-  return { id: result.result.id };
+  return { id: recommendation.id };
 }
 
-export async function approveRecommendation(
-  recommendationId: string,
-  actorId: string
-): Promise<void> {
+export async function getRecommendation(id: string) {
   const recommendation = await db.recommendation.findUnique({
-    where: { id: recommendationId },
-  });
-  if (!recommendation) {
-    throw new NotFoundError("Recommendation", recommendationId);
-  }
-
-  if (recommendation.status !== "pending") {
-    throw new ValidationError(
-      `Cannot approve recommendation with status: ${recommendation.status}`
-    );
-  }
-
-  const data = {
-    status: "approved",
-    approvedBy: actorId,
-    approvedAt: new Date(),
-  };
-
-  await optimisticUpdate("recommendation", recommendationId, recommendation.version, () =>
-    db.recommendation.update({
-      where: withVersionCheck({ id: recommendationId }, recommendation.version),
-      data: withVersionIncrement(data),
-    })
-  );
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
-    actorId,
-    entityType: "recommendation",
-    entityId: recommendationId,
-    payload: { previousStatus: recommendation.status },
-    visibility: "internal",
-  });
-
-  logger.info("Recommendation approved", { recommendationId });
-}
-
-export async function updateRecommendation(
-  recommendationId: string,
-  input: UpdateRecommendationInput,
-  actorId: string
-): Promise<void> {
-  const recommendation = await db.recommendation.findUnique({
-    where: { id: recommendationId },
-  });
-  if (!recommendation) {
-    throw new NotFoundError("Recommendation", recommendationId);
-  }
-
-  // Cannot update approved or rejected recommendations
-  if (recommendation.status === "approved" || recommendation.status === "rejected") {
-    throw new ValidationError(
-      `Cannot update recommendation with status: ${recommendation.status}`
-    );
-  }
-
-  // Validate priority if changing
-  if (input.priority) {
-    const validPriorities = ["low", "medium", "high", "critical"];
-    if (!validPriorities.includes(input.priority)) {
-      throw new ValidationError(
-        `Invalid priority: ${input.priority}. Must be one of: ${validPriorities.join(", ")}`
-      );
-    }
-  }
-
-  const { version, ...fields } = input;
-  const data: Record<string, unknown> = {};
-
-  for (const [k, v] of Object.entries(fields)) {
-    if (v === undefined) continue;
-    data[k] = v;
-  }
-
-  await optimisticUpdate("recommendation", recommendationId, version, () =>
-    db.recommendation.update({
-      where: withVersionCheck({ id: recommendationId }, version),
-      data: withVersionIncrement(data),
-    })
-  );
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
-    actorId,
-    entityType: "recommendation",
-    entityId: recommendationId,
-    payload: data,
-    visibility: "internal",
-  });
-
-  logger.info("Recommendation updated", { recommendationId });
-}
-
-export async function getRecommendationById(recommendationId: string) {
-  const recommendation = await db.recommendation.findUnique({
-    where: { id: recommendationId },
+    where: { id },
     include: {
-      engagement: { select: { id: true, code: true, title: true } },
-      finding: { select: { id: true, title: true, severity: true } },
-      approver: { select: { id: true, name: true, email: true } },
-      actions: { select: { id: true, title: true, status: true } },
+      engagement: true,
+      stage: true,
+      finding: true,
+      actions: true,
     },
   });
-
-  if (!recommendation) throw new NotFoundError("Recommendation", recommendationId);
+  if (!recommendation) throw new NotFoundError("Recommendation", id);
   return recommendation;
 }
 
-export async function listRecommendations(params: {
-  engagementId?: string;
-  findingId?: string;
-  status?: string;
-  priority?: string;
-  limit?: number;
-  offset?: number;
-} = {}) {
-  const { engagementId, findingId, status, priority, limit = 25, offset = 0 } = params;
+export async function getRecommendationsForFinding(findingId: string) {
+  return db.recommendation.findMany({
+    where: {
+      findingId,
+      archivedAt: null,
+    },
+    include: {
+      actions: true,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
 
-  const where = {
-    ...(engagementId && { engagementId }),
-    ...(findingId && { findingId }),
-    ...(status && { status }),
-    ...(priority && { priority }),
-  };
+export async function getRecommendationsForEngagement(engagementId: string) {
+  return db.recommendation.findMany({
+    where: {
+      engagementId,
+      archivedAt: null,
+    },
+    include: {
+      finding: true,
+      actions: true,
+    },
+    orderBy: [{ priority: "asc" }, { createdAt: "desc" }],
+  });
+}
 
-  const [recommendations, total] = await Promise.all([
-    db.recommendation.findMany({
-      where,
-      select: {
-        id: true,
-        title: true,
-        priority: true,
-        status: true,
-        estimatedImpact: true,
-        createdAt: true,
-        engagement: { select: { id: true, code: true } },
-        finding: { select: { id: true, title: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: offset,
+export async function updateRecommendation(
+  id: string,
+  input: UpdateRecommendationInput,
+  actorId: string
+): Promise<void> {
+  const recommendation = await db.recommendation.findUnique({ where: { id } });
+  if (!recommendation) throw new NotFoundError("Recommendation", id);
+
+  if (input.version !== recommendation.version) {
+    throw new ValidationError("Version mismatch");
+  }
+
+  if (input.status && input.status !== recommendation.status) {
+    validateRecommendationTransition(
+      recommendation.status as RecommendationStatus,
+      input.status
+    );
+
+    if (input.status === "endorsed" && !recommendation.rationale) {
+      throw new ValidationError("Cannot endorse recommendation without rationale");
+    }
+
+    if (input.status === "converted") {
+      const actionCount = await db.action.count({
+        where: { recommendationId: id },
+      });
+      if (actionCount === 0) {
+        throw new ValidationError(
+          "Cannot convert recommendation without at least one action"
+        );
+      }
+    }
+  }
+
+  const updated = await db.recommendation.update({
+    where: { id },
+    data: withVersionIncrement({
+      title: input.title ?? undefined,
+      summary: input.summary ?? undefined,
+      priority: input.priority ?? undefined,
+      type: input.type ?? undefined,
+      rationale: input.rationale ?? undefined,
+      expectedImpact: input.expectedImpact ?? undefined,
+      estimatedEffort: input.estimatedEffort ?? undefined,
+      targetMetric: input.targetMetric ?? undefined,
+      ownerId: input.ownerId ?? undefined,
+      dueAt: input.dueAt ? new Date(input.dueAt) : undefined,
+      status: input.status ?? undefined,
+      endorsedAt: input.status === "endorsed" ? new Date() : undefined,
+      convertedAt: input.status === "converted" ? new Date() : undefined,
+      rejectedAt: input.status === "rejected" ? new Date() : undefined,
+      withdrawnAt: input.status === "withdrawn" ? new Date() : undefined,
     }),
-    db.recommendation.count({ where }),
-  ]);
+  });
 
-  return { recommendations, total, limit, offset };
+  if (input.status && input.status !== recommendation.status) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.RECOMMENDATION_STATUS_CHANGED,
+      actorId,
+      entityType: "recommendation",
+      entityId: id,
+      payload: {
+        fromStatus: recommendation.status,
+        toStatus: input.status,
+      },
+      visibility: "internal",
+    });
+
+    await triggerReEvaluation({
+      changeType: input.status === "endorsed" ? "new_critical_evidence" : "scope_change",
+      entityType: "recommendation",
+      entityId: id,
+      engagementId: recommendation.engagementId,
+      severity: recommendation.priority === "urgent" ? "critical" : "high",
+      description: `Recommendation status changed to ${input.status}`,
+      triggeredBy: actorId,
+    });
+  } else {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.RECOMMENDATION_UPDATED,
+      actorId,
+      entityType: "recommendation",
+      entityId: id,
+      payload: {
+        fields: Object.keys(input).filter(k => k !== "version" && k !== "status"),
+      },
+      visibility: "internal",
+    });
+  }
+
+  logger.info("Recommendation updated", {
+    recommendationId: id,
+    engagementId: recommendation.engagementId,
+  });
+}
+
+export async function archiveRecommendation(
+  id: string,
+  actorId: string
+): Promise<void> {
+  const recommendation = await db.recommendation.findUnique({ where: { id } });
+  if (!recommendation) throw new NotFoundError("Recommendation", id);
+
+  await db.recommendation.update({
+    where: { id },
+    data: {
+      archivedAt: new Date(),
+      version: { increment: 1 },
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.RECOMMENDATION_ARCHIVED,
+    actorId,
+    entityType: "recommendation",
+    entityId: id,
+    payload: {
+      engagementId: recommendation.engagementId,
+    },
+    visibility: "internal",
+  });
+
+  logger.info("Recommendation archived", {
+    recommendationId: id,
+    engagementId: recommendation.engagementId,
+  });
 }

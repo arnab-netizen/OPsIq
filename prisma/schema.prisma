@@ -196,6 +196,7 @@ model Engagement {
   conditionProfiles     BusinessConditionProfile[]
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
+  stages                Stage[]
   evidence              Evidence[]
   findings              Finding[]
   recommendations       Recommendation[]
@@ -421,164 +422,186 @@ model ScheduledTask {
   @@map("scheduled_tasks")
 }
 
+// ─── Module 3: Stage ───────────────────────────────────────────────────────
+
+model Stage {
+  id                    String    @id @default(uuid()) @db.Uuid
+  engagementId          String    @map("engagement_id") @db.Uuid
+  title                 String
+  description           String?
+  status                String    // governed by GOVERNED_STAGE_STATES
+  isBlocked             Boolean   @default(false) @map("is_blocked")
+  blockerSeverity       String?   @map("blocker_severity") // "low" | "medium" | "high" | "critical"
+  blockerType           String?   @map("blocker_type")
+  blockerReason         String?   @map("blocker_reason")
+  blockedAt             DateTime? @map("blocked_at")
+  unblockedAt           DateTime? @map("unblocked_at")
+  dueAt                 DateTime? @map("due_at")
+  completedAt           DateTime? @map("completed_at")
+  ownerId               String?   @map("owner_id") @db.Uuid
+  version               Int       @default(1)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  engagement     Engagement      @relation(fields: [engagementId], references: [id])
+  evidence       Evidence[]
+  findings       Finding[]
+  recommendations Recommendation[]
+  actions        Action[]
+
+  @@index([engagementId])
+  @@index([status])
+  @@index([isBlocked])
+  @@map("stages")
+}
+
+// ─── Module 3: Evidence ────────────────────────────────────────────────────
+
+model Evidence {
+  id                String    @id @default(uuid()) @db.Uuid
+  engagementId      String    @map("engagement_id") @db.Uuid
+  stageId           String?   @map("stage_id") @db.Uuid
+  title             String
+  description       String
+  source            String
+  status            String    // governed by EVIDENCE_STATUSES
+  evidenceType      String?   @map("evidence_type")
+  severityRating    String?   @map("severity_rating")
+  collectedAt       DateTime? @map("collected_at")
+  validatedAt       DateTime? @map("validated_at")
+  rejectionReason   String?   @map("rejection_reason")
+  metadata          Json?
+  submittedBy       String?   @map("submitted_by") @db.Uuid
+  validatedBy       String?   @map("validated_by") @db.Uuid
+  version           Int       @default(1)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  stage      Stage?     @relation(fields: [stageId], references: [id])
+  findings   Finding[]
+
+  @@index([engagementId])
+  @@index([stageId])
+  @@index([status])
+  @@map("evidence")
+}
+
 // ─── Module 3: Finding ─────────────────────────────────────────────────────
 
 model Finding {
-  id             String    @id @default(uuid()) @db.Uuid
-  engagementId   String    @map("engagement_id") @db.Uuid
-  title          String
-  description    String?
-  severity       String    // "low" | "medium" | "high" | "critical"
-  category       String?   // e.g. "operational", "financial", "strategic", "technical"
-  status         String    @default("draft") // "draft" | "reviewed" | "validated"
-  validatedBy    String?   @map("validated_by") @db.Uuid
-  validatedAt    DateTime? @map("validated_at")
-  visibility     String    @default("internal") // "internal" | "client_visible"
-  createdBy      String?   @map("created_by") @db.Uuid
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  id                  String    @id @default(uuid()) @db.Uuid
+  engagementId        String    @map("engagement_id") @db.Uuid
+  stageId             String?   @map("stage_id") @db.Uuid
+  primaryEvidenceId   String    @map("primary_evidence_id") @db.Uuid
+  title               String
+  summary             String
+  severity            String    // governed by FINDING_SEVERITIES
+  impactArea          String    @map("impact_area") // governed by FINDING_IMPACTS
+  status              String    @default("identified") // governed by FINDING_STATUSES
+  confidenceScore     Float?    @map("confidence_score")
+  priorityScore       Float?    @map("priority_score")
+  hypothesis          String?
+  rootCause           String?   @map("root_cause")
+  consequence         String?
+  ownerId             String?   @map("owner_id") @db.Uuid
+  dueAt               DateTime? @map("due_at")
+  validatedAt         DateTime? @map("validated_at")
+  resolvedAt          DateTime? @map("resolved_at")
+  dismissedAt         DateTime? @map("dismissed_at")
+  metadata            Json?
+  version             Int       @default(1)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  archivedAt          DateTime? @map("archived_at")
 
-  engagement              Engagement          @relation(fields: [engagementId], references: [id])
-  recommendationsLinked   Recommendation[]    @relation("FindingRecommendations")
-  deliverableFindings     DeliverableContent[] @relation("FindingDeliverables")
+  engagement        Engagement    @relation(fields: [engagementId], references: [id])
+  stage             Stage?        @relation(fields: [stageId], references: [id])
+  primaryEvidence   Evidence      @relation(fields: [primaryEvidenceId], references: [id])
+  recommendations   Recommendation[]
 
-  @@index([engagementId, severity])
+  @@index([engagementId])
+  @@index([stageId])
+  @@index([primaryEvidenceId])
+  @@index([status])
+  @@index([severity])
+  @@index([archivedAt])
   @@index([engagementId, status])
+  @@index([engagementId, severity])
   @@map("findings")
 }
 
 // ─── Module 3: Recommendation ──────────────────────────────────────────────
 
 model Recommendation {
-  id                  String    @id @default(uuid()) @db.Uuid
-  engagementId        String    @map("engagement_id") @db.Uuid
-  linkedFindingId     String?   @map("linked_finding_id") @db.Uuid
-  title               String
-  description         String?
-  rationale           String?
-  priority            String    // "low" | "medium" | "high" | "critical"
-  estimatedEffort     String?   @map("estimated_effort") // e.g. "1 week", "2 months"
-  estimatedImpact     String?   @map("estimated_impact")
-  status              String    @default("draft") // "draft" | "approved" | "superseded" | "implemented"
-  approvedBy          String?   @map("approved_by") @db.Uuid
-  approvedAt          DateTime? @map("approved_at")
-  supersededBy        String?   @map("superseded_by") @db.Uuid
-  visibility          String    @default("internal") // "internal" | "client_visible"
-  createdBy           String?   @map("created_by") @db.Uuid
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  id              String    @id @default(uuid()) @db.Uuid
+  engagementId    String    @map("engagement_id") @db.Uuid
+  stageId         String?   @map("stage_id") @db.Uuid
+  findingId       String    @map("finding_id") @db.Uuid
+  title           String
+  summary         String
+  priority        String    // governed by RECOMMENDATION_PRIORITIES
+  type            String    // governed by RECOMMENDATION_TYPES
+  status          String    @default("proposed") // governed by RECOMMENDATION_STATUSES
+  rationale       String
+  expectedImpact  String?   @map("expected_impact")
+  estimatedEffort String?   @map("estimated_effort")
+  targetMetric    String?   @map("target_metric")
+  ownerId         String?   @map("owner_id") @db.Uuid
+  dueAt           DateTime? @map("due_at")
+  endorsedAt      DateTime? @map("endorsed_at")
+  convertedAt     DateTime? @map("converted_at")
+  rejectedAt      DateTime? @map("rejected_at")
+  withdrawnAt     DateTime? @map("withdrawn_at")
+  metadata        Json?
+  version         Int       @default(1)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  archivedAt      DateTime? @map("archived_at")
 
-  engagement              Engagement           @relation(fields: [engagementId], references: [id])
-  linkedFinding           Finding?             @relation("FindingRecommendations", fields: [linkedFindingId], references: [id])
-  actions                 Action[]
-  deliverableFindings     DeliverableContent[] @relation("RecommendationDeliverables")
+  engagement   Engagement @relation(fields: [engagementId], references: [id])
+  stage        Stage?     @relation(fields: [stageId], references: [id])
+  finding      Finding    @relation(fields: [findingId], references: [id])
+  actions      Action[]
 
+  @@index([engagementId])
+  @@index([stageId])
+  @@index([findingId])
+  @@index([status])
+  @@index([priority])
+  @@index([archivedAt])
   @@index([engagementId, status])
-  @@index([linkedFindingId])
+  @@index([findingId, status])
   @@map("recommendations")
 }
 
 // ─── Module 3: Action ──────────────────────────────────────────────────────
 
 model Action {
-  id                  String    @id @default(uuid()) @db.Uuid
-  engagementId        String    @map("engagement_id") @db.Uuid
-  recommendationId    String?   @map("recommendation_id") @db.Uuid
-  title               String
-  description         String?
-  status              String    @default("open") // "open" | "in_progress" | "completed" | "overdue" | "cancelled"
-  dueDate             DateTime? @map("due_date")
-  completedDate       DateTime? @map("completed_date")
-  owner               String?   @map("owner") @db.Uuid
-  priority            String    // "low" | "medium" | "high" | "critical"
-  visibility          String    @default("internal") // "internal" | "client_visible"
-  createdBy           String?   @map("created_by") @db.Uuid
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  id                String    @id @default(uuid()) @db.Uuid
+  engagementId      String    @map("engagement_id") @db.Uuid
+  stageId           String?   @map("stage_id") @db.Uuid
+  recommendationId  String?   @map("recommendation_id") @db.Uuid
+  title             String
+  description       String?
+  status            String    // governed by ACTION_STATUSES
+  assignedTo        String?   @map("assigned_to") @db.Uuid
+  dueAt             DateTime? @map("due_at")
+  startedAt         DateTime? @map("started_at")
+  completedAt       DateTime? @map("completed_at")
+  verifiedAt        DateTime? @map("verified_at")
+  metadata          Json?
+  version           Int       @default(1)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  engagement              Engagement          @relation(fields: [engagementId], references: [id])
-  recommendation          Recommendation?     @relation(fields: [recommendationId], references: [id])
-  deliverableActions      DeliverableContent[] @relation("ActionDeliverables")
+  engagement     Engagement      @relation(fields: [engagementId], references: [id])
+  stage          Stage?          @relation(fields: [stageId], references: [id])
+  recommendation Recommendation? @relation(fields: [recommendationId], references: [id])
 
-  @@index([engagementId, status])
+  @@index([engagementId])
+  @@index([stageId])
   @@index([recommendationId])
-  @@index([dueDate])
+  @@index([status])
   @@map("actions")
-}
-
-// ─── Module 3: KPI ─────────────────────────────────────────────────────────
-
-model KPI {
-  id                  String    @id @default(uuid()) @db.Uuid
-  engagementId        String    @map("engagement_id") @db.Uuid
-  name                String
-  description         String?
-  unit                String?   // e.g. "%", "dollars", "days"
-  baselineValue       Float?    @map("baseline_value")
-  baselineDate        DateTime? @map("baseline_date")
-  currentValue        Float?    @map("current_value")
-  currentDate         DateTime? @map("current_date")
-  targetValue         Float?    @map("target_value")
-  targetDate          DateTime? @map("target_date")
-  direction           String?   // "increase" | "decrease"
-  status              String    @default("active") // "active" | "paused" | "completed"
-  visibility          String    @default("internal") // "internal" | "client_visible"
-  createdBy           String?   @map("created_by") @db.Uuid
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-
-  engagement              Engagement          @relation(fields: [engagementId], references: [id])
-  deliverableKpis         DeliverableContent[] @relation("KPIDeliverables")
-
-  @@index([engagementId, status])
-  @@map("kpis")
-}
-
-// ─── Module 3: Deliverable ─────────────────────────────────────────────────
-
-model Deliverable {
-  id              String    @id @default(uuid()) @db.Uuid
-  engagementId    String    @map("engagement_id") @db.Uuid
-  title           String
-  type            String    // "report" | "summary" | "alert"
-  status          String    @default("draft") // "draft" | "final"
-  generatedAt     DateTime  @default(now()) @map("generated_at")
-  generatedBy     String?   @map("generated_by") @db.Uuid
-  snapshotData    Json?     @map("snapshot_data") // full report JSON snapshot
-  visibility      String    @default("internal") // "internal" | "client_visible"
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  engagement          Engagement             @relation(fields: [engagementId], references: [id])
-  contents            DeliverableContent[]
-
-  @@index([engagementId, status])
-  @@index([engagementId, generatedAt])
-  @@map("deliverables")
-}
-
-// ─── Module 3: Deliverable Content (junction) ──────────────────────────────
-
-model DeliverableContent {
-  id                  String    @id @default(uuid()) @db.Uuid
-  deliverableId       String    @map("deliverable_id") @db.Uuid
-  findingId           String?   @map("finding_id") @db.Uuid
-  recommendationId    String?   @map("recommendation_id") @db.Uuid
-  actionId            String?   @map("action_id") @db.Uuid
-  kpiId               String?   @map("kpi_id") @db.Uuid
-  contentType         String    // "finding" | "recommendation" | "action" | "kpi"
-  sequenceOrder       Int       @map("sequence_order") @default(0)
-
-  deliverable         Deliverable      @relation(fields: [deliverableId], references: [id])
-  finding             Finding?          @relation("FindingDeliverables", fields: [findingId], references: [id])
-  recommendation      Recommendation?   @relation("RecommendationDeliverables", fields: [recommendationId], references: [id])
-  action              Action?           @relation("ActionDeliverables", fields: [actionId], references: [id])
-  kpi                 KPI?              @relation("KPIDeliverables", fields: [kpiId], references: [id])
-
-  @@index([deliverableId])
-  @@index([findingId])
-  @@index([recommendationId])
-  @@index([actionId])
-  @@index([kpiId])
-  @@map("deliverable_contents")
 }
