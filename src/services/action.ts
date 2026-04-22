@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses";
 
 export interface CreateActionInput {
@@ -81,6 +82,17 @@ export async function createAction(
       priority: input.priority,
     },
     visibility: "internal",
+  });
+
+  // Trigger re-evaluation due to new action
+  await triggerReEvaluation({
+    changeType: "action",
+    entityType: "action",
+    entityId: action.id,
+    engagementId: input.engagementId,
+    severity: (input.priority === "critical" ? "critical" : "medium") as "low" | "medium" | "high" | "critical",
+    description: `Action created: ${input.title}`,
+    triggeredBy: actorId,
   });
 
   logger.info("Action created", {
@@ -165,6 +177,19 @@ export async function updateActionStatus(
     },
     visibility: "internal",
   });
+
+  // Trigger re-evaluation due to action status change
+  if (newStatus !== previousStatus) {
+    await triggerReEvaluation({
+      changeType: "action_status_change",
+      entityType: "action",
+      entityId: actionId,
+      engagementId: action.engagementId,
+      severity: newStatus === "blocked" ? "high" : "medium",
+      description: `Action status changed: ${previousStatus} → ${newStatus}`,
+      triggeredBy: actorId,
+    });
+  }
 
   logger.info("Action status updated", {
     actionId,

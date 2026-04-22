@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -52,6 +53,17 @@ export async function createRecommendation(
       priority: input.priority,
     },
     visibility: "internal",
+  });
+
+  // Trigger re-evaluation due to new recommendation
+  await triggerReEvaluation({
+    changeType: "recommendation",
+    entityType: "recommendation",
+    entityId: recommendation.id,
+    engagementId: input.engagementId,
+    severity: (input.priority === "critical" || input.priority === "urgent" ? "high" : "medium") as "low" | "medium" | "high" | "critical",
+    description: `Recommendation created: ${input.title}`,
+    triggeredBy: actorId,
   });
 
   logger.info("Recommendation created", {

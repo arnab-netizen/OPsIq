@@ -9,6 +9,7 @@ import {
   withVersionIncrement,
 } from "@/lib/optimistic-lock";
 import { logger } from "@/infra/logger";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 import type { EvidenceStatus } from "@/domain/constants/statuses";
 import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
 
@@ -87,6 +88,17 @@ export async function createEvidence(
       title: input.title,
     },
     visibility: "internal",
+  });
+
+  // Trigger re-evaluation due to new evidence
+  await triggerReEvaluation({
+    changeType: "new_critical_evidence",
+    entityType: "evidence",
+    entityId: result.result.id,
+    engagementId: input.engagementId,
+    severity: input.severity ?? "medium",
+    description: `Evidence submitted: ${input.title}`,
+    triggeredBy: actorId,
   });
 
   logger.info("Evidence created", {

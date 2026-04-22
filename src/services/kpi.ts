@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 
 export interface CreateKPIInput {
   engagementId: string;
@@ -51,6 +52,17 @@ export async function createKPI(
       name: input.name,
     },
     visibility: "internal",
+  });
+
+  // Trigger re-evaluation due to new KPI
+  await triggerReEvaluation({
+    changeType: "kpi",
+    entityType: "kpi",
+    entityId: kpi.id,
+    engagementId: input.engagementId,
+    severity: "medium",
+    description: `KPI defined: ${input.name}`,
+    triggeredBy: actorId,
   });
 
   logger.info("KPI created", {
@@ -120,6 +132,17 @@ export async function updateKPIValue(
       currentValue: input.currentValue,
     },
     visibility: "internal",
+  });
+
+  // Trigger re-evaluation due to KPI value change
+  await triggerReEvaluation({
+    changeType: "kpi",
+    entityType: "kpi",
+    entityId: kpiId,
+    engagementId: updated.engagementId,
+    severity: "medium",
+    description: `KPI snapshot recorded: ${updated.name}`,
+    triggeredBy: actorId,
   });
 
   return updated;
