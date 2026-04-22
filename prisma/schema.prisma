@@ -190,6 +190,7 @@ model Engagement {
   conditionProfiles     BusinessConditionProfile[]
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
+  interventionState     InterventionState?
 
   @@index([clientId])
   @@index([status])
@@ -229,6 +230,23 @@ model BusinessConditionProfile {
   @@index([engagementId, isCurrent])
   @@index([engagementId])
   @@map("business_condition_profiles")
+}
+
+// ─── Module 3: Intervention State ──────────────────────────────────────────
+
+model InterventionState {
+  id            String    @id @default(uuid()) @db.Uuid
+  engagementId  String    @unique @map("engagement_id") @db.Uuid // one-to-one: each engagement has exactly one state
+  currentPhase  String    @map("current_phase") // governed by INTERVENTION_PHASES
+  previousPhase String?   @map("previous_phase") // for auditability
+  version       Int       @default(1)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  engagement    Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@map("intervention_states")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────
