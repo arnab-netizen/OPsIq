@@ -190,6 +190,11 @@ model Engagement {
   conditionProfiles     BusinessConditionProfile[]
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
+  findings              Finding[]
+  recommendations       Recommendation[]
+  actions               Action[]
+  kpis                  KPI[]
+  deliverables          Deliverable[]
 
   @@index([clientId])
   @@index([status])
@@ -229,6 +234,134 @@ model BusinessConditionProfile {
   @@index([engagementId, isCurrent])
   @@index([engagementId])
   @@map("business_condition_profiles")
+}
+
+// ─── Module 3: Findings ────────────────────────────────────────────────────
+
+model Finding {
+  id              String    @id @default(uuid()) @db.Uuid
+  engagementId    String    @map("engagement_id") @db.Uuid
+  category        String    // e.g. "operations", "finance", "people", "strategy"
+  severity        String    // "low" | "medium" | "high" | "critical"
+  title           String
+  description     String?
+  evidence        String?   // supporting evidence
+  status          String    @default("active") // "active" | "resolved" | "deferred"
+  discoveredBy    String?   @map("discovered_by") @db.Uuid
+  resolvedAt      DateTime? @map("resolved_at")
+  version         Int       @default(1)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  engagement      Engagement @relation(fields: [engagementId], references: [id])
+  recommendations Recommendation[]
+
+  @@index([engagementId, status])
+  @@index([engagementId])
+  @@map("findings")
+}
+
+// ─── Module 3: Recommendations ────────────────────────────────────────────
+
+model Recommendation {
+  id                  String    @id @default(uuid()) @db.Uuid
+  engagementId        String    @map("engagement_id") @db.Uuid
+  findingId           String?   @map("finding_id") @db.Uuid
+  priority            String    // "low" | "medium" | "high" | "critical"
+  title               String
+  description         String?
+  expectedImpact      String?   @map("expected_impact") // e.g. "improve cash flow by 15%"
+  implementationPhase String?   @map("implementation_phase") // e.g. "phase_1", "ongoing"
+  status              String    @default("open") // "open" | "in_progress" | "completed" | "deferred"
+  recommendedBy       String?   @map("recommended_by") @db.Uuid
+  completedAt         DateTime? @map("completed_at")
+  version             Int       @default(1)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  engagement          Engagement @relation(fields: [engagementId], references: [id])
+  finding             Finding?   @relation(fields: [findingId], references: [id])
+  actions             Action[]
+
+  @@index([engagementId, status])
+  @@index([engagementId])
+  @@map("recommendations")
+}
+
+// ─── Module 3: Actions ──────────────────────────────────────────────────────
+
+model Action {
+  id                  String    @id @default(uuid()) @db.Uuid
+  engagementId        String    @map("engagement_id") @db.Uuid
+  recommendationId    String?   @map("recommendation_id") @db.Uuid
+  title               String
+  description         String?
+  owner               String?   @map("owner") @db.Uuid
+  dueDate             DateTime? @map("due_date")
+  status              String    @default("open") // "open" | "in_progress" | "completed" | "blocked" | "deferred"
+  priority            String    @default("medium") // "low" | "medium" | "high" | "critical"
+  blockageReason      String?   @map("blockage_reason")
+  completedAt         DateTime? @map("completed_at")
+  version             Int       @default(1)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  engagement          Engagement @relation(fields: [engagementId], references: [id])
+  recommendation      Recommendation? @relation(fields: [recommendationId], references: [id])
+
+  @@index([engagementId, status])
+  @@index([engagementId])
+  @@map("actions")
+}
+
+// ─── Module 3: KPIs ────────────────────────────────────────────────────────
+
+model KPI {
+  id                  String    @id @default(uuid()) @db.Uuid
+  engagementId        String    @map("engagement_id") @db.Uuid
+  name                String    // e.g. "revenue", "cash_flow", "margin"
+  baseline            Float?    // starting value
+  currentValue        Float?    @map("current_value") // latest measurement
+  targetValue         Float?    @map("target_value") // goal
+  unit                String?   // e.g. "%", "$", "days"
+  direction           String    @default("up") // "up" | "down" (which direction is better)
+  measurementDate     DateTime? @map("measurement_date")
+  notes               String?
+  version             Int       @default(1)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  engagement          Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@map("kpis")
+}
+
+// ─── Module 3: Deliverables ────────────────────────────────────────────────
+
+model Deliverable {
+  id                  String    @id @default(uuid()) @db.Uuid
+  engagementId        String    @map("engagement_id") @db.Uuid
+  type                String    // e.g. "assessment", "strategy", "implementation_plan"
+  title               String
+  summary             String?
+  findings            String?   // JSON array of finding IDs or text
+  recommendations     String?   // JSON array of recommendation IDs or text
+  actions             String?   // JSON array of action IDs or text
+  kpis                String?   // JSON array of KPI IDs or text
+  reviewStatus        String    @default("draft") @map("review_status") // "draft" | "under_review" | "approved" | "delivered"
+  reviewedBy          String?   @map("reviewed_by") @db.Uuid
+  reviewedAt          DateTime? @map("reviewed_at")
+  deliveredDate       DateTime? @map("delivered_date")
+  version             Int       @default(1)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  engagement          Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId, reviewStatus])
+  @@index([engagementId])
+  @@map("deliverables")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────

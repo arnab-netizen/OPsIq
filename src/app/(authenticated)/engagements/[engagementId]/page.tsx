@@ -27,6 +27,23 @@ const CONDITION_VARIANTS: Record<string, "default" | "success" | "warning" | "de
   strong: "success",
 };
 
+const SEVERITY_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  low: "muted",
+  medium: "warning",
+  high: "warning",
+  critical: "destructive",
+};
+
+const STATUS_BADGE_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  open: "warning",
+  in_progress: "warning",
+  completed: "success",
+  deferred: "muted",
+  resolved: "success",
+  active: "success",
+  blocked: "destructive",
+};
+
 async function fetchEngagement(engagementId: string) {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}`,
@@ -36,17 +53,72 @@ async function fetchEngagement(engagementId: string) {
   return res.json();
 }
 
+async function fetchFindings(engagementId: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}/findings`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchRecommendations(engagementId: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}/recommendations`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchActions(engagementId: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}/actions`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchKPIs(engagementId: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}/kpis`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchDeliverables(engagementId: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/deliverables?engagementId=${engagementId}`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export default async function EngagementDetailPage({
   params,
 }: {
   params: Promise<{ engagementId: string }>;
 }) {
   const { engagementId } = await params;
-  const engagement = await fetchEngagement(engagementId);
+  const [engagement, findings, recommendations, actions, kpis, deliverables] = await Promise.all([
+    fetchEngagement(engagementId),
+    fetchFindings(engagementId),
+    fetchRecommendations(engagementId),
+    fetchActions(engagementId),
+    fetchKPIs(engagementId),
+    fetchDeliverables(engagementId),
+  ]);
 
   if (!engagement) notFound();
 
   const currentCondition = engagement.conditionProfiles?.[0] ?? null;
+  const openActions = actions.filter((a: any) => a.status === "open" || a.status === "in_progress");
+  const criticalFindings = findings.filter((f: any) => f.severity === "critical");
+  const kpisWithMovement = kpis.filter((k: any) => k.currentValue !== null && k.baseline !== null);
 
   return (
     <div>
@@ -253,6 +325,191 @@ export default async function EngagementDetailPage({
               </div>
             )}
           </div>
+        )}
+      </div>
+
+      {/* ─── Findings Section ──────────────────────────────────────────── */}
+      <div className="mt-8 rounded-lg border border-border p-6">
+        <h2 className="text-lg font-semibold text-foreground">
+          Findings ({findings.length})
+        </h2>
+        {findings.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            {findings.slice(0, 5).map((f: any) => (
+              <div key={f.id} className="rounded-md border border-border p-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-foreground">{f.title}</h3>
+                    {f.description && (
+                      <p className="mt-1 text-xs text-muted-foreground">{f.description}</p>
+                    )}
+                    <div className="mt-2 flex gap-2">
+                      <Badge variant={SEVERITY_VARIANTS[f.severity] ?? "muted"}>
+                        {f.severity}
+                      </Badge>
+                      <Badge variant="outline">{f.category}</Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {findings.length > 5 && (
+              <p className="text-xs text-muted-foreground">... and {findings.length - 5} more findings</p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">No findings recorded.</p>
+        )}
+      </div>
+
+      {/* ─── Recommendations Section ────────────────────────────────────── */}
+      <div className="mt-8 rounded-lg border border-border p-6">
+        <h2 className="text-lg font-semibold text-foreground">
+          Recommendations ({recommendations.length})
+        </h2>
+        {recommendations.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            {recommendations.slice(0, 5).map((r: any) => (
+              <div key={r.id} className="rounded-md border border-border p-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-foreground">{r.title}</h3>
+                    {r.description && (
+                      <p className="mt-1 text-xs text-muted-foreground">{r.description}</p>
+                    )}
+                    <div className="mt-2 flex gap-2">
+                      <Badge variant={SEVERITY_VARIANTS[r.priority] ?? "muted"}>
+                        {r.priority}
+                      </Badge>
+                      <Badge variant={STATUS_BADGE_VARIANTS[r.status] ?? "muted"}>
+                        {r.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {recommendations.length > 5 && (
+              <p className="text-xs text-muted-foreground">... and {recommendations.length - 5} more recommendations</p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">No recommendations yet.</p>
+        )}
+      </div>
+
+      {/* ─── Actions Section ───────────────────────────────────────────── */}
+      <div className="mt-8 rounded-lg border border-border p-6">
+        <h2 className="text-lg font-semibold text-foreground">
+          Open Actions ({openActions.length})
+        </h2>
+        {openActions.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            {openActions.slice(0, 5).map((a: any) => (
+              <div key={a.id} className="rounded-md border border-border p-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-foreground">{a.title}</h3>
+                    {a.description && (
+                      <p className="mt-1 text-xs text-muted-foreground">{a.description}</p>
+                    )}
+                    <div className="mt-2 flex gap-2">
+                      <Badge variant={SEVERITY_VARIANTS[a.priority] ?? "muted"}>
+                        {a.priority}
+                      </Badge>
+                      <Badge variant={STATUS_BADGE_VARIANTS[a.status] ?? "muted"}>
+                        {a.status}
+                      </Badge>
+                      {a.dueDate && (
+                        <Badge variant="outline">
+                          Due: {new Date(a.dueDate).toLocaleDateString()}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {openActions.length > 5 && (
+              <p className="text-xs text-muted-foreground">... and {openActions.length - 5} more open actions</p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">No open actions.</p>
+        )}
+      </div>
+
+      {/* ─── KPIs Section ──────────────────────────────────────────────── */}
+      <div className="mt-8 rounded-lg border border-border p-6">
+        <h2 className="text-lg font-semibold text-foreground">
+          Key Performance Indicators ({kpis.length})
+        </h2>
+        {kpis.length > 0 ? (
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+            {kpis.slice(0, 4).map((k: any) => (
+              <div key={k.id} className="rounded-md border border-border p-3">
+                <h3 className="text-sm font-medium text-foreground">{k.name}</h3>
+                <dl className="mt-2 space-y-1 text-xs">
+                  {k.currentValue !== null && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Current:</dt>
+                      <dd className="font-medium text-foreground">
+                        {k.currentValue}{k.unit ? ` ${k.unit}` : ""}
+                      </dd>
+                    </div>
+                  )}
+                  {k.baseline !== null && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Baseline:</dt>
+                      <dd className="font-medium text-foreground">
+                        {k.baseline}{k.unit ? ` ${k.unit}` : ""}
+                      </dd>
+                    </div>
+                  )}
+                  {k.targetValue !== null && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Target:</dt>
+                      <dd className="font-medium text-foreground">
+                        {k.targetValue}{k.unit ? ` ${k.unit}` : ""}
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">No KPIs defined yet.</p>
+        )}
+      </div>
+
+      {/* ─── Deliverables Section ──────────────────────────────────────── */}
+      <div className="mt-8 rounded-lg border border-border p-6">
+        <h2 className="text-lg font-semibold text-foreground">
+          Deliverables ({deliverables.length})
+        </h2>
+        {deliverables.length > 0 ? (
+          <div className="mt-4 space-y-2">
+            {deliverables.map((d: any) => (
+              <Link
+                key={d.id}
+                href={`/deliverables/${d.id}`}
+                className="block rounded-md border border-border p-3 hover:bg-muted/50"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium text-foreground">{d.title}</h3>
+                    <p className="text-xs text-muted-foreground capitalize">{d.type.replace(/_/g, " ")}</p>
+                  </div>
+                  <Badge variant={STATUS_BADGE_VARIANTS[d.reviewStatus] ?? "muted"}>
+                    {d.reviewStatus.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">No deliverables yet.</p>
         )}
       </div>
     </div>
