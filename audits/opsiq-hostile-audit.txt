@@ -370,3 +370,152 @@ Search / Filter
   Missing: No sort options beyond default order.
 
 4. RISKS
+
+P0: Re-Evaluation Service Unimplemented
+  Risk Level: CRITICAL
+  Description: CLAUDE.md mandates that "every significant change must route into governed re-evaluation"
+               of BusinessCondition, InterventionMode, InterventionPhase, priority, cadence, health.
+               Service exists as stub (logs + emits audit). Never actually re-evaluates anything.
+               No triggers from shock, evidence, finding, recommendation, action, KPI, kpi-event.
+  Impact: Business logic correctness completely bypassed. Phase/mode/condition never updated
+          based on evidence changes, KPI deterioration, failed actions. Engagement stuck in
+          stale state indefinitely.
+  Trigger: Any shock event, evidence, finding, recommendation, action, or KPI change.
+  Blast Radius: Entire intervention workflow.
+  Proof of Risk: grep -r "triggerReEvaluation" src/services/ shows 0 calls from intervention modules.
+
+P0: API Routes Untested (All 22 Endpoints)
+  Risk Level: CRITICAL
+  Description: Zero API route tests. Unknown if routes:
+               - Validate input correctly
+               - Enforce authentication/capabilities
+               - Return correct status codes (200/201/400/404)
+               - Emit audit events correctly
+               - Enforce phase gating
+               - Validate cross-engagement ownership
+               - Handle errors (NotFoundError → 404, ValidationError → 400)
+  Impact: API may expose data cross-engagements, accept invalid input, silently fail,
+          return wrong status codes, omit audit events.
+  Proof of Risk: find /home/user/OPsIq/src/app/api -name "*.test.ts" | wc -l = 0
+
+P0: No Delete Path for Corrections
+  Risk Level: HIGH
+  Description: No DELETE endpoints for shock, evidence, finding, recommendation, action, KPI.
+               Cannot remove duplicates, invalid entries, corrections.
+  Impact: Duplicate shocks recorded → duplicate findings created → duplicate recommendations
+          generated → duplicate actions assigned. Auditors see contradictory records.
+          Cannot undo mistakes.
+  Trigger: Any user error or duplicate submission (idempotency not enforced).
+  Workaround: None. Data persists forever.
+
+P1: Action.recommendationId @unique Constraint
+  Risk Level: HIGH
+  Description: Schema: recommendationId @unique on Action. Only one action per recommendation ever.
+               If action is deleted (not possible), or fails, cannot create another action for same recommendation.
+               Violates business logic: one recommendation may need multiple action attempts.
+  Current Behavior: Cannot enforce without DELETE. Creates orphan recommendations with no action.
+  Impact: Incomplete workflow. Recommendation has no corresponding action execution path.
+
+P1: Duplicate Action Creation (No Idempotency)
+  Risk Level: HIGH
+  Description: IdempotencyRecord model exists but never used. POST /actions not idempotent.
+               Network retry, user double-click, browser refresh → duplicate actions created.
+  Impact: Multiple actions for same recommendation (violates @unique constraint) OR
+          first action created, second rejected (confusing error), user retries, eventually succeeds
+          (but sees error in logs/audit).
+  Trigger: Network latency on POST /actions.
+  Proof of Risk: No idempotency key validation in API routes. No idempotency key storage in services.
+
+P1: Stale KPI Status After Phase Change
+  Risk Level: MEDIUM
+  Description: KPI.status derived when currentValue changes. But status not recomputed when:
+               - InterventionPhase changes (→ potentially phase-dependent success criteria)
+               - BusinessCondition changes (→ KPI baseline/target changes)
+               - Engagement scope changes
+  Impact: KPI shows "improving" but engagement condition degraded. "target_met" but intervention
+          phase reverted to assessment.
+  Trigger: Phase or condition change while KPI status is in flux.
+
+P1: Audit Trail Gaps Prevent Reconstruction
+  Risk Level: MEDIUM
+  Description: Missing previous/new values in audit payloads:
+               - ACTION_CREATED missing engagement context
+               - KPI_CHANGE_RECORDED missing actor if auto-triggered
+               - SHOCK_EVENT_RECORDED missing root cause
+               - EVIDENCE_SUBMITTED never emitted (only VALIDATED/REJECTED)
+               - FINDING_LINKED never emitted (links created silent)
+  Impact: Cannot reconstruct decision tree. Why was action created for this recommendation?
+          Who approved the evidence link? Did shock trigger phase change? Unknown.
+  Proof: grep "EVIDENCE_SUBMITTED\|FINDING_LINKED\|ACTION_OVERDUE\|KPI_DETERIORATED" src/services/*.ts
+         shows 0 emissions (except definitions in constants).
+
+P1: Cross-Engagement Access Not Read-Protected
+  Risk Level: MEDIUM
+  Description: Phase CLOSED blocks writes but not reads. User can still query completed engagement
+               KPIs, recommendations, actions even after phase transitions to handover/closed.
+               Can see stale data from archived engagement.
+  Impact: Confusion about what's current vs archived. Possible misuse of outdated recommendations.
+  Trigger: Phase transition while user still has session.
+
+P1: Concurrent Assignment Race Condition
+  Risk Level: MEDIUM
+  Description: No locking on assignOwner. Two users simultaneously assign action owner.
+               Both read currentValue A, both update to user2/user3. Race condition.
+               Last write wins. One assignment silently lost.
+  Impact: Action owner ambiguous. One user thinks they're assigned, another user assigned later
+          overwrites without knowledge. No audit of lost assignment.
+  Trigger: Simultaneous action assign requests.
+
+P1: Evidence-Finding Link Has No Constraints
+  Risk Level: MEDIUM
+  Description: FindingEvidenceLink.create has @unique([findingId, evidenceItemId]) but no
+               validation that evidence belongs to same engagement as finding.
+               Can link evidence from engagement A to finding in engagement B.
+  Impact: Cross-engagement data contamination. Finding in engagement A now includes evidence
+          from engagement B. Audit trail murky.
+  Trigger: API call with cross-engagement findingId + evidenceItemId.
+  Proof: No cross-engagement validation in evidence-item or finding services when linking.
+
+P2: Soft Delete Not Implemented
+  Risk Level: LOW
+  Description: All data hard-deleted (if DELETE existed). No deleted_at timestamp.
+               Cannot audit what was deleted, when, by whom.
+  Impact: Cannot recover deleted shock events, findings, etc. Audit trail shows gone, not why.
+  Trigger: DELETE endpoint (not yet implemented, so not immediate risk).
+
+P2: No Notification System
+  Risk Level: LOW
+  Description: No alerts for:
+               - Action approaching due date
+               - Action overdue
+               - KPI deteriorated below threshold
+               - Phase transition
+               - Recommendation approved/rejected
+  Impact: Users must poll manually. Miss critical deadlines/conditions.
+  Trigger: Any time-sensitive event (action due, KPI threshold).
+
+P2: Enum Validation at Service Layer Only
+  Risk Level: LOW
+  Description: Action.priority, Finding.severity, etc. validated in service, not at DB.
+               If service validation bypassed, invalid enums stored (e.g., priority="INVALID").
+  Impact: Downstream code crashes when parsing enum. Audit system may fail.
+  Trigger: Direct DB insert or API bypass.
+
+P2: No Actor Context for Auto-Triggered Changes
+  Risk Level: LOW
+  Description: If re-evaluation auto-changes recommendation priority, audit event has
+               actorId=system (or null). Cannot identify as automatic vs human-initiated.
+  Impact: Audit trail ambiguous. Looks like user manually changed priority.
+  Trigger: Re-evaluation (once implemented).
+
+P2: Engagement Phase Transitions Not Validated
+  Risk Level: LOW
+  Description: Can transition phase from assessment→closed without intermediate phases.
+               Or closed→assessment (backward). No state machine enforced.
+  Current Behavior: Service allows only defined transitions (assessment→planning→execution→review→handover→closed,
+                   with CLOSED terminal). But no validation that intermediate phases visited.
+  Impact: Skipped phase milestones. Evidence never collected (assessment skipped),
+          findings never validated (review skipped), etc.
+  Trigger: Direct API call to transitionPhase with out-of-order phase.
+
+5. UX IMPROVEMENTS
