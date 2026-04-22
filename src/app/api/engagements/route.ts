@@ -5,7 +5,7 @@ import { createEngagement, listEngagements } from "@/services/engagement";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
-import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES } from "@/domain/constants/statuses";
+import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES, INTERVENTION_PHASES } from "@/domain/constants/statuses";
 
 const createEngagementSchema = z.object({
   title: z.string().min(1),
@@ -13,6 +13,7 @@ const createEngagementSchema = z.object({
   serviceTier: z.enum(SERVICE_TIERS),
   engagementMode: z.enum(ENGAGEMENT_MODES),
   interventionMode: z.enum(INTERVENTION_MODES),
+  interventionPhase: z.enum(INTERVENTION_PHASES).optional(),
   description: z.string().optional(),
   startDate: z.string().optional(),
   targetEndDate: z.string().optional(),

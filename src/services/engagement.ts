@@ -8,11 +8,11 @@ import {
   withVersionCheck,
   withVersionIncrement,
 } from "@/lib/optimistic-lock";
-import { validateEngagementTransition } from "@/policies/state-transition";
+import { validateEngagementTransition, validateInterventionPhaseTransition } from "@/policies/state-transition";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
-import type { EngagementStatus, InterventionMode } from "@/domain/constants/statuses";
-import { ENGAGEMENT_STATUSES, INTERVENTION_MODES } from "@/domain/constants/statuses";
+import type { EngagementStatus, InterventionMode, InterventionPhase } from "@/domain/constants/statuses";
+import { ENGAGEMENT_STATUSES, INTERVENTION_MODES, INTERVENTION_PHASES } from "@/domain/constants/statuses";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -22,6 +22,7 @@ export interface CreateEngagementInput {
   serviceTier: string;
   engagementMode: string;
   interventionMode: string;
+  interventionPhase?: InterventionPhase;
   description?: string;
   startDate?: string;
   targetEndDate?: string;
@@ -42,6 +43,7 @@ export interface UpdateEngagementInput {
   healthStatus?: string;
   status?: EngagementStatus;
   interventionMode?: InterventionMode;
+  interventionPhase?: InterventionPhase;
   version: number;
 }
 
@@ -96,6 +98,14 @@ export async function createEngagement(
     );
   }
 
+  // Validate intervention phase if provided
+  const phase = input.interventionPhase ?? "assessment";
+  if (!INTERVENTION_PHASES.includes(phase)) {
+    throw new ValidationError(
+      `Invalid intervention phase: ${phase}. Must be one of: ${INTERVENTION_PHASES.join(", ")}`
+    );
+  }
+
   // Validate parent engagement if provided
   if (input.parentEngagementId) {
     const parent = await db.engagement.findUnique({
@@ -119,6 +129,7 @@ export async function createEngagement(
           serviceTier: input.serviceTier,
           engagementMode: input.engagementMode,
           interventionMode: input.interventionMode,
+          interventionPhase: phase,
           description: input.description ?? null,
           startDate: input.startDate ? new Date(input.startDate) : null,
           targetEndDate: input.targetEndDate ? new Date(input.targetEndDate) : null,
@@ -144,6 +155,7 @@ export async function createEngagement(
       title: result.result.title,
       clientId: input.clientId,
       interventionMode: input.interventionMode,
+      interventionPhase: phase,
     },
     visibility: "internal",
   });
@@ -188,6 +200,12 @@ export async function updateEngagement(
     );
   }
 
+  // Validate intervention phase transition if changing
+  const currentPhase = engagement.interventionPhase as InterventionPhase;
+  if (input.interventionPhase && input.interventionPhase !== currentPhase) {
+    validateInterventionPhaseTransition(currentPhase, input.interventionPhase);
+  }
+
   const { version, ...fields } = input;
   const data: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(fields)) {
@@ -203,6 +221,11 @@ export async function updateEngagement(
   const interventionModeChanged =
     input.interventionMode &&
     input.interventionMode !== engagement.interventionMode;
+
+  // Track if intervention phase is changing
+  const interventionPhaseChanged =
+    input.interventionPhase &&
+    input.interventionPhase !== currentPhase;
 
   // Track if status is changing for specific audit events
   const statusChanged = input.status && input.status !== currentStatus;
@@ -244,6 +267,21 @@ export async function updateEngagement(
         visibility: "internal",
       });
     }
+  }
+
+  // Emit intervention phase change audit event
+  if (interventionPhaseChanged) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.INTERVENTION_PHASE_CHANGED,
+      actorId,
+      entityType: "engagement",
+      entityId: engagementId,
+      payload: {
+        previousPhase: currentPhase,
+        newPhase: input.interventionPhase,
+      },
+      visibility: "internal",
+    });
   }
 
   // Trigger re-evaluation if intervention mode changed
@@ -330,6 +368,7 @@ export async function listEngagements(params: {
         status: true,
         healthStatus: true,
         interventionMode: true,
+        interventionPhase: true,
         serviceTier: true,
         createdAt: true,
         client: { select: { id: true, name: true } },

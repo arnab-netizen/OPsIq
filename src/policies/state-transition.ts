@@ -14,6 +14,8 @@ import {
   type EngagementStatus,
   DELIVERABLE_STATUSES,
   type DeliverableStatus,
+  INTERVENTION_PHASES,
+  type InterventionPhase,
 } from "@/domain/constants/statuses";
 
 type TransitionMap<T extends string> = Partial<Record<T, readonly T[]>>;
@@ -108,6 +110,15 @@ const DELIVERABLE_TRANSITIONS: TransitionMap<DeliverableStatus> = {
   cancelled: [],
 };
 
+const INTERVENTION_PHASE_TRANSITIONS: TransitionMap<InterventionPhase> = {
+  assessment: ["planning"],
+  planning: ["execution"],
+  execution: ["review"],
+  review: ["handover", "execution"],
+  handover: ["closed"],
+  closed: [],
+};
+
 function validateTransitionGeneric<T extends string>(
   entityType: string,
   transitions: TransitionMap<T>,
@@ -164,4 +175,12 @@ export function getAllowedTransitions<T extends string>(
 
 export function getStageAllowedTransitions(from: GovernedStageState): readonly GovernedStageState[] {
   return getAllowedTransitions(STAGE_TRANSITIONS, from);
+}
+
+export function validateInterventionPhaseTransition(from: InterventionPhase, to: InterventionPhase): void {
+  validateTransitionGeneric("InterventionPhase", INTERVENTION_PHASE_TRANSITIONS, INTERVENTION_PHASES, from, to);
+}
+
+export function getInterventionPhaseAllowedTransitions(from: InterventionPhase): readonly InterventionPhase[] {
+  return getAllowedTransitions(INTERVENTION_PHASE_TRANSITIONS, from);
 }

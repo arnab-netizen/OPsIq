@@ -7,6 +7,7 @@ import { z } from "zod/v4";
 import {
   ENGAGEMENT_STATUSES,
   INTERVENTION_MODES,
+  INTERVENTION_PHASES,
   SERVICE_TIERS,
   ENGAGEMENT_MODES,
   HEALTH_STATUSES,
@@ -24,6 +25,7 @@ const updateEngagementSchema = z.object({
   healthStatus: z.enum(HEALTH_STATUSES).optional(),
   status: z.enum(ENGAGEMENT_STATUSES).optional(),
   interventionMode: z.enum(INTERVENTION_MODES).optional(),
+  interventionPhase: z.enum(INTERVENTION_PHASES).optional(),
   version: z.number().int().min(1),
 });
 
