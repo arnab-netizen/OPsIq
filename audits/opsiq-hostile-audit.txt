@@ -1,7 +1,91 @@
 OPSIQ HOSTILE AUDIT
 1. CURRENT SPEC
+
+Domain Purpose:
+  Governed business intervention and consulting operating system. Must model four dimensions
+  at all times: consulting lifecycle stage, business condition, intervention mode/phase,
+  human execution reality.
+
+Current Application:
+  Backend API service layer for complete intervention workflow from shock detection through
+  KPI tracking. Full schema, service layer, API endpoints, and audit event infrastructure.
+  No UI for intervention workflow. No end-to-end testing of API layer.
+
+Major Entities:
+  User, Session, Role, EngagementMembership
+  Lead, ClientAccount, ClientContact
+  Engagement, BusinessConditionProfile
+  InterventionState, ShockEvent
+  EvidenceItem, Finding, FindingEvidenceLink
+  Recommendation, Action, KPI, KPIEvent
+  AuditEvent, IdempotencyRecord, ScheduledTask
+
+Workflow Supported:
+  Engagement creation → BusinessCondition profiling → InterventionState initialization
+  → ShockEvent recording → EvidenceItem collection → Finding creation → Recommendation
+  generation → Action creation → Action ownership assignment → Action deadline/priority
+  setting → KPI baseline/target definition → KPI value changes recorded with attribution
+  to actions. InterventionState phase transitions gated at each step. Phase CLOSED blocks
+  all writes.
+
+User Roles/Capabilities Present:
+  System admin, user mgmt, role assignment
+  Client account CRUD
+  Lead CRUD
+  Engagement CRUD with member management
+  Evidence submission/validation (EVIDENCE_VIEW, EVIDENCE_SUBMIT)
+  Finding creation/view (FINDING_VIEW, FINDING_CREATE)
+  Recommendation creation/approve (RECOMMENDATION_VIEW, RECOMMENDATION_CREATE, RECOMMENDATION_APPROVE)
+  Action creation/manage (INTERVENTION_MANAGE, INTERVENTION_VIEW for most; INTERVENTION_PHASES for state)
+  KPI creation/update (INTERVENTION_MANAGE, INTERVENTION_VIEW)
+  BusinessCondition assessment/view
+  InterventionState transition control
+
+UI Pages Present:
+  /login, /, /dashboard
+  /clients, /clients/[id], /clients/new
+  /engagements, /engagements/[id], /engagements/new
+  /leads, /leads/[id], /leads/new
+  /users, /settings
+  Total: 14 pages
+  Missing: All intervention workflow pages (shock, evidence, findings, recommendations, actions, KPIs)
+
+APIs Present:
+  22 endpoints under /engagements/[engagementId]/:
+    /shock-events (POST, GET), /shock-events/[id] (GET)
+    /evidence-items (POST, GET), /evidence-items/[id] (GET)
+    /findings (POST, GET), /findings/[id] (GET)
+    /recommendations (POST, GET), /recommendations/[id] (GET)
+    /actions (POST, GET), /actions/[id] (GET), /actions/[id]/status (PUT), /actions/[id]/assign (POST),
+             /actions/[id]/due-date (POST), /actions/[id]/priority (POST)
+    /kpis (POST, GET), /kpis/[id] (GET), /kpis/[id]/value (POST), /kpis/[id]/record (POST)
+    /intervention-state (GET, PUT)
+    /condition (GET, POST)
+    / (GET, PATCH)
+  HTTP methods: GET, POST, PUT only. No DELETE in intervention modules.
+  All endpoints require auth + capability check + UUID validation.
+
+Services Present:
+  18 services implementing business logic:
+    action (createAction, listActions, getActionById, updateActionStatus, assignOwner,
+            setDueDate, setPriority)
+    kpi (createKPI, listKPIs, getKPIById, updateKPIValue)
+    kpi-event (recordKPIChange with delta calculation, status re-derivation)
+    intervention-state (initializeInterventionState, transitionPhase, getInterventionState,
+                        getPhaseAllowedTransitions)
+    shock-event, evidence-item, finding, recommendation (analogous CRUD + list + get operations)
+    re-evaluation (triggerReEvaluation stub - emits audit, specifies targets, no implementation)
+    Plus: auth, engagement, client-account, lead, user, role-assignment, business-condition, etc.
+
+Audit/Control Behavior Present:
+  81 audit events defined (ACTION, KPI, FINDING, RECOMMENDATION, EVIDENCE, SHOCK, INTERVENTION, etc.)
+  All mutations emit audit events with actor, entity type, entity ID, payload, visibility (internal/client).
+  Audit event payload includes relevant previous/new values for state transitions.
+  Phase CLOSED blocks all writes to action, evidence, finding, recommendation, KPI.
+  Version-based optimistic locking on Action updates.
+  Cross-engagement ownership validation (recommendation belongs to engagement, action belongs to
+  engagement, evidence belongs to engagement, etc.).
+  Idempotency model exists (IdempotencyRecord) but not integrated with services/routes.
+  Capability enforcement via withAuth middleware on all write endpoints.
+
 2. IMPLEMENTED
-3. MISSING
-4. RISKS
-5. UX IMPROVEMENTS
-6. EXTERNAL DEPENDENCIES
