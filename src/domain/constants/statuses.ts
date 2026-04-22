@@ -250,3 +250,13 @@ export const EVIDENCE_SOURCE_TYPES = [
 ] as const;
 
 export type EvidenceSourceType = (typeof EVIDENCE_SOURCE_TYPES)[number];
+
+export const FINDING_STATUSES = [
+  "draft",
+  "under_review",
+  "validated",
+  "superseded",
+  "closed",
+] as const;
+
+export type FindingStatus = (typeof FINDING_STATUSES)[number];

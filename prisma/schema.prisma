@@ -193,6 +193,7 @@ model Engagement {
   interventionState     InterventionState?
   shockEvents           ShockEvent[]
   evidenceItems         EvidenceItem[]
+  findings              Finding[]
 
   @@index([clientId])
   @@index([status])
@@ -268,6 +269,7 @@ model ShockEvent {
 
   engagement    Engagement @relation(fields: [engagementId], references: [id])
   evidenceItems EvidenceItem[]
+  findings      Finding[]
 
   @@index([engagementId])
   @@index([severity])
@@ -294,12 +296,55 @@ model EvidenceItem {
 
   engagement              Engagement @relation(fields: [engagementId], references: [id])
   shockEvent              ShockEvent? @relation(fields: [shockEventId], references: [id])
+  findingLinks            FindingEvidenceLink[]
 
   @@index([engagementId])
   @@index([category])
   @@index([sourceType])
   @@index([shockEventId])
   @@map("evidence_items")
+}
+
+// ─── Module 6: Finding ──────────────────────────────────────────────────────
+
+model Finding {
+  id            String   @id @default(uuid()) @db.Uuid
+  engagementId  String   @map("engagement_id") @db.Uuid
+  shockEventId  String?  @map("shock_event_id") @db.Uuid
+  title         String
+  statement     String
+  severity      String   // governed by RISK_SEVERITIES
+  status        String   @default("draft") // governed by FINDING_STATUSES
+  rationale     String?
+  createdBy     String?  @map("created_by") @db.Uuid
+  version       Int      @default(1)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  engagement     Engagement              @relation(fields: [engagementId], references: [id])
+  shockEvent     ShockEvent?             @relation(fields: [shockEventId], references: [id])
+  evidenceLinks  FindingEvidenceLink[]
+
+  @@index([engagementId])
+  @@index([severity])
+  @@index([status])
+  @@index([shockEventId])
+  @@map("findings")
+}
+
+model FindingEvidenceLink {
+  id            String   @id @default(uuid()) @db.Uuid
+  findingId     String   @map("finding_id") @db.Uuid
+  evidenceItemId String  @map("evidence_item_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  finding      Finding     @relation(fields: [findingId], references: [id], onDelete: Cascade)
+  evidenceItem EvidenceItem @relation(fields: [evidenceItemId], references: [id], onDelete: Cascade)
+
+  @@unique([findingId, evidenceItemId])
+  @@index([findingId])
+  @@index([evidenceItemId])
+  @@map("finding_evidence_links")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────
