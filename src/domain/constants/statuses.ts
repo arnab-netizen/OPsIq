@@ -209,3 +209,87 @@ export const DELIVERABLE_STATUSES = [
 ] as const;
 
 export type DeliverableStatus = (typeof DELIVERABLE_STATUSES)[number];
+
+export const SHOCK_EVENT_TYPES = [
+  "key_employee_loss",
+  "major_client_loss",
+  "payroll_pressure",
+  "margin_collapse",
+  "supplier_failure",
+  "service_breakdown",
+  "compliance_issue",
+  "reputation_damage",
+  "internal_conflict",
+  "owner_withdrawal",
+  "execution_stall",
+] as const;
+
+export type ShockEventType = (typeof SHOCK_EVENT_TYPES)[number];
+
+export const EVIDENCE_CATEGORIES = [
+  "financial",
+  "operational",
+  "human",
+  "resilience",
+  "client",
+  "commercial",
+  "leadership",
+  "execution",
+] as const;
+
+export type EvidenceCategory = (typeof EVIDENCE_CATEGORIES)[number];
+
+export const EVIDENCE_SOURCE_TYPES = [
+  "interview",
+  "document",
+  "metric",
+  "observation",
+  "client_feedback",
+  "external_report",
+] as const;
+
+export type EvidenceSourceType = (typeof EVIDENCE_SOURCE_TYPES)[number];
+
+export const EVIDENCE_CAPTURE_METHODS = [
+  "manual",
+  "uploaded",
+  "extracted",
+  "synthesized",
+] as const;
+
+export type EvidenceCaptureMethod = (typeof EVIDENCE_CAPTURE_METHODS)[number];
+
+export const EVIDENCE_TRACEABILITY_STATUSES = [
+  "traceable",
+  "partial",
+  "lost",
+] as const;
+
+export type EvidenceTraceabilityStatus = (typeof EVIDENCE_TRACEABILITY_STATUSES)[number];
+
+export const FINDING_STATUSES = [
+  "draft",
+  "under_review",
+  "validated",
+  "disputed",
+  "superseded",
+  "closed",
+] as const;
+
+export type FindingStatus = (typeof FINDING_STATUSES)[number];
+
+export const CONFIDENCE_LABELS = [
+  "low",
+  "medium",
+  "high",
+] as const;
+
+export type ConfidenceLabel = (typeof CONFIDENCE_LABELS)[number];
+
+export const FINDING_EVIDENCE_LINK_TYPES = [
+  "supports",
+  "contradicts",
+  "context",
+] as const;
+
+export type FindingEvidenceLinkType = (typeof FINDING_EVIDENCE_LINK_TYPES)[number];

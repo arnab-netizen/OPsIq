@@ -50,14 +50,12 @@ export const AUDIT_EVENTS = {
   STAGE_BLOCKED: "stage.blocked",
   STAGE_UNBLOCKED: "stage.unblocked",
 
-  // Evidence
+  // Evidence (legacy names, superseded by EVIDENCE_ITEM_*)
   EVIDENCE_SUBMITTED: "evidence.submitted",
   EVIDENCE_VALIDATED: "evidence.validated",
   EVIDENCE_REJECTED: "evidence.rejected",
 
-  // Finding
-  FINDING_CREATED: "finding.created",
-  FINDING_UPDATED: "finding.updated",
+  // Finding (legacy names, superseded by FINDING_*)
   FINDING_LINKED: "finding.linked",
 
   // Recommendation
@@ -103,7 +101,23 @@ export const AUDIT_EVENTS = {
 
   // Shock Event
   SHOCK_EVENT_RECORDED: "shock.event_recorded",
+  SHOCK_EVENT_UPDATED: "shock.event_updated",
   SHOCK_EVENT_RESOLVED: "shock.event_resolved",
+
+  // Evidence
+  EVIDENCE_ITEM_CREATED: "evidence.item_created",
+  EVIDENCE_ITEM_UPDATED: "evidence.item_updated",
+  EVIDENCE_BUNDLE_CREATED: "evidence.bundle_created",
+  EVIDENCE_BUNDLE_UPDATED: "evidence.bundle_updated",
+  EVIDENCE_FILE_UPLOADED: "evidence.file_uploaded",
+
+  // Finding
+  FINDING_CREATED: "finding.created",
+  FINDING_UPDATED: "finding.updated",
+  FINDING_VALIDATED: "finding.validated",
+  FINDING_DISPUTED: "finding.disputed",
+  FINDING_SUPERSEDED: "finding.superseded",
+  FINDING_EVIDENCE_LINKED: "finding.evidence_linked",
 
   // Risk
   RISK_IDENTIFIED: "risk.identified",

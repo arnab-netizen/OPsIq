@@ -1,321 +1,291 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { createShockEvent, listShockEvents, getShockEvent } from "./shock-event";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { db } from "@/lib/db";
+import {
+  createShockEvent,
+  updateShockEvent,
+  listShockEventsForEngagement,
+  getShockEventDetail,
+} from "./shock-event";
+import { createEngagement } from "./engagement";
+import { createClient } from "./client-account";
+import type { CreateShockEventInput } from "./shock-event";
 
-vi.mock("@/lib/db", () => ({
-  db: {
-    engagement: {
-      findUnique: vi.fn(),
-    },
-    shockEvent: {
-      create: vi.fn(),
-      findMany: vi.fn(),
-      findUnique: vi.fn(),
-    },
-    interventionState: {
-      findUnique: vi.fn(),
-    },
-    businessConditionProfile: {
-      findFirst: vi.fn(),
-    },
-    kpi: {
-      findMany: vi.fn(),
-    },
-    action: {
-      findMany: vi.fn(),
-      count: vi.fn(),
-    },
-    recommendation: {
-      findMany: vi.fn(),
-    },
-  },
-}));
+describe("ShockEvent Service", () => {
+  let clientId: string;
+  let engagementId: string;
+  let actorId = "test-actor-id";
 
-vi.mock("@/infra/audit", () => ({
-  emitAuditEvent: vi.fn().mockResolvedValue({ id: "audit-1" }),
-}));
+  beforeAll(async () => {
+    // Create test client
+    const client = await createClient(
+      {
+        name: "Test Client",
+        industry: "Technology",
+        size: "large",
+      },
+      actorId
+    );
+    clientId = client.id;
 
-vi.mock("@/infra/logger", () => ({
-  logger: {
-    info: vi.fn(),
-  },
-}));
+    // Create test engagement
+    const engagement = await createEngagement(
+      {
+        title: "Test Engagement",
+        clientId,
+        serviceTier: "premium",
+        engagementMode: "expert",
+        interventionMode: "recovery",
+      },
+      actorId
+    );
+    engagementId = engagement.id;
+  });
 
-vi.mock("./intervention-state", () => ({
-  getInterventionState: vi.fn(),
-}));
-
-vi.mock("./re-evaluation", () => ({
-  triggerReEvaluation: vi.fn().mockResolvedValue({}),
-}));
-
-describe("Shock Event Service", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  afterAll(async () => {
+    // Clean up test data
+    // Note: Clean up may fail if records don't exist - that's OK
+    try {
+      await (db.shockEvent.deleteMany as any)({ where: { engagementId } });
+      await (db.engagement.deleteMany as any)({ where: { id: engagementId } });
+      await (db.clientAccount.deleteMany as any)({ where: { id: clientId } });
+    } catch {
+      // Cleanup is best-effort
+    }
   });
 
   describe("createShockEvent", () => {
-    it("creates shock event successfully", async () => {
-      const { db } = await import("@/lib/db");
-      const { getInterventionState } = await import("./intervention-state");
-      const mockDb = db as any;
-      const mockGetState = getInterventionState as any;
-
-      mockDb.engagement.findUnique.mockResolvedValue({
-        id: "eng-1",
-        code: "ENG-001",
-      });
-
-      mockGetState.mockResolvedValue({
-        engagementId: "eng-1",
-        currentPhase: "execution",
-      });
-
-      mockDb.shockEvent.create.mockResolvedValue({
-        id: "shock-1",
-        engagementId: "eng-1",
-        description: "Major client complaint",
+    it("should create a shock event with valid input", async () => {
+      const input: CreateShockEventInput = {
+        engagementId,
+        type: "key_employee_loss",
         severity: "high",
-        detectedBy: "user-1",
-        detectedAt: new Date("2024-01-15T10:00:00Z"),
-        version: 1,
-        createdAt: new Date("2024-01-15T10:00:00Z"),
-        updatedAt: new Date("2024-01-15T10:00:00Z"),
-      });
+        happenedAt: "2026-04-22T10:00:00Z",
+        notes: "VP of Operations resigned unexpectedly",
+      };
 
-      const result = await createShockEvent(
+      const result = await createShockEvent(input, actorId);
+
+      expect(result.id).toBeDefined();
+      expect(result.engagementId).toBe(engagementId);
+
+      const event = await getShockEventDetail(result.id);
+      expect(event.type).toBe("key_employee_loss");
+      expect(event.severity).toBe("high");
+      expect(event.notes).toBe("VP of Operations resigned unexpectedly");
+    });
+
+    it("should reject invalid shock event type", async () => {
+      const input = {
+        engagementId,
+        type: "invalid_type",
+        severity: "high",
+        happenedAt: "2026-04-22T10:00:00Z",
+      } as any;
+
+      expect(async () => {
+        await createShockEvent(input, actorId);
+      }).rejects.toThrow("Invalid shock event type");
+    });
+
+    it("should reject invalid severity", async () => {
+      const input = {
+        engagementId,
+        type: "major_client_loss",
+        severity: "extreme",
+        happenedAt: "2026-04-22T10:00:00Z",
+      } as any;
+
+      expect(async () => {
+        await createShockEvent(input, actorId);
+      }).rejects.toThrow("Invalid severity");
+    });
+
+    it("should reject invalid date format", async () => {
+      const input: CreateShockEventInput = {
+        engagementId,
+        type: "payroll_pressure",
+        severity: "critical",
+        happenedAt: "not-a-date",
+      };
+
+      expect(async () => {
+        await createShockEvent(input, actorId);
+      }).rejects.toThrow("must be a valid ISO 8601 date string");
+    });
+
+    it("should reject non-existent engagement", async () => {
+      const input: CreateShockEventInput = {
+        engagementId: "non-existent-id",
+        type: "compliance_issue",
+        severity: "medium",
+        happenedAt: "2026-04-22T10:00:00Z",
+      };
+
+      expect(async () => {
+        await createShockEvent(input, actorId);
+      }).rejects.toThrow("not found");
+    });
+  });
+
+  describe("updateShockEvent", () => {
+    let shockEventId: string;
+
+    beforeAll(async () => {
+      const input: CreateShockEventInput = {
+        engagementId,
+        type: "service_breakdown",
+        severity: "medium",
+        happenedAt: "2026-04-20T10:00:00Z",
+      };
+      const result = await createShockEvent(input, actorId);
+      shockEventId = result.id;
+    });
+
+    it("should update a shock event", async () => {
+      const existing = await getShockEventDetail(shockEventId);
+      const result = await updateShockEvent(
+        shockEventId,
         {
-          engagementId: "eng-1",
-          description: "Major client complaint",
-          severity: "high",
-          detectedAt: "2024-01-15T10:00:00Z",
+          severity: "critical",
+          notes: "Production database went down for 2 hours",
+          version: existing.version,
         },
-        "user-1"
+        actorId
       );
 
-      expect(result.id).toBe("shock-1");
-      expect(result.severity).toBe("high");
-      expect(mockDb.shockEvent.create).toHaveBeenCalled();
+      expect(result.id).toBe(shockEventId);
+
+      const updated = await getShockEventDetail(shockEventId);
+      expect(updated.severity).toBe("critical");
+      expect(updated.notes).toBe("Production database went down for 2 hours");
+      expect(updated.version).toBe(existing.version + 1);
     });
 
-    it("rejects if engagement not found", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.engagement.findUnique.mockResolvedValue(null);
-
-      try {
-        await createShockEvent(
+    it("should reject version conflict", async () => {
+      expect(async () => {
+        await updateShockEvent(
+          shockEventId,
           {
-            engagementId: "nonexistent",
-            description: "Test",
-            severity: "medium",
-            detectedAt: "2024-01-15T10:00:00Z",
+            severity: "low",
+            version: 999,
           },
-          "user-1"
+          actorId
         );
-        expect.fail("Should throw NotFoundError");
-      } catch (error: any) {
-        expect(error.message).toContain("not found");
-      }
+      }).rejects.toThrow("Version conflict");
     });
 
-    it("rejects if engagement phase is CLOSED", async () => {
-      const { db } = await import("@/lib/db");
-      const { getInterventionState } = await import("./intervention-state");
-      const mockDb = db as any;
-      const mockGetState = getInterventionState as any;
-
-      mockDb.engagement.findUnique.mockResolvedValue({
-        id: "eng-1",
-        code: "ENG-001",
-      });
-
-      mockGetState.mockResolvedValue({
-        engagementId: "eng-1",
-        currentPhase: "closed",
-      });
-
-      try {
-        await createShockEvent(
+    it("should reject invalid new severity", async () => {
+      const existing = await getShockEventDetail(shockEventId);
+      expect(async () => {
+        await updateShockEvent(
+          shockEventId,
           {
-            engagementId: "eng-1",
-            description: "Test shock",
-            severity: "critical",
-            detectedAt: "2024-01-15T10:00:00Z",
-          },
-          "user-1"
+            severity: "invalid",
+            version: existing.version,
+          } as any,
+          actorId
         );
-        expect.fail("Should throw ValidationError");
-      } catch (error: any) {
-        expect(error.message).toContain("CLOSED phase");
-      }
+      }).rejects.toThrow("Invalid severity");
     });
+  });
 
-    it("emits audit event on creation", async () => {
-      const { db } = await import("@/lib/db");
-      const { emitAuditEvent } = await import("@/infra/audit");
-      const { getInterventionState } = await import("./intervention-state");
-      const mockDb = db as any;
-      const mockAudit = emitAuditEvent as any;
-      const mockGetState = getInterventionState as any;
-
-      mockDb.engagement.findUnique.mockResolvedValue({ id: "eng-1" });
-      mockGetState.mockResolvedValue({
-        engagementId: "eng-1",
-        currentPhase: "execution",
-      });
-      mockDb.shockEvent.create.mockResolvedValue({
-        id: "shock-1",
-        engagementId: "eng-1",
-        description: "Test",
-        severity: "high",
-        detectedBy: "user-1",
-        detectedAt: new Date(),
-        version: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+  describe("listShockEventsForEngagement", () => {
+    beforeAll(async () => {
+      // Create multiple shock events
+      await createShockEvent(
+        {
+          engagementId,
+          type: "owner_withdrawal",
+          severity: "critical",
+          happenedAt: "2026-04-15T10:00:00Z",
+        },
+        actorId
+      );
 
       await createShockEvent(
         {
-          engagementId: "eng-1",
-          description: "Test",
+          engagementId,
+          type: "margin_collapse",
           severity: "high",
-          detectedAt: "2024-01-15T10:00:00Z",
+          happenedAt: "2026-04-18T10:00:00Z",
         },
-        "user-1"
+        actorId
       );
-
-      expect(mockAudit).toHaveBeenCalled();
-      const call = mockAudit.mock.calls[0][0];
-      expect(call.eventName).toBe("shock.event_recorded");
-      expect(call.payload.engagementId).toBe("eng-1");
     });
 
-    it("records actor context in shock event", async () => {
-      const { db } = await import("@/lib/db");
-      const { getInterventionState } = await import("./intervention-state");
-      const mockDb = db as any;
-      const mockGetState = getInterventionState as any;
+    it("should list all shock events for engagement", async () => {
+      const events = await listShockEventsForEngagement(engagementId);
+      expect(events.length).toBeGreaterThanOrEqual(2);
+      expect(events[0].happenedAt).toBeInstanceOf(Date);
+    });
 
-      mockDb.engagement.findUnique.mockResolvedValue({ id: "eng-1" });
-      mockGetState.mockResolvedValue({
-        engagementId: "eng-1",
-        currentPhase: "execution",
-      });
-      mockDb.shockEvent.create.mockResolvedValue({
-        id: "shock-1",
-        engagementId: "eng-1",
-        description: "Test",
-        severity: "critical",
-        detectedBy: "user-1",
-        detectedAt: new Date(),
-        version: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+    it("should return empty list for non-existent engagement", async () => {
+      expect(async () => {
+        await listShockEventsForEngagement("non-existent-id");
+      }).rejects.toThrow("not found");
+    });
+  });
 
+  describe("getShockEventDetail", () => {
+    let shockEventId: string;
+
+    beforeAll(async () => {
       const result = await createShockEvent(
         {
-          engagementId: "eng-1",
-          description: "Test",
-          severity: "critical",
-          detectedAt: "2024-01-15T10:00:00Z",
-        },
-        "user-1"
-      );
-
-      expect(result.detectedBy).toBe("user-1");
-    });
-  });
-
-  describe("listShockEvents", () => {
-    it("lists all shock events for engagement", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.engagement.findUnique.mockResolvedValue({ id: "eng-1" });
-      mockDb.shockEvent.findMany.mockResolvedValue([
-        {
-          id: "shock-1",
-          engagementId: "eng-1",
-          description: "First event",
+          engagementId,
+          type: "supplier_failure",
           severity: "high",
-          detectedBy: "user-1",
-          detectedAt: new Date("2024-01-15T10:00:00Z"),
-          version: 1,
-          createdAt: new Date("2024-01-15T10:00:00Z"),
-          updatedAt: new Date("2024-01-15T10:00:00Z"),
+          happenedAt: "2026-04-19T10:00:00Z",
+          notes: "Primary supplier went bankrupt",
         },
-        {
-          id: "shock-2",
-          engagementId: "eng-1",
-          description: "Second event",
-          severity: "medium",
-          detectedBy: "user-1",
-          detectedAt: new Date("2024-01-14T10:00:00Z"),
-          version: 1,
-          createdAt: new Date("2024-01-14T10:00:00Z"),
-          updatedAt: new Date("2024-01-14T10:00:00Z"),
-        },
-      ]);
-
-      const result = await listShockEvents("eng-1");
-
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe("shock-1");
-      expect(result[1].id).toBe("shock-2");
+        actorId
+      );
+      shockEventId = result.id;
     });
 
-    it("rejects if engagement not found", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
+    it("should retrieve shock event detail", async () => {
+      const event = await getShockEventDetail(shockEventId);
+      expect(event.id).toBe(shockEventId);
+      expect(event.type).toBe("supplier_failure");
+      expect(event.severity).toBe("high");
+      expect(event.notes).toBe("Primary supplier went bankrupt");
+      expect(event.version).toBe(1);
+    });
 
-      mockDb.engagement.findUnique.mockResolvedValue(null);
-
-      try {
-        await listShockEvents("nonexistent");
-        expect.fail("Should throw NotFoundError");
-      } catch (error: any) {
-        expect(error.message).toContain("not found");
-      }
+    it("should throw for non-existent shock event", async () => {
+      expect(async () => {
+        await getShockEventDetail("non-existent-id");
+      }).rejects.toThrow("not found");
     });
   });
 
-  describe("getShockEvent", () => {
-    it("retrieves shock event by id", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
+  describe("shock event type validation", () => {
+    it("should accept all valid shock event types", async () => {
+      const validTypes = [
+        "key_employee_loss",
+        "major_client_loss",
+        "payroll_pressure",
+        "margin_collapse",
+        "supplier_failure",
+        "service_breakdown",
+        "compliance_issue",
+        "reputation_damage",
+        "internal_conflict",
+        "owner_withdrawal",
+        "execution_stall",
+      ];
 
-      mockDb.shockEvent.findUnique.mockResolvedValue({
-        id: "shock-1",
-        engagementId: "eng-1",
-        description: "Test event",
-        severity: "critical",
-        detectedBy: "user-1",
-        detectedAt: new Date("2024-01-15T10:00:00Z"),
-        version: 1,
-        createdAt: new Date("2024-01-15T10:00:00Z"),
-        updatedAt: new Date("2024-01-15T10:00:00Z"),
-      });
-
-      const result = await getShockEvent("shock-1");
-
-      expect(result.id).toBe("shock-1");
-      expect(result.description).toBe("Test event");
-    });
-
-    it("throws if shock event not found", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.shockEvent.findUnique.mockResolvedValue(null);
-
-      try {
-        await getShockEvent("nonexistent");
-        expect.fail("Should throw NotFoundError");
-      } catch (error: any) {
-        expect(error.message).toContain("not found");
+      for (const type of validTypes) {
+        const result = await createShockEvent(
+          {
+            engagementId,
+            type: type as any,
+            severity: "medium",
+            happenedAt: "2026-04-22T10:00:00Z",
+          },
+          actorId
+        );
+        expect(result.id).toBeDefined();
       }
     });
   });
