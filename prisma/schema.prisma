@@ -227,6 +227,7 @@ model Engagement {
   status                EngagementStatus @default(draft) @map("status")
   healthStatus          EngagementHealthStatus @default(unknown) @map("health_status")
   interventionMode      InterventionMode @default(recovery) @map("intervention_mode")
+  interventionPhase     String    @default("triage") @map("intervention_phase") // governed by INTERVENTION_PHASES
   description           String?
   startDate             DateTime? @map("start_date")
   targetEndDate         DateTime? @map("target_end_date")

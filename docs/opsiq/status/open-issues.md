@@ -1,7 +1,5 @@
 # Open issues
 
-## Module 02
-Complete and verified. All slices pass safety and completeness checks.
-
-## Module 03
-- Scope: TBD (awaiting schema definition)
+- Module 04 schema must define action/deliverable states and lifecycle.
+- Action status must integrate with intervention phase state.
+- Deliverables must track completion and approval flows.

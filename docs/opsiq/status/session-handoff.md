@@ -1,10 +1,10 @@
 # Session handoff
 
-## Module 02
-Complete and audited. All slices pass safety checks.
+## Last known state
+Module 03 (Intervention State) is complete: schema, backend, and UI fully implemented and audited SAFE.
 
-## Module 03 — Current focus
-Starting with schema definition.
+## Current work
+Module 04 (Engagement Actions and Deliverables) schema design phase.
 
 ## Resume instruction
-Continue with `docs/opsiq/modules/module-03/schema.md`. Define entities, enums, and relationships before recovery work.
+Start with `docs/opsiq/modules/module-04/schema.md`.

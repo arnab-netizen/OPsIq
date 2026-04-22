@@ -45,6 +45,17 @@ export const PATCH = withRequestContext(async (request, context) => {
     internalOnly: true,
   });
 
+  // Check for interventionPhase in raw request body to provide clear error
+  const rawBody = await request.clone().json().catch(() => ({}));
+  if ("interventionPhase" in rawBody) {
+    return Response.json(
+      {
+        error: "interventionPhase updates are not allowed here. Use PATCH /engagements/[id]/intervention instead.",
+      },
+      { status: 400 }
+    );
+  }
+
   const body = await parseRequestBody(request, updateEngagementSchema);
   await updateEngagement(engagementId, body, session.user.id);
 

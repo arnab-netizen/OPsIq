@@ -1,18 +1,19 @@
 # Current module
 
 ## Module
-Module 03 — (Scope TBD)
+Module 04 — Engagement Actions and Deliverables
 
 ## Current slice
 schema
 
 ## Goal
-Define Module 03 schema foundations before recovery work.
+Define schema for tracked actions, deliverables, and their state.
 
 ## Next slices in order
 1. schema
-2. recovery
-3. backend
-4. ui
+2. backend
+3. ui
+4. tests
 5. audit
 6. integration
+7. status update

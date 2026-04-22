@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/ui/primitives";
+import { InterventionStateDisplay } from "@/ui/intervention-state-display";
 
 const STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   draft: "muted",
@@ -86,14 +87,10 @@ export default async function EngagementDetailPage({
               </Badge>
             </div>
           </div>
-          <div className="rounded-md border border-border bg-background p-3">
-            <p className="text-xs font-medium uppercase text-muted-foreground">Intervention Mode</p>
-            <div className="mt-1">
-              <Badge variant="outline">
-                {engagement.interventionMode.replace("_", " ")}
-              </Badge>
-            </div>
-          </div>
+          <InterventionStateDisplay
+            mode={engagement.interventionMode}
+            phase={engagement.interventionPhase}
+          />
           <div className="rounded-md border border-border bg-background p-3">
             <p className="text-xs font-medium uppercase text-muted-foreground">Business Condition</p>
             <div className="mt-1">
@@ -147,6 +144,41 @@ export default async function EngagementDetailPage({
               </div>
             )}
           </dl>
+        </div>
+
+        {/* Intervention State */}
+        <div className="rounded-lg border border-border p-6">
+          <h2 className="text-lg font-semibold text-foreground">Intervention State</h2>
+          {engagement.interventionMode && engagement.interventionPhase ? (
+            <dl className="mt-4 space-y-3">
+              <div>
+                <dt className="text-sm text-muted-foreground">Mode</dt>
+                <dd className="mt-1">
+                  <Badge variant="default">
+                    {engagement.interventionMode.replace("_", " ")}
+                  </Badge>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Phase</dt>
+                <dd className="mt-1">
+                  <Badge variant="default">
+                    {engagement.interventionPhase.replace("_", " ")}
+                  </Badge>
+                </dd>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                <p>
+                  Mode reflects the chosen intervention approach.
+                  Phase indicates the current stage in the structured intervention process.
+                </p>
+              </div>
+            </dl>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Intervention state has not been set yet.
+            </p>
+          )}
         </div>
 
         {/* Business Condition Profile */}
