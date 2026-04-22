@@ -1,26 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRequestContext } from "@/lib/api-handler";
+import { withAuth } from "@/lib/auth-guard";
 import { getDeliverablesForEngagement } from "@/services/deliverable";
-import { requireAuth } from "@/infra/auth";
 
-export async function GET(request: NextRequest) {
-  const user = await requireAuth();
-  const engagementId = request.nextUrl.searchParams.get("engagementId");
+export const GET = withRequestContext(async (request) => {
+  await withAuth();
+  const url = new URL(request.url);
+  const engagementId = url.searchParams.get("engagementId");
 
   if (!engagementId) {
-    return NextResponse.json(
+    return Response.json(
       { error: "engagementId is required" },
       { status: 400 }
     );
   }
 
-  try {
-    const deliverables = await getDeliverablesForEngagement(engagementId);
-    return NextResponse.json(deliverables);
-  } catch (error) {
-    console.error("Error fetching deliverables:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch deliverables" },
-      { status: 500 }
-    );
-  }
-}
+  const deliverables = await getDeliverablesForEngagement(engagementId);
+  return Response.json(deliverables);
+});

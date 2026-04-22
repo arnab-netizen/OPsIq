@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
@@ -42,7 +43,7 @@ export async function createRecommendation(
   });
 
   await emitAuditEvent({
-    eventName: "recommendation_created",
+    eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
     actorId,
     entityType: "recommendation",
     entityId: recommendation.id,
@@ -88,7 +89,7 @@ export async function updateRecommendationStatus(
   });
 
   await emitAuditEvent({
-    eventName: "recommendation_updated",
+    eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
     actorId,
     entityType: "recommendation",
     entityId: recommendationId,

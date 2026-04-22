@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
@@ -41,7 +42,7 @@ export async function createAction(
   });
 
   await emitAuditEvent({
-    eventName: "action_created",
+    eventName: AUDIT_EVENTS.ACTION_CREATED,
     actorId,
     entityType: "action",
     entityId: action.id,
@@ -87,7 +88,7 @@ export async function updateActionStatus(
   });
 
   await emitAuditEvent({
-    eventName: "action_updated",
+    eventName: AUDIT_EVENTS.ACTION_UPDATED,
     actorId,
     entityType: "action",
     entityId: actionId,

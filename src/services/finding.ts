@@ -35,7 +35,7 @@ export async function createFinding(
   });
 
   await emitAuditEvent({
-    eventName: "finding_created",
+    eventName: AUDIT_EVENTS.FINDING_CREATED,
     actorId,
     entityType: "finding",
     entityId: finding.id,

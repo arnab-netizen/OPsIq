@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
@@ -44,7 +45,7 @@ export async function createDeliverable(
   });
 
   await emitAuditEvent({
-    eventName: "deliverable_created",
+    eventName: AUDIT_EVENTS.DELIVERABLE_CREATED,
     actorId,
     entityType: "deliverable",
     entityId: deliverable.id,
@@ -105,7 +106,7 @@ export async function updateDeliverableReviewStatus(
   });
 
   await emitAuditEvent({
-    eventName: "deliverable_reviewed",
+    eventName: AUDIT_EVENTS.DELIVERABLE_APPROVED,
     actorId,
     entityType: "deliverable",
     entityId: deliverableId,

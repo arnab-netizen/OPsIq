@@ -1,33 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRequestContext } from "@/lib/api-handler";
+import { withAuth } from "@/lib/auth-guard";
 import { updateActionStatus } from "@/services/action";
-import { requireAuth } from "@/infra/auth";
-import { ValidationError } from "@/infra/errors";
+import { parseRequestBody } from "@/lib/validation";
+import { z } from "zod/v4";
 
-export async function PATCH(
-  request: NextRequest,
-  context: { params: Promise<{ engagementId: string; actionId: string }> }
-) {
-  const user = await requireAuth();
+const updateActionSchema = z.object({
+  status: z.enum(["open", "in_progress", "completed", "blocked", "deferred"]).optional(),
+  blockageReason: z.string().optional(),
+  version: z.number().int(),
+});
+
+export const PATCH = withRequestContext(async (request, context) => {
   const { actionId } = await context.params;
-  const body = await request.json();
+  const { session } = await withAuth();
+  const body = await parseRequestBody(request, updateActionSchema);
 
-  try {
-    if (!body.version) {
-      throw new ValidationError("Version is required");
-    }
-
-    const updated = await updateActionStatus(
-      actionId,
-      body,
-      user.id
-    );
-
-    return NextResponse.json(updated);
-  } catch (error) {
-    console.error("Error updating action:", error);
-    return NextResponse.json(
-      { error: "Failed to update action" },
-      { status: 500 }
-    );
-  }
-}
+  const updated = await updateActionStatus(actionId, body, session.user.id);
+  return Response.json(updated);
+});

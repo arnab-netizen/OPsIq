@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
@@ -41,7 +42,7 @@ export async function createKPI(
   });
 
   await emitAuditEvent({
-    eventName: "kpi_created",
+    eventName: AUDIT_EVENTS.KPI_DEFINED,
     actorId,
     entityType: "kpi",
     entityId: kpi.id,
@@ -87,7 +88,7 @@ export async function updateKPIValue(
   });
 
   await emitAuditEvent({
-    eventName: "kpi_updated",
+    eventName: AUDIT_EVENTS.KPI_SNAPSHOT_RECORDED,
     actorId,
     entityType: "kpi",
     entityId: kpiId,
