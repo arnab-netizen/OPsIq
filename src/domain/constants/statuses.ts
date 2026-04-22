@@ -260,3 +260,21 @@ export const FINDING_STATUSES = [
 ] as const;
 
 export type FindingStatus = (typeof FINDING_STATUSES)[number];
+
+export const RECOMMENDATION_STATUSES = [
+  "draft",
+  "proposed",
+  "approved",
+  "rejected",
+  "implemented",
+] as const;
+
+export type RecommendationStatus = (typeof RECOMMENDATION_STATUSES)[number];
+
+export const RECOMMENDATION_PRIORITIES = [
+  "high",
+  "medium",
+  "low",
+] as const;
+
+export type RecommendationPriority = (typeof RECOMMENDATION_PRIORITIES)[number];

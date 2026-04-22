@@ -194,6 +194,7 @@ model Engagement {
   shockEvents           ShockEvent[]
   evidenceItems         EvidenceItem[]
   findings              Finding[]
+  recommendations       Recommendation[]
 
   @@index([clientId])
   @@index([status])
@@ -267,9 +268,10 @@ model ShockEvent {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  engagement    Engagement @relation(fields: [engagementId], references: [id])
-  evidenceItems EvidenceItem[]
-  findings      Finding[]
+  engagement      Engagement @relation(fields: [engagementId], references: [id])
+  evidenceItems   EvidenceItem[]
+  findings        Finding[]
+  recommendations Recommendation[]
 
   @@index([engagementId])
   @@index([severity])
@@ -324,6 +326,7 @@ model Finding {
   engagement     Engagement              @relation(fields: [engagementId], references: [id])
   shockEvent     ShockEvent?             @relation(fields: [shockEventId], references: [id])
   evidenceLinks  FindingEvidenceLink[]
+  recommendations Recommendation[]
 
   @@index([engagementId])
   @@index([severity])
@@ -345,6 +348,33 @@ model FindingEvidenceLink {
   @@index([findingId])
   @@index([evidenceItemId])
   @@map("finding_evidence_links")
+}
+
+// ─── Module 7: Recommendation ───────────────────────────────────────────────
+
+model Recommendation {
+  id            String   @id @default(uuid()) @db.Uuid
+  engagementId  String   @map("engagement_id") @db.Uuid
+  findingId     String?  @map("finding_id") @db.Uuid
+  shockEventId  String?  @map("shock_event_id") @db.Uuid
+  priority      String   // "high" | "medium" | "low"
+  title         String
+  description   String?
+  status        String   @default("draft") // governed by RECOMMENDATION_STATUSES
+  version       Int      @default(1)
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  finding    Finding?   @relation(fields: [findingId], references: [id], onDelete: SetNull)
+  shockEvent ShockEvent? @relation(fields: [shockEventId], references: [id], onDelete: SetNull)
+
+  @@index([engagementId])
+  @@index([priority])
+  @@index([findingId])
+  @@index([shockEventId])
+  @@map("recommendations")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────
