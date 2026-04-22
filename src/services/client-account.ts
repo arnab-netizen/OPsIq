@@ -98,6 +98,8 @@ export async function updateClient(
     if (v !== undefined) data[k] = v;
   }
 
+  // Duplicate request protection: optimistic locking via version check
+  // Duplicate requests with old version fail fast with 409 Conflict
   await optimisticUpdate("client_account", clientId, version, () =>
     db.clientAccount.update({
       where: withVersionCheck({ id: clientId }, version),
@@ -127,8 +129,11 @@ export async function archiveClient(
   });
 
   if (!client) throw new NotFoundError("ClientAccount", clientId);
+
+  // Idempotent: if already archived, return success (duplicate request protection)
   if (client.status === "archived") {
-    throw new ValidationError("Client is already archived");
+    logger.info("Client already archived, returning success", { clientId });
+    return;
   }
 
   await optimisticUpdate("client_account", clientId, version, () =>

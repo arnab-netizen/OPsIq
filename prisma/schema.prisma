@@ -7,6 +7,62 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─── Module 2: Enums ────────────────────────────────────────────────────────
+
+enum LeadStatus {
+  new
+  qualifying
+  qualified
+  converted
+  lost
+}
+
+enum EngagementStatus {
+  draft
+  active
+  paused
+  completed
+  cancelled
+  archived
+}
+
+enum EngagementHealthStatus {
+  healthy
+  at_risk
+  critical
+  unknown
+}
+
+enum InterventionMode {
+  recovery
+  stabilization
+  growth
+  shock_response
+  mixed
+}
+
+enum BusinessConditionRating {
+  critical
+  distressed
+  challenged
+  stable
+  improving
+  strong
+}
+
+enum PressureLevel {
+  low
+  medium
+  high
+  critical
+}
+
+enum MaturityLevel {
+  low
+  medium
+  high
+}
+
 // ─── Foundation: User & Auth ────────────────────────────────────────────────
 
 model User {
@@ -93,13 +149,14 @@ model LeadRecord {
   contactEmail    String?   @map("contact_email")
   contactPhone    String?   @map("contact_phone")
   source          String?   // e.g. "referral", "website", "outbound"
-  status          String    @default("new") // "new" | "qualifying" | "qualified" | "converted" | "lost"
+  status          LeadStatus @default(new) @map("status")
   notes           String?
   estimatedValue  Float?    @map("estimated_value")
   convertedToClientId String? @map("converted_to_client_id") @db.Uuid
   engagementId    String?   @map("engagement_id") @db.Uuid
   assignedTo      String?   @map("assigned_to") @db.Uuid
   createdBy       String?   @map("created_by") @db.Uuid
+  version         Int       @default(1)
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -167,9 +224,9 @@ model Engagement {
   clientId              String    @map("client_id") @db.Uuid
   serviceTier           String    @map("service_tier") // "standard" | "premium" | "enterprise"
   engagementMode        String    @map("engagement_mode") // "beginner" | "expert"
-  status                String    @default("draft") // governed by ENGAGEMENT_STATUSES
-  healthStatus          String    @default("healthy") @map("health_status") // "healthy" | "at_risk" | "critical" | "unknown"
-  interventionMode      String    @default("recovery") @map("intervention_mode") // governed by INTERVENTION_MODES
+  status                EngagementStatus @default(draft) @map("status")
+  healthStatus          EngagementHealthStatus @default(unknown) @map("health_status")
+  interventionMode      InterventionMode @default(recovery) @map("intervention_mode")
   description           String?
   startDate             DateTime? @map("start_date")
   targetEndDate         DateTime? @map("target_end_date")
@@ -203,20 +260,20 @@ model Engagement {
 model BusinessConditionProfile {
   id                      String    @id @default(uuid()) @db.Uuid
   engagementId            String    @map("engagement_id") @db.Uuid
-  businessStatus          String    @map("business_status") // governed by BUSINESS_CONDITION_RATINGS
+  businessStatus          BusinessConditionRating @map("business_status")
   severityScore           Int       @map("severity_score") // 1-10
-  urgencyLevel            String    @map("urgency_level") // "low" | "medium" | "high" | "critical"
-  cashPressureLevel       String    @map("cash_pressure_level") // "low" | "medium" | "high" | "critical"
-  marginPressureLevel     String    @map("margin_pressure_level") // "low" | "medium" | "high" | "critical"
-  clientConcentrationRisk String    @map("client_concentration_risk") // "low" | "medium" | "high" | "critical"
-  ownerDependencyRisk     String    @map("owner_dependency_risk") // "low" | "medium" | "high" | "critical"
-  keyPersonDependencyRisk String    @map("key_person_dependency_risk") // "low" | "medium" | "high" | "critical"
-  processMaturityLevel    String    @map("process_maturity_level") // "low" | "medium" | "high"
-  managementMaturityLevel String    @map("management_maturity_level") // "low" | "medium" | "high"
-  executionCapacityLevel  String    @map("execution_capacity_level") // "low" | "medium" | "high"
-  moraleFragilityLevel    String    @map("morale_fragility_level") // "low" | "medium" | "high" | "critical"
-  resilienceLevel         String    @map("resilience_level") // "low" | "medium" | "high"
-  growthReadinessLevel    String    @map("growth_readiness_level") // "low" | "medium" | "high"
+  urgencyLevel            PressureLevel @map("urgency_level")
+  cashPressureLevel       PressureLevel @map("cash_pressure_level")
+  marginPressureLevel     PressureLevel @map("margin_pressure_level")
+  clientConcentrationRisk PressureLevel @map("client_concentration_risk")
+  ownerDependencyRisk     PressureLevel @map("owner_dependency_risk")
+  keyPersonDependencyRisk PressureLevel @map("key_person_dependency_risk")
+  processMaturityLevel    MaturityLevel @map("process_maturity_level")
+  managementMaturityLevel MaturityLevel @map("management_maturity_level")
+  executionCapacityLevel  MaturityLevel @map("execution_capacity_level")
+  moraleFragilityLevel    PressureLevel @map("morale_fragility_level")
+  resilienceLevel         MaturityLevel @map("resilience_level")
+  growthReadinessLevel    MaturityLevel @map("growth_readiness_level")
   notes                   String?
   assessedBy              String?   @map("assessed_by") @db.Uuid
   version                 Int       @default(1)

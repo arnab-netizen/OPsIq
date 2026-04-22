@@ -207,6 +207,8 @@ export async function updateEngagement(
   // Track if status is changing for specific audit events
   const statusChanged = input.status && input.status !== currentStatus;
 
+  // Duplicate request protection: optimistic locking via version check
+  // Duplicate requests with old version fail fast with 409 Conflict
   await optimisticUpdate("engagement", engagementId, version, () =>
     db.engagement.update({
       where: withVersionCheck({ id: engagementId }, version),

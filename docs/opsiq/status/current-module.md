@@ -1,20 +1,18 @@
 # Current module
 
 ## Module
-Module 02 — Clients, Leads, Engagements, and Business Condition
+Module 03 — (Scope TBD)
 
 ## Current slice
-recovery
+schema
 
 ## Goal
-Reconcile the existing partial Module 02 work with the repository rules before adding more code.
+Define Module 03 schema foundations before recovery work.
 
 ## Next slices in order
-1. recovery
-2. schema
+1. schema
+2. recovery
 3. backend
 4. ui
-5. tests
-6. audit
-7. integration
-8. status update
+5. audit
+6. integration

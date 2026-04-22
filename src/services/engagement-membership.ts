@@ -164,11 +164,14 @@ export async function removeMember(
     },
   });
 
+  // Idempotent: if already removed or never existed, return success (duplicate request protection)
   if (!membership) {
-    throw new NotFoundError(
-      "EngagementMembership",
-      `${input.userId}:${input.engagementId}:${input.role}`
-    );
+    logger.info("Member not active or already removed, returning success", {
+      userId: input.userId,
+      engagementId: input.engagementId,
+      role: input.role,
+    });
+    return;
   }
 
   await db.engagementMembership.update({

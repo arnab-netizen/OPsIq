@@ -3,6 +3,11 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import {
+  optimisticUpdate,
+  withVersionCheck,
+  withVersionIncrement,
+} from "@/lib/optimistic-lock";
 import { logger } from "@/infra/logger";
 import type { LeadStatus } from "@/domain/constants/statuses";
 import { LEAD_STATUSES } from "@/domain/constants/statuses";
@@ -30,6 +35,7 @@ export interface UpdateLeadInput {
   estimatedValue?: number;
   status?: LeadStatus;
   assignedTo?: string;
+  version: number;
 }
 
 // ─── Transition Map ────────────────────────────────────────────────────────
@@ -114,15 +120,20 @@ export async function updateLead(
     validateLeadTransition(lead.status as LeadStatus, input.status);
   }
 
+  const { version, ...fields } = input;
   const data: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(input)) {
+  for (const [k, v] of Object.entries(fields)) {
     if (v !== undefined) data[k] = v;
   }
 
-  await db.leadRecord.update({
-    where: { id: leadId },
-    data,
-  });
+  // Duplicate request protection: optimistic locking via version check
+  // Duplicate requests with old version fail fast with 409 Conflict
+  await optimisticUpdate("lead_record", leadId, version, () =>
+    db.leadRecord.update({
+      where: withVersionCheck({ id: leadId }, version),
+      data: withVersionIncrement(data),
+    })
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_UPDATED,
@@ -151,14 +162,50 @@ export async function linkLeadToEngagement(
     );
   }
 
-  await db.leadRecord.update({
-    where: { id: leadId },
-    data: {
-      status: "converted",
-      convertedToClientId: clientId,
-      engagementId,
-    },
+  // Validate engagement exists and is not archived
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: { id: true, clientId: true, status: true },
   });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+  if (engagement.status === "archived") {
+    throw new ValidationError("Cannot link lead to an archived engagement");
+  }
+
+  // Validate client exists and is not archived
+  const client = await db.clientAccount.findUnique({
+    where: { id: clientId },
+    select: { id: true, status: true },
+  });
+  if (!client) throw new NotFoundError("ClientAccount", clientId);
+  if (client.status === "archived") {
+    throw new ValidationError("Cannot link lead to an archived client");
+  }
+
+  // Verify engagement belongs to the provided client
+  if (engagement.clientId !== clientId) {
+    throw new ValidationError(
+      "Engagement does not belong to the specified client"
+    );
+  }
+
+  const idempotencyKey = `lead-link:${leadId}:${engagementId}:${actorId}`;
+
+  await withIdempotency(
+    idempotencyKey,
+    "lead.link_to_engagement",
+    async () => {
+      await db.leadRecord.update({
+        where: { id: leadId },
+        data: {
+          status: "converted",
+          convertedToClientId: clientId,
+          engagementId,
+          version: { increment: 1 },
+        },
+      });
+    }
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_LINKED_TO_ENGAGEMENT,

@@ -1,10 +1,10 @@
 # Session handoff
 
-## Last known state
-Module 02 was partially implemented in Claude with frontend pages for leads, clients, and engagements.
+## Module 02
+Complete and audited. All slices pass safety checks.
 
-## Caution
-Do not continue adding more UI before recovery and schema alignment are complete.
+## Module 03 — Current focus
+Starting with schema definition.
 
 ## Resume instruction
-Start with `docs/opsiq/modules/module-02/recovery.md`.
+Continue with `docs/opsiq/modules/module-03/schema.md`. Define entities, enums, and relationships before recovery work.

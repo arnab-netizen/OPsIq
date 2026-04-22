@@ -16,10 +16,19 @@ Add or correct schema for clients, contacts, leads, engagements, memberships, an
 ### ClientAccount
 - id
 - name
-- industry
+- legalName optional
+- industry optional
+- size optional
+- status
 - website optional
+- address optional
+- notes optional
+- version
+- visibility
+- createdBy optional
 - createdAt
 - updatedAt
+- archivedAt optional
 
 ### ClientContact
 - id
@@ -27,21 +36,28 @@ Add or correct schema for clients, contacts, leads, engagements, memberships, an
 - name
 - email optional
 - phone optional
-- title optional
+- role optional
+- isPrimary
+- isActive
+- notes optional
 - createdAt
 - updatedAt
 
 ### LeadRecord
 - id
-- name
+- companyName
 - contactName optional
-- email optional
-- phone optional
+- contactEmail optional
+- contactPhone optional
 - source optional
 - status
 - notes optional
-- linkedClientId optional
-- linkedEngagementId optional
+- estimatedValue optional
+- convertedToClientId optional
+- engagementId optional
+- assignedTo optional
+- createdBy optional
+- version
 - createdAt
 - updatedAt
 
@@ -49,12 +65,23 @@ Add or correct schema for clients, contacts, leads, engagements, memberships, an
 - id
 - code unique
 - title
-- status
-- serviceTier
 - clientId
+- serviceTier
+- engagementMode
+- status
 - healthStatus
 - interventionMode
+- description optional
+- startDate optional
+- targetEndDate optional
+- actualEndDate optional
+- ownerId optional
+- assignedConsultantId optional
+- currentScopeVersionId optional
 - parentEngagementId optional
+- version
+- visibility
+- createdBy optional
 - createdAt
 - updatedAt
 
@@ -63,7 +90,10 @@ Add or correct schema for clients, contacts, leads, engagements, memberships, an
 - engagementId
 - userId
 - role
-- createdAt
+- addedBy optional
+- addedAt
+- removedAt optional
+- isActive
 
 ### BusinessConditionProfile
 - id
@@ -82,7 +112,12 @@ Add or correct schema for clients, contacts, leads, engagements, memberships, an
 - moraleFragilityLevel
 - resilienceLevel
 - growthReadinessLevel
+- notes optional
+- assessedBy optional
+- version
+- isCurrent
 - createdAt
+- updatedAt
 
 ## Enums
 Add typed enums where appropriate for:
