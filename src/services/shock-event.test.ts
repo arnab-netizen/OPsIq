@@ -43,10 +43,15 @@ describe("ShockEvent Service", () => {
 
   afterAll(async () => {
     // Clean up test data
-    await db.shockEvent.deleteMany({ where: { engagementId } });
-    await db.engagement.deleteMany({ where: { id: engagementId } });
-    await db.clientAccount.deleteMany({ where: { id: clientId } });
-  } as any);
+    // Note: Clean up may fail if records don't exist - that's OK
+    try {
+      await (db.shockEvent.deleteMany as any)({ where: { engagementId } });
+      await (db.engagement.deleteMany as any)({ where: { id: engagementId } });
+      await (db.clientAccount.deleteMany as any)({ where: { id: clientId } });
+    } catch {
+      // Cleanup is best-effort
+    }
+  });
 
   describe("createShockEvent", () => {
     it("should create a shock event with valid input", async () => {
