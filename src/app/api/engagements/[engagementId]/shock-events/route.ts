@@ -2,50 +2,33 @@ import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
-  assessCondition,
-  getConditionHistory,
-} from "@/services/business-condition";
+  createShockEvent,
+  listShockEvents,
+} from "@/services/shock-event";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
-import {
-  BUSINESS_CONDITION_RATINGS,
-  PRESSURE_LEVELS,
-  MATURITY_LEVELS,
-} from "@/domain/constants/statuses";
 
-const assessConditionSchema = z.object({
-  businessStatus: z.enum(BUSINESS_CONDITION_RATINGS),
-  severityScore: z.number().int().min(1).max(10),
-  urgencyLevel: z.enum(PRESSURE_LEVELS),
-  cashPressureLevel: z.enum(PRESSURE_LEVELS),
-  marginPressureLevel: z.enum(PRESSURE_LEVELS),
-  clientConcentrationRisk: z.enum(PRESSURE_LEVELS),
-  ownerDependencyRisk: z.enum(PRESSURE_LEVELS),
-  keyPersonDependencyRisk: z.enum(PRESSURE_LEVELS),
-  processMaturityLevel: z.enum(MATURITY_LEVELS),
-  managementMaturityLevel: z.enum(MATURITY_LEVELS),
-  executionCapacityLevel: z.enum(MATURITY_LEVELS),
-  moraleFragilityLevel: z.enum(MATURITY_LEVELS),
-  resilienceLevel: z.enum(MATURITY_LEVELS),
-  growthReadinessLevel: z.enum(MATURITY_LEVELS),
-  notes: z.string().optional(),
+const createShockEventSchema = z.object({
+  description: z.string().min(1),
+  severity: z.enum(["low", "medium", "high", "critical"]),
+  detectedAt: z.string().datetime(),
 });
 
 export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  await withAuth({ capability: CAPABILITIES.CONDITION_VIEW });
+  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
-  const history = await getConditionHistory(engagementId);
-  return Response.json({ profiles: history });
+  const events = await listShockEvents(engagementId);
+  return Response.json({ events });
 });
 
 export const POST = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
   const { session } = await withAuth({
-    capability: CAPABILITIES.CONDITION_ASSESS,
+    capability: CAPABILITIES.ENGAGEMENT_UPDATE,
     internalOnly: true,
   });
 
@@ -57,12 +40,12 @@ export const POST = withRequestContext(async (request, context) => {
     );
   }
 
-  const body = await parseRequestBody(request, assessConditionSchema);
+  const body = await parseRequestBody(request, createShockEventSchema);
 
   // Check idempotency
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
-    operationName: "assessCondition",
+    operationName: "createShockEvent",
     actorId: session.user.id,
     payload: { engagementId, ...body },
   });
@@ -74,8 +57,8 @@ export const POST = withRequestContext(async (request, context) => {
   }
 
   try {
-    const result = await assessCondition(
-      { ...body, engagementId },
+    const result = await createShockEvent(
+      { engagementId, ...body },
       session.user.id
     );
     await recordIdempotencyResponse(idempotencyKey, 201, result);

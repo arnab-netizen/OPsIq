@@ -249,6 +249,8 @@ model Engagement {
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
   healthChecks          HealthCheckRecord[]
+  interventionState     InterventionState?
+  shockEvents           ShockEvent[]
 
   @@index([clientId])
   @@index([status])

@@ -4,6 +4,7 @@ import { hasInternalAccess } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getEngagementById, updateEngagement } from "@/services/engagement";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import {
   ENGAGEMENT_STATUSES,
@@ -56,9 +57,38 @@ export const PATCH = withRequestContext(async (request, context) => {
     );
   }
 
-  const body = await parseRequestBody(request, updateEngagementSchema);
-  await updateEngagement(engagementId, body, session.user.id);
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
 
-  const updated = await getEngagementById(engagementId, hasInternalAccess(policy));
-  return Response.json(updated);
+  const body = await parseRequestBody(request, updateEngagementSchema);
+
+  // Check idempotency
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "updateEngagement",
+    actorId: session.user.id,
+    payload: { engagementId, ...body },
+  });
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
+  }
+
+  try {
+    await updateEngagement(engagementId, body, session.user.id);
+    const updated = await getEngagementById(engagementId, hasInternalAccess(policy));
+    await recordIdempotencyResponse(idempotencyKey, 200, updated);
+    return Response.json(updated);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
+    throw error;
+  }
 });

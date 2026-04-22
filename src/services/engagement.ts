@@ -10,6 +10,7 @@ import {
 } from "@/lib/optimistic-lock";
 import { validateEngagementTransition } from "@/policies/state-transition";
 import { triggerReEvaluation } from "@/services/re-evaluation";
+import { initializeInterventionState } from "@/services/intervention-state";
 import { logger } from "@/infra/logger";
 import type { EngagementStatus, InterventionMode } from "@/domain/constants/statuses";
 import { ENGAGEMENT_STATUSES, INTERVENTION_MODES } from "@/domain/constants/statuses";
@@ -130,6 +131,13 @@ export async function createEngagement(
           healthStatus: "unknown",
         },
       });
+
+      // Initialize intervention state for this engagement
+      await initializeInterventionState(
+        { engagementId: engagement.id },
+        actorId
+      );
+
       return { id: engagement.id, code: engagement.code, title: engagement.title };
     }
   );
@@ -292,6 +300,13 @@ export async function getEngagementById(engagementId: string, hasInternalAccess:
         where: { isActive: true },
         include: {
           user: { select: { id: true, name: true, email: true } },
+        },
+      },
+      interventionState: {
+        select: {
+          id: true,
+          currentPhase: true,
+          previousPhase: true,
         },
       },
       _count: { select: { leads: true } },
