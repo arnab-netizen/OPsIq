@@ -6,53 +6,59 @@ import * as path from "path";
 const testDbPath = path.join(process.cwd(), "prisma", "test.db");
 
 beforeAll(async () => {
-  // Clean up old test database
-  if (fs.existsSync(testDbPath)) {
-    fs.unlinkSync(testDbPath);
-  }
+  // Set DATABASE_URL for PostgreSQL test
+  process.env.DATABASE_URL = "postgresql://postgres:testpass@localhost:5432/opsiq_test";
+  process.env.PGPASSWORD = "testpass";
 
-  // Create schema for SQLite and generate client
-  const schemaPath = path.join(process.cwd(), "prisma", "schema.sqlite.prisma");
+  // Use main schema (PostgreSQL)
+  const schemaPath = path.join(process.cwd(), "prisma", "schema.prisma");
   if (!fs.existsSync(schemaPath)) {
-    console.error("SQLite schema not found at", schemaPath);
+    console.error("PostgreSQL schema not found at", schemaPath);
     process.exit(1);
   }
 
   // Run Prisma db push to initialize test database with real schema
   try {
     execSync(
-      `npx prisma db push --schema=${schemaPath} --accept-data-loss`,
+      `npx prisma db push --accept-data-loss`,
       {
         cwd: process.cwd(),
         stdio: "inherit",
         env: {
           ...process.env,
-          DATABASE_URL: `file:./prisma/test.db`,
-          NODE_ENV: "test",
+          DATABASE_URL: "postgresql://postgres:testpass@localhost:5432/opsiq_test",
+          PGPASSWORD: "testpass",
         },
       }
     );
-    console.log("✓ Real SQLite test database initialized");
+    console.log("✓ Real PostgreSQL test database initialized");
 
     // Create test users to satisfy foreign key constraints
     const { db } = await import("../lib/db");
-    const testActorIds = ["real-safety-test"];
+    const { v4: uuidv4 } = await import("uuid");
 
-    // Add all actor IDs used in tests
-    for (let i = 0; i < 20; i++) {
-      testActorIds.push(`actor-${i}`);
+    const testActorIds: { [key: string]: string } = {
+      "real-safety-test": uuidv4(),
+      "real-safety-test-different": uuidv4(),
+    };
+
+    // Add all actor IDs used in tests (now 100 for concurrency test)
+    for (let i = 0; i < 100; i++) {
+      testActorIds[`actor-${i}`] = uuidv4();
     }
-    testActorIds.push("real-safety-test-different");
 
-    for (const actorId of testActorIds) {
+    for (const [actorId, uuid] of Object.entries(testActorIds)) {
       try {
         await db.user.create({
           data: {
-            id: actorId,
+            id: uuid,
             email: `${actorId}@test.example.com`,
             isActive: true,
           },
         });
+        // Store the UUID mapping for later reference
+        (globalThis as any).testActorUuids = (globalThis as any).testActorUuids || {};
+        (globalThis as any).testActorUuids[actorId] = uuid;
       } catch (e) {
         // Ignore duplicate key errors
       }
@@ -64,8 +70,25 @@ beforeAll(async () => {
   }
 });
 
-afterAll(() => {
-  if (fs.existsSync(testDbPath)) {
-    fs.unlinkSync(testDbPath);
+afterAll(async () => {
+  // Clean up test data
+  try {
+    const { db } = await import("../lib/db");
+    await db.$executeRawUnsafe(`
+      TRUNCATE TABLE audit_events CASCADE;
+      TRUNCATE TABLE idempotency_records CASCADE;
+      TRUNCATE TABLE business_condition_profiles CASCADE;
+      TRUNCATE TABLE engagement_memberships CASCADE;
+      TRUNCATE TABLE engagements CASCADE;
+      TRUNCATE TABLE lead_records CASCADE;
+      TRUNCATE TABLE client_contacts CASCADE;
+      TRUNCATE TABLE client_accounts CASCADE;
+      TRUNCATE TABLE user_role_assignments CASCADE;
+      TRUNCATE TABLE sessions CASCADE;
+      TRUNCATE TABLE users CASCADE;
+    `);
+    await db.$disconnect();
+  } catch (e) {
+    // Ignore cleanup errors
   }
 });

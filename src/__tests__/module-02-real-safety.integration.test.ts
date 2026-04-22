@@ -5,13 +5,21 @@ import { createContact, updateContact } from "../services/client-contact";
 import { createLead, updateLead } from "../services/lead";
 import { AUDIT_EVENTS } from "../domain/constants/audit-events";
 
-const ACTOR_ID = "real-safety-test";
+function getActorUUID(actorId: string): string {
+  const mapping = (globalThis as any).testActorUuids;
+  if (!mapping || !mapping[actorId]) {
+    throw new Error(`Actor UUID mapping not found for: ${actorId}`);
+  }
+  return mapping[actorId];
+}
 
 async function validateTrueSafety() {
   console.log("=== REAL System Safety Validation ===\n");
 
   let totalTests = 0;
   let failedTests = 0;
+
+  const ACTOR_ID = getActorUUID("real-safety-test");
 
   // SETUP: Create base entities
   const client = await createClient({ name: "Safety Test Client" }, ACTOR_ID);
@@ -28,15 +36,15 @@ async function validateTrueSafety() {
     ACTOR_ID
   );
 
-  // TEST 1: TRUE CONCURRENCY - 20 parallel updates to same contact
-  console.log("TEST 1: TRUE CONCURRENCY - 20 parallel updates to same contact\n");
+  // TEST 1: TRUE CONCURRENCY - 100 parallel updates to same contact
+  console.log("TEST 1: TRUE CONCURRENCY - 100 parallel updates to same contact\n");
   totalTests++;
 
-  const parallelUpdates = Array.from({ length: 20 }, (_, i) =>
+  const parallelUpdates = Array.from({ length: 100 }, (_, i) =>
     updateContact(
       contact.id,
       { email: `concurrent-${i}@test.com` },
-      `actor-${i}`
+      getActorUUID(`actor-${i}`)
     )
   );
 
@@ -46,8 +54,8 @@ async function validateTrueSafety() {
       where: { id: contact.id },
     });
 
-    // Verify final state is valid (one of the 20 emails)
-    const validEmails = Array.from({ length: 20 }, (_, i) => `concurrent-${i}@test.com`);
+    // Verify final state is valid (one of the 100 emails)
+    const validEmails = Array.from({ length: 100 }, (_, i) => `concurrent-${i}@test.com`);
     if (finalContact && validEmails.includes(finalContact.email || "")) {
       console.log(`✓ PASS: Final state valid (email: ${finalContact.email})`);
       console.log("✓ PASS: No lost updates, state is consistent\n");
@@ -129,7 +137,7 @@ async function validateTrueSafety() {
       contactName: "User A",
       contactEmail: "a@test.com",
     },
-    ACTOR_ID + "-different"
+    getActorUUID("real-safety-test-different")
   );
 
   if (collision1.id === collision2.id) {

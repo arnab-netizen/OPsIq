@@ -101,6 +101,11 @@ export async function updateContact(
 
   const roleChanged = input.role && input.role !== contact.role;
 
+  // Introduce delay to expose race conditions in concurrent scenarios
+  if (process.env.NODE_ENV === "test") {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+
   await db.clientContact.update({
     where: { id: contactId },
     data,
