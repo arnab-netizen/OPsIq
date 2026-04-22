@@ -307,6 +307,18 @@ export async function getEngagementById(engagementId: string) {
           previousPhase: true,
         },
       },
+      shockEvents: {
+        select: {
+          id: true,
+          eventType: true,
+          severity: true,
+          title: true,
+          detectedAt: true,
+          createdAt: true,
+        },
+        orderBy: { detectedAt: "desc" },
+        take: 10,
+      },
       _count: { select: { leads: true } },
     },
   });

@@ -10,6 +10,6 @@ export const GET = withRequestContext(async (_request, context) => {
   parseOrThrow(uuidSchema, shockEventId);
   await withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW });
 
-  const event = await getShockEventById(shockEventId);
+  const event = await getShockEventById(shockEventId, engagementId);
   return Response.json(event);
 });

@@ -34,6 +34,10 @@ vi.mock("@/infra/logger", () => ({
 }));
 
 describe("Shock Event Service", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe("Shock event type validation", () => {
     it("includes required shock event types", () => {
       expect(SHOCK_EVENT_TYPES).toContain("market_disruption");
@@ -347,6 +351,100 @@ describe("Shock Event Service", () => {
       expect(call.payload.engagementId).toBe("eng-1");
       expect(call.payload.eventType).toBe("market_disruption");
       expect(call.payload.severity).toBe("high");
+      expect(call.payload.shockEventId).toBe("shock-1");
+      expect(call.payload.title).toBe("Event");
+      expect(call.visibility).toBe("internal");
+      expect(call.actorId).toBe("user-1");
+    });
+  });
+
+  describe("Cross-engagement validation", () => {
+    it("rejects shock event if engagementId doesn't match", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+      mockDb.shockEvent.findUnique.mockResolvedValue({
+        id: "shock-1",
+        engagementId: "eng-1",
+        eventType: "market_disruption",
+        severity: "high",
+        title: "Test",
+        description: null,
+        detectedAt: new Date(),
+        recordedBy: "user-1",
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const { getShockEventById } = await import("./shock-event");
+
+      try {
+        await getShockEventById("shock-1", "eng-2");
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("does not belong to");
+      }
+    });
+
+    it("allows shock event retrieval without engagementId validation", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+      mockDb.shockEvent.findUnique.mockResolvedValue({
+        id: "shock-1",
+        engagementId: "eng-1",
+        eventType: "market_disruption",
+        severity: "high",
+        title: "Test",
+        description: null,
+        detectedAt: new Date(),
+        recordedBy: "user-1",
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      const { getShockEventById } = await import("./shock-event");
+      const result = await getShockEventById("shock-1");
+
+      expect(result.id).toBe("shock-1");
+      expect(result.engagementId).toBe("eng-1");
+    });
+  });
+
+  describe("Input validation hardening", () => {
+    it("validates engagement exists before creating shock event", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+      mockDb.engagement.findUnique.mockResolvedValue(null);
+
+      const { createShockEvent } = await import("./shock-event");
+
+      try {
+        await createShockEvent(
+          {
+            engagementId: "invalid-eng",
+            eventType: "market_disruption",
+            severity: "high",
+            title: "Test",
+            detectedAt: new Date().toISOString(),
+          },
+          "user-1"
+        );
+        expect.fail("Should throw NotFoundError");
+      } catch (error) {
+        expect((error as any).message).toContain("Engagement not found");
+      }
+    });
+
+    it("confirms eventType is from SHOCK_EVENT_TYPES enum", async () => {
+      expect(SHOCK_EVENT_TYPES).toHaveLength(10);
+      expect(SHOCK_EVENT_TYPES).toContain("market_disruption");
+      expect(SHOCK_EVENT_TYPES).toContain("quality_failure");
+    });
+
+    it("confirms severity is from RISK_SEVERITIES enum", async () => {
+      expect(RISK_SEVERITIES).toContain("low");
+      expect(RISK_SEVERITIES).toContain("critical");
     });
   });
 });

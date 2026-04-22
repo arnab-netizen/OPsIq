@@ -163,13 +163,20 @@ export async function listShockEventsForEngagement(
   return { events, total, limit, offset };
 }
 
-export async function getShockEventById(shockEventId: string) {
+export async function getShockEventById(shockEventId: string, engagementId?: string) {
   const event = await db.shockEvent.findUnique({
     where: { id: shockEventId },
   });
 
   if (!event) {
     throw new NotFoundError("ShockEvent", shockEventId);
+  }
+
+  // Validate ownership if engagementId provided
+  if (engagementId && event.engagementId !== engagementId) {
+    throw new ValidationError(
+      "Shock event does not belong to the specified engagement"
+    );
   }
 
   return {
