@@ -81,6 +81,7 @@ export const AUDIT_EVENTS = {
   DELIVERABLE_VERSION_SUBMITTED: "deliverable.version_submitted",
   DELIVERABLE_APPROVED: "deliverable.approved",
   DELIVERABLE_REJECTED: "deliverable.rejected",
+  DELIVERABLE_GENERATED: "deliverable.generated",
 
   // Approval
   APPROVAL_REQUESTED: "approval.requested",
