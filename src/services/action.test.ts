@@ -13,6 +13,9 @@ vi.mock("@/lib/db", () => ({
     recommendation: {
       findUnique: vi.fn(),
     },
+    user: {
+      findUnique: vi.fn(),
+    },
     action: {
       create: vi.fn(),
       findUnique: vi.fn(),
@@ -462,6 +465,93 @@ describe("Action Service", () => {
       expect(call.payload.engagementId).toBe("eng-1");
       expect(call.payload.recommendationId).toBe("rec-1");
       expect(call.visibility).toBe("internal");
+    });
+  });
+
+  describe("Assign owner", () => {
+    it("assigns owner to action successfully", async () => {
+      const { db } = await import("@/lib/db");
+      const { emitAuditEvent } = await import("@/infra/audit");
+      const mockDb = db as any;
+      const mockEmit = emitAuditEvent as any;
+
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+        recommendationId: "rec-1",
+        ownerId: "user-old",
+      });
+      mockDb.user.findUnique.mockResolvedValue({
+        id: "user-2",
+        email: "user2@example.com",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+      mockDb.action.update.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+        ownerId: "user-2",
+        assignedAt: new Date(),
+      });
+
+      const { assignOwner } = await import("./action");
+      await assignOwner("action-1", "user-2", "user-1", "eng-1");
+
+      expect(mockDb.action.update).toHaveBeenCalled();
+      expect(mockEmit).toHaveBeenCalled();
+      const auditCall = mockEmit.mock.calls[0][0];
+      expect(auditCall.eventName).toBe("action.assigned");
+      expect(auditCall.payload.ownerId).toBe("user-2");
+      expect(auditCall.payload.previousOwnerId).toBe("user-old");
+    });
+
+    it("throws error if user does not exist", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+      });
+      mockDb.user.findUnique.mockResolvedValue(null);
+
+      const { assignOwner } = await import("./action");
+
+      try {
+        await assignOwner("action-1", "nonexistent-user", "user-1");
+        expect.fail("Should throw NotFoundError");
+      } catch (error) {
+        expect((error as any).message).toContain("User not found");
+      }
+    });
+
+    it("throws error if intervention phase is closed", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+      });
+      mockDb.user.findUnique.mockResolvedValue({
+        id: "user-2",
+        email: "user2@example.com",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "closed",
+      });
+
+      const { assignOwner } = await import("./action");
+
+      try {
+        await assignOwner("action-1", "user-2", "user-1");
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("closed phase");
+      }
     });
   });
 });

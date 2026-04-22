@@ -389,15 +389,19 @@ model Action {
   title             String
   description       String?
   version           Int      @default(1)
+  ownerId           String   @map("owner_id") @db.Uuid
+  assignedAt        DateTime @map("assigned_at") @db.Timestamp
   createdBy         String?  @map("created_by") @db.Uuid
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   engagement     Engagement     @relation(fields: [engagementId], references: [id])
   recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Restrict)
+  owner          User           @relation(fields: [ownerId], references: [id], onDelete: Restrict)
 
   @@index([engagementId])
   @@index([recommendationId])
+  @@index([ownerId])
   @@index([status])
   @@map("actions")
 }

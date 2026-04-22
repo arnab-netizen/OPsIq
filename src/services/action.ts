@@ -278,3 +278,72 @@ export async function updateActionStatus(
     newStatus: input.status,
   });
 }
+
+export async function assignOwner(
+  actionId: string,
+  ownerId: string,
+  actorId: string,
+  engagementId?: string
+) {
+  const action = await db.action.findUnique({
+    where: { id: actionId },
+  });
+
+  if (!action) {
+    throw new NotFoundError("Action", actionId);
+  }
+
+  if (engagementId && action.engagementId !== engagementId) {
+    throw new ValidationError(
+      "Action does not belong to the specified engagement"
+    );
+  }
+
+  // Verify user exists
+  const user = await db.user.findUnique({
+    where: { id: ownerId },
+  });
+
+  if (!user) {
+    throw new NotFoundError("User", ownerId);
+  }
+
+  // Check intervention phase (reject if closed)
+  const interventionState = await db.interventionState.findUnique({
+    where: { engagementId: action.engagementId },
+  });
+
+  if (interventionState && interventionState.currentPhase === "closed") {
+    throw new ValidationError(
+      "Cannot assign actions when intervention is in closed phase"
+    );
+  }
+
+  const updatedAction = await db.action.update({
+    where: { id: actionId },
+    data: {
+      ownerId,
+      assignedAt: new Date(),
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.ACTION_ASSIGNED,
+    actorId,
+    entityType: "action",
+    entityId: action.id,
+    payload: {
+      actionId: action.id,
+      engagementId: action.engagementId,
+      ownerId,
+      previousOwnerId: action.ownerId,
+    },
+    visibility: "internal",
+  });
+
+  logger.info("Action owner assigned", {
+    actionId: action.id,
+    ownerId,
+    previousOwnerId: action.ownerId,
+  });
+}
