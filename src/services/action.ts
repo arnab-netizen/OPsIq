@@ -20,6 +20,23 @@ export interface UpdateActionStatusInput {
   version: number;
 }
 
+// ─── Status Transitions ────────────────────────────────────────────────────
+
+const ALLOWED_STATUS_TRANSITIONS: Record<ActionStatus, ActionStatus[]> = {
+  "open": ["in_progress", "completed"],
+  "in_progress": ["open", "completed"],
+  "completed": [],
+};
+
+function validateStatusTransition(currentStatus: ActionStatus, newStatus: ActionStatus): void {
+  const allowedTransitions = ALLOWED_STATUS_TRANSITIONS[currentStatus];
+  if (!allowedTransitions.includes(newStatus)) {
+    throw new ValidationError(
+      `Cannot transition from "${currentStatus}" to "${newStatus}"`
+    );
+  }
+}
+
 // ─── Service ───────────────────────────────────────────────────────────────
 
 export async function createAction(
@@ -211,12 +228,26 @@ export async function updateActionStatus(
     );
   }
 
+  // Check intervention phase (reject if closed)
+  const interventionState = await db.interventionState.findUnique({
+    where: { engagementId: action.engagementId },
+  });
+
+  if (interventionState && interventionState.currentPhase === "closed") {
+    throw new ValidationError(
+      "Cannot update actions when intervention is in closed phase"
+    );
+  }
+
   // Verify version matches for concurrency control
   if (action.version !== input.version) {
     throw new ValidationError(
       "Action version mismatch. Please refresh and try again"
     );
   }
+
+  // Validate status transition
+  validateStatusTransition(action.status as ActionStatus, input.status);
 
   const updatedAction = await db.action.update({
     where: { id: actionId },

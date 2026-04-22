@@ -264,6 +264,10 @@ describe("Action Service", () => {
         status: "open",
         version: 1,
       });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
       mockDb.action.update.mockResolvedValue({
         id: "action-1",
         status: "in_progress",
@@ -309,10 +313,66 @@ describe("Action Service", () => {
         expect((error as any).message).toContain("version mismatch");
       }
     });
+
+    it("throws error if intervention phase is closed during update", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+        status: "open",
+        version: 1,
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "closed",
+      });
+
+      const { updateActionStatus } = await import("./action");
+
+      try {
+        await updateActionStatus(
+          "action-1",
+          { status: "in_progress", version: 1 },
+          "user-1"
+        );
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("closed phase");
+      }
+    });
+
+    it("throws error if status transition is invalid", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+        status: "completed",
+        version: 1,
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+
+      const { updateActionStatus } = await import("./action");
+
+      try {
+        await updateActionStatus(
+          "action-1",
+          { status: "open", version: 1 },
+          "user-1"
+        );
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("Cannot transition from");
+      }
+    });
   });
 
   describe("Audit emission", () => {
-    it("emits ACTION_CREATED audit event", async () => {
+    it("emits ACTION_CREATED audit event with complete payload", async () => {
       const { db } = await import("@/lib/db");
       const { emitAuditEvent } = await import("@/infra/audit");
       const mockDb = db as any;
@@ -356,6 +416,51 @@ describe("Action Service", () => {
       expect(call.payload.engagementId).toBe("eng-1");
       expect(call.payload.recommendationId).toBe("rec-1");
       expect(call.payload.status).toBe("open");
+      expect(call.visibility).toBe("internal");
+      expect(call.actorId).toBe("user-1");
+      expect(call.entityType).toBe("action");
+      expect(call.entityId).toBe("action-1");
+    });
+
+    it("emits ACTION_STATUS_UPDATED audit event with previousStatus in payload", async () => {
+      const { db } = await import("@/lib/db");
+      const { emitAuditEvent } = await import("@/infra/audit");
+      const mockDb = db as any;
+      const mockEmit = emitAuditEvent as any;
+
+      mockDb.action.findUnique.mockResolvedValue({
+        id: "action-1",
+        engagementId: "eng-1",
+        recommendationId: "rec-1",
+        status: "open",
+        version: 1,
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+      mockDb.action.update.mockResolvedValue({
+        id: "action-1",
+        status: "in_progress",
+        version: 2,
+      });
+
+      const { updateActionStatus } = await import("./action");
+      await updateActionStatus(
+        "action-1",
+        { status: "in_progress", version: 1 },
+        "user-1",
+        "eng-1"
+      );
+
+      expect(mockEmit).toHaveBeenCalled();
+      const call = mockEmit.mock.calls[0][0];
+      expect(call.eventName).toBe("action.status_updated");
+      expect(call.payload.previousStatus).toBe("open");
+      expect(call.payload.newStatus).toBe("in_progress");
+      expect(call.payload.actionId).toBe("action-1");
+      expect(call.payload.engagementId).toBe("eng-1");
+      expect(call.payload.recommendationId).toBe("rec-1");
       expect(call.visibility).toBe("internal");
     });
   });

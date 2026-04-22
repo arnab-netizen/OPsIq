@@ -384,7 +384,7 @@ model Recommendation {
 model Action {
   id                String   @id @default(uuid()) @db.Uuid
   engagementId      String   @map("engagement_id") @db.Uuid
-  recommendationId  String   @map("recommendation_id") @db.Uuid
+  recommendationId  String   @map("recommendation_id") @db.Uuid @unique
   status            String   @default("open") // "open" | "in_progress" | "completed"
   title             String
   description       String?
@@ -394,7 +394,7 @@ model Action {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   engagement     Engagement     @relation(fields: [engagementId], references: [id])
-  recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Restrict)
 
   @@index([engagementId])
   @@index([recommendationId])
