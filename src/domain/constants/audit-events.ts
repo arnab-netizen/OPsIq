@@ -59,6 +59,7 @@ export const AUDIT_EVENTS = {
   FINDING_CREATED: "finding.created",
   FINDING_UPDATED: "finding.updated",
   FINDING_LINKED: "finding.linked",
+  FINDING_EVIDENCE_LINK_BATCH: "finding.evidence_link_batch",
 
   // Recommendation
   RECOMMENDATION_CREATED: "recommendation.created",

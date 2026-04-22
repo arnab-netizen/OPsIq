@@ -95,9 +95,24 @@ export async function createFinding(
         throw new NotFoundError("EvidenceItem", evidenceId);
       }
 
+      // Validate evidence belongs to same engagement
       if (evidence.engagementId !== input.engagementId) {
         throw new ValidationError(
           "Evidence item does not belong to the specified engagement"
+        );
+      }
+
+      // Validate evidence status is valid
+      if (!EVIDENCE_STATUSES.includes(evidence.status as any)) {
+        throw new ValidationError(
+          `Invalid evidence status: ${evidence.status}`
+        );
+      }
+
+      // Reject terminal states
+      if (evidence.status === "rejected" || evidence.status === "superseded") {
+        throw new ValidationError(
+          `Cannot link evidence with status "${evidence.status}"`
         );
       }
 
@@ -138,17 +153,18 @@ export async function createFinding(
     visibility: "internal",
   });
 
-  // Emit FINDING_LINKED for each linked evidence
-  for (const evidenceId of linkedEvidenceIds) {
+  // Emit batch audit event for all linked evidence
+  if (linkedEvidenceIds.length > 0) {
     await emitAuditEvent({
-      eventName: AUDIT_EVENTS.FINDING_LINKED,
+      eventName: AUDIT_EVENTS.FINDING_EVIDENCE_LINK_BATCH,
       actorId,
-      entityType: "finding_evidence_link",
+      entityType: "finding",
       entityId: finding.id,
       payload: {
         findingId: finding.id,
-        evidenceItemId: evidenceId,
         engagementId: input.engagementId,
+        evidenceItemIds: linkedEvidenceIds,
+        count: linkedEvidenceIds.length,
       },
       visibility: "internal",
     });
