@@ -5,6 +5,7 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { SHOCK_EVENT_TYPES, RISK_SEVERITIES } from "@/domain/constants/statuses";
 import { withVersionCheck, withVersionIncrement } from "@/lib/optimistic-lock";
 import { triggerReEvaluation } from "@/services/re-evaluation";
+import { detectShockFromCurrentState } from "@/services/shock-detection";
 import type { ShockEventType } from "@/domain/constants/statuses";
 import type { RiskSeverity } from "@/domain/constants/statuses";
 
@@ -27,7 +28,7 @@ export interface UpdateShockEventInput {
 export async function createShockEvent(
   input: CreateShockEventInput,
   actorId: string
-): Promise<{ id: string; engagementId: string }> {
+): Promise<{ id: string; engagementId: string; detectionConfirmed: boolean }> {
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
@@ -55,6 +56,10 @@ export async function createShockEvent(
     throw new ValidationError("happenedAt must be a valid ISO 8601 date string");
   }
 
+  // Run shock detection to confirm
+  const detection = await detectShockFromCurrentState(input.engagementId);
+  const detectionConfirmed = detection.shockDetected;
+
   const shockEvent = await db.shockEvent.create({
     data: {
       engagementId: input.engagementId,
@@ -76,6 +81,9 @@ export async function createShockEvent(
       engagementId: input.engagementId,
       type: input.type,
       severity: input.severity,
+      detectionConfirmed,
+      detectionSeverity: detection.severity,
+      detectionIndicators: detection.indicators,
     },
   });
 
@@ -86,11 +94,11 @@ export async function createShockEvent(
     entityId: shockEvent.id,
     engagementId: input.engagementId,
     severity: input.severity,
-    description: `Shock event recorded: ${input.type}`,
+    description: `Shock event recorded: ${input.type}${detectionConfirmed ? " (detection confirmed)" : ""}`,
     triggeredBy: actorId,
   });
 
-  return shockEvent;
+  return { id: shockEvent.id, engagementId: shockEvent.engagementId, detectionConfirmed };
 }
 
 export async function updateShockEvent(

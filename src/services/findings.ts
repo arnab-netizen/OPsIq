@@ -418,7 +418,8 @@ export async function linkEvidenceToFinding(
 
 export async function listFindingsForEngagement(
   engagementId: string,
-  stageId?: string
+  stageId?: string,
+  visibility?: "internal" | "client_visible" | "all"
 ): Promise<Array<{
   id: string;
   title: string;
@@ -435,7 +436,7 @@ export async function listFindingsForEngagement(
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
-  return db.finding.findMany({
+  const findings = await db.finding.findMany({
     where: {
       engagementId,
       ...(stageId && { stageId }),
@@ -448,13 +449,24 @@ export async function listFindingsForEngagement(
       confidenceLabel: true,
       provisionalFlag: true,
       createdAt: true,
+      clientVisibilityStatus: true,
     },
     orderBy: { createdAt: "desc" },
   });
+
+  // Filter by visibility if not requesting all
+  if (visibility && visibility !== "all") {
+    return findings
+      .filter((f) => f.clientVisibilityStatus === visibility)
+      .map(({ clientVisibilityStatus, ...f }) => f);
+  }
+
+  return findings.map(({ clientVisibilityStatus, ...f }) => f);
 }
 
 export async function getFindingDetail(
-  findingId: string
+  findingId: string,
+  visibility?: "internal" | "client_visible" | "all"
 ): Promise<{
   id: string;
   engagementId: string;
@@ -465,7 +477,6 @@ export async function getFindingDetail(
   status: string;
   confidenceLabel: string;
   provisionalFlag: boolean;
-  clientVisibilityStatus: string;
   supersedesFindingId: string | null;
   version: number;
   createdAt: Date;
@@ -504,5 +515,16 @@ export async function getFindingDetail(
   });
 
   if (!finding) throw new NotFoundError("Finding", findingId);
-  return finding;
+
+  // Filter by visibility if not requesting all
+  if (
+    visibility &&
+    visibility !== "all" &&
+    finding.clientVisibilityStatus !== visibility
+  ) {
+    throw new NotFoundError("Finding", findingId);
+  }
+
+  const { clientVisibilityStatus, ...rest } = finding;
+  return rest;
 }

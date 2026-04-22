@@ -194,6 +194,7 @@ model Engagement {
   evidenceItems         EvidenceItem[]
   evidenceBundles       EvidenceBundle[]
   findings              Finding[]
+  recommendations       Recommendation[]
 
   @@index([clientId])
   @@index([status])
@@ -379,6 +380,32 @@ model EvidenceBundle {
 }
 
 // ─── Module 06: Findings ───────────────────────────────────────────────────
+
+model Recommendation {
+  id                    String    @id @default(uuid()) @db.Uuid
+  engagementId          String    @map("engagement_id") @db.Uuid
+  title                 String
+  statement             String
+  severity              String    // low | medium | high | critical
+  rationale             String
+  sourceFindingIds      String[]  @map("source_finding_ids")
+  sourceShockDetected   Boolean   @map("source_shock_detected")
+  priority              Int       // 1=critical, 2=high, 3=medium, 4=low
+  status                String    @default("draft") // draft | approved | superseded | closed
+  visibilityStatus      String    @default("internal") @map("visibility_status") // internal | client_visible
+  version               Int       @default(1)
+  createdBy             String?   @map("created_by") @db.Uuid
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  engagement            Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@index([severity])
+  @@index([priority])
+  @@index([status])
+  @@map("recommendations")
+}
 
 model Finding {
   id                       String    @id @default(uuid()) @db.Uuid

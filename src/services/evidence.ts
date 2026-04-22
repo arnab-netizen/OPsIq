@@ -194,7 +194,8 @@ export async function updateEvidenceItem(
 
 export async function listEvidenceForEngagement(
   engagementId: string,
-  stageId?: string
+  stageId?: string,
+  visibility?: "internal" | "client_visible" | "all"
 ): Promise<Array<{
   id: string;
   category: string;
@@ -211,7 +212,7 @@ export async function listEvidenceForEngagement(
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
-  return db.evidenceItem.findMany({
+  const evidence = await db.evidenceItem.findMany({
     where: {
       engagementId,
       ...(stageId && { stageId }),
@@ -224,13 +225,24 @@ export async function listEvidenceForEngagement(
       validationStatus: true,
       capturedAt: true,
       createdAt: true,
+      visibilityClassification: true,
     },
     orderBy: { capturedAt: "desc" },
   });
+
+  // Filter by visibility if not requesting all
+  if (visibility && visibility !== "all") {
+    return evidence
+      .filter((e) => e.visibilityClassification === visibility)
+      .map(({ visibilityClassification, ...e }) => e);
+  }
+
+  return evidence.map(({ visibilityClassification, ...e }) => e);
 }
 
 export async function getEvidenceItemDetail(
-  evidenceItemId: string
+  evidenceItemId: string,
+  visibility?: "internal" | "client_visible" | "all"
 ): Promise<{
   id: string;
   engagementId: string;
@@ -244,7 +256,6 @@ export async function getEvidenceItemDetail(
   capturedAt: Date;
   validationStatus: string;
   traceabilityStatus: string;
-  visibilityClassification: string;
   statement: string | null;
   version: number;
   createdAt: Date;
@@ -274,7 +285,18 @@ export async function getEvidenceItemDetail(
   });
 
   if (!item) throw new NotFoundError("EvidenceItem", evidenceItemId);
-  return item;
+
+  // Filter by visibility if not requesting all
+  if (
+    visibility &&
+    visibility !== "all" &&
+    item.visibilityClassification !== visibility
+  ) {
+    throw new NotFoundError("EvidenceItem", evidenceItemId);
+  }
+
+  const { visibilityClassification, ...rest } = item;
+  return rest;
 }
 
 export async function createFileBlob(
