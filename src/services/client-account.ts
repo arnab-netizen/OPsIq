@@ -157,7 +157,9 @@ export async function archiveClient(
   logger.info("Client account archived", { clientId });
 }
 
-export async function getClientById(clientId: string) {
+export async function getClientById(clientId: string, hasInternalAccess: boolean = false) {
+  const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
+
   const client = await db.clientAccount.findUnique({
     where: { id: clientId },
     include: {
@@ -167,18 +169,28 @@ export async function getClientById(clientId: string) {
   });
 
   if (!client) throw new NotFoundError("ClientAccount", clientId);
+  if (!hasInternalAccess && client.visibility !== "client_visible") {
+    throw new NotFoundError("ClientAccount", clientId);
+  }
+
   return client;
 }
 
-export async function listClients(params: {
-  limit?: number;
-  offset?: number;
-  status?: string;
-  search?: string;
-} = {}) {
+export async function listClients(
+  params: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    search?: string;
+  } = {},
+  hasInternalAccess: boolean = false
+) {
   const { limit = 25, offset = 0, status, search } = params;
 
+  const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
+
   const where = {
+    ...visibilityFilter,
     ...(status && { status }),
     ...(search && {
       OR: [

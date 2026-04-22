@@ -1,5 +1,6 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getEngagementById, updateEngagement } from "@/services/engagement";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -30,16 +31,16 @@ const updateEngagementSchema = z.object({
 export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+  const { policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
-  const engagement = await getEngagementById(engagementId);
+  const engagement = await getEngagementById(engagementId, hasInternalAccess(policy));
   return Response.json(engagement);
 });
 
 export const PATCH = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
     internalOnly: true,
   });
@@ -47,6 +48,6 @@ export const PATCH = withRequestContext(async (request, context) => {
   const body = await parseRequestBody(request, updateEngagementSchema);
   await updateEngagement(engagementId, body, session.user.id);
 
-  const updated = await getEngagementById(engagementId);
+  const updated = await getEngagementById(engagementId, hasInternalAccess(policy));
   return Response.json(updated);
 });
