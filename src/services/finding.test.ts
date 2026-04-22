@@ -16,6 +16,9 @@ vi.mock("@/lib/db", () => ({
     evidenceItem: {
       findUnique: vi.fn(),
     },
+    interventionState: {
+      findUnique: vi.fn(),
+    },
     finding: {
       create: vi.fn(),
       findUnique: vi.fn(),
@@ -66,6 +69,10 @@ describe("Finding Service", () => {
       const mockDb = db as any;
       mockDb.engagement.findUnique.mockResolvedValue({
         id: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
       });
       mockDb.finding.create.mockResolvedValue({
         id: "finding-1",
@@ -179,6 +186,10 @@ describe("Finding Service", () => {
       mockDb.engagement.findUnique.mockResolvedValue({
         id: "eng-1",
       });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
       mockDb.evidenceItem.findUnique.mockResolvedValue({
         id: "evidence-1",
         engagementId: "eng-2",
@@ -200,6 +211,65 @@ describe("Finding Service", () => {
         expect.fail("Should throw ValidationError");
       } catch (error) {
         expect((error as any).message).toContain("does not belong to");
+      }
+    });
+
+    it("throws error if duplicate evidence in linkedEvidenceIds", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+
+      const { createFinding } = await import("./finding");
+
+      try {
+        await createFinding(
+          {
+            engagementId: "eng-1",
+            title: "Test",
+            statement: "Test",
+            severity: "high",
+            linkedEvidenceIds: ["evidence-1", "evidence-1"],
+          },
+          "user-1"
+        );
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("Duplicate");
+      }
+    });
+
+    it("throws error if intervention phase is closed", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "closed",
+      });
+
+      const { createFinding } = await import("./finding");
+
+      try {
+        await createFinding(
+          {
+            engagementId: "eng-1",
+            title: "Test",
+            statement: "Test",
+            severity: "high",
+          },
+          "user-1"
+        );
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("closed phase");
       }
     });
   });
@@ -324,6 +394,10 @@ describe("Finding Service", () => {
       mockDb.engagement.findUnique.mockResolvedValue({
         id: "eng-1",
       });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
       mockDb.finding.create.mockResolvedValue({
         id: "finding-1",
         engagementId: "eng-1",
@@ -354,6 +428,60 @@ describe("Finding Service", () => {
       expect(call.payload.engagementId).toBe("eng-1");
       expect(call.payload.severity).toBe("critical");
       expect(call.visibility).toBe("internal");
+    });
+
+    it("emits FINDING_LINKED audit event for each linked evidence", async () => {
+      const { db } = await import("@/lib/db");
+      const { emitAuditEvent } = await import("@/infra/audit");
+      const mockDb = db as any;
+      const mockEmit = emitAuditEvent as any;
+
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+      mockDb.evidenceItem.findUnique.mockResolvedValue({
+        id: "evidence-1",
+        engagementId: "eng-1",
+      });
+      mockDb.finding.create.mockResolvedValue({
+        id: "finding-1",
+        engagementId: "eng-1",
+        shockEventId: null,
+        title: "Critical issue",
+        statement: "System failure",
+        severity: "critical",
+        status: "draft",
+        rationale: null,
+        createdBy: "user-1",
+        version: 1,
+      });
+
+      const { createFinding } = await import("./finding");
+      await createFinding(
+        {
+          engagementId: "eng-1",
+          title: "Critical issue",
+          statement: "System failure",
+          severity: "critical",
+          linkedEvidenceIds: ["evidence-1"],
+        },
+        "user-1"
+      );
+
+      expect(mockEmit).toHaveBeenCalledTimes(2);
+
+      // First call should be FINDING_CREATED
+      expect(mockEmit.mock.calls[0][0].eventName).toBe("finding.created");
+
+      // Second call should be FINDING_LINKED
+      expect(mockEmit.mock.calls[1][0].eventName).toBe("finding.linked");
+      expect(mockEmit.mock.calls[1][0].payload.findingId).toBe("finding-1");
+      expect(mockEmit.mock.calls[1][0].payload.evidenceItemId).toBe("evidence-1");
+      expect(mockEmit.mock.calls[1][0].payload.engagementId).toBe("eng-1");
     });
   });
 });

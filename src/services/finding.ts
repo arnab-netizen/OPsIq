@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
-import { RISK_SEVERITIES, type RiskSeverity, FINDING_STATUSES, type FindingStatus } from "@/domain/constants/statuses";
+import { RISK_SEVERITIES, type RiskSeverity, FINDING_STATUSES, type FindingStatus, EVIDENCE_STATUSES, INTERVENTION_PHASES, type InterventionPhase } from "@/domain/constants/statuses";
 import { logger } from "@/infra/logger";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -64,9 +64,28 @@ export async function createFinding(
     );
   }
 
+  // Check intervention phase (reject if closed)
+  const interventionState = await db.interventionState.findUnique({
+    where: { engagementId: input.engagementId },
+  });
+
+  if (interventionState && interventionState.currentPhase === "closed") {
+    throw new ValidationError(
+      "Cannot create findings when intervention is in closed phase"
+    );
+  }
+
   // Validate evidence items if provided
   const linkedEvidenceIds: string[] = [];
   if (input.linkedEvidenceIds && input.linkedEvidenceIds.length > 0) {
+    // Check for duplicates
+    const uniqueIds = new Set(input.linkedEvidenceIds);
+    if (uniqueIds.size !== input.linkedEvidenceIds.length) {
+      throw new ValidationError(
+        "Duplicate evidence items in linkedEvidenceIds"
+      );
+    }
+
     for (const evidenceId of input.linkedEvidenceIds) {
       const evidence = await db.evidenceItem.findUnique({
         where: { id: evidenceId },
@@ -119,10 +138,27 @@ export async function createFinding(
     visibility: "internal",
   });
 
+  // Emit FINDING_LINKED for each linked evidence
+  for (const evidenceId of linkedEvidenceIds) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.FINDING_LINKED,
+      actorId,
+      entityType: "finding_evidence_link",
+      entityId: finding.id,
+      payload: {
+        findingId: finding.id,
+        evidenceItemId: evidenceId,
+        engagementId: input.engagementId,
+      },
+      visibility: "internal",
+    });
+  }
+
   logger.info("Finding created", {
     findingId: finding.id,
     engagementId: input.engagementId,
     severity: input.severity,
+    linkedEvidenceCount: linkedEvidenceIds.length,
   });
 
   return {
