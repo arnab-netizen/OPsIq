@@ -195,6 +195,7 @@ model Engagement {
   evidenceItems         EvidenceItem[]
   findings              Finding[]
   recommendations       Recommendation[]
+  actions               Action[]
 
   @@index([clientId])
   @@index([status])
@@ -369,12 +370,36 @@ model Recommendation {
   engagement Engagement @relation(fields: [engagementId], references: [id])
   finding    Finding?   @relation(fields: [findingId], references: [id], onDelete: SetNull)
   shockEvent ShockEvent? @relation(fields: [shockEventId], references: [id], onDelete: SetNull)
+  actions    Action[]
 
   @@index([engagementId])
   @@index([priority])
   @@index([findingId])
   @@index([shockEventId])
   @@map("recommendations")
+}
+
+// ─── Module 8: Action ───────────────────────────────────────────────────────
+
+model Action {
+  id                String   @id @default(uuid()) @db.Uuid
+  engagementId      String   @map("engagement_id") @db.Uuid
+  recommendationId  String   @map("recommendation_id") @db.Uuid
+  status            String   @default("open") // "open" | "in_progress" | "completed"
+  title             String
+  description       String?
+  version           Int      @default(1)
+  createdBy         String?  @map("created_by") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  engagement     Engagement     @relation(fields: [engagementId], references: [id])
+  recommendation Recommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@index([engagementId])
+  @@index([recommendationId])
+  @@index([status])
+  @@map("actions")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────

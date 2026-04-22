@@ -41,14 +41,9 @@ export const EVIDENCE_STATUSES = [
 export type EvidenceStatus = (typeof EVIDENCE_STATUSES)[number];
 
 export const ACTION_STATUSES = [
-  "draft",
-  "assigned",
+  "open",
   "in_progress",
-  "blocked",
   "completed",
-  "verified",
-  "cancelled",
-  "overdue",
 ] as const;
 
 export type ActionStatus = (typeof ACTION_STATUSES)[number];
