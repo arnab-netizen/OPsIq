@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { assertEngagementAccess } from "@/lib/visibility";
 import {
   optimisticUpdate,
   withVersionCheck,
@@ -175,8 +176,18 @@ export async function updateEvidence(
   logger.info("Evidence updated", { evidenceId });
 }
 
-export async function getEvidenceById(evidenceId: string) {
+export async function getEvidenceById(evidenceId: string, userId: string) {
   const evidence = await db.evidence.findUnique({
+    where: { id: evidenceId },
+    select: { engagementId: true },
+  });
+
+  if (!evidence) throw new NotFoundError("Evidence", evidenceId);
+
+  // Check engagement access
+  await assertEngagementAccess(userId, evidence.engagementId);
+
+  const fullEvidence = await db.evidence.findUnique({
     where: { id: evidenceId },
     include: {
       engagement: { select: { id: true, code: true, title: true } },
@@ -185,8 +196,8 @@ export async function getEvidenceById(evidenceId: string) {
     },
   });
 
-  if (!evidence) throw new NotFoundError("Evidence", evidenceId);
-  return evidence;
+  if (!fullEvidence) throw new NotFoundError("Evidence", evidenceId);
+  return fullEvidence;
 }
 
 export async function listEvidence(params: {
@@ -194,8 +205,14 @@ export async function listEvidence(params: {
   status?: string;
   limit?: number;
   offset?: number;
+  userId?: string;
 } = {}) {
-  const { engagementId, status, limit = 25, offset = 0 } = params;
+  const { engagementId, status, limit = 25, offset = 0, userId } = params;
+
+  // Check engagement access if engagementId provided
+  if (engagementId && userId) {
+    await assertEngagementAccess(userId, engagementId);
+  }
 
   const where = {
     ...(engagementId && { engagementId }),

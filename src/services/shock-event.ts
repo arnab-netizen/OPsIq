@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { assertEngagementAccess } from "@/lib/visibility";
 import { SHOCK_EVENT_TYPES, RISK_SEVERITIES } from "@/domain/constants/statuses";
 import { withVersionCheck, withVersionIncrement } from "@/lib/optimistic-lock";
 import { triggerReEvaluation } from "@/services/re-evaluation";
@@ -186,7 +187,8 @@ export async function updateShockEvent(
 }
 
 export async function listShockEventsForEngagement(
-  engagementId: string
+  engagementId: string,
+  userId: string
 ): Promise<Array<{
   id: string;
   type: string;
@@ -195,12 +197,8 @@ export async function listShockEventsForEngagement(
   notes: string | null;
   createdAt: Date;
 }>> {
-  // Validate engagement exists
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
-    select: { id: true },
-  });
-  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+  // Check engagement access
+  await assertEngagementAccess(userId, engagementId);
 
   return db.shockEvent.findMany({
     where: { engagementId },
@@ -217,7 +215,8 @@ export async function listShockEventsForEngagement(
 }
 
 export async function getShockEventDetail(
-  shockEventId: string
+  shockEventId: string,
+  userId: string
 ): Promise<{
   id: string;
   engagementId: string;
@@ -230,6 +229,16 @@ export async function getShockEventDetail(
   updatedAt: Date;
 }> {
   const event = await db.shockEvent.findUnique({
+    where: { id: shockEventId },
+    select: { engagementId: true },
+  });
+
+  if (!event) throw new NotFoundError("ShockEvent", shockEventId);
+
+  // Check engagement access
+  await assertEngagementAccess(userId, event.engagementId);
+
+  const fullEvent = await db.shockEvent.findUnique({
     where: { id: shockEventId },
     select: {
       id: true,
@@ -244,6 +253,6 @@ export async function getShockEventDetail(
     },
   });
 
-  if (!event) throw new NotFoundError("ShockEvent", shockEventId);
-  return event;
+  if (!fullEvent) throw new NotFoundError("ShockEvent", shockEventId);
+  return fullEvent;
 }

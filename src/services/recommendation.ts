@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
+import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 
@@ -74,7 +75,10 @@ export async function createRecommendation(
   return recommendation;
 }
 
-export async function getRecommendationsForEngagement(engagementId: string) {
+export async function getRecommendationsForEngagement(engagementId: string, userId: string) {
+  // Check engagement access
+  await assertEngagementAccess(userId, engagementId);
+
   return db.recommendation.findMany({
     where: { engagementId },
     include: { actions: true },

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { assertEngagementAccess } from "@/lib/visibility";
 import {
   FINDING_STATUSES,
   CONFIDENCE_LABELS,
@@ -422,6 +423,7 @@ export async function linkEvidenceToFinding(
 
 export async function listFindingsForEngagement(
   engagementId: string,
+  userId: string,
   stageId?: string,
   visibility?: "internal" | "client_visible" | "all"
 ): Promise<Array<{
@@ -433,12 +435,8 @@ export async function listFindingsForEngagement(
   provisionalFlag: boolean;
   createdAt: Date;
 }>> {
-  // Validate engagement exists
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
-    select: { id: true },
-  });
-  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+  // Check engagement access
+  await assertEngagementAccess(userId, engagementId);
 
   const findings = await db.finding.findMany({
     where: {
@@ -470,6 +468,7 @@ export async function listFindingsForEngagement(
 
 export async function getFindingDetail(
   findingId: string,
+  userId: string,
   visibility?: "internal" | "client_visible" | "all"
 ): Promise<{
   id: string;
@@ -492,6 +491,16 @@ export async function getFindingDetail(
   }>;
 }> {
   const finding = await db.finding.findUnique({
+    where: { id: findingId },
+    select: { engagementId: true },
+  });
+
+  if (!finding) throw new NotFoundError("Finding", findingId);
+
+  // Check engagement access
+  await assertEngagementAccess(userId, finding.engagementId);
+
+  const detailFinding = await db.finding.findUnique({
     where: { id: findingId },
     select: {
       id: true,
@@ -518,17 +527,17 @@ export async function getFindingDetail(
     },
   });
 
-  if (!finding) throw new NotFoundError("Finding", findingId);
+  if (!detailFinding) throw new NotFoundError("Finding", findingId);
 
   // Filter by visibility if not requesting all
   if (
     visibility &&
     visibility !== "all" &&
-    finding.clientVisibilityStatus !== visibility
+    detailFinding.clientVisibilityStatus !== visibility
   ) {
     throw new NotFoundError("Finding", findingId);
   }
 
-  const { clientVisibilityStatus, ...rest } = finding;
+  const { clientVisibilityStatus, ...rest } = detailFinding;
   return rest;
 }

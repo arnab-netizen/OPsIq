@@ -5,6 +5,7 @@ import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses";
+import { assertEngagementAccess } from "@/lib/visibility";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -103,7 +104,10 @@ export async function createAction(
   return action;
 }
 
-export async function getActionsForEngagement(engagementId: string) {
+export async function getActionsForEngagement(engagementId: string, userId: string) {
+  // Check engagement access
+  await assertEngagementAccess(userId, engagementId);
+
   return db.action.findMany({
     where: { engagementId },
     orderBy: [{ priority: "desc" }, { dueDate: "asc" }],

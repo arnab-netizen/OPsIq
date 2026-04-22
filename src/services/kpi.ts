@@ -4,6 +4,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
+import { assertEngagementAccess } from "@/lib/visibility";
 
 export interface CreateKPIInput {
   engagementId: string;
@@ -73,7 +74,10 @@ export async function createKPI(
   return kpi;
 }
 
-export async function getKPIsForEngagement(engagementId: string) {
+export async function getKPIsForEngagement(engagementId: string, userId: string) {
+  // Check engagement access
+  await assertEngagementAccess(userId, engagementId);
+
   return db.kPI.findMany({
     where: { engagementId },
     orderBy: { createdAt: "desc" },
