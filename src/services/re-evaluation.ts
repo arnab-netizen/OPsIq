@@ -175,6 +175,7 @@ async function evaluateBusinessConditionImpact(engagementId: string) {
   const factors: string[] = [];
   let severityDelta = 0;
 
+  // Evaluate critical risks
   const criticalRisks = [
     current.cashPressureLevel === "critical" ? "critical_cash_pressure" : null,
     current.marginPressureLevel === "critical" ? "critical_margin_pressure" : null,
@@ -182,20 +183,74 @@ async function evaluateBusinessConditionImpact(engagementId: string) {
     current.moraleFragilityLevel === "critical" ? "morale_fragility_critical" : null,
   ].filter(Boolean);
 
+  // Evaluate KPI trends (improved or deteriorated)
+  const kpis = await db.kPI.findMany({
+    where: { engagementId },
+    select: { baseline: true, currentValue: true, direction: true },
+  });
+
+  if (kpis.length > 0) {
+    const deterior = kpis.filter((k) => {
+      if (k.direction === "increase" && k.currentValue !== null && k.baseline !== null) {
+        return k.currentValue < k.baseline;
+      } else if (k.direction === "decrease" && k.currentValue !== null && k.baseline !== null) {
+        return k.currentValue > k.baseline;
+      }
+      return false;
+    });
+
+    if (deterior.length > kpis.length / 2) {
+      factors.push("kpi_deterioration");
+      severityDelta += 1;
+    } else if (deterior.length === 0) {
+      factors.push("kpi_improving");
+      severityDelta -= 1;
+    }
+  }
+
+  // Evaluate recent shocks (weighted by severity)
+  const recentShocks = await db.shockEvent.findMany({
+    where: {
+      engagementId,
+      happenedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+    },
+    select: { severity: true },
+  });
+
+  const shockWeight = recentShocks.reduce((sum, s) => {
+    const weight =
+      s.severity === "critical"
+        ? 3
+        : s.severity === "high"
+          ? 2
+          : s.severity === "medium"
+            ? 1
+            : 0;
+    return sum + weight;
+  }, 0);
+
+  if (shockWeight >= 3) {
+    factors.push("critical_shocks");
+    severityDelta += 2;
+  } else if (shockWeight > 0) {
+    factors.push("recent_shocks");
+    severityDelta += 1;
+  }
+
   if (criticalRisks.length > 0) {
     factors.push(...(criticalRisks as string[]));
-    severityDelta = 3;
+    severityDelta = Math.max(severityDelta, 3);
   }
 
   let recommendedRating = current.businessStatus as BusinessConditionRating;
 
   if (criticalRisks.length > 0) {
     recommendedRating = "critical";
-  } else if (current.severityScore >= 8) {
+  } else if (current.severityScore + severityDelta >= 8) {
     recommendedRating = "distressed";
-  } else if (current.severityScore >= 6) {
+  } else if (current.severityScore + severityDelta >= 6) {
     recommendedRating = "challenged";
-  } else if (current.severityScore >= 4) {
+  } else if (current.severityScore + severityDelta >= 4) {
     recommendedRating = "stable";
   } else {
     recommendedRating = "improving";
@@ -260,35 +315,42 @@ async function evaluateInterventionModeImpact(engagementId: string) {
 }
 
 async function evaluateInterventionPhaseImpact(engagementId: string) {
-  const state = await db.interventionState.findUnique({ where: { engagementId } });
+  // Determine phase based on findings and actions (deterministic lifecycle rules)
+  const findings = await db.finding.findMany({
+    where: { engagementId },
+    select: { id: true, status: true },
+  });
 
-  if (!state) {
-    return {
-      recommendedPhase: undefined,
-      canAdvance: false,
-      blockers: ["no_intervention_state"],
-    };
-  }
+  const actions = await db.action.findMany({
+    where: { engagementId },
+    select: { id: true, status: true },
+  });
 
-  const currentPhase = state.currentPhase as InterventionPhase;
   const blockers: string[] = [];
+  let recommendedPhase: InterventionPhase | undefined;
 
-  let recommendedPhase = currentPhase;
-  const canAdvance = blockers.length === 0;
+  // Phase suggestion logic based on findings and actions
+  if (findings.length === 0) {
+    recommendedPhase = "assessment";
+  } else if (actions.length === 0) {
+    recommendedPhase = "planning";
+  } else {
+    const completedCount = actions.filter((a) => a.status === "completed").length;
+    const activeCount = actions.filter((a) => a.status !== "completed" && a.status !== "cancelled")
+      .length;
 
-  if (canAdvance) {
-    if (currentPhase === "assessment") {
-      recommendedPhase = "planning" as InterventionPhase;
-    } else if (currentPhase === "planning") {
-      recommendedPhase = "execution" as InterventionPhase;
-    } else if (currentPhase === "execution") {
-      recommendedPhase = "review" as InterventionPhase;
-    } else if (currentPhase === "review") {
-      recommendedPhase = "handover" as InterventionPhase;
+    if (activeCount > 0) {
+      recommendedPhase = "execution";
+    } else if (completedCount === actions.length) {
+      recommendedPhase = "review";
+    } else {
+      recommendedPhase = "execution";
     }
   }
 
-  return { recommendedPhase: canAdvance ? recommendedPhase : undefined, canAdvance, blockers };
+  const canAdvance = blockers.length === 0;
+
+  return { recommendedPhase, canAdvance, blockers };
 }
 
 function evaluatePriorityImpact(
