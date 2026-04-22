@@ -191,6 +191,7 @@ model Engagement {
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
   interventionState     InterventionState?
+  shockEvents           ShockEvent[]
 
   @@index([clientId])
   @@index([status])
@@ -247,6 +248,29 @@ model InterventionState {
 
   @@index([engagementId])
   @@map("intervention_states")
+}
+
+// ─── Module 4: Shock Event ──────────────────────────────────────────────────
+
+model ShockEvent {
+  id            String    @id @default(uuid()) @db.Uuid
+  engagementId  String    @map("engagement_id") @db.Uuid
+  eventType     String    @map("event_type") // governed by SHOCK_EVENT_TYPES
+  severity      String    // governed by RISK_SEVERITIES
+  title         String
+  description   String?
+  detectedAt    DateTime  @map("detected_at")
+  recordedBy    String?   @map("recorded_by") @db.Uuid
+  version       Int       @default(1)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  engagement    Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@index([severity])
+  @@index([eventType])
+  @@map("shock_events")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────

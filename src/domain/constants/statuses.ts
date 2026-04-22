@@ -209,3 +209,18 @@ export const DELIVERABLE_STATUSES = [
 ] as const;
 
 export type DeliverableStatus = (typeof DELIVERABLE_STATUSES)[number];
+
+export const SHOCK_EVENT_TYPES = [
+  "market_disruption",
+  "key_personnel_loss",
+  "major_client_loss",
+  "regulatory_change",
+  "cash_flow_crisis",
+  "quality_failure",
+  "operational_disruption",
+  "competitive_threat",
+  "partnership_breakdown",
+  "technology_failure",
+] as const;
+
+export type ShockEventType = (typeof SHOCK_EVENT_TYPES)[number];
