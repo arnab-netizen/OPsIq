@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError } from "@/infra/errors";
+import { NotFoundError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
 export interface CreateKPIInput {
@@ -78,14 +78,38 @@ export async function updateKPIValue(
   });
   if (!kpi) throw new NotFoundError("KPI", kpiId);
 
-  const updated = await db.kPI.update({
-    where: { id: kpiId },
+  // Validate version for optimistic locking
+  if (kpi.version !== input.version) {
+    throw new ConflictError(
+      "KPI has been modified by another process. Current version: " + kpi.version,
+      "STALE_VERSION"
+    );
+  }
+
+  // Optimistic locking: update only if version matches
+  const updateResult = await db.kPI.updateMany({
+    where: {
+      id: kpiId,
+      version: input.version,
+    },
     data: {
       currentValue: input.currentValue ?? kpi.currentValue,
       measurementDate: input.measurementDate ? new Date(input.measurementDate) : kpi.measurementDate,
-      version: input.version + 1,
+      version: { increment: 1 },
     },
   });
+
+  if (updateResult.count === 0) {
+    throw new ConflictError(
+      "KPI has been modified by another process",
+      "OPTIMISTIC_LOCK_FAILED"
+    );
+  }
+
+  const updated = await db.kPI.findUnique({
+    where: { id: kpiId },
+  });
+  if (!updated) throw new NotFoundError("KPI", kpiId);
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.KPI_SNAPSHOT_RECORDED,

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError } from "@/infra/errors";
+import { NotFoundError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
 export interface CreateRecommendationInput {
@@ -80,13 +80,37 @@ export async function updateRecommendationStatus(
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);
 
-  const updated = await db.recommendation.update({
-    where: { id: recommendationId },
+  // Validate version for optimistic locking
+  if (rec.version !== input.version) {
+    throw new ConflictError(
+      "Recommendation has been modified by another process. Current version: " + rec.version,
+      "STALE_VERSION"
+    );
+  }
+
+  // Optimistic locking: update only if version matches
+  const updateResult = await db.recommendation.updateMany({
+    where: {
+      id: recommendationId,
+      version: input.version,
+    },
     data: {
       status: input.status ?? rec.status,
-      version: input.version + 1,
+      version: { increment: 1 },
     },
   });
+
+  if (updateResult.count === 0) {
+    throw new ConflictError(
+      "Recommendation has been modified by another process",
+      "OPTIMISTIC_LOCK_FAILED"
+    );
+  }
+
+  const updated = await db.recommendation.findUnique({
+    where: { id: recommendationId },
+  });
+  if (!updated) throw new NotFoundError("Recommendation", recommendationId);
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
