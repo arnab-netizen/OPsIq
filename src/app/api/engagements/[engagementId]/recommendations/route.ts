@@ -10,7 +10,7 @@ import { paginationSchema } from "@/lib/validation";
 const createRecommendationSchema = z.object({
   findingId: z.string().uuid().optional(),
   shockEventId: z.string().uuid().optional(),
-  priority: z.enum(RECOMMENDATION_PRIORITIES),
+  priority: z.enum(RECOMMENDATION_PRIORITIES).optional(),
   title: z.string().min(1),
   description: z.string().optional(),
   status: z.enum(RECOMMENDATION_STATUSES).optional(),

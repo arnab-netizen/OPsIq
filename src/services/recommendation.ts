@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
-import { RECOMMENDATION_STATUSES, type RecommendationStatus, RECOMMENDATION_PRIORITIES, type RecommendationPriority } from "@/domain/constants/statuses";
+import { RECOMMENDATION_STATUSES, type RecommendationStatus, RECOMMENDATION_PRIORITIES, type RecommendationPriority, RISK_SEVERITIES } from "@/domain/constants/statuses";
 import { logger } from "@/infra/logger";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -11,10 +11,27 @@ export interface CreateRecommendationInput {
   engagementId: string;
   findingId?: string;
   shockEventId?: string;
-  priority: RecommendationPriority;
+  priority?: RecommendationPriority;
   title: string;
   description?: string;
   status?: RecommendationStatus;
+}
+
+// ─── Priority Mapping ──────────────────────────────────────────────────────
+
+function mapSeverityToPriority(severity: string): RecommendationPriority {
+  switch (severity) {
+    case "critical":
+      return "high";
+    case "high":
+      return "high";
+    case "medium":
+      return "medium";
+    case "low":
+      return "low";
+    default:
+      return "medium";
+  }
 }
 
 // ─── Service ───────────────────────────────────────────────────────────────
@@ -61,6 +78,7 @@ export async function createRecommendation(
   }
 
   // Validate shock event if provided and belongs to same engagement
+  let shockEventSeverity: string | null = null;
   if (input.shockEventId) {
     const shockEvent = await db.shockEvent.findUnique({
       where: { id: input.shockEventId },
@@ -75,14 +93,72 @@ export async function createRecommendation(
         "Shock event does not belong to the specified engagement"
       );
     }
+
+    shockEventSeverity = shockEvent.severity;
   }
 
-  // Validate priority
-  if (!RECOMMENDATION_PRIORITIES.includes(input.priority)) {
+  // Require at least one source (finding or shock event)
+  if (!input.findingId && !input.shockEventId) {
     throw new ValidationError(
-      `Invalid priority: ${input.priority}. Must be one of: ${RECOMMENDATION_PRIORITIES.join(", ")}`
+      "Recommendation must be linked to either a finding or shock event"
     );
   }
+
+  // Check for duplicate recommendations with same source
+  if (input.findingId) {
+    const existingForFinding = await db.recommendation.findFirst({
+      where: {
+        engagementId: input.engagementId,
+        findingId: input.findingId,
+      },
+    });
+    if (existingForFinding) {
+      throw new ValidationError(
+        "Recommendation already exists for this finding"
+      );
+    }
+  }
+
+  if (input.shockEventId) {
+    const existingForShock = await db.recommendation.findFirst({
+      where: {
+        engagementId: input.engagementId,
+        shockEventId: input.shockEventId,
+      },
+    });
+    if (existingForShock) {
+      throw new ValidationError(
+        "Recommendation already exists for this shock event"
+      );
+    }
+  }
+
+  // Determine priority based on source severity if not provided
+  let priority = input.priority;
+  if (!priority) {
+    // Get finding severity if available
+    if (input.findingId) {
+      const finding = await db.finding.findUnique({
+        where: { id: input.findingId },
+        select: { severity: true },
+      });
+      if (finding) {
+        priority = mapSeverityToPriority(finding.severity);
+      }
+    } else if (shockEventSeverity) {
+      priority = mapSeverityToPriority(shockEventSeverity);
+    }
+  }
+
+  // Validate priority if provided
+  if (priority && !RECOMMENDATION_PRIORITIES.includes(priority)) {
+    throw new ValidationError(
+      `Invalid priority: ${priority}. Must be one of: ${RECOMMENDATION_PRIORITIES.join(", ")}`
+    );
+  }
+
+  // Default priority if still not set
+  priority = priority || "medium";
 
   // Validate status if provided
   if (input.status && !RECOMMENDATION_STATUSES.includes(input.status)) {
@@ -96,13 +172,16 @@ export async function createRecommendation(
       engagementId: input.engagementId,
       findingId: input.findingId ?? null,
       shockEventId: input.shockEventId ?? null,
-      priority: input.priority,
+      priority: priority!,
       title: input.title,
       description: input.description ?? null,
       status: input.status ?? "draft",
       createdBy: actorId,
     },
   });
+
+  // Determine source type for audit
+  const sourceType = input.findingId ? "finding" : "shock";
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
@@ -114,7 +193,8 @@ export async function createRecommendation(
       recommendationId: recommendation.id,
       findingId: input.findingId ?? null,
       shockEventId: input.shockEventId ?? null,
-      priority: input.priority,
+      priority: priority,
+      sourceType: sourceType,
     },
     visibility: "internal",
   });

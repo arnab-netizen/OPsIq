@@ -23,6 +23,7 @@ vi.mock("@/lib/db", () => ({
       create: vi.fn(),
       findUnique: vi.fn(),
       findMany: vi.fn(),
+      findFirst: vi.fn(),
       count: vi.fn(),
     },
   },
@@ -73,10 +74,16 @@ describe("Recommendation Service", () => {
         engagementId: "eng-1",
         currentPhase: "execution",
       });
+      mockDb.finding.findUnique.mockResolvedValue({
+        id: "finding-1",
+        engagementId: "eng-1",
+        severity: "high",
+      });
+      mockDb.recommendation.findFirst.mockResolvedValue(null);
       mockDb.recommendation.create.mockResolvedValue({
         id: "rec-1",
         engagementId: "eng-1",
-        findingId: null,
+        findingId: "finding-1",
         shockEventId: null,
         priority: "high",
         title: "Improve system stability",
@@ -89,6 +96,7 @@ describe("Recommendation Service", () => {
       const result = await createRecommendation(
         {
           engagementId: "eng-1",
+          findingId: "finding-1",
           priority: "high",
           title: "Improve system stability",
           description: "Add more monitoring",
@@ -215,6 +223,108 @@ describe("Recommendation Service", () => {
         expect((error as any).message).toContain("does not belong to");
       }
     });
+
+    it("throws error if neither finding nor shock event provided", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+
+      const { createRecommendation } = await import("./recommendation");
+
+      try {
+        await createRecommendation(
+          {
+            engagementId: "eng-1",
+            priority: "high",
+            title: "Test",
+          },
+          "user-1"
+        );
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("must be linked to");
+      }
+    });
+
+    it("throws error if duplicate recommendation exists for finding", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+      mockDb.finding.findUnique.mockResolvedValue({
+        id: "finding-1",
+        engagementId: "eng-1",
+        severity: "high",
+      });
+      mockDb.recommendation.findFirst.mockResolvedValue({
+        id: "rec-existing",
+      });
+
+      const { createRecommendation } = await import("./recommendation");
+
+      try {
+        await createRecommendation(
+          {
+            engagementId: "eng-1",
+            findingId: "finding-1",
+            priority: "high",
+            title: "Test",
+          },
+          "user-1"
+        );
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("already exists");
+      }
+    });
+
+    it("throws error if duplicate recommendation exists for shock event", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+      mockDb.shockEvent.findUnique.mockResolvedValue({
+        id: "shock-1",
+        engagementId: "eng-1",
+        severity: "critical",
+      });
+      mockDb.recommendation.findFirst.mockResolvedValue({
+        id: "rec-existing",
+      });
+
+      const { createRecommendation } = await import("./recommendation");
+
+      try {
+        await createRecommendation(
+          {
+            engagementId: "eng-1",
+            shockEventId: "shock-1",
+            priority: "high",
+            title: "Test",
+          },
+          "user-1"
+        );
+        expect.fail("Should throw ValidationError");
+      } catch (error) {
+        expect((error as any).message).toContain("already exists");
+      }
+    });
   });
 
   describe("List recommendations", () => {
@@ -299,7 +409,7 @@ describe("Recommendation Service", () => {
   });
 
   describe("Audit emission", () => {
-    it("emits RECOMMENDATION_CREATED audit event with correct payload", async () => {
+    it("emits RECOMMENDATION_CREATED audit event with sourceType and payload", async () => {
       const { db } = await import("@/lib/db");
       const { emitAuditEvent } = await import("@/infra/audit");
       const mockDb = db as any;
@@ -312,10 +422,16 @@ describe("Recommendation Service", () => {
         engagementId: "eng-1",
         currentPhase: "execution",
       });
+      mockDb.finding.findUnique.mockResolvedValue({
+        id: "finding-1",
+        engagementId: "eng-1",
+        severity: "high",
+      });
+      mockDb.recommendation.findFirst.mockResolvedValue(null);
       mockDb.recommendation.create.mockResolvedValue({
         id: "rec-1",
         engagementId: "eng-1",
-        findingId: null,
+        findingId: "finding-1",
         shockEventId: null,
         priority: "high",
         title: "Test recommendation",
@@ -328,7 +444,7 @@ describe("Recommendation Service", () => {
       await createRecommendation(
         {
           engagementId: "eng-1",
-          priority: "high",
+          findingId: "finding-1",
           title: "Test recommendation",
         },
         "user-1"
@@ -340,9 +456,95 @@ describe("Recommendation Service", () => {
       expect(call.payload.engagementId).toBe("eng-1");
       expect(call.payload.recommendationId).toBe("rec-1");
       expect(call.payload.priority).toBe("high");
-      expect(call.payload.findingId).toBeNull();
+      expect(call.payload.findingId).toBe("finding-1");
       expect(call.payload.shockEventId).toBeNull();
+      expect(call.payload.sourceType).toBe("finding");
       expect(call.visibility).toBe("internal");
+    });
+
+    it("maps priority based on finding severity", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+      mockDb.finding.findUnique.mockResolvedValue({
+        id: "finding-1",
+        engagementId: "eng-1",
+        severity: "critical",
+        select: { severity: true },
+      });
+      mockDb.recommendation.findFirst.mockResolvedValue(null);
+      mockDb.recommendation.create.mockResolvedValue({
+        id: "rec-1",
+        engagementId: "eng-1",
+        findingId: "finding-1",
+        shockEventId: null,
+        priority: "high",
+        title: "Test",
+        description: null,
+        status: "draft",
+        version: 1,
+      });
+
+      const { createRecommendation } = await import("./recommendation");
+      const result = await createRecommendation(
+        {
+          engagementId: "eng-1",
+          findingId: "finding-1",
+          title: "Test",
+        },
+        "user-1"
+      );
+
+      expect(result.priority).toBe("high");
+    });
+
+    it("maps priority based on shock event severity", async () => {
+      const { db } = await import("@/lib/db");
+      const mockDb = db as any;
+
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+      });
+      mockDb.interventionState.findUnique.mockResolvedValue({
+        engagementId: "eng-1",
+        currentPhase: "execution",
+      });
+      mockDb.shockEvent.findUnique.mockResolvedValue({
+        id: "shock-1",
+        engagementId: "eng-1",
+        severity: "low",
+      });
+      mockDb.recommendation.findFirst.mockResolvedValue(null);
+      mockDb.recommendation.create.mockResolvedValue({
+        id: "rec-1",
+        engagementId: "eng-1",
+        findingId: null,
+        shockEventId: "shock-1",
+        priority: "low",
+        title: "Test",
+        description: null,
+        status: "draft",
+        version: 1,
+      });
+
+      const { createRecommendation } = await import("./recommendation");
+      const result = await createRecommendation(
+        {
+          engagementId: "eng-1",
+          shockEventId: "shock-1",
+          title: "Test",
+        },
+        "user-1"
+      );
+
+      expect(result.priority).toBe("low");
     });
   });
 });
