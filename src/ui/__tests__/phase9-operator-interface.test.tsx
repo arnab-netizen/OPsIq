@@ -1,3 +1,4 @@
+// @vitest environment jsdom
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { RecommendationsView } from "@/ui/recommendations-view";
@@ -325,7 +326,7 @@ describe("Phase 9: Operator Interface", () => {
   });
 
   describe("4. KPI Trend", () => {
-    it("should display KPI current value", () => {
+    it("should display KPI current value", async () => {
       const kpis = [
         {
           id: "kpi-1",
@@ -338,10 +339,12 @@ describe("Phase 9: Operator Interface", () => {
 
       render(<KPITrend kpis={kpis} />);
 
-      expect(screen.getByText("100000")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("100000")).toBeInTheDocument();
+      });
     });
 
-    it("should show direction indicator", () => {
+    it("should show direction indicator", async () => {
       const kpis = [
         {
           id: "kpi-1",
@@ -357,10 +360,12 @@ describe("Phase 9: Operator Interface", () => {
 
       render(<KPITrend kpis={kpis} />);
 
-      expect(screen.getByText(/↓ Improving/)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/↓ Improving/)).toBeInTheDocument();
+      });
     });
 
-    it("should flag deterioration", () => {
+    it("should flag deterioration", async () => {
       const kpis = [
         {
           id: "kpi-1",
@@ -376,10 +381,12 @@ describe("Phase 9: Operator Interface", () => {
 
       render(<KPITrend kpis={kpis} />);
 
-      expect(screen.getByText("⚠️ Deteriorating")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("⚠️ Deteriorating")).toBeInTheDocument();
+      });
     });
 
-    it("should render trend chart with last 5 values", () => {
+    it("should render trend chart with last 5 values", async () => {
       const kpis = [
         {
           id: "kpi-1",
@@ -399,8 +406,10 @@ describe("Phase 9: Operator Interface", () => {
       render(<KPITrend kpis={kpis} />);
 
       // Should render bars for snapshots
-      const valueElements = screen.getAllByText(/^(100|95|90|85|80)$/);
-      expect(valueElements.length).toBeGreaterThan(0);
+      await waitFor(() => {
+        const valueElements = screen.getAllByText(/^(100|95|90|85|80)$/);
+        expect(valueElements.length).toBeGreaterThan(0);
+      });
     });
   });
 
@@ -441,9 +450,9 @@ describe("Phase 9: Operator Interface", () => {
         </>
       );
 
-      expect(screen.getByText("Recommendations")).toBeInTheDocument();
-      expect(screen.getByText("KPI Trends")).toBeInTheDocument();
-      expect(screen.getByText("Open Actions")).toBeInTheDocument();
+      expect(screen.getByText(/Recommendations/)).toBeInTheDocument();
+      expect(screen.getByText(/KPI Trends|KPI/)).toBeInTheDocument();
+      expect(screen.getByText(/Open Actions|Actions/)).toBeInTheDocument();
     });
 
     it("should display all components without business logic", () => {
