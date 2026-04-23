@@ -2,6 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/ui/primitives";
 import { InterventionStateDisplay } from "@/ui/intervention-state-display";
+import { RecommendationsView } from "@/ui/recommendations-view";
+import { ActionCenter } from "@/ui/action-center";
+import { KPITrend } from "@/ui/kpi-trend";
+import { AuditTimeline } from "@/ui/audit-timeline";
 
 const STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   draft: "muted",
@@ -35,6 +39,24 @@ const PHASE_VARIANTS: Record<string, "default" | "success" | "warning" | "destru
   review: "warning",
   handover: "warning",
   closed: "muted",
+};
+
+const SEVERITY_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  critical: "destructive",
+  high: "warning",
+  medium: "default",
+  low: "muted",
+};
+
+const STATUS_BADGE_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  draft: "muted",
+  open: "warning",
+  in_progress: "default",
+  completed: "success",
+  assigned: "default",
+  blocked: "destructive",
+  verified: "success",
+  cancelled: "muted",
 };
 
 async function fetchEngagement(engagementId: string) {
@@ -416,124 +438,23 @@ export default async function EngagementDetailPage({
       </div>
 
       {/* ─── Recommendations Section ────────────────────────────────────── */}
-      <div className="mt-8 rounded-lg border border-border p-6">
-        <h2 className="text-lg font-semibold text-foreground">
-          Recommendations ({recommendations.length})
-        </h2>
-        {recommendations.length > 0 ? (
-          <div className="mt-4 space-y-3">
-            {recommendations.slice(0, 5).map((r: any) => (
-              <div key={r.id} className="rounded-md border border-border p-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-foreground">{r.title}</h3>
-                    {r.description && (
-                      <p className="mt-1 text-xs text-muted-foreground">{r.description}</p>
-                    )}
-                    <div className="mt-2 flex gap-2">
-                      <Badge variant={SEVERITY_VARIANTS[r.priority] ?? "muted"}>
-                        {r.priority}
-                      </Badge>
-                      <Badge variant={STATUS_BADGE_VARIANTS[r.status] ?? "muted"}>
-                        {r.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {recommendations.length > 5 && (
-              <p className="text-xs text-muted-foreground">... and {recommendations.length - 5} more recommendations</p>
-            )}
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-muted-foreground">No recommendations yet.</p>
-        )}
+      <div className="mt-8">
+        <RecommendationsView recommendations={recommendations} />
+      </div>
+
+      {/* ─── Audit Timeline Section ────────────────────────────────────── */}
+      <div className="mt-8">
+        <AuditTimeline engagementId={engagementId} />
       </div>
 
       {/* ─── Actions Section ───────────────────────────────────────────── */}
-      <div className="mt-8 rounded-lg border border-border p-6">
-        <h2 className="text-lg font-semibold text-foreground">
-          Open Actions ({openActions.length})
-        </h2>
-        {openActions.length > 0 ? (
-          <div className="mt-4 space-y-3">
-            {openActions.slice(0, 5).map((a: any) => (
-              <div key={a.id} className="rounded-md border border-border p-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-foreground">{a.title}</h3>
-                    {a.description && (
-                      <p className="mt-1 text-xs text-muted-foreground">{a.description}</p>
-                    )}
-                    <div className="mt-2 flex gap-2">
-                      <Badge variant={SEVERITY_VARIANTS[a.priority] ?? "muted"}>
-                        {a.priority}
-                      </Badge>
-                      <Badge variant={STATUS_BADGE_VARIANTS[a.status] ?? "muted"}>
-                        {a.status}
-                      </Badge>
-                      {a.dueDate && (
-                        <Badge variant="outline">
-                          Due: {new Date(a.dueDate).toLocaleDateString()}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-            {openActions.length > 5 && (
-              <p className="text-xs text-muted-foreground">... and {openActions.length - 5} more open actions</p>
-            )}
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-muted-foreground">No open actions.</p>
-        )}
+      <div className="mt-8">
+        <ActionCenter actions={actions} engagementId={engagementId} />
       </div>
 
       {/* ─── KPIs Section ──────────────────────────────────────────────── */}
-      <div className="mt-8 rounded-lg border border-border p-6">
-        <h2 className="text-lg font-semibold text-foreground">
-          Key Performance Indicators ({kpis.length})
-        </h2>
-        {kpis.length > 0 ? (
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            {kpis.slice(0, 4).map((k: any) => (
-              <div key={k.id} className="rounded-md border border-border p-3">
-                <h3 className="text-sm font-medium text-foreground">{k.name}</h3>
-                <dl className="mt-2 space-y-1 text-xs">
-                  {k.currentValue !== null && (
-                    <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Current:</dt>
-                      <dd className="font-medium text-foreground">
-                        {k.currentValue}{k.unit ? ` ${k.unit}` : ""}
-                      </dd>
-                    </div>
-                  )}
-                  {k.baseline !== null && (
-                    <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Baseline:</dt>
-                      <dd className="font-medium text-foreground">
-                        {k.baseline}{k.unit ? ` ${k.unit}` : ""}
-                      </dd>
-                    </div>
-                  )}
-                  {k.targetValue !== null && (
-                    <div className="flex justify-between">
-                      <dt className="text-muted-foreground">Target:</dt>
-                      <dd className="font-medium text-foreground">
-                        {k.targetValue}{k.unit ? ` ${k.unit}` : ""}
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-muted-foreground">No KPIs defined yet.</p>
-        )}
+      <div className="mt-8">
+        <KPITrend kpis={kpis} />
       </div>
 
       {/* ─── Deliverables Section ──────────────────────────────────────── */}
