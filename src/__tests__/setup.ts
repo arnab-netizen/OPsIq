@@ -31,30 +31,28 @@ const loadEnv = () => {
 
 loadEnv();
 
-// Verify database connection before running tests
+// Verify test database connection before each test file
 beforeAll(async () => {
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) {
     throw new Error(
       "DATABASE_URL environment variable is not set. Tests require a database connection.\n" +
-      "Ensure .env.test or .env is configured with DATABASE_URL pointing to a PostgreSQL test database."
+      "Ensure .env.test or .env is configured with DATABASE_URL."
     );
   }
 
   try {
-    console.log("Verifying test database connection...");
     // Import db after env is loaded
     const { db } = await import("@/lib/db");
 
     // Test the connection by doing a simple query
     await db.user.count();
-    console.log("Test database connection verified");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
       `Test database connection failed. DATABASE_URL: ${dbUrl}\n` +
       `Error: ${message}\n` +
-      `Ensure PostgreSQL is running and the test database is accessible.`
+      `Verify database is properly initialized.`
     );
   }
 });

@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
 import fs from "fs";
+import { execSync } from "child_process";
 
 // Load test environment variables
 const loadEnv = () => {
@@ -24,11 +25,32 @@ const loadEnv = () => {
 
 loadEnv();
 
+// Generate SQLite Prisma client for tests if using SQLite
+const generateTestClient = () => {
+  const dbUrl = process.env.DATABASE_URL || "";
+  if (dbUrl.startsWith("file:")) {
+    console.log("Generating SQLite Prisma client for tests...");
+    try {
+      const testSchemaPath = path.resolve(__dirname, "prisma/schema.test.prisma");
+      // Generate without pushing to DB (that happens in setup.ts)
+      execSync(`npx prisma generate --schema ${testSchemaPath}`, {
+        stdio: "pipe",
+      });
+      console.log("SQLite Prisma client generated");
+    } catch (error) {
+      console.warn("Warning: Could not generate SQLite Prisma client. Tests may fail.");
+    }
+  }
+};
+
+generateTestClient();
+
 export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    globalSetup: ["src/__tests__/global-setup.ts"],
     setupFiles: ["src/__tests__/setup.ts"],
   },
   resolve: {

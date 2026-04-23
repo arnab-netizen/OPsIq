@@ -1,16 +1,16 @@
 generator client {
   provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  output   = "../src/generated/prisma-sqlite"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 // ─── Foundation: User & Auth ────────────────────────────────────────────────
 
 model User {
-  id             String    @id @default(uuid()) @db.Uuid
+  id             String    @id @default(uuid())
   email          String    @unique
   name           String?
   hashedPassword String?   @map("hashed_password")
@@ -35,8 +35,8 @@ model User {
 }
 
 model Session {
-  id           String    @id @default(uuid()) @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
   token        String    @unique
   expiresAt    DateTime  @map("expires_at")
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -52,12 +52,12 @@ model Session {
 }
 
 model UserRoleAssignment {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @map("user_id") @db.Uuid
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
   role      String
   scope     String?
-  scopeId   String?   @map("scope_id") @db.Uuid
-  grantedBy String?   @map("granted_by") @db.Uuid
+  scopeId   String?   @map("scope_id")
+  grantedBy String?   @map("granted_by")
   grantedAt DateTime  @default(now()) @map("granted_at")
   revokedAt DateTime? @map("revoked_at")
   isActive  Boolean   @default(true) @map("is_active")
@@ -69,14 +69,12 @@ model UserRoleAssignment {
   @@map("user_role_assignments")
 }
 
-// ─── Identity: Engagement Membership ────────────────────────────────────────
-
 model EngagementMembership {
-  id            String    @id @default(uuid()) @db.Uuid
-  userId        String    @map("user_id") @db.Uuid
-  engagementId  String    @map("engagement_id") @db.Uuid
-  role          String    // engagement-scoped role
-  addedBy       String?   @map("added_by") @db.Uuid
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  engagementId  String    @map("engagement_id")
+  role          String
+  addedBy       String?   @map("added_by")
   addedAt       DateTime  @default(now()) @map("added_at")
   removedAt     DateTime? @map("removed_at")
   isActive      Boolean   @default(true) @map("is_active")
@@ -90,22 +88,20 @@ model EngagementMembership {
   @@map("engagement_memberships")
 }
 
-// ─── Module 2: Lead ────────────────────────────────────────────────────────
-
 model LeadRecord {
-  id              String    @id @default(uuid()) @db.Uuid
+  id              String    @id @default(uuid())
   companyName     String    @map("company_name")
   contactName     String?   @map("contact_name")
   contactEmail    String?   @map("contact_email")
   contactPhone    String?   @map("contact_phone")
-  source          String?   // e.g. "referral", "website", "outbound"
-  status          String    @default("new") // "new" | "qualifying" | "qualified" | "converted" | "lost"
+  source          String?
+  status          String    @default("new")
   notes           String?
   estimatedValue  Float?    @map("estimated_value")
-  convertedToClientId String? @map("converted_to_client_id") @db.Uuid
-  engagementId    String?   @map("engagement_id") @db.Uuid
-  assignedTo      String?   @map("assigned_to") @db.Uuid
-  createdBy       String?   @map("created_by") @db.Uuid
+  convertedToClientId String? @map("converted_to_client_id")
+  engagementId    String?   @map("engagement_id")
+  assignedTo      String?   @map("assigned_to")
+  createdBy       String?   @map("created_by")
   version         Int       @default(1)
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -119,21 +115,19 @@ model LeadRecord {
   @@map("lead_records")
 }
 
-// ─── Module 2: Client Account ──────────────────────────────────────────────
-
 model ClientAccount {
-  id              String    @id @default(uuid()) @db.Uuid
+  id              String    @id @default(uuid())
   name            String
   legalName       String?   @map("legal_name")
   industry        String?
-  size            String?   // "micro" | "small" | "medium" | "large"
-  status          String    @default("active") // "active" | "inactive" | "archived"
+  size            String?
+  status          String    @default("active")
   website         String?
   address         String?
   notes           String?
   version         Int       @default(1)
-  visibility      String    @default("internal") // "internal" | "client_visible"
-  createdBy       String?   @map("created_by") @db.Uuid
+  visibility      String    @default("internal")
+  createdBy       String?   @map("created_by")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   archivedAt      DateTime? @map("archived_at")
@@ -147,16 +141,16 @@ model ClientAccount {
 }
 
 model ClientContact {
-  id              String    @id @default(uuid()) @db.Uuid
-  clientId        String    @map("client_id") @db.Uuid
+  id              String    @id @default(uuid())
+  clientId        String    @map("client_id")
   name            String
   email           String?
   phone           String?
-  role            String?   // e.g. "owner", "cfo", "operations_manager"
+  role            String?
   isPrimary       Boolean   @default(false) @map("is_primary")
   isActive        Boolean   @default(true) @map("is_active")
   notes           String?
-  createdBy       String?   @map("created_by") @db.Uuid
+  createdBy       String?   @map("created_by")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -166,30 +160,28 @@ model ClientContact {
   @@map("client_contacts")
 }
 
-// ─── Module 2: Engagement ──────────────────────────────────────────────────
-
 model Engagement {
-  id                    String    @id @default(uuid()) @db.Uuid
-  code                  String    @unique // human-readable engagement code
+  id                    String    @id @default(uuid())
+  code                  String    @unique
   title                 String
-  clientId              String    @map("client_id") @db.Uuid
-  serviceTier           String    @map("service_tier") // "standard" | "premium" | "enterprise"
-  engagementMode        String    @map("engagement_mode") // "beginner" | "expert"
-  status                String    @default("draft") // governed by ENGAGEMENT_STATUSES
-  healthStatus          String    @default("healthy") @map("health_status") // "healthy" | "at_risk" | "critical" | "unknown"
-  interventionMode      String    @default("recovery") @map("intervention_mode") // governed by INTERVENTION_MODES
-  interventionPhase     String    @default("triage") @map("intervention_phase") // governed by INTERVENTION_PHASES
+  clientId              String    @map("client_id")
+  serviceTier           String    @map("service_tier")
+  engagementMode        String    @map("engagement_mode")
+  status                String    @default("draft")
+  healthStatus          String    @default("healthy") @map("health_status")
+  interventionMode      String    @default("recovery") @map("intervention_mode")
+  interventionPhase     String    @default("triage") @map("intervention_phase")
   description           String?
   startDate             DateTime? @map("start_date")
   targetEndDate         DateTime? @map("target_end_date")
   actualEndDate         DateTime? @map("actual_end_date")
-  ownerId               String?   @map("owner_id") @db.Uuid // primary consultant
-  assignedConsultantId  String?   @map("assigned_consultant_id") @db.Uuid
-  currentScopeVersionId String?   @map("current_scope_version_id") @db.Uuid // placeholder for future scope module
-  parentEngagementId    String?   @map("parent_engagement_id") @db.Uuid // retainer/micro-engagement lineage
+  ownerId               String?   @map("owner_id")
+  assignedConsultantId  String?   @map("assigned_consultant_id")
+  currentScopeVersionId String?   @map("current_scope_version_id")
+  parentEngagementId    String?   @map("parent_engagement_id")
   version               Int       @default(1)
-  visibility            String    @default("internal") // "internal" | "client_visible"
-  createdBy             String?   @map("created_by") @db.Uuid
+  visibility            String    @default("internal")
+  createdBy             String?   @map("created_by")
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
@@ -216,59 +208,53 @@ model Engagement {
   @@map("engagements")
 }
 
-// ─── Module 2: Business Condition Profile ──────────────────────────────────
-
 model BusinessConditionProfile {
-  id                      String    @id @default(uuid()) @db.Uuid
-  engagementId            String    @map("engagement_id") @db.Uuid
-  businessStatus          String    @map("business_status") // governed by BUSINESS_CONDITION_RATINGS
-  severityScore           Int       @map("severity_score") // 1-10
-  urgencyLevel            String    @map("urgency_level") // "low" | "medium" | "high" | "critical"
-  cashPressureLevel       String    @map("cash_pressure_level") // "low" | "medium" | "high" | "critical"
-  marginPressureLevel     String    @map("margin_pressure_level") // "low" | "medium" | "high" | "critical"
-  clientConcentrationRisk String    @map("client_concentration_risk") // "low" | "medium" | "high" | "critical"
-  ownerDependencyRisk     String    @map("owner_dependency_risk") // "low" | "medium" | "high" | "critical"
-  keyPersonDependencyRisk String    @map("key_person_dependency_risk") // "low" | "medium" | "high" | "critical"
-  processMaturityLevel    String    @map("process_maturity_level") // "low" | "medium" | "high"
-  managementMaturityLevel String    @map("management_maturity_level") // "low" | "medium" | "high"
-  executionCapacityLevel  String    @map("execution_capacity_level") // "low" | "medium" | "high"
-  moraleFragilityLevel    String    @map("morale_fragility_level") // "low" | "medium" | "high" | "critical"
-  resilienceLevel         String    @map("resilience_level") // "low" | "medium" | "high"
-  growthReadinessLevel    String    @map("growth_readiness_level") // "low" | "medium" | "high"
+  id                      String    @id @default(uuid())
+  engagementId            String    @map("engagement_id")
+  businessStatus          String    @map("business_status")
+  severityScore           Int       @map("severity_score")
+  urgencyLevel            String    @map("urgency_level")
+  cashPressureLevel       String    @map("cash_pressure_level")
+  marginPressureLevel     String    @map("margin_pressure_level")
+  clientConcentrationRisk String    @map("client_concentration_risk")
+  ownerDependencyRisk     String    @map("owner_dependency_risk")
+  keyPersonDependencyRisk String    @map("key_person_dependency_risk")
+  processMaturityLevel    String    @map("process_maturity_level")
+  managementMaturityLevel String    @map("management_maturity_level")
+  executionCapacityLevel  String    @map("execution_capacity_level")
+  moraleFragilityLevel    String    @map("morale_fragility_level")
+  resilienceLevel         String    @map("resilience_level")
+  growthReadinessLevel    String    @map("growth_readiness_level")
   notes                   String?
-  assessedBy              String?   @map("assessed_by") @db.Uuid
+  assessedBy              String?   @map("assessed_by")
   version                 Int       @default(1)
-  isCurrent               Boolean   @default(true) @map("is_current") // only one current per engagement
+  isCurrent               Boolean   @default(true) @map("is_current")
   createdAt               DateTime  @default(now()) @map("created_at")
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
   engagement              Engagement @relation(fields: [engagementId], references: [id])
 
-  // NOTE: Requires database-level partial unique constraint:
-  // CREATE UNIQUE INDEX idx_bcp_current ON business_condition_profiles(engagement_id) WHERE is_current = true
   @@index([engagementId, isCurrent])
   @@index([engagementId])
   @@map("business_condition_profiles")
 }
 
-// ─── Module: Evidence, Finding, Recommendation, Action ─────────────────────
-
 model Evidence {
-  id                String    @id @default(uuid()) @db.Uuid
-  engagementId      String    @map("engagement_id") @db.Uuid
+  id                String    @id @default(uuid())
+  engagementId      String    @map("engagement_id")
   title             String
   description       String?
-  evidenceType      String    @map("evidence_type") // "document", "interview", "metric", "observation"
-  sourceReference   String?   @map("source_reference") // link, file path, etc.
-  status            String    @default("submitted") @map("status") // governed by EVIDENCE_STATUSES
-  severity          String?   // "low" | "medium" | "high" | "critical"
-  relatedFindingId  String?   @map("related_finding_id") @db.Uuid
-  submittedBy       String?   @map("submitted_by") @db.Uuid
-  validatedBy       String?   @map("validated_by") @db.Uuid
+  evidenceType      String    @map("evidence_type")
+  sourceReference   String?   @map("source_reference")
+  status            String    @default("submitted")
+  severity          String?
+  relatedFindingId  String?   @map("related_finding_id")
+  submittedBy       String?   @map("submitted_by")
+  validatedBy       String?   @map("validated_by")
   validatedAt       DateTime? @map("validated_at")
   rejectionReason   String?   @map("rejection_reason")
   version           Int       @default(1)
-  visibility        String    @default("internal") // "internal" | "client_visible"
+  visibility        String    @default("internal")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -285,12 +271,12 @@ model Evidence {
 }
 
 model EvidenceBundle {
-  id           String    @id @default(uuid()) @db.Uuid
-  engagementId String    @map("engagement_id") @db.Uuid
+  id           String    @id @default(uuid())
+  engagementId String    @map("engagement_id")
   title        String
   description  String?
   status       String    @default("active")
-  createdBy    String?   @map("created_by") @db.Uuid
+  createdBy    String?   @map("created_by")
   version      Int       @default(1)
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
@@ -304,10 +290,10 @@ model EvidenceBundle {
 }
 
 model EvidenceBundleItem {
-  id            String    @id @default(uuid()) @db.Uuid
-  bundleId      String    @map("bundle_id") @db.Uuid
-  evidenceId    String    @map("evidence_item_id") @db.Uuid
-  addedBy       String?   @map("added_by") @db.Uuid
+  id            String    @id @default(uuid())
+  bundleId      String    @map("bundle_id")
+  evidenceId    String    @map("evidence_item_id")
+  addedBy       String?   @map("added_by")
   addedAt       DateTime  @default(now()) @map("added_at")
   removedAt     DateTime? @map("removed_at")
 
@@ -321,16 +307,16 @@ model EvidenceBundleItem {
 }
 
 model Finding {
-  id              String    @id @default(uuid()) @db.Uuid
-  engagementId    String    @map("engagement_id") @db.Uuid
+  id              String    @id @default(uuid())
+  engagementId    String    @map("engagement_id")
   title           String
   description     String?
-  findingType     String    @map("finding_type") // "technical", "operational", "human_factor", "market"
-  impactArea      String?   @map("impact_area") // "revenue", "cost", "execution", "risk"
-  severity        String    // "low" | "medium" | "high" | "critical"
+  findingType     String    @map("finding_type")
+  impactArea      String?   @map("impact_area")
+  severity        String
   rootCause       String?   @map("root_cause")
-  linkedEvidence  String    @default("[]") @db.Text @map("linked_evidence") // array of Evidence IDs as JSON
-  createdBy       String?   @map("created_by") @db.Uuid
+  linkedEvidence  String    @default("[]") @map("linked_evidence")
+  createdBy       String?   @map("created_by")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -344,19 +330,19 @@ model Finding {
 }
 
 model Recommendation {
-  id              String    @id @default(uuid()) @db.Uuid
-  engagementId    String    @map("engagement_id") @db.Uuid
-  findingId       String?   @map("finding_id") @db.Uuid
+  id              String    @id @default(uuid())
+  engagementId    String    @map("engagement_id")
+  findingId       String?   @map("finding_id")
   title           String
   description     String?
   rationale       String?
-  priority        String    // "low" | "medium" | "high" | "critical"
-  estimatedImpact String?   @map("estimated_impact") // "low" | "medium" | "high"
-  status          String    @default("pending") // "pending" | "approved" | "rejected" | "superseded"
-  approvedBy      String?   @map("approved_by") @db.Uuid
+  priority        String
+  estimatedImpact String?   @map("estimated_impact")
+  status          String    @default("pending")
+  approvedBy      String?   @map("approved_by")
   approvedAt      DateTime? @map("approved_at")
   version         Int       @default(1)
-  visibility      String    @default("internal") // "internal" | "client_visible"
+  visibility      String    @default("internal")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -372,23 +358,23 @@ model Recommendation {
 }
 
 model Action {
-  id                  String    @id @default(uuid()) @db.Uuid
-  engagementId        String    @map("engagement_id") @db.Uuid
-  recommendationId    String    @map("recommendation_id") @db.Uuid
+  id                  String    @id @default(uuid())
+  engagementId        String    @map("engagement_id")
+  recommendationId    String    @map("recommendation_id")
   title               String
   description         String?
   dueDate             DateTime? @map("due_date")
-  priority            String    // "low" | "medium" | "high" | "critical"
-  status              String    @default("draft") @map("status") // governed by ACTION_STATUSES
-  assignedTo          String?   @map("assigned_to") @db.Uuid
-  completedBy         String?   @map("completed_by") @db.Uuid
+  priority            String
+  status              String    @default("draft")
+  assignedTo          String?   @map("assigned_to")
+  completedBy         String?   @map("completed_by")
   completedAt         DateTime? @map("completed_at")
-  verifiedBy          String?   @map("verified_by") @db.Uuid
+  verifiedBy          String?   @map("verified_by")
   verifiedAt          DateTime? @map("verified_at")
   notes               String?
   blockerReason       String?   @map("blocker_reason")
   version             Int       @default(1)
-  visibility          String    @default("internal") // "internal" | "client_visible"
+  visibility          String    @default("internal")
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
@@ -405,18 +391,16 @@ model Action {
   @@map("actions")
 }
 
-// ─── Foundation: Audit ──────────────────────────────────────────────────────
-
 model AuditEvent {
-  id            String   @id @default(uuid()) @db.Uuid
+  id            String   @id @default(uuid())
   eventName     String   @map("event_name")
-  actorId       String?  @map("actor_id") @db.Uuid
+  actorId       String?  @map("actor_id")
   actorType     String   @default("user") @map("actor_type")
   entityType    String?  @map("entity_type")
-  entityId      String?  @map("entity_id") @db.Uuid
+  entityId      String?  @map("entity_id")
   payload       Json?
   correlationId String?  @map("correlation_id")
-  visibility    String   @default("internal") // "internal" | "client_visible"
+  visibility    String   @default("internal")
   occurredAt    DateTime @default(now()) @map("occurred_at")
 
   actor User? @relation(fields: [actorId], references: [id])
@@ -429,13 +413,11 @@ model AuditEvent {
   @@map("audit_events")
 }
 
-// ─── Foundation: Idempotency ────────────────────────────────────────────────
-
 model IdempotencyRecord {
-  id            String   @id @default(uuid()) @db.Uuid
+  id            String   @id @default(uuid())
   idempotencyKey String  @unique @map("idempotency_key")
   operationName String   @map("operation_name")
-  status        String   @default("pending") // "pending" | "completed" | "failed"
+  status        String   @default("pending")
   responseCode  Int?     @map("response_code")
   responseBody  Json?    @map("response_body")
   createdAt     DateTime @default(now()) @map("created_at")
@@ -447,13 +429,11 @@ model IdempotencyRecord {
   @@map("idempotency_records")
 }
 
-// ─── Foundation: Scheduler ──────────────────────────────────────────────────
-
 model ScheduledTask {
-  id            String    @id @default(uuid()) @db.Uuid
+  id            String    @id @default(uuid())
   taskName      String    @map("task_name")
   payload       Json?
-  status        String    @default("pending") // "pending" | "running" | "completed" | "failed" | "dead_letter"
+  status        String    @default("pending")
   attempts      Int       @default(0)
   maxAttempts   Int       @default(3) @map("max_attempts")
   lastError     String?   @map("last_error")
@@ -468,20 +448,18 @@ model ScheduledTask {
   @@map("scheduled_tasks")
 }
 
-// ─── Module 3: Stage ────────────────────────────────────────────────────────
-
 model Stage {
-  id                String    @id @default(uuid()) @db.Uuid
-  engagementId      String    @map("engagement_id") @db.Uuid
+  id                String    @id @default(uuid())
+  engagementId      String    @map("engagement_id")
   title             String
-  status            String    @default("draft") // governed by GOVERNED_STAGE_STATES
+  status            String    @default("draft")
   description       String?
   notes             String?
   version           Int       @default(1)
   startDate         DateTime? @map("start_date")
   targetEndDate     DateTime? @map("target_end_date")
   completedAt       DateTime? @map("completed_at")
-  createdBy         String?   @map("created_by") @db.Uuid
+  createdBy         String?   @map("created_by")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -494,19 +472,17 @@ model Stage {
   @@map("stages")
 }
 
-// ─── Module 3: KPI ──────────────────────────────────────────────────────────
-
 model KPI {
-  id                String    @id @default(uuid()) @db.Uuid
-  engagementId      String    @map("engagement_id") @db.Uuid
+  id                String    @id @default(uuid())
+  engagementId      String    @map("engagement_id")
   name              String
   description       String?
   target            Float?
   currentValue      Float?    @map("current_value")
   measurementDate   DateTime? @map("measurement_date")
-  direction         String    @default("up") // "up" or "down"
+  direction         String    @default("up")
   version           Int       @default(1)
-  createdBy         String?   @map("created_by") @db.Uuid
+  createdBy         String?   @map("created_by")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -518,11 +494,11 @@ model KPI {
 }
 
 model KPISnapshot {
-  id                String    @id @default(uuid()) @db.Uuid
-  kpiId             String    @map("kpi_id") @db.Uuid
+  id                String    @id @default(uuid())
+  kpiId             String    @map("kpi_id")
   value             Float
   recordedAt        DateTime  @default(now()) @map("recorded_at")
-  recordedBy        String?   @map("recorded_by") @db.Uuid
+  recordedBy        String?   @map("recorded_by")
 
   kpi               KPI       @relation(fields: [kpiId], references: [id])
 
@@ -531,22 +507,20 @@ model KPISnapshot {
   @@map("kpi_snapshots")
 }
 
-// ─── Module 3: Deliverable ──────────────────────────────────────────────────
-
 model Deliverable {
-  id                String    @id @default(uuid()) @db.Uuid
-  stageId           String    @map("stage_id") @db.Uuid
-  engagementId      String    @map("engagement_id") @db.Uuid
+  id                String    @id @default(uuid())
+  stageId           String    @map("stage_id")
+  engagementId      String    @map("engagement_id")
   title             String
   description       String?
-  status            String    @default("draft") // governed by DELIVERABLE_STATUSES
+  status            String    @default("draft")
   version           Int       @default(1)
-  submittedBy       String?   @map("submitted_by") @db.Uuid
+  submittedBy       String?   @map("submitted_by")
   submittedAt       DateTime? @map("submitted_at")
-  approvedBy        String?   @map("approved_by") @db.Uuid
+  approvedBy        String?   @map("approved_by")
   approvedAt        DateTime? @map("approved_at")
   rejectionReason   String?   @map("rejection_reason")
-  createdBy         String?   @map("created_by") @db.Uuid
+  createdBy         String?   @map("created_by")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -559,19 +533,17 @@ model Deliverable {
   @@map("deliverables")
 }
 
-// ─── Module 3: Risk ─────────────────────────────────────────────────────────
-
 model Risk {
-  id                String    @id @default(uuid()) @db.Uuid
-  stageId           String    @map("stage_id") @db.Uuid
-  engagementId      String    @map("engagement_id") @db.Uuid
+  id                String    @id @default(uuid())
+  stageId           String    @map("stage_id")
+  engagementId      String    @map("engagement_id")
   title             String
   description       String?
-  status            String    @default("identified") // governed by RISK_STATUSES
+  status            String    @default("identified")
   identifiedAt      DateTime  @default(now()) @map("identified_at")
-  identifiedBy      String?   @map("identified_by") @db.Uuid
+  identifiedBy      String?   @map("identified_by")
   assessedAt        DateTime? @map("assessed_at")
-  assessedBy        String?   @map("assessed_by") @db.Uuid
+  assessedBy        String?   @map("assessed_by")
   mitigationStrategy String?  @map("mitigation_strategy")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
