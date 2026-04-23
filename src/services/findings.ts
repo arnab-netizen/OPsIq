@@ -7,6 +7,8 @@ import {
   FINDING_STATUSES,
 } from "@/domain/constants/statuses";
 import { triggerReEvaluation } from "@/services/re-evaluation";
+import { withIdempotency } from "@/infra/idempotency";
+import { logger } from "@/infra/logger";
 import type {
   FindingStatus,
 } from "@/domain/constants/statuses";

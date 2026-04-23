@@ -156,6 +156,9 @@ export const AUDIT_EVENTS = {
   FILE_DELETED: "file.deleted",
   FILE_ACCESS_CHANGED: "file.access_changed",
 
+  // Idempotency
+  IDEMPOTENCY_REPLAY_DETECTED: "idempotency.replay_detected",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",

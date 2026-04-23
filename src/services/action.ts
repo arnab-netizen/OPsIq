@@ -6,6 +6,7 @@ import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses";
 import { assertEngagementAccess } from "@/lib/visibility";
+import { withIdempotency } from "@/infra/idempotency";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -54,12 +55,76 @@ function validateActionTransition(fromStatus: ActionStatus, toStatus: ActionStat
 
 export async function createAction(
   input: CreateActionInput,
-  actorId: string
+  actorId: string,
+  idempotencyKey?: string
 ) {
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
+
+  if (idempotencyKey) {
+    const result = await withIdempotency(
+      idempotencyKey,
+      "action.create",
+      async () => {
+        return await db.$transaction(async (tx) => {
+          const action = await tx.action.create({
+            data: {
+              engagementId: input.engagementId,
+              recommendationId: input.recommendationId ?? null,
+              title: input.title,
+              description: input.description ?? null,
+              owner: input.owner ?? null,
+              dueDate: input.dueDate ? new Date(input.dueDate) : null,
+              priority: input.priority ?? "medium",
+            },
+          });
+
+          await emitAuditEvent({
+            eventName: AUDIT_EVENTS.ACTION_CREATED,
+            actorId,
+            entityType: "action",
+            entityId: action.id,
+            payload: {
+              engagementId: input.engagementId,
+              priority: input.priority,
+            },
+            visibility: "internal",
+          });
+
+          return action;
+        });
+      },
+      input,
+      actorId
+    );
+
+    if (!result.isNew) {
+      logger.info("Action creation - idempotency replay", {
+        actionId: result.result.id,
+        engagementId: input.engagementId,
+      });
+    } else {
+      // Trigger re-evaluation only on first creation
+      await triggerReEvaluation({
+        changeType: "action",
+        entityType: "action",
+        entityId: result.result.id,
+        engagementId: input.engagementId,
+        severity: (input.priority === "critical" ? "critical" : "medium") as "low" | "medium" | "high" | "critical",
+        description: `Action created: ${input.title}`,
+        triggeredBy: actorId,
+      });
+
+      logger.info("Action created", {
+        actionId: result.result.id,
+        engagementId: input.engagementId,
+      });
+    }
+
+    return result.result;
+  }
 
   const action = await db.action.create({
     data: {
