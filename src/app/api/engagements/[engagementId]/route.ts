@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getEngagementById, updateEngagement } from "@/services/engagement";
+import { assertEngagementAccess } from "@/lib/visibility";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
@@ -32,7 +33,9 @@ const updateEngagementSchema = z.object({
 export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  const { policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+  const { session, policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+
+  await assertEngagementAccess(session.user.id, engagementId);
 
   const engagement = await getEngagementById(engagementId, hasInternalAccess(policy));
   return Response.json(engagement);
@@ -45,6 +48,8 @@ export const PATCH = withRequestContext(async (request, context) => {
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
     internalOnly: true,
   });
+
+  await assertEngagementAccess(session.user.id, engagementId);
 
   // Check for interventionPhase in raw request body to provide clear error
   const rawBody = await request.clone().json().catch(() => ({}));

@@ -2,6 +2,7 @@ import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getInterventionState, transitionPhase } from "@/services/intervention-state";
+import { assertEngagementAccess } from "@/lib/visibility";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
@@ -14,7 +15,9 @@ const transitionPhaseSchema = z.object({
 export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  await withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW });
+  const { session } = await withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW });
+
+  await assertEngagementAccess(session.user.id, engagementId);
 
   const state = await getInterventionState(engagementId);
   return Response.json(state);
@@ -27,6 +30,8 @@ export const PUT = withRequestContext(async (request, context) => {
     capability: CAPABILITIES.INTERVENTION_MANAGE,
     internalOnly: true,
   });
+
+  await assertEngagementAccess(session.user.id, engagementId);
 
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {

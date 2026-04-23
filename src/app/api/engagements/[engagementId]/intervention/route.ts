@@ -6,6 +6,7 @@ import {
   updateInterventionPhase,
   updateInterventionMode,
 } from "@/services/intervention-state";
+import { assertEngagementAccess } from "@/lib/visibility";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { z } from "zod/v4";
 import { INTERVENTION_PHASES, INTERVENTION_MODES } from "@/domain/constants/statuses";
@@ -23,7 +24,9 @@ const updateInterventionModeSchema = z.object({
 export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  await withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW });
+  const { session } = await withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW });
+
+  await assertEngagementAccess(session.user.id, engagementId);
 
   const state = await getInterventionState(engagementId);
   return Response.json(state);
@@ -36,6 +39,8 @@ export const PATCH = withRequestContext(async (request, context) => {
     capability: CAPABILITIES.INTERVENTION_MANAGE,
     internalOnly: true,
   });
+
+  await assertEngagementAccess(session.user.id, engagementId);
 
   // Parse body and determine which field is being updated
   let body;

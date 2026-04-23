@@ -5,6 +5,7 @@ import {
   assessCondition,
   getConditionHistory,
 } from "@/services/business-condition";
+import { assertEngagementAccess } from "@/lib/visibility";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
@@ -35,7 +36,9 @@ const assessConditionSchema = z.object({
 export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  await withAuth({ capability: CAPABILITIES.CONDITION_VIEW });
+  const { session } = await withAuth({ capability: CAPABILITIES.CONDITION_VIEW });
+
+  await assertEngagementAccess(session.user.id, engagementId);
 
   const history = await getConditionHistory(engagementId);
   return Response.json({ profiles: history });
@@ -48,6 +51,8 @@ export const POST = withRequestContext(async (request, context) => {
     capability: CAPABILITIES.CONDITION_ASSESS,
     internalOnly: true,
   });
+
+  await assertEngagementAccess(session.user.id, engagementId);
 
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {

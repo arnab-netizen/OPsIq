@@ -1,11 +1,14 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
 import { listFindingsForEngagement } from "@/services/findings";
+import { assertEngagementAccess } from "@/lib/visibility";
 
 export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
-  await withAuth();
+  const { session } = await withAuth();
 
-  const findings = await listFindingsForEngagement(engagementId);
+  await assertEngagementAccess(session.user.id, engagementId);
+
+  const findings = await listFindingsForEngagement(engagementId, session.user.id);
   return Response.json(findings);
 });
