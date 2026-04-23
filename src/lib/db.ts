@@ -6,16 +6,6 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): PrismaClient {
-  const databaseUrl = process.env.DATABASE_URL || "";
-
-  if (databaseUrl.startsWith("file:")) {
-    throw new Error(
-      "SQLite test database is configured but Prisma client requires an adapter. " +
-      "Please ensure the SQLite Prisma client is properly generated from schema.test.prisma"
-    );
-  }
-
-  // PostgreSQL production mode
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
   });
