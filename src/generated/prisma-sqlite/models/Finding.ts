@@ -20,8 +20,18 @@ export type FindingModel = runtime.Types.Result.DefaultSelection<Prisma.$Finding
 
 export type AggregateFinding = {
   _count: FindingCountAggregateOutputType | null
+  _avg: FindingAvgAggregateOutputType | null
+  _sum: FindingSumAggregateOutputType | null
   _min: FindingMinAggregateOutputType | null
   _max: FindingMaxAggregateOutputType | null
+}
+
+export type FindingAvgAggregateOutputType = {
+  version: number | null
+}
+
+export type FindingSumAggregateOutputType = {
+  version: number | null
 }
 
 export type FindingMinAggregateOutputType = {
@@ -34,6 +44,9 @@ export type FindingMinAggregateOutputType = {
   severity: string | null
   rootCause: string | null
   linkedEvidence: string | null
+  status: string | null
+  version: number | null
+  provisionalFlag: boolean | null
   createdBy: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -49,6 +62,9 @@ export type FindingMaxAggregateOutputType = {
   severity: string | null
   rootCause: string | null
   linkedEvidence: string | null
+  status: string | null
+  version: number | null
+  provisionalFlag: boolean | null
   createdBy: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -64,12 +80,23 @@ export type FindingCountAggregateOutputType = {
   severity: number
   rootCause: number
   linkedEvidence: number
+  status: number
+  version: number
+  provisionalFlag: number
   createdBy: number
   createdAt: number
   updatedAt: number
   _all: number
 }
 
+
+export type FindingAvgAggregateInputType = {
+  version?: true
+}
+
+export type FindingSumAggregateInputType = {
+  version?: true
+}
 
 export type FindingMinAggregateInputType = {
   id?: true
@@ -81,6 +108,9 @@ export type FindingMinAggregateInputType = {
   severity?: true
   rootCause?: true
   linkedEvidence?: true
+  status?: true
+  version?: true
+  provisionalFlag?: true
   createdBy?: true
   createdAt?: true
   updatedAt?: true
@@ -96,6 +126,9 @@ export type FindingMaxAggregateInputType = {
   severity?: true
   rootCause?: true
   linkedEvidence?: true
+  status?: true
+  version?: true
+  provisionalFlag?: true
   createdBy?: true
   createdAt?: true
   updatedAt?: true
@@ -111,6 +144,9 @@ export type FindingCountAggregateInputType = {
   severity?: true
   rootCause?: true
   linkedEvidence?: true
+  status?: true
+  version?: true
+  provisionalFlag?: true
   createdBy?: true
   createdAt?: true
   updatedAt?: true
@@ -155,6 +191,18 @@ export type FindingAggregateArgs<ExtArgs extends runtime.Types.Extensions.Intern
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: FindingAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: FindingSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: FindingMinAggregateInputType
@@ -185,6 +233,8 @@ export type FindingGroupByArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   _count?: FindingCountAggregateInputType | true
+  _avg?: FindingAvgAggregateInputType
+  _sum?: FindingSumAggregateInputType
   _min?: FindingMinAggregateInputType
   _max?: FindingMaxAggregateInputType
 }
@@ -199,10 +249,15 @@ export type FindingGroupByOutputType = {
   severity: string
   rootCause: string | null
   linkedEvidence: string | null
+  status: string
+  version: number
+  provisionalFlag: boolean
   createdBy: string | null
   createdAt: Date
   updatedAt: Date
   _count: FindingCountAggregateOutputType | null
+  _avg: FindingAvgAggregateOutputType | null
+  _sum: FindingSumAggregateOutputType | null
   _min: FindingMinAggregateOutputType | null
   _max: FindingMaxAggregateOutputType | null
 }
@@ -235,6 +290,9 @@ export type FindingWhereInput = {
   severity?: Prisma.StringFilter<"Finding"> | string
   rootCause?: Prisma.StringNullableFilter<"Finding"> | string | null
   linkedEvidence?: Prisma.StringNullableFilter<"Finding"> | string | null
+  status?: Prisma.StringFilter<"Finding"> | string
+  version?: Prisma.IntFilter<"Finding"> | number
+  provisionalFlag?: Prisma.BoolFilter<"Finding"> | boolean
   createdBy?: Prisma.StringNullableFilter<"Finding"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
@@ -253,6 +311,9 @@ export type FindingOrderByWithRelationInput = {
   severity?: Prisma.SortOrder
   rootCause?: Prisma.SortOrderInput | Prisma.SortOrder
   linkedEvidence?: Prisma.SortOrderInput | Prisma.SortOrder
+  status?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  provisionalFlag?: Prisma.SortOrder
   createdBy?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -274,6 +335,9 @@ export type FindingWhereUniqueInput = Prisma.AtLeast<{
   severity?: Prisma.StringFilter<"Finding"> | string
   rootCause?: Prisma.StringNullableFilter<"Finding"> | string | null
   linkedEvidence?: Prisma.StringNullableFilter<"Finding"> | string | null
+  status?: Prisma.StringFilter<"Finding"> | string
+  version?: Prisma.IntFilter<"Finding"> | number
+  provisionalFlag?: Prisma.BoolFilter<"Finding"> | boolean
   createdBy?: Prisma.StringNullableFilter<"Finding"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
@@ -292,12 +356,17 @@ export type FindingOrderByWithAggregationInput = {
   severity?: Prisma.SortOrder
   rootCause?: Prisma.SortOrderInput | Prisma.SortOrder
   linkedEvidence?: Prisma.SortOrderInput | Prisma.SortOrder
+  status?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  provisionalFlag?: Prisma.SortOrder
   createdBy?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.FindingCountOrderByAggregateInput
+  _avg?: Prisma.FindingAvgOrderByAggregateInput
   _max?: Prisma.FindingMaxOrderByAggregateInput
   _min?: Prisma.FindingMinOrderByAggregateInput
+  _sum?: Prisma.FindingSumOrderByAggregateInput
 }
 
 export type FindingScalarWhereWithAggregatesInput = {
@@ -313,6 +382,9 @@ export type FindingScalarWhereWithAggregatesInput = {
   severity?: Prisma.StringWithAggregatesFilter<"Finding"> | string
   rootCause?: Prisma.StringNullableWithAggregatesFilter<"Finding"> | string | null
   linkedEvidence?: Prisma.StringNullableWithAggregatesFilter<"Finding"> | string | null
+  status?: Prisma.StringWithAggregatesFilter<"Finding"> | string
+  version?: Prisma.IntWithAggregatesFilter<"Finding"> | number
+  provisionalFlag?: Prisma.BoolWithAggregatesFilter<"Finding"> | boolean
   createdBy?: Prisma.StringNullableWithAggregatesFilter<"Finding"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Finding"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Finding"> | Date | string
@@ -327,6 +399,9 @@ export type FindingCreateInput = {
   severity: string
   rootCause?: string | null
   linkedEvidence?: string | null
+  status?: string
+  version?: number
+  provisionalFlag?: boolean
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -345,6 +420,9 @@ export type FindingUncheckedCreateInput = {
   severity: string
   rootCause?: string | null
   linkedEvidence?: string | null
+  status?: string
+  version?: number
+  provisionalFlag?: boolean
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -361,6 +439,9 @@ export type FindingUpdateInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -379,6 +460,9 @@ export type FindingUncheckedUpdateInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -396,6 +480,9 @@ export type FindingCreateManyInput = {
   severity: string
   rootCause?: string | null
   linkedEvidence?: string | null
+  status?: string
+  version?: number
+  provisionalFlag?: boolean
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -410,6 +497,9 @@ export type FindingUpdateManyMutationInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -425,6 +515,9 @@ export type FindingUncheckedUpdateManyInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -455,9 +548,16 @@ export type FindingCountOrderByAggregateInput = {
   severity?: Prisma.SortOrder
   rootCause?: Prisma.SortOrder
   linkedEvidence?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  provisionalFlag?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type FindingAvgOrderByAggregateInput = {
+  version?: Prisma.SortOrder
 }
 
 export type FindingMaxOrderByAggregateInput = {
@@ -470,6 +570,9 @@ export type FindingMaxOrderByAggregateInput = {
   severity?: Prisma.SortOrder
   rootCause?: Prisma.SortOrder
   linkedEvidence?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  provisionalFlag?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -485,9 +588,16 @@ export type FindingMinOrderByAggregateInput = {
   severity?: Prisma.SortOrder
   rootCause?: Prisma.SortOrder
   linkedEvidence?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  provisionalFlag?: Prisma.SortOrder
   createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type FindingSumOrderByAggregateInput = {
+  version?: Prisma.SortOrder
 }
 
 export type FindingCreateNestedManyWithoutEngagementInput = {
@@ -573,6 +683,9 @@ export type FindingCreateWithoutEngagementInput = {
   severity: string
   rootCause?: string | null
   linkedEvidence?: string | null
+  status?: string
+  version?: number
+  provisionalFlag?: boolean
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -589,6 +702,9 @@ export type FindingUncheckedCreateWithoutEngagementInput = {
   severity: string
   rootCause?: string | null
   linkedEvidence?: string | null
+  status?: string
+  version?: number
+  provisionalFlag?: boolean
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -634,6 +750,9 @@ export type FindingScalarWhereInput = {
   severity?: Prisma.StringFilter<"Finding"> | string
   rootCause?: Prisma.StringNullableFilter<"Finding"> | string | null
   linkedEvidence?: Prisma.StringNullableFilter<"Finding"> | string | null
+  status?: Prisma.StringFilter<"Finding"> | string
+  version?: Prisma.IntFilter<"Finding"> | number
+  provisionalFlag?: Prisma.BoolFilter<"Finding"> | boolean
   createdBy?: Prisma.StringNullableFilter<"Finding"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
@@ -648,6 +767,9 @@ export type FindingCreateWithoutEvidenceInput = {
   severity: string
   rootCause?: string | null
   linkedEvidence?: string | null
+  status?: string
+  version?: number
+  provisionalFlag?: boolean
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -665,6 +787,9 @@ export type FindingUncheckedCreateWithoutEvidenceInput = {
   severity: string
   rootCause?: string | null
   linkedEvidence?: string | null
+  status?: string
+  version?: number
+  provisionalFlag?: boolean
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -696,6 +821,9 @@ export type FindingUpdateWithoutEvidenceInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -713,6 +841,9 @@ export type FindingUncheckedUpdateWithoutEvidenceInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -728,6 +859,9 @@ export type FindingCreateWithoutRecommendationsInput = {
   severity: string
   rootCause?: string | null
   linkedEvidence?: string | null
+  status?: string
+  version?: number
+  provisionalFlag?: boolean
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -745,6 +879,9 @@ export type FindingUncheckedCreateWithoutRecommendationsInput = {
   severity: string
   rootCause?: string | null
   linkedEvidence?: string | null
+  status?: string
+  version?: number
+  provisionalFlag?: boolean
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -776,6 +913,9 @@ export type FindingUpdateWithoutRecommendationsInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -793,6 +933,9 @@ export type FindingUncheckedUpdateWithoutRecommendationsInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -808,6 +951,9 @@ export type FindingCreateManyEngagementInput = {
   severity: string
   rootCause?: string | null
   linkedEvidence?: string | null
+  status?: string
+  version?: number
+  provisionalFlag?: boolean
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -822,6 +968,9 @@ export type FindingUpdateWithoutEngagementInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -838,6 +987,9 @@ export type FindingUncheckedUpdateWithoutEngagementInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -854,6 +1006,9 @@ export type FindingUncheckedUpdateManyWithoutEngagementInput = {
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  provisionalFlag?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -909,6 +1064,9 @@ export type FindingSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   severity?: boolean
   rootCause?: boolean
   linkedEvidence?: boolean
+  status?: boolean
+  version?: boolean
+  provisionalFlag?: boolean
   createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -928,6 +1086,9 @@ export type FindingSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   severity?: boolean
   rootCause?: boolean
   linkedEvidence?: boolean
+  status?: boolean
+  version?: boolean
+  provisionalFlag?: boolean
   createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -944,6 +1105,9 @@ export type FindingSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   severity?: boolean
   rootCause?: boolean
   linkedEvidence?: boolean
+  status?: boolean
+  version?: boolean
+  provisionalFlag?: boolean
   createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -960,12 +1124,15 @@ export type FindingSelectScalar = {
   severity?: boolean
   rootCause?: boolean
   linkedEvidence?: boolean
+  status?: boolean
+  version?: boolean
+  provisionalFlag?: boolean
   createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type FindingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "title" | "description" | "findingType" | "impactArea" | "severity" | "rootCause" | "linkedEvidence" | "createdBy" | "createdAt" | "updatedAt", ExtArgs["result"]["finding"]>
+export type FindingOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "title" | "description" | "findingType" | "impactArea" | "severity" | "rootCause" | "linkedEvidence" | "status" | "version" | "provisionalFlag" | "createdBy" | "createdAt" | "updatedAt", ExtArgs["result"]["finding"]>
 export type FindingInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
   recommendations?: boolean | Prisma.Finding$recommendationsArgs<ExtArgs>
@@ -996,6 +1163,9 @@ export type $FindingPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     severity: string
     rootCause: string | null
     linkedEvidence: string | null
+    status: string
+    version: number
+    provisionalFlag: boolean
     createdBy: string | null
     createdAt: Date
     updatedAt: Date
@@ -1434,6 +1604,9 @@ export interface FindingFieldRefs {
   readonly severity: Prisma.FieldRef<"Finding", 'String'>
   readonly rootCause: Prisma.FieldRef<"Finding", 'String'>
   readonly linkedEvidence: Prisma.FieldRef<"Finding", 'String'>
+  readonly status: Prisma.FieldRef<"Finding", 'String'>
+  readonly version: Prisma.FieldRef<"Finding", 'Int'>
+  readonly provisionalFlag: Prisma.FieldRef<"Finding", 'Boolean'>
   readonly createdBy: Prisma.FieldRef<"Finding", 'String'>
   readonly createdAt: Prisma.FieldRef<"Finding", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Finding", 'DateTime'>

@@ -18,11 +18,18 @@ import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
 
 export interface CreateEvidenceInput {
   engagementId: string;
-  title: string;
+  title?: string;
   description?: string;
-  evidenceType: "document" | "interview" | "metric" | "observation";
+  evidenceType?: "document" | "interview" | "metric" | "observation";
   sourceReference?: string;
   severity?: "low" | "medium" | "high" | "critical";
+  // Alternative field names for compatibility
+  category?: string;
+  type?: string;
+  sourceType?: string;
+  sourceLabel?: string;
+  captureMethod?: string;
+  capturedAt?: string;
 }
 
 export interface UpdateEvidenceInput {
@@ -48,15 +55,21 @@ export async function createEvidence(
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
+  // Handle alternative field names
+  const title = input.title || input.sourceLabel || "Evidence";
+  const evidenceType = input.evidenceType || input.type || "document";
+  const sourceReference = input.sourceReference || input.sourceType || null;
+  const severity = input.severity || "medium";
+
   // Validate evidence type
   const validTypes = ["document", "interview", "metric", "observation"];
-  if (!validTypes.includes(input.evidenceType)) {
+  if (!validTypes.includes(evidenceType)) {
     throw new ValidationError(
-      `Invalid evidence type: ${input.evidenceType}. Must be one of: ${validTypes.join(", ")}`
+      `Invalid evidence type: ${evidenceType}. Must be one of: ${validTypes.join(", ")}`
     );
   }
 
-  const idempotencyKey = `evidence-create:${input.engagementId}:${input.title}:${actorId}`;
+  const idempotencyKey = `evidence-create:${input.engagementId}:${title}:${actorId}`;
 
   const result = await withIdempotency(
     idempotencyKey,
@@ -65,11 +78,11 @@ export async function createEvidence(
       const evidence = await db.evidence.create({
         data: {
           engagementId: input.engagementId,
-          title: input.title,
+          title: title,
           description: input.description ?? null,
-          evidenceType: input.evidenceType,
-          sourceReference: input.sourceReference ?? null,
-          severity: input.severity ?? null,
+          evidenceType: evidenceType,
+          sourceReference: sourceReference,
+          severity: severity,
           submittedBy: actorId,
           status: "submitted",
         },
@@ -85,8 +98,8 @@ export async function createEvidence(
     entityId: result.result.id,
     payload: {
       engagementId: input.engagementId,
-      evidenceType: input.evidenceType,
-      title: input.title,
+      evidenceType: evidenceType,
+      title: title,
     },
     visibility: "internal",
   });
@@ -97,8 +110,8 @@ export async function createEvidence(
     entityType: "evidence",
     entityId: result.result.id,
     engagementId: input.engagementId,
-    severity: input.severity ?? "medium",
-    description: `Evidence submitted: ${input.title}`,
+    severity: severity as "low" | "medium" | "high" | "critical",
+    description: `Evidence submitted: ${title}`,
     triggeredBy: actorId,
   });
 

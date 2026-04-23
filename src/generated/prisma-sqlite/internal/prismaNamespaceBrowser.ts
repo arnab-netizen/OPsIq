@@ -325,6 +325,9 @@ export const FindingScalarFieldEnum = {
   severity: 'severity',
   rootCause: 'rootCause',
   linkedEvidence: 'linkedEvidence',
+  status: 'status',
+  version: 'version',
+  provisionalFlag: 'provisionalFlag',
   createdBy: 'createdBy',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
