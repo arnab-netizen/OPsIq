@@ -77,7 +77,7 @@ export async function createAction(
       idempotencyKey,
       "action.create",
       async () => {
-        return await db.$transaction(async (tx) => {
+        return await db.$transaction(async (tx: any) => {
           const action = await tx.action.create({
             data: {
               engagementId: input.engagementId,

@@ -91,7 +91,7 @@ export async function createFinding(
   };
   const findingType = findingTypeMap[input.impactArea] || "technical";
 
-  const finding = await db.$transaction(async (tx) => {
+  const finding = await db.$transaction(async (tx: any) => {
     const newFinding = await tx.finding.create({
       data: {
         engagementId: input.engagementId,
@@ -356,7 +356,7 @@ export async function linkEvidenceToFinding(
     throw new ValidationError("Evidence is already linked to this finding");
   }
 
-  const updated = await db.$transaction(async (tx) => {
+  const updated = await db.$transaction(async (tx: any) => {
     const updatedFinding = await tx.finding.update({
       where: { id: findingId },
       data: {
@@ -416,11 +416,11 @@ export async function unlinkEvidenceFromFinding(
     throw new ValidationError("Evidence is not linked to this finding");
   }
 
-  const updated = await db.$transaction(async (tx) => {
+  const updated = await db.$transaction(async (tx: any) => {
     const updatedFinding = await tx.finding.update({
       where: { id: findingId },
       data: {
-        linkedEvidence: finding.linkedEvidence.filter((id) => id !== evidenceId),
+        linkedEvidence: finding.linkedEvidence.filter((id: any) => id !== evidenceId),
       },
       select: { id: true, linkedEvidence: true },
     });

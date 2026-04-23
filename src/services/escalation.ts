@@ -33,7 +33,7 @@ export async function detectHighPriorityOverdueActions(
       engagementId,
       severity: "critical",
       description: `${criticalOverdueActions.length} critical action(s) overdue`,
-      relatedEntityIds: criticalOverdueActions.map((a) => a.id),
+      relatedEntityIds: criticalOverdueActions.map((a: any) => a.id),
     };
 
     await emitAuditEvent({
@@ -45,7 +45,7 @@ export async function detectHighPriorityOverdueActions(
         engagementId,
         actionCount: criticalOverdueActions.length,
         actionIds: alert.relatedEntityIds,
-        actionTitles: criticalOverdueActions.map((a) => a.title),
+        actionTitles: criticalOverdueActions.map((a: any) => a.title),
       },
       visibility: "internal",
     });

@@ -219,7 +219,7 @@ export async function createRecommendation(
       idempotencyKey,
       "recommendation.create",
       async () => {
-        return await db.$transaction(async (tx) => {
+        return await db.$transaction(async (tx: any) => {
           let derivedPriority = input.priority;
           let scoreValue: number | null = null;
           let scoreBreakdown: ScoreBreakdown | null = null;

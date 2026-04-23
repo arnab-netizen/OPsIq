@@ -92,7 +92,7 @@ export async function getPolicyContext(): Promise<PolicyContext | null> {
       scope: ra.scope,
       scopeId: ra.scopeId,
     })),
-    engagementMemberships: engagementMemberships.map((em) => ({
+    engagementMemberships: engagementMemberships.map((em: any) => ({
       engagementId: em.engagementId,
       role: em.role as RoleName,
     })),

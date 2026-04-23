@@ -89,7 +89,7 @@ describe("Phase 9: Operator Interface Components", () => {
         { id: "a-3", status: "blocked" },
       ];
 
-      const blocked = actions.filter((a) => a.status === "blocked");
+      const blocked = actions.filter((a: any) => a.status === "blocked");
       expect(blocked).toHaveLength(2);
     });
 
@@ -218,7 +218,7 @@ describe("Phase 9: Operator Interface Components", () => {
         { id: "f-3", severity: "critical" },
       ];
 
-      const critical = findings.filter((f) => f.severity === "critical");
+      const critical = findings.filter((f: any) => f.severity === "critical");
       expect(critical).toHaveLength(2);
     });
 
@@ -260,7 +260,7 @@ describe("Phase 9: Operator Interface Components", () => {
         },
       ];
 
-      const alerts = mockEvents.filter((e) =>
+      const alerts = mockEvents.filter((e: any) =>
         e.eventName.startsWith("escalation.")
       );
       expect(alerts).toHaveLength(2);

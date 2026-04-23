@@ -131,7 +131,7 @@ export async function queryAuditEvents(
   ]);
 
   return {
-    events: events.map((e) => ({
+    events: events.map((e: any) => ({
       id: e.id,
       eventName: e.eventName,
       actorId: e.actorId,

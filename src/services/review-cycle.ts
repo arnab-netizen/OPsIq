@@ -63,7 +63,7 @@ export async function generateReviewCycle(
       kpiProgressions.push({ isOnTrack: progress.isOnTrack });
     }
 
-    const onTrack = kpiProgressions.filter((p) => p.isOnTrack).length;
+    const onTrack = kpiProgressions.filter((p: any) => p.isOnTrack).length;
     kpiProgressSummary = `${onTrack}/${kpis.length} KPIs on track`;
   } else {
     kpiProgressSummary = "No KPIs defined";
@@ -76,10 +76,10 @@ export async function generateReviewCycle(
   });
 
   const actionStatus = {
-    completed: actions.filter((a) => a.status === "done").length,
-    open: actions.filter((a) => a.status === "open").length,
-    inProgress: actions.filter((a) => a.status === "in_progress").length,
-    blocked: actions.filter((a) => a.status === "blocked").length,
+    completed: actions.filter((a: any) => a.status === "done").length,
+    open: actions.filter((a: any) => a.status === "open").length,
+    inProgress: actions.filter((a: any) => a.status === "in_progress").length,
+    blocked: actions.filter((a: any) => a.status === "blocked").length,
   };
 
   const completedActionsCount = actionStatus.completed;
@@ -100,7 +100,7 @@ export async function generateReviewCycle(
   // Assess current state (simplified without previous cycle history)
   if (kpiProgressions.length > 0) {
     const onTrackPercent =
-      (kpiProgressions.filter((p) => p.isOnTrack).length /
+      (kpiProgressions.filter((p: any) => p.isOnTrack).length /
         kpiProgressions.length) *
       100;
     if (onTrackPercent >= 75) {
@@ -227,10 +227,10 @@ export async function getReviewCycleStats(
   });
 
   const actionStatus = {
-    completed: actions.filter((a) => a.status === "done").length,
-    open: actions.filter((a) => a.status === "open").length,
-    inProgress: actions.filter((a) => a.status === "in_progress").length,
-    blocked: actions.filter((a) => a.status === "blocked").length,
+    completed: actions.filter((a: any) => a.status === "done").length,
+    open: actions.filter((a: any) => a.status === "open").length,
+    inProgress: actions.filter((a: any) => a.status === "in_progress").length,
+    blocked: actions.filter((a: any) => a.status === "blocked").length,
   };
 
   // Get finding stats (status not tracked in schema, so count all as unresolved)
