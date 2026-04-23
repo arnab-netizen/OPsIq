@@ -39,6 +39,36 @@ export interface RecommendationScoringInput {
 
 export type RecommendationClass = "containment" | "stabilization" | "growth";
 
+export interface ScoreBreakdown {
+  class?: RecommendationClass;
+  weights: ScoringWeights;
+  normalizedInputs: {
+    impact: number;
+    urgency: number;
+    confidence: number;
+    riskReduction: number;
+    strategicAlignment: number;
+    effort: number;
+    cost: number;
+    timeToImpact: number;
+    reversibility: number;
+    dependency: number;
+  };
+  contributions: {
+    impact: number;
+    urgency: number;
+    confidence: number;
+    riskReduction: number;
+    strategicAlignment: number;
+    effort: number;
+    cost: number;
+    timeToImpact: number;
+    reversibility: number;
+    dependency: number;
+  };
+  finalScore: number;
+}
+
 function normalizeValue(value: number, min: number, max: number): number {
   if (value < min) return 0;
   if (value > max) return 1;
@@ -116,10 +146,10 @@ function getWeightsByClass(recommendationClass?: RecommendationClass): ScoringWe
   return weights;
 }
 
-export function calculateRecommendationScore(
+export function calculateRecommendationScoreBreakdown(
   input: RecommendationScoringInput,
   recommendationClass?: RecommendationClass
-): number {
+): ScoreBreakdown {
   const normalized = {
     impact: normalizeValue(input.impact, 1, 5),
     urgency: normalizeValue(input.urgency, 1, 5),
@@ -135,19 +165,36 @@ export function calculateRecommendationScore(
 
   const weights = getWeightsByClass(recommendationClass);
 
-  const score =
-    normalized.impact * weights.impact +
-    normalized.urgency * weights.urgency +
-    normalized.confidence * weights.confidence +
-    normalized.riskReduction * weights.riskReduction +
-    normalized.strategicAlignment * weights.strategicAlignment +
-    (1 - normalized.effort) * weights.effort +
-    (1 - normalized.cost) * weights.cost +
-    (1 - normalized.timeToImpact) * weights.timeToImpact +
-    normalized.reversibility * weights.reversibility +
-    (1 - normalized.dependency) * weights.dependency;
+  const contributions = {
+    impact: normalized.impact * weights.impact,
+    urgency: normalized.urgency * weights.urgency,
+    confidence: normalized.confidence * weights.confidence,
+    riskReduction: normalized.riskReduction * weights.riskReduction,
+    strategicAlignment: normalized.strategicAlignment * weights.strategicAlignment,
+    effort: (1 - normalized.effort) * weights.effort,
+    cost: (1 - normalized.cost) * weights.cost,
+    timeToImpact: (1 - normalized.timeToImpact) * weights.timeToImpact,
+    reversibility: normalized.reversibility * weights.reversibility,
+    dependency: (1 - normalized.dependency) * weights.dependency,
+  };
 
-  return Math.min(Math.max(score, 0), 1);
+  const finalScore = Math.min(Math.max(Object.values(contributions).reduce((a, b) => a + b, 0), 0), 1);
+
+  return {
+    class: recommendationClass,
+    weights,
+    normalizedInputs: normalized,
+    contributions,
+    finalScore,
+  };
+}
+
+export function calculateRecommendationScore(
+  input: RecommendationScoringInput,
+  recommendationClass?: RecommendationClass
+): number {
+  const breakdown = calculateRecommendationScoreBreakdown(input, recommendationClass);
+  return breakdown.finalScore;
 }
 
 export function mapScoreToPriority(score: number): string {
@@ -167,9 +214,11 @@ export async function createRecommendation(
 
   let derivedPriority = input.priority;
   let scoreValue: number | null = null;
+  let scoreBreakdown: ScoreBreakdown | null = null;
 
   if (input.scoringInput) {
-    scoreValue = calculateRecommendationScore(input.scoringInput, input.class);
+    scoreBreakdown = calculateRecommendationScoreBreakdown(input.scoringInput, input.class);
+    scoreValue = scoreBreakdown.finalScore;
     derivedPriority = mapScoreToPriority(scoreValue);
   }
 
@@ -186,6 +235,7 @@ export async function createRecommendation(
       recommendedBy: actorId,
       score: scoreValue,
       scoringMetrics: input.scoringInput ? JSON.stringify(input.scoringInput) : null,
+      scoreBreakdown: scoreBreakdown ? JSON.stringify(scoreBreakdown) : null,
     },
   });
 
@@ -364,10 +414,11 @@ export async function reRankRecommendationsInEngagement(
         ? JSON.parse(rec.scoringMetrics)
         : rec.scoringMetrics;
 
-      const newScore = calculateRecommendationScore(
+      const breakdown = calculateRecommendationScoreBreakdown(
         metrics as RecommendationScoringInput,
         rec.class as RecommendationClass | undefined
       );
+      const newScore = breakdown.finalScore;
       const newPriority = mapScoreToPriority(newScore);
 
       if (newPriority !== rec.priority) {
@@ -376,6 +427,7 @@ export async function reRankRecommendationsInEngagement(
           data: {
             priority: newPriority,
             score: newScore,
+            scoreBreakdown: JSON.stringify(breakdown),
             version: { increment: 1 },
           },
         });
