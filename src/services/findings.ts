@@ -225,20 +225,13 @@ export async function validateFinding(
     throw new ValidationError("Finding must have at least one linked evidence before validation");
   }
 
-  const updated = await db.finding.findUnique({
-    where: { id: findingId },
-    select: { id: true, engagementId: true },
-  });
-
-  if (!updated) throw new NotFoundError("Finding", findingId);
-
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_VALIDATED,
     actorId,
     entityType: "Finding",
     entityId: findingId,
     payload: {
-      engagementId: updated.engagementId,
+      engagementId: existing.engagementId,
     },
     visibility: "internal",
   });
@@ -254,7 +247,7 @@ export async function validateFinding(
     triggeredBy: actorId,
   });
 
-  return { id: updated.id };
+  return { id: existing.id };
 }
 
 export async function disputeFinding(
