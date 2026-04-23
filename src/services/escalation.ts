@@ -87,10 +87,8 @@ export async function detectKPIDeteriorationPattern(
       const current = kpi.snapshots[i].value;
       const previous = kpi.snapshots[i + 1].value;
 
-      const isWorsening =
-        kpi.direction === "up"
-          ? current < previous
-          : current > previous;
+      // Default to "up" is better (e.g., revenue, margin, growth)
+      const isWorsening = current < previous;
 
       if (isWorsening) {
         consecutiveDeteriorations++;

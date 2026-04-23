@@ -5,9 +5,9 @@ import type { RiskSeverity } from "@/domain/constants/statuses";
 export interface ShockDetectionInput {
   engagementId: string;
   evidenceItems?: Array<{
-    category: string;
-    validationStatus: string;
-    severity?: string;
+    evidenceType: string;
+    status: string;
+    severity?: string | null;
   }>;
   conditionProfile?: {
     severityScore: number;
@@ -100,14 +100,14 @@ export async function detectShockState(
   // Evaluate critical evidence items
   if (input.evidenceItems && input.evidenceItems.length > 0) {
     const criticalEvidence = input.evidenceItems.filter(
-      (e) => e.validationStatus === "validated" && e.severity === "critical"
+      (e) => e.status === "submitted" && e.severity === "critical"
     );
 
     const highRiskEvidence = input.evidenceItems.filter(
       (e) =>
-        e.validationStatus === "validated" &&
+        e.status === "submitted" &&
         (e.severity === "high" ||
-          ["financial", "operational", "leadership"].includes(e.category))
+          ["document", "interview", "metric", "observation"].includes(e.evidenceType))
     );
 
     if (criticalEvidence.length >= 2) {
@@ -182,13 +182,13 @@ export async function detectShockFromCurrentState(
         },
         take: 1,
       },
-      evidenceItems: {
+      evidence: {
         where: {
-          validationStatus: { in: ["validated", "validated"] },
+          status: { in: ["submitted", "submitted"] },
         },
         select: {
-          category: true,
-          validationStatus: true,
+          evidenceType: true,
+          status: true,
         },
       },
     },
@@ -206,6 +206,6 @@ export async function detectShockFromCurrentState(
   return detectShockState({
     engagementId,
     conditionProfile: engagement.conditionProfiles[0],
-    evidenceItems: engagement.evidenceItems,
+    evidenceItems: engagement.evidence,
   });
 }

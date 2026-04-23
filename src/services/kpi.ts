@@ -10,11 +10,8 @@ import { withIdempotency } from "@/infra/idempotency";
 export interface CreateKPIInput {
   engagementId: string;
   name: string;
-  baseline?: number;
-  targetValue?: number;
-  unit?: string;
-  direction?: string;
-  notes?: string;
+  description?: string;
+  target?: number;
 }
 
 export interface UpdateKPIInput {
@@ -43,11 +40,9 @@ export async function createKPI(
             data: {
               engagementId: input.engagementId,
               name: input.name,
-              baseline: input.baseline ?? null,
-              targetValue: input.targetValue ?? null,
-              unit: input.unit ?? null,
-              direction: input.direction ?? "up",
-              notes: input.notes ?? null,
+              description: input.description || null,
+              target: input.target || null,
+              createdBy: actorId,
             },
           });
 
@@ -76,16 +71,6 @@ export async function createKPI(
         engagementId: input.engagementId,
       });
     } else {
-      await triggerReEvaluation({
-        changeType: "kpi",
-        entityType: "kpi",
-        entityId: result.result.id,
-        engagementId: input.engagementId,
-        severity: "medium",
-        description: `KPI defined: ${input.name}`,
-        triggeredBy: actorId,
-      });
-
       logger.info("KPI created", {
         kpiId: result.result.id,
         engagementId: input.engagementId,
@@ -99,11 +84,9 @@ export async function createKPI(
     data: {
       engagementId: input.engagementId,
       name: input.name,
-      baseline: input.baseline ?? null,
-      targetValue: input.targetValue ?? null,
-      unit: input.unit ?? null,
-      direction: input.direction ?? "up",
-      notes: input.notes ?? null,
+      description: input.description || null,
+      target: input.target || null,
+      createdBy: actorId,
     },
   });
 
@@ -117,17 +100,6 @@ export async function createKPI(
       name: input.name,
     },
     visibility: "internal",
-  });
-
-  // Trigger re-evaluation due to new KPI
-  await triggerReEvaluation({
-    changeType: "kpi",
-    entityType: "kpi",
-    entityId: kpi.id,
-    engagementId: input.engagementId,
-    severity: "medium",
-    description: `KPI defined: ${input.name}`,
-    triggeredBy: actorId,
   });
 
   logger.info("KPI created", {
@@ -169,7 +141,7 @@ export async function updateKPIValue(
   if (kpi.version !== input.version) {
     throw new ConflictError(
       "KPI has been modified by another process. Current version: " + kpi.version,
-      "STALE_VERSION"
+      { code: "STALE_VERSION" }
     );
   }
 
@@ -194,7 +166,7 @@ export async function updateKPIValue(
           if (updateResult.count === 0) {
             throw new ConflictError(
               "KPI has been modified by another process",
-              "OPTIMISTIC_LOCK_FAILED"
+              { code: "OPTIMISTIC_LOCK_FAILED" }
             );
           }
 
@@ -217,7 +189,7 @@ export async function updateKPIValue(
           const previousValue = kpi.snapshots[0]?.value;
           let deteriorated = false;
 
-          if (previousValue !== undefined && newValue !== undefined) {
+          if (previousValue != null && newValue != null) {
             const isWorsening = kpi.direction === "up" ? newValue < previousValue : newValue > previousValue;
             if (isWorsening) {
               deteriorated = true;
@@ -259,16 +231,6 @@ export async function updateKPIValue(
       logger.info("KPI record - idempotency replay", {
         kpiId: result.result.id,
       });
-    } else {
-      await triggerReEvaluation({
-        changeType: "kpi",
-        entityType: "kpi",
-        entityId: kpiId,
-        engagementId: result.result.engagementId,
-        severity: "medium",
-        description: `KPI snapshot recorded: ${result.result.name}`,
-        triggeredBy: actorId,
-      });
     }
 
     return result.result;
@@ -290,7 +252,7 @@ export async function updateKPIValue(
   if (updateResult.count === 0) {
     throw new ConflictError(
       "KPI has been modified by another process",
-      "OPTIMISTIC_LOCK_FAILED"
+      { code: "OPTIMISTIC_LOCK_FAILED" }
     );
   }
 
@@ -313,7 +275,7 @@ export async function updateKPIValue(
   const previousValue = kpi.snapshots[0]?.value;
   let deteriorated = false;
 
-  if (previousValue !== undefined && newValue !== undefined) {
+  if (previousValue != null && newValue != null) {
     const isWorsening = kpi.direction === "up" ? newValue < previousValue : newValue > previousValue;
     if (isWorsening) {
       deteriorated = true;
@@ -342,17 +304,6 @@ export async function updateKPIValue(
       deteriorated,
     },
     visibility: "internal",
-  });
-
-  // Trigger re-evaluation due to KPI value change
-  await triggerReEvaluation({
-    changeType: "kpi",
-    entityType: "kpi",
-    entityId: kpiId,
-    engagementId: updated.engagementId,
-    severity: "medium",
-    description: `KPI snapshot recorded: ${updated.name}`,
-    triggeredBy: actorId,
   });
 
   return updated;

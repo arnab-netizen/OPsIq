@@ -91,7 +91,7 @@ export async function deactivateContact(
   });
 
   await emitAuditEvent({
-    eventName: "contact.deactivated",
+    eventName: AUDIT_EVENTS.CLIENT_CONTACT_DEACTIVATED,
     actorId,
     entityType: "client_contact",
     entityId: contactId,

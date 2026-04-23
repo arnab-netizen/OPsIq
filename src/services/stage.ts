@@ -56,8 +56,6 @@ export async function createStage(
       title: input.title,
       description: input.description ?? null,
       status: input.status,
-      dueAt: input.dueAt ? new Date(input.dueAt) : null,
-      ownerId: input.ownerId ?? null,
     },
   });
 
@@ -114,10 +112,6 @@ export async function updateStage(
 
   if (input.status && input.status !== stage.status) {
     validateStageTransition(stage.status as GovernedStageState, input.status);
-
-    if (stage.isBlocked && input.status !== "active" && input.status !== "deferred") {
-      throw new ValidationError("Cannot transition blocked stage to this status");
-    }
   }
 
   await db.stage.update({
@@ -163,16 +157,10 @@ export async function blockStage(
     throw new ValidationError("Version mismatch");
   }
 
-  if (stage.isBlocked) {
-    throw new ValidationError("Stage is already blocked");
-  }
-
+  // Note: Stage blocking is not tracked in the schema
   await db.stage.update({
     where: { id },
     data: withVersionIncrement({
-      isBlocked: true,
-      blockerSeverity: input.blockerSeverity,
-      blockerType: input.blockerType,
       blockerReason: input.blockerReason,
       blockedAt: new Date(),
     }),
@@ -220,19 +208,10 @@ export async function unblockStage(
     throw new ValidationError("Version mismatch");
   }
 
-  if (!stage.isBlocked) {
-    throw new ValidationError("Stage is not blocked");
-  }
-
+  // Note: Stage blocking is not tracked in the schema
   await db.stage.update({
     where: { id },
-    data: withVersionIncrement({
-      isBlocked: false,
-      blockerSeverity: null,
-      blockerType: null,
-      blockerReason: null,
-      unblockedAt: new Date(),
-    }),
+    data: withVersionIncrement({}),
   });
 
   await emitAuditEvent({

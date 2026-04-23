@@ -72,12 +72,12 @@ export interface AuditQueryFilter {
 export interface AuditEventResponse {
   id: string;
   eventName: string;
-  actorId: string;
-  entityType: string;
-  entityId: string;
+  actorId: string | null;
+  entityType: string | null;
+  entityId: string | null;
   payload: Record<string, unknown>;
   correlationId?: string;
-  createdAt: string;
+  occurredAt: string;
 }
 
 export async function queryAuditEvents(
@@ -113,7 +113,7 @@ export async function queryAuditEvents(
   const [events, total] = await Promise.all([
     db.auditEvent.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: { occurredAt: "desc" },
       take: limit,
       skip: offset,
       select: {
@@ -124,7 +124,7 @@ export async function queryAuditEvents(
         entityId: true,
         payload: true,
         correlationId: true,
-        createdAt: true,
+        occurredAt: true,
       },
     }),
     db.auditEvent.count({ where }),
@@ -139,7 +139,7 @@ export async function queryAuditEvents(
       entityId: e.entityId,
       payload: typeof e.payload === "string" ? JSON.parse(e.payload) : e.payload,
       correlationId: e.correlationId || undefined,
-      createdAt: e.createdAt.toISOString(),
+      occurredAt: e.occurredAt.toISOString(),
     })),
     total,
   };

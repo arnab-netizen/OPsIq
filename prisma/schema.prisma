@@ -178,6 +178,7 @@ model Engagement {
   status                String    @default("draft") // governed by ENGAGEMENT_STATUSES
   healthStatus          String    @default("healthy") @map("health_status") // "healthy" | "at_risk" | "critical" | "unknown"
   interventionMode      String    @default("recovery") @map("intervention_mode") // governed by INTERVENTION_MODES
+  interventionPhase     String    @default("triage") @map("intervention_phase") // governed by INTERVENTION_PHASES
   description           String?
   startDate             DateTime? @map("start_date")
   targetEndDate         DateTime? @map("target_end_date")
@@ -202,6 +203,7 @@ model Engagement {
   findings              Finding[]
   recommendations       Recommendation[]
   evidence              Evidence[]
+  evidenceBundles       EvidenceBundle[]
   actions               Action[]
   kpis                  KPI[]
   deliverables          Deliverable[]
@@ -270,15 +272,52 @@ model Evidence {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  engagement   Engagement @relation(fields: [engagementId], references: [id])
-  finding      Finding?   @relation(fields: [relatedFindingId], references: [id])
-  submitter    User?      @relation("SubmittedEvidence", fields: [submittedBy], references: [id])
-  validator    User?      @relation("ValidatedEvidence", fields: [validatedBy], references: [id])
+  engagement   Engagement           @relation(fields: [engagementId], references: [id])
+  finding      Finding?             @relation(fields: [relatedFindingId], references: [id])
+  submitter    User?                @relation("SubmittedEvidence", fields: [submittedBy], references: [id])
+  validator    User?                @relation("ValidatedEvidence", fields: [validatedBy], references: [id])
+  bundleItems  EvidenceBundleItem[]
 
   @@index([engagementId])
   @@index([status])
   @@index([relatedFindingId])
   @@map("evidence")
+}
+
+model EvidenceBundle {
+  id           String    @id @default(uuid()) @db.Uuid
+  engagementId String    @map("engagement_id") @db.Uuid
+  title        String
+  description  String?
+  status       String    @default("active")
+  createdBy    String?   @map("created_by") @db.Uuid
+  version      Int       @default(1)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement              @relation(fields: [engagementId], references: [id])
+  items      EvidenceBundleItem[]
+
+  @@index([engagementId])
+  @@index([status])
+  @@map("evidence_bundles")
+}
+
+model EvidenceBundleItem {
+  id            String    @id @default(uuid()) @db.Uuid
+  bundleId      String    @map("bundle_id") @db.Uuid
+  evidenceId    String    @map("evidence_item_id") @db.Uuid
+  addedBy       String?   @map("added_by") @db.Uuid
+  addedAt       DateTime  @default(now()) @map("added_at")
+  removedAt     DateTime? @map("removed_at")
+
+  bundle   EvidenceBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  evidence Evidence       @relation(fields: [evidenceId], references: [id])
+
+  @@unique([bundleId, evidenceId])
+  @@index([bundleId])
+  @@index([evidenceId])
+  @@map("evidence_bundle_items")
 }
 
 model Finding {
@@ -307,7 +346,7 @@ model Finding {
 model Recommendation {
   id              String    @id @default(uuid()) @db.Uuid
   engagementId    String    @map("engagement_id") @db.Uuid
-  findingId       String    @map("finding_id") @db.Uuid
+  findingId       String?   @map("finding_id") @db.Uuid
   title           String
   description     String?
   rationale       String?
@@ -322,7 +361,7 @@ model Recommendation {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   engagement Engagement @relation(fields: [engagementId], references: [id])
-  finding    Finding    @relation(fields: [findingId], references: [id])
+  finding    Finding?   @relation(fields: [findingId], references: [id])
   approver   User?      @relation(fields: [approvedBy], references: [id])
   actions    Action[]
 
@@ -463,6 +502,10 @@ model KPI {
   name              String
   description       String?
   target            Float?
+  currentValue      Float?    @map("current_value")
+  measurementDate   DateTime? @map("measurement_date")
+  direction         String    @default("up") // "up" or "down"
+  version           Int       @default(1)
   createdBy         String?   @map("created_by") @db.Uuid
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")

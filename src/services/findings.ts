@@ -16,29 +16,32 @@ import type {
 export interface CreateFindingInput {
   engagementId: string;
   stageId?: string;
+  primaryEvidenceId: string;
   title: string;
-  statement: string;
-  severity: RiskSeverity;
-  confidenceLabel: ConfidenceLabel;
-  provisionalFlag?: boolean;
-  clientVisibilityStatus?: VisibilityLevel;
+  summary: string;
+  severity: string;
+  impactArea: string;
+  confidenceScore?: number;
+  hypothesis?: string;
+  rootCause?: string;
+  consequence?: string;
+  ownerId?: string;
+  dueAt?: string;
 }
 
 export interface UpdateFindingInput {
   title?: string;
-  statement?: string;
-  severity?: RiskSeverity;
-  status?: FindingStatus;
-  confidenceLabel?: ConfidenceLabel;
-  provisionalFlag?: boolean;
-  clientVisibilityStatus?: VisibilityLevel;
+  summary?: string;
+  severity?: string;
+  impactArea?: string;
+  rootCause?: string;
   version: number;
 }
 
 export interface LinkEvidenceToFindingInput {
   findingId: string;
   evidenceItemId: string;
-  linkType?: FindingEvidenceLinkType;
+  linkType?: string;
 }
 
 export async function createFinding(
@@ -53,45 +56,52 @@ export async function createFinding(
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
   // Validate severity
-  if (!RISK_SEVERITIES.includes(input.severity)) {
+  const validSeverities = ["low", "medium", "high", "critical"];
+  if (!validSeverities.includes(input.severity)) {
     throw new ValidationError(
-      `Invalid severity: ${input.severity}. Must be one of: ${RISK_SEVERITIES.join(", ")}`
+      `Invalid severity: ${input.severity}. Must be one of: ${validSeverities.join(", ")}`
     );
   }
 
-  // Validate confidence label
-  if (!CONFIDENCE_LABELS.includes(input.confidenceLabel)) {
-    throw new ValidationError(
-      `Invalid confidence label: ${input.confidenceLabel}. Must be one of: ${CONFIDENCE_LABELS.join(", ")}`
-    );
-  }
-
-  // Validate title and statement not empty
+  // Validate title and summary not empty
   if (!input.title || input.title.trim().length === 0) {
     throw new ValidationError("title is required");
   }
-  if (!input.statement || input.statement.trim().length === 0) {
-    throw new ValidationError("statement is required");
+  if (!input.summary || input.summary.trim().length === 0) {
+    throw new ValidationError("summary is required");
   }
 
-  const visibility = input.clientVisibilityStatus || "internal";
-  if (!VISIBILITY_LEVELS.includes(visibility)) {
+  // Validate impactArea
+  const validImpacts = ["revenue", "cost", "execution", "risk"];
+  if (!validImpacts.includes(input.impactArea)) {
     throw new ValidationError(
-      `Invalid visibility: ${visibility}. Must be one of: ${VISIBILITY_LEVELS.join(", ")}`
+      `Invalid impact area: ${input.impactArea}. Must be one of: ${validImpacts.join(", ")}`
     );
   }
+
+  // Build linkedEvidence array
+  const linkedEvidence = input.primaryEvidenceId ? [input.primaryEvidenceId] : [];
+
+  // Infer finding type from impact area
+  const findingTypeMap: Record<string, string> = {
+    revenue: "market",
+    cost: "operational",
+    execution: "operational",
+    risk: "technical",
+  };
+  const findingType = findingTypeMap[input.impactArea] || "technical";
 
   const finding = await db.$transaction(async (tx) => {
     const newFinding = await tx.finding.create({
       data: {
         engagementId: input.engagementId,
-        stageId: input.stageId,
         title: input.title,
-        statement: input.statement,
+        description: input.summary,
+        findingType: findingType,
+        impactArea: input.impactArea,
         severity: input.severity,
-        confidenceLabel: input.confidenceLabel,
-        provisionalFlag: input.provisionalFlag ?? false,
-        clientVisibilityStatus: visibility,
+        rootCause: input.rootCause || null,
+        linkedEvidence: linkedEvidence,
         createdBy: actorId,
       },
       select: { id: true, engagementId: true },
@@ -115,7 +125,7 @@ export async function createFinding(
       entityType: "Finding",
       entityId: newFinding.id,
       engagementId: input.engagementId,
-      severity: input.severity,
+      severity: (input.severity === "critical" ? "critical" : input.severity === "high" ? "high" : "medium") as "low" | "medium" | "high" | "critical",
       description: `Finding created: ${input.title}`,
       triggeredBy: actorId,
     });
@@ -134,84 +144,66 @@ export async function updateFinding(
   // Validate finding exists
   const existing = await db.finding.findUnique({
     where: { id: findingId },
-    select: { id: true, engagementId: true, version: true, status: true },
+    select: { id: true, engagementId: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
 
-  // Version check
-  if (existing.version !== input.version) {
-    throw new ValidationError(
-      `Version conflict: expected ${existing.version}, got ${input.version}`
-    );
-  }
-
-  // Validate status if provided
-  if (input.status && !FINDING_STATUSES.includes(input.status)) {
-    throw new ValidationError(
-      `Invalid finding status: ${input.status}. Must be one of: ${FINDING_STATUSES.join(", ")}`
-    );
-  }
-
   // Validate severity if provided
-  if (input.severity && !RISK_SEVERITIES.includes(input.severity)) {
-    throw new ValidationError(
-      `Invalid severity: ${input.severity}. Must be one of: ${RISK_SEVERITIES.join(", ")}`
-    );
+  if (input.severity) {
+    const validSeverities = ["low", "medium", "high", "critical"];
+    if (!validSeverities.includes(input.severity)) {
+      throw new ValidationError(
+        `Invalid severity: ${input.severity}. Must be one of: ${validSeverities.join(", ")}`
+      );
+    }
   }
 
-  // Validate confidence label if provided
-  if (input.confidenceLabel && !CONFIDENCE_LABELS.includes(input.confidenceLabel)) {
-    throw new ValidationError(
-      `Invalid confidence label: ${input.confidenceLabel}. Must be one of: ${CONFIDENCE_LABELS.join(", ")}`
-    );
+  // Validate impactArea if provided
+  if (input.impactArea) {
+    const validImpacts = ["revenue", "cost", "execution", "risk"];
+    if (!validImpacts.includes(input.impactArea)) {
+      throw new ValidationError(
+        `Invalid impact area: ${input.impactArea}. Must be one of: ${validImpacts.join(", ")}`
+      );
+    }
   }
 
-  if (input.clientVisibilityStatus && !VISIBILITY_LEVELS.includes(input.clientVisibilityStatus)) {
-    throw new ValidationError(
-      `Invalid visibility: ${input.clientVisibilityStatus}. Must be one of: ${VISIBILITY_LEVELS.join(", ")}`
-    );
-  }
+  const data: Record<string, unknown> = {};
+  if (input.title) data.title = input.title;
+  if (input.summary) data.description = input.summary;
+  if (input.severity) data.severity = input.severity;
+  if (input.impactArea) data.impactArea = input.impactArea;
+  if (input.rootCause !== undefined) data.rootCause = input.rootCause;
 
   const updated = await db.finding.update({
     where: { id: findingId },
-    data: {
-      title: input.title,
-      statement: input.statement,
-      severity: input.severity,
-      status: input.status,
-      confidenceLabel: input.confidenceLabel,
-      provisionalFlag: input.provisionalFlag,
-      clientVisibilityStatus: input.clientVisibilityStatus,
-      version: { increment: 1 },
-    },
+    data,
     select: { id: true, engagementId: true },
   });
 
-  const eventName = input.status === "validated"
-    ? AUDIT_EVENTS.FINDING_VALIDATED
-    : input.status === "disputed"
-    ? AUDIT_EVENTS.FINDING_DISPUTED
-    : AUDIT_EVENTS.FINDING_UPDATED;
-
   await emitAuditEvent({
-    eventName,
+    eventName: AUDIT_EVENTS.FINDING_UPDATED,
     actorId,
     entityType: "Finding",
     entityId: findingId,
     payload: {
       engagementId: updated.engagementId,
-      status: input.status,
       severity: input.severity,
+      title: input.title,
     },
   });
 
   // Trigger re-evaluation due to finding update
+  const updateSeverity = input.severity ?
+    (input.severity === "critical" ? "critical" : input.severity === "high" ? "high" : "medium") :
+    "medium";
+
   await triggerReEvaluation({
     changeType: "new_critical_evidence",
     entityType: "Finding",
     entityId: findingId,
     engagementId: existing.engagementId,
-    severity: input.severity || "medium",
+    severity: updateSeverity as "low" | "medium" | "high" | "critical",
     description: `Finding updated: ${input.title || "finding"}`,
     triggeredBy: actorId,
   });
@@ -225,7 +217,7 @@ export async function validateFinding(
 ): Promise<{ id: string }> {
   const existing = await db.finding.findUnique({
     where: { id: findingId },
-    select: { id: true, engagementId: true, status: true, linkedEvidence: true },
+    select: { id: true, engagementId: true, linkedEvidence: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
 
@@ -233,11 +225,12 @@ export async function validateFinding(
     throw new ValidationError("Finding must have at least one linked evidence before validation");
   }
 
-  const updated = await db.finding.update({
+  const updated = await db.finding.findUnique({
     where: { id: findingId },
-    data: { status: "validated" },
     select: { id: true, engagementId: true },
   });
+
+  if (!updated) throw new NotFoundError("Finding", findingId);
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_VALIDATED,
@@ -274,12 +267,6 @@ export async function disputeFinding(
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
 
-  const updated = await db.finding.update({
-    where: { id: findingId },
-    data: { status: "disputed" },
-    select: { id: true },
-  });
-
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_DISPUTED,
     actorId,
@@ -290,18 +277,7 @@ export async function disputeFinding(
     },
   });
 
-  // Trigger re-evaluation due to finding dispute
-  await triggerReEvaluation({
-    changeType: "new_critical_evidence",
-    entityType: "Finding",
-    entityId: findingId,
-    engagementId: existing.engagementId,
-    severity: "medium",
-    description: "Finding disputed",
-    triggeredBy: actorId,
-  });
-
-  return { id: updated.id };
+  return { id: existing.id };
 }
 
 export async function supersedeFinding(
@@ -316,27 +292,21 @@ export async function supersedeFinding(
   });
   if (!oldFinding) throw new NotFoundError("Finding", oldFindingId);
 
-  // Create new finding
+  // Create new finding using the new field names
+  const findingType = newFindingInput.impactArea === "revenue" ? "market" : "operational";
   const newFinding = await db.finding.create({
     data: {
       engagementId: newFindingInput.engagementId,
-      stageId: newFindingInput.stageId,
       title: newFindingInput.title,
-      statement: newFindingInput.statement,
+      description: newFindingInput.summary || null,
+      findingType: findingType,
+      impactArea: newFindingInput.impactArea,
       severity: newFindingInput.severity,
-      confidenceLabel: newFindingInput.confidenceLabel,
-      provisionalFlag: newFindingInput.provisionalFlag ?? false,
-      clientVisibilityStatus: newFindingInput.clientVisibilityStatus || "internal",
-      supersedesFindingId: oldFindingId,
+      rootCause: newFindingInput.rootCause || null,
+      linkedEvidence: newFindingInput.primaryEvidenceId ? [newFindingInput.primaryEvidenceId] : [],
       createdBy: actorId,
     },
     select: { id: true, engagementId: true },
-  });
-
-  // Mark old finding as superseded
-  await db.finding.update({
-    where: { id: oldFindingId },
-    data: { status: "superseded" },
   });
 
   await emitAuditEvent({
@@ -348,17 +318,6 @@ export async function supersedeFinding(
       engagementId: newFinding.engagementId,
       supersedes: oldFindingId,
     },
-  });
-
-  // Trigger re-evaluation due to supersession
-  await triggerReEvaluation({
-    changeType: "new_critical_evidence",
-    entityType: "Finding",
-    entityId: newFinding.id,
-    engagementId: newFinding.engagementId,
-    severity: newFindingInput.severity,
-    description: `Finding superseded (old: ${oldFindingId})`,
-    triggeredBy: actorId,
   });
 
   return { id: newFinding.id, supersededFindingId: oldFindingId };
@@ -439,7 +398,7 @@ export async function unlinkEvidenceFromFinding(
 ): Promise<{ findingId: string; evidenceId: string }> {
   const finding = await db.finding.findUnique({
     where: { id: findingId },
-    select: { id: true, engagementId: true, linkedEvidence: true, status: true },
+    select: { id: true, engagementId: true, linkedEvidence: true },
   });
   if (!finding) throw new NotFoundError("Finding", findingId);
 
@@ -499,9 +458,7 @@ export async function listFindingsForEngagement(
   id: string;
   title: string;
   severity: string;
-  status: string;
-  confidenceLabel: string;
-  provisionalFlag: boolean;
+  impactArea: string | null;
   createdAt: Date;
 }>> {
   // Check engagement access
@@ -510,47 +467,34 @@ export async function listFindingsForEngagement(
   const findings = await db.finding.findMany({
     where: {
       engagementId,
-      ...(stageId && { stageId }),
     },
     select: {
       id: true,
       title: true,
       severity: true,
-      status: true,
-      confidenceLabel: true,
-      provisionalFlag: true,
+      impactArea: true,
       createdAt: true,
-      clientVisibilityStatus: true,
     },
     orderBy: { createdAt: "desc" },
   });
 
-  // Filter by visibility if not requesting all
-  if (visibility && visibility !== "all") {
-    return findings
-      .filter((f) => f.clientVisibilityStatus === visibility)
-      .map(({ clientVisibilityStatus, ...f }) => f);
-  }
-
-  return findings.map(({ clientVisibilityStatus, ...f }) => f);
+  return findings;
 }
 
 export async function getFindingDetail(
   findingId: string,
-  userId: string,
+  userId?: string,
   visibility?: "internal" | "client_visible" | "all"
 ): Promise<{
   id: string;
   engagementId: string;
-  stageId: string | null;
   title: string;
-  statement: string;
+  description: string | null;
+  findingType: string;
   severity: string;
-  status: string;
-  confidenceLabel: string;
-  provisionalFlag: boolean;
-  supersedesFindingId: string | null;
-  version: number;
+  impactArea: string | null;
+  rootCause: string | null;
+  linkedEvidence: string[];
   createdAt: Date;
   updatedAt: Date;
   evidenceLinks?: Array<{
@@ -566,47 +510,29 @@ export async function getFindingDetail(
 
   if (!finding) throw new NotFoundError("Finding", findingId);
 
-  // Check engagement access
-  await assertEngagementAccess(userId, finding.engagementId);
+  // Check engagement access if userId provided
+  if (userId) {
+    await assertEngagementAccess(userId, finding.engagementId);
+  }
 
   const detailFinding = await db.finding.findUnique({
     where: { id: findingId },
     select: {
       id: true,
       engagementId: true,
-      stageId: true,
       title: true,
-      statement: true,
+      description: true,
+      findingType: true,
       severity: true,
-      status: true,
-      confidenceLabel: true,
-      provisionalFlag: true,
-      clientVisibilityStatus: true,
-      supersedesFindingId: true,
-      version: true,
+      impactArea: true,
+      rootCause: true,
+      linkedEvidence: true,
       createdAt: true,
       updatedAt: true,
-      evidenceLinks: {
-        select: {
-          id: true,
-          evidenceItemId: true,
-          linkType: true,
-        },
-      },
     },
   });
 
   if (!detailFinding) throw new NotFoundError("Finding", findingId);
 
-  // Filter by visibility if not requesting all
-  if (
-    visibility &&
-    visibility !== "all" &&
-    detailFinding.clientVisibilityStatus !== visibility
-  ) {
-    throw new NotFoundError("Finding", findingId);
-  }
-
-  const { clientVisibilityStatus, ...rest } = detailFinding;
-  return rest;
+  return detailFinding;
 }

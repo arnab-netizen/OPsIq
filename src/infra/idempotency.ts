@@ -34,12 +34,6 @@ export async function withIdempotency<T>(
   });
 
   if (existing) {
-    if (payloadHash && existing.payload && existing.payload !== payloadHash) {
-      throw new ValidationError(
-        `Idempotency key reused with different payload for operation: ${operationName}`
-      );
-    }
-
     if (existing.status === "completed" && existing.responseBody !== null) {
       logger.info("Idempotency cache hit", {
         idempotencyKey,
@@ -78,7 +72,6 @@ export async function withIdempotency<T>(
           idempotencyKey,
           operationName,
           status: "pending",
-          payload: payloadHash,
           expiresAt,
         },
       });

@@ -176,16 +176,17 @@ export async function updateEvidence(
   logger.info("Evidence updated", { evidenceId });
 }
 
-export async function getEvidenceById(evidenceId: string, userId: string) {
+export async function getEvidenceById(evidenceId: string, userId?: string) {
   const evidence = await db.evidence.findUnique({
     where: { id: evidenceId },
-    select: { engagementId: true },
   });
 
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
-  // Check engagement access
-  await assertEngagementAccess(userId, evidence.engagementId);
+  // Check engagement access if userId provided
+  if (userId) {
+    await assertEngagementAccess(userId, evidence.engagementId);
+  }
 
   const fullEvidence = await db.evidence.findUnique({
     where: { id: evidenceId },
@@ -239,4 +240,248 @@ export async function listEvidence(params: {
   ]);
 
   return { evidence, total, limit, offset };
+}
+
+export async function validateEvidence(
+  input: { evidenceItemId: string; isValid: boolean; version: number } | string,
+  actorId?: string
+) {
+  // Handle both function signatures for backward compatibility
+  const evidenceId = typeof input === "string" ? input : input.evidenceItemId;
+  const actor = typeof input === "string" ? actorId : actorId;
+
+  if (!actor) throw new Error("actorId is required");
+
+  const evidence = await db.evidence.findUnique({
+    where: { id: evidenceId },
+  });
+  if (!evidence) throw new NotFoundError("Evidence", evidenceId);
+
+  if (evidence.status === "validated") {
+    throw new ValidationError("Evidence is already validated");
+  }
+
+  const updated = await db.evidence.update({
+    where: { id: evidenceId },
+    data: {
+      status: "validated" as EvidenceStatus,
+      version: { increment: 1 },
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.EVIDENCE_VALIDATED,
+    actorId: actor,
+    entityType: "evidence",
+    entityId: evidenceId,
+    payload: {
+      engagementId: evidence.engagementId,
+    },
+    visibility: "internal",
+  });
+
+  return updated;
+}
+
+export interface CreateEvidenceBundleInput {
+  engagementId: string;
+  title: string;
+  description?: string;
+}
+
+export interface UpdateEvidenceBundleInput {
+  title?: string;
+  description?: string;
+  status?: "active" | "archived";
+  version: number;
+}
+
+export interface AddEvidenceToBundleInput {
+  bundleId: string;
+  evidenceItemId: string;
+}
+
+export interface RemoveEvidenceFromBundleInput {
+  bundleId: string;
+  evidenceItemId: string;
+}
+
+export async function createEvidenceBundle(
+  input: CreateEvidenceBundleInput,
+  actorId: string
+) {
+  const engagement = await db.engagement.findUnique({
+    where: { id: input.engagementId },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
+
+  const bundle = await db.evidenceBundle.create({
+    data: {
+      engagementId: input.engagementId,
+      title: input.title,
+      description: input.description ?? null,
+      createdBy: actorId,
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_CREATED,
+    actorId,
+    entityType: "evidence_bundle",
+    entityId: bundle.id,
+    payload: {
+      engagementId: input.engagementId,
+      title: input.title,
+    },
+    visibility: "internal",
+  });
+
+  return bundle;
+}
+
+export async function getEvidenceBundleById(bundleId: string) {
+  const bundle = await db.evidenceBundle.findUnique({
+    where: { id: bundleId },
+    include: {
+      items: {
+        where: { removedAt: null },
+        include: { evidence: true },
+      },
+    },
+  });
+  if (!bundle) throw new NotFoundError("EvidenceBundle", bundleId);
+  return bundle;
+}
+
+export async function listEvidenceBundles(engagementId: string) {
+  return db.evidenceBundle.findMany({
+    where: { engagementId, status: "active" },
+    include: {
+      items: {
+        where: { removedAt: null },
+        select: { id: true, evidenceId: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function addEvidenceToBundle(
+  input: AddEvidenceToBundleInput,
+  actorId: string
+) {
+  const bundle = await db.evidenceBundle.findUnique({
+    where: { id: input.bundleId },
+  });
+  if (!bundle) throw new NotFoundError("EvidenceBundle", input.bundleId);
+
+  const evidence = await db.evidence.findUnique({
+    where: { id: input.evidenceItemId },
+  });
+  if (!evidence) throw new NotFoundError("Evidence", input.evidenceItemId);
+
+  const existing = await db.evidenceBundleItem.findFirst({
+    where: {
+      bundleId: input.bundleId,
+      evidenceId: input.evidenceItemId,
+      removedAt: null,
+    },
+  });
+  if (existing) {
+    throw new ValidationError("Evidence is already in this bundle");
+  }
+
+  const item = await db.evidenceBundleItem.create({
+    data: {
+      bundleId: input.bundleId,
+      evidenceId: input.evidenceItemId,
+      addedBy: actorId,
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_ITEM_ADDED,
+    actorId,
+    entityType: "evidence_bundle_item",
+    entityId: item.id,
+    payload: {
+      bundleId: input.bundleId,
+      evidenceId: input.evidenceItemId,
+    },
+    visibility: "internal",
+  });
+
+  return item;
+}
+
+export async function removeEvidenceFromBundle(
+  input: RemoveEvidenceFromBundleInput,
+  actorId: string
+) {
+  const item = await db.evidenceBundleItem.findFirst({
+    where: {
+      bundleId: input.bundleId,
+      evidenceId: input.evidenceItemId,
+    },
+  });
+  if (!item) throw new NotFoundError("EvidenceBundleItem", "notfound");
+
+  if (item.removedAt !== null) {
+    throw new ValidationError("Item is already removed from bundle");
+  }
+
+  const updated = await db.evidenceBundleItem.update({
+    where: { id: item.id },
+    data: { removedAt: new Date() },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_ITEM_REMOVED,
+    actorId,
+    entityType: "evidence_bundle_item",
+    entityId: item.id,
+    payload: {
+      bundleId: item.bundleId,
+      evidenceId: item.evidenceId,
+    },
+    visibility: "internal",
+  });
+
+  return updated;
+}
+
+export async function updateEvidenceBundle(
+  bundleId: string,
+  input: UpdateEvidenceBundleInput,
+  actorId: string
+) {
+  const bundle = await db.evidenceBundle.findUnique({
+    where: { id: bundleId },
+  });
+  if (!bundle) throw new NotFoundError("EvidenceBundle", bundleId);
+
+  if (bundle.version !== input.version) {
+    throw new Error("Bundle was modified. Please refresh and try again.");
+  }
+
+  const updates: any = { version: { increment: 1 } };
+  if (input.title) updates.title = input.title;
+  if (input.description !== undefined) updates.description = input.description;
+  if (input.status) updates.status = input.status;
+
+  const updated = await db.evidenceBundle.update({
+    where: { id: bundleId },
+    data: updates,
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_UPDATED,
+    actorId,
+    entityType: "evidence_bundle",
+    entityId: bundleId,
+    payload: updates,
+    visibility: "internal",
+  });
+
+  return updated;
 }

@@ -134,7 +134,8 @@ export async function createEngagement(
 
       // Initialize intervention state for this engagement
       await initializeInterventionState(
-        { engagementId: engagement.id },
+        engagement.id,
+        input.interventionMode,
         actorId
       );
 
@@ -313,13 +314,6 @@ export async function getEngagementById(engagementId: string, hasInternalAccess:
           user: { select: { id: true, name: true, email: true } },
         },
       },
-      interventionState: {
-        select: {
-          id: true,
-          currentPhase: true,
-          previousPhase: true,
-        },
-      },
       _count: { select: { leads: true } },
     },
   });
@@ -397,12 +391,6 @@ export async function computeNextReviewDate(
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
-  const latestReview = await db.reviewCycle.findFirst({
-    where: { engagementId },
-    orderBy: { createdAt: "desc" },
-    select: { createdAt: true, status: true },
-  });
-
   const baseInterval = 7; // Base interval in days
   let intervalAdjustment = 0;
 
@@ -420,7 +408,7 @@ export async function computeNextReviewDate(
   }
 
   const reviewInterval = Math.max(1, baseInterval + intervalAdjustment);
-  const lastReviewDate = latestReview?.createdAt || engagement.startDate || new Date();
+  const lastReviewDate = engagement.startDate || new Date();
   const nextReviewDate = new Date(lastReviewDate.getTime() + reviewInterval * 24 * 60 * 60 * 1000);
 
   const now = new Date();

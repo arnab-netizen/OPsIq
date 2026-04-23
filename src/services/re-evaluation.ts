@@ -194,15 +194,15 @@ async function evaluateBusinessConditionImpact(engagementId: string) {
   // Evaluate KPI trends (improved or deteriorated)
   const kpis = await db.kPI.findMany({
     where: { engagementId },
-    select: { baseline: true, currentValue: true, direction: true },
+    select: { target: true, currentValue: true, direction: true },
   });
 
   if (kpis.length > 0) {
     const deterior = kpis.filter((k) => {
-      if (k.direction === "increase" && k.currentValue !== null && k.baseline !== null) {
-        return k.currentValue < k.baseline;
-      } else if (k.direction === "decrease" && k.currentValue !== null && k.baseline !== null) {
-        return k.currentValue > k.baseline;
+      if (k.direction === "up" && k.currentValue !== null && k.target !== null) {
+        return k.currentValue < k.target;
+      } else if (k.direction === "down" && k.currentValue !== null && k.target !== null) {
+        return k.currentValue > k.target;
       }
       return false;
     });
@@ -216,34 +216,6 @@ async function evaluateBusinessConditionImpact(engagementId: string) {
     }
   }
 
-  // Evaluate recent shocks (weighted by severity)
-  const recentShocks = await db.shockEvent.findMany({
-    where: {
-      engagementId,
-      happenedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-    },
-    select: { severity: true },
-  });
-
-  const shockWeight = recentShocks.reduce((sum, s) => {
-    const weight =
-      s.severity === "critical"
-        ? 3
-        : s.severity === "high"
-          ? 2
-          : s.severity === "medium"
-            ? 1
-            : 0;
-    return sum + weight;
-  }, 0);
-
-  if (shockWeight >= 3) {
-    factors.push("critical_shocks");
-    severityDelta += 2;
-  } else if (shockWeight > 0) {
-    factors.push("recent_shocks");
-    severityDelta += 1;
-  }
 
   if (criticalRisks.length > 0) {
     factors.push(...(criticalRisks as string[]));
@@ -326,7 +298,7 @@ async function evaluateInterventionPhaseImpact(engagementId: string) {
   // Determine phase based on findings and actions (deterministic lifecycle rules)
   const findings = await db.finding.findMany({
     where: { engagementId },
-    select: { id: true, status: true },
+    select: { id: true },
   });
 
   const actions = await db.action.findMany({
@@ -339,20 +311,20 @@ async function evaluateInterventionPhaseImpact(engagementId: string) {
 
   // Phase suggestion logic based on findings and actions
   if (findings.length === 0) {
-    recommendedPhase = "assessment";
+    recommendedPhase = "triage";
   } else if (actions.length === 0) {
-    recommendedPhase = "planning";
+    recommendedPhase = "stabilize";
   } else {
     const completedCount = actions.filter((a) => a.status === "completed").length;
     const activeCount = actions.filter((a) => a.status !== "completed" && a.status !== "cancelled")
       .length;
 
     if (activeCount > 0) {
-      recommendedPhase = "execution";
+      recommendedPhase = "repair";
     } else if (completedCount === actions.length) {
-      recommendedPhase = "review";
+      recommendedPhase = "strengthen";
     } else {
-      recommendedPhase = "execution";
+      recommendedPhase = "repair";
     }
   }
 
@@ -606,21 +578,21 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
 
     // 3. Update intervention phase if changed and allowed
     if (targets.interventionPhase && interventionPhaseImpact.recommendedPhase) {
-      const state = await tx.interventionState.findUnique({
-        where: { engagementId: event.engagementId },
-        select: { id: true, currentPhase: true },
+      const engagement = await tx.engagement.findUnique({
+        where: { id: event.engagementId },
+        select: { interventionPhase: true },
       });
 
-      if (state && state.currentPhase !== interventionPhaseImpact.recommendedPhase) {
+      if (engagement && engagement.interventionPhase !== interventionPhaseImpact.recommendedPhase) {
         auditPayload.interventionPhaseChange = {
-          oldValue: state.currentPhase,
+          oldValue: engagement.interventionPhase,
           newValue: interventionPhaseImpact.recommendedPhase,
           canAdvance: interventionPhaseImpact.canAdvance,
         };
 
-        await tx.interventionState.update({
-          where: { id: state.id },
-          data: { currentPhase: interventionPhaseImpact.recommendedPhase },
+        await tx.engagement.update({
+          where: { id: event.engagementId },
+          data: { interventionPhase: interventionPhaseImpact.recommendedPhase, version: { increment: 1 } },
         });
       }
     }
@@ -664,7 +636,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     }
 
     // 5. Dynamic re-ranking based on scoring metrics
-    if (targets.recommendationPriority) {
+    if (targets.recommendationPriority && event.triggeredBy && event.engagementId) {
       const reRankResult = await reRankRecommendationsInEngagement(event.engagementId, event.triggeredBy);
 
       if (reRankResult.updated > 0) {

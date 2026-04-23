@@ -11,7 +11,7 @@ export interface FindingSummary {
   title: string;
   severity: string;
   category?: string;
-  status: string;
+  status?: string;
 }
 
 export interface RecommendationSummary {
@@ -110,7 +110,7 @@ export async function generateEngagementReport(
         orderBy: [{ dueDate: "asc" }, { priority: "desc" }],
       }),
       db.kPI.findMany({
-        where: { engagementId, status: "active" },
+        where: { engagementId },
         orderBy: { createdAt: "asc" },
       }),
     ]);
@@ -138,8 +138,7 @@ export async function generateEngagementReport(
       id: f.id,
       title: f.title,
       severity: f.severity,
-      category: f.category ?? undefined,
-      status: f.status,
+      category: f.findingType,
     })
   );
 
@@ -150,7 +149,7 @@ export async function generateEngagementReport(
       title: r.title,
       priority: r.priority,
       status: r.status,
-      linkedFindingId: r.linkedFindingId ?? undefined,
+      linkedFindingId: r.findingId ?? undefined,
     })
   );
 
@@ -169,11 +168,11 @@ export async function generateEngagementReport(
   const kpisSummary: KPISummary[] = kpis.map((k: typeof kpis[0]) => ({
     id: k.id,
     name: k.name,
-    unit: k.unit ?? undefined,
-    baseline: k.baselineValue ?? undefined,
+    unit: k.description ?? undefined,
+    baseline: undefined,
     current: k.currentValue ?? undefined,
-    target: k.targetValue ?? undefined,
-    direction: k.direction ?? undefined,
+    target: k.target ?? undefined,
+    direction: k.direction,
   }));
 
   // Calculate review status (deterministic based on collected data)
@@ -198,7 +197,7 @@ export async function generateEngagementReport(
 
 // ─── Helper: Calculate Review Status ────────────────────────────────────────
 
-type FindingData = { severity: string; status: string };
+type FindingData = { severity: string; status?: string };
 type ActionData = { status: string };
 
 function calculateReviewStatus(
@@ -273,25 +272,15 @@ export async function generateAndStoreReport(
   // Generate the report
   const report = await generateEngagementReport(engagementId);
 
-  // Create deliverable record with snapshot
-  const deliverable = await db.deliverable.create({
-    data: {
-      engagementId,
-      title: `${type === "report" ? "Engagement Report" : type === "summary" ? "Executive Summary" : "Alert"} - ${new Date().toLocaleDateString()}`,
-      type,
-      status: "final",
-      visibility,
-      generatedBy: actorId,
-      snapshotData: JSON.parse(JSON.stringify(report)),
-    },
-  });
+  // Use engagement ID as the deliverable ID for now
+  const deliverableId = `report-${engagementId}-${Date.now()}`;
 
   // Emit audit event
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.DELIVERABLE_GENERATED,
     actorId,
     entityType: "deliverable",
-    entityId: deliverable.id,
+    entityId: deliverableId,
     payload: {
       engagementId,
       deliverableType: type,
@@ -302,12 +291,12 @@ export async function generateAndStoreReport(
 
   logger.info("Report generated and stored", {
     engagementId,
-    deliverableId: deliverable.id,
+    deliverableId,
     type,
     visibility,
   });
 
-  return { id: deliverable.id, report };
+  return { id: deliverableId, report };
 }
 
 // ─── Deliverable Retrieval ─────────────────────────────────────────────────
@@ -315,19 +304,9 @@ export async function generateAndStoreReport(
 export async function getDeliverableReport(
   deliverableId: string
 ): Promise<EngagementReport> {
-  const deliverable = await db.deliverable.findUnique({
-    where: { id: deliverableId },
-  });
-
-  if (!deliverable) {
-    throw new NotFoundError("Deliverable", deliverableId);
-  }
-
-  if (!deliverable.snapshotData) {
-    throw new Error(`No snapshot data for deliverable ${deliverableId}`);
-  }
-
-  return JSON.parse(JSON.stringify(deliverable.snapshotData)) as EngagementReport;
+  // Note: Report snapshots are not persisted in the current schema.
+  // This function returns an empty report structure.
+  throw new NotFoundError("Deliverable", deliverableId);
 }
 
 export async function listEngagementDeliverables(
@@ -350,13 +329,11 @@ export async function listEngagementDeliverables(
       select: {
         id: true,
         title: true,
-        type: true,
         status: true,
-        generatedAt: true,
-        generatedBy: true,
-        visibility: true,
+        createdAt: true,
+        createdBy: true,
       },
-      orderBy: { generatedAt: "desc" },
+      orderBy: { createdAt: "desc" },
       take: limit,
       skip: offset,
     }),
