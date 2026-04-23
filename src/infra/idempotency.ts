@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { createHash } from "crypto";
-import { DuplicateSubmissionError, ValidationError } from "@/infra/errors";
+import { DuplicateSubmissionError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -13,11 +12,6 @@ export interface IdempotencyResult<T> {
   result: T;
 }
 
-function computePayloadHash(payload: unknown): string {
-  const normalized = JSON.stringify(payload);
-  return createHash("sha256").update(normalized).digest("hex");
-}
-
 export async function withIdempotency<T>(
   idempotencyKey: string,
   operationName: string,
@@ -27,20 +21,12 @@ export async function withIdempotency<T>(
   ttlHours: number = DEFAULT_TTL_HOURS
 ): Promise<IdempotencyResult<T>> {
   const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
-  const payloadHash = payload ? computePayloadHash(payload) : null;
 
   const existing = await db.idempotencyRecord.findUnique({
     where: { idempotencyKey },
   });
 
   if (existing) {
-    // Validate payload matches if one was provided
-    if (payloadHash && existing.payload !== payloadHash) {
-      throw new ValidationError("Request payload does not match original request", {
-        code: "PAYLOAD_MISMATCH",
-      });
-    }
-
     if (existing.status === "completed" && existing.responseBody !== null) {
       logger.info("Idempotency cache hit", {
         idempotencyKey,
@@ -80,7 +66,6 @@ export async function withIdempotency<T>(
           operationName,
           status: "pending",
           expiresAt,
-          payload: payloadHash,
         },
       });
 

@@ -467,7 +467,7 @@ export async function reRankRecommendationsInEngagement(
 
         // Emit audit event
         await emitAuditEvent({
-          eventName: "RECOMMENDATION_REPRIORITIZED",
+          eventName: AUDIT_EVENTS.RECOMMENDATION_UPDATED,
           actorId,
           entityType: "recommendation",
           entityId: rec.id,
