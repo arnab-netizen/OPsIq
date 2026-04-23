@@ -131,6 +131,7 @@ export const AUDIT_EVENTS = {
   FINDING_DISPUTED: "finding.disputed",
   FINDING_SUPERSEDED: "finding.superseded",
   FINDING_EVIDENCE_LINKED: "finding.evidence_linked",
+  FINDING_EVIDENCE_UNLINKED: "finding.evidence_unlinked",
 
   // Risk
   RISK_IDENTIFIED: "risk.identified",

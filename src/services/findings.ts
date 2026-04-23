@@ -5,18 +5,10 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import {
   FINDING_STATUSES,
-  CONFIDENCE_LABELS,
-  VISIBILITY_LEVELS,
-  RISK_SEVERITIES,
-  FINDING_EVIDENCE_LINK_TYPES,
 } from "@/domain/constants/statuses";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import type {
   FindingStatus,
-  ConfidenceLabel,
-  VisibilityLevel,
-  RiskSeverity,
-  FindingEvidenceLinkType,
 } from "@/domain/constants/statuses";
 
 export interface CreateFindingInput {
@@ -231,9 +223,13 @@ export async function validateFinding(
 ): Promise<{ id: string }> {
   const existing = await db.finding.findUnique({
     where: { id: findingId },
-    select: { id: true, engagementId: true, status: true },
+    select: { id: true, engagementId: true, status: true, linkedEvidence: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
+
+  if (existing.linkedEvidence.length === 0) {
+    throw new ValidationError("Finding must have at least one linked evidence before validation");
+  }
 
   const updated = await db.finding.update({
     where: { id: findingId },
@@ -249,6 +245,7 @@ export async function validateFinding(
     payload: {
       engagementId: updated.engagementId,
     },
+    visibility: "internal",
   });
 
   // Trigger re-evaluation due to finding validation
@@ -367,58 +364,128 @@ export async function supersedeFinding(
 
 export async function linkEvidenceToFinding(
   findingId: string,
-  evidenceItemId: string,
-  linkType: FindingEvidenceLinkType,
+  evidenceId: string,
   actorId: string
-): Promise<{ id: string }> {
-  // Validate finding exists
+): Promise<{ findingId: string; evidenceId: string }> {
   const finding = await db.finding.findUnique({
     where: { id: findingId },
-    select: { id: true, engagementId: true },
+    select: { id: true, engagementId: true, linkedEvidence: true },
   });
   if (!finding) throw new NotFoundError("Finding", findingId);
 
-  // Validate evidence item exists
-  const evidence = await db.evidenceItem.findUnique({
-    where: { id: evidenceItemId },
-    select: { id: true, engagementId: true },
+  const evidence = await db.evidence.findUnique({
+    where: { id: evidenceId },
+    select: { id: true, engagementId: true, status: true, relatedFindingId: true },
   });
-  if (!evidence) throw new NotFoundError("EvidenceItem", evidenceItemId);
+  if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
-  // Validate they're in the same engagement
   if (finding.engagementId !== evidence.engagementId) {
     throw new ValidationError("Finding and evidence must belong to the same engagement");
   }
 
-  // Validate link type
-  if (!FINDING_EVIDENCE_LINK_TYPES.includes(linkType)) {
-    throw new ValidationError(
-      `Invalid link type: ${linkType}. Must be one of: ${FINDING_EVIDENCE_LINK_TYPES.join(", ")}`
-    );
+  if (evidence.status === "rejected") {
+    throw new ValidationError("Cannot link rejected evidence");
   }
 
-  const link = await db.findingEvidenceLink.create({
-    data: {
-      findingId,
-      evidenceItemId,
-      linkType,
-    },
-    select: { id: true },
+  if (evidence.status === "superseded") {
+    throw new ValidationError("Cannot link superseded evidence");
+  }
+
+  if (finding.linkedEvidence.includes(evidenceId)) {
+    throw new ValidationError("Evidence is already linked to this finding");
+  }
+
+  const updated = await db.$transaction(async (tx) => {
+    const updatedFinding = await tx.finding.update({
+      where: { id: findingId },
+      data: {
+        linkedEvidence: {
+          push: evidenceId,
+        },
+      },
+      select: { id: true, engagementId: true },
+    });
+
+    await tx.evidence.update({
+      where: { id: evidenceId },
+      data: { relatedFindingId: findingId },
+    });
+
+    return updatedFinding;
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_EVIDENCE_LINKED,
     actorId,
-    entityType: "FindingEvidenceLink",
-    entityId: link.id,
+    entityType: "Finding",
+    entityId: findingId,
     payload: {
       findingId,
-      evidenceItemId,
-      linkType,
+      evidenceId,
+      action: "linked",
     },
+    visibility: "internal",
   });
 
-  return link;
+  return { findingId: updated.id, evidenceId };
+}
+
+export async function unlinkEvidenceFromFinding(
+  findingId: string,
+  evidenceId: string,
+  actorId: string
+): Promise<{ findingId: string; evidenceId: string }> {
+  const finding = await db.finding.findUnique({
+    where: { id: findingId },
+    select: { id: true, engagementId: true, linkedEvidence: true, status: true },
+  });
+  if (!finding) throw new NotFoundError("Finding", findingId);
+
+  const evidence = await db.evidence.findUnique({
+    where: { id: evidenceId },
+    select: { id: true, engagementId: true, relatedFindingId: true },
+  });
+  if (!evidence) throw new NotFoundError("Evidence", evidenceId);
+
+  if (finding.engagementId !== evidence.engagementId) {
+    throw new ValidationError("Finding and evidence must belong to the same engagement");
+  }
+
+  if (!finding.linkedEvidence.includes(evidenceId)) {
+    throw new ValidationError("Evidence is not linked to this finding");
+  }
+
+  const updated = await db.$transaction(async (tx) => {
+    const updatedFinding = await tx.finding.update({
+      where: { id: findingId },
+      data: {
+        linkedEvidence: finding.linkedEvidence.filter((id) => id !== evidenceId),
+      },
+      select: { id: true, linkedEvidence: true },
+    });
+
+    await tx.evidence.update({
+      where: { id: evidenceId },
+      data: { relatedFindingId: null },
+    });
+
+    return updatedFinding;
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.FINDING_EVIDENCE_UNLINKED,
+    actorId,
+    entityType: "Finding",
+    entityId: findingId,
+    payload: {
+      findingId,
+      evidenceId,
+      action: "unlinked",
+    },
+    visibility: "internal",
+  });
+
+  return { findingId: updated.id, evidenceId };
 }
 
 export async function listFindingsForEngagement(
