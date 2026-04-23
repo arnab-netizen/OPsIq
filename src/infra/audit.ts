@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import type { AuditEventName } from "@/domain/constants/audit-events";
 
@@ -24,9 +23,7 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
       actorType: input.actorType ?? "user",
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
-      payload: input.payload
-        ? (input.payload as Prisma.InputJsonValue)
-        : Prisma.DbNull,
+      payload: input.payload ? JSON.stringify(input.payload) : null,
       correlationId: input.correlationId ?? null,
       visibility: input.visibility ?? "internal",
     },
