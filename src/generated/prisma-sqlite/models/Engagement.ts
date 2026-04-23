@@ -296,8 +296,8 @@ export type EngagementGroupByOutputType = {
   engagementMode: string
   status: string
   healthStatus: string
-  interventionMode: string
-  interventionPhase: string
+  interventionMode: string | null
+  interventionPhase: string | null
   description: string | null
   startDate: Date | null
   targetEndDate: Date | null
@@ -345,8 +345,8 @@ export type EngagementWhereInput = {
   engagementMode?: Prisma.StringFilter<"Engagement"> | string
   status?: Prisma.StringFilter<"Engagement"> | string
   healthStatus?: Prisma.StringFilter<"Engagement"> | string
-  interventionMode?: Prisma.StringFilter<"Engagement"> | string
-  interventionPhase?: Prisma.StringFilter<"Engagement"> | string
+  interventionMode?: Prisma.StringNullableFilter<"Engagement"> | string | null
+  interventionPhase?: Prisma.StringNullableFilter<"Engagement"> | string | null
   description?: Prisma.StringNullableFilter<"Engagement"> | string | null
   startDate?: Prisma.DateTimeNullableFilter<"Engagement"> | Date | string | null
   targetEndDate?: Prisma.DateTimeNullableFilter<"Engagement"> | Date | string | null
@@ -386,8 +386,8 @@ export type EngagementOrderByWithRelationInput = {
   engagementMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   healthStatus?: Prisma.SortOrder
-  interventionMode?: Prisma.SortOrder
-  interventionPhase?: Prisma.SortOrder
+  interventionMode?: Prisma.SortOrderInput | Prisma.SortOrder
+  interventionPhase?: Prisma.SortOrderInput | Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   startDate?: Prisma.SortOrderInput | Prisma.SortOrder
   targetEndDate?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -430,8 +430,8 @@ export type EngagementWhereUniqueInput = Prisma.AtLeast<{
   engagementMode?: Prisma.StringFilter<"Engagement"> | string
   status?: Prisma.StringFilter<"Engagement"> | string
   healthStatus?: Prisma.StringFilter<"Engagement"> | string
-  interventionMode?: Prisma.StringFilter<"Engagement"> | string
-  interventionPhase?: Prisma.StringFilter<"Engagement"> | string
+  interventionMode?: Prisma.StringNullableFilter<"Engagement"> | string | null
+  interventionPhase?: Prisma.StringNullableFilter<"Engagement"> | string | null
   description?: Prisma.StringNullableFilter<"Engagement"> | string | null
   startDate?: Prisma.DateTimeNullableFilter<"Engagement"> | Date | string | null
   targetEndDate?: Prisma.DateTimeNullableFilter<"Engagement"> | Date | string | null
@@ -471,8 +471,8 @@ export type EngagementOrderByWithAggregationInput = {
   engagementMode?: Prisma.SortOrder
   status?: Prisma.SortOrder
   healthStatus?: Prisma.SortOrder
-  interventionMode?: Prisma.SortOrder
-  interventionPhase?: Prisma.SortOrder
+  interventionMode?: Prisma.SortOrderInput | Prisma.SortOrder
+  interventionPhase?: Prisma.SortOrderInput | Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   startDate?: Prisma.SortOrderInput | Prisma.SortOrder
   targetEndDate?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -505,8 +505,8 @@ export type EngagementScalarWhereWithAggregatesInput = {
   engagementMode?: Prisma.StringWithAggregatesFilter<"Engagement"> | string
   status?: Prisma.StringWithAggregatesFilter<"Engagement"> | string
   healthStatus?: Prisma.StringWithAggregatesFilter<"Engagement"> | string
-  interventionMode?: Prisma.StringWithAggregatesFilter<"Engagement"> | string
-  interventionPhase?: Prisma.StringWithAggregatesFilter<"Engagement"> | string
+  interventionMode?: Prisma.StringNullableWithAggregatesFilter<"Engagement"> | string | null
+  interventionPhase?: Prisma.StringNullableWithAggregatesFilter<"Engagement"> | string | null
   description?: Prisma.StringNullableWithAggregatesFilter<"Engagement"> | string | null
   startDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Engagement"> | Date | string | null
   targetEndDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Engagement"> | Date | string | null
@@ -530,8 +530,8 @@ export type EngagementCreateInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -570,8 +570,8 @@ export type EngagementUncheckedCreateInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -608,8 +608,8 @@ export type EngagementUpdateInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -648,8 +648,8 @@ export type EngagementUncheckedUpdateInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -687,8 +687,8 @@ export type EngagementCreateManyInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -712,8 +712,8 @@ export type EngagementUpdateManyMutationInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -737,8 +737,8 @@ export type EngagementUncheckedUpdateManyInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1138,8 +1138,8 @@ export type EngagementCreateWithoutMembershipsInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1177,8 +1177,8 @@ export type EngagementUncheckedCreateWithoutMembershipsInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1230,8 +1230,8 @@ export type EngagementUpdateWithoutMembershipsInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1269,8 +1269,8 @@ export type EngagementUncheckedUpdateWithoutMembershipsInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1306,8 +1306,8 @@ export type EngagementCreateWithoutLeadsInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1345,8 +1345,8 @@ export type EngagementUncheckedCreateWithoutLeadsInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1398,8 +1398,8 @@ export type EngagementUpdateWithoutLeadsInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1437,8 +1437,8 @@ export type EngagementUncheckedUpdateWithoutLeadsInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1474,8 +1474,8 @@ export type EngagementCreateWithoutClientInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1512,8 +1512,8 @@ export type EngagementUncheckedCreateWithoutClientInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1579,8 +1579,8 @@ export type EngagementScalarWhereInput = {
   engagementMode?: Prisma.StringFilter<"Engagement"> | string
   status?: Prisma.StringFilter<"Engagement"> | string
   healthStatus?: Prisma.StringFilter<"Engagement"> | string
-  interventionMode?: Prisma.StringFilter<"Engagement"> | string
-  interventionPhase?: Prisma.StringFilter<"Engagement"> | string
+  interventionMode?: Prisma.StringNullableFilter<"Engagement"> | string | null
+  interventionPhase?: Prisma.StringNullableFilter<"Engagement"> | string | null
   description?: Prisma.StringNullableFilter<"Engagement"> | string | null
   startDate?: Prisma.DateTimeNullableFilter<"Engagement"> | Date | string | null
   targetEndDate?: Prisma.DateTimeNullableFilter<"Engagement"> | Date | string | null
@@ -1604,8 +1604,8 @@ export type EngagementCreateWithoutChildrenInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1643,8 +1643,8 @@ export type EngagementUncheckedCreateWithoutChildrenInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1685,8 +1685,8 @@ export type EngagementCreateWithoutParentInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1724,8 +1724,8 @@ export type EngagementUncheckedCreateWithoutParentInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1781,8 +1781,8 @@ export type EngagementUpdateWithoutChildrenInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1820,8 +1820,8 @@ export type EngagementUncheckedUpdateWithoutChildrenInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -1873,8 +1873,8 @@ export type EngagementCreateWithoutConditionProfilesInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1912,8 +1912,8 @@ export type EngagementUncheckedCreateWithoutConditionProfilesInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -1965,8 +1965,8 @@ export type EngagementUpdateWithoutConditionProfilesInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2004,8 +2004,8 @@ export type EngagementUncheckedUpdateWithoutConditionProfilesInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2041,8 +2041,8 @@ export type EngagementCreateWithoutEvidenceInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2080,8 +2080,8 @@ export type EngagementUncheckedCreateWithoutEvidenceInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2133,8 +2133,8 @@ export type EngagementUpdateWithoutEvidenceInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2172,8 +2172,8 @@ export type EngagementUncheckedUpdateWithoutEvidenceInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2209,8 +2209,8 @@ export type EngagementCreateWithoutEvidenceBundlesInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2248,8 +2248,8 @@ export type EngagementUncheckedCreateWithoutEvidenceBundlesInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2301,8 +2301,8 @@ export type EngagementUpdateWithoutEvidenceBundlesInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2340,8 +2340,8 @@ export type EngagementUncheckedUpdateWithoutEvidenceBundlesInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2377,8 +2377,8 @@ export type EngagementCreateWithoutFindingsInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2416,8 +2416,8 @@ export type EngagementUncheckedCreateWithoutFindingsInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2469,8 +2469,8 @@ export type EngagementUpdateWithoutFindingsInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2508,8 +2508,8 @@ export type EngagementUncheckedUpdateWithoutFindingsInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2545,8 +2545,8 @@ export type EngagementCreateWithoutRecommendationsInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2584,8 +2584,8 @@ export type EngagementUncheckedCreateWithoutRecommendationsInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2637,8 +2637,8 @@ export type EngagementUpdateWithoutRecommendationsInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2676,8 +2676,8 @@ export type EngagementUncheckedUpdateWithoutRecommendationsInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2713,8 +2713,8 @@ export type EngagementCreateWithoutActionsInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2752,8 +2752,8 @@ export type EngagementUncheckedCreateWithoutActionsInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2805,8 +2805,8 @@ export type EngagementUpdateWithoutActionsInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2844,8 +2844,8 @@ export type EngagementUncheckedUpdateWithoutActionsInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -2881,8 +2881,8 @@ export type EngagementCreateWithoutStagesInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2920,8 +2920,8 @@ export type EngagementUncheckedCreateWithoutStagesInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -2973,8 +2973,8 @@ export type EngagementUpdateWithoutStagesInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3012,8 +3012,8 @@ export type EngagementUncheckedUpdateWithoutStagesInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3049,8 +3049,8 @@ export type EngagementCreateWithoutKpisInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -3088,8 +3088,8 @@ export type EngagementUncheckedCreateWithoutKpisInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -3141,8 +3141,8 @@ export type EngagementUpdateWithoutKpisInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3180,8 +3180,8 @@ export type EngagementUncheckedUpdateWithoutKpisInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3217,8 +3217,8 @@ export type EngagementCreateWithoutDeliverablesInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -3256,8 +3256,8 @@ export type EngagementUncheckedCreateWithoutDeliverablesInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -3309,8 +3309,8 @@ export type EngagementUpdateWithoutDeliverablesInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3348,8 +3348,8 @@ export type EngagementUncheckedUpdateWithoutDeliverablesInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3385,8 +3385,8 @@ export type EngagementCreateWithoutRisksInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -3424,8 +3424,8 @@ export type EngagementUncheckedCreateWithoutRisksInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -3477,8 +3477,8 @@ export type EngagementUpdateWithoutRisksInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3516,8 +3516,8 @@ export type EngagementUncheckedUpdateWithoutRisksInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3553,8 +3553,8 @@ export type EngagementCreateManyClientInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -3578,8 +3578,8 @@ export type EngagementUpdateWithoutClientInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3616,8 +3616,8 @@ export type EngagementUncheckedUpdateWithoutClientInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3654,8 +3654,8 @@ export type EngagementUncheckedUpdateManyWithoutClientInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3680,8 +3680,8 @@ export type EngagementCreateManyParentInput = {
   engagementMode: string
   status?: string
   healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
   description?: string | null
   startDate?: Date | string | null
   targetEndDate?: Date | string | null
@@ -3704,8 +3704,8 @@ export type EngagementUpdateWithoutParentInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3743,8 +3743,8 @@ export type EngagementUncheckedUpdateWithoutParentInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -3781,8 +3781,8 @@ export type EngagementUncheckedUpdateManyWithoutParentInput = {
   engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -4116,8 +4116,8 @@ export type $EngagementPayload<ExtArgs extends runtime.Types.Extensions.Internal
     engagementMode: string
     status: string
     healthStatus: string
-    interventionMode: string
-    interventionPhase: string
+    interventionMode: string | null
+    interventionPhase: string | null
     description: string | null
     startDate: Date | null
     targetEndDate: Date | null
