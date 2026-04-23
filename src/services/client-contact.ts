@@ -53,21 +53,21 @@ export async function createContact(
     eventName: AUDIT_EVENTS.CLIENT_CONTACT_CREATED,
     actorId,
     entityType: "client_contact",
-    entityId: result.result.id,
+    entityId: contact.id,
     payload: {
       clientId: input.clientId,
-      name: result.result.name,
+      name: contact.name,
       role: input.role ?? null,
     },
     visibility: "internal",
   });
 
   logger.info("Client contact created", {
-    contactId: result.result.id,
+    contactId: contact.id,
     clientId: input.clientId,
   });
 
-  return { id: result.result.id };
+  return { id: contact.id };
 }
 
 export async function deactivateContact(
@@ -139,35 +139,6 @@ export async function updateContact(
   });
 
   logger.info("Client contact updated", { contactId });
-}
-
-export async function deactivateContact(
-  contactId: string,
-  actorId: string
-): Promise<void> {
-  const contact = await db.clientContact.findUnique({
-    where: { id: contactId },
-  });
-  if (!contact) throw new NotFoundError("ClientContact", contactId);
-
-  if (!contact.isActive) {
-    throw new ValidationError("Contact is already inactive");
-  }
-
-  await db.clientContact.update({
-    where: { id: contactId },
-    data: { isActive: false },
-  });
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.CLIENT_CONTACT_DEACTIVATED,
-    actorId,
-    entityType: "client_contact",
-    entityId: contactId,
-    visibility: "internal",
-  });
-
-  logger.info("Client contact deactivated", { contactId });
 }
 
 export async function getContactsForClient(clientId: string) {
