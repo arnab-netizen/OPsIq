@@ -66,6 +66,7 @@ export const ModelName = {
   Finding: 'Finding',
   Recommendation: 'Recommendation',
   Action: 'Action',
+  ShockEvent: 'ShockEvent',
   AuditEvent: 'AuditEvent',
   IdempotencyRecord: 'IdempotencyRecord',
   ScheduledTask: 'ScheduledTask',
@@ -380,6 +381,22 @@ export const ActionScalarFieldEnum = {
 } as const
 
 export type ActionScalarFieldEnum = (typeof ActionScalarFieldEnum)[keyof typeof ActionScalarFieldEnum]
+
+
+export const ShockEventScalarFieldEnum = {
+  id: 'id',
+  engagementId: 'engagementId',
+  type: 'type',
+  severity: 'severity',
+  happenedAt: 'happenedAt',
+  notes: 'notes',
+  reportedBy: 'reportedBy',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ShockEventScalarFieldEnum = (typeof ShockEventScalarFieldEnum)[keyof typeof ShockEventScalarFieldEnum]
 
 
 export const AuditEventScalarFieldEnum = {

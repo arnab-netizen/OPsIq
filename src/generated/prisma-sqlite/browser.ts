@@ -93,6 +93,11 @@ export type Recommendation = Prisma.RecommendationModel
  */
 export type Action = Prisma.ActionModel
 /**
+ * Model ShockEvent
+ * 
+ */
+export type ShockEvent = Prisma.ShockEventModel
+/**
  * Model AuditEvent
  * 
  */

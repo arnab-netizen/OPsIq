@@ -372,6 +372,7 @@ export type EngagementWhereInput = {
   evidence?: Prisma.EvidenceListRelationFilter
   evidenceBundles?: Prisma.EvidenceBundleListRelationFilter
   actions?: Prisma.ActionListRelationFilter
+  shockEvents?: Prisma.ShockEventListRelationFilter
   kpis?: Prisma.KPIListRelationFilter
   deliverables?: Prisma.DeliverableListRelationFilter
   risks?: Prisma.RiskListRelationFilter
@@ -413,6 +414,7 @@ export type EngagementOrderByWithRelationInput = {
   evidence?: Prisma.EvidenceOrderByRelationAggregateInput
   evidenceBundles?: Prisma.EvidenceBundleOrderByRelationAggregateInput
   actions?: Prisma.ActionOrderByRelationAggregateInput
+  shockEvents?: Prisma.ShockEventOrderByRelationAggregateInput
   kpis?: Prisma.KPIOrderByRelationAggregateInput
   deliverables?: Prisma.DeliverableOrderByRelationAggregateInput
   risks?: Prisma.RiskOrderByRelationAggregateInput
@@ -457,6 +459,7 @@ export type EngagementWhereUniqueInput = Prisma.AtLeast<{
   evidence?: Prisma.EvidenceListRelationFilter
   evidenceBundles?: Prisma.EvidenceBundleListRelationFilter
   actions?: Prisma.ActionListRelationFilter
+  shockEvents?: Prisma.ShockEventListRelationFilter
   kpis?: Prisma.KPIListRelationFilter
   deliverables?: Prisma.DeliverableListRelationFilter
   risks?: Prisma.RiskListRelationFilter
@@ -556,6 +559,7 @@ export type EngagementCreateInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -595,6 +599,7 @@ export type EngagementUncheckedCreateInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -634,6 +639,7 @@ export type EngagementUpdateInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -673,6 +679,7 @@ export type EngagementUncheckedUpdateInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -1074,6 +1081,20 @@ export type EngagementUpdateOneRequiredWithoutActionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutActionsInput, Prisma.EngagementUpdateWithoutActionsInput>, Prisma.EngagementUncheckedUpdateWithoutActionsInput>
 }
 
+export type EngagementCreateNestedOneWithoutShockEventsInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutShockEventsInput, Prisma.EngagementUncheckedCreateWithoutShockEventsInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutShockEventsInput
+  connect?: Prisma.EngagementWhereUniqueInput
+}
+
+export type EngagementUpdateOneRequiredWithoutShockEventsNestedInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutShockEventsInput, Prisma.EngagementUncheckedCreateWithoutShockEventsInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutShockEventsInput
+  upsert?: Prisma.EngagementUpsertWithoutShockEventsInput
+  connect?: Prisma.EngagementWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutShockEventsInput, Prisma.EngagementUpdateWithoutShockEventsInput>, Prisma.EngagementUncheckedUpdateWithoutShockEventsInput>
+}
+
 export type EngagementCreateNestedOneWithoutStagesInput = {
   create?: Prisma.XOR<Prisma.EngagementCreateWithoutStagesInput, Prisma.EngagementUncheckedCreateWithoutStagesInput>
   connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutStagesInput
@@ -1163,6 +1184,7 @@ export type EngagementCreateWithoutMembershipsInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -1201,6 +1223,7 @@ export type EngagementUncheckedCreateWithoutMembershipsInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -1255,6 +1278,7 @@ export type EngagementUpdateWithoutMembershipsInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -1293,6 +1317,7 @@ export type EngagementUncheckedUpdateWithoutMembershipsInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -1331,6 +1356,7 @@ export type EngagementCreateWithoutLeadsInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -1369,6 +1395,7 @@ export type EngagementUncheckedCreateWithoutLeadsInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -1423,6 +1450,7 @@ export type EngagementUpdateWithoutLeadsInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -1461,6 +1489,7 @@ export type EngagementUncheckedUpdateWithoutLeadsInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -1499,6 +1528,7 @@ export type EngagementCreateWithoutClientInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -1537,6 +1567,7 @@ export type EngagementUncheckedCreateWithoutClientInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -1629,6 +1660,7 @@ export type EngagementCreateWithoutChildrenInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -1667,6 +1699,7 @@ export type EngagementUncheckedCreateWithoutChildrenInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -1710,6 +1743,7 @@ export type EngagementCreateWithoutParentInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -1748,6 +1782,7 @@ export type EngagementUncheckedCreateWithoutParentInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -1806,6 +1841,7 @@ export type EngagementUpdateWithoutChildrenInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -1844,6 +1880,7 @@ export type EngagementUncheckedUpdateWithoutChildrenInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -1898,6 +1935,7 @@ export type EngagementCreateWithoutConditionProfilesInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -1936,6 +1974,7 @@ export type EngagementUncheckedCreateWithoutConditionProfilesInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -1990,6 +2029,7 @@ export type EngagementUpdateWithoutConditionProfilesInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -2028,6 +2068,7 @@ export type EngagementUncheckedUpdateWithoutConditionProfilesInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -2066,6 +2107,7 @@ export type EngagementCreateWithoutEvidenceInput = {
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -2104,6 +2146,7 @@ export type EngagementUncheckedCreateWithoutEvidenceInput = {
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -2158,6 +2201,7 @@ export type EngagementUpdateWithoutEvidenceInput = {
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -2196,6 +2240,7 @@ export type EngagementUncheckedUpdateWithoutEvidenceInput = {
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -2234,6 +2279,7 @@ export type EngagementCreateWithoutEvidenceBundlesInput = {
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -2272,6 +2318,7 @@ export type EngagementUncheckedCreateWithoutEvidenceBundlesInput = {
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -2326,6 +2373,7 @@ export type EngagementUpdateWithoutEvidenceBundlesInput = {
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -2364,6 +2412,7 @@ export type EngagementUncheckedUpdateWithoutEvidenceBundlesInput = {
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -2402,6 +2451,7 @@ export type EngagementCreateWithoutFindingsInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -2440,6 +2490,7 @@ export type EngagementUncheckedCreateWithoutFindingsInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -2494,6 +2545,7 @@ export type EngagementUpdateWithoutFindingsInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -2532,6 +2584,7 @@ export type EngagementUncheckedUpdateWithoutFindingsInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -2570,6 +2623,7 @@ export type EngagementCreateWithoutRecommendationsInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -2608,6 +2662,7 @@ export type EngagementUncheckedCreateWithoutRecommendationsInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -2662,6 +2717,7 @@ export type EngagementUpdateWithoutRecommendationsInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -2700,6 +2756,7 @@ export type EngagementUncheckedUpdateWithoutRecommendationsInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -2738,6 +2795,7 @@ export type EngagementCreateWithoutActionsInput = {
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -2776,6 +2834,7 @@ export type EngagementUncheckedCreateWithoutActionsInput = {
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -2830,6 +2889,7 @@ export type EngagementUpdateWithoutActionsInput = {
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -2868,6 +2928,179 @@ export type EngagementUncheckedUpdateWithoutActionsInput = {
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+}
+
+export type EngagementCreateWithoutShockEventsInput = {
+  id?: string
+  code: string
+  title: string
+  serviceTier: string
+  engagementMode: string
+  status?: string
+  healthStatus?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
+  description?: string | null
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  actualEndDate?: Date | string | null
+  ownerId?: string | null
+  assignedConsultantId?: string | null
+  currentScopeVersionId?: string | null
+  version?: number
+  visibility?: string
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  client: Prisma.ClientAccountCreateNestedOneWithoutEngagementsInput
+  parent?: Prisma.EngagementCreateNestedOneWithoutChildrenInput
+  children?: Prisma.EngagementCreateNestedManyWithoutParentInput
+  conditionProfiles?: Prisma.BusinessConditionProfileCreateNestedManyWithoutEngagementInput
+  memberships?: Prisma.EngagementMembershipCreateNestedManyWithoutEngagementInput
+  leads?: Prisma.LeadRecordCreateNestedManyWithoutEngagementInput
+  stages?: Prisma.StageCreateNestedManyWithoutEngagementInput
+  findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
+  recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
+  evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
+  actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+}
+
+export type EngagementUncheckedCreateWithoutShockEventsInput = {
+  id?: string
+  code: string
+  title: string
+  clientId: string
+  serviceTier: string
+  engagementMode: string
+  status?: string
+  healthStatus?: string
+  interventionMode?: string | null
+  interventionPhase?: string | null
+  description?: string | null
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  actualEndDate?: Date | string | null
+  ownerId?: string | null
+  assignedConsultantId?: string | null
+  currentScopeVersionId?: string | null
+  parentEngagementId?: string | null
+  version?: number
+  visibility?: string
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  children?: Prisma.EngagementUncheckedCreateNestedManyWithoutParentInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedCreateNestedManyWithoutEngagementInput
+  memberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutEngagementInput
+  leads?: Prisma.LeadRecordUncheckedCreateNestedManyWithoutEngagementInput
+  stages?: Prisma.StageUncheckedCreateNestedManyWithoutEngagementInput
+  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
+  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
+  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
+  actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+}
+
+export type EngagementCreateOrConnectWithoutShockEventsInput = {
+  where: Prisma.EngagementWhereUniqueInput
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutShockEventsInput, Prisma.EngagementUncheckedCreateWithoutShockEventsInput>
+}
+
+export type EngagementUpsertWithoutShockEventsInput = {
+  update: Prisma.XOR<Prisma.EngagementUpdateWithoutShockEventsInput, Prisma.EngagementUncheckedUpdateWithoutShockEventsInput>
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutShockEventsInput, Prisma.EngagementUncheckedCreateWithoutShockEventsInput>
+  where?: Prisma.EngagementWhereInput
+}
+
+export type EngagementUpdateToOneWithWhereWithoutShockEventsInput = {
+  where?: Prisma.EngagementWhereInput
+  data: Prisma.XOR<Prisma.EngagementUpdateWithoutShockEventsInput, Prisma.EngagementUncheckedUpdateWithoutShockEventsInput>
+}
+
+export type EngagementUpdateWithoutShockEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  client?: Prisma.ClientAccountUpdateOneRequiredWithoutEngagementsNestedInput
+  parent?: Prisma.EngagementUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.EngagementUpdateManyWithoutParentNestedInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUpdateManyWithoutEngagementNestedInput
+  memberships?: Prisma.EngagementMembershipUpdateManyWithoutEngagementNestedInput
+  leads?: Prisma.LeadRecordUpdateManyWithoutEngagementNestedInput
+  stages?: Prisma.StageUpdateManyWithoutEngagementNestedInput
+  findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
+  recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
+  evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
+  actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+}
+
+export type EngagementUncheckedUpdateWithoutShockEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  clientId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  interventionPhase?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentEngagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  children?: Prisma.EngagementUncheckedUpdateManyWithoutParentNestedInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedUpdateManyWithoutEngagementNestedInput
+  memberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutEngagementNestedInput
+  leads?: Prisma.LeadRecordUncheckedUpdateManyWithoutEngagementNestedInput
+  stages?: Prisma.StageUncheckedUpdateManyWithoutEngagementNestedInput
+  findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
+  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
+  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
+  actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -2906,6 +3139,7 @@ export type EngagementCreateWithoutStagesInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
@@ -2944,6 +3178,7 @@ export type EngagementUncheckedCreateWithoutStagesInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
@@ -2998,6 +3233,7 @@ export type EngagementUpdateWithoutStagesInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -3036,6 +3272,7 @@ export type EngagementUncheckedUpdateWithoutStagesInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -3075,6 +3312,7 @@ export type EngagementCreateWithoutKpisInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
@@ -3113,6 +3351,7 @@ export type EngagementUncheckedCreateWithoutKpisInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
@@ -3167,6 +3406,7 @@ export type EngagementUpdateWithoutKpisInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
@@ -3205,6 +3445,7 @@ export type EngagementUncheckedUpdateWithoutKpisInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
@@ -3243,6 +3484,7 @@ export type EngagementCreateWithoutDeliverablesInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
@@ -3281,6 +3523,7 @@ export type EngagementUncheckedCreateWithoutDeliverablesInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
@@ -3335,6 +3578,7 @@ export type EngagementUpdateWithoutDeliverablesInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
@@ -3373,6 +3617,7 @@ export type EngagementUncheckedUpdateWithoutDeliverablesInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
@@ -3411,6 +3656,7 @@ export type EngagementCreateWithoutRisksInput = {
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
 }
@@ -3449,6 +3695,7 @@ export type EngagementUncheckedCreateWithoutRisksInput = {
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  shockEvents?: Prisma.ShockEventUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
 }
@@ -3503,6 +3750,7 @@ export type EngagementUpdateWithoutRisksInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
 }
@@ -3541,6 +3789,7 @@ export type EngagementUncheckedUpdateWithoutRisksInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
 }
@@ -3603,6 +3852,7 @@ export type EngagementUpdateWithoutClientInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -3641,6 +3891,7 @@ export type EngagementUncheckedUpdateWithoutClientInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -3729,6 +3980,7 @@ export type EngagementUpdateWithoutParentInput = {
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
@@ -3767,6 +4019,7 @@ export type EngagementUncheckedUpdateWithoutParentInput = {
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  shockEvents?: Prisma.ShockEventUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
@@ -3813,6 +4066,7 @@ export type EngagementCountOutputType = {
   evidence: number
   evidenceBundles: number
   actions: number
+  shockEvents: number
   kpis: number
   deliverables: number
   risks: number
@@ -3829,6 +4083,7 @@ export type EngagementCountOutputTypeSelect<ExtArgs extends runtime.Types.Extens
   evidence?: boolean | EngagementCountOutputTypeCountEvidenceArgs
   evidenceBundles?: boolean | EngagementCountOutputTypeCountEvidenceBundlesArgs
   actions?: boolean | EngagementCountOutputTypeCountActionsArgs
+  shockEvents?: boolean | EngagementCountOutputTypeCountShockEventsArgs
   kpis?: boolean | EngagementCountOutputTypeCountKpisArgs
   deliverables?: boolean | EngagementCountOutputTypeCountDeliverablesArgs
   risks?: boolean | EngagementCountOutputTypeCountRisksArgs
@@ -3917,6 +4172,13 @@ export type EngagementCountOutputTypeCountActionsArgs<ExtArgs extends runtime.Ty
 /**
  * EngagementCountOutputType without action
  */
+export type EngagementCountOutputTypeCountShockEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ShockEventWhereInput
+}
+
+/**
+ * EngagementCountOutputType without action
+ */
 export type EngagementCountOutputTypeCountKpisArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.KPIWhereInput
 }
@@ -3972,6 +4234,7 @@ export type EngagementSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   evidence?: boolean | Prisma.Engagement$evidenceArgs<ExtArgs>
   evidenceBundles?: boolean | Prisma.Engagement$evidenceBundlesArgs<ExtArgs>
   actions?: boolean | Prisma.Engagement$actionsArgs<ExtArgs>
+  shockEvents?: boolean | Prisma.Engagement$shockEventsArgs<ExtArgs>
   kpis?: boolean | Prisma.Engagement$kpisArgs<ExtArgs>
   deliverables?: boolean | Prisma.Engagement$deliverablesArgs<ExtArgs>
   risks?: boolean | Prisma.Engagement$risksArgs<ExtArgs>
@@ -4074,6 +4337,7 @@ export type EngagementInclude<ExtArgs extends runtime.Types.Extensions.InternalA
   evidence?: boolean | Prisma.Engagement$evidenceArgs<ExtArgs>
   evidenceBundles?: boolean | Prisma.Engagement$evidenceBundlesArgs<ExtArgs>
   actions?: boolean | Prisma.Engagement$actionsArgs<ExtArgs>
+  shockEvents?: boolean | Prisma.Engagement$shockEventsArgs<ExtArgs>
   kpis?: boolean | Prisma.Engagement$kpisArgs<ExtArgs>
   deliverables?: boolean | Prisma.Engagement$deliverablesArgs<ExtArgs>
   risks?: boolean | Prisma.Engagement$risksArgs<ExtArgs>
@@ -4103,6 +4367,7 @@ export type $EngagementPayload<ExtArgs extends runtime.Types.Extensions.Internal
     evidence: Prisma.$EvidencePayload<ExtArgs>[]
     evidenceBundles: Prisma.$EvidenceBundlePayload<ExtArgs>[]
     actions: Prisma.$ActionPayload<ExtArgs>[]
+    shockEvents: Prisma.$ShockEventPayload<ExtArgs>[]
     kpis: Prisma.$KPIPayload<ExtArgs>[]
     deliverables: Prisma.$DeliverablePayload<ExtArgs>[]
     risks: Prisma.$RiskPayload<ExtArgs>[]
@@ -4537,6 +4802,7 @@ export interface Prisma__EngagementClient<T, Null = never, ExtArgs extends runti
   evidence<T extends Prisma.Engagement$evidenceArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$evidenceArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvidencePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   evidenceBundles<T extends Prisma.Engagement$evidenceBundlesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$evidenceBundlesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvidenceBundlePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   actions<T extends Prisma.Engagement$actionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$actionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  shockEvents<T extends Prisma.Engagement$shockEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$shockEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ShockEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   kpis<T extends Prisma.Engagement$kpisArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$kpisArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$KPIPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   deliverables<T extends Prisma.Engagement$deliverablesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$deliverablesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeliverablePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   risks<T extends Prisma.Engagement$risksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$risksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RiskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -5247,6 +5513,30 @@ export type Engagement$actionsArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   distinct?: Prisma.ActionScalarFieldEnum | Prisma.ActionScalarFieldEnum[]
+}
+
+/**
+ * Engagement.shockEvents
+ */
+export type Engagement$shockEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the ShockEvent
+   */
+  select?: Prisma.ShockEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the ShockEvent
+   */
+  omit?: Prisma.ShockEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ShockEventInclude<ExtArgs> | null
+  where?: Prisma.ShockEventWhereInput
+  orderBy?: Prisma.ShockEventOrderByWithRelationInput | Prisma.ShockEventOrderByWithRelationInput[]
+  cursor?: Prisma.ShockEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ShockEventScalarFieldEnum | Prisma.ShockEventScalarFieldEnum[]
 }
 
 /**

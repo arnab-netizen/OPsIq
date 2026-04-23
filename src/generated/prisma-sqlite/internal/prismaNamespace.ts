@@ -399,6 +399,7 @@ export const ModelName = {
   Finding: 'Finding',
   Recommendation: 'Recommendation',
   Action: 'Action',
+  ShockEvent: 'ShockEvent',
   AuditEvent: 'AuditEvent',
   IdempotencyRecord: 'IdempotencyRecord',
   ScheduledTask: 'ScheduledTask',
@@ -422,7 +423,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "session" | "userRoleAssignment" | "engagementMembership" | "leadRecord" | "clientAccount" | "clientContact" | "engagement" | "businessConditionProfile" | "evidence" | "evidenceBundle" | "evidenceBundleItem" | "finding" | "recommendation" | "action" | "auditEvent" | "idempotencyRecord" | "scheduledTask" | "stage" | "kPI" | "kPISnapshot" | "deliverable" | "risk"
+    modelProps: "user" | "session" | "userRoleAssignment" | "engagementMembership" | "leadRecord" | "clientAccount" | "clientContact" | "engagement" | "businessConditionProfile" | "evidence" | "evidenceBundle" | "evidenceBundleItem" | "finding" | "recommendation" | "action" | "shockEvent" | "auditEvent" | "idempotencyRecord" | "scheduledTask" | "stage" | "kPI" | "kPISnapshot" | "deliverable" | "risk"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1536,6 +1537,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ShockEvent: {
+      payload: Prisma.$ShockEventPayload<ExtArgs>
+      fields: Prisma.ShockEventFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ShockEventFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ShockEventFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload>
+        }
+        findFirst: {
+          args: Prisma.ShockEventFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ShockEventFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload>
+        }
+        findMany: {
+          args: Prisma.ShockEventFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload>[]
+        }
+        create: {
+          args: Prisma.ShockEventCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload>
+        }
+        createMany: {
+          args: Prisma.ShockEventCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ShockEventCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload>[]
+        }
+        delete: {
+          args: Prisma.ShockEventDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload>
+        }
+        update: {
+          args: Prisma.ShockEventUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload>
+        }
+        deleteMany: {
+          args: Prisma.ShockEventDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ShockEventUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ShockEventUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload>[]
+        }
+        upsert: {
+          args: Prisma.ShockEventUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ShockEventPayload>
+        }
+        aggregate: {
+          args: Prisma.ShockEventAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateShockEvent>
+        }
+        groupBy: {
+          args: Prisma.ShockEventGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ShockEventGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ShockEventCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ShockEventCountAggregateOutputType> | number
+        }
+      }
+    }
     AuditEvent: {
       payload: Prisma.$AuditEventPayload<ExtArgs>
       fields: Prisma.AuditEventFieldRefs
@@ -2457,6 +2532,22 @@ export const ActionScalarFieldEnum = {
 export type ActionScalarFieldEnum = (typeof ActionScalarFieldEnum)[keyof typeof ActionScalarFieldEnum]
 
 
+export const ShockEventScalarFieldEnum = {
+  id: 'id',
+  engagementId: 'engagementId',
+  type: 'type',
+  severity: 'severity',
+  happenedAt: 'happenedAt',
+  notes: 'notes',
+  reportedBy: 'reportedBy',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ShockEventScalarFieldEnum = (typeof ShockEventScalarFieldEnum)[keyof typeof ShockEventScalarFieldEnum]
+
+
 export const AuditEventScalarFieldEnum = {
   id: 'id',
   eventName: 'eventName',
@@ -2776,6 +2867,7 @@ export type GlobalOmitConfig = {
   finding?: Prisma.FindingOmit
   recommendation?: Prisma.RecommendationOmit
   action?: Prisma.ActionOmit
+  shockEvent?: Prisma.ShockEventOmit
   auditEvent?: Prisma.AuditEventOmit
   idempotencyRecord?: Prisma.IdempotencyRecordOmit
   scheduledTask?: Prisma.ScheduledTaskOmit
