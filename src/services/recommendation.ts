@@ -14,6 +14,7 @@ export interface CreateRecommendationInput {
   description?: string;
   expectedImpact?: string;
   implementationPhase?: string;
+  class?: RecommendationClass;
   scoringInput?: RecommendationScoringInput;
 }
 
@@ -36,13 +37,89 @@ export interface RecommendationScoringInput {
   strategicAlignment: number;
 }
 
+export type RecommendationClass = "containment" | "stabilization" | "growth";
+
 function normalizeValue(value: number, min: number, max: number): number {
   if (value < min) return 0;
   if (value > max) return 1;
   return (value - min) / (max - min);
 }
 
-export function calculateRecommendationScore(input: RecommendationScoringInput): number {
+interface ScoringWeights {
+  impact: number;
+  urgency: number;
+  confidence: number;
+  riskReduction: number;
+  strategicAlignment: number;
+  effort: number;
+  cost: number;
+  timeToImpact: number;
+  reversibility: number;
+  dependency: number;
+}
+
+function getWeightsByClass(recommendationClass?: RecommendationClass): ScoringWeights {
+  const baseWeights: ScoringWeights = {
+    impact: 0.2,
+    urgency: 0.15,
+    confidence: 0.1,
+    riskReduction: 0.15,
+    strategicAlignment: 0.15,
+    effort: 0.1,
+    cost: 0.05,
+    timeToImpact: 0.05,
+    reversibility: 0.03,
+    dependency: 0.02,
+  };
+
+  if (!recommendationClass) {
+    return baseWeights;
+  }
+
+  const weights = { ...baseWeights };
+
+  if (recommendationClass === "containment") {
+    weights.urgency = 0.22;
+    weights.riskReduction = 0.22;
+    weights.impact = 0.15;
+    weights.strategicAlignment = 0.12;
+    weights.confidence = 0.08;
+    weights.effort = 0.08;
+    weights.cost = 0.04;
+    weights.timeToImpact = 0.04;
+    weights.reversibility = 0.03;
+    weights.dependency = 0.02;
+  } else if (recommendationClass === "stabilization") {
+    weights.effort = 0.18;
+    weights.dependency = 0.12;
+    weights.impact = 0.15;
+    weights.urgency = 0.12;
+    weights.confidence = 0.1;
+    weights.riskReduction = 0.12;
+    weights.strategicAlignment = 0.12;
+    weights.cost = 0.03;
+    weights.timeToImpact = 0.03;
+    weights.reversibility = 0.03;
+  } else if (recommendationClass === "growth") {
+    weights.impact = 0.28;
+    weights.strategicAlignment = 0.22;
+    weights.confidence = 0.12;
+    weights.riskReduction = 0.12;
+    weights.urgency = 0.1;
+    weights.reversibility = 0.05;
+    weights.effort = 0.05;
+    weights.cost = 0.03;
+    weights.timeToImpact = 0.02;
+    weights.dependency = 0.01;
+  }
+
+  return weights;
+}
+
+export function calculateRecommendationScore(
+  input: RecommendationScoringInput,
+  recommendationClass?: RecommendationClass
+): number {
   const normalized = {
     impact: normalizeValue(input.impact, 1, 5),
     urgency: normalizeValue(input.urgency, 1, 5),
@@ -56,17 +133,19 @@ export function calculateRecommendationScore(input: RecommendationScoringInput):
     dependency: normalizeValue(input.dependency, 0, 10),
   };
 
+  const weights = getWeightsByClass(recommendationClass);
+
   const score =
-    normalized.impact * 0.2 +
-    normalized.urgency * 0.15 +
-    normalized.confidence * 0.1 +
-    normalized.riskReduction * 0.15 +
-    normalized.strategicAlignment * 0.15 +
-    (1 - normalized.effort) * 0.1 +
-    (1 - normalized.cost) * 0.05 +
-    (1 - normalized.timeToImpact) * 0.05 +
-    normalized.reversibility * 0.03 +
-    (1 - normalized.dependency) * 0.02;
+    normalized.impact * weights.impact +
+    normalized.urgency * weights.urgency +
+    normalized.confidence * weights.confidence +
+    normalized.riskReduction * weights.riskReduction +
+    normalized.strategicAlignment * weights.strategicAlignment +
+    (1 - normalized.effort) * weights.effort +
+    (1 - normalized.cost) * weights.cost +
+    (1 - normalized.timeToImpact) * weights.timeToImpact +
+    normalized.reversibility * weights.reversibility +
+    (1 - normalized.dependency) * weights.dependency;
 
   return Math.min(Math.max(score, 0), 1);
 }
@@ -90,7 +169,7 @@ export async function createRecommendation(
   let scoreValue: number | null = null;
 
   if (input.scoringInput) {
-    scoreValue = calculateRecommendationScore(input.scoringInput);
+    scoreValue = calculateRecommendationScore(input.scoringInput, input.class);
     derivedPriority = mapScoreToPriority(scoreValue);
   }
 
@@ -103,6 +182,7 @@ export async function createRecommendation(
       description: input.description ?? null,
       expectedImpact: input.expectedImpact ?? null,
       implementationPhase: input.implementationPhase ?? null,
+      class: input.class ?? null,
       recommendedBy: actorId,
       score: scoreValue,
       scoringMetrics: input.scoringInput ? JSON.stringify(input.scoringInput) : null,
@@ -210,14 +290,15 @@ export async function updateRecommendationStatus(
 export async function updateRecommendationPriorityFromScore(
   recommendationId: string,
   scoringInput: RecommendationScoringInput,
-  actorId: string
+  actorId: string,
+  recommendationClass?: RecommendationClass
 ): Promise<{ id: string; score: number; priority: string }> {
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId },
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);
 
-  const score = calculateRecommendationScore(scoringInput);
+  const score = calculateRecommendationScore(scoringInput, recommendationClass);
   const newPriority = mapScoreToPriority(score);
 
   const updated = await db.recommendation.update({
@@ -267,6 +348,7 @@ export async function reRankRecommendationsInEngagement(
       priority: true,
       score: true,
       scoringMetrics: true,
+      class: true,
     },
   });
 
@@ -282,7 +364,10 @@ export async function reRankRecommendationsInEngagement(
         ? JSON.parse(rec.scoringMetrics)
         : rec.scoringMetrics;
 
-      const newScore = calculateRecommendationScore(metrics as RecommendationScoringInput);
+      const newScore = calculateRecommendationScore(
+        metrics as RecommendationScoringInput,
+        rec.class as RecommendationClass | undefined
+      );
       const newPriority = mapScoreToPriority(newScore);
 
       if (newPriority !== rec.priority) {
