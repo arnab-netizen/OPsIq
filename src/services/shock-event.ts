@@ -110,7 +110,7 @@ export async function updateShockEvent(
 
 export async function listShockEventsForEngagement(
   engagementId: string,
-  userId: string
+  userId?: string
 ): Promise<Array<{
   id: string;
   type: string;
@@ -119,14 +119,30 @@ export async function listShockEventsForEngagement(
   notes: string | null;
   createdAt: Date;
 }>> {
-  // Note: ShockEvent model does not exist in schema - returning empty list
-  await assertEngagementAccess(userId, engagementId);
-  return [];
+  // Check engagement access if userId provided
+  if (userId) {
+    await assertEngagementAccess(userId, engagementId);
+  }
+
+  const events = await db.shockEvent.findMany({
+    where: { engagementId },
+    select: {
+      id: true,
+      type: true,
+      severity: true,
+      happenedAt: true,
+      notes: true,
+      createdAt: true,
+    },
+    orderBy: { happenedAt: "desc" },
+  });
+
+  return events;
 }
 
 export async function getShockEventDetail(
   shockEventId: string,
-  userId: string
+  userId?: string
 ): Promise<{
   id: string;
   engagementId: string;
@@ -134,10 +150,19 @@ export async function getShockEventDetail(
   severity: string;
   happenedAt: Date;
   notes: string | null;
-  version: number;
   createdAt: Date;
   updatedAt: Date;
 }> {
-  // Note: ShockEvent model does not exist in schema - always throw NotFoundError
-  throw new NotFoundError("ShockEvent", shockEventId);
+  const shockEvent = await db.shockEvent.findUnique({
+    where: { id: shockEventId },
+  });
+
+  if (!shockEvent) throw new NotFoundError("ShockEvent", shockEventId);
+
+  // Check engagement access if userId provided
+  if (userId) {
+    await assertEngagementAccess(userId, shockEvent.engagementId);
+  }
+
+  return shockEvent;
 }
