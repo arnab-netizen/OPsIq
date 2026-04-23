@@ -8,6 +8,9 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     globalSetup: ["src/__tests__/global-setup.ts"],
     setupFiles: ["src/__tests__/setup.ts"],
+    threads: false,
+    singleThread: true,
+    maxWorkers: 1,
   },
   resolve: {
     alias: {

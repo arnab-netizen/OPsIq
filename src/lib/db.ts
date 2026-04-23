@@ -1,5 +1,6 @@
 const globalForPrisma = globalThis as unknown as {
   prisma: any | undefined;
+  prismaPromise: Promise<any> | undefined;
 };
 
 async function createPrismaClient() {
@@ -10,7 +11,6 @@ async function createPrismaClient() {
     try {
       let SqliteClient: any;
       let createSqliteAdapter: any;
-      let BetterSqlite3Module: any;
 
       try {
         const clientModule = await import("../generated/prisma-sqlite/client");
@@ -59,7 +59,13 @@ async function getDb() {
   if (globalForPrisma.prisma) {
     return globalForPrisma.prisma;
   }
-  globalForPrisma.prisma = await createPrismaClient();
+
+  if (globalForPrisma.prismaPromise) {
+    return globalForPrisma.prismaPromise;
+  }
+
+  globalForPrisma.prismaPromise = createPrismaClient();
+  globalForPrisma.prisma = await globalForPrisma.prismaPromise;
   return globalForPrisma.prisma;
 }
 
