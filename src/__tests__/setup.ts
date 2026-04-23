@@ -3,9 +3,15 @@ import { beforeAll } from "vitest";
 import path from "path";
 import fs from "fs";
 
-// Load .env if it exists
+// Load .env.test first, then .env for fallback
 const loadEnv = () => {
-  const envPath = path.resolve(__dirname, "../../.env");
+  // Try .env.test first (test-specific config)
+  let envPath = path.resolve(__dirname, "../../.env.test");
+  if (!fs.existsSync(envPath)) {
+    // Fall back to .env
+    envPath = path.resolve(__dirname, "../../.env");
+  }
+
   if (fs.existsSync(envPath)) {
     const envContent = fs.readFileSync(envPath, "utf-8");
     const lines = envContent.split("\n");
@@ -30,25 +36,25 @@ beforeAll(async () => {
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) {
     throw new Error(
-      "DATABASE_URL environment variable is not set. Tests require a working PostgreSQL database.\n" +
-      "Set DATABASE_URL in .env or environment."
+      "DATABASE_URL environment variable is not set. Tests require a database connection.\n" +
+      "Ensure .env.test or .env is configured with DATABASE_URL pointing to a PostgreSQL test database."
     );
   }
 
   try {
-    console.log("Verifying database connection...");
+    console.log("Verifying test database connection...");
     // Import db after env is loaded
     const { db } = await import("@/lib/db");
 
     // Test the connection by doing a simple query
     await db.user.count();
-    console.log("Database connection verified");
+    console.log("Test database connection verified");
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `Database connection failed. Tests require a working PostgreSQL database at: ${dbUrl}\n` +
-      `Error: ${message}`
+      `Test database connection failed. DATABASE_URL: ${dbUrl}\n` +
+      `Error: ${message}\n` +
+      `Ensure PostgreSQL is running and the test database is accessible.`
     );
   }
 });
-
