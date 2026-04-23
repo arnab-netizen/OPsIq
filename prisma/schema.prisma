@@ -177,8 +177,8 @@ model Engagement {
   engagementMode        String    @map("engagement_mode") // "beginner" | "expert"
   status                String    @default("draft") // governed by ENGAGEMENT_STATUSES
   healthStatus          String    @default("healthy") @map("health_status") // "healthy" | "at_risk" | "critical" | "unknown"
-  interventionMode      String    @default("recovery") @map("intervention_mode") // governed by INTERVENTION_MODES
-  interventionPhase     String    @default("triage") @map("intervention_phase") // governed by INTERVENTION_PHASES
+  interventionMode      String?   @map("intervention_mode") // governed by INTERVENTION_MODES, null until initialized
+  interventionPhase     String?   @map("intervention_phase") // governed by INTERVENTION_PHASES, null until initialized
   description           String?
   startDate             DateTime? @map("start_date")
   targetEndDate         DateTime? @map("target_end_date")

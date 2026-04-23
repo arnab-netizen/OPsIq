@@ -119,7 +119,6 @@ export async function createEngagement(
           clientId: input.clientId,
           serviceTier: input.serviceTier,
           engagementMode: input.engagementMode,
-          interventionMode: input.interventionMode,
           description: input.description ?? null,
           startDate: input.startDate ? new Date(input.startDate) : null,
           targetEndDate: input.targetEndDate ? new Date(input.targetEndDate) : null,
