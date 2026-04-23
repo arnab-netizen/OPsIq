@@ -44,7 +44,7 @@ describe("Evidence Service", () => {
   });
 
   afterAll(async () => {
-    await db.evidenceItem.deleteMany({ where: { engagementId } });
+    await db.evidence.deleteMany({ where: { engagementId } });
     await db.evidenceBundle.deleteMany({ where: { engagementId } });
     await db.engagement.deleteMany({ where: { id: engagementId } });
     await db.clientAccount.deleteMany({ where: { id: clientId } });

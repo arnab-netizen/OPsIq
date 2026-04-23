@@ -34,6 +34,13 @@ export async function withIdempotency<T>(
   });
 
   if (existing) {
+    // Validate payload matches if one was provided
+    if (payloadHash && existing.payload !== payloadHash) {
+      throw new ValidationError("Request payload does not match original request", {
+        code: "PAYLOAD_MISMATCH",
+      });
+    }
+
     if (existing.status === "completed" && existing.responseBody !== null) {
       logger.info("Idempotency cache hit", {
         idempotencyKey,
@@ -73,6 +80,7 @@ export async function withIdempotency<T>(
           operationName,
           status: "pending",
           expiresAt,
+          payload: payloadHash,
         },
       });
 

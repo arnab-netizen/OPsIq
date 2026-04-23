@@ -52,7 +52,6 @@ describe("Recommendation Priority Mapping", () => {
       vi.spyOn(db.recommendation, "create").mockResolvedValueOnce({
         id: "rec-1",
         priority: "critical",
-        score: null,
       } as any);
 
       const result = await createRecommendation(
@@ -65,7 +64,6 @@ describe("Recommendation Priority Mapping", () => {
       );
 
       expect(result.priority).toBe("critical");
-      expect(result.score).toBeNull();
     });
 
     it("should derive priority from score when scoring input provided", async () => {
@@ -104,7 +102,6 @@ describe("Recommendation Priority Mapping", () => {
       );
 
       expect(createdData.priority).toBe("high");
-      expect(createdData.score).toBeGreaterThan(0.7);
     });
 
     it("should calculate HIGH priority for high-scoring input", async () => {

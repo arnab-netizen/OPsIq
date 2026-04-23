@@ -333,3 +333,7 @@ export async function transitionPhase(
 
   return updated;
 }
+
+export function getPhaseAllowedTransitions(phase: InterventionPhase): InterventionPhase[] {
+  return (PHASE_TRANSITIONS[phase] || []) as InterventionPhase[];
+}

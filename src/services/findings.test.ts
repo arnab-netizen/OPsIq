@@ -62,11 +62,8 @@ describe("Findings Service", () => {
   });
 
   afterAll(async () => {
-    await db.findingEvidenceLink.deleteMany({
-      where: { finding: { engagementId } },
-    });
     await db.finding.deleteMany({ where: { engagementId } });
-    await db.evidenceItem.deleteMany({ where: { engagementId } });
+    await db.evidence.deleteMany({ where: { engagementId } });
     await db.engagement.deleteMany({ where: { id: engagementId } });
     await db.clientAccount.deleteMany({ where: { id: clientId } });
   });

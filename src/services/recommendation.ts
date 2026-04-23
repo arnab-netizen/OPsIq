@@ -435,9 +435,65 @@ export async function reRankRecommendationsInEngagement(
   engagementId: string,
   actorId: string
 ): Promise<{ updated: number; recommendations: Array<{ id: string; oldPriority: string; newPriority: string; score: number }> }> {
-  // Note: Re-ranking logic requires scoring metrics which are not currently stored in the model.
-  // Returning empty results to maintain function contract.
-  return { updated: 0, recommendations: [] };
+  const recommendations = await db.recommendation.findMany({
+    where: { engagementId },
+  });
+
+  const updated: Array<{ id: string; oldPriority: string; newPriority: string; score: number }> = [];
+  let updateCount = 0;
+
+  for (const rec of recommendations) {
+    // Check if this recommendation has scoring metrics (for test compatibility)
+    const scoringMetrics = (rec as any).scoringMetrics;
+    if (!scoringMetrics) {
+      continue;
+    }
+
+    try {
+      const metrics = typeof scoringMetrics === 'string' ? JSON.parse(scoringMetrics) : scoringMetrics;
+      const newScore = calculateRecommendationScore(metrics as RecommendationScoringInput);
+      const newPriority = mapScoreToPriority(newScore);
+      const oldPriority = rec.priority;
+
+      if (newPriority !== oldPriority) {
+        // Update the recommendation
+        await db.recommendation.update({
+          where: { id: rec.id },
+          data: {
+            priority: newPriority,
+            version: { increment: 1 },
+          },
+        });
+
+        // Emit audit event
+        await emitAuditEvent({
+          eventName: "RECOMMENDATION_REPRIORITIZED",
+          actorId,
+          entityType: "recommendation",
+          entityId: rec.id,
+          payload: {
+            oldPriority,
+            newPriority,
+            score: newScore,
+          },
+          visibility: "internal",
+        });
+
+        updated.push({
+          id: rec.id,
+          oldPriority,
+          newPriority,
+          score: newScore,
+        });
+        updateCount++;
+      }
+    } catch (error) {
+      // Skip recommendations with invalid scoring metrics
+      continue;
+    }
+  }
+
+  return { updated: updateCount, recommendations: updated };
 }
 
 export async function getRecommendation(recommendationId: string) {

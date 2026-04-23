@@ -9,10 +9,6 @@ vi.mock("@/lib/db", () => ({
   db: {
     engagement: {
       findUnique: vi.fn(),
-    },
-    interventionState: {
-      findUnique: vi.fn(),
-      create: vi.fn(),
       update: vi.fn(),
     },
     businessConditionProfile: {
@@ -127,46 +123,43 @@ describe("Intervention State Service", () => {
 
   describe("Service initialization", () => {
     it("initializes with assessment as default phase", async () => {
-      // Mock setup
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.engagement.findUnique.mockResolvedValue({ id: "eng-1" });
-      mockDb.interventionState.findUnique.mockResolvedValue(null);
-      mockDb.interventionState.create.mockResolvedValue({
-        id: "state-1",
+      mockDb.engagement.findUnique.mockResolvedValue({ id: "eng-1", interventionMode: null });
+      mockDb.engagement.update.mockResolvedValue({
+        id: "eng-1",
         engagementId: "eng-1",
-        currentPhase: "triage",
-        previousPhase: null,
+        interventionMode: "recovery",
+        interventionPhase: "triage",
         version: 1,
       });
 
       const { initializeInterventionState } = await import("./intervention-state");
       const result = await initializeInterventionState(
-        { engagementId: "eng-1" },
+        "eng-1",
+        "recovery",
         "user-1"
       );
 
-      expect(result.id).toBe("state-1");
-      expect(result.engagementId).toBe("eng-1");
-      expect(result.currentPhase).toBe("triage");
+      expect(result.id).toBe("eng-1");
+      expect(result.interventionPhase).toBe("triage");
     });
 
     it("prevents duplicate initialization", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.engagement.findUnique.mockResolvedValue({ id: "eng-1" });
-      mockDb.interventionState.findUnique.mockResolvedValue({
-        id: "state-1",
-        engagementId: "eng-1",
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+        interventionMode: "recovery",
       });
 
       const { initializeInterventionState } = await import("./intervention-state");
 
       try {
-        await initializeInterventionState({ engagementId: "eng-1" }, "user-1");
+        await initializeInterventionState("eng-1", "recovery", "user-1");
         expect.fail("Should throw validation error");
       } catch (error) {
-        expect((error as any).message).toContain("already exists");
+        expect((error as any).message).toContain("already initialized");
       }
     });
 
@@ -178,10 +171,7 @@ describe("Intervention State Service", () => {
       const { initializeInterventionState } = await import("./intervention-state");
 
       try {
-        await initializeInterventionState(
-          { engagementId: "nonexistent" },
-          "user-1"
-        );
+        await initializeInterventionState("nonexistent", "recovery", "user-1");
         expect.fail("Should throw not found error");
       } catch (error) {
         expect((error as any).message).toContain("not found");
@@ -193,36 +183,14 @@ describe("Intervention State Service", () => {
     it("successfully transitions to allowed phase", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.interventionState.findUnique.mockResolvedValue({
-        id: "state-1",
-        engagementId: "eng-1",
-        currentPhase: "triage",
-        previousPhase: null,
-      });
-      mockDb.interventionState.update.mockResolvedValue({
-        id: "state-1",
-        engagementId: "eng-1",
-        currentPhase: "stabilize",
-        previousPhase: "triage",
-      });
-
-      mockDb.businessConditionProfile.findFirst.mockResolvedValue({
-        businessStatus: "stable",
-        severityScore: 5,
-        cashPressureLevel: "low",
-        marginPressureLevel: "low",
-        ownerDependencyRisk: "low",
-        moraleFragilityLevel: "low",
-      });
-      mockDb.kpi.findMany.mockResolvedValue([]);
-      mockDb.action.findMany.mockResolvedValue([]);
-      mockDb.action.count.mockResolvedValue(0);
-      mockDb.shockEvent.findMany.mockResolvedValue([]);
       mockDb.engagement.findUnique.mockResolvedValue({
         id: "eng-1",
-        interventionMode: "stabilization",
+        interventionPhase: "triage",
       });
-      mockDb.recommendation.findMany.mockResolvedValue([]);
+      mockDb.engagement.update.mockResolvedValue({
+        id: "eng-1",
+        interventionPhase: "stabilize",
+      });
 
       const { transitionPhase } = await import("./intervention-state");
       const result = await transitionPhase(
@@ -231,17 +199,15 @@ describe("Intervention State Service", () => {
         "user-1"
       );
 
-      expect(result.currentPhase).toBe("stabilize");
-      expect(result.previousPhase).toBe("triage");
+      expect(result.interventionPhase).toBe("stabilize");
     });
 
     it("throws error for invalid phase transition", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.interventionState.findUnique.mockResolvedValue({
-        id: "state-1",
-        engagementId: "eng-1",
-        currentPhase: "triage",
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+        interventionPhase: "triage",
       });
 
       const { transitionPhase } = await import("./intervention-state");
@@ -261,7 +227,7 @@ describe("Intervention State Service", () => {
     it("throws error if intervention state not found", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.interventionState.findUnique.mockResolvedValue(null);
+      mockDb.engagement.findUnique.mockResolvedValue(null);
 
       const { transitionPhase } = await import("./intervention-state");
 
@@ -278,29 +244,24 @@ describe("Intervention State Service", () => {
     it("retrieves current intervention state", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.interventionState.findUnique.mockResolvedValue({
-        id: "state-1",
-        engagementId: "eng-1",
-        currentPhase: "repair",
-        previousPhase: "stabilize",
+      mockDb.engagement.findUnique.mockResolvedValue({
+        id: "eng-1",
+        interventionMode: "stabilization",
         version: 2,
-        createdAt: new Date("2024-01-01"),
-        updatedAt: new Date("2024-01-02"),
       });
 
       const { getInterventionState } = await import("./intervention-state");
       const result = await getInterventionState("eng-1");
 
-      expect(result.id).toBe("state-1");
-      expect(result.currentPhase).toBe("repair");
-      expect(result.previousPhase).toBe("stabilize");
+      expect(result.engagementId).toBe("eng-1");
+      expect(result.interventionMode).toBe("stabilization");
       expect(result.version).toBe(2);
     });
 
     it("throws error if state not found", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.interventionState.findUnique.mockResolvedValue(null);
+      mockDb.engagement.findUnique.mockResolvedValue(null);
 
       const { getInterventionState } = await import("./intervention-state");
 
