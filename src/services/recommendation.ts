@@ -22,6 +22,54 @@ export interface UpdateRecommendationInput {
   version: number;
 }
 
+export interface RecommendationScoringInput {
+  impact: number;
+  urgency: number;
+  confidence: number;
+  effort: number;
+  riskReduction: number;
+  timeToImpact: number;
+  cost: number;
+  reversibility: number;
+  dependency: number;
+  strategicAlignment: number;
+}
+
+function normalizeValue(value: number, min: number, max: number): number {
+  if (value < min) return 0;
+  if (value > max) return 1;
+  return (value - min) / (max - min);
+}
+
+export function calculateRecommendationScore(input: RecommendationScoringInput): number {
+  const normalized = {
+    impact: normalizeValue(input.impact, 1, 5),
+    urgency: normalizeValue(input.urgency, 1, 5),
+    confidence: normalizeValue(input.confidence, 0, 100),
+    riskReduction: normalizeValue(input.riskReduction, 0, 100),
+    strategicAlignment: normalizeValue(input.strategicAlignment, 1, 5),
+    effort: normalizeValue(input.effort, 1, 5),
+    cost: normalizeValue(input.cost, 1, 5),
+    timeToImpact: normalizeValue(input.timeToImpact, 1, 365),
+    reversibility: normalizeValue(input.reversibility, 0, 100),
+    dependency: normalizeValue(input.dependency, 0, 10),
+  };
+
+  const score =
+    normalized.impact * 0.2 +
+    normalized.urgency * 0.15 +
+    normalized.confidence * 0.1 +
+    normalized.riskReduction * 0.15 +
+    normalized.strategicAlignment * 0.15 +
+    (1 - normalized.effort) * 0.1 +
+    (1 - normalized.cost) * 0.05 +
+    (1 - normalized.timeToImpact) * 0.05 +
+    normalized.reversibility * 0.03 +
+    (1 - normalized.dependency) * 0.02;
+
+  return Math.min(Math.max(score, 0), 1);
+}
+
 export async function createRecommendation(
   input: CreateRecommendationInput,
   actorId: string
