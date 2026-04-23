@@ -271,7 +271,7 @@ describe("Recommendation Re-ranking", () => {
 
       expect(emitAuditEvent).toHaveBeenCalled();
       const call = emitAuditEvent.mock.calls[0][0];
-      expect(call.eventName).toBe("RECOMMENDATION_REPRIORITIZED");
+      expect(call.eventName).toBe("recommendation.updated");
       expect(call.entityId).toBe("rec-1");
       expect(call.payload).toHaveProperty("oldPriority", "low");
       expect(call.payload).toHaveProperty("newPriority", "high");
