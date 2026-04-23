@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/lib/db";
-import { getEvidenceItemDetail, listEvidenceForEngagement } from "./evidence";
+import { getEvidenceById, listEvidence } from "./evidence";
 import { getFindingDetail, listFindingsForEngagement } from "./findings";
 import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
-import { createEvidenceItem } from "./evidence";
+import { createEvidence } from "./evidence";
 import { createFinding } from "./findings";
 
 describe("Visibility Enforcement", () => {
@@ -40,7 +40,7 @@ describe("Visibility Enforcement", () => {
     engagementId = engagement.id;
 
     // Create internal-only evidence
-    const internalEvidence = await createEvidenceItem(
+    const internalEvidence = await createEvidence(
       {
         engagementId,
         category: "operational",
@@ -57,7 +57,7 @@ describe("Visibility Enforcement", () => {
     internalEvidenceId = internalEvidence.id;
 
     // Create client-visible evidence
-    const clientEvidence = await createEvidenceItem(
+    const clientEvidence = await createEvidence(
       {
         engagementId,
         category: "financial",
@@ -115,14 +115,14 @@ describe("Visibility Enforcement", () => {
 
   describe("evidence visibility enforcement", () => {
     it("should filter internal-only evidence from client view", async () => {
-      const internalOnly = await listEvidenceForEngagement(
+      const internalOnly = await listEvidence(
         engagementId,
         undefined,
         "internal"
       );
       expect(internalOnly.some((e) => e.id === internalEvidenceId)).toBe(true);
 
-      const clientVisible = await listEvidenceForEngagement(
+      const clientVisible = await listEvidence(
         engagementId,
         undefined,
         "client_visible"
@@ -135,12 +135,12 @@ describe("Visibility Enforcement", () => {
 
     it("should throw when accessing internal-only evidence with client visibility", async () => {
       expect(async () => {
-        await getEvidenceItemDetail(internalEvidenceId, "client_visible");
+        await getEvidenceById(internalEvidenceId, "client_visible");
       }).rejects.toThrow("not found");
     });
 
     it("should allow accessing client-visible evidence", async () => {
-      const evidence = await getEvidenceItemDetail(
+      const evidence = await getEvidenceById(
         clientVisibleEvidenceId,
         "client_visible"
       );
@@ -148,12 +148,12 @@ describe("Visibility Enforcement", () => {
     });
 
     it("should not expose visibility classification in response", async () => {
-      const evidence = await getEvidenceItemDetail(internalEvidenceId, "all");
+      const evidence = await getEvidenceById(internalEvidenceId, "all");
       expect((evidence as any).visibilityClassification).toBeUndefined();
     });
 
     it("should allow accessing all evidence with 'all' visibility", async () => {
-      const all = await listEvidenceForEngagement(
+      const all = await listEvidence(
         engagementId,
         undefined,
         "all"
@@ -216,7 +216,7 @@ describe("Visibility Enforcement", () => {
   describe("security boundaries", () => {
     it("should prevent client from accessing internal evidence", async () => {
       // Simulate client request with client_visible filter
-      const clientEvidence = await listEvidenceForEngagement(
+      const clientEvidence = await listEvidence(
         engagementId,
         undefined,
         "client_visible"

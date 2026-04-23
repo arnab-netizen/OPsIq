@@ -4,7 +4,7 @@ import { generateRecommendations, listRecommendationsForEngagement } from "./rec
 import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
 import { createFinding } from "./findings";
-import { createEvidenceItem } from "./evidence";
+import { createEvidence } from "./evidence";
 
 describe("Recommendation Service", () => {
   let clientId: string;

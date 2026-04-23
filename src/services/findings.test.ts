@@ -10,7 +10,7 @@ import {
   supersedeFinding,
   linkEvidenceToFinding,
 } from "./findings";
-import { createEvidenceItem } from "./evidence";
+import { createEvidence } from "./evidence";
 import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
 import type { CreateFindingInput } from "./findings";
@@ -45,7 +45,7 @@ describe("Findings Service", () => {
     engagementId = engagement.id;
 
     // Create evidence item for linking
-    const evidence = await createEvidenceItem(
+    const evidence = await createEvidence(
       {
         engagementId,
         category: "financial",
@@ -407,7 +407,7 @@ describe("Findings Service", () => {
       const newFindingId = result.id;
 
       // Create more evidence
-      const evidence2 = await createEvidenceItem(
+      const evidence2 = await createEvidence(
         {
           engagementId,
           category: "operational",
@@ -471,7 +471,7 @@ describe("Findings Service", () => {
       );
 
       // Create evidence in different engagement
-      const evidence3 = await createEvidenceItem(
+      const evidence3 = await createEvidence(
         {
           engagementId: engagement2.id,
           category: "human",
