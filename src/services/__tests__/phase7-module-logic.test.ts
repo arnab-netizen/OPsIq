@@ -327,6 +327,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
       };
 
       vi.mocked(db.action.findMany).mockResolvedValueOnce([criticalOverdueAction]);
+      vi.mocked(db.kPI.findMany).mockResolvedValueOnce([]);
 
       const alert = await checkEngagementEscalations(engagementId, actorId);
 
@@ -340,9 +341,9 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
 
     it("should detect KPI deterioration pattern (2+ consecutive)", async () => {
       const snapshots = [
-        { value: 100, recordedAt: new Date() },
+        { value: 90, recordedAt: new Date() },
         { value: 95, recordedAt: new Date(Date.now() - 86400000) },
-        { value: 90, recordedAt: new Date(Date.now() - 172800000) },
+        { value: 100, recordedAt: new Date(Date.now() - 172800000) },
       ];
 
       const kpi = {

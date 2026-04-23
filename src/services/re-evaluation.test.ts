@@ -1,32 +1,68 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { triggerReEvaluation } from "./re-evaluation";
 
-vi.mock("@/lib/db", () => ({
-  db: {
+vi.mock("@/lib/db", () => {
+  const createDbMock = () => ({
     businessConditionProfile: {
       findFirst: vi.fn(),
+      update: vi.fn(),
     },
-    kpi: {
+    kPI: {
       findMany: vi.fn(),
     },
     action: {
       findMany: vi.fn(),
       count: vi.fn(),
     },
+    finding: {
+      findMany: vi.fn().mockResolvedValue([]),
+    },
     shockEvent: {
       findMany: vi.fn(),
     },
     engagement: {
       findUnique: vi.fn(),
+      update: vi.fn(),
     },
     interventionState: {
       findUnique: vi.fn(),
+      update: vi.fn(),
     },
     recommendation: {
       findMany: vi.fn(),
+      updateMany: vi.fn(),
     },
-  },
-}));
+    $transaction: vi.fn((callback) => {
+      // Create a mock transaction object with the same methods
+      const txMock: any = {
+        businessConditionProfile: {
+          update: vi.fn().mockResolvedValue({}),
+          findFirst: vi.fn().mockResolvedValue(null),
+        },
+        engagement: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          update: vi.fn().mockResolvedValue({}),
+        },
+        interventionState: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          update: vi.fn().mockResolvedValue({}),
+        },
+        recommendation: {
+          findMany: vi.fn().mockResolvedValue([]),
+          updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        },
+        finding: {
+          findMany: vi.fn().mockResolvedValue([]),
+        },
+      };
+      return Promise.resolve(callback(txMock));
+    }),
+  });
+
+  return {
+    db: createDbMock(),
+  };
+});
 
 vi.mock("@/infra/audit", () => ({
   emitAuditEvent: vi.fn().mockResolvedValue({ id: "audit-1" }),
@@ -35,7 +71,28 @@ vi.mock("@/infra/audit", () => ({
 vi.mock("@/infra/logger", () => ({
   logger: {
     info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
   },
+}));
+
+vi.mock("@/services/escalation", () => ({
+  checkEngagementEscalations: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock("@/services/engagement", () => ({
+  computeNextReviewDate: vi.fn().mockResolvedValue({
+    nextReviewDate: new Date(),
+    isDueSoon: false,
+    daysUntilDue: 7,
+  }),
+}));
+
+vi.mock("@/services/recommendation", () => ({
+  reRankRecommendationsInEngagement: vi.fn().mockResolvedValue({
+    updated: 0,
+    recommendations: [],
+  }),
 }));
 
 describe("Re-evaluation Service", () => {
@@ -73,7 +130,7 @@ describe("Re-evaluation Service", () => {
         moraleFragilityLevel: "low",
       });
 
-      mockDb.kpi.findMany.mockResolvedValue([
+      mockDb.kPI.findMany.mockResolvedValue([
         { id: "kpi-1", status: "improving" },
         { id: "kpi-2", status: "stable" },
       ]);
@@ -135,7 +192,7 @@ describe("Re-evaluation Service", () => {
           moraleFragilityLevel: "low",
         });
 
-        mockDb.kpi.findMany.mockResolvedValue([]);
+        mockDb.kPI.findMany.mockResolvedValue([]);
         mockDb.action.findMany.mockResolvedValue([]);
         mockDb.action.count.mockResolvedValue(0);
         mockDb.shockEvent.findMany.mockResolvedValue([]);
@@ -159,17 +216,21 @@ describe("Re-evaluation Service", () => {
         severity: "low",
         description: "Minor evidence",
         triggeredBy: "user-1",
+        correlationId: "ev-1-1",
       });
+
+      await new Promise((r) => setTimeout(r, 1));
 
       mockSetup();
       const result2 = await triggerReEvaluation({
         changeType: "new_critical_evidence",
         entityType: "evidence",
-        entityId: "ev-1",
+        entityId: "ev-2",
         engagementId: "eng-1",
         severity: "low",
         description: "Minor evidence",
         triggeredBy: "user-1",
+        correlationId: "ev-1-2",
       });
 
       expect(result1.businessConditionImpact.recommendedRating).toBe(
@@ -193,7 +254,7 @@ describe("Re-evaluation Service", () => {
         moraleFragilityLevel: "low",
       });
 
-      mockDb.kpi.findMany.mockResolvedValue([]);
+      mockDb.kPI.findMany.mockResolvedValue([]);
       mockDb.action.findMany.mockResolvedValue([]);
       mockDb.action.count.mockResolvedValue(0);
       mockDb.shockEvent.findMany.mockResolvedValue([]);
@@ -268,7 +329,7 @@ describe("Re-evaluation Service", () => {
         moraleFragilityLevel: "low",
       });
 
-      mockDb.kpi.findMany.mockResolvedValue([]);
+      mockDb.kPI.findMany.mockResolvedValue([]);
       mockDb.action.findMany.mockResolvedValue([]);
       mockDb.action.count.mockResolvedValue(0);
       mockDb.shockEvent.findMany.mockResolvedValue([]);
@@ -309,7 +370,7 @@ describe("Re-evaluation Service", () => {
         moraleFragilityLevel: "low",
       });
 
-      mockDb.kpi.findMany.mockResolvedValue([]);
+      mockDb.kPI.findMany.mockResolvedValue([]);
       mockDb.action.findMany.mockResolvedValue([]);
       mockDb.action.count.mockResolvedValue(0);
       mockDb.shockEvent.findMany.mockResolvedValue([]);
@@ -355,7 +416,7 @@ describe("Re-evaluation Service", () => {
         moraleFragilityLevel: "low",
       });
 
-      mockDb.kpi.findMany.mockResolvedValue([]);
+      mockDb.kPI.findMany.mockResolvedValue([]);
       mockDb.action.findMany.mockResolvedValue([]);
       mockDb.action.count.mockResolvedValue(0);
       mockDb.shockEvent.findMany.mockResolvedValue([]);
