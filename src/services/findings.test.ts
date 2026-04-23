@@ -53,6 +53,7 @@ describe("Findings Service", () => {
         evidenceType: "metric",
         sourceReference: "Q1 2026 Financial Reports",
         severity: "high",
+        impactArea: "execution",
       },
       actorId
     );
@@ -91,10 +92,10 @@ describe("Findings Service", () => {
     it("should reject invalid severity", async () => {
       const input = {
         engagementId,
+        primaryEvidenceId: evidenceId,
         title: "Test",
-        statement: "Test finding",
+        summary: "Test finding",
         severity: "extreme",
-        confidenceLabel: "high",
       } as any;
 
       expect(async () => {
@@ -102,27 +103,27 @@ describe("Findings Service", () => {
       }).rejects.toThrow("Invalid severity");
     });
 
-    it("should reject invalid confidence label", async () => {
+    it("should reject missing impactArea", async () => {
       const input = {
         engagementId,
+        primaryEvidenceId: evidenceId,
         title: "Test",
-        statement: "Test finding",
+        summary: "Test finding",
         severity: "high",
-        confidenceLabel: "very_high",
       } as any;
 
       expect(async () => {
         await createFinding(input, actorId);
-      }).rejects.toThrow("Invalid confidence label");
+      }).rejects.toThrow("Invalid impact area");
     });
 
     it("should reject empty title", async () => {
       const input: CreateFindingInput = {
         engagementId,
+        primaryEvidenceId: evidenceId,
         title: "",
-        statement: "Test finding",
+        summary: "Test finding",
         severity: "medium",
-        confidenceLabel: "medium",
       };
 
       expect(async () => {
@@ -130,18 +131,19 @@ describe("Findings Service", () => {
       }).rejects.toThrow("title is required");
     });
 
-    it("should reject empty statement", async () => {
+    it("should reject empty summary", async () => {
       const input: CreateFindingInput = {
         engagementId,
+        primaryEvidenceId: evidenceId,
         title: "Test Finding",
-        statement: "   ",
+        summary: "   ",
         severity: "medium",
-        confidenceLabel: "low",
+        impactArea: "execution",
       };
 
       expect(async () => {
         await createFinding(input, actorId);
-      }).rejects.toThrow("statement is required");
+      }).rejects.toThrow("summary is required");
     });
 
     it("should support all severity levels", async () => {
@@ -151,10 +153,11 @@ describe("Findings Service", () => {
         const result = await createFinding(
           {
             engagementId,
+            primaryEvidenceId: evidenceId,
             title: `Finding - ${severity}`,
-            statement: `This is a ${severity} severity finding`,
+            summary: `This is a ${severity} severity finding`,
             severity: severity as any,
-            confidenceLabel: "medium",
+            impactArea: "execution",
           },
           actorId
         );
@@ -170,11 +173,12 @@ describe("Findings Service", () => {
       const result = await createFinding(
         {
           engagementId,
+        primaryEvidenceId: evidenceId,
           title: "Operational Inefficiency",
-          statement: "Current processes are inefficient",
+          summary: "Current processes are inefficient",
           severity: "medium",
-          confidenceLabel: "medium",
-        },
+        impactArea: "execution",
+      },
         actorId
       );
       findingId = result.id;
@@ -185,7 +189,7 @@ describe("Findings Service", () => {
       const result = await updateFinding(
         findingId,
         {
-          statement: "Processes need significant overhaul",
+          summary: "Processes need significant overhaul",
           severity: "high",
           version: existing.version,
         },
@@ -195,7 +199,7 @@ describe("Findings Service", () => {
       expect(result.id).toBe(findingId);
 
       const updated = await getFindingDetail(findingId);
-      expect(updated.statement).toBe("Processes need significant overhaul");
+      expect(updated.description).toBe("Processes need significant overhaul");
       expect(updated.severity).toBe("high");
       expect(updated.version).toBe(existing.version + 1);
     });
@@ -233,22 +237,24 @@ describe("Findings Service", () => {
       await createFinding(
         {
           engagementId,
+        primaryEvidenceId: evidenceId,
           title: "Staffing Gap",
-          statement: "Critical positions are unfilled",
+          summary: "Critical positions are unfilled",
           severity: "high",
-          confidenceLabel: "high",
-        },
+        impactArea: "execution",
+      },
         actorId
       );
 
       await createFinding(
         {
           engagementId,
+        primaryEvidenceId: evidenceId,
           title: "Technology Debt",
-          statement: "Legacy systems need modernization",
+          summary: "Legacy systems need modernization",
           severity: "medium",
-          confidenceLabel: "medium",
-        },
+        impactArea: "execution",
+      },
         actorId
       );
     });
@@ -272,11 +278,12 @@ describe("Findings Service", () => {
       const result = await createFinding(
         {
           engagementId,
+        primaryEvidenceId: evidenceId,
           title: "Market Expansion Risk",
-          statement: "Company lacks experience in target market",
+          summary: "Company lacks experience in target market",
           severity: "high",
-          confidenceLabel: "high",
-        },
+        impactArea: "execution",
+      },
         actorId
       );
       findingId = result.id;
@@ -298,11 +305,12 @@ describe("Findings Service", () => {
       const result = await createFinding(
         {
           engagementId,
+        primaryEvidenceId: evidenceId,
           title: "Disputed Finding",
-          statement: "This finding might not be accurate",
+          summary: "This finding might not be accurate",
           severity: "low",
-          confidenceLabel: "low",
-        },
+        impactArea: "execution",
+      },
         actorId
       );
       findingId = result.id;
@@ -324,11 +332,12 @@ describe("Findings Service", () => {
       const result = await createFinding(
         {
           engagementId,
+        primaryEvidenceId: evidenceId,
           title: "Original Finding",
-          statement: "This is the original finding",
+          summary: "This is the original finding",
           severity: "medium",
-          confidenceLabel: "medium",
-        },
+        impactArea: "execution",
+      },
         actorId
       );
       oldFindingId = result.id;
@@ -340,10 +349,10 @@ describe("Findings Service", () => {
         {
           engagementId,
           title: "Updated Finding",
-          statement: "This supersedes the original finding",
+          summary: "This supersedes the original finding",
           severity: "high",
-          confidenceLabel: "high",
-        },
+        impactArea: "execution",
+      },
         actorId
       );
 
@@ -365,11 +374,12 @@ describe("Findings Service", () => {
       const result = await createFinding(
         {
           engagementId,
+        primaryEvidenceId: evidenceId,
           title: "Evidence-backed Finding",
-          statement: "This finding is supported by evidence",
+          summary: "This finding is supported by evidence",
           severity: "critical",
-          confidenceLabel: "high",
-        },
+        impactArea: "execution",
+      },
         actorId
       );
       findingId = result.id;
@@ -395,11 +405,12 @@ describe("Findings Service", () => {
       const result = await createFinding(
         {
           engagementId,
+        primaryEvidenceId: evidenceId,
           title: "Multi-link Finding",
-          statement: "Finding with multiple evidence links",
+          summary: "Finding with multiple evidence links",
           severity: "high",
-          confidenceLabel: "medium",
-        },
+        impactArea: "execution",
+      },
         actorId
       );
       const newFindingId = result.id;
@@ -503,11 +514,12 @@ describe("Findings Service", () => {
       const result = await createFinding(
         {
           engagementId,
+        primaryEvidenceId: evidenceId,
           title: "New Status Test",
-          statement: "Test",
+          summary: "Test",
           severity: "medium",
-          confidenceLabel: "medium",
-        },
+        impactArea: "execution",
+      },
         actorId
       );
 
@@ -527,11 +539,12 @@ describe("Findings Service", () => {
         const result = await createFinding(
           {
             engagementId,
+        primaryEvidenceId: evidenceId,
             title: `Finding - ${status}`,
             statement: `Finding with ${status} status`,
             severity: "low",
-            confidenceLabel: "low",
-          },
+        impactArea: "execution",
+      },
           actorId
         );
 
@@ -557,11 +570,11 @@ describe("Findings Service", () => {
     it("should create finding atomically with audit event", async () => {
       const input: CreateFindingInput = {
         engagementId,
+        primaryEvidenceId: evidenceId,
         title: "Transaction Test Finding",
-        statement: "This finding was created within a transaction",
+        summary: "This finding was created within a transaction",
         severity: "critical",
-        confidenceLabel: "high",
-        clientVisibilityStatus: "client_visible",
+        impactArea: "execution",
       };
 
       const result = await createFinding(input, actorId);

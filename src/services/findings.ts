@@ -79,9 +79,6 @@ export async function createFinding(
     );
   }
 
-  // Build linkedEvidence array
-  const linkedEvidence = input.primaryEvidenceId ? [input.primaryEvidenceId] : [];
-
   // Infer finding type from impact area
   const findingTypeMap: Record<string, string> = {
     revenue: "market",
@@ -101,7 +98,7 @@ export async function createFinding(
         impactArea: input.impactArea,
         severity: input.severity,
         rootCause: input.rootCause || null,
-        linkedEvidence: linkedEvidence,
+        linkedEvidence: input.primaryEvidenceId || null,
         createdBy: actorId,
       },
       select: { id: true, engagementId: true },
