@@ -176,7 +176,20 @@ export async function updateEvidence(
   logger.info("Evidence updated", { evidenceId });
 }
 
-export async function getEvidenceById(evidenceId: string, userId?: string) {
+export async function getEvidenceById(
+  evidenceId: string,
+  userIdOrVisibility?: string
+) {
+  // Detect if param is visibility or userId
+  let userId: string | undefined;
+  let visibility: "internal" | "client_visible" | "all" | undefined;
+
+  if (userIdOrVisibility && ["internal", "client_visible", "all"].includes(userIdOrVisibility)) {
+    visibility = userIdOrVisibility as "internal" | "client_visible" | "all";
+  } else {
+    userId = userIdOrVisibility;
+  }
+
   const evidence = await db.evidence.findUnique({
     where: { id: evidenceId },
   });
@@ -201,14 +214,38 @@ export async function getEvidenceById(evidenceId: string, userId?: string) {
   return fullEvidence;
 }
 
-export async function listEvidence(params: {
-  engagementId?: string;
-  status?: string;
-  limit?: number;
-  offset?: number;
-  userId?: string;
-} = {}) {
-  const { engagementId, status, limit = 25, offset = 0, userId } = params;
+export async function listEvidence(
+  engagementIdOrParams?: string | {
+    engagementId?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+    userId?: string;
+  },
+  userIdOrUndefined?: string,
+  visibilityFilter?: "internal" | "client_visible" | "all"
+) {
+  // Handle both calling conventions
+  let engagementId: string | undefined;
+  let userId: string | undefined;
+  let visibility: string | undefined;
+  let status: string | undefined;
+  let limit = 25;
+  let offset = 0;
+
+  if (typeof engagementIdOrParams === "string") {
+    // Positional arguments: listEvidence(engagementId, userId?, visibility?)
+    engagementId = engagementIdOrParams;
+    userId = userIdOrUndefined;
+    visibility = visibilityFilter;
+  } else if (typeof engagementIdOrParams === "object" && engagementIdOrParams) {
+    // Object argument: listEvidence({ engagementId, status, ... })
+    engagementId = engagementIdOrParams.engagementId;
+    userId = engagementIdOrParams.userId;
+    status = engagementIdOrParams.status;
+    limit = engagementIdOrParams.limit ?? 25;
+    offset = engagementIdOrParams.offset ?? 0;
+  }
 
   // Check engagement access if engagementId provided
   if (engagementId && userId) {
@@ -239,6 +276,10 @@ export async function listEvidence(params: {
     db.evidence.count({ where }),
   ]);
 
+  // Return array for positional argument calls, object for backward compatibility
+  if (typeof engagementIdOrParams === "string") {
+    return evidence;
+  }
   return { evidence, total, limit, offset };
 }
 

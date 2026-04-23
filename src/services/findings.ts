@@ -88,46 +88,43 @@ export async function createFinding(
   };
   const findingType = findingTypeMap[input.impactArea] || "technical";
 
-  const finding = await db.$transaction(async (tx: any) => {
-    const newFinding = await tx.finding.create({
-      data: {
-        engagementId: input.engagementId,
-        title: input.title,
-        description: input.summary,
-        findingType: findingType,
-        impactArea: input.impactArea,
-        severity: input.severity,
-        rootCause: input.rootCause || null,
-        linkedEvidence: input.primaryEvidenceId || null,
-        createdBy: actorId,
-      },
-      select: { id: true, engagementId: true },
-    });
-
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.FINDING_CREATED,
-      actorId,
-      entityType: "Finding",
-      entityId: newFinding.id,
-      payload: {
-        engagementId: input.engagementId,
-        severity: input.severity,
-        title: input.title,
-      },
-    });
-
-    // Trigger re-evaluation due to new finding
-    await triggerReEvaluation({
-      changeType: "new_critical_evidence",
-      entityType: "Finding",
-      entityId: newFinding.id,
+  const finding = await db.finding.create({
+    data: {
       engagementId: input.engagementId,
-      severity: (input.severity === "critical" ? "critical" : input.severity === "high" ? "high" : "medium") as "low" | "medium" | "high" | "critical",
-      description: `Finding created: ${input.title}`,
-      triggeredBy: actorId,
-    });
+      title: input.title,
+      description: input.summary,
+      findingType: findingType,
+      impactArea: input.impactArea,
+      severity: input.severity,
+      rootCause: input.rootCause || null,
+      linkedEvidence: input.primaryEvidenceId || null,
+      createdBy: actorId,
+    },
+    select: { id: true, engagementId: true },
+  });
 
-    return newFinding;
+  // Emit audit event as side effect
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.FINDING_CREATED,
+    actorId,
+    entityType: "Finding",
+    entityId: finding.id,
+    payload: {
+      engagementId: input.engagementId,
+      severity: input.severity,
+      title: input.title,
+    },
+  });
+
+  // Trigger re-evaluation as side effect
+  await triggerReEvaluation({
+    changeType: "new_critical_evidence",
+    entityType: "Finding",
+    entityId: finding.id,
+    engagementId: input.engagementId,
+    severity: (input.severity === "critical" ? "critical" : input.severity === "high" ? "high" : "medium") as "low" | "medium" | "high" | "critical",
+    description: `Finding created: ${input.title}`,
+    triggeredBy: actorId,
   });
 
   return finding;
@@ -316,8 +313,21 @@ export async function supersedeFinding(
 export async function linkEvidenceToFinding(
   findingId: string,
   evidenceId: string,
-  actorId: string
-): Promise<{ findingId: string; evidenceId: string }> {
+  linkTypeOrActorId: string,
+  maybeActorId?: string
+): Promise<{ id?: string; findingId: string; evidenceId: string }> {
+  // Handle both calling conventions
+  let linkType: string | undefined;
+  let actorId: string;
+
+  if (maybeActorId) {
+    // New signature: linkEvidenceToFinding(findingId, evidenceId, linkType, actorId)
+    linkType = linkTypeOrActorId;
+    actorId = maybeActorId;
+  } else {
+    // Old signature: linkEvidenceToFinding(findingId, evidenceId, actorId)
+    actorId = linkTypeOrActorId;
+  }
   const finding = await db.finding.findUnique({
     where: { id: findingId },
     select: { id: true, engagementId: true, linkedEvidence: true },
@@ -441,8 +451,7 @@ export async function unlinkEvidenceFromFinding(
 
 export async function listFindingsForEngagement(
   engagementId: string,
-  userId: string,
-  stageId?: string,
+  userId?: string,
   visibility?: "internal" | "client_visible" | "all"
 ): Promise<Array<{
   id: string;
@@ -451,8 +460,10 @@ export async function listFindingsForEngagement(
   impactArea: string | null;
   createdAt: Date;
 }>> {
-  // Check engagement access
-  await assertEngagementAccess(userId, engagementId);
+  // Check engagement access if userId provided
+  if (userId) {
+    await assertEngagementAccess(userId, engagementId);
+  }
 
   const findings = await db.finding.findMany({
     where: {
@@ -473,8 +484,8 @@ export async function listFindingsForEngagement(
 
 export async function getFindingDetail(
   findingId: string,
-  userId?: string,
-  visibility?: "internal" | "client_visible" | "all"
+  userIdOrVisibility?: string,
+  maybeVisibility?: "internal" | "client_visible" | "all"
 ): Promise<{
   id: string;
   engagementId: string;
@@ -493,6 +504,17 @@ export async function getFindingDetail(
     linkType: string;
   }>;
 }> {
+  // Detect if first optional param is visibility or userId
+  let userId: string | undefined;
+  let visibility: "internal" | "client_visible" | "all" | undefined;
+
+  if (userIdOrVisibility && ["internal", "client_visible", "all"].includes(userIdOrVisibility)) {
+    visibility = userIdOrVisibility as "internal" | "client_visible" | "all";
+  } else {
+    userId = userIdOrVisibility;
+    visibility = maybeVisibility;
+  }
+
   const finding = await db.finding.findUnique({
     where: { id: findingId },
     select: { engagementId: true },

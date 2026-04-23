@@ -50,7 +50,7 @@ export async function queryAuditEvents(filter: {
   limit?: number;
   offset?: number;
 }) {
-  return db.auditEvent.findMany({
+  const events = await db.auditEvent.findMany({
     where: {
       ...(filter.entityType && { entityType: filter.entityType }),
       ...(filter.entityId && { entityId: filter.entityId }),
@@ -70,4 +70,10 @@ export async function queryAuditEvents(filter: {
     take: filter.limit ?? 50,
     skip: filter.offset ?? 0,
   });
+
+  // Parse payload strings back to objects
+  return events.map(event => ({
+    ...event,
+    payload: event.payload ? JSON.parse(event.payload) : null,
+  }));
 }

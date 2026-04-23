@@ -6,6 +6,8 @@ const globalForPrisma = globalThis as unknown as {
 async function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL;
 
+  let client: any;
+
   if (!databaseUrl || databaseUrl.startsWith("file:")) {
     // SQLite mode (default for tests)
     try {
@@ -37,8 +39,7 @@ async function createPrismaClient() {
         throw new Error("PrismaSqlite instantiation returned undefined/null");
       }
 
-      const client = new SqliteClient({ adapter });
-      return client;
+      client = new SqliteClient({ adapter });
     } catch (error) {
       throw new Error(
         `Failed to initialize SQLite Prisma client: ${error instanceof Error ? error.message : String(error)}`
@@ -51,8 +52,30 @@ async function createPrismaClient() {
     const adapter = new PrismaPg({
       connectionString: process.env.DATABASE_URL,
     });
-    return new PgClient({ adapter });
+    client = new PgClient({ adapter });
   }
+
+  // Extend client to auto-parse audit event payloads
+  return client.$extends({
+    result: {
+      auditEvent: {
+        payload: {
+          needs: { payload: true },
+          compute(event) {
+            if (!event.payload) return null;
+            if (typeof event.payload === "string") {
+              try {
+                return JSON.parse(event.payload);
+              } catch {
+                return null;
+              }
+            }
+            return event.payload;
+          },
+        },
+      },
+    },
+  });
 }
 
 async function getDb() {
