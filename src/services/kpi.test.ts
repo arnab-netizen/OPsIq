@@ -22,7 +22,7 @@ describe("KPI Service", () => {
   beforeAll(async () => {
     const client = await createClient(
       {
-        name: "Test Client",
+        name: "Test Client - KPI",
         industry: "Technology",
         size: "large",
       },

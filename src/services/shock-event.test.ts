@@ -19,7 +19,7 @@ describe("ShockEvent Service", () => {
     // Create test client
     const client = await createClient(
       {
-        name: "Test Client",
+        name: "Test Client - Shock Event",
         industry: "Technology",
         size: "large",
       },

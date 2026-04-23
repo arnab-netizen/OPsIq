@@ -24,7 +24,7 @@ describe("Findings Service", () => {
   beforeAll(async () => {
     const client = await createClient(
       {
-        name: "Test Client",
+        name: "Test Client - Findings",
         industry: "Retail",
         size: "large",
       },

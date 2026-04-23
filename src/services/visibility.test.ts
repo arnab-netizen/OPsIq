@@ -19,7 +19,7 @@ describe("Visibility Enforcement", () => {
   beforeAll(async () => {
     const client = await createClient(
       {
-        name: "Test Client",
+        name: "Test Client - Visibility",
         industry: "Technology",
         size: "large",
       },

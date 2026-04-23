@@ -25,7 +25,7 @@ describe("Report Generation Service", () => {
     // Create test data
     const client = await createClient(
       {
-        name: "Test Client",
+        name: "Test Client - Report Generator",
         industry: "Technology",
         size: "medium",
       },
