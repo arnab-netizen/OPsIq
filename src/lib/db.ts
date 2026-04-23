@@ -2,21 +2,17 @@ const globalForPrisma = globalThis as unknown as {
   prisma: any | undefined;
 };
 
+// __dirname is not always available, construct it if needed
+const currentDir = typeof __dirname !== "undefined" ? __dirname : __filename.split("/").slice(0, -1).join("/");
+
 function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL || "";
 
   try {
     if (databaseUrl.startsWith("file:")) {
       // For SQLite tests, dynamically load the SQLite-generated client
-      // This path works because generated/prisma-sqlite is a sibling to lib
-      let SqliteModule: any;
-      try {
-        // Try CommonJS require first (works better with compiled JS)
-        SqliteModule = require("../generated/prisma-sqlite/client.js");
-      } catch {
-        // Fall back to TypeScript module
-        SqliteModule = require("../generated/prisma-sqlite/client");
-      }
+      const sqlitePath = currentDir + "/../generated/prisma-sqlite/client";
+      const SqliteModule = require(sqlitePath);
 
       if (!SqliteModule || !SqliteModule.PrismaClient) {
         throw new Error(
@@ -26,7 +22,8 @@ function createPrismaClient() {
       return new SqliteModule.PrismaClient() as any;
     } else {
       // For PostgreSQL production, load PostgreSQL client with adapter
-      const PgModule = require("../generated/prisma/client");
+      const pgPath = currentDir + "/../generated/prisma/client";
+      const PgModule = require(pgPath);
       if (!PgModule || !PgModule.PrismaClient) {
         throw new Error("PostgreSQL Prisma client not properly generated");
       }
