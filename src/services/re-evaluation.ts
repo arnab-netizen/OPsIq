@@ -15,6 +15,7 @@ import {
 } from "@/domain/constants/statuses";
 
 // Safety guards for re-evaluation
+let requestKeyCounter = 0;
 const requestDebounceMap = new Map<string, Set<string>>();
 const reEvaluationInProgress = new Set<string>();
 const processedCorrelationIds = new Set<string>();
@@ -426,7 +427,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
   }
 
   // Safety Guard 1: Debounce - prevent duplicate within same request
-  const requestKey = `${Date.now()}`;
+  const requestKey = `${++requestKeyCounter}`;
   if (!requestDebounceMap.has(requestKey)) {
     requestDebounceMap.set(requestKey, new Set());
   }
