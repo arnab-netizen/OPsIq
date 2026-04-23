@@ -156,6 +156,12 @@ export async function updateKPIValue(
 ) {
   const kpi = await db.kPI.findUnique({
     where: { id: kpiId },
+    include: {
+      snapshots: {
+        orderBy: { recordedAt: "desc" },
+        take: 1,
+      },
+    },
   });
   if (!kpi) throw new NotFoundError("KPI", kpiId);
 
@@ -192,10 +198,43 @@ export async function updateKPIValue(
             );
           }
 
+          // Create snapshot of the new value
+          const newValue = input.currentValue ?? kpi.currentValue;
+          const snapshot = await tx.kPISnapshot.create({
+            data: {
+              kpiId,
+              value: newValue ?? 0,
+              recordedBy: actorId,
+            },
+          });
+
           const updated = await tx.kPI.findUnique({
             where: { id: kpiId },
           });
           if (!updated) throw new NotFoundError("KPI", kpiId);
+
+          // Detect deterioration
+          const previousValue = kpi.snapshots[0]?.value;
+          let deteriorated = false;
+
+          if (previousValue !== undefined && newValue !== undefined) {
+            const isWorsening = kpi.direction === "up" ? newValue < previousValue : newValue > previousValue;
+            if (isWorsening) {
+              deteriorated = true;
+              await emitAuditEvent({
+                eventName: AUDIT_EVENTS.KPI_DETERIORATED,
+                actorId,
+                entityType: "kpi",
+                entityId: kpiId,
+                payload: {
+                  previousValue,
+                  currentValue: newValue,
+                  direction: kpi.direction,
+                },
+                visibility: "internal",
+              });
+            }
+          }
 
           await emitAuditEvent({
             eventName: AUDIT_EVENTS.KPI_SNAPSHOT_RECORDED,
@@ -204,6 +243,7 @@ export async function updateKPIValue(
             entityId: kpiId,
             payload: {
               currentValue: input.currentValue,
+              deteriorated,
             },
             visibility: "internal",
           });
@@ -254,10 +294,43 @@ export async function updateKPIValue(
     );
   }
 
+  // Create snapshot of the new value
+  const newValue = input.currentValue ?? kpi.currentValue;
+  await db.kPISnapshot.create({
+    data: {
+      kpiId,
+      value: newValue ?? 0,
+      recordedBy: actorId,
+    },
+  });
+
   const updated = await db.kPI.findUnique({
     where: { id: kpiId },
   });
   if (!updated) throw new NotFoundError("KPI", kpiId);
+
+  // Detect deterioration
+  const previousValue = kpi.snapshots[0]?.value;
+  let deteriorated = false;
+
+  if (previousValue !== undefined && newValue !== undefined) {
+    const isWorsening = kpi.direction === "up" ? newValue < previousValue : newValue > previousValue;
+    if (isWorsening) {
+      deteriorated = true;
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.KPI_DETERIORATED,
+        actorId,
+        entityType: "kpi",
+        entityId: kpiId,
+        payload: {
+          previousValue,
+          currentValue: newValue,
+          direction: kpi.direction,
+        },
+        visibility: "internal",
+      });
+    }
+  }
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.KPI_SNAPSHOT_RECORDED,
@@ -266,6 +339,7 @@ export async function updateKPIValue(
     entityId: kpiId,
     payload: {
       currentValue: input.currentValue,
+      deteriorated,
     },
     visibility: "internal",
   });

@@ -269,3 +269,68 @@ export async function updateActionStatus(
 
   return updated;
 }
+
+export async function detectOverdueActions(engagementId: string, actorId: string) {
+  const now = new Date();
+
+  const overdueActions = await db.action.findMany({
+    where: {
+      engagementId,
+      dueDate: { lt: now },
+      status: { notIn: ["completed", "verified", "cancelled"] },
+    },
+  });
+
+  const results = [];
+
+  for (const action of overdueActions) {
+    // Emit overdue event
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ACTION_OVERDUE,
+      actorId,
+      entityType: "action",
+      entityId: action.id,
+      payload: {
+        engagementId,
+        dueDate: action.dueDate,
+        currentStatus: action.status,
+      },
+      visibility: "internal",
+    });
+
+    // Increase priority if high/critical
+    if (action.priority !== "critical") {
+      const newPriority = action.priority === "high" ? "critical" : "high";
+      await db.action.update({
+        where: { id: action.id },
+        data: {
+          priority: newPriority,
+          version: { increment: 1 },
+        },
+      });
+
+      results.push({
+        actionId: action.id,
+        overdue: true,
+        priorityIncreased: true,
+        newPriority,
+      });
+    } else {
+      results.push({
+        actionId: action.id,
+        overdue: true,
+        priorityIncreased: false,
+      });
+    }
+  }
+
+  if (overdueActions.length > 0) {
+    logger.warn("Overdue actions detected", {
+      engagementId,
+      count: overdueActions.length,
+      actions: results,
+    });
+  }
+
+  return results;
+}
