@@ -38,6 +38,37 @@ export default async function globalSetup() {
         stdio: "pipe",
       });
 
+      // Create test users for audit event FK constraint
+      console.log("Global: Creating test users...");
+      const { db } = await import("@/lib/db");
+
+      // Create system user for audit events emitted during test setup
+      await db.user.upsert({
+        where: { email: "system@example.com" },
+        update: {},
+        create: {
+          id: "system",
+          email: "system@example.com",
+          name: "System",
+          hashedPassword: null,
+          isActive: true,
+        },
+      });
+
+      // Create test actor user for audit event FK constraint
+      await db.user.upsert({
+        where: { email: "test@example.com" },
+        update: {},
+        create: {
+          id: "test-actor-id",
+          email: "test@example.com",
+          name: "Test User",
+          hashedPassword: null,
+          isActive: true,
+        },
+      });
+      console.log("Global: Test users created/verified");
+
       console.log("Global: SQLite test database initialized");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
