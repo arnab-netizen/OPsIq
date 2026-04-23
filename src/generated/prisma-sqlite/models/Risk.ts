@@ -26,42 +26,48 @@ export type AggregateRisk = {
 
 export type RiskMinAggregateOutputType = {
   id: string | null
+  stageId: string | null
   engagementId: string | null
   title: string | null
   description: string | null
-  probability: string | null
-  impact: string | null
-  mitigation: string | null
-  owner: string | null
   status: string | null
+  identifiedAt: Date | null
+  identifiedBy: string | null
+  assessedAt: Date | null
+  assessedBy: string | null
+  mitigationStrategy: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
 
 export type RiskMaxAggregateOutputType = {
   id: string | null
+  stageId: string | null
   engagementId: string | null
   title: string | null
   description: string | null
-  probability: string | null
-  impact: string | null
-  mitigation: string | null
-  owner: string | null
   status: string | null
+  identifiedAt: Date | null
+  identifiedBy: string | null
+  assessedAt: Date | null
+  assessedBy: string | null
+  mitigationStrategy: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
 
 export type RiskCountAggregateOutputType = {
   id: number
+  stageId: number
   engagementId: number
   title: number
   description: number
-  probability: number
-  impact: number
-  mitigation: number
-  owner: number
   status: number
+  identifiedAt: number
+  identifiedBy: number
+  assessedAt: number
+  assessedBy: number
+  mitigationStrategy: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -70,42 +76,48 @@ export type RiskCountAggregateOutputType = {
 
 export type RiskMinAggregateInputType = {
   id?: true
+  stageId?: true
   engagementId?: true
   title?: true
   description?: true
-  probability?: true
-  impact?: true
-  mitigation?: true
-  owner?: true
   status?: true
+  identifiedAt?: true
+  identifiedBy?: true
+  assessedAt?: true
+  assessedBy?: true
+  mitigationStrategy?: true
   createdAt?: true
   updatedAt?: true
 }
 
 export type RiskMaxAggregateInputType = {
   id?: true
+  stageId?: true
   engagementId?: true
   title?: true
   description?: true
-  probability?: true
-  impact?: true
-  mitigation?: true
-  owner?: true
   status?: true
+  identifiedAt?: true
+  identifiedBy?: true
+  assessedAt?: true
+  assessedBy?: true
+  mitigationStrategy?: true
   createdAt?: true
   updatedAt?: true
 }
 
 export type RiskCountAggregateInputType = {
   id?: true
+  stageId?: true
   engagementId?: true
   title?: true
   description?: true
-  probability?: true
-  impact?: true
-  mitigation?: true
-  owner?: true
   status?: true
+  identifiedAt?: true
+  identifiedBy?: true
+  assessedAt?: true
+  assessedBy?: true
+  mitigationStrategy?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -185,14 +197,16 @@ export type RiskGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
 
 export type RiskGroupByOutputType = {
   id: string
+  stageId: string
   engagementId: string
   title: string
   description: string | null
-  probability: string
-  impact: string
-  mitigation: string | null
-  owner: string | null
   status: string
+  identifiedAt: Date
+  identifiedBy: string | null
+  assessedAt: Date | null
+  assessedBy: string | null
+  mitigationStrategy: string | null
   createdAt: Date
   updatedAt: Date
   _count: RiskCountAggregateOutputType | null
@@ -220,31 +234,37 @@ export type RiskWhereInput = {
   OR?: Prisma.RiskWhereInput[]
   NOT?: Prisma.RiskWhereInput | Prisma.RiskWhereInput[]
   id?: Prisma.StringFilter<"Risk"> | string
+  stageId?: Prisma.StringFilter<"Risk"> | string
   engagementId?: Prisma.StringFilter<"Risk"> | string
   title?: Prisma.StringFilter<"Risk"> | string
   description?: Prisma.StringNullableFilter<"Risk"> | string | null
-  probability?: Prisma.StringFilter<"Risk"> | string
-  impact?: Prisma.StringFilter<"Risk"> | string
-  mitigation?: Prisma.StringNullableFilter<"Risk"> | string | null
-  owner?: Prisma.StringNullableFilter<"Risk"> | string | null
   status?: Prisma.StringFilter<"Risk"> | string
+  identifiedAt?: Prisma.DateTimeFilter<"Risk"> | Date | string
+  identifiedBy?: Prisma.StringNullableFilter<"Risk"> | string | null
+  assessedAt?: Prisma.DateTimeNullableFilter<"Risk"> | Date | string | null
+  assessedBy?: Prisma.StringNullableFilter<"Risk"> | string | null
+  mitigationStrategy?: Prisma.StringNullableFilter<"Risk"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Risk"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Risk"> | Date | string
+  stage?: Prisma.XOR<Prisma.StageScalarRelationFilter, Prisma.StageWhereInput>
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
 }
 
 export type RiskOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  stageId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
-  probability?: Prisma.SortOrder
-  impact?: Prisma.SortOrder
-  mitigation?: Prisma.SortOrderInput | Prisma.SortOrder
-  owner?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
+  identifiedAt?: Prisma.SortOrder
+  identifiedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  assessedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  assessedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  mitigationStrategy?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  stage?: Prisma.StageOrderByWithRelationInput
   engagement?: Prisma.EngagementOrderByWithRelationInput
 }
 
@@ -253,29 +273,34 @@ export type RiskWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.RiskWhereInput | Prisma.RiskWhereInput[]
   OR?: Prisma.RiskWhereInput[]
   NOT?: Prisma.RiskWhereInput | Prisma.RiskWhereInput[]
+  stageId?: Prisma.StringFilter<"Risk"> | string
   engagementId?: Prisma.StringFilter<"Risk"> | string
   title?: Prisma.StringFilter<"Risk"> | string
   description?: Prisma.StringNullableFilter<"Risk"> | string | null
-  probability?: Prisma.StringFilter<"Risk"> | string
-  impact?: Prisma.StringFilter<"Risk"> | string
-  mitigation?: Prisma.StringNullableFilter<"Risk"> | string | null
-  owner?: Prisma.StringNullableFilter<"Risk"> | string | null
   status?: Prisma.StringFilter<"Risk"> | string
+  identifiedAt?: Prisma.DateTimeFilter<"Risk"> | Date | string
+  identifiedBy?: Prisma.StringNullableFilter<"Risk"> | string | null
+  assessedAt?: Prisma.DateTimeNullableFilter<"Risk"> | Date | string | null
+  assessedBy?: Prisma.StringNullableFilter<"Risk"> | string | null
+  mitigationStrategy?: Prisma.StringNullableFilter<"Risk"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Risk"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Risk"> | Date | string
+  stage?: Prisma.XOR<Prisma.StageScalarRelationFilter, Prisma.StageWhereInput>
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
 }, "id">
 
 export type RiskOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  stageId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
-  probability?: Prisma.SortOrder
-  impact?: Prisma.SortOrder
-  mitigation?: Prisma.SortOrderInput | Prisma.SortOrder
-  owner?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
+  identifiedAt?: Prisma.SortOrder
+  identifiedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  assessedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  assessedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  mitigationStrategy?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.RiskCountOrderByAggregateInput
@@ -288,14 +313,16 @@ export type RiskScalarWhereWithAggregatesInput = {
   OR?: Prisma.RiskScalarWhereWithAggregatesInput[]
   NOT?: Prisma.RiskScalarWhereWithAggregatesInput | Prisma.RiskScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Risk"> | string
+  stageId?: Prisma.StringWithAggregatesFilter<"Risk"> | string
   engagementId?: Prisma.StringWithAggregatesFilter<"Risk"> | string
   title?: Prisma.StringWithAggregatesFilter<"Risk"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"Risk"> | string | null
-  probability?: Prisma.StringWithAggregatesFilter<"Risk"> | string
-  impact?: Prisma.StringWithAggregatesFilter<"Risk"> | string
-  mitigation?: Prisma.StringNullableWithAggregatesFilter<"Risk"> | string | null
-  owner?: Prisma.StringNullableWithAggregatesFilter<"Risk"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"Risk"> | string
+  identifiedAt?: Prisma.DateTimeWithAggregatesFilter<"Risk"> | Date | string
+  identifiedBy?: Prisma.StringNullableWithAggregatesFilter<"Risk"> | string | null
+  assessedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Risk"> | Date | string | null
+  assessedBy?: Prisma.StringNullableWithAggregatesFilter<"Risk"> | string | null
+  mitigationStrategy?: Prisma.StringNullableWithAggregatesFilter<"Risk"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Risk"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Risk"> | Date | string
 }
@@ -304,26 +331,30 @@ export type RiskCreateInput = {
   id?: string
   title: string
   description?: string | null
-  probability: string
-  impact: string
-  mitigation?: string | null
-  owner?: string | null
   status?: string
+  identifiedAt?: Date | string
+  identifiedBy?: string | null
+  assessedAt?: Date | string | null
+  assessedBy?: string | null
+  mitigationStrategy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  stage: Prisma.StageCreateNestedOneWithoutRisksInput
   engagement: Prisma.EngagementCreateNestedOneWithoutRisksInput
 }
 
 export type RiskUncheckedCreateInput = {
   id?: string
+  stageId: string
   engagementId: string
   title: string
   description?: string | null
-  probability: string
-  impact: string
-  mitigation?: string | null
-  owner?: string | null
   status?: string
+  identifiedAt?: Date | string
+  identifiedBy?: string | null
+  assessedAt?: Date | string | null
+  assessedBy?: string | null
+  mitigationStrategy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -332,40 +363,46 @@ export type RiskUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  probability?: Prisma.StringFieldUpdateOperationsInput | string
-  impact?: Prisma.StringFieldUpdateOperationsInput | string
-  mitigation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  owner?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  identifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitigationStrategy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  stage?: Prisma.StageUpdateOneRequiredWithoutRisksNestedInput
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutRisksNestedInput
 }
 
 export type RiskUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  stageId?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  probability?: Prisma.StringFieldUpdateOperationsInput | string
-  impact?: Prisma.StringFieldUpdateOperationsInput | string
-  mitigation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  owner?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  identifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitigationStrategy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type RiskCreateManyInput = {
   id?: string
+  stageId: string
   engagementId: string
   title: string
   description?: string | null
-  probability: string
-  impact: string
-  mitigation?: string | null
-  owner?: string | null
   status?: string
+  identifiedAt?: Date | string
+  identifiedBy?: string | null
+  assessedAt?: Date | string | null
+  assessedBy?: string | null
+  mitigationStrategy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -374,25 +411,28 @@ export type RiskUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  probability?: Prisma.StringFieldUpdateOperationsInput | string
-  impact?: Prisma.StringFieldUpdateOperationsInput | string
-  mitigation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  owner?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  identifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitigationStrategy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type RiskUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  stageId?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  probability?: Prisma.StringFieldUpdateOperationsInput | string
-  impact?: Prisma.StringFieldUpdateOperationsInput | string
-  mitigation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  owner?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  identifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitigationStrategy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -409,42 +449,48 @@ export type RiskOrderByRelationAggregateInput = {
 
 export type RiskCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  stageId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  probability?: Prisma.SortOrder
-  impact?: Prisma.SortOrder
-  mitigation?: Prisma.SortOrder
-  owner?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  identifiedAt?: Prisma.SortOrder
+  identifiedBy?: Prisma.SortOrder
+  assessedAt?: Prisma.SortOrder
+  assessedBy?: Prisma.SortOrder
+  mitigationStrategy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type RiskMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  stageId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  probability?: Prisma.SortOrder
-  impact?: Prisma.SortOrder
-  mitigation?: Prisma.SortOrder
-  owner?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  identifiedAt?: Prisma.SortOrder
+  identifiedBy?: Prisma.SortOrder
+  assessedAt?: Prisma.SortOrder
+  assessedBy?: Prisma.SortOrder
+  mitigationStrategy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type RiskMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  stageId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  probability?: Prisma.SortOrder
-  impact?: Prisma.SortOrder
-  mitigation?: Prisma.SortOrder
-  owner?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  identifiedAt?: Prisma.SortOrder
+  identifiedBy?: Prisma.SortOrder
+  assessedAt?: Prisma.SortOrder
+  assessedBy?: Prisma.SortOrder
+  mitigationStrategy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -491,28 +537,74 @@ export type RiskUncheckedUpdateManyWithoutEngagementNestedInput = {
   deleteMany?: Prisma.RiskScalarWhereInput | Prisma.RiskScalarWhereInput[]
 }
 
+export type RiskCreateNestedManyWithoutStageInput = {
+  create?: Prisma.XOR<Prisma.RiskCreateWithoutStageInput, Prisma.RiskUncheckedCreateWithoutStageInput> | Prisma.RiskCreateWithoutStageInput[] | Prisma.RiskUncheckedCreateWithoutStageInput[]
+  connectOrCreate?: Prisma.RiskCreateOrConnectWithoutStageInput | Prisma.RiskCreateOrConnectWithoutStageInput[]
+  createMany?: Prisma.RiskCreateManyStageInputEnvelope
+  connect?: Prisma.RiskWhereUniqueInput | Prisma.RiskWhereUniqueInput[]
+}
+
+export type RiskUncheckedCreateNestedManyWithoutStageInput = {
+  create?: Prisma.XOR<Prisma.RiskCreateWithoutStageInput, Prisma.RiskUncheckedCreateWithoutStageInput> | Prisma.RiskCreateWithoutStageInput[] | Prisma.RiskUncheckedCreateWithoutStageInput[]
+  connectOrCreate?: Prisma.RiskCreateOrConnectWithoutStageInput | Prisma.RiskCreateOrConnectWithoutStageInput[]
+  createMany?: Prisma.RiskCreateManyStageInputEnvelope
+  connect?: Prisma.RiskWhereUniqueInput | Prisma.RiskWhereUniqueInput[]
+}
+
+export type RiskUpdateManyWithoutStageNestedInput = {
+  create?: Prisma.XOR<Prisma.RiskCreateWithoutStageInput, Prisma.RiskUncheckedCreateWithoutStageInput> | Prisma.RiskCreateWithoutStageInput[] | Prisma.RiskUncheckedCreateWithoutStageInput[]
+  connectOrCreate?: Prisma.RiskCreateOrConnectWithoutStageInput | Prisma.RiskCreateOrConnectWithoutStageInput[]
+  upsert?: Prisma.RiskUpsertWithWhereUniqueWithoutStageInput | Prisma.RiskUpsertWithWhereUniqueWithoutStageInput[]
+  createMany?: Prisma.RiskCreateManyStageInputEnvelope
+  set?: Prisma.RiskWhereUniqueInput | Prisma.RiskWhereUniqueInput[]
+  disconnect?: Prisma.RiskWhereUniqueInput | Prisma.RiskWhereUniqueInput[]
+  delete?: Prisma.RiskWhereUniqueInput | Prisma.RiskWhereUniqueInput[]
+  connect?: Prisma.RiskWhereUniqueInput | Prisma.RiskWhereUniqueInput[]
+  update?: Prisma.RiskUpdateWithWhereUniqueWithoutStageInput | Prisma.RiskUpdateWithWhereUniqueWithoutStageInput[]
+  updateMany?: Prisma.RiskUpdateManyWithWhereWithoutStageInput | Prisma.RiskUpdateManyWithWhereWithoutStageInput[]
+  deleteMany?: Prisma.RiskScalarWhereInput | Prisma.RiskScalarWhereInput[]
+}
+
+export type RiskUncheckedUpdateManyWithoutStageNestedInput = {
+  create?: Prisma.XOR<Prisma.RiskCreateWithoutStageInput, Prisma.RiskUncheckedCreateWithoutStageInput> | Prisma.RiskCreateWithoutStageInput[] | Prisma.RiskUncheckedCreateWithoutStageInput[]
+  connectOrCreate?: Prisma.RiskCreateOrConnectWithoutStageInput | Prisma.RiskCreateOrConnectWithoutStageInput[]
+  upsert?: Prisma.RiskUpsertWithWhereUniqueWithoutStageInput | Prisma.RiskUpsertWithWhereUniqueWithoutStageInput[]
+  createMany?: Prisma.RiskCreateManyStageInputEnvelope
+  set?: Prisma.RiskWhereUniqueInput | Prisma.RiskWhereUniqueInput[]
+  disconnect?: Prisma.RiskWhereUniqueInput | Prisma.RiskWhereUniqueInput[]
+  delete?: Prisma.RiskWhereUniqueInput | Prisma.RiskWhereUniqueInput[]
+  connect?: Prisma.RiskWhereUniqueInput | Prisma.RiskWhereUniqueInput[]
+  update?: Prisma.RiskUpdateWithWhereUniqueWithoutStageInput | Prisma.RiskUpdateWithWhereUniqueWithoutStageInput[]
+  updateMany?: Prisma.RiskUpdateManyWithWhereWithoutStageInput | Prisma.RiskUpdateManyWithWhereWithoutStageInput[]
+  deleteMany?: Prisma.RiskScalarWhereInput | Prisma.RiskScalarWhereInput[]
+}
+
 export type RiskCreateWithoutEngagementInput = {
   id?: string
   title: string
   description?: string | null
-  probability: string
-  impact: string
-  mitigation?: string | null
-  owner?: string | null
   status?: string
+  identifiedAt?: Date | string
+  identifiedBy?: string | null
+  assessedAt?: Date | string | null
+  assessedBy?: string | null
+  mitigationStrategy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  stage: Prisma.StageCreateNestedOneWithoutRisksInput
 }
 
 export type RiskUncheckedCreateWithoutEngagementInput = {
   id?: string
+  stageId: string
   title: string
   description?: string | null
-  probability: string
-  impact: string
-  mitigation?: string | null
-  owner?: string | null
   status?: string
+  identifiedAt?: Date | string
+  identifiedBy?: string | null
+  assessedAt?: Date | string | null
+  assessedBy?: string | null
+  mitigationStrategy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -547,27 +639,86 @@ export type RiskScalarWhereInput = {
   OR?: Prisma.RiskScalarWhereInput[]
   NOT?: Prisma.RiskScalarWhereInput | Prisma.RiskScalarWhereInput[]
   id?: Prisma.StringFilter<"Risk"> | string
+  stageId?: Prisma.StringFilter<"Risk"> | string
   engagementId?: Prisma.StringFilter<"Risk"> | string
   title?: Prisma.StringFilter<"Risk"> | string
   description?: Prisma.StringNullableFilter<"Risk"> | string | null
-  probability?: Prisma.StringFilter<"Risk"> | string
-  impact?: Prisma.StringFilter<"Risk"> | string
-  mitigation?: Prisma.StringNullableFilter<"Risk"> | string | null
-  owner?: Prisma.StringNullableFilter<"Risk"> | string | null
   status?: Prisma.StringFilter<"Risk"> | string
+  identifiedAt?: Prisma.DateTimeFilter<"Risk"> | Date | string
+  identifiedBy?: Prisma.StringNullableFilter<"Risk"> | string | null
+  assessedAt?: Prisma.DateTimeNullableFilter<"Risk"> | Date | string | null
+  assessedBy?: Prisma.StringNullableFilter<"Risk"> | string | null
+  mitigationStrategy?: Prisma.StringNullableFilter<"Risk"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Risk"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Risk"> | Date | string
 }
 
-export type RiskCreateManyEngagementInput = {
+export type RiskCreateWithoutStageInput = {
   id?: string
   title: string
   description?: string | null
-  probability: string
-  impact: string
-  mitigation?: string | null
-  owner?: string | null
   status?: string
+  identifiedAt?: Date | string
+  identifiedBy?: string | null
+  assessedAt?: Date | string | null
+  assessedBy?: string | null
+  mitigationStrategy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  engagement: Prisma.EngagementCreateNestedOneWithoutRisksInput
+}
+
+export type RiskUncheckedCreateWithoutStageInput = {
+  id?: string
+  engagementId: string
+  title: string
+  description?: string | null
+  status?: string
+  identifiedAt?: Date | string
+  identifiedBy?: string | null
+  assessedAt?: Date | string | null
+  assessedBy?: string | null
+  mitigationStrategy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type RiskCreateOrConnectWithoutStageInput = {
+  where: Prisma.RiskWhereUniqueInput
+  create: Prisma.XOR<Prisma.RiskCreateWithoutStageInput, Prisma.RiskUncheckedCreateWithoutStageInput>
+}
+
+export type RiskCreateManyStageInputEnvelope = {
+  data: Prisma.RiskCreateManyStageInput | Prisma.RiskCreateManyStageInput[]
+}
+
+export type RiskUpsertWithWhereUniqueWithoutStageInput = {
+  where: Prisma.RiskWhereUniqueInput
+  update: Prisma.XOR<Prisma.RiskUpdateWithoutStageInput, Prisma.RiskUncheckedUpdateWithoutStageInput>
+  create: Prisma.XOR<Prisma.RiskCreateWithoutStageInput, Prisma.RiskUncheckedCreateWithoutStageInput>
+}
+
+export type RiskUpdateWithWhereUniqueWithoutStageInput = {
+  where: Prisma.RiskWhereUniqueInput
+  data: Prisma.XOR<Prisma.RiskUpdateWithoutStageInput, Prisma.RiskUncheckedUpdateWithoutStageInput>
+}
+
+export type RiskUpdateManyWithWhereWithoutStageInput = {
+  where: Prisma.RiskScalarWhereInput
+  data: Prisma.XOR<Prisma.RiskUpdateManyMutationInput, Prisma.RiskUncheckedUpdateManyWithoutStageInput>
+}
+
+export type RiskCreateManyEngagementInput = {
+  id?: string
+  stageId: string
+  title: string
+  description?: string | null
+  status?: string
+  identifiedAt?: Date | string
+  identifiedBy?: string | null
+  assessedAt?: Date | string | null
+  assessedBy?: string | null
+  mitigationStrategy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -576,37 +727,103 @@ export type RiskUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  probability?: Prisma.StringFieldUpdateOperationsInput | string
-  impact?: Prisma.StringFieldUpdateOperationsInput | string
-  mitigation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  owner?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  identifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitigationStrategy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  stage?: Prisma.StageUpdateOneRequiredWithoutRisksNestedInput
 }
 
 export type RiskUncheckedUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  stageId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  probability?: Prisma.StringFieldUpdateOperationsInput | string
-  impact?: Prisma.StringFieldUpdateOperationsInput | string
-  mitigation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  owner?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  identifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitigationStrategy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type RiskUncheckedUpdateManyWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  stageId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  probability?: Prisma.StringFieldUpdateOperationsInput | string
-  impact?: Prisma.StringFieldUpdateOperationsInput | string
-  mitigation?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  owner?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  identifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitigationStrategy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type RiskCreateManyStageInput = {
+  id?: string
+  engagementId: string
+  title: string
+  description?: string | null
+  status?: string
+  identifiedAt?: Date | string
+  identifiedBy?: string | null
+  assessedAt?: Date | string | null
+  assessedBy?: string | null
+  mitigationStrategy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type RiskUpdateWithoutStageInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  identifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitigationStrategy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engagement?: Prisma.EngagementUpdateOneRequiredWithoutRisksNestedInput
+}
+
+export type RiskUncheckedUpdateWithoutStageInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  identifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitigationStrategy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type RiskUncheckedUpdateManyWithoutStageInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  identifiedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  identifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  mitigationStrategy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -615,89 +832,106 @@ export type RiskUncheckedUpdateManyWithoutEngagementInput = {
 
 export type RiskSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  stageId?: boolean
   engagementId?: boolean
   title?: boolean
   description?: boolean
-  probability?: boolean
-  impact?: boolean
-  mitigation?: boolean
-  owner?: boolean
   status?: boolean
+  identifiedAt?: boolean
+  identifiedBy?: boolean
+  assessedAt?: boolean
+  assessedBy?: boolean
+  mitigationStrategy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["risk"]>
 
 export type RiskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  stageId?: boolean
   engagementId?: boolean
   title?: boolean
   description?: boolean
-  probability?: boolean
-  impact?: boolean
-  mitigation?: boolean
-  owner?: boolean
   status?: boolean
+  identifiedAt?: boolean
+  identifiedBy?: boolean
+  assessedAt?: boolean
+  assessedBy?: boolean
+  mitigationStrategy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["risk"]>
 
 export type RiskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  stageId?: boolean
   engagementId?: boolean
   title?: boolean
   description?: boolean
-  probability?: boolean
-  impact?: boolean
-  mitigation?: boolean
-  owner?: boolean
   status?: boolean
+  identifiedAt?: boolean
+  identifiedBy?: boolean
+  assessedAt?: boolean
+  assessedBy?: boolean
+  mitigationStrategy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["risk"]>
 
 export type RiskSelectScalar = {
   id?: boolean
+  stageId?: boolean
   engagementId?: boolean
   title?: boolean
   description?: boolean
-  probability?: boolean
-  impact?: boolean
-  mitigation?: boolean
-  owner?: boolean
   status?: boolean
+  identifiedAt?: boolean
+  identifiedBy?: boolean
+  assessedAt?: boolean
+  assessedBy?: boolean
+  mitigationStrategy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type RiskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "title" | "description" | "probability" | "impact" | "mitigation" | "owner" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["risk"]>
+export type RiskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "stageId" | "engagementId" | "title" | "description" | "status" | "identifiedAt" | "identifiedBy" | "assessedAt" | "assessedBy" | "mitigationStrategy" | "createdAt" | "updatedAt", ExtArgs["result"]["risk"]>
 export type RiskInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }
 export type RiskIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }
 export type RiskIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }
 
 export type $RiskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Risk"
   objects: {
+    stage: Prisma.$StagePayload<ExtArgs>
     engagement: Prisma.$EngagementPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    stageId: string
     engagementId: string
     title: string
     description: string | null
-    probability: string
-    impact: string
-    mitigation: string | null
-    owner: string | null
     status: string
+    identifiedAt: Date
+    identifiedBy: string | null
+    assessedAt: Date | null
+    assessedBy: string | null
+    mitigationStrategy: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["risk"]>
@@ -1094,6 +1328,7 @@ readonly fields: RiskFieldRefs;
  */
 export interface Prisma__RiskClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  stage<T extends Prisma.StageDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StageDefaultArgs<ExtArgs>>): Prisma.Prisma__StageClient<runtime.Types.Result.GetResult<Prisma.$StagePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   engagement<T extends Prisma.EngagementDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EngagementDefaultArgs<ExtArgs>>): Prisma.Prisma__EngagementClient<runtime.Types.Result.GetResult<Prisma.$EngagementPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1125,14 +1360,16 @@ export interface Prisma__RiskClient<T, Null = never, ExtArgs extends runtime.Typ
  */
 export interface RiskFieldRefs {
   readonly id: Prisma.FieldRef<"Risk", 'String'>
+  readonly stageId: Prisma.FieldRef<"Risk", 'String'>
   readonly engagementId: Prisma.FieldRef<"Risk", 'String'>
   readonly title: Prisma.FieldRef<"Risk", 'String'>
   readonly description: Prisma.FieldRef<"Risk", 'String'>
-  readonly probability: Prisma.FieldRef<"Risk", 'String'>
-  readonly impact: Prisma.FieldRef<"Risk", 'String'>
-  readonly mitigation: Prisma.FieldRef<"Risk", 'String'>
-  readonly owner: Prisma.FieldRef<"Risk", 'String'>
   readonly status: Prisma.FieldRef<"Risk", 'String'>
+  readonly identifiedAt: Prisma.FieldRef<"Risk", 'DateTime'>
+  readonly identifiedBy: Prisma.FieldRef<"Risk", 'String'>
+  readonly assessedAt: Prisma.FieldRef<"Risk", 'DateTime'>
+  readonly assessedBy: Prisma.FieldRef<"Risk", 'String'>
+  readonly mitigationStrategy: Prisma.FieldRef<"Risk", 'String'>
   readonly createdAt: Prisma.FieldRef<"Risk", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Risk", 'DateTime'>
 }

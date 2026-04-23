@@ -20,15 +20,28 @@ export type EvidenceBundleModel = runtime.Types.Result.DefaultSelection<Prisma.$
 
 export type AggregateEvidenceBundle = {
   _count: EvidenceBundleCountAggregateOutputType | null
+  _avg: EvidenceBundleAvgAggregateOutputType | null
+  _sum: EvidenceBundleSumAggregateOutputType | null
   _min: EvidenceBundleMinAggregateOutputType | null
   _max: EvidenceBundleMaxAggregateOutputType | null
+}
+
+export type EvidenceBundleAvgAggregateOutputType = {
+  version: number | null
+}
+
+export type EvidenceBundleSumAggregateOutputType = {
+  version: number | null
 }
 
 export type EvidenceBundleMinAggregateOutputType = {
   id: string | null
   engagementId: string | null
-  name: string | null
+  title: string | null
   description: string | null
+  status: string | null
+  createdBy: string | null
+  version: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -36,8 +49,11 @@ export type EvidenceBundleMinAggregateOutputType = {
 export type EvidenceBundleMaxAggregateOutputType = {
   id: string | null
   engagementId: string | null
-  name: string | null
+  title: string | null
   description: string | null
+  status: string | null
+  createdBy: string | null
+  version: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -45,19 +61,33 @@ export type EvidenceBundleMaxAggregateOutputType = {
 export type EvidenceBundleCountAggregateOutputType = {
   id: number
   engagementId: number
-  name: number
+  title: number
   description: number
+  status: number
+  createdBy: number
+  version: number
   createdAt: number
   updatedAt: number
   _all: number
 }
 
 
+export type EvidenceBundleAvgAggregateInputType = {
+  version?: true
+}
+
+export type EvidenceBundleSumAggregateInputType = {
+  version?: true
+}
+
 export type EvidenceBundleMinAggregateInputType = {
   id?: true
   engagementId?: true
-  name?: true
+  title?: true
   description?: true
+  status?: true
+  createdBy?: true
+  version?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -65,8 +95,11 @@ export type EvidenceBundleMinAggregateInputType = {
 export type EvidenceBundleMaxAggregateInputType = {
   id?: true
   engagementId?: true
-  name?: true
+  title?: true
   description?: true
+  status?: true
+  createdBy?: true
+  version?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -74,8 +107,11 @@ export type EvidenceBundleMaxAggregateInputType = {
 export type EvidenceBundleCountAggregateInputType = {
   id?: true
   engagementId?: true
-  name?: true
+  title?: true
   description?: true
+  status?: true
+  createdBy?: true
+  version?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -119,6 +155,18 @@ export type EvidenceBundleAggregateArgs<ExtArgs extends runtime.Types.Extensions
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: EvidenceBundleAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: EvidenceBundleSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: EvidenceBundleMinAggregateInputType
@@ -149,6 +197,8 @@ export type EvidenceBundleGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   _count?: EvidenceBundleCountAggregateInputType | true
+  _avg?: EvidenceBundleAvgAggregateInputType
+  _sum?: EvidenceBundleSumAggregateInputType
   _min?: EvidenceBundleMinAggregateInputType
   _max?: EvidenceBundleMaxAggregateInputType
 }
@@ -156,11 +206,16 @@ export type EvidenceBundleGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 export type EvidenceBundleGroupByOutputType = {
   id: string
   engagementId: string
-  name: string
+  title: string
   description: string | null
+  status: string
+  createdBy: string | null
+  version: number
   createdAt: Date
   updatedAt: Date
   _count: EvidenceBundleCountAggregateOutputType | null
+  _avg: EvidenceBundleAvgAggregateOutputType | null
+  _sum: EvidenceBundleSumAggregateOutputType | null
   _min: EvidenceBundleMinAggregateOutputType | null
   _max: EvidenceBundleMaxAggregateOutputType | null
 }
@@ -186,20 +241,28 @@ export type EvidenceBundleWhereInput = {
   NOT?: Prisma.EvidenceBundleWhereInput | Prisma.EvidenceBundleWhereInput[]
   id?: Prisma.StringFilter<"EvidenceBundle"> | string
   engagementId?: Prisma.StringFilter<"EvidenceBundle"> | string
-  name?: Prisma.StringFilter<"EvidenceBundle"> | string
+  title?: Prisma.StringFilter<"EvidenceBundle"> | string
   description?: Prisma.StringNullableFilter<"EvidenceBundle"> | string | null
+  status?: Prisma.StringFilter<"EvidenceBundle"> | string
+  createdBy?: Prisma.StringNullableFilter<"EvidenceBundle"> | string | null
+  version?: Prisma.IntFilter<"EvidenceBundle"> | number
   createdAt?: Prisma.DateTimeFilter<"EvidenceBundle"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"EvidenceBundle"> | Date | string
+  engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
   items?: Prisma.EvidenceBundleItemListRelationFilter
 }
 
 export type EvidenceBundleOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  status?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  version?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  engagement?: Prisma.EngagementOrderByWithRelationInput
   items?: Prisma.EvidenceBundleItemOrderByRelationAggregateInput
 }
 
@@ -209,23 +272,32 @@ export type EvidenceBundleWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.EvidenceBundleWhereInput[]
   NOT?: Prisma.EvidenceBundleWhereInput | Prisma.EvidenceBundleWhereInput[]
   engagementId?: Prisma.StringFilter<"EvidenceBundle"> | string
-  name?: Prisma.StringFilter<"EvidenceBundle"> | string
+  title?: Prisma.StringFilter<"EvidenceBundle"> | string
   description?: Prisma.StringNullableFilter<"EvidenceBundle"> | string | null
+  status?: Prisma.StringFilter<"EvidenceBundle"> | string
+  createdBy?: Prisma.StringNullableFilter<"EvidenceBundle"> | string | null
+  version?: Prisma.IntFilter<"EvidenceBundle"> | number
   createdAt?: Prisma.DateTimeFilter<"EvidenceBundle"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"EvidenceBundle"> | Date | string
+  engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
   items?: Prisma.EvidenceBundleItemListRelationFilter
 }, "id">
 
 export type EvidenceBundleOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  status?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  version?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.EvidenceBundleCountOrderByAggregateInput
+  _avg?: Prisma.EvidenceBundleAvgOrderByAggregateInput
   _max?: Prisma.EvidenceBundleMaxOrderByAggregateInput
   _min?: Prisma.EvidenceBundleMinOrderByAggregateInput
+  _sum?: Prisma.EvidenceBundleSumOrderByAggregateInput
 }
 
 export type EvidenceBundleScalarWhereWithAggregatesInput = {
@@ -234,27 +306,36 @@ export type EvidenceBundleScalarWhereWithAggregatesInput = {
   NOT?: Prisma.EvidenceBundleScalarWhereWithAggregatesInput | Prisma.EvidenceBundleScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"EvidenceBundle"> | string
   engagementId?: Prisma.StringWithAggregatesFilter<"EvidenceBundle"> | string
-  name?: Prisma.StringWithAggregatesFilter<"EvidenceBundle"> | string
+  title?: Prisma.StringWithAggregatesFilter<"EvidenceBundle"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"EvidenceBundle"> | string | null
+  status?: Prisma.StringWithAggregatesFilter<"EvidenceBundle"> | string
+  createdBy?: Prisma.StringNullableWithAggregatesFilter<"EvidenceBundle"> | string | null
+  version?: Prisma.IntWithAggregatesFilter<"EvidenceBundle"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"EvidenceBundle"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"EvidenceBundle"> | Date | string
 }
 
 export type EvidenceBundleCreateInput = {
   id?: string
-  engagementId: string
-  name: string
+  title: string
   description?: string | null
+  status?: string
+  createdBy?: string | null
+  version?: number
   createdAt?: Date | string
   updatedAt?: Date | string
+  engagement: Prisma.EngagementCreateNestedOneWithoutEvidenceBundlesInput
   items?: Prisma.EvidenceBundleItemCreateNestedManyWithoutBundleInput
 }
 
 export type EvidenceBundleUncheckedCreateInput = {
   id?: string
   engagementId: string
-  name: string
+  title: string
   description?: string | null
+  status?: string
+  createdBy?: string | null
+  version?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   items?: Prisma.EvidenceBundleItemUncheckedCreateNestedManyWithoutBundleInput
@@ -262,19 +343,25 @@ export type EvidenceBundleUncheckedCreateInput = {
 
 export type EvidenceBundleUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engagement?: Prisma.EngagementUpdateOneRequiredWithoutEvidenceBundlesNestedInput
   items?: Prisma.EvidenceBundleItemUpdateManyWithoutBundleNestedInput
 }
 
 export type EvidenceBundleUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.EvidenceBundleItemUncheckedUpdateManyWithoutBundleNestedInput
@@ -283,17 +370,22 @@ export type EvidenceBundleUncheckedUpdateInput = {
 export type EvidenceBundleCreateManyInput = {
   id?: string
   engagementId: string
-  name: string
+  title: string
   description?: string | null
+  status?: string
+  createdBy?: string | null
+  version?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
 export type EvidenceBundleUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -301,26 +393,49 @@ export type EvidenceBundleUpdateManyMutationInput = {
 export type EvidenceBundleUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type EvidenceBundleListRelationFilter = {
+  every?: Prisma.EvidenceBundleWhereInput
+  some?: Prisma.EvidenceBundleWhereInput
+  none?: Prisma.EvidenceBundleWhereInput
+}
+
+export type EvidenceBundleOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type EvidenceBundleCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrder
+  version?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type EvidenceBundleAvgOrderByAggregateInput = {
+  version?: Prisma.SortOrder
 }
 
 export type EvidenceBundleMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrder
+  version?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -328,15 +443,64 @@ export type EvidenceBundleMaxOrderByAggregateInput = {
 export type EvidenceBundleMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrder
+  version?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type EvidenceBundleSumOrderByAggregateInput = {
+  version?: Prisma.SortOrder
 }
 
 export type EvidenceBundleScalarRelationFilter = {
   is?: Prisma.EvidenceBundleWhereInput
   isNot?: Prisma.EvidenceBundleWhereInput
+}
+
+export type EvidenceBundleCreateNestedManyWithoutEngagementInput = {
+  create?: Prisma.XOR<Prisma.EvidenceBundleCreateWithoutEngagementInput, Prisma.EvidenceBundleUncheckedCreateWithoutEngagementInput> | Prisma.EvidenceBundleCreateWithoutEngagementInput[] | Prisma.EvidenceBundleUncheckedCreateWithoutEngagementInput[]
+  connectOrCreate?: Prisma.EvidenceBundleCreateOrConnectWithoutEngagementInput | Prisma.EvidenceBundleCreateOrConnectWithoutEngagementInput[]
+  createMany?: Prisma.EvidenceBundleCreateManyEngagementInputEnvelope
+  connect?: Prisma.EvidenceBundleWhereUniqueInput | Prisma.EvidenceBundleWhereUniqueInput[]
+}
+
+export type EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput = {
+  create?: Prisma.XOR<Prisma.EvidenceBundleCreateWithoutEngagementInput, Prisma.EvidenceBundleUncheckedCreateWithoutEngagementInput> | Prisma.EvidenceBundleCreateWithoutEngagementInput[] | Prisma.EvidenceBundleUncheckedCreateWithoutEngagementInput[]
+  connectOrCreate?: Prisma.EvidenceBundleCreateOrConnectWithoutEngagementInput | Prisma.EvidenceBundleCreateOrConnectWithoutEngagementInput[]
+  createMany?: Prisma.EvidenceBundleCreateManyEngagementInputEnvelope
+  connect?: Prisma.EvidenceBundleWhereUniqueInput | Prisma.EvidenceBundleWhereUniqueInput[]
+}
+
+export type EvidenceBundleUpdateManyWithoutEngagementNestedInput = {
+  create?: Prisma.XOR<Prisma.EvidenceBundleCreateWithoutEngagementInput, Prisma.EvidenceBundleUncheckedCreateWithoutEngagementInput> | Prisma.EvidenceBundleCreateWithoutEngagementInput[] | Prisma.EvidenceBundleUncheckedCreateWithoutEngagementInput[]
+  connectOrCreate?: Prisma.EvidenceBundleCreateOrConnectWithoutEngagementInput | Prisma.EvidenceBundleCreateOrConnectWithoutEngagementInput[]
+  upsert?: Prisma.EvidenceBundleUpsertWithWhereUniqueWithoutEngagementInput | Prisma.EvidenceBundleUpsertWithWhereUniqueWithoutEngagementInput[]
+  createMany?: Prisma.EvidenceBundleCreateManyEngagementInputEnvelope
+  set?: Prisma.EvidenceBundleWhereUniqueInput | Prisma.EvidenceBundleWhereUniqueInput[]
+  disconnect?: Prisma.EvidenceBundleWhereUniqueInput | Prisma.EvidenceBundleWhereUniqueInput[]
+  delete?: Prisma.EvidenceBundleWhereUniqueInput | Prisma.EvidenceBundleWhereUniqueInput[]
+  connect?: Prisma.EvidenceBundleWhereUniqueInput | Prisma.EvidenceBundleWhereUniqueInput[]
+  update?: Prisma.EvidenceBundleUpdateWithWhereUniqueWithoutEngagementInput | Prisma.EvidenceBundleUpdateWithWhereUniqueWithoutEngagementInput[]
+  updateMany?: Prisma.EvidenceBundleUpdateManyWithWhereWithoutEngagementInput | Prisma.EvidenceBundleUpdateManyWithWhereWithoutEngagementInput[]
+  deleteMany?: Prisma.EvidenceBundleScalarWhereInput | Prisma.EvidenceBundleScalarWhereInput[]
+}
+
+export type EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput = {
+  create?: Prisma.XOR<Prisma.EvidenceBundleCreateWithoutEngagementInput, Prisma.EvidenceBundleUncheckedCreateWithoutEngagementInput> | Prisma.EvidenceBundleCreateWithoutEngagementInput[] | Prisma.EvidenceBundleUncheckedCreateWithoutEngagementInput[]
+  connectOrCreate?: Prisma.EvidenceBundleCreateOrConnectWithoutEngagementInput | Prisma.EvidenceBundleCreateOrConnectWithoutEngagementInput[]
+  upsert?: Prisma.EvidenceBundleUpsertWithWhereUniqueWithoutEngagementInput | Prisma.EvidenceBundleUpsertWithWhereUniqueWithoutEngagementInput[]
+  createMany?: Prisma.EvidenceBundleCreateManyEngagementInputEnvelope
+  set?: Prisma.EvidenceBundleWhereUniqueInput | Prisma.EvidenceBundleWhereUniqueInput[]
+  disconnect?: Prisma.EvidenceBundleWhereUniqueInput | Prisma.EvidenceBundleWhereUniqueInput[]
+  delete?: Prisma.EvidenceBundleWhereUniqueInput | Prisma.EvidenceBundleWhereUniqueInput[]
+  connect?: Prisma.EvidenceBundleWhereUniqueInput | Prisma.EvidenceBundleWhereUniqueInput[]
+  update?: Prisma.EvidenceBundleUpdateWithWhereUniqueWithoutEngagementInput | Prisma.EvidenceBundleUpdateWithWhereUniqueWithoutEngagementInput[]
+  updateMany?: Prisma.EvidenceBundleUpdateManyWithWhereWithoutEngagementInput | Prisma.EvidenceBundleUpdateManyWithWhereWithoutEngagementInput[]
+  deleteMany?: Prisma.EvidenceBundleScalarWhereInput | Prisma.EvidenceBundleScalarWhereInput[]
 }
 
 export type EvidenceBundleCreateNestedOneWithoutItemsInput = {
@@ -353,20 +517,90 @@ export type EvidenceBundleUpdateOneRequiredWithoutItemsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.EvidenceBundleUpdateToOneWithWhereWithoutItemsInput, Prisma.EvidenceBundleUpdateWithoutItemsInput>, Prisma.EvidenceBundleUncheckedUpdateWithoutItemsInput>
 }
 
-export type EvidenceBundleCreateWithoutItemsInput = {
+export type EvidenceBundleCreateWithoutEngagementInput = {
   id?: string
-  engagementId: string
-  name: string
+  title: string
   description?: string | null
+  status?: string
+  createdBy?: string | null
+  version?: number
   createdAt?: Date | string
   updatedAt?: Date | string
+  items?: Prisma.EvidenceBundleItemCreateNestedManyWithoutBundleInput
+}
+
+export type EvidenceBundleUncheckedCreateWithoutEngagementInput = {
+  id?: string
+  title: string
+  description?: string | null
+  status?: string
+  createdBy?: string | null
+  version?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  items?: Prisma.EvidenceBundleItemUncheckedCreateNestedManyWithoutBundleInput
+}
+
+export type EvidenceBundleCreateOrConnectWithoutEngagementInput = {
+  where: Prisma.EvidenceBundleWhereUniqueInput
+  create: Prisma.XOR<Prisma.EvidenceBundleCreateWithoutEngagementInput, Prisma.EvidenceBundleUncheckedCreateWithoutEngagementInput>
+}
+
+export type EvidenceBundleCreateManyEngagementInputEnvelope = {
+  data: Prisma.EvidenceBundleCreateManyEngagementInput | Prisma.EvidenceBundleCreateManyEngagementInput[]
+}
+
+export type EvidenceBundleUpsertWithWhereUniqueWithoutEngagementInput = {
+  where: Prisma.EvidenceBundleWhereUniqueInput
+  update: Prisma.XOR<Prisma.EvidenceBundleUpdateWithoutEngagementInput, Prisma.EvidenceBundleUncheckedUpdateWithoutEngagementInput>
+  create: Prisma.XOR<Prisma.EvidenceBundleCreateWithoutEngagementInput, Prisma.EvidenceBundleUncheckedCreateWithoutEngagementInput>
+}
+
+export type EvidenceBundleUpdateWithWhereUniqueWithoutEngagementInput = {
+  where: Prisma.EvidenceBundleWhereUniqueInput
+  data: Prisma.XOR<Prisma.EvidenceBundleUpdateWithoutEngagementInput, Prisma.EvidenceBundleUncheckedUpdateWithoutEngagementInput>
+}
+
+export type EvidenceBundleUpdateManyWithWhereWithoutEngagementInput = {
+  where: Prisma.EvidenceBundleScalarWhereInput
+  data: Prisma.XOR<Prisma.EvidenceBundleUpdateManyMutationInput, Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementInput>
+}
+
+export type EvidenceBundleScalarWhereInput = {
+  AND?: Prisma.EvidenceBundleScalarWhereInput | Prisma.EvidenceBundleScalarWhereInput[]
+  OR?: Prisma.EvidenceBundleScalarWhereInput[]
+  NOT?: Prisma.EvidenceBundleScalarWhereInput | Prisma.EvidenceBundleScalarWhereInput[]
+  id?: Prisma.StringFilter<"EvidenceBundle"> | string
+  engagementId?: Prisma.StringFilter<"EvidenceBundle"> | string
+  title?: Prisma.StringFilter<"EvidenceBundle"> | string
+  description?: Prisma.StringNullableFilter<"EvidenceBundle"> | string | null
+  status?: Prisma.StringFilter<"EvidenceBundle"> | string
+  createdBy?: Prisma.StringNullableFilter<"EvidenceBundle"> | string | null
+  version?: Prisma.IntFilter<"EvidenceBundle"> | number
+  createdAt?: Prisma.DateTimeFilter<"EvidenceBundle"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"EvidenceBundle"> | Date | string
+}
+
+export type EvidenceBundleCreateWithoutItemsInput = {
+  id?: string
+  title: string
+  description?: string | null
+  status?: string
+  createdBy?: string | null
+  version?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  engagement: Prisma.EngagementCreateNestedOneWithoutEvidenceBundlesInput
 }
 
 export type EvidenceBundleUncheckedCreateWithoutItemsInput = {
   id?: string
   engagementId: string
-  name: string
+  title: string
   description?: string | null
+  status?: string
+  createdBy?: string | null
+  version?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -389,18 +623,70 @@ export type EvidenceBundleUpdateToOneWithWhereWithoutItemsInput = {
 
 export type EvidenceBundleUpdateWithoutItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engagement?: Prisma.EngagementUpdateOneRequiredWithoutEvidenceBundlesNestedInput
 }
 
 export type EvidenceBundleUncheckedUpdateWithoutItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type EvidenceBundleCreateManyEngagementInput = {
+  id?: string
+  title: string
+  description?: string | null
+  status?: string
+  createdBy?: string | null
+  version?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type EvidenceBundleUpdateWithoutEngagementInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  items?: Prisma.EvidenceBundleItemUpdateManyWithoutBundleNestedInput
+}
+
+export type EvidenceBundleUncheckedUpdateWithoutEngagementInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  items?: Prisma.EvidenceBundleItemUncheckedUpdateManyWithoutBundleNestedInput
+}
+
+export type EvidenceBundleUncheckedUpdateManyWithoutEngagementInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -439,10 +725,14 @@ export type EvidenceBundleCountOutputTypeCountItemsArgs<ExtArgs extends runtime.
 export type EvidenceBundleSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   engagementId?: boolean
-  name?: boolean
+  title?: boolean
   description?: boolean
+  status?: boolean
+  createdBy?: boolean
+  version?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
   items?: boolean | Prisma.EvidenceBundle$itemsArgs<ExtArgs>
   _count?: boolean | Prisma.EvidenceBundleCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evidenceBundle"]>
@@ -450,48 +740,68 @@ export type EvidenceBundleSelect<ExtArgs extends runtime.Types.Extensions.Intern
 export type EvidenceBundleSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   engagementId?: boolean
-  name?: boolean
+  title?: boolean
   description?: boolean
+  status?: boolean
+  createdBy?: boolean
+  version?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evidenceBundle"]>
 
 export type EvidenceBundleSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   engagementId?: boolean
-  name?: boolean
+  title?: boolean
   description?: boolean
+  status?: boolean
+  createdBy?: boolean
+  version?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evidenceBundle"]>
 
 export type EvidenceBundleSelectScalar = {
   id?: boolean
   engagementId?: boolean
-  name?: boolean
+  title?: boolean
   description?: boolean
+  status?: boolean
+  createdBy?: boolean
+  version?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type EvidenceBundleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "name" | "description" | "createdAt" | "updatedAt", ExtArgs["result"]["evidenceBundle"]>
+export type EvidenceBundleOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "title" | "description" | "status" | "createdBy" | "version" | "createdAt" | "updatedAt", ExtArgs["result"]["evidenceBundle"]>
 export type EvidenceBundleInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
   items?: boolean | Prisma.EvidenceBundle$itemsArgs<ExtArgs>
   _count?: boolean | Prisma.EvidenceBundleCountOutputTypeDefaultArgs<ExtArgs>
 }
-export type EvidenceBundleIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type EvidenceBundleIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type EvidenceBundleIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+}
+export type EvidenceBundleIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+}
 
 export type $EvidenceBundlePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "EvidenceBundle"
   objects: {
+    engagement: Prisma.$EngagementPayload<ExtArgs>
     items: Prisma.$EvidenceBundleItemPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     engagementId: string
-    name: string
+    title: string
     description: string | null
+    status: string
+    createdBy: string | null
+    version: number
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["evidenceBundle"]>
@@ -888,6 +1198,7 @@ readonly fields: EvidenceBundleFieldRefs;
  */
 export interface Prisma__EvidenceBundleClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  engagement<T extends Prisma.EngagementDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EngagementDefaultArgs<ExtArgs>>): Prisma.Prisma__EngagementClient<runtime.Types.Result.GetResult<Prisma.$EngagementPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   items<T extends Prisma.EvidenceBundle$itemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EvidenceBundle$itemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvidenceBundleItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -920,8 +1231,11 @@ export interface Prisma__EvidenceBundleClient<T, Null = never, ExtArgs extends r
 export interface EvidenceBundleFieldRefs {
   readonly id: Prisma.FieldRef<"EvidenceBundle", 'String'>
   readonly engagementId: Prisma.FieldRef<"EvidenceBundle", 'String'>
-  readonly name: Prisma.FieldRef<"EvidenceBundle", 'String'>
+  readonly title: Prisma.FieldRef<"EvidenceBundle", 'String'>
   readonly description: Prisma.FieldRef<"EvidenceBundle", 'String'>
+  readonly status: Prisma.FieldRef<"EvidenceBundle", 'String'>
+  readonly createdBy: Prisma.FieldRef<"EvidenceBundle", 'String'>
+  readonly version: Prisma.FieldRef<"EvidenceBundle", 'Int'>
   readonly createdAt: Prisma.FieldRef<"EvidenceBundle", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"EvidenceBundle", 'DateTime'>
 }
@@ -1176,6 +1490,10 @@ export type EvidenceBundleCreateManyAndReturnArgs<ExtArgs extends runtime.Types.
    * The data used to create many EvidenceBundles.
    */
   data: Prisma.EvidenceBundleCreateManyInput | Prisma.EvidenceBundleCreateManyInput[]
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvidenceBundleIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1246,6 +1564,10 @@ export type EvidenceBundleUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.
    * Limit how many EvidenceBundles to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EvidenceBundleIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**

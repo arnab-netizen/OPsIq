@@ -20,80 +20,134 @@ export type DeliverableModel = runtime.Types.Result.DefaultSelection<Prisma.$Del
 
 export type AggregateDeliverable = {
   _count: DeliverableCountAggregateOutputType | null
+  _avg: DeliverableAvgAggregateOutputType | null
+  _sum: DeliverableSumAggregateOutputType | null
   _min: DeliverableMinAggregateOutputType | null
   _max: DeliverableMaxAggregateOutputType | null
 }
 
+export type DeliverableAvgAggregateOutputType = {
+  version: number | null
+}
+
+export type DeliverableSumAggregateOutputType = {
+  version: number | null
+}
+
 export type DeliverableMinAggregateOutputType = {
   id: string | null
+  stageId: string | null
   engagementId: string | null
-  name: string | null
+  title: string | null
   description: string | null
   status: string | null
-  dueDate: Date | null
-  completedDate: Date | null
+  version: number | null
+  submittedBy: string | null
+  submittedAt: Date | null
+  approvedBy: string | null
+  approvedAt: Date | null
+  rejectionReason: string | null
+  createdBy: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
 
 export type DeliverableMaxAggregateOutputType = {
   id: string | null
+  stageId: string | null
   engagementId: string | null
-  name: string | null
+  title: string | null
   description: string | null
   status: string | null
-  dueDate: Date | null
-  completedDate: Date | null
+  version: number | null
+  submittedBy: string | null
+  submittedAt: Date | null
+  approvedBy: string | null
+  approvedAt: Date | null
+  rejectionReason: string | null
+  createdBy: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
 
 export type DeliverableCountAggregateOutputType = {
   id: number
+  stageId: number
   engagementId: number
-  name: number
+  title: number
   description: number
   status: number
-  dueDate: number
-  completedDate: number
+  version: number
+  submittedBy: number
+  submittedAt: number
+  approvedBy: number
+  approvedAt: number
+  rejectionReason: number
+  createdBy: number
   createdAt: number
   updatedAt: number
   _all: number
 }
 
 
+export type DeliverableAvgAggregateInputType = {
+  version?: true
+}
+
+export type DeliverableSumAggregateInputType = {
+  version?: true
+}
+
 export type DeliverableMinAggregateInputType = {
   id?: true
+  stageId?: true
   engagementId?: true
-  name?: true
+  title?: true
   description?: true
   status?: true
-  dueDate?: true
-  completedDate?: true
+  version?: true
+  submittedBy?: true
+  submittedAt?: true
+  approvedBy?: true
+  approvedAt?: true
+  rejectionReason?: true
+  createdBy?: true
   createdAt?: true
   updatedAt?: true
 }
 
 export type DeliverableMaxAggregateInputType = {
   id?: true
+  stageId?: true
   engagementId?: true
-  name?: true
+  title?: true
   description?: true
   status?: true
-  dueDate?: true
-  completedDate?: true
+  version?: true
+  submittedBy?: true
+  submittedAt?: true
+  approvedBy?: true
+  approvedAt?: true
+  rejectionReason?: true
+  createdBy?: true
   createdAt?: true
   updatedAt?: true
 }
 
 export type DeliverableCountAggregateInputType = {
   id?: true
+  stageId?: true
   engagementId?: true
-  name?: true
+  title?: true
   description?: true
   status?: true
-  dueDate?: true
-  completedDate?: true
+  version?: true
+  submittedBy?: true
+  submittedAt?: true
+  approvedBy?: true
+  approvedAt?: true
+  rejectionReason?: true
+  createdBy?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -137,6 +191,18 @@ export type DeliverableAggregateArgs<ExtArgs extends runtime.Types.Extensions.In
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: DeliverableAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: DeliverableSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: DeliverableMinAggregateInputType
@@ -167,21 +233,31 @@ export type DeliverableGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inte
   take?: number
   skip?: number
   _count?: DeliverableCountAggregateInputType | true
+  _avg?: DeliverableAvgAggregateInputType
+  _sum?: DeliverableSumAggregateInputType
   _min?: DeliverableMinAggregateInputType
   _max?: DeliverableMaxAggregateInputType
 }
 
 export type DeliverableGroupByOutputType = {
   id: string
+  stageId: string
   engagementId: string
-  name: string
+  title: string
   description: string | null
   status: string
-  dueDate: Date | null
-  completedDate: Date | null
+  version: number
+  submittedBy: string | null
+  submittedAt: Date | null
+  approvedBy: string | null
+  approvedAt: Date | null
+  rejectionReason: string | null
+  createdBy: string | null
   createdAt: Date
   updatedAt: Date
   _count: DeliverableCountAggregateOutputType | null
+  _avg: DeliverableAvgAggregateOutputType | null
+  _sum: DeliverableSumAggregateOutputType | null
   _min: DeliverableMinAggregateOutputType | null
   _max: DeliverableMaxAggregateOutputType | null
 }
@@ -206,27 +282,41 @@ export type DeliverableWhereInput = {
   OR?: Prisma.DeliverableWhereInput[]
   NOT?: Prisma.DeliverableWhereInput | Prisma.DeliverableWhereInput[]
   id?: Prisma.StringFilter<"Deliverable"> | string
+  stageId?: Prisma.StringFilter<"Deliverable"> | string
   engagementId?: Prisma.StringFilter<"Deliverable"> | string
-  name?: Prisma.StringFilter<"Deliverable"> | string
+  title?: Prisma.StringFilter<"Deliverable"> | string
   description?: Prisma.StringNullableFilter<"Deliverable"> | string | null
   status?: Prisma.StringFilter<"Deliverable"> | string
-  dueDate?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
-  completedDate?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
+  version?: Prisma.IntFilter<"Deliverable"> | number
+  submittedBy?: Prisma.StringNullableFilter<"Deliverable"> | string | null
+  submittedAt?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
+  approvedBy?: Prisma.StringNullableFilter<"Deliverable"> | string | null
+  approvedAt?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
+  rejectionReason?: Prisma.StringNullableFilter<"Deliverable"> | string | null
+  createdBy?: Prisma.StringNullableFilter<"Deliverable"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Deliverable"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Deliverable"> | Date | string
+  stage?: Prisma.XOR<Prisma.StageScalarRelationFilter, Prisma.StageWhereInput>
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
 }
 
 export type DeliverableOrderByWithRelationInput = {
   id?: Prisma.SortOrder
+  stageId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
-  dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
-  completedDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  version?: Prisma.SortOrder
+  submittedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  submittedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  approvedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  approvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrderInput | Prisma.SortOrder
+  createdBy?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  stage?: Prisma.StageOrderByWithRelationInput
   engagement?: Prisma.EngagementOrderByWithRelationInput
 }
 
@@ -235,30 +325,45 @@ export type DeliverableWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.DeliverableWhereInput | Prisma.DeliverableWhereInput[]
   OR?: Prisma.DeliverableWhereInput[]
   NOT?: Prisma.DeliverableWhereInput | Prisma.DeliverableWhereInput[]
+  stageId?: Prisma.StringFilter<"Deliverable"> | string
   engagementId?: Prisma.StringFilter<"Deliverable"> | string
-  name?: Prisma.StringFilter<"Deliverable"> | string
+  title?: Prisma.StringFilter<"Deliverable"> | string
   description?: Prisma.StringNullableFilter<"Deliverable"> | string | null
   status?: Prisma.StringFilter<"Deliverable"> | string
-  dueDate?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
-  completedDate?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
+  version?: Prisma.IntFilter<"Deliverable"> | number
+  submittedBy?: Prisma.StringNullableFilter<"Deliverable"> | string | null
+  submittedAt?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
+  approvedBy?: Prisma.StringNullableFilter<"Deliverable"> | string | null
+  approvedAt?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
+  rejectionReason?: Prisma.StringNullableFilter<"Deliverable"> | string | null
+  createdBy?: Prisma.StringNullableFilter<"Deliverable"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Deliverable"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Deliverable"> | Date | string
+  stage?: Prisma.XOR<Prisma.StageScalarRelationFilter, Prisma.StageWhereInput>
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
 }, "id">
 
 export type DeliverableOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
+  stageId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
-  dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
-  completedDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  version?: Prisma.SortOrder
+  submittedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  submittedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  approvedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  approvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrderInput | Prisma.SortOrder
+  createdBy?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.DeliverableCountOrderByAggregateInput
+  _avg?: Prisma.DeliverableAvgOrderByAggregateInput
   _max?: Prisma.DeliverableMaxOrderByAggregateInput
   _min?: Prisma.DeliverableMinOrderByAggregateInput
+  _sum?: Prisma.DeliverableSumOrderByAggregateInput
 }
 
 export type DeliverableScalarWhereWithAggregatesInput = {
@@ -266,95 +371,142 @@ export type DeliverableScalarWhereWithAggregatesInput = {
   OR?: Prisma.DeliverableScalarWhereWithAggregatesInput[]
   NOT?: Prisma.DeliverableScalarWhereWithAggregatesInput | Prisma.DeliverableScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Deliverable"> | string
+  stageId?: Prisma.StringWithAggregatesFilter<"Deliverable"> | string
   engagementId?: Prisma.StringWithAggregatesFilter<"Deliverable"> | string
-  name?: Prisma.StringWithAggregatesFilter<"Deliverable"> | string
+  title?: Prisma.StringWithAggregatesFilter<"Deliverable"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"Deliverable"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"Deliverable"> | string
-  dueDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Deliverable"> | Date | string | null
-  completedDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Deliverable"> | Date | string | null
+  version?: Prisma.IntWithAggregatesFilter<"Deliverable"> | number
+  submittedBy?: Prisma.StringNullableWithAggregatesFilter<"Deliverable"> | string | null
+  submittedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Deliverable"> | Date | string | null
+  approvedBy?: Prisma.StringNullableWithAggregatesFilter<"Deliverable"> | string | null
+  approvedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Deliverable"> | Date | string | null
+  rejectionReason?: Prisma.StringNullableWithAggregatesFilter<"Deliverable"> | string | null
+  createdBy?: Prisma.StringNullableWithAggregatesFilter<"Deliverable"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Deliverable"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Deliverable"> | Date | string
 }
 
 export type DeliverableCreateInput = {
   id?: string
-  name: string
+  title: string
   description?: string | null
   status?: string
-  dueDate?: Date | string | null
-  completedDate?: Date | string | null
+  version?: number
+  submittedBy?: string | null
+  submittedAt?: Date | string | null
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  rejectionReason?: string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  stage: Prisma.StageCreateNestedOneWithoutDeliverablesInput
   engagement: Prisma.EngagementCreateNestedOneWithoutDeliverablesInput
 }
 
 export type DeliverableUncheckedCreateInput = {
   id?: string
+  stageId: string
   engagementId: string
-  name: string
+  title: string
   description?: string | null
   status?: string
-  dueDate?: Date | string | null
-  completedDate?: Date | string | null
+  version?: number
+  submittedBy?: string | null
+  submittedAt?: Date | string | null
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  rejectionReason?: string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
 export type DeliverableUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  stage?: Prisma.StageUpdateOneRequiredWithoutDeliverablesNestedInput
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutDeliverablesNestedInput
 }
 
 export type DeliverableUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  stageId?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type DeliverableCreateManyInput = {
   id?: string
+  stageId: string
   engagementId: string
-  name: string
+  title: string
   description?: string | null
   status?: string
-  dueDate?: Date | string | null
-  completedDate?: Date | string | null
+  version?: number
+  submittedBy?: string | null
+  submittedAt?: Date | string | null
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  rejectionReason?: string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
 export type DeliverableUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type DeliverableUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  stageId?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -371,38 +523,64 @@ export type DeliverableOrderByRelationAggregateInput = {
 
 export type DeliverableCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  stageId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   description?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  dueDate?: Prisma.SortOrder
-  completedDate?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  submittedBy?: Prisma.SortOrder
+  submittedAt?: Prisma.SortOrder
+  approvedBy?: Prisma.SortOrder
+  approvedAt?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
+export type DeliverableAvgOrderByAggregateInput = {
+  version?: Prisma.SortOrder
+}
+
 export type DeliverableMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  stageId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   description?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  dueDate?: Prisma.SortOrder
-  completedDate?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  submittedBy?: Prisma.SortOrder
+  submittedAt?: Prisma.SortOrder
+  approvedBy?: Prisma.SortOrder
+  approvedAt?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type DeliverableMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  stageId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   description?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  dueDate?: Prisma.SortOrder
-  completedDate?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  submittedBy?: Prisma.SortOrder
+  submittedAt?: Prisma.SortOrder
+  approvedBy?: Prisma.SortOrder
+  approvedAt?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type DeliverableSumOrderByAggregateInput = {
+  version?: Prisma.SortOrder
 }
 
 export type DeliverableCreateNestedManyWithoutEngagementInput = {
@@ -447,24 +625,78 @@ export type DeliverableUncheckedUpdateManyWithoutEngagementNestedInput = {
   deleteMany?: Prisma.DeliverableScalarWhereInput | Prisma.DeliverableScalarWhereInput[]
 }
 
+export type DeliverableCreateNestedManyWithoutStageInput = {
+  create?: Prisma.XOR<Prisma.DeliverableCreateWithoutStageInput, Prisma.DeliverableUncheckedCreateWithoutStageInput> | Prisma.DeliverableCreateWithoutStageInput[] | Prisma.DeliverableUncheckedCreateWithoutStageInput[]
+  connectOrCreate?: Prisma.DeliverableCreateOrConnectWithoutStageInput | Prisma.DeliverableCreateOrConnectWithoutStageInput[]
+  createMany?: Prisma.DeliverableCreateManyStageInputEnvelope
+  connect?: Prisma.DeliverableWhereUniqueInput | Prisma.DeliverableWhereUniqueInput[]
+}
+
+export type DeliverableUncheckedCreateNestedManyWithoutStageInput = {
+  create?: Prisma.XOR<Prisma.DeliverableCreateWithoutStageInput, Prisma.DeliverableUncheckedCreateWithoutStageInput> | Prisma.DeliverableCreateWithoutStageInput[] | Prisma.DeliverableUncheckedCreateWithoutStageInput[]
+  connectOrCreate?: Prisma.DeliverableCreateOrConnectWithoutStageInput | Prisma.DeliverableCreateOrConnectWithoutStageInput[]
+  createMany?: Prisma.DeliverableCreateManyStageInputEnvelope
+  connect?: Prisma.DeliverableWhereUniqueInput | Prisma.DeliverableWhereUniqueInput[]
+}
+
+export type DeliverableUpdateManyWithoutStageNestedInput = {
+  create?: Prisma.XOR<Prisma.DeliverableCreateWithoutStageInput, Prisma.DeliverableUncheckedCreateWithoutStageInput> | Prisma.DeliverableCreateWithoutStageInput[] | Prisma.DeliverableUncheckedCreateWithoutStageInput[]
+  connectOrCreate?: Prisma.DeliverableCreateOrConnectWithoutStageInput | Prisma.DeliverableCreateOrConnectWithoutStageInput[]
+  upsert?: Prisma.DeliverableUpsertWithWhereUniqueWithoutStageInput | Prisma.DeliverableUpsertWithWhereUniqueWithoutStageInput[]
+  createMany?: Prisma.DeliverableCreateManyStageInputEnvelope
+  set?: Prisma.DeliverableWhereUniqueInput | Prisma.DeliverableWhereUniqueInput[]
+  disconnect?: Prisma.DeliverableWhereUniqueInput | Prisma.DeliverableWhereUniqueInput[]
+  delete?: Prisma.DeliverableWhereUniqueInput | Prisma.DeliverableWhereUniqueInput[]
+  connect?: Prisma.DeliverableWhereUniqueInput | Prisma.DeliverableWhereUniqueInput[]
+  update?: Prisma.DeliverableUpdateWithWhereUniqueWithoutStageInput | Prisma.DeliverableUpdateWithWhereUniqueWithoutStageInput[]
+  updateMany?: Prisma.DeliverableUpdateManyWithWhereWithoutStageInput | Prisma.DeliverableUpdateManyWithWhereWithoutStageInput[]
+  deleteMany?: Prisma.DeliverableScalarWhereInput | Prisma.DeliverableScalarWhereInput[]
+}
+
+export type DeliverableUncheckedUpdateManyWithoutStageNestedInput = {
+  create?: Prisma.XOR<Prisma.DeliverableCreateWithoutStageInput, Prisma.DeliverableUncheckedCreateWithoutStageInput> | Prisma.DeliverableCreateWithoutStageInput[] | Prisma.DeliverableUncheckedCreateWithoutStageInput[]
+  connectOrCreate?: Prisma.DeliverableCreateOrConnectWithoutStageInput | Prisma.DeliverableCreateOrConnectWithoutStageInput[]
+  upsert?: Prisma.DeliverableUpsertWithWhereUniqueWithoutStageInput | Prisma.DeliverableUpsertWithWhereUniqueWithoutStageInput[]
+  createMany?: Prisma.DeliverableCreateManyStageInputEnvelope
+  set?: Prisma.DeliverableWhereUniqueInput | Prisma.DeliverableWhereUniqueInput[]
+  disconnect?: Prisma.DeliverableWhereUniqueInput | Prisma.DeliverableWhereUniqueInput[]
+  delete?: Prisma.DeliverableWhereUniqueInput | Prisma.DeliverableWhereUniqueInput[]
+  connect?: Prisma.DeliverableWhereUniqueInput | Prisma.DeliverableWhereUniqueInput[]
+  update?: Prisma.DeliverableUpdateWithWhereUniqueWithoutStageInput | Prisma.DeliverableUpdateWithWhereUniqueWithoutStageInput[]
+  updateMany?: Prisma.DeliverableUpdateManyWithWhereWithoutStageInput | Prisma.DeliverableUpdateManyWithWhereWithoutStageInput[]
+  deleteMany?: Prisma.DeliverableScalarWhereInput | Prisma.DeliverableScalarWhereInput[]
+}
+
 export type DeliverableCreateWithoutEngagementInput = {
   id?: string
-  name: string
+  title: string
   description?: string | null
   status?: string
-  dueDate?: Date | string | null
-  completedDate?: Date | string | null
+  version?: number
+  submittedBy?: string | null
+  submittedAt?: Date | string | null
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  rejectionReason?: string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  stage: Prisma.StageCreateNestedOneWithoutDeliverablesInput
 }
 
 export type DeliverableUncheckedCreateWithoutEngagementInput = {
   id?: string
-  name: string
+  stageId: string
+  title: string
   description?: string | null
   status?: string
-  dueDate?: Date | string | null
-  completedDate?: Date | string | null
+  version?: number
+  submittedBy?: string | null
+  submittedAt?: Date | string | null
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  rejectionReason?: string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -499,56 +731,213 @@ export type DeliverableScalarWhereInput = {
   OR?: Prisma.DeliverableScalarWhereInput[]
   NOT?: Prisma.DeliverableScalarWhereInput | Prisma.DeliverableScalarWhereInput[]
   id?: Prisma.StringFilter<"Deliverable"> | string
+  stageId?: Prisma.StringFilter<"Deliverable"> | string
   engagementId?: Prisma.StringFilter<"Deliverable"> | string
-  name?: Prisma.StringFilter<"Deliverable"> | string
+  title?: Prisma.StringFilter<"Deliverable"> | string
   description?: Prisma.StringNullableFilter<"Deliverable"> | string | null
   status?: Prisma.StringFilter<"Deliverable"> | string
-  dueDate?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
-  completedDate?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
+  version?: Prisma.IntFilter<"Deliverable"> | number
+  submittedBy?: Prisma.StringNullableFilter<"Deliverable"> | string | null
+  submittedAt?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
+  approvedBy?: Prisma.StringNullableFilter<"Deliverable"> | string | null
+  approvedAt?: Prisma.DateTimeNullableFilter<"Deliverable"> | Date | string | null
+  rejectionReason?: Prisma.StringNullableFilter<"Deliverable"> | string | null
+  createdBy?: Prisma.StringNullableFilter<"Deliverable"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Deliverable"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Deliverable"> | Date | string
 }
 
-export type DeliverableCreateManyEngagementInput = {
+export type DeliverableCreateWithoutStageInput = {
   id?: string
-  name: string
+  title: string
   description?: string | null
   status?: string
-  dueDate?: Date | string | null
-  completedDate?: Date | string | null
+  version?: number
+  submittedBy?: string | null
+  submittedAt?: Date | string | null
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  rejectionReason?: string | null
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  engagement: Prisma.EngagementCreateNestedOneWithoutDeliverablesInput
+}
+
+export type DeliverableUncheckedCreateWithoutStageInput = {
+  id?: string
+  engagementId: string
+  title: string
+  description?: string | null
+  status?: string
+  version?: number
+  submittedBy?: string | null
+  submittedAt?: Date | string | null
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  rejectionReason?: string | null
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type DeliverableCreateOrConnectWithoutStageInput = {
+  where: Prisma.DeliverableWhereUniqueInput
+  create: Prisma.XOR<Prisma.DeliverableCreateWithoutStageInput, Prisma.DeliverableUncheckedCreateWithoutStageInput>
+}
+
+export type DeliverableCreateManyStageInputEnvelope = {
+  data: Prisma.DeliverableCreateManyStageInput | Prisma.DeliverableCreateManyStageInput[]
+}
+
+export type DeliverableUpsertWithWhereUniqueWithoutStageInput = {
+  where: Prisma.DeliverableWhereUniqueInput
+  update: Prisma.XOR<Prisma.DeliverableUpdateWithoutStageInput, Prisma.DeliverableUncheckedUpdateWithoutStageInput>
+  create: Prisma.XOR<Prisma.DeliverableCreateWithoutStageInput, Prisma.DeliverableUncheckedCreateWithoutStageInput>
+}
+
+export type DeliverableUpdateWithWhereUniqueWithoutStageInput = {
+  where: Prisma.DeliverableWhereUniqueInput
+  data: Prisma.XOR<Prisma.DeliverableUpdateWithoutStageInput, Prisma.DeliverableUncheckedUpdateWithoutStageInput>
+}
+
+export type DeliverableUpdateManyWithWhereWithoutStageInput = {
+  where: Prisma.DeliverableScalarWhereInput
+  data: Prisma.XOR<Prisma.DeliverableUpdateManyMutationInput, Prisma.DeliverableUncheckedUpdateManyWithoutStageInput>
+}
+
+export type DeliverableCreateManyEngagementInput = {
+  id?: string
+  stageId: string
+  title: string
+  description?: string | null
+  status?: string
+  version?: number
+  submittedBy?: string | null
+  submittedAt?: Date | string | null
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  rejectionReason?: string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
 export type DeliverableUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  stage?: Prisma.StageUpdateOneRequiredWithoutDeliverablesNestedInput
 }
 
 export type DeliverableUncheckedUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  stageId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type DeliverableUncheckedUpdateManyWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
+  stageId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completedDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type DeliverableCreateManyStageInput = {
+  id?: string
+  engagementId: string
+  title: string
+  description?: string | null
+  status?: string
+  version?: number
+  submittedBy?: string | null
+  submittedAt?: Date | string | null
+  approvedBy?: string | null
+  approvedAt?: Date | string | null
+  rejectionReason?: string | null
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type DeliverableUpdateWithoutStageInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engagement?: Prisma.EngagementUpdateOneRequiredWithoutDeliverablesNestedInput
+}
+
+export type DeliverableUncheckedUpdateWithoutStageInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type DeliverableUncheckedUpdateManyWithoutStageInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -557,79 +946,116 @@ export type DeliverableUncheckedUpdateManyWithoutEngagementInput = {
 
 export type DeliverableSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  stageId?: boolean
   engagementId?: boolean
-  name?: boolean
+  title?: boolean
   description?: boolean
   status?: boolean
-  dueDate?: boolean
-  completedDate?: boolean
+  version?: boolean
+  submittedBy?: boolean
+  submittedAt?: boolean
+  approvedBy?: boolean
+  approvedAt?: boolean
+  rejectionReason?: boolean
+  createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["deliverable"]>
 
 export type DeliverableSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  stageId?: boolean
   engagementId?: boolean
-  name?: boolean
+  title?: boolean
   description?: boolean
   status?: boolean
-  dueDate?: boolean
-  completedDate?: boolean
+  version?: boolean
+  submittedBy?: boolean
+  submittedAt?: boolean
+  approvedBy?: boolean
+  approvedAt?: boolean
+  rejectionReason?: boolean
+  createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["deliverable"]>
 
 export type DeliverableSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
+  stageId?: boolean
   engagementId?: boolean
-  name?: boolean
+  title?: boolean
   description?: boolean
   status?: boolean
-  dueDate?: boolean
-  completedDate?: boolean
+  version?: boolean
+  submittedBy?: boolean
+  submittedAt?: boolean
+  approvedBy?: boolean
+  approvedAt?: boolean
+  rejectionReason?: boolean
+  createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["deliverable"]>
 
 export type DeliverableSelectScalar = {
   id?: boolean
+  stageId?: boolean
   engagementId?: boolean
-  name?: boolean
+  title?: boolean
   description?: boolean
   status?: boolean
-  dueDate?: boolean
-  completedDate?: boolean
+  version?: boolean
+  submittedBy?: boolean
+  submittedAt?: boolean
+  approvedBy?: boolean
+  approvedAt?: boolean
+  rejectionReason?: boolean
+  createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type DeliverableOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "name" | "description" | "status" | "dueDate" | "completedDate" | "createdAt" | "updatedAt", ExtArgs["result"]["deliverable"]>
+export type DeliverableOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "stageId" | "engagementId" | "title" | "description" | "status" | "version" | "submittedBy" | "submittedAt" | "approvedBy" | "approvedAt" | "rejectionReason" | "createdBy" | "createdAt" | "updatedAt", ExtArgs["result"]["deliverable"]>
 export type DeliverableInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }
 export type DeliverableIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }
 export type DeliverableIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  stage?: boolean | Prisma.StageDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }
 
 export type $DeliverablePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Deliverable"
   objects: {
+    stage: Prisma.$StagePayload<ExtArgs>
     engagement: Prisma.$EngagementPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
+    stageId: string
     engagementId: string
-    name: string
+    title: string
     description: string | null
     status: string
-    dueDate: Date | null
-    completedDate: Date | null
+    version: number
+    submittedBy: string | null
+    submittedAt: Date | null
+    approvedBy: string | null
+    approvedAt: Date | null
+    rejectionReason: string | null
+    createdBy: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["deliverable"]>
@@ -1026,6 +1452,7 @@ readonly fields: DeliverableFieldRefs;
  */
 export interface Prisma__DeliverableClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  stage<T extends Prisma.StageDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.StageDefaultArgs<ExtArgs>>): Prisma.Prisma__StageClient<runtime.Types.Result.GetResult<Prisma.$StagePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   engagement<T extends Prisma.EngagementDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EngagementDefaultArgs<ExtArgs>>): Prisma.Prisma__EngagementClient<runtime.Types.Result.GetResult<Prisma.$EngagementPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1057,12 +1484,18 @@ export interface Prisma__DeliverableClient<T, Null = never, ExtArgs extends runt
  */
 export interface DeliverableFieldRefs {
   readonly id: Prisma.FieldRef<"Deliverable", 'String'>
+  readonly stageId: Prisma.FieldRef<"Deliverable", 'String'>
   readonly engagementId: Prisma.FieldRef<"Deliverable", 'String'>
-  readonly name: Prisma.FieldRef<"Deliverable", 'String'>
+  readonly title: Prisma.FieldRef<"Deliverable", 'String'>
   readonly description: Prisma.FieldRef<"Deliverable", 'String'>
   readonly status: Prisma.FieldRef<"Deliverable", 'String'>
-  readonly dueDate: Prisma.FieldRef<"Deliverable", 'DateTime'>
-  readonly completedDate: Prisma.FieldRef<"Deliverable", 'DateTime'>
+  readonly version: Prisma.FieldRef<"Deliverable", 'Int'>
+  readonly submittedBy: Prisma.FieldRef<"Deliverable", 'String'>
+  readonly submittedAt: Prisma.FieldRef<"Deliverable", 'DateTime'>
+  readonly approvedBy: Prisma.FieldRef<"Deliverable", 'String'>
+  readonly approvedAt: Prisma.FieldRef<"Deliverable", 'DateTime'>
+  readonly rejectionReason: Prisma.FieldRef<"Deliverable", 'String'>
+  readonly createdBy: Prisma.FieldRef<"Deliverable", 'String'>
   readonly createdAt: Prisma.FieldRef<"Deliverable", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Deliverable", 'DateTime'>
 }

@@ -59,22 +59,21 @@ export const ModelName = {
   ClientAccount: 'ClientAccount',
   ClientContact: 'ClientContact',
   Engagement: 'Engagement',
-  AuditEvent: 'AuditEvent',
-  Stage: 'Stage',
-  Finding: 'Finding',
-  Recommendation: 'Recommendation',
+  BusinessConditionProfile: 'BusinessConditionProfile',
   Evidence: 'Evidence',
   EvidenceBundle: 'EvidenceBundle',
   EvidenceBundleItem: 'EvidenceBundleItem',
+  Finding: 'Finding',
+  Recommendation: 'Recommendation',
   Action: 'Action',
+  AuditEvent: 'AuditEvent',
+  IdempotencyRecord: 'IdempotencyRecord',
+  ScheduledTask: 'ScheduledTask',
+  Stage: 'Stage',
   KPI: 'KPI',
   KPISnapshot: 'KPISnapshot',
-  Risk: 'Risk',
   Deliverable: 'Deliverable',
-  BusinessConditionProfile: 'BusinessConditionProfile',
-  InterventionHistory: 'InterventionHistory',
-  IdempotencyRecord: 'IdempotencyRecord',
-  ScheduledTask: 'ScheduledTask'
+  Risk: 'Risk'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -238,34 +237,82 @@ export const EngagementScalarFieldEnum = {
 export type EngagementScalarFieldEnum = (typeof EngagementScalarFieldEnum)[keyof typeof EngagementScalarFieldEnum]
 
 
-export const AuditEventScalarFieldEnum = {
-  id: 'id',
-  eventName: 'eventName',
-  actorId: 'actorId',
-  entityType: 'entityType',
-  entityId: 'entityId',
-  changes: 'changes',
-  timestamp: 'timestamp',
-  metadata: 'metadata'
-} as const
-
-export type AuditEventScalarFieldEnum = (typeof AuditEventScalarFieldEnum)[keyof typeof AuditEventScalarFieldEnum]
-
-
-export const StageScalarFieldEnum = {
+export const BusinessConditionProfileScalarFieldEnum = {
   id: 'id',
   engagementId: 'engagementId',
-  name: 'name',
-  description: 'description',
-  startDate: 'startDate',
-  endDate: 'endDate',
-  status: 'status',
-  order: 'order',
+  businessStatus: 'businessStatus',
+  severityScore: 'severityScore',
+  urgencyLevel: 'urgencyLevel',
+  cashPressureLevel: 'cashPressureLevel',
+  marginPressureLevel: 'marginPressureLevel',
+  clientConcentrationRisk: 'clientConcentrationRisk',
+  ownerDependencyRisk: 'ownerDependencyRisk',
+  keyPersonDependencyRisk: 'keyPersonDependencyRisk',
+  processMaturityLevel: 'processMaturityLevel',
+  managementMaturityLevel: 'managementMaturityLevel',
+  executionCapacityLevel: 'executionCapacityLevel',
+  moraleFragilityLevel: 'moraleFragilityLevel',
+  resilienceLevel: 'resilienceLevel',
+  growthReadinessLevel: 'growthReadinessLevel',
+  notes: 'notes',
+  assessedBy: 'assessedBy',
+  version: 'version',
+  isCurrent: 'isCurrent',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
-export type StageScalarFieldEnum = (typeof StageScalarFieldEnum)[keyof typeof StageScalarFieldEnum]
+export type BusinessConditionProfileScalarFieldEnum = (typeof BusinessConditionProfileScalarFieldEnum)[keyof typeof BusinessConditionProfileScalarFieldEnum]
+
+
+export const EvidenceScalarFieldEnum = {
+  id: 'id',
+  engagementId: 'engagementId',
+  title: 'title',
+  description: 'description',
+  evidenceType: 'evidenceType',
+  sourceReference: 'sourceReference',
+  status: 'status',
+  severity: 'severity',
+  relatedFindingId: 'relatedFindingId',
+  submittedBy: 'submittedBy',
+  validatedBy: 'validatedBy',
+  validatedAt: 'validatedAt',
+  rejectionReason: 'rejectionReason',
+  version: 'version',
+  visibility: 'visibility',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EvidenceScalarFieldEnum = (typeof EvidenceScalarFieldEnum)[keyof typeof EvidenceScalarFieldEnum]
+
+
+export const EvidenceBundleScalarFieldEnum = {
+  id: 'id',
+  engagementId: 'engagementId',
+  title: 'title',
+  description: 'description',
+  status: 'status',
+  createdBy: 'createdBy',
+  version: 'version',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EvidenceBundleScalarFieldEnum = (typeof EvidenceBundleScalarFieldEnum)[keyof typeof EvidenceBundleScalarFieldEnum]
+
+
+export const EvidenceBundleItemScalarFieldEnum = {
+  id: 'id',
+  bundleId: 'bundleId',
+  evidenceId: 'evidenceId',
+  addedBy: 'addedBy',
+  addedAt: 'addedAt',
+  removedAt: 'removedAt'
+} as const
+
+export type EvidenceBundleItemScalarFieldEnum = (typeof EvidenceBundleItemScalarFieldEnum)[keyof typeof EvidenceBundleItemScalarFieldEnum]
 
 
 export const FindingScalarFieldEnum = {
@@ -288,15 +335,18 @@ export type FindingScalarFieldEnum = (typeof FindingScalarFieldEnum)[keyof typeo
 
 export const RecommendationScalarFieldEnum = {
   id: 'id',
-  findingId: 'findingId',
   engagementId: 'engagementId',
+  findingId: 'findingId',
   title: 'title',
   description: 'description',
+  rationale: 'rationale',
   priority: 'priority',
+  estimatedImpact: 'estimatedImpact',
   status: 'status',
   approvedBy: 'approvedBy',
-  approvalDate: 'approvalDate',
+  approvedAt: 'approvedAt',
   version: 'version',
+  visibility: 'visibility',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -304,72 +354,97 @@ export const RecommendationScalarFieldEnum = {
 export type RecommendationScalarFieldEnum = (typeof RecommendationScalarFieldEnum)[keyof typeof RecommendationScalarFieldEnum]
 
 
-export const EvidenceScalarFieldEnum = {
-  id: 'id',
-  engagementId: 'engagementId',
-  title: 'title',
-  description: 'description',
-  type: 'type',
-  source: 'source',
-  submittedBy: 'submittedBy',
-  submissionDate: 'submissionDate',
-  validatedBy: 'validatedBy',
-  validationDate: 'validationDate',
-  status: 'status',
-  version: 'version',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type EvidenceScalarFieldEnum = (typeof EvidenceScalarFieldEnum)[keyof typeof EvidenceScalarFieldEnum]
-
-
-export const EvidenceBundleScalarFieldEnum = {
-  id: 'id',
-  engagementId: 'engagementId',
-  name: 'name',
-  description: 'description',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type EvidenceBundleScalarFieldEnum = (typeof EvidenceBundleScalarFieldEnum)[keyof typeof EvidenceBundleScalarFieldEnum]
-
-
-export const EvidenceBundleItemScalarFieldEnum = {
-  id: 'id',
-  bundleId: 'bundleId',
-  evidenceId: 'evidenceId',
-  addedBy: 'addedBy',
-  addedAt: 'addedAt',
-  removedAt: 'removedAt'
-} as const
-
-export type EvidenceBundleItemScalarFieldEnum = (typeof EvidenceBundleItemScalarFieldEnum)[keyof typeof EvidenceBundleItemScalarFieldEnum]
-
-
 export const ActionScalarFieldEnum = {
   id: 'id',
-  recommendationId: 'recommendationId',
   engagementId: 'engagementId',
+  recommendationId: 'recommendationId',
   title: 'title',
   description: 'description',
-  status: 'status',
-  priority: 'priority',
   dueDate: 'dueDate',
+  priority: 'priority',
+  status: 'status',
   assignedTo: 'assignedTo',
   completedBy: 'completedBy',
-  completionDate: 'completionDate',
+  completedAt: 'completedAt',
   verifiedBy: 'verifiedBy',
-  verificationDate: 'verificationDate',
+  verifiedAt: 'verifiedAt',
+  notes: 'notes',
+  blockerReason: 'blockerReason',
   version: 'version',
   visibility: 'visibility',
-  blockerReason: 'blockerReason',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type ActionScalarFieldEnum = (typeof ActionScalarFieldEnum)[keyof typeof ActionScalarFieldEnum]
+
+
+export const AuditEventScalarFieldEnum = {
+  id: 'id',
+  eventName: 'eventName',
+  actorId: 'actorId',
+  actorType: 'actorType',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  payload: 'payload',
+  correlationId: 'correlationId',
+  visibility: 'visibility',
+  occurredAt: 'occurredAt'
+} as const
+
+export type AuditEventScalarFieldEnum = (typeof AuditEventScalarFieldEnum)[keyof typeof AuditEventScalarFieldEnum]
+
+
+export const IdempotencyRecordScalarFieldEnum = {
+  id: 'id',
+  idempotencyKey: 'idempotencyKey',
+  operationName: 'operationName',
+  status: 'status',
+  responseCode: 'responseCode',
+  responseBody: 'responseBody',
+  createdAt: 'createdAt',
+  completedAt: 'completedAt',
+  expiresAt: 'expiresAt'
+} as const
+
+export type IdempotencyRecordScalarFieldEnum = (typeof IdempotencyRecordScalarFieldEnum)[keyof typeof IdempotencyRecordScalarFieldEnum]
+
+
+export const ScheduledTaskScalarFieldEnum = {
+  id: 'id',
+  taskName: 'taskName',
+  payload: 'payload',
+  status: 'status',
+  attempts: 'attempts',
+  maxAttempts: 'maxAttempts',
+  lastError: 'lastError',
+  scheduledFor: 'scheduledFor',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ScheduledTaskScalarFieldEnum = (typeof ScheduledTaskScalarFieldEnum)[keyof typeof ScheduledTaskScalarFieldEnum]
+
+
+export const StageScalarFieldEnum = {
+  id: 'id',
+  engagementId: 'engagementId',
+  title: 'title',
+  status: 'status',
+  description: 'description',
+  notes: 'notes',
+  version: 'version',
+  startDate: 'startDate',
+  targetEndDate: 'targetEndDate',
+  completedAt: 'completedAt',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type StageScalarFieldEnum = (typeof StageScalarFieldEnum)[keyof typeof StageScalarFieldEnum]
 
 
 export const KPIScalarFieldEnum = {
@@ -394,37 +469,27 @@ export const KPISnapshotScalarFieldEnum = {
   id: 'id',
   kpiId: 'kpiId',
   value: 'value',
-  recordedAt: 'recordedAt'
+  recordedAt: 'recordedAt',
+  recordedBy: 'recordedBy'
 } as const
 
 export type KPISnapshotScalarFieldEnum = (typeof KPISnapshotScalarFieldEnum)[keyof typeof KPISnapshotScalarFieldEnum]
 
 
-export const RiskScalarFieldEnum = {
+export const DeliverableScalarFieldEnum = {
   id: 'id',
+  stageId: 'stageId',
   engagementId: 'engagementId',
   title: 'title',
   description: 'description',
-  probability: 'probability',
-  impact: 'impact',
-  mitigation: 'mitigation',
-  owner: 'owner',
   status: 'status',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type RiskScalarFieldEnum = (typeof RiskScalarFieldEnum)[keyof typeof RiskScalarFieldEnum]
-
-
-export const DeliverableScalarFieldEnum = {
-  id: 'id',
-  engagementId: 'engagementId',
-  name: 'name',
-  description: 'description',
-  status: 'status',
-  dueDate: 'dueDate',
-  completedDate: 'completedDate',
+  version: 'version',
+  submittedBy: 'submittedBy',
+  submittedAt: 'submittedAt',
+  approvedBy: 'approvedBy',
+  approvedAt: 'approvedAt',
+  rejectionReason: 'rejectionReason',
+  createdBy: 'createdBy',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -432,58 +497,23 @@ export const DeliverableScalarFieldEnum = {
 export type DeliverableScalarFieldEnum = (typeof DeliverableScalarFieldEnum)[keyof typeof DeliverableScalarFieldEnum]
 
 
-export const BusinessConditionProfileScalarFieldEnum = {
+export const RiskScalarFieldEnum = {
   id: 'id',
+  stageId: 'stageId',
   engagementId: 'engagementId',
-  financialHealth: 'financialHealth',
-  operationalEfficiency: 'operationalEfficiency',
-  marketPosition: 'marketPosition',
-  teamCapability: 'teamCapability',
-  timestamp: 'timestamp',
-  version: 'version'
-} as const
-
-export type BusinessConditionProfileScalarFieldEnum = (typeof BusinessConditionProfileScalarFieldEnum)[keyof typeof BusinessConditionProfileScalarFieldEnum]
-
-
-export const InterventionHistoryScalarFieldEnum = {
-  id: 'id',
-  engagementId: 'engagementId',
-  mode: 'mode',
-  phase: 'phase',
-  triggeredBy: 'triggeredBy',
-  timestamp: 'timestamp'
-} as const
-
-export type InterventionHistoryScalarFieldEnum = (typeof InterventionHistoryScalarFieldEnum)[keyof typeof InterventionHistoryScalarFieldEnum]
-
-
-export const IdempotencyRecordScalarFieldEnum = {
-  id: 'id',
-  idempotencyKey: 'idempotencyKey',
-  operationName: 'operationName',
+  title: 'title',
+  description: 'description',
   status: 'status',
-  responseCode: 'responseCode',
-  responseBody: 'responseBody',
+  identifiedAt: 'identifiedAt',
+  identifiedBy: 'identifiedBy',
+  assessedAt: 'assessedAt',
+  assessedBy: 'assessedBy',
+  mitigationStrategy: 'mitigationStrategy',
   createdAt: 'createdAt',
-  completedAt: 'completedAt',
-  expiresAt: 'expiresAt'
+  updatedAt: 'updatedAt'
 } as const
 
-export type IdempotencyRecordScalarFieldEnum = (typeof IdempotencyRecordScalarFieldEnum)[keyof typeof IdempotencyRecordScalarFieldEnum]
-
-
-export const ScheduledTaskScalarFieldEnum = {
-  id: 'id',
-  type: 'type',
-  engagementId: 'engagementId',
-  nextRunAt: 'nextRunAt',
-  lastRunAt: 'lastRunAt',
-  status: 'status',
-  createdAt: 'createdAt'
-} as const
-
-export type ScheduledTaskScalarFieldEnum = (typeof ScheduledTaskScalarFieldEnum)[keyof typeof ScheduledTaskScalarFieldEnum]
+export type RiskScalarFieldEnum = (typeof RiskScalarFieldEnum)[keyof typeof RiskScalarFieldEnum]
 
 
 export const SortOrder = {

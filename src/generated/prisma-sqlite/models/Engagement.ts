@@ -370,11 +370,11 @@ export type EngagementWhereInput = {
   findings?: Prisma.FindingListRelationFilter
   recommendations?: Prisma.RecommendationListRelationFilter
   evidence?: Prisma.EvidenceListRelationFilter
-  kpis?: Prisma.KPIListRelationFilter
+  evidenceBundles?: Prisma.EvidenceBundleListRelationFilter
   actions?: Prisma.ActionListRelationFilter
-  risks?: Prisma.RiskListRelationFilter
+  kpis?: Prisma.KPIListRelationFilter
   deliverables?: Prisma.DeliverableListRelationFilter
-  interventionHistory?: Prisma.InterventionHistoryListRelationFilter
+  risks?: Prisma.RiskListRelationFilter
 }
 
 export type EngagementOrderByWithRelationInput = {
@@ -411,11 +411,11 @@ export type EngagementOrderByWithRelationInput = {
   findings?: Prisma.FindingOrderByRelationAggregateInput
   recommendations?: Prisma.RecommendationOrderByRelationAggregateInput
   evidence?: Prisma.EvidenceOrderByRelationAggregateInput
-  kpis?: Prisma.KPIOrderByRelationAggregateInput
+  evidenceBundles?: Prisma.EvidenceBundleOrderByRelationAggregateInput
   actions?: Prisma.ActionOrderByRelationAggregateInput
-  risks?: Prisma.RiskOrderByRelationAggregateInput
+  kpis?: Prisma.KPIOrderByRelationAggregateInput
   deliverables?: Prisma.DeliverableOrderByRelationAggregateInput
-  interventionHistory?: Prisma.InterventionHistoryOrderByRelationAggregateInput
+  risks?: Prisma.RiskOrderByRelationAggregateInput
 }
 
 export type EngagementWhereUniqueInput = Prisma.AtLeast<{
@@ -455,11 +455,11 @@ export type EngagementWhereUniqueInput = Prisma.AtLeast<{
   findings?: Prisma.FindingListRelationFilter
   recommendations?: Prisma.RecommendationListRelationFilter
   evidence?: Prisma.EvidenceListRelationFilter
-  kpis?: Prisma.KPIListRelationFilter
+  evidenceBundles?: Prisma.EvidenceBundleListRelationFilter
   actions?: Prisma.ActionListRelationFilter
-  risks?: Prisma.RiskListRelationFilter
+  kpis?: Prisma.KPIListRelationFilter
   deliverables?: Prisma.DeliverableListRelationFilter
-  interventionHistory?: Prisma.InterventionHistoryListRelationFilter
+  risks?: Prisma.RiskListRelationFilter
 }, "id" | "code">
 
 export type EngagementOrderByWithAggregationInput = {
@@ -554,11 +554,11 @@ export type EngagementCreateInput = {
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUncheckedCreateInput = {
@@ -593,11 +593,11 @@ export type EngagementUncheckedCreateInput = {
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUpdateInput = {
@@ -632,11 +632,11 @@ export type EngagementUpdateInput = {
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateInput = {
@@ -671,11 +671,11 @@ export type EngagementUncheckedUpdateInput = {
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementCreateManyInput = {
@@ -990,18 +990,46 @@ export type EngagementUncheckedUpdateManyWithoutParentNestedInput = {
   deleteMany?: Prisma.EngagementScalarWhereInput | Prisma.EngagementScalarWhereInput[]
 }
 
-export type EngagementCreateNestedOneWithoutStagesInput = {
-  create?: Prisma.XOR<Prisma.EngagementCreateWithoutStagesInput, Prisma.EngagementUncheckedCreateWithoutStagesInput>
-  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutStagesInput
+export type EngagementCreateNestedOneWithoutConditionProfilesInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutConditionProfilesInput, Prisma.EngagementUncheckedCreateWithoutConditionProfilesInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutConditionProfilesInput
   connect?: Prisma.EngagementWhereUniqueInput
 }
 
-export type EngagementUpdateOneRequiredWithoutStagesNestedInput = {
-  create?: Prisma.XOR<Prisma.EngagementCreateWithoutStagesInput, Prisma.EngagementUncheckedCreateWithoutStagesInput>
-  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutStagesInput
-  upsert?: Prisma.EngagementUpsertWithoutStagesInput
+export type EngagementUpdateOneRequiredWithoutConditionProfilesNestedInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutConditionProfilesInput, Prisma.EngagementUncheckedCreateWithoutConditionProfilesInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutConditionProfilesInput
+  upsert?: Prisma.EngagementUpsertWithoutConditionProfilesInput
   connect?: Prisma.EngagementWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutStagesInput, Prisma.EngagementUpdateWithoutStagesInput>, Prisma.EngagementUncheckedUpdateWithoutStagesInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutConditionProfilesInput, Prisma.EngagementUpdateWithoutConditionProfilesInput>, Prisma.EngagementUncheckedUpdateWithoutConditionProfilesInput>
+}
+
+export type EngagementCreateNestedOneWithoutEvidenceInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutEvidenceInput, Prisma.EngagementUncheckedCreateWithoutEvidenceInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutEvidenceInput
+  connect?: Prisma.EngagementWhereUniqueInput
+}
+
+export type EngagementUpdateOneRequiredWithoutEvidenceNestedInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutEvidenceInput, Prisma.EngagementUncheckedCreateWithoutEvidenceInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutEvidenceInput
+  upsert?: Prisma.EngagementUpsertWithoutEvidenceInput
+  connect?: Prisma.EngagementWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutEvidenceInput, Prisma.EngagementUpdateWithoutEvidenceInput>, Prisma.EngagementUncheckedUpdateWithoutEvidenceInput>
+}
+
+export type EngagementCreateNestedOneWithoutEvidenceBundlesInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutEvidenceBundlesInput, Prisma.EngagementUncheckedCreateWithoutEvidenceBundlesInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutEvidenceBundlesInput
+  connect?: Prisma.EngagementWhereUniqueInput
+}
+
+export type EngagementUpdateOneRequiredWithoutEvidenceBundlesNestedInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutEvidenceBundlesInput, Prisma.EngagementUncheckedCreateWithoutEvidenceBundlesInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutEvidenceBundlesInput
+  upsert?: Prisma.EngagementUpsertWithoutEvidenceBundlesInput
+  connect?: Prisma.EngagementWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutEvidenceBundlesInput, Prisma.EngagementUpdateWithoutEvidenceBundlesInput>, Prisma.EngagementUncheckedUpdateWithoutEvidenceBundlesInput>
 }
 
 export type EngagementCreateNestedOneWithoutFindingsInput = {
@@ -1032,20 +1060,6 @@ export type EngagementUpdateOneRequiredWithoutRecommendationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutRecommendationsInput, Prisma.EngagementUpdateWithoutRecommendationsInput>, Prisma.EngagementUncheckedUpdateWithoutRecommendationsInput>
 }
 
-export type EngagementCreateNestedOneWithoutEvidenceInput = {
-  create?: Prisma.XOR<Prisma.EngagementCreateWithoutEvidenceInput, Prisma.EngagementUncheckedCreateWithoutEvidenceInput>
-  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutEvidenceInput
-  connect?: Prisma.EngagementWhereUniqueInput
-}
-
-export type EngagementUpdateOneRequiredWithoutEvidenceNestedInput = {
-  create?: Prisma.XOR<Prisma.EngagementCreateWithoutEvidenceInput, Prisma.EngagementUncheckedCreateWithoutEvidenceInput>
-  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutEvidenceInput
-  upsert?: Prisma.EngagementUpsertWithoutEvidenceInput
-  connect?: Prisma.EngagementWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutEvidenceInput, Prisma.EngagementUpdateWithoutEvidenceInput>, Prisma.EngagementUncheckedUpdateWithoutEvidenceInput>
-}
-
 export type EngagementCreateNestedOneWithoutActionsInput = {
   create?: Prisma.XOR<Prisma.EngagementCreateWithoutActionsInput, Prisma.EngagementUncheckedCreateWithoutActionsInput>
   connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutActionsInput
@@ -1058,6 +1072,20 @@ export type EngagementUpdateOneRequiredWithoutActionsNestedInput = {
   upsert?: Prisma.EngagementUpsertWithoutActionsInput
   connect?: Prisma.EngagementWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutActionsInput, Prisma.EngagementUpdateWithoutActionsInput>, Prisma.EngagementUncheckedUpdateWithoutActionsInput>
+}
+
+export type EngagementCreateNestedOneWithoutStagesInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutStagesInput, Prisma.EngagementUncheckedCreateWithoutStagesInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutStagesInput
+  connect?: Prisma.EngagementWhereUniqueInput
+}
+
+export type EngagementUpdateOneRequiredWithoutStagesNestedInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutStagesInput, Prisma.EngagementUncheckedCreateWithoutStagesInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutStagesInput
+  upsert?: Prisma.EngagementUpsertWithoutStagesInput
+  connect?: Prisma.EngagementWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutStagesInput, Prisma.EngagementUpdateWithoutStagesInput>, Prisma.EngagementUncheckedUpdateWithoutStagesInput>
 }
 
 export type EngagementCreateNestedOneWithoutKpisInput = {
@@ -1074,20 +1102,6 @@ export type EngagementUpdateOneRequiredWithoutKpisNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutKpisInput, Prisma.EngagementUpdateWithoutKpisInput>, Prisma.EngagementUncheckedUpdateWithoutKpisInput>
 }
 
-export type EngagementCreateNestedOneWithoutRisksInput = {
-  create?: Prisma.XOR<Prisma.EngagementCreateWithoutRisksInput, Prisma.EngagementUncheckedCreateWithoutRisksInput>
-  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutRisksInput
-  connect?: Prisma.EngagementWhereUniqueInput
-}
-
-export type EngagementUpdateOneRequiredWithoutRisksNestedInput = {
-  create?: Prisma.XOR<Prisma.EngagementCreateWithoutRisksInput, Prisma.EngagementUncheckedCreateWithoutRisksInput>
-  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutRisksInput
-  upsert?: Prisma.EngagementUpsertWithoutRisksInput
-  connect?: Prisma.EngagementWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutRisksInput, Prisma.EngagementUpdateWithoutRisksInput>, Prisma.EngagementUncheckedUpdateWithoutRisksInput>
-}
-
 export type EngagementCreateNestedOneWithoutDeliverablesInput = {
   create?: Prisma.XOR<Prisma.EngagementCreateWithoutDeliverablesInput, Prisma.EngagementUncheckedCreateWithoutDeliverablesInput>
   connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutDeliverablesInput
@@ -1102,32 +1116,18 @@ export type EngagementUpdateOneRequiredWithoutDeliverablesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutDeliverablesInput, Prisma.EngagementUpdateWithoutDeliverablesInput>, Prisma.EngagementUncheckedUpdateWithoutDeliverablesInput>
 }
 
-export type EngagementCreateNestedOneWithoutConditionProfilesInput = {
-  create?: Prisma.XOR<Prisma.EngagementCreateWithoutConditionProfilesInput, Prisma.EngagementUncheckedCreateWithoutConditionProfilesInput>
-  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutConditionProfilesInput
+export type EngagementCreateNestedOneWithoutRisksInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutRisksInput, Prisma.EngagementUncheckedCreateWithoutRisksInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutRisksInput
   connect?: Prisma.EngagementWhereUniqueInput
 }
 
-export type EngagementUpdateOneRequiredWithoutConditionProfilesNestedInput = {
-  create?: Prisma.XOR<Prisma.EngagementCreateWithoutConditionProfilesInput, Prisma.EngagementUncheckedCreateWithoutConditionProfilesInput>
-  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutConditionProfilesInput
-  upsert?: Prisma.EngagementUpsertWithoutConditionProfilesInput
+export type EngagementUpdateOneRequiredWithoutRisksNestedInput = {
+  create?: Prisma.XOR<Prisma.EngagementCreateWithoutRisksInput, Prisma.EngagementUncheckedCreateWithoutRisksInput>
+  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutRisksInput
+  upsert?: Prisma.EngagementUpsertWithoutRisksInput
   connect?: Prisma.EngagementWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutConditionProfilesInput, Prisma.EngagementUpdateWithoutConditionProfilesInput>, Prisma.EngagementUncheckedUpdateWithoutConditionProfilesInput>
-}
-
-export type EngagementCreateNestedOneWithoutInterventionHistoryInput = {
-  create?: Prisma.XOR<Prisma.EngagementCreateWithoutInterventionHistoryInput, Prisma.EngagementUncheckedCreateWithoutInterventionHistoryInput>
-  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutInterventionHistoryInput
-  connect?: Prisma.EngagementWhereUniqueInput
-}
-
-export type EngagementUpdateOneRequiredWithoutInterventionHistoryNestedInput = {
-  create?: Prisma.XOR<Prisma.EngagementCreateWithoutInterventionHistoryInput, Prisma.EngagementUncheckedCreateWithoutInterventionHistoryInput>
-  connectOrCreate?: Prisma.EngagementCreateOrConnectWithoutInterventionHistoryInput
-  upsert?: Prisma.EngagementUpsertWithoutInterventionHistoryInput
-  connect?: Prisma.EngagementWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutInterventionHistoryInput, Prisma.EngagementUpdateWithoutInterventionHistoryInput>, Prisma.EngagementUncheckedUpdateWithoutInterventionHistoryInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.EngagementUpdateToOneWithWhereWithoutRisksInput, Prisma.EngagementUpdateWithoutRisksInput>, Prisma.EngagementUncheckedUpdateWithoutRisksInput>
 }
 
 export type EngagementCreateWithoutMembershipsInput = {
@@ -1161,11 +1161,11 @@ export type EngagementCreateWithoutMembershipsInput = {
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUncheckedCreateWithoutMembershipsInput = {
@@ -1199,11 +1199,11 @@ export type EngagementUncheckedCreateWithoutMembershipsInput = {
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementCreateOrConnectWithoutMembershipsInput = {
@@ -1253,11 +1253,11 @@ export type EngagementUpdateWithoutMembershipsInput = {
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateWithoutMembershipsInput = {
@@ -1291,11 +1291,11 @@ export type EngagementUncheckedUpdateWithoutMembershipsInput = {
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementCreateWithoutLeadsInput = {
@@ -1329,11 +1329,11 @@ export type EngagementCreateWithoutLeadsInput = {
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUncheckedCreateWithoutLeadsInput = {
@@ -1367,11 +1367,11 @@ export type EngagementUncheckedCreateWithoutLeadsInput = {
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementCreateOrConnectWithoutLeadsInput = {
@@ -1421,11 +1421,11 @@ export type EngagementUpdateWithoutLeadsInput = {
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateWithoutLeadsInput = {
@@ -1459,11 +1459,11 @@ export type EngagementUncheckedUpdateWithoutLeadsInput = {
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementCreateWithoutClientInput = {
@@ -1497,11 +1497,11 @@ export type EngagementCreateWithoutClientInput = {
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUncheckedCreateWithoutClientInput = {
@@ -1535,11 +1535,11 @@ export type EngagementUncheckedCreateWithoutClientInput = {
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementCreateOrConnectWithoutClientInput = {
@@ -1627,11 +1627,11 @@ export type EngagementCreateWithoutChildrenInput = {
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUncheckedCreateWithoutChildrenInput = {
@@ -1665,11 +1665,11 @@ export type EngagementUncheckedCreateWithoutChildrenInput = {
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementCreateOrConnectWithoutChildrenInput = {
@@ -1708,11 +1708,11 @@ export type EngagementCreateWithoutParentInput = {
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUncheckedCreateWithoutParentInput = {
@@ -1746,11 +1746,11 @@ export type EngagementUncheckedCreateWithoutParentInput = {
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementCreateOrConnectWithoutParentInput = {
@@ -1804,11 +1804,11 @@ export type EngagementUpdateWithoutChildrenInput = {
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateWithoutChildrenInput = {
@@ -1842,11 +1842,11 @@ export type EngagementUncheckedUpdateWithoutChildrenInput = {
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUpsertWithWhereUniqueWithoutParentInput = {
@@ -1865,7 +1865,7 @@ export type EngagementUpdateManyWithWhereWithoutParentInput = {
   data: Prisma.XOR<Prisma.EngagementUpdateManyMutationInput, Prisma.EngagementUncheckedUpdateManyWithoutParentInput>
 }
 
-export type EngagementCreateWithoutStagesInput = {
+export type EngagementCreateWithoutConditionProfilesInput = {
   id?: string
   code: string
   title: string
@@ -1890,356 +1890,20 @@ export type EngagementCreateWithoutStagesInput = {
   client: Prisma.ClientAccountCreateNestedOneWithoutEngagementsInput
   parent?: Prisma.EngagementCreateNestedOneWithoutChildrenInput
   children?: Prisma.EngagementCreateNestedManyWithoutParentInput
-  conditionProfiles?: Prisma.BusinessConditionProfileCreateNestedManyWithoutEngagementInput
-  memberships?: Prisma.EngagementMembershipCreateNestedManyWithoutEngagementInput
-  leads?: Prisma.LeadRecordCreateNestedManyWithoutEngagementInput
-  findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
-  recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
-  evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
-  actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
-  deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
-}
-
-export type EngagementUncheckedCreateWithoutStagesInput = {
-  id?: string
-  code: string
-  title: string
-  clientId: string
-  serviceTier: string
-  engagementMode: string
-  status?: string
-  healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
-  description?: string | null
-  startDate?: Date | string | null
-  targetEndDate?: Date | string | null
-  actualEndDate?: Date | string | null
-  ownerId?: string | null
-  assignedConsultantId?: string | null
-  currentScopeVersionId?: string | null
-  parentEngagementId?: string | null
-  version?: number
-  visibility?: string
-  createdBy?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  children?: Prisma.EngagementUncheckedCreateNestedManyWithoutParentInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedCreateNestedManyWithoutEngagementInput
-  memberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutEngagementInput
-  leads?: Prisma.LeadRecordUncheckedCreateNestedManyWithoutEngagementInput
-  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
-  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
-  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
-  actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
-  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
-}
-
-export type EngagementCreateOrConnectWithoutStagesInput = {
-  where: Prisma.EngagementWhereUniqueInput
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutStagesInput, Prisma.EngagementUncheckedCreateWithoutStagesInput>
-}
-
-export type EngagementUpsertWithoutStagesInput = {
-  update: Prisma.XOR<Prisma.EngagementUpdateWithoutStagesInput, Prisma.EngagementUncheckedUpdateWithoutStagesInput>
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutStagesInput, Prisma.EngagementUncheckedCreateWithoutStagesInput>
-  where?: Prisma.EngagementWhereInput
-}
-
-export type EngagementUpdateToOneWithWhereWithoutStagesInput = {
-  where?: Prisma.EngagementWhereInput
-  data: Prisma.XOR<Prisma.EngagementUpdateWithoutStagesInput, Prisma.EngagementUncheckedUpdateWithoutStagesInput>
-}
-
-export type EngagementUpdateWithoutStagesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  client?: Prisma.ClientAccountUpdateOneRequiredWithoutEngagementsNestedInput
-  parent?: Prisma.EngagementUpdateOneWithoutChildrenNestedInput
-  children?: Prisma.EngagementUpdateManyWithoutParentNestedInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUpdateManyWithoutEngagementNestedInput
-  memberships?: Prisma.EngagementMembershipUpdateManyWithoutEngagementNestedInput
-  leads?: Prisma.LeadRecordUpdateManyWithoutEngagementNestedInput
-  findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
-  recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
-  evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
-  actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
-  deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
-}
-
-export type EngagementUncheckedUpdateWithoutStagesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  parentEngagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  children?: Prisma.EngagementUncheckedUpdateManyWithoutParentNestedInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedUpdateManyWithoutEngagementNestedInput
-  memberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutEngagementNestedInput
-  leads?: Prisma.LeadRecordUncheckedUpdateManyWithoutEngagementNestedInput
-  findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
-  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
-  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
-  actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
-  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
-}
-
-export type EngagementCreateWithoutFindingsInput = {
-  id?: string
-  code: string
-  title: string
-  serviceTier: string
-  engagementMode: string
-  status?: string
-  healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
-  description?: string | null
-  startDate?: Date | string | null
-  targetEndDate?: Date | string | null
-  actualEndDate?: Date | string | null
-  ownerId?: string | null
-  assignedConsultantId?: string | null
-  currentScopeVersionId?: string | null
-  version?: number
-  visibility?: string
-  createdBy?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  client: Prisma.ClientAccountCreateNestedOneWithoutEngagementsInput
-  parent?: Prisma.EngagementCreateNestedOneWithoutChildrenInput
-  children?: Prisma.EngagementCreateNestedManyWithoutParentInput
-  conditionProfiles?: Prisma.BusinessConditionProfileCreateNestedManyWithoutEngagementInput
-  memberships?: Prisma.EngagementMembershipCreateNestedManyWithoutEngagementInput
-  leads?: Prisma.LeadRecordCreateNestedManyWithoutEngagementInput
-  stages?: Prisma.StageCreateNestedManyWithoutEngagementInput
-  recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
-  evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
-  actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
-  deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
-}
-
-export type EngagementUncheckedCreateWithoutFindingsInput = {
-  id?: string
-  code: string
-  title: string
-  clientId: string
-  serviceTier: string
-  engagementMode: string
-  status?: string
-  healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
-  description?: string | null
-  startDate?: Date | string | null
-  targetEndDate?: Date | string | null
-  actualEndDate?: Date | string | null
-  ownerId?: string | null
-  assignedConsultantId?: string | null
-  currentScopeVersionId?: string | null
-  parentEngagementId?: string | null
-  version?: number
-  visibility?: string
-  createdBy?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  children?: Prisma.EngagementUncheckedCreateNestedManyWithoutParentInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedCreateNestedManyWithoutEngagementInput
-  memberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutEngagementInput
-  leads?: Prisma.LeadRecordUncheckedCreateNestedManyWithoutEngagementInput
-  stages?: Prisma.StageUncheckedCreateNestedManyWithoutEngagementInput
-  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
-  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
-  actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
-  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
-}
-
-export type EngagementCreateOrConnectWithoutFindingsInput = {
-  where: Prisma.EngagementWhereUniqueInput
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutFindingsInput, Prisma.EngagementUncheckedCreateWithoutFindingsInput>
-}
-
-export type EngagementUpsertWithoutFindingsInput = {
-  update: Prisma.XOR<Prisma.EngagementUpdateWithoutFindingsInput, Prisma.EngagementUncheckedUpdateWithoutFindingsInput>
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutFindingsInput, Prisma.EngagementUncheckedCreateWithoutFindingsInput>
-  where?: Prisma.EngagementWhereInput
-}
-
-export type EngagementUpdateToOneWithWhereWithoutFindingsInput = {
-  where?: Prisma.EngagementWhereInput
-  data: Prisma.XOR<Prisma.EngagementUpdateWithoutFindingsInput, Prisma.EngagementUncheckedUpdateWithoutFindingsInput>
-}
-
-export type EngagementUpdateWithoutFindingsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  client?: Prisma.ClientAccountUpdateOneRequiredWithoutEngagementsNestedInput
-  parent?: Prisma.EngagementUpdateOneWithoutChildrenNestedInput
-  children?: Prisma.EngagementUpdateManyWithoutParentNestedInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUpdateManyWithoutEngagementNestedInput
-  memberships?: Prisma.EngagementMembershipUpdateManyWithoutEngagementNestedInput
-  leads?: Prisma.LeadRecordUpdateManyWithoutEngagementNestedInput
-  stages?: Prisma.StageUpdateManyWithoutEngagementNestedInput
-  recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
-  evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
-  actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
-  deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
-}
-
-export type EngagementUncheckedUpdateWithoutFindingsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  parentEngagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  children?: Prisma.EngagementUncheckedUpdateManyWithoutParentNestedInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedUpdateManyWithoutEngagementNestedInput
-  memberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutEngagementNestedInput
-  leads?: Prisma.LeadRecordUncheckedUpdateManyWithoutEngagementNestedInput
-  stages?: Prisma.StageUncheckedUpdateManyWithoutEngagementNestedInput
-  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
-  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
-  actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
-  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
-}
-
-export type EngagementCreateWithoutRecommendationsInput = {
-  id?: string
-  code: string
-  title: string
-  serviceTier: string
-  engagementMode: string
-  status?: string
-  healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
-  description?: string | null
-  startDate?: Date | string | null
-  targetEndDate?: Date | string | null
-  actualEndDate?: Date | string | null
-  ownerId?: string | null
-  assignedConsultantId?: string | null
-  currentScopeVersionId?: string | null
-  version?: number
-  visibility?: string
-  createdBy?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  client: Prisma.ClientAccountCreateNestedOneWithoutEngagementsInput
-  parent?: Prisma.EngagementCreateNestedOneWithoutChildrenInput
-  children?: Prisma.EngagementCreateNestedManyWithoutParentInput
-  conditionProfiles?: Prisma.BusinessConditionProfileCreateNestedManyWithoutEngagementInput
   memberships?: Prisma.EngagementMembershipCreateNestedManyWithoutEngagementInput
   leads?: Prisma.LeadRecordCreateNestedManyWithoutEngagementInput
   stages?: Prisma.StageCreateNestedManyWithoutEngagementInput
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
+  recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
 
-export type EngagementUncheckedCreateWithoutRecommendationsInput = {
+export type EngagementUncheckedCreateWithoutConditionProfilesInput = {
   id?: string
   code: string
   title: string
@@ -2264,36 +1928,36 @@ export type EngagementUncheckedCreateWithoutRecommendationsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   children?: Prisma.EngagementUncheckedCreateNestedManyWithoutParentInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedCreateNestedManyWithoutEngagementInput
   memberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutEngagementInput
   leads?: Prisma.LeadRecordUncheckedCreateNestedManyWithoutEngagementInput
   stages?: Prisma.StageUncheckedCreateNestedManyWithoutEngagementInput
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
+  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
 
-export type EngagementCreateOrConnectWithoutRecommendationsInput = {
+export type EngagementCreateOrConnectWithoutConditionProfilesInput = {
   where: Prisma.EngagementWhereUniqueInput
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutRecommendationsInput, Prisma.EngagementUncheckedCreateWithoutRecommendationsInput>
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutConditionProfilesInput, Prisma.EngagementUncheckedCreateWithoutConditionProfilesInput>
 }
 
-export type EngagementUpsertWithoutRecommendationsInput = {
-  update: Prisma.XOR<Prisma.EngagementUpdateWithoutRecommendationsInput, Prisma.EngagementUncheckedUpdateWithoutRecommendationsInput>
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutRecommendationsInput, Prisma.EngagementUncheckedCreateWithoutRecommendationsInput>
+export type EngagementUpsertWithoutConditionProfilesInput = {
+  update: Prisma.XOR<Prisma.EngagementUpdateWithoutConditionProfilesInput, Prisma.EngagementUncheckedUpdateWithoutConditionProfilesInput>
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutConditionProfilesInput, Prisma.EngagementUncheckedCreateWithoutConditionProfilesInput>
   where?: Prisma.EngagementWhereInput
 }
 
-export type EngagementUpdateToOneWithWhereWithoutRecommendationsInput = {
+export type EngagementUpdateToOneWithWhereWithoutConditionProfilesInput = {
   where?: Prisma.EngagementWhereInput
-  data: Prisma.XOR<Prisma.EngagementUpdateWithoutRecommendationsInput, Prisma.EngagementUncheckedUpdateWithoutRecommendationsInput>
+  data: Prisma.XOR<Prisma.EngagementUpdateWithoutConditionProfilesInput, Prisma.EngagementUncheckedUpdateWithoutConditionProfilesInput>
 }
 
-export type EngagementUpdateWithoutRecommendationsInput = {
+export type EngagementUpdateWithoutConditionProfilesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2318,20 +1982,20 @@ export type EngagementUpdateWithoutRecommendationsInput = {
   client?: Prisma.ClientAccountUpdateOneRequiredWithoutEngagementsNestedInput
   parent?: Prisma.EngagementUpdateOneWithoutChildrenNestedInput
   children?: Prisma.EngagementUpdateManyWithoutParentNestedInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUpdateManyWithoutEngagementNestedInput
   memberships?: Prisma.EngagementMembershipUpdateManyWithoutEngagementNestedInput
   leads?: Prisma.LeadRecordUpdateManyWithoutEngagementNestedInput
   stages?: Prisma.StageUpdateManyWithoutEngagementNestedInput
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
+  recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
 
-export type EngagementUncheckedUpdateWithoutRecommendationsInput = {
+export type EngagementUncheckedUpdateWithoutConditionProfilesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2356,17 +2020,17 @@ export type EngagementUncheckedUpdateWithoutRecommendationsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   children?: Prisma.EngagementUncheckedUpdateManyWithoutParentNestedInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedUpdateManyWithoutEngagementNestedInput
   memberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutEngagementNestedInput
   leads?: Prisma.LeadRecordUncheckedUpdateManyWithoutEngagementNestedInput
   stages?: Prisma.StageUncheckedUpdateManyWithoutEngagementNestedInput
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
+  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementCreateWithoutEvidenceInput = {
@@ -2400,11 +2064,11 @@ export type EngagementCreateWithoutEvidenceInput = {
   stages?: Prisma.StageCreateNestedManyWithoutEngagementInput
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUncheckedCreateWithoutEvidenceInput = {
@@ -2438,11 +2102,11 @@ export type EngagementUncheckedCreateWithoutEvidenceInput = {
   stages?: Prisma.StageUncheckedCreateNestedManyWithoutEngagementInput
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementCreateOrConnectWithoutEvidenceInput = {
@@ -2492,11 +2156,11 @@ export type EngagementUpdateWithoutEvidenceInput = {
   stages?: Prisma.StageUpdateManyWithoutEngagementNestedInput
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateWithoutEvidenceInput = {
@@ -2530,11 +2194,515 @@ export type EngagementUncheckedUpdateWithoutEvidenceInput = {
   stages?: Prisma.StageUncheckedUpdateManyWithoutEngagementNestedInput
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+}
+
+export type EngagementCreateWithoutEvidenceBundlesInput = {
+  id?: string
+  code: string
+  title: string
+  serviceTier: string
+  engagementMode: string
+  status?: string
+  healthStatus?: string
+  interventionMode?: string
+  interventionPhase?: string
+  description?: string | null
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  actualEndDate?: Date | string | null
+  ownerId?: string | null
+  assignedConsultantId?: string | null
+  currentScopeVersionId?: string | null
+  version?: number
+  visibility?: string
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  client: Prisma.ClientAccountCreateNestedOneWithoutEngagementsInput
+  parent?: Prisma.EngagementCreateNestedOneWithoutChildrenInput
+  children?: Prisma.EngagementCreateNestedManyWithoutParentInput
+  conditionProfiles?: Prisma.BusinessConditionProfileCreateNestedManyWithoutEngagementInput
+  memberships?: Prisma.EngagementMembershipCreateNestedManyWithoutEngagementInput
+  leads?: Prisma.LeadRecordCreateNestedManyWithoutEngagementInput
+  stages?: Prisma.StageCreateNestedManyWithoutEngagementInput
+  findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
+  recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
+  evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
+  actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+}
+
+export type EngagementUncheckedCreateWithoutEvidenceBundlesInput = {
+  id?: string
+  code: string
+  title: string
+  clientId: string
+  serviceTier: string
+  engagementMode: string
+  status?: string
+  healthStatus?: string
+  interventionMode?: string
+  interventionPhase?: string
+  description?: string | null
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  actualEndDate?: Date | string | null
+  ownerId?: string | null
+  assignedConsultantId?: string | null
+  currentScopeVersionId?: string | null
+  parentEngagementId?: string | null
+  version?: number
+  visibility?: string
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  children?: Prisma.EngagementUncheckedCreateNestedManyWithoutParentInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedCreateNestedManyWithoutEngagementInput
+  memberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutEngagementInput
+  leads?: Prisma.LeadRecordUncheckedCreateNestedManyWithoutEngagementInput
+  stages?: Prisma.StageUncheckedCreateNestedManyWithoutEngagementInput
+  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
+  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
+  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
+  actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+}
+
+export type EngagementCreateOrConnectWithoutEvidenceBundlesInput = {
+  where: Prisma.EngagementWhereUniqueInput
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutEvidenceBundlesInput, Prisma.EngagementUncheckedCreateWithoutEvidenceBundlesInput>
+}
+
+export type EngagementUpsertWithoutEvidenceBundlesInput = {
+  update: Prisma.XOR<Prisma.EngagementUpdateWithoutEvidenceBundlesInput, Prisma.EngagementUncheckedUpdateWithoutEvidenceBundlesInput>
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutEvidenceBundlesInput, Prisma.EngagementUncheckedCreateWithoutEvidenceBundlesInput>
+  where?: Prisma.EngagementWhereInput
+}
+
+export type EngagementUpdateToOneWithWhereWithoutEvidenceBundlesInput = {
+  where?: Prisma.EngagementWhereInput
+  data: Prisma.XOR<Prisma.EngagementUpdateWithoutEvidenceBundlesInput, Prisma.EngagementUncheckedUpdateWithoutEvidenceBundlesInput>
+}
+
+export type EngagementUpdateWithoutEvidenceBundlesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  client?: Prisma.ClientAccountUpdateOneRequiredWithoutEngagementsNestedInput
+  parent?: Prisma.EngagementUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.EngagementUpdateManyWithoutParentNestedInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUpdateManyWithoutEngagementNestedInput
+  memberships?: Prisma.EngagementMembershipUpdateManyWithoutEngagementNestedInput
+  leads?: Prisma.LeadRecordUpdateManyWithoutEngagementNestedInput
+  stages?: Prisma.StageUpdateManyWithoutEngagementNestedInput
+  findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
+  recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
+  evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
+  actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+}
+
+export type EngagementUncheckedUpdateWithoutEvidenceBundlesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  clientId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentEngagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  children?: Prisma.EngagementUncheckedUpdateManyWithoutParentNestedInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedUpdateManyWithoutEngagementNestedInput
+  memberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutEngagementNestedInput
+  leads?: Prisma.LeadRecordUncheckedUpdateManyWithoutEngagementNestedInput
+  stages?: Prisma.StageUncheckedUpdateManyWithoutEngagementNestedInput
+  findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
+  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
+  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
+  actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+}
+
+export type EngagementCreateWithoutFindingsInput = {
+  id?: string
+  code: string
+  title: string
+  serviceTier: string
+  engagementMode: string
+  status?: string
+  healthStatus?: string
+  interventionMode?: string
+  interventionPhase?: string
+  description?: string | null
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  actualEndDate?: Date | string | null
+  ownerId?: string | null
+  assignedConsultantId?: string | null
+  currentScopeVersionId?: string | null
+  version?: number
+  visibility?: string
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  client: Prisma.ClientAccountCreateNestedOneWithoutEngagementsInput
+  parent?: Prisma.EngagementCreateNestedOneWithoutChildrenInput
+  children?: Prisma.EngagementCreateNestedManyWithoutParentInput
+  conditionProfiles?: Prisma.BusinessConditionProfileCreateNestedManyWithoutEngagementInput
+  memberships?: Prisma.EngagementMembershipCreateNestedManyWithoutEngagementInput
+  leads?: Prisma.LeadRecordCreateNestedManyWithoutEngagementInput
+  stages?: Prisma.StageCreateNestedManyWithoutEngagementInput
+  recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
+  evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
+  actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+}
+
+export type EngagementUncheckedCreateWithoutFindingsInput = {
+  id?: string
+  code: string
+  title: string
+  clientId: string
+  serviceTier: string
+  engagementMode: string
+  status?: string
+  healthStatus?: string
+  interventionMode?: string
+  interventionPhase?: string
+  description?: string | null
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  actualEndDate?: Date | string | null
+  ownerId?: string | null
+  assignedConsultantId?: string | null
+  currentScopeVersionId?: string | null
+  parentEngagementId?: string | null
+  version?: number
+  visibility?: string
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  children?: Prisma.EngagementUncheckedCreateNestedManyWithoutParentInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedCreateNestedManyWithoutEngagementInput
+  memberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutEngagementInput
+  leads?: Prisma.LeadRecordUncheckedCreateNestedManyWithoutEngagementInput
+  stages?: Prisma.StageUncheckedCreateNestedManyWithoutEngagementInput
+  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
+  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
+  actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+}
+
+export type EngagementCreateOrConnectWithoutFindingsInput = {
+  where: Prisma.EngagementWhereUniqueInput
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutFindingsInput, Prisma.EngagementUncheckedCreateWithoutFindingsInput>
+}
+
+export type EngagementUpsertWithoutFindingsInput = {
+  update: Prisma.XOR<Prisma.EngagementUpdateWithoutFindingsInput, Prisma.EngagementUncheckedUpdateWithoutFindingsInput>
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutFindingsInput, Prisma.EngagementUncheckedCreateWithoutFindingsInput>
+  where?: Prisma.EngagementWhereInput
+}
+
+export type EngagementUpdateToOneWithWhereWithoutFindingsInput = {
+  where?: Prisma.EngagementWhereInput
+  data: Prisma.XOR<Prisma.EngagementUpdateWithoutFindingsInput, Prisma.EngagementUncheckedUpdateWithoutFindingsInput>
+}
+
+export type EngagementUpdateWithoutFindingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  client?: Prisma.ClientAccountUpdateOneRequiredWithoutEngagementsNestedInput
+  parent?: Prisma.EngagementUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.EngagementUpdateManyWithoutParentNestedInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUpdateManyWithoutEngagementNestedInput
+  memberships?: Prisma.EngagementMembershipUpdateManyWithoutEngagementNestedInput
+  leads?: Prisma.LeadRecordUpdateManyWithoutEngagementNestedInput
+  stages?: Prisma.StageUpdateManyWithoutEngagementNestedInput
+  recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
+  evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
+  actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+}
+
+export type EngagementUncheckedUpdateWithoutFindingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  clientId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentEngagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  children?: Prisma.EngagementUncheckedUpdateManyWithoutParentNestedInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedUpdateManyWithoutEngagementNestedInput
+  memberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutEngagementNestedInput
+  leads?: Prisma.LeadRecordUncheckedUpdateManyWithoutEngagementNestedInput
+  stages?: Prisma.StageUncheckedUpdateManyWithoutEngagementNestedInput
+  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
+  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
+  actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+}
+
+export type EngagementCreateWithoutRecommendationsInput = {
+  id?: string
+  code: string
+  title: string
+  serviceTier: string
+  engagementMode: string
+  status?: string
+  healthStatus?: string
+  interventionMode?: string
+  interventionPhase?: string
+  description?: string | null
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  actualEndDate?: Date | string | null
+  ownerId?: string | null
+  assignedConsultantId?: string | null
+  currentScopeVersionId?: string | null
+  version?: number
+  visibility?: string
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  client: Prisma.ClientAccountCreateNestedOneWithoutEngagementsInput
+  parent?: Prisma.EngagementCreateNestedOneWithoutChildrenInput
+  children?: Prisma.EngagementCreateNestedManyWithoutParentInput
+  conditionProfiles?: Prisma.BusinessConditionProfileCreateNestedManyWithoutEngagementInput
+  memberships?: Prisma.EngagementMembershipCreateNestedManyWithoutEngagementInput
+  leads?: Prisma.LeadRecordCreateNestedManyWithoutEngagementInput
+  stages?: Prisma.StageCreateNestedManyWithoutEngagementInput
+  findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
+  evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
+  actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+}
+
+export type EngagementUncheckedCreateWithoutRecommendationsInput = {
+  id?: string
+  code: string
+  title: string
+  clientId: string
+  serviceTier: string
+  engagementMode: string
+  status?: string
+  healthStatus?: string
+  interventionMode?: string
+  interventionPhase?: string
+  description?: string | null
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  actualEndDate?: Date | string | null
+  ownerId?: string | null
+  assignedConsultantId?: string | null
+  currentScopeVersionId?: string | null
+  parentEngagementId?: string | null
+  version?: number
+  visibility?: string
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  children?: Prisma.EngagementUncheckedCreateNestedManyWithoutParentInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedCreateNestedManyWithoutEngagementInput
+  memberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutEngagementInput
+  leads?: Prisma.LeadRecordUncheckedCreateNestedManyWithoutEngagementInput
+  stages?: Prisma.StageUncheckedCreateNestedManyWithoutEngagementInput
+  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
+  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
+  actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+}
+
+export type EngagementCreateOrConnectWithoutRecommendationsInput = {
+  where: Prisma.EngagementWhereUniqueInput
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutRecommendationsInput, Prisma.EngagementUncheckedCreateWithoutRecommendationsInput>
+}
+
+export type EngagementUpsertWithoutRecommendationsInput = {
+  update: Prisma.XOR<Prisma.EngagementUpdateWithoutRecommendationsInput, Prisma.EngagementUncheckedUpdateWithoutRecommendationsInput>
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutRecommendationsInput, Prisma.EngagementUncheckedCreateWithoutRecommendationsInput>
+  where?: Prisma.EngagementWhereInput
+}
+
+export type EngagementUpdateToOneWithWhereWithoutRecommendationsInput = {
+  where?: Prisma.EngagementWhereInput
+  data: Prisma.XOR<Prisma.EngagementUpdateWithoutRecommendationsInput, Prisma.EngagementUncheckedUpdateWithoutRecommendationsInput>
+}
+
+export type EngagementUpdateWithoutRecommendationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  client?: Prisma.ClientAccountUpdateOneRequiredWithoutEngagementsNestedInput
+  parent?: Prisma.EngagementUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.EngagementUpdateManyWithoutParentNestedInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUpdateManyWithoutEngagementNestedInput
+  memberships?: Prisma.EngagementMembershipUpdateManyWithoutEngagementNestedInput
+  leads?: Prisma.LeadRecordUpdateManyWithoutEngagementNestedInput
+  stages?: Prisma.StageUpdateManyWithoutEngagementNestedInput
+  findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
+  evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
+  actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+}
+
+export type EngagementUncheckedUpdateWithoutRecommendationsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  clientId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentEngagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  children?: Prisma.EngagementUncheckedUpdateManyWithoutParentNestedInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedUpdateManyWithoutEngagementNestedInput
+  memberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutEngagementNestedInput
+  leads?: Prisma.LeadRecordUncheckedUpdateManyWithoutEngagementNestedInput
+  stages?: Prisma.StageUncheckedUpdateManyWithoutEngagementNestedInput
+  findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
+  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
+  actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementCreateWithoutActionsInput = {
@@ -2569,10 +2737,10 @@ export type EngagementCreateWithoutActionsInput = {
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUncheckedCreateWithoutActionsInput = {
@@ -2607,10 +2775,10 @@ export type EngagementUncheckedCreateWithoutActionsInput = {
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementCreateOrConnectWithoutActionsInput = {
@@ -2661,10 +2829,10 @@ export type EngagementUpdateWithoutActionsInput = {
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateWithoutActionsInput = {
@@ -2699,10 +2867,178 @@ export type EngagementUncheckedUpdateWithoutActionsInput = {
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+}
+
+export type EngagementCreateWithoutStagesInput = {
+  id?: string
+  code: string
+  title: string
+  serviceTier: string
+  engagementMode: string
+  status?: string
+  healthStatus?: string
+  interventionMode?: string
+  interventionPhase?: string
+  description?: string | null
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  actualEndDate?: Date | string | null
+  ownerId?: string | null
+  assignedConsultantId?: string | null
+  currentScopeVersionId?: string | null
+  version?: number
+  visibility?: string
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  client: Prisma.ClientAccountCreateNestedOneWithoutEngagementsInput
+  parent?: Prisma.EngagementCreateNestedOneWithoutChildrenInput
+  children?: Prisma.EngagementCreateNestedManyWithoutParentInput
+  conditionProfiles?: Prisma.BusinessConditionProfileCreateNestedManyWithoutEngagementInput
+  memberships?: Prisma.EngagementMembershipCreateNestedManyWithoutEngagementInput
+  leads?: Prisma.LeadRecordCreateNestedManyWithoutEngagementInput
+  findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
+  recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
+  evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
+  actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+}
+
+export type EngagementUncheckedCreateWithoutStagesInput = {
+  id?: string
+  code: string
+  title: string
+  clientId: string
+  serviceTier: string
+  engagementMode: string
+  status?: string
+  healthStatus?: string
+  interventionMode?: string
+  interventionPhase?: string
+  description?: string | null
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  actualEndDate?: Date | string | null
+  ownerId?: string | null
+  assignedConsultantId?: string | null
+  currentScopeVersionId?: string | null
+  parentEngagementId?: string | null
+  version?: number
+  visibility?: string
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  children?: Prisma.EngagementUncheckedCreateNestedManyWithoutParentInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedCreateNestedManyWithoutEngagementInput
+  memberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutEngagementInput
+  leads?: Prisma.LeadRecordUncheckedCreateNestedManyWithoutEngagementInput
+  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
+  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
+  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
+  actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+}
+
+export type EngagementCreateOrConnectWithoutStagesInput = {
+  where: Prisma.EngagementWhereUniqueInput
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutStagesInput, Prisma.EngagementUncheckedCreateWithoutStagesInput>
+}
+
+export type EngagementUpsertWithoutStagesInput = {
+  update: Prisma.XOR<Prisma.EngagementUpdateWithoutStagesInput, Prisma.EngagementUncheckedUpdateWithoutStagesInput>
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutStagesInput, Prisma.EngagementUncheckedCreateWithoutStagesInput>
+  where?: Prisma.EngagementWhereInput
+}
+
+export type EngagementUpdateToOneWithWhereWithoutStagesInput = {
+  where?: Prisma.EngagementWhereInput
+  data: Prisma.XOR<Prisma.EngagementUpdateWithoutStagesInput, Prisma.EngagementUncheckedUpdateWithoutStagesInput>
+}
+
+export type EngagementUpdateWithoutStagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  client?: Prisma.ClientAccountUpdateOneRequiredWithoutEngagementsNestedInput
+  parent?: Prisma.EngagementUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.EngagementUpdateManyWithoutParentNestedInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUpdateManyWithoutEngagementNestedInput
+  memberships?: Prisma.EngagementMembershipUpdateManyWithoutEngagementNestedInput
+  leads?: Prisma.LeadRecordUpdateManyWithoutEngagementNestedInput
+  findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
+  recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
+  evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
+  actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+}
+
+export type EngagementUncheckedUpdateWithoutStagesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  clientId?: Prisma.StringFieldUpdateOperationsInput | string
+  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
+  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentEngagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  children?: Prisma.EngagementUncheckedUpdateManyWithoutParentNestedInput
+  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedUpdateManyWithoutEngagementNestedInput
+  memberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutEngagementNestedInput
+  leads?: Prisma.LeadRecordUncheckedUpdateManyWithoutEngagementNestedInput
+  findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
+  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
+  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
+  actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementCreateWithoutKpisInput = {
@@ -2737,10 +3073,10 @@ export type EngagementCreateWithoutKpisInput = {
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUncheckedCreateWithoutKpisInput = {
@@ -2775,10 +3111,10 @@ export type EngagementUncheckedCreateWithoutKpisInput = {
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementCreateOrConnectWithoutKpisInput = {
@@ -2829,10 +3165,10 @@ export type EngagementUpdateWithoutKpisInput = {
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateWithoutKpisInput = {
@@ -2867,178 +3203,10 @@ export type EngagementUncheckedUpdateWithoutKpisInput = {
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
+  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
-  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
-}
-
-export type EngagementCreateWithoutRisksInput = {
-  id?: string
-  code: string
-  title: string
-  serviceTier: string
-  engagementMode: string
-  status?: string
-  healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
-  description?: string | null
-  startDate?: Date | string | null
-  targetEndDate?: Date | string | null
-  actualEndDate?: Date | string | null
-  ownerId?: string | null
-  assignedConsultantId?: string | null
-  currentScopeVersionId?: string | null
-  version?: number
-  visibility?: string
-  createdBy?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  client: Prisma.ClientAccountCreateNestedOneWithoutEngagementsInput
-  parent?: Prisma.EngagementCreateNestedOneWithoutChildrenInput
-  children?: Prisma.EngagementCreateNestedManyWithoutParentInput
-  conditionProfiles?: Prisma.BusinessConditionProfileCreateNestedManyWithoutEngagementInput
-  memberships?: Prisma.EngagementMembershipCreateNestedManyWithoutEngagementInput
-  leads?: Prisma.LeadRecordCreateNestedManyWithoutEngagementInput
-  stages?: Prisma.StageCreateNestedManyWithoutEngagementInput
-  findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
-  recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
-  evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
-  actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
-}
-
-export type EngagementUncheckedCreateWithoutRisksInput = {
-  id?: string
-  code: string
-  title: string
-  clientId: string
-  serviceTier: string
-  engagementMode: string
-  status?: string
-  healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
-  description?: string | null
-  startDate?: Date | string | null
-  targetEndDate?: Date | string | null
-  actualEndDate?: Date | string | null
-  ownerId?: string | null
-  assignedConsultantId?: string | null
-  currentScopeVersionId?: string | null
-  parentEngagementId?: string | null
-  version?: number
-  visibility?: string
-  createdBy?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  children?: Prisma.EngagementUncheckedCreateNestedManyWithoutParentInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedCreateNestedManyWithoutEngagementInput
-  memberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutEngagementInput
-  leads?: Prisma.LeadRecordUncheckedCreateNestedManyWithoutEngagementInput
-  stages?: Prisma.StageUncheckedCreateNestedManyWithoutEngagementInput
-  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
-  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
-  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
-  actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
-}
-
-export type EngagementCreateOrConnectWithoutRisksInput = {
-  where: Prisma.EngagementWhereUniqueInput
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutRisksInput, Prisma.EngagementUncheckedCreateWithoutRisksInput>
-}
-
-export type EngagementUpsertWithoutRisksInput = {
-  update: Prisma.XOR<Prisma.EngagementUpdateWithoutRisksInput, Prisma.EngagementUncheckedUpdateWithoutRisksInput>
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutRisksInput, Prisma.EngagementUncheckedCreateWithoutRisksInput>
-  where?: Prisma.EngagementWhereInput
-}
-
-export type EngagementUpdateToOneWithWhereWithoutRisksInput = {
-  where?: Prisma.EngagementWhereInput
-  data: Prisma.XOR<Prisma.EngagementUpdateWithoutRisksInput, Prisma.EngagementUncheckedUpdateWithoutRisksInput>
-}
-
-export type EngagementUpdateWithoutRisksInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  client?: Prisma.ClientAccountUpdateOneRequiredWithoutEngagementsNestedInput
-  parent?: Prisma.EngagementUpdateOneWithoutChildrenNestedInput
-  children?: Prisma.EngagementUpdateManyWithoutParentNestedInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUpdateManyWithoutEngagementNestedInput
-  memberships?: Prisma.EngagementMembershipUpdateManyWithoutEngagementNestedInput
-  leads?: Prisma.LeadRecordUpdateManyWithoutEngagementNestedInput
-  stages?: Prisma.StageUpdateManyWithoutEngagementNestedInput
-  findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
-  recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
-  evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
-  actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
-}
-
-export type EngagementUncheckedUpdateWithoutRisksInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  parentEngagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  children?: Prisma.EngagementUncheckedUpdateManyWithoutParentNestedInput
-  conditionProfiles?: Prisma.BusinessConditionProfileUncheckedUpdateManyWithoutEngagementNestedInput
-  memberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutEngagementNestedInput
-  leads?: Prisma.LeadRecordUncheckedUpdateManyWithoutEngagementNestedInput
-  stages?: Prisma.StageUncheckedUpdateManyWithoutEngagementNestedInput
-  findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
-  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
-  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
-  actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementCreateWithoutDeliverablesInput = {
@@ -3073,10 +3241,10 @@ export type EngagementCreateWithoutDeliverablesInput = {
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementUncheckedCreateWithoutDeliverablesInput = {
@@ -3111,10 +3279,10 @@ export type EngagementUncheckedCreateWithoutDeliverablesInput = {
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
 }
 
 export type EngagementCreateOrConnectWithoutDeliverablesInput = {
@@ -3165,10 +3333,10 @@ export type EngagementUpdateWithoutDeliverablesInput = {
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateWithoutDeliverablesInput = {
@@ -3203,181 +3371,13 @@ export type EngagementUncheckedUpdateWithoutDeliverablesInput = {
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
-}
-
-export type EngagementCreateWithoutConditionProfilesInput = {
-  id?: string
-  code: string
-  title: string
-  serviceTier: string
-  engagementMode: string
-  status?: string
-  healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
-  description?: string | null
-  startDate?: Date | string | null
-  targetEndDate?: Date | string | null
-  actualEndDate?: Date | string | null
-  ownerId?: string | null
-  assignedConsultantId?: string | null
-  currentScopeVersionId?: string | null
-  version?: number
-  visibility?: string
-  createdBy?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  client: Prisma.ClientAccountCreateNestedOneWithoutEngagementsInput
-  parent?: Prisma.EngagementCreateNestedOneWithoutChildrenInput
-  children?: Prisma.EngagementCreateNestedManyWithoutParentInput
-  memberships?: Prisma.EngagementMembershipCreateNestedManyWithoutEngagementInput
-  leads?: Prisma.LeadRecordCreateNestedManyWithoutEngagementInput
-  stages?: Prisma.StageCreateNestedManyWithoutEngagementInput
-  findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
-  recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
-  evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
-  actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
-  deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryCreateNestedManyWithoutEngagementInput
-}
-
-export type EngagementUncheckedCreateWithoutConditionProfilesInput = {
-  id?: string
-  code: string
-  title: string
-  clientId: string
-  serviceTier: string
-  engagementMode: string
-  status?: string
-  healthStatus?: string
-  interventionMode?: string
-  interventionPhase?: string
-  description?: string | null
-  startDate?: Date | string | null
-  targetEndDate?: Date | string | null
-  actualEndDate?: Date | string | null
-  ownerId?: string | null
-  assignedConsultantId?: string | null
-  currentScopeVersionId?: string | null
-  parentEngagementId?: string | null
-  version?: number
-  visibility?: string
-  createdBy?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  children?: Prisma.EngagementUncheckedCreateNestedManyWithoutParentInput
-  memberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutEngagementInput
-  leads?: Prisma.LeadRecordUncheckedCreateNestedManyWithoutEngagementInput
-  stages?: Prisma.StageUncheckedCreateNestedManyWithoutEngagementInput
-  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
-  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
-  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
-  actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
-  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedCreateNestedManyWithoutEngagementInput
-}
-
-export type EngagementCreateOrConnectWithoutConditionProfilesInput = {
-  where: Prisma.EngagementWhereUniqueInput
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutConditionProfilesInput, Prisma.EngagementUncheckedCreateWithoutConditionProfilesInput>
-}
-
-export type EngagementUpsertWithoutConditionProfilesInput = {
-  update: Prisma.XOR<Prisma.EngagementUpdateWithoutConditionProfilesInput, Prisma.EngagementUncheckedUpdateWithoutConditionProfilesInput>
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutConditionProfilesInput, Prisma.EngagementUncheckedCreateWithoutConditionProfilesInput>
-  where?: Prisma.EngagementWhereInput
-}
-
-export type EngagementUpdateToOneWithWhereWithoutConditionProfilesInput = {
-  where?: Prisma.EngagementWhereInput
-  data: Prisma.XOR<Prisma.EngagementUpdateWithoutConditionProfilesInput, Prisma.EngagementUncheckedUpdateWithoutConditionProfilesInput>
-}
-
-export type EngagementUpdateWithoutConditionProfilesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  client?: Prisma.ClientAccountUpdateOneRequiredWithoutEngagementsNestedInput
-  parent?: Prisma.EngagementUpdateOneWithoutChildrenNestedInput
-  children?: Prisma.EngagementUpdateManyWithoutParentNestedInput
-  memberships?: Prisma.EngagementMembershipUpdateManyWithoutEngagementNestedInput
-  leads?: Prisma.LeadRecordUpdateManyWithoutEngagementNestedInput
-  stages?: Prisma.StageUpdateManyWithoutEngagementNestedInput
-  findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
-  recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
-  evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
-  actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
-  deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
-}
-
-export type EngagementUncheckedUpdateWithoutConditionProfilesInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  code?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  clientId?: Prisma.StringFieldUpdateOperationsInput | string
-  serviceTier?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  healthStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionMode?: Prisma.StringFieldUpdateOperationsInput | string
-  interventionPhase?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  actualEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  ownerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  assignedConsultantId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  currentScopeVersionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  parentEngagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  children?: Prisma.EngagementUncheckedUpdateManyWithoutParentNestedInput
-  memberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutEngagementNestedInput
-  leads?: Prisma.LeadRecordUncheckedUpdateManyWithoutEngagementNestedInput
-  stages?: Prisma.StageUncheckedUpdateManyWithoutEngagementNestedInput
-  findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
-  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
-  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
   kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
-  actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
   risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
-  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
-export type EngagementCreateWithoutInterventionHistoryInput = {
+export type EngagementCreateWithoutRisksInput = {
   id?: string
   code: string
   title: string
@@ -3409,13 +3409,13 @@ export type EngagementCreateWithoutInterventionHistoryInput = {
   findings?: Prisma.FindingCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPICreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableCreateNestedManyWithoutEngagementInput
 }
 
-export type EngagementUncheckedCreateWithoutInterventionHistoryInput = {
+export type EngagementUncheckedCreateWithoutRisksInput = {
   id?: string
   code: string
   title: string
@@ -3447,29 +3447,29 @@ export type EngagementUncheckedCreateWithoutInterventionHistoryInput = {
   findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEngagementInput
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutEngagementInput
   evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutEngagementInput
-  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedCreateNestedManyWithoutEngagementInput
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutEngagementInput
-  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutEngagementInput
+  kpis?: Prisma.KPIUncheckedCreateNestedManyWithoutEngagementInput
   deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutEngagementInput
 }
 
-export type EngagementCreateOrConnectWithoutInterventionHistoryInput = {
+export type EngagementCreateOrConnectWithoutRisksInput = {
   where: Prisma.EngagementWhereUniqueInput
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutInterventionHistoryInput, Prisma.EngagementUncheckedCreateWithoutInterventionHistoryInput>
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutRisksInput, Prisma.EngagementUncheckedCreateWithoutRisksInput>
 }
 
-export type EngagementUpsertWithoutInterventionHistoryInput = {
-  update: Prisma.XOR<Prisma.EngagementUpdateWithoutInterventionHistoryInput, Prisma.EngagementUncheckedUpdateWithoutInterventionHistoryInput>
-  create: Prisma.XOR<Prisma.EngagementCreateWithoutInterventionHistoryInput, Prisma.EngagementUncheckedCreateWithoutInterventionHistoryInput>
+export type EngagementUpsertWithoutRisksInput = {
+  update: Prisma.XOR<Prisma.EngagementUpdateWithoutRisksInput, Prisma.EngagementUncheckedUpdateWithoutRisksInput>
+  create: Prisma.XOR<Prisma.EngagementCreateWithoutRisksInput, Prisma.EngagementUncheckedCreateWithoutRisksInput>
   where?: Prisma.EngagementWhereInput
 }
 
-export type EngagementUpdateToOneWithWhereWithoutInterventionHistoryInput = {
+export type EngagementUpdateToOneWithWhereWithoutRisksInput = {
   where?: Prisma.EngagementWhereInput
-  data: Prisma.XOR<Prisma.EngagementUpdateWithoutInterventionHistoryInput, Prisma.EngagementUncheckedUpdateWithoutInterventionHistoryInput>
+  data: Prisma.XOR<Prisma.EngagementUpdateWithoutRisksInput, Prisma.EngagementUncheckedUpdateWithoutRisksInput>
 }
 
-export type EngagementUpdateWithoutInterventionHistoryInput = {
+export type EngagementUpdateWithoutRisksInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3501,13 +3501,13 @@ export type EngagementUpdateWithoutInterventionHistoryInput = {
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
 }
 
-export type EngagementUncheckedUpdateWithoutInterventionHistoryInput = {
+export type EngagementUncheckedUpdateWithoutRisksInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   code?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
@@ -3539,9 +3539,9 @@ export type EngagementUncheckedUpdateWithoutInterventionHistoryInput = {
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
@@ -3601,11 +3601,11 @@ export type EngagementUpdateWithoutClientInput = {
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateWithoutClientInput = {
@@ -3639,11 +3639,11 @@ export type EngagementUncheckedUpdateWithoutClientInput = {
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateManyWithoutClientInput = {
@@ -3727,11 +3727,11 @@ export type EngagementUpdateWithoutParentInput = {
   findings?: Prisma.FindingUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateWithoutParentInput = {
@@ -3765,11 +3765,11 @@ export type EngagementUncheckedUpdateWithoutParentInput = {
   findings?: Prisma.FindingUncheckedUpdateManyWithoutEngagementNestedInput
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutEngagementNestedInput
   evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutEngagementNestedInput
-  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
+  evidenceBundles?: Prisma.EvidenceBundleUncheckedUpdateManyWithoutEngagementNestedInput
   actions?: Prisma.ActionUncheckedUpdateManyWithoutEngagementNestedInput
-  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
+  kpis?: Prisma.KPIUncheckedUpdateManyWithoutEngagementNestedInput
   deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutEngagementNestedInput
-  interventionHistory?: Prisma.InterventionHistoryUncheckedUpdateManyWithoutEngagementNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutEngagementNestedInput
 }
 
 export type EngagementUncheckedUpdateManyWithoutParentInput = {
@@ -3811,11 +3811,11 @@ export type EngagementCountOutputType = {
   findings: number
   recommendations: number
   evidence: number
-  kpis: number
+  evidenceBundles: number
   actions: number
-  risks: number
+  kpis: number
   deliverables: number
-  interventionHistory: number
+  risks: number
 }
 
 export type EngagementCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -3827,11 +3827,11 @@ export type EngagementCountOutputTypeSelect<ExtArgs extends runtime.Types.Extens
   findings?: boolean | EngagementCountOutputTypeCountFindingsArgs
   recommendations?: boolean | EngagementCountOutputTypeCountRecommendationsArgs
   evidence?: boolean | EngagementCountOutputTypeCountEvidenceArgs
-  kpis?: boolean | EngagementCountOutputTypeCountKpisArgs
+  evidenceBundles?: boolean | EngagementCountOutputTypeCountEvidenceBundlesArgs
   actions?: boolean | EngagementCountOutputTypeCountActionsArgs
-  risks?: boolean | EngagementCountOutputTypeCountRisksArgs
+  kpis?: boolean | EngagementCountOutputTypeCountKpisArgs
   deliverables?: boolean | EngagementCountOutputTypeCountDeliverablesArgs
-  interventionHistory?: boolean | EngagementCountOutputTypeCountInterventionHistoryArgs
+  risks?: boolean | EngagementCountOutputTypeCountRisksArgs
 }
 
 /**
@@ -3903,8 +3903,8 @@ export type EngagementCountOutputTypeCountEvidenceArgs<ExtArgs extends runtime.T
 /**
  * EngagementCountOutputType without action
  */
-export type EngagementCountOutputTypeCountKpisArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.KPIWhereInput
+export type EngagementCountOutputTypeCountEvidenceBundlesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EvidenceBundleWhereInput
 }
 
 /**
@@ -3917,8 +3917,8 @@ export type EngagementCountOutputTypeCountActionsArgs<ExtArgs extends runtime.Ty
 /**
  * EngagementCountOutputType without action
  */
-export type EngagementCountOutputTypeCountRisksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.RiskWhereInput
+export type EngagementCountOutputTypeCountKpisArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.KPIWhereInput
 }
 
 /**
@@ -3931,8 +3931,8 @@ export type EngagementCountOutputTypeCountDeliverablesArgs<ExtArgs extends runti
 /**
  * EngagementCountOutputType without action
  */
-export type EngagementCountOutputTypeCountInterventionHistoryArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.InterventionHistoryWhereInput
+export type EngagementCountOutputTypeCountRisksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RiskWhereInput
 }
 
 
@@ -3970,11 +3970,11 @@ export type EngagementSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   findings?: boolean | Prisma.Engagement$findingsArgs<ExtArgs>
   recommendations?: boolean | Prisma.Engagement$recommendationsArgs<ExtArgs>
   evidence?: boolean | Prisma.Engagement$evidenceArgs<ExtArgs>
-  kpis?: boolean | Prisma.Engagement$kpisArgs<ExtArgs>
+  evidenceBundles?: boolean | Prisma.Engagement$evidenceBundlesArgs<ExtArgs>
   actions?: boolean | Prisma.Engagement$actionsArgs<ExtArgs>
-  risks?: boolean | Prisma.Engagement$risksArgs<ExtArgs>
+  kpis?: boolean | Prisma.Engagement$kpisArgs<ExtArgs>
   deliverables?: boolean | Prisma.Engagement$deliverablesArgs<ExtArgs>
-  interventionHistory?: boolean | Prisma.Engagement$interventionHistoryArgs<ExtArgs>
+  risks?: boolean | Prisma.Engagement$risksArgs<ExtArgs>
   _count?: boolean | Prisma.EngagementCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["engagement"]>
 
@@ -4072,11 +4072,11 @@ export type EngagementInclude<ExtArgs extends runtime.Types.Extensions.InternalA
   findings?: boolean | Prisma.Engagement$findingsArgs<ExtArgs>
   recommendations?: boolean | Prisma.Engagement$recommendationsArgs<ExtArgs>
   evidence?: boolean | Prisma.Engagement$evidenceArgs<ExtArgs>
-  kpis?: boolean | Prisma.Engagement$kpisArgs<ExtArgs>
+  evidenceBundles?: boolean | Prisma.Engagement$evidenceBundlesArgs<ExtArgs>
   actions?: boolean | Prisma.Engagement$actionsArgs<ExtArgs>
-  risks?: boolean | Prisma.Engagement$risksArgs<ExtArgs>
+  kpis?: boolean | Prisma.Engagement$kpisArgs<ExtArgs>
   deliverables?: boolean | Prisma.Engagement$deliverablesArgs<ExtArgs>
-  interventionHistory?: boolean | Prisma.Engagement$interventionHistoryArgs<ExtArgs>
+  risks?: boolean | Prisma.Engagement$risksArgs<ExtArgs>
   _count?: boolean | Prisma.EngagementCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type EngagementIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4101,11 +4101,11 @@ export type $EngagementPayload<ExtArgs extends runtime.Types.Extensions.Internal
     findings: Prisma.$FindingPayload<ExtArgs>[]
     recommendations: Prisma.$RecommendationPayload<ExtArgs>[]
     evidence: Prisma.$EvidencePayload<ExtArgs>[]
-    kpis: Prisma.$KPIPayload<ExtArgs>[]
+    evidenceBundles: Prisma.$EvidenceBundlePayload<ExtArgs>[]
     actions: Prisma.$ActionPayload<ExtArgs>[]
-    risks: Prisma.$RiskPayload<ExtArgs>[]
+    kpis: Prisma.$KPIPayload<ExtArgs>[]
     deliverables: Prisma.$DeliverablePayload<ExtArgs>[]
-    interventionHistory: Prisma.$InterventionHistoryPayload<ExtArgs>[]
+    risks: Prisma.$RiskPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -4535,11 +4535,11 @@ export interface Prisma__EngagementClient<T, Null = never, ExtArgs extends runti
   findings<T extends Prisma.Engagement$findingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$findingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FindingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   recommendations<T extends Prisma.Engagement$recommendationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$recommendationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RecommendationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   evidence<T extends Prisma.Engagement$evidenceArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$evidenceArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvidencePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  kpis<T extends Prisma.Engagement$kpisArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$kpisArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$KPIPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  evidenceBundles<T extends Prisma.Engagement$evidenceBundlesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$evidenceBundlesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvidenceBundlePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   actions<T extends Prisma.Engagement$actionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$actionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  risks<T extends Prisma.Engagement$risksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$risksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RiskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  kpis<T extends Prisma.Engagement$kpisArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$kpisArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$KPIPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   deliverables<T extends Prisma.Engagement$deliverablesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$deliverablesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeliverablePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  interventionHistory<T extends Prisma.Engagement$interventionHistoryArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$interventionHistoryArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InterventionHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  risks<T extends Prisma.Engagement$risksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Engagement$risksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RiskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5202,27 +5202,27 @@ export type Engagement$evidenceArgs<ExtArgs extends runtime.Types.Extensions.Int
 }
 
 /**
- * Engagement.kpis
+ * Engagement.evidenceBundles
  */
-export type Engagement$kpisArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Engagement$evidenceBundlesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the KPI
+   * Select specific fields to fetch from the EvidenceBundle
    */
-  select?: Prisma.KPISelect<ExtArgs> | null
+  select?: Prisma.EvidenceBundleSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the KPI
+   * Omit specific fields from the EvidenceBundle
    */
-  omit?: Prisma.KPIOmit<ExtArgs> | null
+  omit?: Prisma.EvidenceBundleOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.KPIInclude<ExtArgs> | null
-  where?: Prisma.KPIWhereInput
-  orderBy?: Prisma.KPIOrderByWithRelationInput | Prisma.KPIOrderByWithRelationInput[]
-  cursor?: Prisma.KPIWhereUniqueInput
+  include?: Prisma.EvidenceBundleInclude<ExtArgs> | null
+  where?: Prisma.EvidenceBundleWhereInput
+  orderBy?: Prisma.EvidenceBundleOrderByWithRelationInput | Prisma.EvidenceBundleOrderByWithRelationInput[]
+  cursor?: Prisma.EvidenceBundleWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.KPIScalarFieldEnum | Prisma.KPIScalarFieldEnum[]
+  distinct?: Prisma.EvidenceBundleScalarFieldEnum | Prisma.EvidenceBundleScalarFieldEnum[]
 }
 
 /**
@@ -5250,27 +5250,27 @@ export type Engagement$actionsArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
- * Engagement.risks
+ * Engagement.kpis
  */
-export type Engagement$risksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Engagement$kpisArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Risk
+   * Select specific fields to fetch from the KPI
    */
-  select?: Prisma.RiskSelect<ExtArgs> | null
+  select?: Prisma.KPISelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Risk
+   * Omit specific fields from the KPI
    */
-  omit?: Prisma.RiskOmit<ExtArgs> | null
+  omit?: Prisma.KPIOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.RiskInclude<ExtArgs> | null
-  where?: Prisma.RiskWhereInput
-  orderBy?: Prisma.RiskOrderByWithRelationInput | Prisma.RiskOrderByWithRelationInput[]
-  cursor?: Prisma.RiskWhereUniqueInput
+  include?: Prisma.KPIInclude<ExtArgs> | null
+  where?: Prisma.KPIWhereInput
+  orderBy?: Prisma.KPIOrderByWithRelationInput | Prisma.KPIOrderByWithRelationInput[]
+  cursor?: Prisma.KPIWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.RiskScalarFieldEnum | Prisma.RiskScalarFieldEnum[]
+  distinct?: Prisma.KPIScalarFieldEnum | Prisma.KPIScalarFieldEnum[]
 }
 
 /**
@@ -5298,27 +5298,27 @@ export type Engagement$deliverablesArgs<ExtArgs extends runtime.Types.Extensions
 }
 
 /**
- * Engagement.interventionHistory
+ * Engagement.risks
  */
-export type Engagement$interventionHistoryArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Engagement$risksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the InterventionHistory
+   * Select specific fields to fetch from the Risk
    */
-  select?: Prisma.InterventionHistorySelect<ExtArgs> | null
+  select?: Prisma.RiskSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the InterventionHistory
+   * Omit specific fields from the Risk
    */
-  omit?: Prisma.InterventionHistoryOmit<ExtArgs> | null
+  omit?: Prisma.RiskOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.InterventionHistoryInclude<ExtArgs> | null
-  where?: Prisma.InterventionHistoryWhereInput
-  orderBy?: Prisma.InterventionHistoryOrderByWithRelationInput | Prisma.InterventionHistoryOrderByWithRelationInput[]
-  cursor?: Prisma.InterventionHistoryWhereUniqueInput
+  include?: Prisma.RiskInclude<ExtArgs> | null
+  where?: Prisma.RiskWhereInput
+  orderBy?: Prisma.RiskOrderByWithRelationInput | Prisma.RiskOrderByWithRelationInput[]
+  cursor?: Prisma.RiskWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.InterventionHistoryScalarFieldEnum | Prisma.InterventionHistoryScalarFieldEnum[]
+  distinct?: Prisma.RiskScalarFieldEnum | Prisma.RiskScalarFieldEnum[]
 }
 
 /**

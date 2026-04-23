@@ -198,7 +198,7 @@ export type FindingGroupByOutputType = {
   impactArea: string | null
   severity: string
   rootCause: string | null
-  linkedEvidence: string
+  linkedEvidence: string | null
   createdBy: string | null
   createdAt: Date
   updatedAt: Date
@@ -234,7 +234,7 @@ export type FindingWhereInput = {
   impactArea?: Prisma.StringNullableFilter<"Finding"> | string | null
   severity?: Prisma.StringFilter<"Finding"> | string
   rootCause?: Prisma.StringNullableFilter<"Finding"> | string | null
-  linkedEvidence?: Prisma.StringFilter<"Finding"> | string
+  linkedEvidence?: Prisma.StringNullableFilter<"Finding"> | string | null
   createdBy?: Prisma.StringNullableFilter<"Finding"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
@@ -252,7 +252,7 @@ export type FindingOrderByWithRelationInput = {
   impactArea?: Prisma.SortOrderInput | Prisma.SortOrder
   severity?: Prisma.SortOrder
   rootCause?: Prisma.SortOrderInput | Prisma.SortOrder
-  linkedEvidence?: Prisma.SortOrder
+  linkedEvidence?: Prisma.SortOrderInput | Prisma.SortOrder
   createdBy?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -273,7 +273,7 @@ export type FindingWhereUniqueInput = Prisma.AtLeast<{
   impactArea?: Prisma.StringNullableFilter<"Finding"> | string | null
   severity?: Prisma.StringFilter<"Finding"> | string
   rootCause?: Prisma.StringNullableFilter<"Finding"> | string | null
-  linkedEvidence?: Prisma.StringFilter<"Finding"> | string
+  linkedEvidence?: Prisma.StringNullableFilter<"Finding"> | string | null
   createdBy?: Prisma.StringNullableFilter<"Finding"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
@@ -291,7 +291,7 @@ export type FindingOrderByWithAggregationInput = {
   impactArea?: Prisma.SortOrderInput | Prisma.SortOrder
   severity?: Prisma.SortOrder
   rootCause?: Prisma.SortOrderInput | Prisma.SortOrder
-  linkedEvidence?: Prisma.SortOrder
+  linkedEvidence?: Prisma.SortOrderInput | Prisma.SortOrder
   createdBy?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -312,7 +312,7 @@ export type FindingScalarWhereWithAggregatesInput = {
   impactArea?: Prisma.StringNullableWithAggregatesFilter<"Finding"> | string | null
   severity?: Prisma.StringWithAggregatesFilter<"Finding"> | string
   rootCause?: Prisma.StringNullableWithAggregatesFilter<"Finding"> | string | null
-  linkedEvidence?: Prisma.StringWithAggregatesFilter<"Finding"> | string
+  linkedEvidence?: Prisma.StringNullableWithAggregatesFilter<"Finding"> | string | null
   createdBy?: Prisma.StringNullableWithAggregatesFilter<"Finding"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Finding"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Finding"> | Date | string
@@ -326,13 +326,13 @@ export type FindingCreateInput = {
   impactArea?: string | null
   severity: string
   rootCause?: string | null
-  linkedEvidence?: string
+  linkedEvidence?: string | null
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   engagement: Prisma.EngagementCreateNestedOneWithoutFindingsInput
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutFindingInput
-  evidence?: Prisma.EvidenceCreateNestedManyWithoutFindingsInput
+  evidence?: Prisma.EvidenceCreateNestedManyWithoutFindingInput
 }
 
 export type FindingUncheckedCreateInput = {
@@ -344,12 +344,12 @@ export type FindingUncheckedCreateInput = {
   impactArea?: string | null
   severity: string
   rootCause?: string | null
-  linkedEvidence?: string
+  linkedEvidence?: string | null
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutFindingInput
-  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutFindingsInput
+  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutFindingInput
 }
 
 export type FindingUpdateInput = {
@@ -360,13 +360,13 @@ export type FindingUpdateInput = {
   impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutFindingsNestedInput
   recommendations?: Prisma.RecommendationUpdateManyWithoutFindingNestedInput
-  evidence?: Prisma.EvidenceUpdateManyWithoutFindingsNestedInput
+  evidence?: Prisma.EvidenceUpdateManyWithoutFindingNestedInput
 }
 
 export type FindingUncheckedUpdateInput = {
@@ -378,12 +378,12 @@ export type FindingUncheckedUpdateInput = {
   impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutFindingNestedInput
-  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutFindingsNestedInput
+  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutFindingNestedInput
 }
 
 export type FindingCreateManyInput = {
@@ -395,7 +395,7 @@ export type FindingCreateManyInput = {
   impactArea?: string | null
   severity: string
   rootCause?: string | null
-  linkedEvidence?: string
+  linkedEvidence?: string | null
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -409,7 +409,7 @@ export type FindingUpdateManyMutationInput = {
   impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -424,7 +424,7 @@ export type FindingUncheckedUpdateManyInput = {
   impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -438,6 +438,11 @@ export type FindingListRelationFilter = {
 
 export type FindingOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
+}
+
+export type FindingNullableScalarRelationFilter = {
+  is?: Prisma.FindingWhereInput | null
+  isNot?: Prisma.FindingWhereInput | null
 }
 
 export type FindingCountOrderByAggregateInput = {
@@ -485,11 +490,6 @@ export type FindingMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
 }
 
-export type FindingScalarRelationFilter = {
-  is?: Prisma.FindingWhereInput
-  isNot?: Prisma.FindingWhereInput
-}
-
 export type FindingCreateNestedManyWithoutEngagementInput = {
   create?: Prisma.XOR<Prisma.FindingCreateWithoutEngagementInput, Prisma.FindingUncheckedCreateWithoutEngagementInput> | Prisma.FindingCreateWithoutEngagementInput[] | Prisma.FindingUncheckedCreateWithoutEngagementInput[]
   connectOrCreate?: Prisma.FindingCreateOrConnectWithoutEngagementInput | Prisma.FindingCreateOrConnectWithoutEngagementInput[]
@@ -532,56 +532,36 @@ export type FindingUncheckedUpdateManyWithoutEngagementNestedInput = {
   deleteMany?: Prisma.FindingScalarWhereInput | Prisma.FindingScalarWhereInput[]
 }
 
+export type FindingCreateNestedOneWithoutEvidenceInput = {
+  create?: Prisma.XOR<Prisma.FindingCreateWithoutEvidenceInput, Prisma.FindingUncheckedCreateWithoutEvidenceInput>
+  connectOrCreate?: Prisma.FindingCreateOrConnectWithoutEvidenceInput
+  connect?: Prisma.FindingWhereUniqueInput
+}
+
+export type FindingUpdateOneWithoutEvidenceNestedInput = {
+  create?: Prisma.XOR<Prisma.FindingCreateWithoutEvidenceInput, Prisma.FindingUncheckedCreateWithoutEvidenceInput>
+  connectOrCreate?: Prisma.FindingCreateOrConnectWithoutEvidenceInput
+  upsert?: Prisma.FindingUpsertWithoutEvidenceInput
+  disconnect?: Prisma.FindingWhereInput | boolean
+  delete?: Prisma.FindingWhereInput | boolean
+  connect?: Prisma.FindingWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.FindingUpdateToOneWithWhereWithoutEvidenceInput, Prisma.FindingUpdateWithoutEvidenceInput>, Prisma.FindingUncheckedUpdateWithoutEvidenceInput>
+}
+
 export type FindingCreateNestedOneWithoutRecommendationsInput = {
   create?: Prisma.XOR<Prisma.FindingCreateWithoutRecommendationsInput, Prisma.FindingUncheckedCreateWithoutRecommendationsInput>
   connectOrCreate?: Prisma.FindingCreateOrConnectWithoutRecommendationsInput
   connect?: Prisma.FindingWhereUniqueInput
 }
 
-export type FindingUpdateOneRequiredWithoutRecommendationsNestedInput = {
+export type FindingUpdateOneWithoutRecommendationsNestedInput = {
   create?: Prisma.XOR<Prisma.FindingCreateWithoutRecommendationsInput, Prisma.FindingUncheckedCreateWithoutRecommendationsInput>
   connectOrCreate?: Prisma.FindingCreateOrConnectWithoutRecommendationsInput
   upsert?: Prisma.FindingUpsertWithoutRecommendationsInput
+  disconnect?: Prisma.FindingWhereInput | boolean
+  delete?: Prisma.FindingWhereInput | boolean
   connect?: Prisma.FindingWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.FindingUpdateToOneWithWhereWithoutRecommendationsInput, Prisma.FindingUpdateWithoutRecommendationsInput>, Prisma.FindingUncheckedUpdateWithoutRecommendationsInput>
-}
-
-export type FindingCreateNestedManyWithoutEvidenceInput = {
-  create?: Prisma.XOR<Prisma.FindingCreateWithoutEvidenceInput, Prisma.FindingUncheckedCreateWithoutEvidenceInput> | Prisma.FindingCreateWithoutEvidenceInput[] | Prisma.FindingUncheckedCreateWithoutEvidenceInput[]
-  connectOrCreate?: Prisma.FindingCreateOrConnectWithoutEvidenceInput | Prisma.FindingCreateOrConnectWithoutEvidenceInput[]
-  connect?: Prisma.FindingWhereUniqueInput | Prisma.FindingWhereUniqueInput[]
-}
-
-export type FindingUncheckedCreateNestedManyWithoutEvidenceInput = {
-  create?: Prisma.XOR<Prisma.FindingCreateWithoutEvidenceInput, Prisma.FindingUncheckedCreateWithoutEvidenceInput> | Prisma.FindingCreateWithoutEvidenceInput[] | Prisma.FindingUncheckedCreateWithoutEvidenceInput[]
-  connectOrCreate?: Prisma.FindingCreateOrConnectWithoutEvidenceInput | Prisma.FindingCreateOrConnectWithoutEvidenceInput[]
-  connect?: Prisma.FindingWhereUniqueInput | Prisma.FindingWhereUniqueInput[]
-}
-
-export type FindingUpdateManyWithoutEvidenceNestedInput = {
-  create?: Prisma.XOR<Prisma.FindingCreateWithoutEvidenceInput, Prisma.FindingUncheckedCreateWithoutEvidenceInput> | Prisma.FindingCreateWithoutEvidenceInput[] | Prisma.FindingUncheckedCreateWithoutEvidenceInput[]
-  connectOrCreate?: Prisma.FindingCreateOrConnectWithoutEvidenceInput | Prisma.FindingCreateOrConnectWithoutEvidenceInput[]
-  upsert?: Prisma.FindingUpsertWithWhereUniqueWithoutEvidenceInput | Prisma.FindingUpsertWithWhereUniqueWithoutEvidenceInput[]
-  set?: Prisma.FindingWhereUniqueInput | Prisma.FindingWhereUniqueInput[]
-  disconnect?: Prisma.FindingWhereUniqueInput | Prisma.FindingWhereUniqueInput[]
-  delete?: Prisma.FindingWhereUniqueInput | Prisma.FindingWhereUniqueInput[]
-  connect?: Prisma.FindingWhereUniqueInput | Prisma.FindingWhereUniqueInput[]
-  update?: Prisma.FindingUpdateWithWhereUniqueWithoutEvidenceInput | Prisma.FindingUpdateWithWhereUniqueWithoutEvidenceInput[]
-  updateMany?: Prisma.FindingUpdateManyWithWhereWithoutEvidenceInput | Prisma.FindingUpdateManyWithWhereWithoutEvidenceInput[]
-  deleteMany?: Prisma.FindingScalarWhereInput | Prisma.FindingScalarWhereInput[]
-}
-
-export type FindingUncheckedUpdateManyWithoutEvidenceNestedInput = {
-  create?: Prisma.XOR<Prisma.FindingCreateWithoutEvidenceInput, Prisma.FindingUncheckedCreateWithoutEvidenceInput> | Prisma.FindingCreateWithoutEvidenceInput[] | Prisma.FindingUncheckedCreateWithoutEvidenceInput[]
-  connectOrCreate?: Prisma.FindingCreateOrConnectWithoutEvidenceInput | Prisma.FindingCreateOrConnectWithoutEvidenceInput[]
-  upsert?: Prisma.FindingUpsertWithWhereUniqueWithoutEvidenceInput | Prisma.FindingUpsertWithWhereUniqueWithoutEvidenceInput[]
-  set?: Prisma.FindingWhereUniqueInput | Prisma.FindingWhereUniqueInput[]
-  disconnect?: Prisma.FindingWhereUniqueInput | Prisma.FindingWhereUniqueInput[]
-  delete?: Prisma.FindingWhereUniqueInput | Prisma.FindingWhereUniqueInput[]
-  connect?: Prisma.FindingWhereUniqueInput | Prisma.FindingWhereUniqueInput[]
-  update?: Prisma.FindingUpdateWithWhereUniqueWithoutEvidenceInput | Prisma.FindingUpdateWithWhereUniqueWithoutEvidenceInput[]
-  updateMany?: Prisma.FindingUpdateManyWithWhereWithoutEvidenceInput | Prisma.FindingUpdateManyWithWhereWithoutEvidenceInput[]
-  deleteMany?: Prisma.FindingScalarWhereInput | Prisma.FindingScalarWhereInput[]
 }
 
 export type FindingCreateWithoutEngagementInput = {
@@ -592,12 +572,12 @@ export type FindingCreateWithoutEngagementInput = {
   impactArea?: string | null
   severity: string
   rootCause?: string | null
-  linkedEvidence?: string
+  linkedEvidence?: string | null
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   recommendations?: Prisma.RecommendationCreateNestedManyWithoutFindingInput
-  evidence?: Prisma.EvidenceCreateNestedManyWithoutFindingsInput
+  evidence?: Prisma.EvidenceCreateNestedManyWithoutFindingInput
 }
 
 export type FindingUncheckedCreateWithoutEngagementInput = {
@@ -608,12 +588,12 @@ export type FindingUncheckedCreateWithoutEngagementInput = {
   impactArea?: string | null
   severity: string
   rootCause?: string | null
-  linkedEvidence?: string
+  linkedEvidence?: string | null
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutFindingInput
-  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutFindingsInput
+  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutFindingInput
 }
 
 export type FindingCreateOrConnectWithoutEngagementInput = {
@@ -653,10 +633,90 @@ export type FindingScalarWhereInput = {
   impactArea?: Prisma.StringNullableFilter<"Finding"> | string | null
   severity?: Prisma.StringFilter<"Finding"> | string
   rootCause?: Prisma.StringNullableFilter<"Finding"> | string | null
-  linkedEvidence?: Prisma.StringFilter<"Finding"> | string
+  linkedEvidence?: Prisma.StringNullableFilter<"Finding"> | string | null
   createdBy?: Prisma.StringNullableFilter<"Finding"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Finding"> | Date | string
+}
+
+export type FindingCreateWithoutEvidenceInput = {
+  id?: string
+  title: string
+  description?: string | null
+  findingType: string
+  impactArea?: string | null
+  severity: string
+  rootCause?: string | null
+  linkedEvidence?: string | null
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  engagement: Prisma.EngagementCreateNestedOneWithoutFindingsInput
+  recommendations?: Prisma.RecommendationCreateNestedManyWithoutFindingInput
+}
+
+export type FindingUncheckedCreateWithoutEvidenceInput = {
+  id?: string
+  engagementId: string
+  title: string
+  description?: string | null
+  findingType: string
+  impactArea?: string | null
+  severity: string
+  rootCause?: string | null
+  linkedEvidence?: string | null
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutFindingInput
+}
+
+export type FindingCreateOrConnectWithoutEvidenceInput = {
+  where: Prisma.FindingWhereUniqueInput
+  create: Prisma.XOR<Prisma.FindingCreateWithoutEvidenceInput, Prisma.FindingUncheckedCreateWithoutEvidenceInput>
+}
+
+export type FindingUpsertWithoutEvidenceInput = {
+  update: Prisma.XOR<Prisma.FindingUpdateWithoutEvidenceInput, Prisma.FindingUncheckedUpdateWithoutEvidenceInput>
+  create: Prisma.XOR<Prisma.FindingCreateWithoutEvidenceInput, Prisma.FindingUncheckedCreateWithoutEvidenceInput>
+  where?: Prisma.FindingWhereInput
+}
+
+export type FindingUpdateToOneWithWhereWithoutEvidenceInput = {
+  where?: Prisma.FindingWhereInput
+  data: Prisma.XOR<Prisma.FindingUpdateWithoutEvidenceInput, Prisma.FindingUncheckedUpdateWithoutEvidenceInput>
+}
+
+export type FindingUpdateWithoutEvidenceInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  findingType?: Prisma.StringFieldUpdateOperationsInput | string
+  impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  severity?: Prisma.StringFieldUpdateOperationsInput | string
+  rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engagement?: Prisma.EngagementUpdateOneRequiredWithoutFindingsNestedInput
+  recommendations?: Prisma.RecommendationUpdateManyWithoutFindingNestedInput
+}
+
+export type FindingUncheckedUpdateWithoutEvidenceInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  findingType?: Prisma.StringFieldUpdateOperationsInput | string
+  impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  severity?: Prisma.StringFieldUpdateOperationsInput | string
+  rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutFindingNestedInput
 }
 
 export type FindingCreateWithoutRecommendationsInput = {
@@ -667,12 +727,12 @@ export type FindingCreateWithoutRecommendationsInput = {
   impactArea?: string | null
   severity: string
   rootCause?: string | null
-  linkedEvidence?: string
+  linkedEvidence?: string | null
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   engagement: Prisma.EngagementCreateNestedOneWithoutFindingsInput
-  evidence?: Prisma.EvidenceCreateNestedManyWithoutFindingsInput
+  evidence?: Prisma.EvidenceCreateNestedManyWithoutFindingInput
 }
 
 export type FindingUncheckedCreateWithoutRecommendationsInput = {
@@ -684,11 +744,11 @@ export type FindingUncheckedCreateWithoutRecommendationsInput = {
   impactArea?: string | null
   severity: string
   rootCause?: string | null
-  linkedEvidence?: string
+  linkedEvidence?: string | null
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutFindingsInput
+  evidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutFindingInput
 }
 
 export type FindingCreateOrConnectWithoutRecommendationsInput = {
@@ -715,12 +775,12 @@ export type FindingUpdateWithoutRecommendationsInput = {
   impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutFindingsNestedInput
-  evidence?: Prisma.EvidenceUpdateManyWithoutFindingsNestedInput
+  evidence?: Prisma.EvidenceUpdateManyWithoutFindingNestedInput
 }
 
 export type FindingUncheckedUpdateWithoutRecommendationsInput = {
@@ -732,64 +792,11 @@ export type FindingUncheckedUpdateWithoutRecommendationsInput = {
   impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutFindingsNestedInput
-}
-
-export type FindingCreateWithoutEvidenceInput = {
-  id?: string
-  title: string
-  description?: string | null
-  findingType: string
-  impactArea?: string | null
-  severity: string
-  rootCause?: string | null
-  linkedEvidence?: string
-  createdBy?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  engagement: Prisma.EngagementCreateNestedOneWithoutFindingsInput
-  recommendations?: Prisma.RecommendationCreateNestedManyWithoutFindingInput
-}
-
-export type FindingUncheckedCreateWithoutEvidenceInput = {
-  id?: string
-  engagementId: string
-  title: string
-  description?: string | null
-  findingType: string
-  impactArea?: string | null
-  severity: string
-  rootCause?: string | null
-  linkedEvidence?: string
-  createdBy?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  recommendations?: Prisma.RecommendationUncheckedCreateNestedManyWithoutFindingInput
-}
-
-export type FindingCreateOrConnectWithoutEvidenceInput = {
-  where: Prisma.FindingWhereUniqueInput
-  create: Prisma.XOR<Prisma.FindingCreateWithoutEvidenceInput, Prisma.FindingUncheckedCreateWithoutEvidenceInput>
-}
-
-export type FindingUpsertWithWhereUniqueWithoutEvidenceInput = {
-  where: Prisma.FindingWhereUniqueInput
-  update: Prisma.XOR<Prisma.FindingUpdateWithoutEvidenceInput, Prisma.FindingUncheckedUpdateWithoutEvidenceInput>
-  create: Prisma.XOR<Prisma.FindingCreateWithoutEvidenceInput, Prisma.FindingUncheckedCreateWithoutEvidenceInput>
-}
-
-export type FindingUpdateWithWhereUniqueWithoutEvidenceInput = {
-  where: Prisma.FindingWhereUniqueInput
-  data: Prisma.XOR<Prisma.FindingUpdateWithoutEvidenceInput, Prisma.FindingUncheckedUpdateWithoutEvidenceInput>
-}
-
-export type FindingUpdateManyWithWhereWithoutEvidenceInput = {
-  where: Prisma.FindingScalarWhereInput
-  data: Prisma.XOR<Prisma.FindingUpdateManyMutationInput, Prisma.FindingUncheckedUpdateManyWithoutEvidenceInput>
+  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutFindingNestedInput
 }
 
 export type FindingCreateManyEngagementInput = {
@@ -800,7 +807,7 @@ export type FindingCreateManyEngagementInput = {
   impactArea?: string | null
   severity: string
   rootCause?: string | null
-  linkedEvidence?: string
+  linkedEvidence?: string | null
   createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -814,12 +821,12 @@ export type FindingUpdateWithoutEngagementInput = {
   impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   recommendations?: Prisma.RecommendationUpdateManyWithoutFindingNestedInput
-  evidence?: Prisma.EvidenceUpdateManyWithoutFindingsNestedInput
+  evidence?: Prisma.EvidenceUpdateManyWithoutFindingNestedInput
 }
 
 export type FindingUncheckedUpdateWithoutEngagementInput = {
@@ -830,12 +837,12 @@ export type FindingUncheckedUpdateWithoutEngagementInput = {
   impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutFindingNestedInput
-  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutFindingsNestedInput
+  evidence?: Prisma.EvidenceUncheckedUpdateManyWithoutFindingNestedInput
 }
 
 export type FindingUncheckedUpdateManyWithoutEngagementInput = {
@@ -846,54 +853,7 @@ export type FindingUncheckedUpdateManyWithoutEngagementInput = {
   impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   severity?: Prisma.StringFieldUpdateOperationsInput | string
   rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-}
-
-export type FindingUpdateWithoutEvidenceInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  findingType?: Prisma.StringFieldUpdateOperationsInput | string
-  impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  severity?: Prisma.StringFieldUpdateOperationsInput | string
-  rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  engagement?: Prisma.EngagementUpdateOneRequiredWithoutFindingsNestedInput
-  recommendations?: Prisma.RecommendationUpdateManyWithoutFindingNestedInput
-}
-
-export type FindingUncheckedUpdateWithoutEvidenceInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  findingType?: Prisma.StringFieldUpdateOperationsInput | string
-  impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  severity?: Prisma.StringFieldUpdateOperationsInput | string
-  rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
-  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  recommendations?: Prisma.RecommendationUncheckedUpdateManyWithoutFindingNestedInput
-}
-
-export type FindingUncheckedUpdateManyWithoutEvidenceInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  findingType?: Prisma.StringFieldUpdateOperationsInput | string
-  impactArea?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  severity?: Prisma.StringFieldUpdateOperationsInput | string
-  rootCause?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  linkedEvidence?: Prisma.StringFieldUpdateOperationsInput | string
+  linkedEvidence?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1035,7 +995,7 @@ export type $FindingPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     impactArea: string | null
     severity: string
     rootCause: string | null
-    linkedEvidence: string
+    linkedEvidence: string | null
     createdBy: string | null
     createdAt: Date
     updatedAt: Date

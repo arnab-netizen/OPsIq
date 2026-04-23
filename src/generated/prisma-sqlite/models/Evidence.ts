@@ -39,14 +39,17 @@ export type EvidenceMinAggregateOutputType = {
   engagementId: string | null
   title: string | null
   description: string | null
-  type: string | null
-  source: string | null
-  submittedBy: string | null
-  submissionDate: Date | null
-  validatedBy: string | null
-  validationDate: Date | null
+  evidenceType: string | null
+  sourceReference: string | null
   status: string | null
+  severity: string | null
+  relatedFindingId: string | null
+  submittedBy: string | null
+  validatedBy: string | null
+  validatedAt: Date | null
+  rejectionReason: string | null
   version: number | null
+  visibility: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -56,14 +59,17 @@ export type EvidenceMaxAggregateOutputType = {
   engagementId: string | null
   title: string | null
   description: string | null
-  type: string | null
-  source: string | null
-  submittedBy: string | null
-  submissionDate: Date | null
-  validatedBy: string | null
-  validationDate: Date | null
+  evidenceType: string | null
+  sourceReference: string | null
   status: string | null
+  severity: string | null
+  relatedFindingId: string | null
+  submittedBy: string | null
+  validatedBy: string | null
+  validatedAt: Date | null
+  rejectionReason: string | null
   version: number | null
+  visibility: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -73,14 +79,17 @@ export type EvidenceCountAggregateOutputType = {
   engagementId: number
   title: number
   description: number
-  type: number
-  source: number
-  submittedBy: number
-  submissionDate: number
-  validatedBy: number
-  validationDate: number
+  evidenceType: number
+  sourceReference: number
   status: number
+  severity: number
+  relatedFindingId: number
+  submittedBy: number
+  validatedBy: number
+  validatedAt: number
+  rejectionReason: number
   version: number
+  visibility: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -100,14 +109,17 @@ export type EvidenceMinAggregateInputType = {
   engagementId?: true
   title?: true
   description?: true
-  type?: true
-  source?: true
-  submittedBy?: true
-  submissionDate?: true
-  validatedBy?: true
-  validationDate?: true
+  evidenceType?: true
+  sourceReference?: true
   status?: true
+  severity?: true
+  relatedFindingId?: true
+  submittedBy?: true
+  validatedBy?: true
+  validatedAt?: true
+  rejectionReason?: true
   version?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -117,14 +129,17 @@ export type EvidenceMaxAggregateInputType = {
   engagementId?: true
   title?: true
   description?: true
-  type?: true
-  source?: true
-  submittedBy?: true
-  submissionDate?: true
-  validatedBy?: true
-  validationDate?: true
+  evidenceType?: true
+  sourceReference?: true
   status?: true
+  severity?: true
+  relatedFindingId?: true
+  submittedBy?: true
+  validatedBy?: true
+  validatedAt?: true
+  rejectionReason?: true
   version?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -134,14 +149,17 @@ export type EvidenceCountAggregateInputType = {
   engagementId?: true
   title?: true
   description?: true
-  type?: true
-  source?: true
-  submittedBy?: true
-  submissionDate?: true
-  validatedBy?: true
-  validationDate?: true
+  evidenceType?: true
+  sourceReference?: true
   status?: true
+  severity?: true
+  relatedFindingId?: true
+  submittedBy?: true
+  validatedBy?: true
+  validatedAt?: true
+  rejectionReason?: true
   version?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -238,14 +256,17 @@ export type EvidenceGroupByOutputType = {
   engagementId: string
   title: string
   description: string | null
-  type: string
-  source: string | null
-  submittedBy: string | null
-  submissionDate: Date | null
-  validatedBy: string | null
-  validationDate: Date | null
+  evidenceType: string
+  sourceReference: string | null
   status: string
+  severity: string | null
+  relatedFindingId: string | null
+  submittedBy: string | null
+  validatedBy: string | null
+  validatedAt: Date | null
+  rejectionReason: string | null
   version: number
+  visibility: string
   createdAt: Date
   updatedAt: Date
   _count: EvidenceCountAggregateOutputType | null
@@ -278,20 +299,23 @@ export type EvidenceWhereInput = {
   engagementId?: Prisma.StringFilter<"Evidence"> | string
   title?: Prisma.StringFilter<"Evidence"> | string
   description?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  type?: Prisma.StringFilter<"Evidence"> | string
-  source?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  submittedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  submissionDate?: Prisma.DateTimeNullableFilter<"Evidence"> | Date | string | null
-  validatedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  validationDate?: Prisma.DateTimeNullableFilter<"Evidence"> | Date | string | null
+  evidenceType?: Prisma.StringFilter<"Evidence"> | string
+  sourceReference?: Prisma.StringNullableFilter<"Evidence"> | string | null
   status?: Prisma.StringFilter<"Evidence"> | string
+  severity?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  relatedFindingId?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  submittedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  validatedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  validatedAt?: Prisma.DateTimeNullableFilter<"Evidence"> | Date | string | null
+  rejectionReason?: Prisma.StringNullableFilter<"Evidence"> | string | null
   version?: Prisma.IntFilter<"Evidence"> | number
+  visibility?: Prisma.StringFilter<"Evidence"> | string
   createdAt?: Prisma.DateTimeFilter<"Evidence"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Evidence"> | Date | string
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
+  finding?: Prisma.XOR<Prisma.FindingNullableScalarRelationFilter, Prisma.FindingWhereInput> | null
   submitter?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   validator?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
-  findings?: Prisma.FindingListRelationFilter
   bundleItems?: Prisma.EvidenceBundleItemListRelationFilter
 }
 
@@ -300,20 +324,23 @@ export type EvidenceOrderByWithRelationInput = {
   engagementId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
-  type?: Prisma.SortOrder
-  source?: Prisma.SortOrderInput | Prisma.SortOrder
-  submittedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  submissionDate?: Prisma.SortOrderInput | Prisma.SortOrder
-  validatedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  validationDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  evidenceType?: Prisma.SortOrder
+  sourceReference?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
+  severity?: Prisma.SortOrderInput | Prisma.SortOrder
+  relatedFindingId?: Prisma.SortOrderInput | Prisma.SortOrder
+  submittedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  validatedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  validatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrderInput | Prisma.SortOrder
   version?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   engagement?: Prisma.EngagementOrderByWithRelationInput
+  finding?: Prisma.FindingOrderByWithRelationInput
   submitter?: Prisma.UserOrderByWithRelationInput
   validator?: Prisma.UserOrderByWithRelationInput
-  findings?: Prisma.FindingOrderByRelationAggregateInput
   bundleItems?: Prisma.EvidenceBundleItemOrderByRelationAggregateInput
 }
 
@@ -325,20 +352,23 @@ export type EvidenceWhereUniqueInput = Prisma.AtLeast<{
   engagementId?: Prisma.StringFilter<"Evidence"> | string
   title?: Prisma.StringFilter<"Evidence"> | string
   description?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  type?: Prisma.StringFilter<"Evidence"> | string
-  source?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  submittedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  submissionDate?: Prisma.DateTimeNullableFilter<"Evidence"> | Date | string | null
-  validatedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  validationDate?: Prisma.DateTimeNullableFilter<"Evidence"> | Date | string | null
+  evidenceType?: Prisma.StringFilter<"Evidence"> | string
+  sourceReference?: Prisma.StringNullableFilter<"Evidence"> | string | null
   status?: Prisma.StringFilter<"Evidence"> | string
+  severity?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  relatedFindingId?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  submittedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  validatedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  validatedAt?: Prisma.DateTimeNullableFilter<"Evidence"> | Date | string | null
+  rejectionReason?: Prisma.StringNullableFilter<"Evidence"> | string | null
   version?: Prisma.IntFilter<"Evidence"> | number
+  visibility?: Prisma.StringFilter<"Evidence"> | string
   createdAt?: Prisma.DateTimeFilter<"Evidence"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Evidence"> | Date | string
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
+  finding?: Prisma.XOR<Prisma.FindingNullableScalarRelationFilter, Prisma.FindingWhereInput> | null
   submitter?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   validator?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
-  findings?: Prisma.FindingListRelationFilter
   bundleItems?: Prisma.EvidenceBundleItemListRelationFilter
 }, "id">
 
@@ -347,14 +377,17 @@ export type EvidenceOrderByWithAggregationInput = {
   engagementId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
-  type?: Prisma.SortOrder
-  source?: Prisma.SortOrderInput | Prisma.SortOrder
-  submittedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  submissionDate?: Prisma.SortOrderInput | Prisma.SortOrder
-  validatedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  validationDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  evidenceType?: Prisma.SortOrder
+  sourceReference?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
+  severity?: Prisma.SortOrderInput | Prisma.SortOrder
+  relatedFindingId?: Prisma.SortOrderInput | Prisma.SortOrder
+  submittedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  validatedBy?: Prisma.SortOrderInput | Prisma.SortOrder
+  validatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrderInput | Prisma.SortOrder
   version?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.EvidenceCountOrderByAggregateInput
@@ -372,14 +405,17 @@ export type EvidenceScalarWhereWithAggregatesInput = {
   engagementId?: Prisma.StringWithAggregatesFilter<"Evidence"> | string
   title?: Prisma.StringWithAggregatesFilter<"Evidence"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"Evidence"> | string | null
-  type?: Prisma.StringWithAggregatesFilter<"Evidence"> | string
-  source?: Prisma.StringNullableWithAggregatesFilter<"Evidence"> | string | null
-  submittedBy?: Prisma.StringNullableWithAggregatesFilter<"Evidence"> | string | null
-  submissionDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Evidence"> | Date | string | null
-  validatedBy?: Prisma.StringNullableWithAggregatesFilter<"Evidence"> | string | null
-  validationDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Evidence"> | Date | string | null
+  evidenceType?: Prisma.StringWithAggregatesFilter<"Evidence"> | string
+  sourceReference?: Prisma.StringNullableWithAggregatesFilter<"Evidence"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"Evidence"> | string
+  severity?: Prisma.StringNullableWithAggregatesFilter<"Evidence"> | string | null
+  relatedFindingId?: Prisma.StringNullableWithAggregatesFilter<"Evidence"> | string | null
+  submittedBy?: Prisma.StringNullableWithAggregatesFilter<"Evidence"> | string | null
+  validatedBy?: Prisma.StringNullableWithAggregatesFilter<"Evidence"> | string | null
+  validatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Evidence"> | Date | string | null
+  rejectionReason?: Prisma.StringNullableWithAggregatesFilter<"Evidence"> | string | null
   version?: Prisma.IntWithAggregatesFilter<"Evidence"> | number
+  visibility?: Prisma.StringWithAggregatesFilter<"Evidence"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Evidence"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Evidence"> | Date | string
 }
@@ -388,18 +424,20 @@ export type EvidenceCreateInput = {
   id?: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submissionDate?: Date | string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   engagement: Prisma.EngagementCreateNestedOneWithoutEvidenceInput
+  finding?: Prisma.FindingCreateNestedOneWithoutEvidenceInput
   submitter?: Prisma.UserCreateNestedOneWithoutSubmittedEvidenceInput
   validator?: Prisma.UserCreateNestedOneWithoutValidatedEvidenceInput
-  findings?: Prisma.FindingCreateNestedManyWithoutEvidenceInput
   bundleItems?: Prisma.EvidenceBundleItemCreateNestedManyWithoutEvidenceInput
 }
 
@@ -408,17 +446,19 @@ export type EvidenceUncheckedCreateInput = {
   engagementId: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submittedBy?: string | null
-  submissionDate?: Date | string | null
-  validatedBy?: string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  relatedFindingId?: string | null
+  submittedBy?: string | null
+  validatedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
-  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEvidenceInput
   bundleItems?: Prisma.EvidenceBundleItemUncheckedCreateNestedManyWithoutEvidenceInput
 }
 
@@ -426,18 +466,20 @@ export type EvidenceUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutEvidenceNestedInput
+  finding?: Prisma.FindingUpdateOneWithoutEvidenceNestedInput
   submitter?: Prisma.UserUpdateOneWithoutSubmittedEvidenceNestedInput
   validator?: Prisma.UserUpdateOneWithoutValidatedEvidenceNestedInput
-  findings?: Prisma.FindingUpdateManyWithoutEvidenceNestedInput
   bundleItems?: Prisma.EvidenceBundleItemUpdateManyWithoutEvidenceNestedInput
 }
 
@@ -446,17 +488,19 @@ export type EvidenceUncheckedUpdateInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  relatedFindingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  findings?: Prisma.FindingUncheckedUpdateManyWithoutEvidenceNestedInput
   bundleItems?: Prisma.EvidenceBundleItemUncheckedUpdateManyWithoutEvidenceNestedInput
 }
 
@@ -465,14 +509,17 @@ export type EvidenceCreateManyInput = {
   engagementId: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submittedBy?: string | null
-  submissionDate?: Date | string | null
-  validatedBy?: string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  relatedFindingId?: string | null
+  submittedBy?: string | null
+  validatedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -481,12 +528,14 @@ export type EvidenceUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -496,14 +545,17 @@ export type EvidenceUncheckedUpdateManyInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  relatedFindingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -523,14 +575,17 @@ export type EvidenceCountOrderByAggregateInput = {
   engagementId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  source?: Prisma.SortOrder
-  submittedBy?: Prisma.SortOrder
-  submissionDate?: Prisma.SortOrder
-  validatedBy?: Prisma.SortOrder
-  validationDate?: Prisma.SortOrder
+  evidenceType?: Prisma.SortOrder
+  sourceReference?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  severity?: Prisma.SortOrder
+  relatedFindingId?: Prisma.SortOrder
+  submittedBy?: Prisma.SortOrder
+  validatedBy?: Prisma.SortOrder
+  validatedAt?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -544,14 +599,17 @@ export type EvidenceMaxOrderByAggregateInput = {
   engagementId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  source?: Prisma.SortOrder
-  submittedBy?: Prisma.SortOrder
-  submissionDate?: Prisma.SortOrder
-  validatedBy?: Prisma.SortOrder
-  validationDate?: Prisma.SortOrder
+  evidenceType?: Prisma.SortOrder
+  sourceReference?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  severity?: Prisma.SortOrder
+  relatedFindingId?: Prisma.SortOrder
+  submittedBy?: Prisma.SortOrder
+  validatedBy?: Prisma.SortOrder
+  validatedAt?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -561,14 +619,17 @@ export type EvidenceMinOrderByAggregateInput = {
   engagementId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  source?: Prisma.SortOrder
-  submittedBy?: Prisma.SortOrder
-  submissionDate?: Prisma.SortOrder
-  validatedBy?: Prisma.SortOrder
-  validationDate?: Prisma.SortOrder
+  evidenceType?: Prisma.SortOrder
+  sourceReference?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  severity?: Prisma.SortOrder
+  relatedFindingId?: Prisma.SortOrder
+  submittedBy?: Prisma.SortOrder
+  validatedBy?: Prisma.SortOrder
+  validatedAt?: Prisma.SortOrder
+  rejectionReason?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -708,44 +769,6 @@ export type EvidenceUncheckedUpdateManyWithoutEngagementNestedInput = {
   deleteMany?: Prisma.EvidenceScalarWhereInput | Prisma.EvidenceScalarWhereInput[]
 }
 
-export type EvidenceCreateNestedManyWithoutFindingsInput = {
-  create?: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingsInput, Prisma.EvidenceUncheckedCreateWithoutFindingsInput> | Prisma.EvidenceCreateWithoutFindingsInput[] | Prisma.EvidenceUncheckedCreateWithoutFindingsInput[]
-  connectOrCreate?: Prisma.EvidenceCreateOrConnectWithoutFindingsInput | Prisma.EvidenceCreateOrConnectWithoutFindingsInput[]
-  connect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
-}
-
-export type EvidenceUncheckedCreateNestedManyWithoutFindingsInput = {
-  create?: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingsInput, Prisma.EvidenceUncheckedCreateWithoutFindingsInput> | Prisma.EvidenceCreateWithoutFindingsInput[] | Prisma.EvidenceUncheckedCreateWithoutFindingsInput[]
-  connectOrCreate?: Prisma.EvidenceCreateOrConnectWithoutFindingsInput | Prisma.EvidenceCreateOrConnectWithoutFindingsInput[]
-  connect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
-}
-
-export type EvidenceUpdateManyWithoutFindingsNestedInput = {
-  create?: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingsInput, Prisma.EvidenceUncheckedCreateWithoutFindingsInput> | Prisma.EvidenceCreateWithoutFindingsInput[] | Prisma.EvidenceUncheckedCreateWithoutFindingsInput[]
-  connectOrCreate?: Prisma.EvidenceCreateOrConnectWithoutFindingsInput | Prisma.EvidenceCreateOrConnectWithoutFindingsInput[]
-  upsert?: Prisma.EvidenceUpsertWithWhereUniqueWithoutFindingsInput | Prisma.EvidenceUpsertWithWhereUniqueWithoutFindingsInput[]
-  set?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
-  disconnect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
-  delete?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
-  connect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
-  update?: Prisma.EvidenceUpdateWithWhereUniqueWithoutFindingsInput | Prisma.EvidenceUpdateWithWhereUniqueWithoutFindingsInput[]
-  updateMany?: Prisma.EvidenceUpdateManyWithWhereWithoutFindingsInput | Prisma.EvidenceUpdateManyWithWhereWithoutFindingsInput[]
-  deleteMany?: Prisma.EvidenceScalarWhereInput | Prisma.EvidenceScalarWhereInput[]
-}
-
-export type EvidenceUncheckedUpdateManyWithoutFindingsNestedInput = {
-  create?: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingsInput, Prisma.EvidenceUncheckedCreateWithoutFindingsInput> | Prisma.EvidenceCreateWithoutFindingsInput[] | Prisma.EvidenceUncheckedCreateWithoutFindingsInput[]
-  connectOrCreate?: Prisma.EvidenceCreateOrConnectWithoutFindingsInput | Prisma.EvidenceCreateOrConnectWithoutFindingsInput[]
-  upsert?: Prisma.EvidenceUpsertWithWhereUniqueWithoutFindingsInput | Prisma.EvidenceUpsertWithWhereUniqueWithoutFindingsInput[]
-  set?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
-  disconnect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
-  delete?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
-  connect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
-  update?: Prisma.EvidenceUpdateWithWhereUniqueWithoutFindingsInput | Prisma.EvidenceUpdateWithWhereUniqueWithoutFindingsInput[]
-  updateMany?: Prisma.EvidenceUpdateManyWithWhereWithoutFindingsInput | Prisma.EvidenceUpdateManyWithWhereWithoutFindingsInput[]
-  deleteMany?: Prisma.EvidenceScalarWhereInput | Prisma.EvidenceScalarWhereInput[]
-}
-
 export type EvidenceCreateNestedOneWithoutBundleItemsInput = {
   create?: Prisma.XOR<Prisma.EvidenceCreateWithoutBundleItemsInput, Prisma.EvidenceUncheckedCreateWithoutBundleItemsInput>
   connectOrCreate?: Prisma.EvidenceCreateOrConnectWithoutBundleItemsInput
@@ -760,21 +783,65 @@ export type EvidenceUpdateOneRequiredWithoutBundleItemsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.EvidenceUpdateToOneWithWhereWithoutBundleItemsInput, Prisma.EvidenceUpdateWithoutBundleItemsInput>, Prisma.EvidenceUncheckedUpdateWithoutBundleItemsInput>
 }
 
+export type EvidenceCreateNestedManyWithoutFindingInput = {
+  create?: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingInput, Prisma.EvidenceUncheckedCreateWithoutFindingInput> | Prisma.EvidenceCreateWithoutFindingInput[] | Prisma.EvidenceUncheckedCreateWithoutFindingInput[]
+  connectOrCreate?: Prisma.EvidenceCreateOrConnectWithoutFindingInput | Prisma.EvidenceCreateOrConnectWithoutFindingInput[]
+  createMany?: Prisma.EvidenceCreateManyFindingInputEnvelope
+  connect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
+}
+
+export type EvidenceUncheckedCreateNestedManyWithoutFindingInput = {
+  create?: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingInput, Prisma.EvidenceUncheckedCreateWithoutFindingInput> | Prisma.EvidenceCreateWithoutFindingInput[] | Prisma.EvidenceUncheckedCreateWithoutFindingInput[]
+  connectOrCreate?: Prisma.EvidenceCreateOrConnectWithoutFindingInput | Prisma.EvidenceCreateOrConnectWithoutFindingInput[]
+  createMany?: Prisma.EvidenceCreateManyFindingInputEnvelope
+  connect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
+}
+
+export type EvidenceUpdateManyWithoutFindingNestedInput = {
+  create?: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingInput, Prisma.EvidenceUncheckedCreateWithoutFindingInput> | Prisma.EvidenceCreateWithoutFindingInput[] | Prisma.EvidenceUncheckedCreateWithoutFindingInput[]
+  connectOrCreate?: Prisma.EvidenceCreateOrConnectWithoutFindingInput | Prisma.EvidenceCreateOrConnectWithoutFindingInput[]
+  upsert?: Prisma.EvidenceUpsertWithWhereUniqueWithoutFindingInput | Prisma.EvidenceUpsertWithWhereUniqueWithoutFindingInput[]
+  createMany?: Prisma.EvidenceCreateManyFindingInputEnvelope
+  set?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
+  disconnect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
+  delete?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
+  connect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
+  update?: Prisma.EvidenceUpdateWithWhereUniqueWithoutFindingInput | Prisma.EvidenceUpdateWithWhereUniqueWithoutFindingInput[]
+  updateMany?: Prisma.EvidenceUpdateManyWithWhereWithoutFindingInput | Prisma.EvidenceUpdateManyWithWhereWithoutFindingInput[]
+  deleteMany?: Prisma.EvidenceScalarWhereInput | Prisma.EvidenceScalarWhereInput[]
+}
+
+export type EvidenceUncheckedUpdateManyWithoutFindingNestedInput = {
+  create?: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingInput, Prisma.EvidenceUncheckedCreateWithoutFindingInput> | Prisma.EvidenceCreateWithoutFindingInput[] | Prisma.EvidenceUncheckedCreateWithoutFindingInput[]
+  connectOrCreate?: Prisma.EvidenceCreateOrConnectWithoutFindingInput | Prisma.EvidenceCreateOrConnectWithoutFindingInput[]
+  upsert?: Prisma.EvidenceUpsertWithWhereUniqueWithoutFindingInput | Prisma.EvidenceUpsertWithWhereUniqueWithoutFindingInput[]
+  createMany?: Prisma.EvidenceCreateManyFindingInputEnvelope
+  set?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
+  disconnect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
+  delete?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
+  connect?: Prisma.EvidenceWhereUniqueInput | Prisma.EvidenceWhereUniqueInput[]
+  update?: Prisma.EvidenceUpdateWithWhereUniqueWithoutFindingInput | Prisma.EvidenceUpdateWithWhereUniqueWithoutFindingInput[]
+  updateMany?: Prisma.EvidenceUpdateManyWithWhereWithoutFindingInput | Prisma.EvidenceUpdateManyWithWhereWithoutFindingInput[]
+  deleteMany?: Prisma.EvidenceScalarWhereInput | Prisma.EvidenceScalarWhereInput[]
+}
+
 export type EvidenceCreateWithoutSubmitterInput = {
   id?: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submissionDate?: Date | string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   engagement: Prisma.EngagementCreateNestedOneWithoutEvidenceInput
+  finding?: Prisma.FindingCreateNestedOneWithoutEvidenceInput
   validator?: Prisma.UserCreateNestedOneWithoutValidatedEvidenceInput
-  findings?: Prisma.FindingCreateNestedManyWithoutEvidenceInput
   bundleItems?: Prisma.EvidenceBundleItemCreateNestedManyWithoutEvidenceInput
 }
 
@@ -783,16 +850,18 @@ export type EvidenceUncheckedCreateWithoutSubmitterInput = {
   engagementId: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submissionDate?: Date | string | null
-  validatedBy?: string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  relatedFindingId?: string | null
+  validatedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
-  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEvidenceInput
   bundleItems?: Prisma.EvidenceBundleItemUncheckedCreateNestedManyWithoutEvidenceInput
 }
 
@@ -809,17 +878,19 @@ export type EvidenceCreateWithoutValidatorInput = {
   id?: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submissionDate?: Date | string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   engagement: Prisma.EngagementCreateNestedOneWithoutEvidenceInput
+  finding?: Prisma.FindingCreateNestedOneWithoutEvidenceInput
   submitter?: Prisma.UserCreateNestedOneWithoutSubmittedEvidenceInput
-  findings?: Prisma.FindingCreateNestedManyWithoutEvidenceInput
   bundleItems?: Prisma.EvidenceBundleItemCreateNestedManyWithoutEvidenceInput
 }
 
@@ -828,16 +899,18 @@ export type EvidenceUncheckedCreateWithoutValidatorInput = {
   engagementId: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submittedBy?: string | null
-  submissionDate?: Date | string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  relatedFindingId?: string | null
+  submittedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
-  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEvidenceInput
   bundleItems?: Prisma.EvidenceBundleItemUncheckedCreateNestedManyWithoutEvidenceInput
 }
 
@@ -874,14 +947,17 @@ export type EvidenceScalarWhereInput = {
   engagementId?: Prisma.StringFilter<"Evidence"> | string
   title?: Prisma.StringFilter<"Evidence"> | string
   description?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  type?: Prisma.StringFilter<"Evidence"> | string
-  source?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  submittedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  submissionDate?: Prisma.DateTimeNullableFilter<"Evidence"> | Date | string | null
-  validatedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
-  validationDate?: Prisma.DateTimeNullableFilter<"Evidence"> | Date | string | null
+  evidenceType?: Prisma.StringFilter<"Evidence"> | string
+  sourceReference?: Prisma.StringNullableFilter<"Evidence"> | string | null
   status?: Prisma.StringFilter<"Evidence"> | string
+  severity?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  relatedFindingId?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  submittedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  validatedBy?: Prisma.StringNullableFilter<"Evidence"> | string | null
+  validatedAt?: Prisma.DateTimeNullableFilter<"Evidence"> | Date | string | null
+  rejectionReason?: Prisma.StringNullableFilter<"Evidence"> | string | null
   version?: Prisma.IntFilter<"Evidence"> | number
+  visibility?: Prisma.StringFilter<"Evidence"> | string
   createdAt?: Prisma.DateTimeFilter<"Evidence"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Evidence"> | Date | string
 }
@@ -906,17 +982,19 @@ export type EvidenceCreateWithoutEngagementInput = {
   id?: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submissionDate?: Date | string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  finding?: Prisma.FindingCreateNestedOneWithoutEvidenceInput
   submitter?: Prisma.UserCreateNestedOneWithoutSubmittedEvidenceInput
   validator?: Prisma.UserCreateNestedOneWithoutValidatedEvidenceInput
-  findings?: Prisma.FindingCreateNestedManyWithoutEvidenceInput
   bundleItems?: Prisma.EvidenceBundleItemCreateNestedManyWithoutEvidenceInput
 }
 
@@ -924,17 +1002,19 @@ export type EvidenceUncheckedCreateWithoutEngagementInput = {
   id?: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submittedBy?: string | null
-  submissionDate?: Date | string | null
-  validatedBy?: string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  relatedFindingId?: string | null
+  submittedBy?: string | null
+  validatedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
-  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEvidenceInput
   bundleItems?: Prisma.EvidenceBundleItemUncheckedCreateNestedManyWithoutEvidenceInput
 }
 
@@ -963,79 +1043,24 @@ export type EvidenceUpdateManyWithWhereWithoutEngagementInput = {
   data: Prisma.XOR<Prisma.EvidenceUpdateManyMutationInput, Prisma.EvidenceUncheckedUpdateManyWithoutEngagementInput>
 }
 
-export type EvidenceCreateWithoutFindingsInput = {
-  id?: string
-  title: string
-  description?: string | null
-  type?: string
-  source?: string | null
-  submissionDate?: Date | string | null
-  validationDate?: Date | string | null
-  status?: string
-  version?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  engagement: Prisma.EngagementCreateNestedOneWithoutEvidenceInput
-  submitter?: Prisma.UserCreateNestedOneWithoutSubmittedEvidenceInput
-  validator?: Prisma.UserCreateNestedOneWithoutValidatedEvidenceInput
-  bundleItems?: Prisma.EvidenceBundleItemCreateNestedManyWithoutEvidenceInput
-}
-
-export type EvidenceUncheckedCreateWithoutFindingsInput = {
-  id?: string
-  engagementId: string
-  title: string
-  description?: string | null
-  type?: string
-  source?: string | null
-  submittedBy?: string | null
-  submissionDate?: Date | string | null
-  validatedBy?: string | null
-  validationDate?: Date | string | null
-  status?: string
-  version?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  bundleItems?: Prisma.EvidenceBundleItemUncheckedCreateNestedManyWithoutEvidenceInput
-}
-
-export type EvidenceCreateOrConnectWithoutFindingsInput = {
-  where: Prisma.EvidenceWhereUniqueInput
-  create: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingsInput, Prisma.EvidenceUncheckedCreateWithoutFindingsInput>
-}
-
-export type EvidenceUpsertWithWhereUniqueWithoutFindingsInput = {
-  where: Prisma.EvidenceWhereUniqueInput
-  update: Prisma.XOR<Prisma.EvidenceUpdateWithoutFindingsInput, Prisma.EvidenceUncheckedUpdateWithoutFindingsInput>
-  create: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingsInput, Prisma.EvidenceUncheckedCreateWithoutFindingsInput>
-}
-
-export type EvidenceUpdateWithWhereUniqueWithoutFindingsInput = {
-  where: Prisma.EvidenceWhereUniqueInput
-  data: Prisma.XOR<Prisma.EvidenceUpdateWithoutFindingsInput, Prisma.EvidenceUncheckedUpdateWithoutFindingsInput>
-}
-
-export type EvidenceUpdateManyWithWhereWithoutFindingsInput = {
-  where: Prisma.EvidenceScalarWhereInput
-  data: Prisma.XOR<Prisma.EvidenceUpdateManyMutationInput, Prisma.EvidenceUncheckedUpdateManyWithoutFindingsInput>
-}
-
 export type EvidenceCreateWithoutBundleItemsInput = {
   id?: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submissionDate?: Date | string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   engagement: Prisma.EngagementCreateNestedOneWithoutEvidenceInput
+  finding?: Prisma.FindingCreateNestedOneWithoutEvidenceInput
   submitter?: Prisma.UserCreateNestedOneWithoutSubmittedEvidenceInput
   validator?: Prisma.UserCreateNestedOneWithoutValidatedEvidenceInput
-  findings?: Prisma.FindingCreateNestedManyWithoutEvidenceInput
 }
 
 export type EvidenceUncheckedCreateWithoutBundleItemsInput = {
@@ -1043,17 +1068,19 @@ export type EvidenceUncheckedCreateWithoutBundleItemsInput = {
   engagementId: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submittedBy?: string | null
-  submissionDate?: Date | string | null
-  validatedBy?: string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  relatedFindingId?: string | null
+  submittedBy?: string | null
+  validatedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
-  findings?: Prisma.FindingUncheckedCreateNestedManyWithoutEvidenceInput
 }
 
 export type EvidenceCreateOrConnectWithoutBundleItemsInput = {
@@ -1076,18 +1103,20 @@ export type EvidenceUpdateWithoutBundleItemsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutEvidenceNestedInput
+  finding?: Prisma.FindingUpdateOneWithoutEvidenceNestedInput
   submitter?: Prisma.UserUpdateOneWithoutSubmittedEvidenceNestedInput
   validator?: Prisma.UserUpdateOneWithoutValidatedEvidenceNestedInput
-  findings?: Prisma.FindingUpdateManyWithoutEvidenceNestedInput
 }
 
 export type EvidenceUncheckedUpdateWithoutBundleItemsInput = {
@@ -1095,17 +1124,84 @@ export type EvidenceUncheckedUpdateWithoutBundleItemsInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  relatedFindingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  findings?: Prisma.FindingUncheckedUpdateManyWithoutEvidenceNestedInput
+}
+
+export type EvidenceCreateWithoutFindingInput = {
+  id?: string
+  title: string
+  description?: string | null
+  evidenceType: string
+  sourceReference?: string | null
+  status?: string
+  severity?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
+  version?: number
+  visibility?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  engagement: Prisma.EngagementCreateNestedOneWithoutEvidenceInput
+  submitter?: Prisma.UserCreateNestedOneWithoutSubmittedEvidenceInput
+  validator?: Prisma.UserCreateNestedOneWithoutValidatedEvidenceInput
+  bundleItems?: Prisma.EvidenceBundleItemCreateNestedManyWithoutEvidenceInput
+}
+
+export type EvidenceUncheckedCreateWithoutFindingInput = {
+  id?: string
+  engagementId: string
+  title: string
+  description?: string | null
+  evidenceType: string
+  sourceReference?: string | null
+  status?: string
+  severity?: string | null
+  submittedBy?: string | null
+  validatedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
+  version?: number
+  visibility?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  bundleItems?: Prisma.EvidenceBundleItemUncheckedCreateNestedManyWithoutEvidenceInput
+}
+
+export type EvidenceCreateOrConnectWithoutFindingInput = {
+  where: Prisma.EvidenceWhereUniqueInput
+  create: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingInput, Prisma.EvidenceUncheckedCreateWithoutFindingInput>
+}
+
+export type EvidenceCreateManyFindingInputEnvelope = {
+  data: Prisma.EvidenceCreateManyFindingInput | Prisma.EvidenceCreateManyFindingInput[]
+}
+
+export type EvidenceUpsertWithWhereUniqueWithoutFindingInput = {
+  where: Prisma.EvidenceWhereUniqueInput
+  update: Prisma.XOR<Prisma.EvidenceUpdateWithoutFindingInput, Prisma.EvidenceUncheckedUpdateWithoutFindingInput>
+  create: Prisma.XOR<Prisma.EvidenceCreateWithoutFindingInput, Prisma.EvidenceUncheckedCreateWithoutFindingInput>
+}
+
+export type EvidenceUpdateWithWhereUniqueWithoutFindingInput = {
+  where: Prisma.EvidenceWhereUniqueInput
+  data: Prisma.XOR<Prisma.EvidenceUpdateWithoutFindingInput, Prisma.EvidenceUncheckedUpdateWithoutFindingInput>
+}
+
+export type EvidenceUpdateManyWithWhereWithoutFindingInput = {
+  where: Prisma.EvidenceScalarWhereInput
+  data: Prisma.XOR<Prisma.EvidenceUpdateManyMutationInput, Prisma.EvidenceUncheckedUpdateManyWithoutFindingInput>
 }
 
 export type EvidenceCreateManySubmitterInput = {
@@ -1113,13 +1209,16 @@ export type EvidenceCreateManySubmitterInput = {
   engagementId: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submissionDate?: Date | string | null
-  validatedBy?: string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  relatedFindingId?: string | null
+  validatedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1129,13 +1228,16 @@ export type EvidenceCreateManyValidatorInput = {
   engagementId: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submittedBy?: string | null
-  submissionDate?: Date | string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  relatedFindingId?: string | null
+  submittedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1144,17 +1246,19 @@ export type EvidenceUpdateWithoutSubmitterInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutEvidenceNestedInput
+  finding?: Prisma.FindingUpdateOneWithoutEvidenceNestedInput
   validator?: Prisma.UserUpdateOneWithoutValidatedEvidenceNestedInput
-  findings?: Prisma.FindingUpdateManyWithoutEvidenceNestedInput
   bundleItems?: Prisma.EvidenceBundleItemUpdateManyWithoutEvidenceNestedInput
 }
 
@@ -1163,16 +1267,18 @@ export type EvidenceUncheckedUpdateWithoutSubmitterInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  relatedFindingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  findings?: Prisma.FindingUncheckedUpdateManyWithoutEvidenceNestedInput
   bundleItems?: Prisma.EvidenceBundleItemUncheckedUpdateManyWithoutEvidenceNestedInput
 }
 
@@ -1181,13 +1287,16 @@ export type EvidenceUncheckedUpdateManyWithoutSubmitterInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  relatedFindingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1196,17 +1305,19 @@ export type EvidenceUpdateWithoutValidatorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutEvidenceNestedInput
+  finding?: Prisma.FindingUpdateOneWithoutEvidenceNestedInput
   submitter?: Prisma.UserUpdateOneWithoutSubmittedEvidenceNestedInput
-  findings?: Prisma.FindingUpdateManyWithoutEvidenceNestedInput
   bundleItems?: Prisma.EvidenceBundleItemUpdateManyWithoutEvidenceNestedInput
 }
 
@@ -1215,16 +1326,18 @@ export type EvidenceUncheckedUpdateWithoutValidatorInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  relatedFindingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  findings?: Prisma.FindingUncheckedUpdateManyWithoutEvidenceNestedInput
   bundleItems?: Prisma.EvidenceBundleItemUncheckedUpdateManyWithoutEvidenceNestedInput
 }
 
@@ -1233,13 +1346,16 @@ export type EvidenceUncheckedUpdateManyWithoutValidatorInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  relatedFindingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1248,14 +1364,17 @@ export type EvidenceCreateManyEngagementInput = {
   id?: string
   title: string
   description?: string | null
-  type?: string
-  source?: string | null
-  submittedBy?: string | null
-  submissionDate?: Date | string | null
-  validatedBy?: string | null
-  validationDate?: Date | string | null
+  evidenceType: string
+  sourceReference?: string | null
   status?: string
+  severity?: string | null
+  relatedFindingId?: string | null
+  submittedBy?: string | null
+  validatedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1264,17 +1383,19 @@ export type EvidenceUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  finding?: Prisma.FindingUpdateOneWithoutEvidenceNestedInput
   submitter?: Prisma.UserUpdateOneWithoutSubmittedEvidenceNestedInput
   validator?: Prisma.UserUpdateOneWithoutValidatedEvidenceNestedInput
-  findings?: Prisma.FindingUpdateManyWithoutEvidenceNestedInput
   bundleItems?: Prisma.EvidenceBundleItemUpdateManyWithoutEvidenceNestedInput
 }
 
@@ -1282,17 +1403,19 @@ export type EvidenceUncheckedUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  relatedFindingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  findings?: Prisma.FindingUncheckedUpdateManyWithoutEvidenceNestedInput
   bundleItems?: Prisma.EvidenceBundleItemUncheckedUpdateManyWithoutEvidenceNestedInput
 }
 
@@ -1300,28 +1423,52 @@ export type EvidenceUncheckedUpdateManyWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  relatedFindingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type EvidenceUpdateWithoutFindingsInput = {
+export type EvidenceCreateManyFindingInput = {
+  id?: string
+  engagementId: string
+  title: string
+  description?: string | null
+  evidenceType: string
+  sourceReference?: string | null
+  status?: string
+  severity?: string | null
+  submittedBy?: string | null
+  validatedBy?: string | null
+  validatedAt?: Date | string | null
+  rejectionReason?: string | null
+  version?: number
+  visibility?: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type EvidenceUpdateWithoutFindingInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutEvidenceNestedInput
@@ -1330,37 +1477,41 @@ export type EvidenceUpdateWithoutFindingsInput = {
   bundleItems?: Prisma.EvidenceBundleItemUpdateManyWithoutEvidenceNestedInput
 }
 
-export type EvidenceUncheckedUpdateWithoutFindingsInput = {
+export type EvidenceUncheckedUpdateWithoutFindingInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   bundleItems?: Prisma.EvidenceBundleItemUncheckedUpdateManyWithoutEvidenceNestedInput
 }
 
-export type EvidenceUncheckedUpdateManyWithoutFindingsInput = {
+export type EvidenceUncheckedUpdateManyWithoutFindingInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  source?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  submissionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  validationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  evidenceType?: Prisma.StringFieldUpdateOperationsInput | string
+  sourceReference?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  severity?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  submittedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  validatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  rejectionReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1371,12 +1522,10 @@ export type EvidenceUncheckedUpdateManyWithoutFindingsInput = {
  */
 
 export type EvidenceCountOutputType = {
-  findings: number
   bundleItems: number
 }
 
 export type EvidenceCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  findings?: boolean | EvidenceCountOutputTypeCountFindingsArgs
   bundleItems?: boolean | EvidenceCountOutputTypeCountBundleItemsArgs
 }
 
@@ -1393,13 +1542,6 @@ export type EvidenceCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Ext
 /**
  * EvidenceCountOutputType without action
  */
-export type EvidenceCountOutputTypeCountFindingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.FindingWhereInput
-}
-
-/**
- * EvidenceCountOutputType without action
- */
 export type EvidenceCountOutputTypeCountBundleItemsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.EvidenceBundleItemWhereInput
 }
@@ -1410,20 +1552,23 @@ export type EvidenceSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   engagementId?: boolean
   title?: boolean
   description?: boolean
-  type?: boolean
-  source?: boolean
-  submittedBy?: boolean
-  submissionDate?: boolean
-  validatedBy?: boolean
-  validationDate?: boolean
+  evidenceType?: boolean
+  sourceReference?: boolean
   status?: boolean
+  severity?: boolean
+  relatedFindingId?: boolean
+  submittedBy?: boolean
+  validatedBy?: boolean
+  validatedAt?: boolean
+  rejectionReason?: boolean
   version?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Evidence$findingArgs<ExtArgs>
   submitter?: boolean | Prisma.Evidence$submitterArgs<ExtArgs>
   validator?: boolean | Prisma.Evidence$validatorArgs<ExtArgs>
-  findings?: boolean | Prisma.Evidence$findingsArgs<ExtArgs>
   bundleItems?: boolean | Prisma.Evidence$bundleItemsArgs<ExtArgs>
   _count?: boolean | Prisma.EvidenceCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["evidence"]>
@@ -1433,17 +1578,21 @@ export type EvidenceSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   engagementId?: boolean
   title?: boolean
   description?: boolean
-  type?: boolean
-  source?: boolean
-  submittedBy?: boolean
-  submissionDate?: boolean
-  validatedBy?: boolean
-  validationDate?: boolean
+  evidenceType?: boolean
+  sourceReference?: boolean
   status?: boolean
+  severity?: boolean
+  relatedFindingId?: boolean
+  submittedBy?: boolean
+  validatedBy?: boolean
+  validatedAt?: boolean
+  rejectionReason?: boolean
   version?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Evidence$findingArgs<ExtArgs>
   submitter?: boolean | Prisma.Evidence$submitterArgs<ExtArgs>
   validator?: boolean | Prisma.Evidence$validatorArgs<ExtArgs>
 }, ExtArgs["result"]["evidence"]>
@@ -1453,17 +1602,21 @@ export type EvidenceSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   engagementId?: boolean
   title?: boolean
   description?: boolean
-  type?: boolean
-  source?: boolean
-  submittedBy?: boolean
-  submissionDate?: boolean
-  validatedBy?: boolean
-  validationDate?: boolean
+  evidenceType?: boolean
+  sourceReference?: boolean
   status?: boolean
+  severity?: boolean
+  relatedFindingId?: boolean
+  submittedBy?: boolean
+  validatedBy?: boolean
+  validatedAt?: boolean
+  rejectionReason?: boolean
   version?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Evidence$findingArgs<ExtArgs>
   submitter?: boolean | Prisma.Evidence$submitterArgs<ExtArgs>
   validator?: boolean | Prisma.Evidence$validatorArgs<ExtArgs>
 }, ExtArgs["result"]["evidence"]>
@@ -1473,34 +1626,39 @@ export type EvidenceSelectScalar = {
   engagementId?: boolean
   title?: boolean
   description?: boolean
-  type?: boolean
-  source?: boolean
-  submittedBy?: boolean
-  submissionDate?: boolean
-  validatedBy?: boolean
-  validationDate?: boolean
+  evidenceType?: boolean
+  sourceReference?: boolean
   status?: boolean
+  severity?: boolean
+  relatedFindingId?: boolean
+  submittedBy?: boolean
+  validatedBy?: boolean
+  validatedAt?: boolean
+  rejectionReason?: boolean
   version?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type EvidenceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "title" | "description" | "type" | "source" | "submittedBy" | "submissionDate" | "validatedBy" | "validationDate" | "status" | "version" | "createdAt" | "updatedAt", ExtArgs["result"]["evidence"]>
+export type EvidenceOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "title" | "description" | "evidenceType" | "sourceReference" | "status" | "severity" | "relatedFindingId" | "submittedBy" | "validatedBy" | "validatedAt" | "rejectionReason" | "version" | "visibility" | "createdAt" | "updatedAt", ExtArgs["result"]["evidence"]>
 export type EvidenceInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Evidence$findingArgs<ExtArgs>
   submitter?: boolean | Prisma.Evidence$submitterArgs<ExtArgs>
   validator?: boolean | Prisma.Evidence$validatorArgs<ExtArgs>
-  findings?: boolean | Prisma.Evidence$findingsArgs<ExtArgs>
   bundleItems?: boolean | Prisma.Evidence$bundleItemsArgs<ExtArgs>
   _count?: boolean | Prisma.EvidenceCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type EvidenceIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Evidence$findingArgs<ExtArgs>
   submitter?: boolean | Prisma.Evidence$submitterArgs<ExtArgs>
   validator?: boolean | Prisma.Evidence$validatorArgs<ExtArgs>
 }
 export type EvidenceIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Evidence$findingArgs<ExtArgs>
   submitter?: boolean | Prisma.Evidence$submitterArgs<ExtArgs>
   validator?: boolean | Prisma.Evidence$validatorArgs<ExtArgs>
 }
@@ -1509,9 +1667,9 @@ export type $EvidencePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   name: "Evidence"
   objects: {
     engagement: Prisma.$EngagementPayload<ExtArgs>
+    finding: Prisma.$FindingPayload<ExtArgs> | null
     submitter: Prisma.$UserPayload<ExtArgs> | null
     validator: Prisma.$UserPayload<ExtArgs> | null
-    findings: Prisma.$FindingPayload<ExtArgs>[]
     bundleItems: Prisma.$EvidenceBundleItemPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1519,14 +1677,17 @@ export type $EvidencePayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     engagementId: string
     title: string
     description: string | null
-    type: string
-    source: string | null
-    submittedBy: string | null
-    submissionDate: Date | null
-    validatedBy: string | null
-    validationDate: Date | null
+    evidenceType: string
+    sourceReference: string | null
     status: string
+    severity: string | null
+    relatedFindingId: string | null
+    submittedBy: string | null
+    validatedBy: string | null
+    validatedAt: Date | null
+    rejectionReason: string | null
     version: number
+    visibility: string
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["evidence"]>
@@ -1924,9 +2085,9 @@ readonly fields: EvidenceFieldRefs;
 export interface Prisma__EvidenceClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   engagement<T extends Prisma.EngagementDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EngagementDefaultArgs<ExtArgs>>): Prisma.Prisma__EngagementClient<runtime.Types.Result.GetResult<Prisma.$EngagementPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  finding<T extends Prisma.Evidence$findingArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Evidence$findingArgs<ExtArgs>>): Prisma.Prisma__FindingClient<runtime.Types.Result.GetResult<Prisma.$FindingPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   submitter<T extends Prisma.Evidence$submitterArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Evidence$submitterArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   validator<T extends Prisma.Evidence$validatorArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Evidence$validatorArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  findings<T extends Prisma.Evidence$findingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Evidence$findingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FindingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   bundleItems<T extends Prisma.Evidence$bundleItemsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Evidence$bundleItemsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EvidenceBundleItemPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1961,14 +2122,17 @@ export interface EvidenceFieldRefs {
   readonly engagementId: Prisma.FieldRef<"Evidence", 'String'>
   readonly title: Prisma.FieldRef<"Evidence", 'String'>
   readonly description: Prisma.FieldRef<"Evidence", 'String'>
-  readonly type: Prisma.FieldRef<"Evidence", 'String'>
-  readonly source: Prisma.FieldRef<"Evidence", 'String'>
-  readonly submittedBy: Prisma.FieldRef<"Evidence", 'String'>
-  readonly submissionDate: Prisma.FieldRef<"Evidence", 'DateTime'>
-  readonly validatedBy: Prisma.FieldRef<"Evidence", 'String'>
-  readonly validationDate: Prisma.FieldRef<"Evidence", 'DateTime'>
+  readonly evidenceType: Prisma.FieldRef<"Evidence", 'String'>
+  readonly sourceReference: Prisma.FieldRef<"Evidence", 'String'>
   readonly status: Prisma.FieldRef<"Evidence", 'String'>
+  readonly severity: Prisma.FieldRef<"Evidence", 'String'>
+  readonly relatedFindingId: Prisma.FieldRef<"Evidence", 'String'>
+  readonly submittedBy: Prisma.FieldRef<"Evidence", 'String'>
+  readonly validatedBy: Prisma.FieldRef<"Evidence", 'String'>
+  readonly validatedAt: Prisma.FieldRef<"Evidence", 'DateTime'>
+  readonly rejectionReason: Prisma.FieldRef<"Evidence", 'String'>
   readonly version: Prisma.FieldRef<"Evidence", 'Int'>
+  readonly visibility: Prisma.FieldRef<"Evidence", 'String'>
   readonly createdAt: Prisma.FieldRef<"Evidence", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Evidence", 'DateTime'>
 }
@@ -2370,6 +2534,25 @@ export type EvidenceDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
+ * Evidence.finding
+ */
+export type Evidence$findingArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Finding
+   */
+  select?: Prisma.FindingSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Finding
+   */
+  omit?: Prisma.FindingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FindingInclude<ExtArgs> | null
+  where?: Prisma.FindingWhereInput
+}
+
+/**
  * Evidence.submitter
  */
 export type Evidence$submitterArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2405,30 +2588,6 @@ export type Evidence$validatorArgs<ExtArgs extends runtime.Types.Extensions.Inte
    */
   include?: Prisma.UserInclude<ExtArgs> | null
   where?: Prisma.UserWhereInput
-}
-
-/**
- * Evidence.findings
- */
-export type Evidence$findingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Finding
-   */
-  select?: Prisma.FindingSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Finding
-   */
-  omit?: Prisma.FindingOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.FindingInclude<ExtArgs> | null
-  where?: Prisma.FindingWhereInput
-  orderBy?: Prisma.FindingOrderByWithRelationInput | Prisma.FindingOrderByWithRelationInput[]
-  cursor?: Prisma.FindingWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.FindingScalarFieldEnum | Prisma.FindingScalarFieldEnum[]
 }
 
 /**

@@ -27,22 +27,25 @@ export type AggregateStage = {
 }
 
 export type StageAvgAggregateOutputType = {
-  order: number | null
+  version: number | null
 }
 
 export type StageSumAggregateOutputType = {
-  order: number | null
+  version: number | null
 }
 
 export type StageMinAggregateOutputType = {
   id: string | null
   engagementId: string | null
-  name: string | null
-  description: string | null
-  startDate: Date | null
-  endDate: Date | null
+  title: string | null
   status: string | null
-  order: number | null
+  description: string | null
+  notes: string | null
+  version: number | null
+  startDate: Date | null
+  targetEndDate: Date | null
+  completedAt: Date | null
+  createdBy: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -50,12 +53,15 @@ export type StageMinAggregateOutputType = {
 export type StageMaxAggregateOutputType = {
   id: string | null
   engagementId: string | null
-  name: string | null
-  description: string | null
-  startDate: Date | null
-  endDate: Date | null
+  title: string | null
   status: string | null
-  order: number | null
+  description: string | null
+  notes: string | null
+  version: number | null
+  startDate: Date | null
+  targetEndDate: Date | null
+  completedAt: Date | null
+  createdBy: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -63,12 +69,15 @@ export type StageMaxAggregateOutputType = {
 export type StageCountAggregateOutputType = {
   id: number
   engagementId: number
-  name: number
-  description: number
-  startDate: number
-  endDate: number
+  title: number
   status: number
-  order: number
+  description: number
+  notes: number
+  version: number
+  startDate: number
+  targetEndDate: number
+  completedAt: number
+  createdBy: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -76,22 +85,25 @@ export type StageCountAggregateOutputType = {
 
 
 export type StageAvgAggregateInputType = {
-  order?: true
+  version?: true
 }
 
 export type StageSumAggregateInputType = {
-  order?: true
+  version?: true
 }
 
 export type StageMinAggregateInputType = {
   id?: true
   engagementId?: true
-  name?: true
-  description?: true
-  startDate?: true
-  endDate?: true
+  title?: true
   status?: true
-  order?: true
+  description?: true
+  notes?: true
+  version?: true
+  startDate?: true
+  targetEndDate?: true
+  completedAt?: true
+  createdBy?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -99,12 +111,15 @@ export type StageMinAggregateInputType = {
 export type StageMaxAggregateInputType = {
   id?: true
   engagementId?: true
-  name?: true
-  description?: true
-  startDate?: true
-  endDate?: true
+  title?: true
   status?: true
-  order?: true
+  description?: true
+  notes?: true
+  version?: true
+  startDate?: true
+  targetEndDate?: true
+  completedAt?: true
+  createdBy?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -112,12 +127,15 @@ export type StageMaxAggregateInputType = {
 export type StageCountAggregateInputType = {
   id?: true
   engagementId?: true
-  name?: true
-  description?: true
-  startDate?: true
-  endDate?: true
+  title?: true
   status?: true
-  order?: true
+  description?: true
+  notes?: true
+  version?: true
+  startDate?: true
+  targetEndDate?: true
+  completedAt?: true
+  createdBy?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -212,12 +230,15 @@ export type StageGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalAr
 export type StageGroupByOutputType = {
   id: string
   engagementId: string
-  name: string
-  description: string | null
-  startDate: Date | null
-  endDate: Date | null
+  title: string
   status: string
-  order: number
+  description: string | null
+  notes: string | null
+  version: number
+  startDate: Date | null
+  targetEndDate: Date | null
+  completedAt: Date | null
+  createdBy: string | null
   createdAt: Date
   updatedAt: Date
   _count: StageCountAggregateOutputType | null
@@ -248,29 +269,39 @@ export type StageWhereInput = {
   NOT?: Prisma.StageWhereInput | Prisma.StageWhereInput[]
   id?: Prisma.StringFilter<"Stage"> | string
   engagementId?: Prisma.StringFilter<"Stage"> | string
-  name?: Prisma.StringFilter<"Stage"> | string
-  description?: Prisma.StringNullableFilter<"Stage"> | string | null
-  startDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
-  endDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  title?: Prisma.StringFilter<"Stage"> | string
   status?: Prisma.StringFilter<"Stage"> | string
-  order?: Prisma.IntFilter<"Stage"> | number
+  description?: Prisma.StringNullableFilter<"Stage"> | string | null
+  notes?: Prisma.StringNullableFilter<"Stage"> | string | null
+  version?: Prisma.IntFilter<"Stage"> | number
+  startDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  targetEndDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  createdBy?: Prisma.StringNullableFilter<"Stage"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Stage"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Stage"> | Date | string
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
+  deliverables?: Prisma.DeliverableListRelationFilter
+  risks?: Prisma.RiskListRelationFilter
 }
 
 export type StageOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  description?: Prisma.SortOrderInput | Prisma.SortOrder
-  startDate?: Prisma.SortOrderInput | Prisma.SortOrder
-  endDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  title?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  order?: Prisma.SortOrder
+  description?: Prisma.SortOrderInput | Prisma.SortOrder
+  notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  version?: Prisma.SortOrder
+  startDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  targetEndDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  createdBy?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   engagement?: Prisma.EngagementOrderByWithRelationInput
+  deliverables?: Prisma.DeliverableOrderByRelationAggregateInput
+  risks?: Prisma.RiskOrderByRelationAggregateInput
 }
 
 export type StageWhereUniqueInput = Prisma.AtLeast<{
@@ -279,26 +310,34 @@ export type StageWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.StageWhereInput[]
   NOT?: Prisma.StageWhereInput | Prisma.StageWhereInput[]
   engagementId?: Prisma.StringFilter<"Stage"> | string
-  name?: Prisma.StringFilter<"Stage"> | string
-  description?: Prisma.StringNullableFilter<"Stage"> | string | null
-  startDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
-  endDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  title?: Prisma.StringFilter<"Stage"> | string
   status?: Prisma.StringFilter<"Stage"> | string
-  order?: Prisma.IntFilter<"Stage"> | number
+  description?: Prisma.StringNullableFilter<"Stage"> | string | null
+  notes?: Prisma.StringNullableFilter<"Stage"> | string | null
+  version?: Prisma.IntFilter<"Stage"> | number
+  startDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  targetEndDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  createdBy?: Prisma.StringNullableFilter<"Stage"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Stage"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Stage"> | Date | string
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
+  deliverables?: Prisma.DeliverableListRelationFilter
+  risks?: Prisma.RiskListRelationFilter
 }, "id">
 
 export type StageOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  description?: Prisma.SortOrderInput | Prisma.SortOrder
-  startDate?: Prisma.SortOrderInput | Prisma.SortOrder
-  endDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  title?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  order?: Prisma.SortOrder
+  description?: Prisma.SortOrderInput | Prisma.SortOrder
+  notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  version?: Prisma.SortOrder
+  startDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  targetEndDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  createdBy?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.StageCountOrderByAggregateInput
@@ -314,89 +353,118 @@ export type StageScalarWhereWithAggregatesInput = {
   NOT?: Prisma.StageScalarWhereWithAggregatesInput | Prisma.StageScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Stage"> | string
   engagementId?: Prisma.StringWithAggregatesFilter<"Stage"> | string
-  name?: Prisma.StringWithAggregatesFilter<"Stage"> | string
-  description?: Prisma.StringNullableWithAggregatesFilter<"Stage"> | string | null
-  startDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Stage"> | Date | string | null
-  endDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Stage"> | Date | string | null
+  title?: Prisma.StringWithAggregatesFilter<"Stage"> | string
   status?: Prisma.StringWithAggregatesFilter<"Stage"> | string
-  order?: Prisma.IntWithAggregatesFilter<"Stage"> | number
+  description?: Prisma.StringNullableWithAggregatesFilter<"Stage"> | string | null
+  notes?: Prisma.StringNullableWithAggregatesFilter<"Stage"> | string | null
+  version?: Prisma.IntWithAggregatesFilter<"Stage"> | number
+  startDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Stage"> | Date | string | null
+  targetEndDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Stage"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Stage"> | Date | string | null
+  createdBy?: Prisma.StringNullableWithAggregatesFilter<"Stage"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Stage"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Stage"> | Date | string
 }
 
 export type StageCreateInput = {
   id?: string
-  name: string
-  description?: string | null
-  startDate?: Date | string | null
-  endDate?: Date | string | null
+  title: string
   status?: string
-  order?: number
+  description?: string | null
+  notes?: string | null
+  version?: number
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  completedAt?: Date | string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   engagement: Prisma.EngagementCreateNestedOneWithoutStagesInput
+  deliverables?: Prisma.DeliverableCreateNestedManyWithoutStageInput
+  risks?: Prisma.RiskCreateNestedManyWithoutStageInput
 }
 
 export type StageUncheckedCreateInput = {
   id?: string
   engagementId: string
-  name: string
-  description?: string | null
-  startDate?: Date | string | null
-  endDate?: Date | string | null
+  title: string
   status?: string
-  order?: number
+  description?: string | null
+  notes?: string | null
+  version?: number
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  completedAt?: Date | string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutStageInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutStageInput
 }
 
 export type StageUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  order?: Prisma.IntFieldUpdateOperationsInput | number
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutStagesNestedInput
+  deliverables?: Prisma.DeliverableUpdateManyWithoutStageNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutStageNestedInput
 }
 
 export type StageUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  order?: Prisma.IntFieldUpdateOperationsInput | number
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutStageNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutStageNestedInput
 }
 
 export type StageCreateManyInput = {
   id?: string
   engagementId: string
-  name: string
-  description?: string | null
-  startDate?: Date | string | null
-  endDate?: Date | string | null
+  title: string
   status?: string
-  order?: number
+  description?: string | null
+  notes?: string | null
+  version?: number
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  completedAt?: Date | string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
 export type StageUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  order?: Prisma.IntFieldUpdateOperationsInput | number
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -404,12 +472,15 @@ export type StageUpdateManyMutationInput = {
 export type StageUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  order?: Prisma.IntFieldUpdateOperationsInput | number
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -427,29 +498,35 @@ export type StageOrderByRelationAggregateInput = {
 export type StageCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  description?: Prisma.SortOrder
-  startDate?: Prisma.SortOrder
-  endDate?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  order?: Prisma.SortOrder
+  description?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  startDate?: Prisma.SortOrder
+  targetEndDate?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type StageAvgOrderByAggregateInput = {
-  order?: Prisma.SortOrder
+  version?: Prisma.SortOrder
 }
 
 export type StageMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  description?: Prisma.SortOrder
-  startDate?: Prisma.SortOrder
-  endDate?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  order?: Prisma.SortOrder
+  description?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  startDate?: Prisma.SortOrder
+  targetEndDate?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -457,18 +534,26 @@ export type StageMaxOrderByAggregateInput = {
 export type StageMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  name?: Prisma.SortOrder
-  description?: Prisma.SortOrder
-  startDate?: Prisma.SortOrder
-  endDate?: Prisma.SortOrder
+  title?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  order?: Prisma.SortOrder
+  description?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+  startDate?: Prisma.SortOrder
+  targetEndDate?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
+  createdBy?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type StageSumOrderByAggregateInput = {
-  order?: Prisma.SortOrder
+  version?: Prisma.SortOrder
+}
+
+export type StageScalarRelationFilter = {
+  is?: Prisma.StageWhereInput
+  isNot?: Prisma.StageWhereInput
 }
 
 export type StageCreateNestedManyWithoutEngagementInput = {
@@ -513,28 +598,66 @@ export type StageUncheckedUpdateManyWithoutEngagementNestedInput = {
   deleteMany?: Prisma.StageScalarWhereInput | Prisma.StageScalarWhereInput[]
 }
 
+export type StageCreateNestedOneWithoutDeliverablesInput = {
+  create?: Prisma.XOR<Prisma.StageCreateWithoutDeliverablesInput, Prisma.StageUncheckedCreateWithoutDeliverablesInput>
+  connectOrCreate?: Prisma.StageCreateOrConnectWithoutDeliverablesInput
+  connect?: Prisma.StageWhereUniqueInput
+}
+
+export type StageUpdateOneRequiredWithoutDeliverablesNestedInput = {
+  create?: Prisma.XOR<Prisma.StageCreateWithoutDeliverablesInput, Prisma.StageUncheckedCreateWithoutDeliverablesInput>
+  connectOrCreate?: Prisma.StageCreateOrConnectWithoutDeliverablesInput
+  upsert?: Prisma.StageUpsertWithoutDeliverablesInput
+  connect?: Prisma.StageWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StageUpdateToOneWithWhereWithoutDeliverablesInput, Prisma.StageUpdateWithoutDeliverablesInput>, Prisma.StageUncheckedUpdateWithoutDeliverablesInput>
+}
+
+export type StageCreateNestedOneWithoutRisksInput = {
+  create?: Prisma.XOR<Prisma.StageCreateWithoutRisksInput, Prisma.StageUncheckedCreateWithoutRisksInput>
+  connectOrCreate?: Prisma.StageCreateOrConnectWithoutRisksInput
+  connect?: Prisma.StageWhereUniqueInput
+}
+
+export type StageUpdateOneRequiredWithoutRisksNestedInput = {
+  create?: Prisma.XOR<Prisma.StageCreateWithoutRisksInput, Prisma.StageUncheckedCreateWithoutRisksInput>
+  connectOrCreate?: Prisma.StageCreateOrConnectWithoutRisksInput
+  upsert?: Prisma.StageUpsertWithoutRisksInput
+  connect?: Prisma.StageWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.StageUpdateToOneWithWhereWithoutRisksInput, Prisma.StageUpdateWithoutRisksInput>, Prisma.StageUncheckedUpdateWithoutRisksInput>
+}
+
 export type StageCreateWithoutEngagementInput = {
   id?: string
-  name: string
-  description?: string | null
-  startDate?: Date | string | null
-  endDate?: Date | string | null
+  title: string
   status?: string
-  order?: number
+  description?: string | null
+  notes?: string | null
+  version?: number
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  completedAt?: Date | string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  deliverables?: Prisma.DeliverableCreateNestedManyWithoutStageInput
+  risks?: Prisma.RiskCreateNestedManyWithoutStageInput
 }
 
 export type StageUncheckedCreateWithoutEngagementInput = {
   id?: string
-  name: string
-  description?: string | null
-  startDate?: Date | string | null
-  endDate?: Date | string | null
+  title: string
   status?: string
-  order?: number
+  description?: string | null
+  notes?: string | null
+  version?: number
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  completedAt?: Date | string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
+  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutStageInput
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutStageInput
 }
 
 export type StageCreateOrConnectWithoutEngagementInput = {
@@ -568,89 +691,323 @@ export type StageScalarWhereInput = {
   NOT?: Prisma.StageScalarWhereInput | Prisma.StageScalarWhereInput[]
   id?: Prisma.StringFilter<"Stage"> | string
   engagementId?: Prisma.StringFilter<"Stage"> | string
-  name?: Prisma.StringFilter<"Stage"> | string
-  description?: Prisma.StringNullableFilter<"Stage"> | string | null
-  startDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
-  endDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  title?: Prisma.StringFilter<"Stage"> | string
   status?: Prisma.StringFilter<"Stage"> | string
-  order?: Prisma.IntFilter<"Stage"> | number
+  description?: Prisma.StringNullableFilter<"Stage"> | string | null
+  notes?: Prisma.StringNullableFilter<"Stage"> | string | null
+  version?: Prisma.IntFilter<"Stage"> | number
+  startDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  targetEndDate?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableFilter<"Stage"> | Date | string | null
+  createdBy?: Prisma.StringNullableFilter<"Stage"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Stage"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Stage"> | Date | string
 }
 
+export type StageCreateWithoutDeliverablesInput = {
+  id?: string
+  title: string
+  status?: string
+  description?: string | null
+  notes?: string | null
+  version?: number
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  completedAt?: Date | string | null
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  engagement: Prisma.EngagementCreateNestedOneWithoutStagesInput
+  risks?: Prisma.RiskCreateNestedManyWithoutStageInput
+}
+
+export type StageUncheckedCreateWithoutDeliverablesInput = {
+  id?: string
+  engagementId: string
+  title: string
+  status?: string
+  description?: string | null
+  notes?: string | null
+  version?: number
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  completedAt?: Date | string | null
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  risks?: Prisma.RiskUncheckedCreateNestedManyWithoutStageInput
+}
+
+export type StageCreateOrConnectWithoutDeliverablesInput = {
+  where: Prisma.StageWhereUniqueInput
+  create: Prisma.XOR<Prisma.StageCreateWithoutDeliverablesInput, Prisma.StageUncheckedCreateWithoutDeliverablesInput>
+}
+
+export type StageUpsertWithoutDeliverablesInput = {
+  update: Prisma.XOR<Prisma.StageUpdateWithoutDeliverablesInput, Prisma.StageUncheckedUpdateWithoutDeliverablesInput>
+  create: Prisma.XOR<Prisma.StageCreateWithoutDeliverablesInput, Prisma.StageUncheckedCreateWithoutDeliverablesInput>
+  where?: Prisma.StageWhereInput
+}
+
+export type StageUpdateToOneWithWhereWithoutDeliverablesInput = {
+  where?: Prisma.StageWhereInput
+  data: Prisma.XOR<Prisma.StageUpdateWithoutDeliverablesInput, Prisma.StageUncheckedUpdateWithoutDeliverablesInput>
+}
+
+export type StageUpdateWithoutDeliverablesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engagement?: Prisma.EngagementUpdateOneRequiredWithoutStagesNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutStageNestedInput
+}
+
+export type StageUncheckedUpdateWithoutDeliverablesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutStageNestedInput
+}
+
+export type StageCreateWithoutRisksInput = {
+  id?: string
+  title: string
+  status?: string
+  description?: string | null
+  notes?: string | null
+  version?: number
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  completedAt?: Date | string | null
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  engagement: Prisma.EngagementCreateNestedOneWithoutStagesInput
+  deliverables?: Prisma.DeliverableCreateNestedManyWithoutStageInput
+}
+
+export type StageUncheckedCreateWithoutRisksInput = {
+  id?: string
+  engagementId: string
+  title: string
+  status?: string
+  description?: string | null
+  notes?: string | null
+  version?: number
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  completedAt?: Date | string | null
+  createdBy?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deliverables?: Prisma.DeliverableUncheckedCreateNestedManyWithoutStageInput
+}
+
+export type StageCreateOrConnectWithoutRisksInput = {
+  where: Prisma.StageWhereUniqueInput
+  create: Prisma.XOR<Prisma.StageCreateWithoutRisksInput, Prisma.StageUncheckedCreateWithoutRisksInput>
+}
+
+export type StageUpsertWithoutRisksInput = {
+  update: Prisma.XOR<Prisma.StageUpdateWithoutRisksInput, Prisma.StageUncheckedUpdateWithoutRisksInput>
+  create: Prisma.XOR<Prisma.StageCreateWithoutRisksInput, Prisma.StageUncheckedCreateWithoutRisksInput>
+  where?: Prisma.StageWhereInput
+}
+
+export type StageUpdateToOneWithWhereWithoutRisksInput = {
+  where?: Prisma.StageWhereInput
+  data: Prisma.XOR<Prisma.StageUpdateWithoutRisksInput, Prisma.StageUncheckedUpdateWithoutRisksInput>
+}
+
+export type StageUpdateWithoutRisksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  engagement?: Prisma.EngagementUpdateOneRequiredWithoutStagesNestedInput
+  deliverables?: Prisma.DeliverableUpdateManyWithoutStageNestedInput
+}
+
+export type StageUncheckedUpdateWithoutRisksInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutStageNestedInput
+}
+
 export type StageCreateManyEngagementInput = {
   id?: string
-  name: string
-  description?: string | null
-  startDate?: Date | string | null
-  endDate?: Date | string | null
+  title: string
   status?: string
-  order?: number
+  description?: string | null
+  notes?: string | null
+  version?: number
+  startDate?: Date | string | null
+  targetEndDate?: Date | string | null
+  completedAt?: Date | string | null
+  createdBy?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
 export type StageUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  order?: Prisma.IntFieldUpdateOperationsInput | number
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deliverables?: Prisma.DeliverableUpdateManyWithoutStageNestedInput
+  risks?: Prisma.RiskUpdateManyWithoutStageNestedInput
 }
 
 export type StageUncheckedUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  order?: Prisma.IntFieldUpdateOperationsInput | number
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deliverables?: Prisma.DeliverableUncheckedUpdateManyWithoutStageNestedInput
+  risks?: Prisma.RiskUncheckedUpdateManyWithoutStageNestedInput
 }
 
 export type StageUncheckedUpdateManyWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  endDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  title?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  order?: Prisma.IntFieldUpdateOperationsInput | number
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  startDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  targetEndDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  createdBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
+
+/**
+ * Count Type StageCountOutputType
+ */
+
+export type StageCountOutputType = {
+  deliverables: number
+  risks: number
+}
+
+export type StageCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  deliverables?: boolean | StageCountOutputTypeCountDeliverablesArgs
+  risks?: boolean | StageCountOutputTypeCountRisksArgs
+}
+
+/**
+ * StageCountOutputType without action
+ */
+export type StageCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the StageCountOutputType
+   */
+  select?: Prisma.StageCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * StageCountOutputType without action
+ */
+export type StageCountOutputTypeCountDeliverablesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.DeliverableWhereInput
+}
+
+/**
+ * StageCountOutputType without action
+ */
+export type StageCountOutputTypeCountRisksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RiskWhereInput
+}
 
 
 export type StageSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   engagementId?: boolean
-  name?: boolean
-  description?: boolean
-  startDate?: boolean
-  endDate?: boolean
+  title?: boolean
   status?: boolean
-  order?: boolean
+  description?: boolean
+  notes?: boolean
+  version?: boolean
+  startDate?: boolean
+  targetEndDate?: boolean
+  completedAt?: boolean
+  createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  deliverables?: boolean | Prisma.Stage$deliverablesArgs<ExtArgs>
+  risks?: boolean | Prisma.Stage$risksArgs<ExtArgs>
+  _count?: boolean | Prisma.StageCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["stage"]>
 
 export type StageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   engagementId?: boolean
-  name?: boolean
-  description?: boolean
-  startDate?: boolean
-  endDate?: boolean
+  title?: boolean
   status?: boolean
-  order?: boolean
+  description?: boolean
+  notes?: boolean
+  version?: boolean
+  startDate?: boolean
+  targetEndDate?: boolean
+  completedAt?: boolean
+  createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
@@ -659,12 +1016,15 @@ export type StageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 export type StageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   engagementId?: boolean
-  name?: boolean
-  description?: boolean
-  startDate?: boolean
-  endDate?: boolean
+  title?: boolean
   status?: boolean
-  order?: boolean
+  description?: boolean
+  notes?: boolean
+  version?: boolean
+  startDate?: boolean
+  targetEndDate?: boolean
+  completedAt?: boolean
+  createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
@@ -673,19 +1033,25 @@ export type StageSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensi
 export type StageSelectScalar = {
   id?: boolean
   engagementId?: boolean
-  name?: boolean
-  description?: boolean
-  startDate?: boolean
-  endDate?: boolean
+  title?: boolean
   status?: boolean
-  order?: boolean
+  description?: boolean
+  notes?: boolean
+  version?: boolean
+  startDate?: boolean
+  targetEndDate?: boolean
+  completedAt?: boolean
+  createdBy?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type StageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "name" | "description" | "startDate" | "endDate" | "status" | "order" | "createdAt" | "updatedAt", ExtArgs["result"]["stage"]>
+export type StageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "title" | "status" | "description" | "notes" | "version" | "startDate" | "targetEndDate" | "completedAt" | "createdBy" | "createdAt" | "updatedAt", ExtArgs["result"]["stage"]>
 export type StageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  deliverables?: boolean | Prisma.Stage$deliverablesArgs<ExtArgs>
+  risks?: boolean | Prisma.Stage$risksArgs<ExtArgs>
+  _count?: boolean | Prisma.StageCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type StageIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
@@ -698,16 +1064,21 @@ export type $StagePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   name: "Stage"
   objects: {
     engagement: Prisma.$EngagementPayload<ExtArgs>
+    deliverables: Prisma.$DeliverablePayload<ExtArgs>[]
+    risks: Prisma.$RiskPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     engagementId: string
-    name: string
-    description: string | null
-    startDate: Date | null
-    endDate: Date | null
+    title: string
     status: string
-    order: number
+    description: string | null
+    notes: string | null
+    version: number
+    startDate: Date | null
+    targetEndDate: Date | null
+    completedAt: Date | null
+    createdBy: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["stage"]>
@@ -1105,6 +1476,8 @@ readonly fields: StageFieldRefs;
 export interface Prisma__StageClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   engagement<T extends Prisma.EngagementDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EngagementDefaultArgs<ExtArgs>>): Prisma.Prisma__EngagementClient<runtime.Types.Result.GetResult<Prisma.$EngagementPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  deliverables<T extends Prisma.Stage$deliverablesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Stage$deliverablesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeliverablePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  risks<T extends Prisma.Stage$risksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Stage$risksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RiskPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1136,12 +1509,15 @@ export interface Prisma__StageClient<T, Null = never, ExtArgs extends runtime.Ty
 export interface StageFieldRefs {
   readonly id: Prisma.FieldRef<"Stage", 'String'>
   readonly engagementId: Prisma.FieldRef<"Stage", 'String'>
-  readonly name: Prisma.FieldRef<"Stage", 'String'>
-  readonly description: Prisma.FieldRef<"Stage", 'String'>
-  readonly startDate: Prisma.FieldRef<"Stage", 'DateTime'>
-  readonly endDate: Prisma.FieldRef<"Stage", 'DateTime'>
+  readonly title: Prisma.FieldRef<"Stage", 'String'>
   readonly status: Prisma.FieldRef<"Stage", 'String'>
-  readonly order: Prisma.FieldRef<"Stage", 'Int'>
+  readonly description: Prisma.FieldRef<"Stage", 'String'>
+  readonly notes: Prisma.FieldRef<"Stage", 'String'>
+  readonly version: Prisma.FieldRef<"Stage", 'Int'>
+  readonly startDate: Prisma.FieldRef<"Stage", 'DateTime'>
+  readonly targetEndDate: Prisma.FieldRef<"Stage", 'DateTime'>
+  readonly completedAt: Prisma.FieldRef<"Stage", 'DateTime'>
+  readonly createdBy: Prisma.FieldRef<"Stage", 'String'>
   readonly createdAt: Prisma.FieldRef<"Stage", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Stage", 'DateTime'>
 }
@@ -1540,6 +1916,54 @@ export type StageDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Limit how many Stages to delete.
    */
   limit?: number
+}
+
+/**
+ * Stage.deliverables
+ */
+export type Stage$deliverablesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Deliverable
+   */
+  select?: Prisma.DeliverableSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Deliverable
+   */
+  omit?: Prisma.DeliverableOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.DeliverableInclude<ExtArgs> | null
+  where?: Prisma.DeliverableWhereInput
+  orderBy?: Prisma.DeliverableOrderByWithRelationInput | Prisma.DeliverableOrderByWithRelationInput[]
+  cursor?: Prisma.DeliverableWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.DeliverableScalarFieldEnum | Prisma.DeliverableScalarFieldEnum[]
+}
+
+/**
+ * Stage.risks
+ */
+export type Stage$risksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Risk
+   */
+  select?: Prisma.RiskSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Risk
+   */
+  omit?: Prisma.RiskOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RiskInclude<ExtArgs> | null
+  where?: Prisma.RiskWhereInput
+  orderBy?: Prisma.RiskOrderByWithRelationInput | Prisma.RiskOrderByWithRelationInput[]
+  cursor?: Prisma.RiskWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RiskScalarFieldEnum | Prisma.RiskScalarFieldEnum[]
 }
 
 /**

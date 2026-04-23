@@ -82,25 +82,10 @@ export type ClientContact = Prisma.ClientContactModel
  */
 export type Engagement = Prisma.EngagementModel
 /**
- * Model AuditEvent
+ * Model BusinessConditionProfile
  * 
  */
-export type AuditEvent = Prisma.AuditEventModel
-/**
- * Model Stage
- * 
- */
-export type Stage = Prisma.StageModel
-/**
- * Model Finding
- * 
- */
-export type Finding = Prisma.FindingModel
-/**
- * Model Recommendation
- * 
- */
-export type Recommendation = Prisma.RecommendationModel
+export type BusinessConditionProfile = Prisma.BusinessConditionProfileModel
 /**
  * Model Evidence
  * 
@@ -117,10 +102,40 @@ export type EvidenceBundle = Prisma.EvidenceBundleModel
  */
 export type EvidenceBundleItem = Prisma.EvidenceBundleItemModel
 /**
+ * Model Finding
+ * 
+ */
+export type Finding = Prisma.FindingModel
+/**
+ * Model Recommendation
+ * 
+ */
+export type Recommendation = Prisma.RecommendationModel
+/**
  * Model Action
  * 
  */
 export type Action = Prisma.ActionModel
+/**
+ * Model AuditEvent
+ * 
+ */
+export type AuditEvent = Prisma.AuditEventModel
+/**
+ * Model IdempotencyRecord
+ * 
+ */
+export type IdempotencyRecord = Prisma.IdempotencyRecordModel
+/**
+ * Model ScheduledTask
+ * 
+ */
+export type ScheduledTask = Prisma.ScheduledTaskModel
+/**
+ * Model Stage
+ * 
+ */
+export type Stage = Prisma.StageModel
 /**
  * Model KPI
  * 
@@ -132,32 +147,12 @@ export type KPI = Prisma.KPIModel
  */
 export type KPISnapshot = Prisma.KPISnapshotModel
 /**
- * Model Risk
- * 
- */
-export type Risk = Prisma.RiskModel
-/**
  * Model Deliverable
  * 
  */
 export type Deliverable = Prisma.DeliverableModel
 /**
- * Model BusinessConditionProfile
+ * Model Risk
  * 
  */
-export type BusinessConditionProfile = Prisma.BusinessConditionProfileModel
-/**
- * Model InterventionHistory
- * 
- */
-export type InterventionHistory = Prisma.InterventionHistoryModel
-/**
- * Model IdempotencyRecord
- * 
- */
-export type IdempotencyRecord = Prisma.IdempotencyRecordModel
-/**
- * Model ScheduledTask
- * 
- */
-export type ScheduledTask = Prisma.ScheduledTaskModel
+export type Risk = Prisma.RiskModel

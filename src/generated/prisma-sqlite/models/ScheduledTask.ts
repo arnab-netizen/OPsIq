@@ -20,70 +20,122 @@ export type ScheduledTaskModel = runtime.Types.Result.DefaultSelection<Prisma.$S
 
 export type AggregateScheduledTask = {
   _count: ScheduledTaskCountAggregateOutputType | null
+  _avg: ScheduledTaskAvgAggregateOutputType | null
+  _sum: ScheduledTaskSumAggregateOutputType | null
   _min: ScheduledTaskMinAggregateOutputType | null
   _max: ScheduledTaskMaxAggregateOutputType | null
 }
 
+export type ScheduledTaskAvgAggregateOutputType = {
+  attempts: number | null
+  maxAttempts: number | null
+}
+
+export type ScheduledTaskSumAggregateOutputType = {
+  attempts: number | null
+  maxAttempts: number | null
+}
+
 export type ScheduledTaskMinAggregateOutputType = {
   id: string | null
-  type: string | null
-  engagementId: string | null
-  nextRunAt: Date | null
-  lastRunAt: Date | null
+  taskName: string | null
+  payload: string | null
   status: string | null
+  attempts: number | null
+  maxAttempts: number | null
+  lastError: string | null
+  scheduledFor: Date | null
+  startedAt: Date | null
+  completedAt: Date | null
   createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type ScheduledTaskMaxAggregateOutputType = {
   id: string | null
-  type: string | null
-  engagementId: string | null
-  nextRunAt: Date | null
-  lastRunAt: Date | null
+  taskName: string | null
+  payload: string | null
   status: string | null
+  attempts: number | null
+  maxAttempts: number | null
+  lastError: string | null
+  scheduledFor: Date | null
+  startedAt: Date | null
+  completedAt: Date | null
   createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type ScheduledTaskCountAggregateOutputType = {
   id: number
-  type: number
-  engagementId: number
-  nextRunAt: number
-  lastRunAt: number
+  taskName: number
+  payload: number
   status: number
+  attempts: number
+  maxAttempts: number
+  lastError: number
+  scheduledFor: number
+  startedAt: number
+  completedAt: number
   createdAt: number
+  updatedAt: number
   _all: number
 }
 
 
+export type ScheduledTaskAvgAggregateInputType = {
+  attempts?: true
+  maxAttempts?: true
+}
+
+export type ScheduledTaskSumAggregateInputType = {
+  attempts?: true
+  maxAttempts?: true
+}
+
 export type ScheduledTaskMinAggregateInputType = {
   id?: true
-  type?: true
-  engagementId?: true
-  nextRunAt?: true
-  lastRunAt?: true
+  taskName?: true
+  payload?: true
   status?: true
+  attempts?: true
+  maxAttempts?: true
+  lastError?: true
+  scheduledFor?: true
+  startedAt?: true
+  completedAt?: true
   createdAt?: true
+  updatedAt?: true
 }
 
 export type ScheduledTaskMaxAggregateInputType = {
   id?: true
-  type?: true
-  engagementId?: true
-  nextRunAt?: true
-  lastRunAt?: true
+  taskName?: true
+  payload?: true
   status?: true
+  attempts?: true
+  maxAttempts?: true
+  lastError?: true
+  scheduledFor?: true
+  startedAt?: true
+  completedAt?: true
   createdAt?: true
+  updatedAt?: true
 }
 
 export type ScheduledTaskCountAggregateInputType = {
   id?: true
-  type?: true
-  engagementId?: true
-  nextRunAt?: true
-  lastRunAt?: true
+  taskName?: true
+  payload?: true
   status?: true
+  attempts?: true
+  maxAttempts?: true
+  lastError?: true
+  scheduledFor?: true
+  startedAt?: true
+  completedAt?: true
   createdAt?: true
+  updatedAt?: true
   _all?: true
 }
 
@@ -125,6 +177,18 @@ export type ScheduledTaskAggregateArgs<ExtArgs extends runtime.Types.Extensions.
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: ScheduledTaskAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: ScheduledTaskSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: ScheduledTaskMinAggregateInputType
@@ -155,19 +219,28 @@ export type ScheduledTaskGroupByArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   _count?: ScheduledTaskCountAggregateInputType | true
+  _avg?: ScheduledTaskAvgAggregateInputType
+  _sum?: ScheduledTaskSumAggregateInputType
   _min?: ScheduledTaskMinAggregateInputType
   _max?: ScheduledTaskMaxAggregateInputType
 }
 
 export type ScheduledTaskGroupByOutputType = {
   id: string
-  type: string
-  engagementId: string | null
-  nextRunAt: Date
-  lastRunAt: Date | null
+  taskName: string
+  payload: string | null
   status: string
+  attempts: number
+  maxAttempts: number
+  lastError: string | null
+  scheduledFor: Date
+  startedAt: Date | null
+  completedAt: Date | null
   createdAt: Date
+  updatedAt: Date
   _count: ScheduledTaskCountAggregateOutputType | null
+  _avg: ScheduledTaskAvgAggregateOutputType | null
+  _sum: ScheduledTaskSumAggregateOutputType | null
   _min: ScheduledTaskMinAggregateOutputType | null
   _max: ScheduledTaskMaxAggregateOutputType | null
 }
@@ -192,22 +265,32 @@ export type ScheduledTaskWhereInput = {
   OR?: Prisma.ScheduledTaskWhereInput[]
   NOT?: Prisma.ScheduledTaskWhereInput | Prisma.ScheduledTaskWhereInput[]
   id?: Prisma.StringFilter<"ScheduledTask"> | string
-  type?: Prisma.StringFilter<"ScheduledTask"> | string
-  engagementId?: Prisma.StringNullableFilter<"ScheduledTask"> | string | null
-  nextRunAt?: Prisma.DateTimeFilter<"ScheduledTask"> | Date | string
-  lastRunAt?: Prisma.DateTimeNullableFilter<"ScheduledTask"> | Date | string | null
+  taskName?: Prisma.StringFilter<"ScheduledTask"> | string
+  payload?: Prisma.StringNullableFilter<"ScheduledTask"> | string | null
   status?: Prisma.StringFilter<"ScheduledTask"> | string
+  attempts?: Prisma.IntFilter<"ScheduledTask"> | number
+  maxAttempts?: Prisma.IntFilter<"ScheduledTask"> | number
+  lastError?: Prisma.StringNullableFilter<"ScheduledTask"> | string | null
+  scheduledFor?: Prisma.DateTimeFilter<"ScheduledTask"> | Date | string
+  startedAt?: Prisma.DateTimeNullableFilter<"ScheduledTask"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableFilter<"ScheduledTask"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ScheduledTask"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"ScheduledTask"> | Date | string
 }
 
 export type ScheduledTaskOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  engagementId?: Prisma.SortOrderInput | Prisma.SortOrder
-  nextRunAt?: Prisma.SortOrder
-  lastRunAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  taskName?: Prisma.SortOrder
+  payload?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
+  attempts?: Prisma.SortOrder
+  maxAttempts?: Prisma.SortOrder
+  lastError?: Prisma.SortOrderInput | Prisma.SortOrder
+  scheduledFor?: Prisma.SortOrder
+  startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type ScheduledTaskWhereUniqueInput = Prisma.AtLeast<{
@@ -215,25 +298,37 @@ export type ScheduledTaskWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.ScheduledTaskWhereInput | Prisma.ScheduledTaskWhereInput[]
   OR?: Prisma.ScheduledTaskWhereInput[]
   NOT?: Prisma.ScheduledTaskWhereInput | Prisma.ScheduledTaskWhereInput[]
-  type?: Prisma.StringFilter<"ScheduledTask"> | string
-  engagementId?: Prisma.StringNullableFilter<"ScheduledTask"> | string | null
-  nextRunAt?: Prisma.DateTimeFilter<"ScheduledTask"> | Date | string
-  lastRunAt?: Prisma.DateTimeNullableFilter<"ScheduledTask"> | Date | string | null
+  taskName?: Prisma.StringFilter<"ScheduledTask"> | string
+  payload?: Prisma.StringNullableFilter<"ScheduledTask"> | string | null
   status?: Prisma.StringFilter<"ScheduledTask"> | string
+  attempts?: Prisma.IntFilter<"ScheduledTask"> | number
+  maxAttempts?: Prisma.IntFilter<"ScheduledTask"> | number
+  lastError?: Prisma.StringNullableFilter<"ScheduledTask"> | string | null
+  scheduledFor?: Prisma.DateTimeFilter<"ScheduledTask"> | Date | string
+  startedAt?: Prisma.DateTimeNullableFilter<"ScheduledTask"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableFilter<"ScheduledTask"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ScheduledTask"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"ScheduledTask"> | Date | string
 }, "id">
 
 export type ScheduledTaskOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  engagementId?: Prisma.SortOrderInput | Prisma.SortOrder
-  nextRunAt?: Prisma.SortOrder
-  lastRunAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  taskName?: Prisma.SortOrder
+  payload?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
+  attempts?: Prisma.SortOrder
+  maxAttempts?: Prisma.SortOrder
+  lastError?: Prisma.SortOrderInput | Prisma.SortOrder
+  scheduledFor?: Prisma.SortOrder
+  startedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   _count?: Prisma.ScheduledTaskCountOrderByAggregateInput
+  _avg?: Prisma.ScheduledTaskAvgOrderByAggregateInput
   _max?: Prisma.ScheduledTaskMaxOrderByAggregateInput
   _min?: Prisma.ScheduledTaskMinOrderByAggregateInput
+  _sum?: Prisma.ScheduledTaskSumOrderByAggregateInput
 }
 
 export type ScheduledTaskScalarWhereWithAggregatesInput = {
@@ -241,169 +336,259 @@ export type ScheduledTaskScalarWhereWithAggregatesInput = {
   OR?: Prisma.ScheduledTaskScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ScheduledTaskScalarWhereWithAggregatesInput | Prisma.ScheduledTaskScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"ScheduledTask"> | string
-  type?: Prisma.StringWithAggregatesFilter<"ScheduledTask"> | string
-  engagementId?: Prisma.StringNullableWithAggregatesFilter<"ScheduledTask"> | string | null
-  nextRunAt?: Prisma.DateTimeWithAggregatesFilter<"ScheduledTask"> | Date | string
-  lastRunAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ScheduledTask"> | Date | string | null
+  taskName?: Prisma.StringWithAggregatesFilter<"ScheduledTask"> | string
+  payload?: Prisma.StringNullableWithAggregatesFilter<"ScheduledTask"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"ScheduledTask"> | string
+  attempts?: Prisma.IntWithAggregatesFilter<"ScheduledTask"> | number
+  maxAttempts?: Prisma.IntWithAggregatesFilter<"ScheduledTask"> | number
+  lastError?: Prisma.StringNullableWithAggregatesFilter<"ScheduledTask"> | string | null
+  scheduledFor?: Prisma.DateTimeWithAggregatesFilter<"ScheduledTask"> | Date | string
+  startedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ScheduledTask"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"ScheduledTask"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ScheduledTask"> | Date | string
+  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ScheduledTask"> | Date | string
 }
 
 export type ScheduledTaskCreateInput = {
   id?: string
-  type: string
-  engagementId?: string | null
-  nextRunAt: Date | string
-  lastRunAt?: Date | string | null
+  taskName: string
+  payload?: string | null
   status?: string
+  attempts?: number
+  maxAttempts?: number
+  lastError?: string | null
+  scheduledFor: Date | string
+  startedAt?: Date | string | null
+  completedAt?: Date | string | null
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type ScheduledTaskUncheckedCreateInput = {
   id?: string
-  type: string
-  engagementId?: string | null
-  nextRunAt: Date | string
-  lastRunAt?: Date | string | null
+  taskName: string
+  payload?: string | null
   status?: string
+  attempts?: number
+  maxAttempts?: number
+  lastError?: string | null
+  scheduledFor: Date | string
+  startedAt?: Date | string | null
+  completedAt?: Date | string | null
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type ScheduledTaskUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  nextRunAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  taskName?: Prisma.StringFieldUpdateOperationsInput | string
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  attempts?: Prisma.IntFieldUpdateOperationsInput | number
+  maxAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledFor?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ScheduledTaskUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  nextRunAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  taskName?: Prisma.StringFieldUpdateOperationsInput | string
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  attempts?: Prisma.IntFieldUpdateOperationsInput | number
+  maxAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledFor?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ScheduledTaskCreateManyInput = {
   id?: string
-  type: string
-  engagementId?: string | null
-  nextRunAt: Date | string
-  lastRunAt?: Date | string | null
+  taskName: string
+  payload?: string | null
   status?: string
+  attempts?: number
+  maxAttempts?: number
+  lastError?: string | null
+  scheduledFor: Date | string
+  startedAt?: Date | string | null
+  completedAt?: Date | string | null
   createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type ScheduledTaskUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  nextRunAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  taskName?: Prisma.StringFieldUpdateOperationsInput | string
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  attempts?: Prisma.IntFieldUpdateOperationsInput | number
+  maxAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledFor?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ScheduledTaskUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  engagementId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  nextRunAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  lastRunAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  taskName?: Prisma.StringFieldUpdateOperationsInput | string
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
+  attempts?: Prisma.IntFieldUpdateOperationsInput | number
+  maxAttempts?: Prisma.IntFieldUpdateOperationsInput | number
+  lastError?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  scheduledFor?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  startedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ScheduledTaskCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  engagementId?: Prisma.SortOrder
-  nextRunAt?: Prisma.SortOrder
-  lastRunAt?: Prisma.SortOrder
+  taskName?: Prisma.SortOrder
+  payload?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  attempts?: Prisma.SortOrder
+  maxAttempts?: Prisma.SortOrder
+  lastError?: Prisma.SortOrder
+  scheduledFor?: Prisma.SortOrder
+  startedAt?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
+}
+
+export type ScheduledTaskAvgOrderByAggregateInput = {
+  attempts?: Prisma.SortOrder
+  maxAttempts?: Prisma.SortOrder
 }
 
 export type ScheduledTaskMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  engagementId?: Prisma.SortOrder
-  nextRunAt?: Prisma.SortOrder
-  lastRunAt?: Prisma.SortOrder
+  taskName?: Prisma.SortOrder
+  payload?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  attempts?: Prisma.SortOrder
+  maxAttempts?: Prisma.SortOrder
+  lastError?: Prisma.SortOrder
+  scheduledFor?: Prisma.SortOrder
+  startedAt?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type ScheduledTaskMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  engagementId?: Prisma.SortOrder
-  nextRunAt?: Prisma.SortOrder
-  lastRunAt?: Prisma.SortOrder
+  taskName?: Prisma.SortOrder
+  payload?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  attempts?: Prisma.SortOrder
+  maxAttempts?: Prisma.SortOrder
+  lastError?: Prisma.SortOrder
+  scheduledFor?: Prisma.SortOrder
+  startedAt?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
+}
+
+export type ScheduledTaskSumOrderByAggregateInput = {
+  attempts?: Prisma.SortOrder
+  maxAttempts?: Prisma.SortOrder
 }
 
 
 
 export type ScheduledTaskSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  type?: boolean
-  engagementId?: boolean
-  nextRunAt?: boolean
-  lastRunAt?: boolean
+  taskName?: boolean
+  payload?: boolean
   status?: boolean
+  attempts?: boolean
+  maxAttempts?: boolean
+  lastError?: boolean
+  scheduledFor?: boolean
+  startedAt?: boolean
+  completedAt?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
 }, ExtArgs["result"]["scheduledTask"]>
 
 export type ScheduledTaskSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  type?: boolean
-  engagementId?: boolean
-  nextRunAt?: boolean
-  lastRunAt?: boolean
+  taskName?: boolean
+  payload?: boolean
   status?: boolean
+  attempts?: boolean
+  maxAttempts?: boolean
+  lastError?: boolean
+  scheduledFor?: boolean
+  startedAt?: boolean
+  completedAt?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
 }, ExtArgs["result"]["scheduledTask"]>
 
 export type ScheduledTaskSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  type?: boolean
-  engagementId?: boolean
-  nextRunAt?: boolean
-  lastRunAt?: boolean
+  taskName?: boolean
+  payload?: boolean
   status?: boolean
+  attempts?: boolean
+  maxAttempts?: boolean
+  lastError?: boolean
+  scheduledFor?: boolean
+  startedAt?: boolean
+  completedAt?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
 }, ExtArgs["result"]["scheduledTask"]>
 
 export type ScheduledTaskSelectScalar = {
   id?: boolean
-  type?: boolean
-  engagementId?: boolean
-  nextRunAt?: boolean
-  lastRunAt?: boolean
+  taskName?: boolean
+  payload?: boolean
   status?: boolean
+  attempts?: boolean
+  maxAttempts?: boolean
+  lastError?: boolean
+  scheduledFor?: boolean
+  startedAt?: boolean
+  completedAt?: boolean
   createdAt?: boolean
+  updatedAt?: boolean
 }
 
-export type ScheduledTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "type" | "engagementId" | "nextRunAt" | "lastRunAt" | "status" | "createdAt", ExtArgs["result"]["scheduledTask"]>
+export type ScheduledTaskOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "taskName" | "payload" | "status" | "attempts" | "maxAttempts" | "lastError" | "scheduledFor" | "startedAt" | "completedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["scheduledTask"]>
 
 export type $ScheduledTaskPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "ScheduledTask"
   objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    type: string
-    engagementId: string | null
-    nextRunAt: Date
-    lastRunAt: Date | null
+    taskName: string
+    payload: string | null
     status: string
+    attempts: number
+    maxAttempts: number
+    lastError: string | null
+    scheduledFor: Date
+    startedAt: Date | null
+    completedAt: Date | null
     createdAt: Date
+    updatedAt: Date
   }, ExtArgs["result"]["scheduledTask"]>
   composites: {}
 }
@@ -828,12 +1013,17 @@ export interface Prisma__ScheduledTaskClient<T, Null = never, ExtArgs extends ru
  */
 export interface ScheduledTaskFieldRefs {
   readonly id: Prisma.FieldRef<"ScheduledTask", 'String'>
-  readonly type: Prisma.FieldRef<"ScheduledTask", 'String'>
-  readonly engagementId: Prisma.FieldRef<"ScheduledTask", 'String'>
-  readonly nextRunAt: Prisma.FieldRef<"ScheduledTask", 'DateTime'>
-  readonly lastRunAt: Prisma.FieldRef<"ScheduledTask", 'DateTime'>
+  readonly taskName: Prisma.FieldRef<"ScheduledTask", 'String'>
+  readonly payload: Prisma.FieldRef<"ScheduledTask", 'String'>
   readonly status: Prisma.FieldRef<"ScheduledTask", 'String'>
+  readonly attempts: Prisma.FieldRef<"ScheduledTask", 'Int'>
+  readonly maxAttempts: Prisma.FieldRef<"ScheduledTask", 'Int'>
+  readonly lastError: Prisma.FieldRef<"ScheduledTask", 'String'>
+  readonly scheduledFor: Prisma.FieldRef<"ScheduledTask", 'DateTime'>
+  readonly startedAt: Prisma.FieldRef<"ScheduledTask", 'DateTime'>
+  readonly completedAt: Prisma.FieldRef<"ScheduledTask", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ScheduledTask", 'DateTime'>
+  readonly updatedAt: Prisma.FieldRef<"ScheduledTask", 'DateTime'>
 }
     
 

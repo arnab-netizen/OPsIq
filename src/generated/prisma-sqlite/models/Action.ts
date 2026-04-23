@@ -36,63 +36,66 @@ export type ActionSumAggregateOutputType = {
 
 export type ActionMinAggregateOutputType = {
   id: string | null
-  recommendationId: string | null
   engagementId: string | null
+  recommendationId: string | null
   title: string | null
   description: string | null
-  status: string | null
-  priority: string | null
   dueDate: Date | null
+  priority: string | null
+  status: string | null
   assignedTo: string | null
   completedBy: string | null
-  completionDate: Date | null
+  completedAt: Date | null
   verifiedBy: string | null
-  verificationDate: Date | null
+  verifiedAt: Date | null
+  notes: string | null
+  blockerReason: string | null
   version: number | null
   visibility: string | null
-  blockerReason: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
 
 export type ActionMaxAggregateOutputType = {
   id: string | null
-  recommendationId: string | null
   engagementId: string | null
+  recommendationId: string | null
   title: string | null
   description: string | null
-  status: string | null
-  priority: string | null
   dueDate: Date | null
+  priority: string | null
+  status: string | null
   assignedTo: string | null
   completedBy: string | null
-  completionDate: Date | null
+  completedAt: Date | null
   verifiedBy: string | null
-  verificationDate: Date | null
+  verifiedAt: Date | null
+  notes: string | null
+  blockerReason: string | null
   version: number | null
   visibility: string | null
-  blockerReason: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
 
 export type ActionCountAggregateOutputType = {
   id: number
-  recommendationId: number
   engagementId: number
+  recommendationId: number
   title: number
   description: number
-  status: number
-  priority: number
   dueDate: number
+  priority: number
+  status: number
   assignedTo: number
   completedBy: number
-  completionDate: number
+  completedAt: number
   verifiedBy: number
-  verificationDate: number
+  verifiedAt: number
+  notes: number
+  blockerReason: number
   version: number
   visibility: number
-  blockerReason: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -109,63 +112,66 @@ export type ActionSumAggregateInputType = {
 
 export type ActionMinAggregateInputType = {
   id?: true
-  recommendationId?: true
   engagementId?: true
+  recommendationId?: true
   title?: true
   description?: true
-  status?: true
-  priority?: true
   dueDate?: true
+  priority?: true
+  status?: true
   assignedTo?: true
   completedBy?: true
-  completionDate?: true
+  completedAt?: true
   verifiedBy?: true
-  verificationDate?: true
+  verifiedAt?: true
+  notes?: true
+  blockerReason?: true
   version?: true
   visibility?: true
-  blockerReason?: true
   createdAt?: true
   updatedAt?: true
 }
 
 export type ActionMaxAggregateInputType = {
   id?: true
-  recommendationId?: true
   engagementId?: true
+  recommendationId?: true
   title?: true
   description?: true
-  status?: true
-  priority?: true
   dueDate?: true
+  priority?: true
+  status?: true
   assignedTo?: true
   completedBy?: true
-  completionDate?: true
+  completedAt?: true
   verifiedBy?: true
-  verificationDate?: true
+  verifiedAt?: true
+  notes?: true
+  blockerReason?: true
   version?: true
   visibility?: true
-  blockerReason?: true
   createdAt?: true
   updatedAt?: true
 }
 
 export type ActionCountAggregateInputType = {
   id?: true
-  recommendationId?: true
   engagementId?: true
+  recommendationId?: true
   title?: true
   description?: true
-  status?: true
-  priority?: true
   dueDate?: true
+  priority?: true
+  status?: true
   assignedTo?: true
   completedBy?: true
-  completionDate?: true
+  completedAt?: true
   verifiedBy?: true
-  verificationDate?: true
+  verifiedAt?: true
+  notes?: true
+  blockerReason?: true
   version?: true
   visibility?: true
-  blockerReason?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -259,21 +265,22 @@ export type ActionGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 
 export type ActionGroupByOutputType = {
   id: string
-  recommendationId: string | null
   engagementId: string
+  recommendationId: string
   title: string
   description: string | null
-  status: string
-  priority: string
   dueDate: Date | null
+  priority: string
+  status: string
   assignedTo: string | null
   completedBy: string | null
-  completionDate: Date | null
+  completedAt: Date | null
   verifiedBy: string | null
-  verificationDate: Date | null
+  verifiedAt: Date | null
+  notes: string | null
+  blockerReason: string | null
   version: number
   visibility: string
-  blockerReason: string | null
   createdAt: Date
   updatedAt: Date
   _count: ActionCountAggregateOutputType | null
@@ -303,54 +310,56 @@ export type ActionWhereInput = {
   OR?: Prisma.ActionWhereInput[]
   NOT?: Prisma.ActionWhereInput | Prisma.ActionWhereInput[]
   id?: Prisma.StringFilter<"Action"> | string
-  recommendationId?: Prisma.StringNullableFilter<"Action"> | string | null
   engagementId?: Prisma.StringFilter<"Action"> | string
+  recommendationId?: Prisma.StringFilter<"Action"> | string
   title?: Prisma.StringFilter<"Action"> | string
   description?: Prisma.StringNullableFilter<"Action"> | string | null
-  status?: Prisma.StringFilter<"Action"> | string
-  priority?: Prisma.StringFilter<"Action"> | string
   dueDate?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  priority?: Prisma.StringFilter<"Action"> | string
+  status?: Prisma.StringFilter<"Action"> | string
   assignedTo?: Prisma.StringNullableFilter<"Action"> | string | null
   completedBy?: Prisma.StringNullableFilter<"Action"> | string | null
-  completionDate?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
   verifiedBy?: Prisma.StringNullableFilter<"Action"> | string | null
-  verificationDate?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  verifiedAt?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  notes?: Prisma.StringNullableFilter<"Action"> | string | null
+  blockerReason?: Prisma.StringNullableFilter<"Action"> | string | null
   version?: Prisma.IntFilter<"Action"> | number
   visibility?: Prisma.StringFilter<"Action"> | string
-  blockerReason?: Prisma.StringNullableFilter<"Action"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Action"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Action"> | Date | string
-  recommendation?: Prisma.XOR<Prisma.RecommendationNullableScalarRelationFilter, Prisma.RecommendationWhereInput> | null
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
+  recommendation?: Prisma.XOR<Prisma.RecommendationScalarRelationFilter, Prisma.RecommendationWhereInput>
   assignee?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
-  completedByUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
-  verifiedByUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  completer?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  verifier?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }
 
 export type ActionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  recommendationId?: Prisma.SortOrderInput | Prisma.SortOrder
   engagementId?: Prisma.SortOrder
+  recommendationId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
-  status?: Prisma.SortOrder
-  priority?: Prisma.SortOrder
   dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  priority?: Prisma.SortOrder
+  status?: Prisma.SortOrder
   assignedTo?: Prisma.SortOrderInput | Prisma.SortOrder
   completedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  completionDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   verifiedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  verificationDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  verifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  blockerReason?: Prisma.SortOrderInput | Prisma.SortOrder
   version?: Prisma.SortOrder
   visibility?: Prisma.SortOrder
-  blockerReason?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
-  recommendation?: Prisma.RecommendationOrderByWithRelationInput
   engagement?: Prisma.EngagementOrderByWithRelationInput
+  recommendation?: Prisma.RecommendationOrderByWithRelationInput
   assignee?: Prisma.UserOrderByWithRelationInput
-  completedByUser?: Prisma.UserOrderByWithRelationInput
-  verifiedByUser?: Prisma.UserOrderByWithRelationInput
+  completer?: Prisma.UserOrderByWithRelationInput
+  verifier?: Prisma.UserOrderByWithRelationInput
 }
 
 export type ActionWhereUniqueInput = Prisma.AtLeast<{
@@ -358,47 +367,49 @@ export type ActionWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.ActionWhereInput | Prisma.ActionWhereInput[]
   OR?: Prisma.ActionWhereInput[]
   NOT?: Prisma.ActionWhereInput | Prisma.ActionWhereInput[]
-  recommendationId?: Prisma.StringNullableFilter<"Action"> | string | null
   engagementId?: Prisma.StringFilter<"Action"> | string
+  recommendationId?: Prisma.StringFilter<"Action"> | string
   title?: Prisma.StringFilter<"Action"> | string
   description?: Prisma.StringNullableFilter<"Action"> | string | null
-  status?: Prisma.StringFilter<"Action"> | string
-  priority?: Prisma.StringFilter<"Action"> | string
   dueDate?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  priority?: Prisma.StringFilter<"Action"> | string
+  status?: Prisma.StringFilter<"Action"> | string
   assignedTo?: Prisma.StringNullableFilter<"Action"> | string | null
   completedBy?: Prisma.StringNullableFilter<"Action"> | string | null
-  completionDate?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
   verifiedBy?: Prisma.StringNullableFilter<"Action"> | string | null
-  verificationDate?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  verifiedAt?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  notes?: Prisma.StringNullableFilter<"Action"> | string | null
+  blockerReason?: Prisma.StringNullableFilter<"Action"> | string | null
   version?: Prisma.IntFilter<"Action"> | number
   visibility?: Prisma.StringFilter<"Action"> | string
-  blockerReason?: Prisma.StringNullableFilter<"Action"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Action"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Action"> | Date | string
-  recommendation?: Prisma.XOR<Prisma.RecommendationNullableScalarRelationFilter, Prisma.RecommendationWhereInput> | null
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
+  recommendation?: Prisma.XOR<Prisma.RecommendationScalarRelationFilter, Prisma.RecommendationWhereInput>
   assignee?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
-  completedByUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
-  verifiedByUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  completer?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  verifier?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }, "id">
 
 export type ActionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  recommendationId?: Prisma.SortOrderInput | Prisma.SortOrder
   engagementId?: Prisma.SortOrder
+  recommendationId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
-  status?: Prisma.SortOrder
-  priority?: Prisma.SortOrder
   dueDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  priority?: Prisma.SortOrder
+  status?: Prisma.SortOrder
   assignedTo?: Prisma.SortOrderInput | Prisma.SortOrder
   completedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  completionDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   verifiedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  verificationDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  verifiedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  blockerReason?: Prisma.SortOrderInput | Prisma.SortOrder
   version?: Prisma.SortOrder
   visibility?: Prisma.SortOrder
-  blockerReason?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ActionCountOrderByAggregateInput
@@ -413,21 +424,22 @@ export type ActionScalarWhereWithAggregatesInput = {
   OR?: Prisma.ActionScalarWhereWithAggregatesInput[]
   NOT?: Prisma.ActionScalarWhereWithAggregatesInput | Prisma.ActionScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Action"> | string
-  recommendationId?: Prisma.StringNullableWithAggregatesFilter<"Action"> | string | null
   engagementId?: Prisma.StringWithAggregatesFilter<"Action"> | string
+  recommendationId?: Prisma.StringWithAggregatesFilter<"Action"> | string
   title?: Prisma.StringWithAggregatesFilter<"Action"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"Action"> | string | null
-  status?: Prisma.StringWithAggregatesFilter<"Action"> | string
-  priority?: Prisma.StringWithAggregatesFilter<"Action"> | string
   dueDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Action"> | Date | string | null
+  priority?: Prisma.StringWithAggregatesFilter<"Action"> | string
+  status?: Prisma.StringWithAggregatesFilter<"Action"> | string
   assignedTo?: Prisma.StringNullableWithAggregatesFilter<"Action"> | string | null
   completedBy?: Prisma.StringNullableWithAggregatesFilter<"Action"> | string | null
-  completionDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Action"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Action"> | Date | string | null
   verifiedBy?: Prisma.StringNullableWithAggregatesFilter<"Action"> | string | null
-  verificationDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Action"> | Date | string | null
+  verifiedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Action"> | Date | string | null
+  notes?: Prisma.StringNullableWithAggregatesFilter<"Action"> | string | null
+  blockerReason?: Prisma.StringNullableWithAggregatesFilter<"Action"> | string | null
   version?: Prisma.IntWithAggregatesFilter<"Action"> | number
   visibility?: Prisma.StringWithAggregatesFilter<"Action"> | string
-  blockerReason?: Prisma.StringNullableWithAggregatesFilter<"Action"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Action"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Action"> | Date | string
 }
@@ -436,40 +448,42 @@ export type ActionCreateInput = {
   id?: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
-  completionDate?: Date | string | null
-  verificationDate?: Date | string | null
+  priority: string
+  status?: string
+  completedAt?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  recommendation?: Prisma.RecommendationCreateNestedOneWithoutActionsInput
   engagement: Prisma.EngagementCreateNestedOneWithoutActionsInput
+  recommendation: Prisma.RecommendationCreateNestedOneWithoutActionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
-  completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
-  verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
+  completer?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
+  verifier?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
 }
 
 export type ActionUncheckedCreateInput = {
   id?: string
-  recommendationId?: string | null
   engagementId: string
+  recommendationId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   assignedTo?: string | null
   completedBy?: string | null
-  completionDate?: Date | string | null
+  completedAt?: Date | string | null
   verifiedBy?: string | null
-  verificationDate?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -478,61 +492,64 @@ export type ActionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  recommendation?: Prisma.RecommendationUpdateOneWithoutActionsNestedInput
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutActionsNestedInput
+  recommendation?: Prisma.RecommendationUpdateOneRequiredWithoutActionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
-  completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
-  verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
+  completer?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
+  verifier?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
 }
 
 export type ActionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  recommendationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ActionCreateManyInput = {
   id?: string
-  recommendationId?: string | null
   engagementId: string
+  recommendationId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   assignedTo?: string | null
   completedBy?: string | null
-  completionDate?: Date | string | null
+  completedAt?: Date | string | null
   verifiedBy?: string | null
-  verificationDate?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -541,35 +558,37 @@ export type ActionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ActionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  recommendationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -586,21 +605,22 @@ export type ActionOrderByRelationAggregateInput = {
 
 export type ActionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  recommendationId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
+  recommendationId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  status?: Prisma.SortOrder
-  priority?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
+  priority?: Prisma.SortOrder
+  status?: Prisma.SortOrder
   assignedTo?: Prisma.SortOrder
   completedBy?: Prisma.SortOrder
-  completionDate?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
   verifiedBy?: Prisma.SortOrder
-  verificationDate?: Prisma.SortOrder
+  verifiedAt?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  blockerReason?: Prisma.SortOrder
   version?: Prisma.SortOrder
   visibility?: Prisma.SortOrder
-  blockerReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -611,42 +631,44 @@ export type ActionAvgOrderByAggregateInput = {
 
 export type ActionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  recommendationId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
+  recommendationId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  status?: Prisma.SortOrder
-  priority?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
+  priority?: Prisma.SortOrder
+  status?: Prisma.SortOrder
   assignedTo?: Prisma.SortOrder
   completedBy?: Prisma.SortOrder
-  completionDate?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
   verifiedBy?: Prisma.SortOrder
-  verificationDate?: Prisma.SortOrder
+  verifiedAt?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  blockerReason?: Prisma.SortOrder
   version?: Prisma.SortOrder
   visibility?: Prisma.SortOrder
-  blockerReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type ActionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  recommendationId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
+  recommendationId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
-  status?: Prisma.SortOrder
-  priority?: Prisma.SortOrder
   dueDate?: Prisma.SortOrder
+  priority?: Prisma.SortOrder
+  status?: Prisma.SortOrder
   assignedTo?: Prisma.SortOrder
   completedBy?: Prisma.SortOrder
-  completionDate?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
   verifiedBy?: Prisma.SortOrder
-  verificationDate?: Prisma.SortOrder
+  verifiedAt?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  blockerReason?: Prisma.SortOrder
   version?: Prisma.SortOrder
   visibility?: Prisma.SortOrder
-  blockerReason?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -662,17 +684,17 @@ export type ActionCreateNestedManyWithoutAssigneeInput = {
   connect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
 }
 
-export type ActionCreateNestedManyWithoutCompletedByUserInput = {
-  create?: Prisma.XOR<Prisma.ActionCreateWithoutCompletedByUserInput, Prisma.ActionUncheckedCreateWithoutCompletedByUserInput> | Prisma.ActionCreateWithoutCompletedByUserInput[] | Prisma.ActionUncheckedCreateWithoutCompletedByUserInput[]
-  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutCompletedByUserInput | Prisma.ActionCreateOrConnectWithoutCompletedByUserInput[]
-  createMany?: Prisma.ActionCreateManyCompletedByUserInputEnvelope
+export type ActionCreateNestedManyWithoutCompleterInput = {
+  create?: Prisma.XOR<Prisma.ActionCreateWithoutCompleterInput, Prisma.ActionUncheckedCreateWithoutCompleterInput> | Prisma.ActionCreateWithoutCompleterInput[] | Prisma.ActionUncheckedCreateWithoutCompleterInput[]
+  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutCompleterInput | Prisma.ActionCreateOrConnectWithoutCompleterInput[]
+  createMany?: Prisma.ActionCreateManyCompleterInputEnvelope
   connect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
 }
 
-export type ActionCreateNestedManyWithoutVerifiedByUserInput = {
-  create?: Prisma.XOR<Prisma.ActionCreateWithoutVerifiedByUserInput, Prisma.ActionUncheckedCreateWithoutVerifiedByUserInput> | Prisma.ActionCreateWithoutVerifiedByUserInput[] | Prisma.ActionUncheckedCreateWithoutVerifiedByUserInput[]
-  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutVerifiedByUserInput | Prisma.ActionCreateOrConnectWithoutVerifiedByUserInput[]
-  createMany?: Prisma.ActionCreateManyVerifiedByUserInputEnvelope
+export type ActionCreateNestedManyWithoutVerifierInput = {
+  create?: Prisma.XOR<Prisma.ActionCreateWithoutVerifierInput, Prisma.ActionUncheckedCreateWithoutVerifierInput> | Prisma.ActionCreateWithoutVerifierInput[] | Prisma.ActionUncheckedCreateWithoutVerifierInput[]
+  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutVerifierInput | Prisma.ActionCreateOrConnectWithoutVerifierInput[]
+  createMany?: Prisma.ActionCreateManyVerifierInputEnvelope
   connect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
 }
 
@@ -683,17 +705,17 @@ export type ActionUncheckedCreateNestedManyWithoutAssigneeInput = {
   connect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
 }
 
-export type ActionUncheckedCreateNestedManyWithoutCompletedByUserInput = {
-  create?: Prisma.XOR<Prisma.ActionCreateWithoutCompletedByUserInput, Prisma.ActionUncheckedCreateWithoutCompletedByUserInput> | Prisma.ActionCreateWithoutCompletedByUserInput[] | Prisma.ActionUncheckedCreateWithoutCompletedByUserInput[]
-  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutCompletedByUserInput | Prisma.ActionCreateOrConnectWithoutCompletedByUserInput[]
-  createMany?: Prisma.ActionCreateManyCompletedByUserInputEnvelope
+export type ActionUncheckedCreateNestedManyWithoutCompleterInput = {
+  create?: Prisma.XOR<Prisma.ActionCreateWithoutCompleterInput, Prisma.ActionUncheckedCreateWithoutCompleterInput> | Prisma.ActionCreateWithoutCompleterInput[] | Prisma.ActionUncheckedCreateWithoutCompleterInput[]
+  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutCompleterInput | Prisma.ActionCreateOrConnectWithoutCompleterInput[]
+  createMany?: Prisma.ActionCreateManyCompleterInputEnvelope
   connect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
 }
 
-export type ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput = {
-  create?: Prisma.XOR<Prisma.ActionCreateWithoutVerifiedByUserInput, Prisma.ActionUncheckedCreateWithoutVerifiedByUserInput> | Prisma.ActionCreateWithoutVerifiedByUserInput[] | Prisma.ActionUncheckedCreateWithoutVerifiedByUserInput[]
-  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutVerifiedByUserInput | Prisma.ActionCreateOrConnectWithoutVerifiedByUserInput[]
-  createMany?: Prisma.ActionCreateManyVerifiedByUserInputEnvelope
+export type ActionUncheckedCreateNestedManyWithoutVerifierInput = {
+  create?: Prisma.XOR<Prisma.ActionCreateWithoutVerifierInput, Prisma.ActionUncheckedCreateWithoutVerifierInput> | Prisma.ActionCreateWithoutVerifierInput[] | Prisma.ActionUncheckedCreateWithoutVerifierInput[]
+  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutVerifierInput | Prisma.ActionCreateOrConnectWithoutVerifierInput[]
+  createMany?: Prisma.ActionCreateManyVerifierInputEnvelope
   connect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
 }
 
@@ -711,31 +733,31 @@ export type ActionUpdateManyWithoutAssigneeNestedInput = {
   deleteMany?: Prisma.ActionScalarWhereInput | Prisma.ActionScalarWhereInput[]
 }
 
-export type ActionUpdateManyWithoutCompletedByUserNestedInput = {
-  create?: Prisma.XOR<Prisma.ActionCreateWithoutCompletedByUserInput, Prisma.ActionUncheckedCreateWithoutCompletedByUserInput> | Prisma.ActionCreateWithoutCompletedByUserInput[] | Prisma.ActionUncheckedCreateWithoutCompletedByUserInput[]
-  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutCompletedByUserInput | Prisma.ActionCreateOrConnectWithoutCompletedByUserInput[]
-  upsert?: Prisma.ActionUpsertWithWhereUniqueWithoutCompletedByUserInput | Prisma.ActionUpsertWithWhereUniqueWithoutCompletedByUserInput[]
-  createMany?: Prisma.ActionCreateManyCompletedByUserInputEnvelope
+export type ActionUpdateManyWithoutCompleterNestedInput = {
+  create?: Prisma.XOR<Prisma.ActionCreateWithoutCompleterInput, Prisma.ActionUncheckedCreateWithoutCompleterInput> | Prisma.ActionCreateWithoutCompleterInput[] | Prisma.ActionUncheckedCreateWithoutCompleterInput[]
+  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutCompleterInput | Prisma.ActionCreateOrConnectWithoutCompleterInput[]
+  upsert?: Prisma.ActionUpsertWithWhereUniqueWithoutCompleterInput | Prisma.ActionUpsertWithWhereUniqueWithoutCompleterInput[]
+  createMany?: Prisma.ActionCreateManyCompleterInputEnvelope
   set?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   disconnect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   delete?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   connect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
-  update?: Prisma.ActionUpdateWithWhereUniqueWithoutCompletedByUserInput | Prisma.ActionUpdateWithWhereUniqueWithoutCompletedByUserInput[]
-  updateMany?: Prisma.ActionUpdateManyWithWhereWithoutCompletedByUserInput | Prisma.ActionUpdateManyWithWhereWithoutCompletedByUserInput[]
+  update?: Prisma.ActionUpdateWithWhereUniqueWithoutCompleterInput | Prisma.ActionUpdateWithWhereUniqueWithoutCompleterInput[]
+  updateMany?: Prisma.ActionUpdateManyWithWhereWithoutCompleterInput | Prisma.ActionUpdateManyWithWhereWithoutCompleterInput[]
   deleteMany?: Prisma.ActionScalarWhereInput | Prisma.ActionScalarWhereInput[]
 }
 
-export type ActionUpdateManyWithoutVerifiedByUserNestedInput = {
-  create?: Prisma.XOR<Prisma.ActionCreateWithoutVerifiedByUserInput, Prisma.ActionUncheckedCreateWithoutVerifiedByUserInput> | Prisma.ActionCreateWithoutVerifiedByUserInput[] | Prisma.ActionUncheckedCreateWithoutVerifiedByUserInput[]
-  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutVerifiedByUserInput | Prisma.ActionCreateOrConnectWithoutVerifiedByUserInput[]
-  upsert?: Prisma.ActionUpsertWithWhereUniqueWithoutVerifiedByUserInput | Prisma.ActionUpsertWithWhereUniqueWithoutVerifiedByUserInput[]
-  createMany?: Prisma.ActionCreateManyVerifiedByUserInputEnvelope
+export type ActionUpdateManyWithoutVerifierNestedInput = {
+  create?: Prisma.XOR<Prisma.ActionCreateWithoutVerifierInput, Prisma.ActionUncheckedCreateWithoutVerifierInput> | Prisma.ActionCreateWithoutVerifierInput[] | Prisma.ActionUncheckedCreateWithoutVerifierInput[]
+  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutVerifierInput | Prisma.ActionCreateOrConnectWithoutVerifierInput[]
+  upsert?: Prisma.ActionUpsertWithWhereUniqueWithoutVerifierInput | Prisma.ActionUpsertWithWhereUniqueWithoutVerifierInput[]
+  createMany?: Prisma.ActionCreateManyVerifierInputEnvelope
   set?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   disconnect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   delete?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   connect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
-  update?: Prisma.ActionUpdateWithWhereUniqueWithoutVerifiedByUserInput | Prisma.ActionUpdateWithWhereUniqueWithoutVerifiedByUserInput[]
-  updateMany?: Prisma.ActionUpdateManyWithWhereWithoutVerifiedByUserInput | Prisma.ActionUpdateManyWithWhereWithoutVerifiedByUserInput[]
+  update?: Prisma.ActionUpdateWithWhereUniqueWithoutVerifierInput | Prisma.ActionUpdateWithWhereUniqueWithoutVerifierInput[]
+  updateMany?: Prisma.ActionUpdateManyWithWhereWithoutVerifierInput | Prisma.ActionUpdateManyWithWhereWithoutVerifierInput[]
   deleteMany?: Prisma.ActionScalarWhereInput | Prisma.ActionScalarWhereInput[]
 }
 
@@ -753,31 +775,31 @@ export type ActionUncheckedUpdateManyWithoutAssigneeNestedInput = {
   deleteMany?: Prisma.ActionScalarWhereInput | Prisma.ActionScalarWhereInput[]
 }
 
-export type ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput = {
-  create?: Prisma.XOR<Prisma.ActionCreateWithoutCompletedByUserInput, Prisma.ActionUncheckedCreateWithoutCompletedByUserInput> | Prisma.ActionCreateWithoutCompletedByUserInput[] | Prisma.ActionUncheckedCreateWithoutCompletedByUserInput[]
-  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutCompletedByUserInput | Prisma.ActionCreateOrConnectWithoutCompletedByUserInput[]
-  upsert?: Prisma.ActionUpsertWithWhereUniqueWithoutCompletedByUserInput | Prisma.ActionUpsertWithWhereUniqueWithoutCompletedByUserInput[]
-  createMany?: Prisma.ActionCreateManyCompletedByUserInputEnvelope
+export type ActionUncheckedUpdateManyWithoutCompleterNestedInput = {
+  create?: Prisma.XOR<Prisma.ActionCreateWithoutCompleterInput, Prisma.ActionUncheckedCreateWithoutCompleterInput> | Prisma.ActionCreateWithoutCompleterInput[] | Prisma.ActionUncheckedCreateWithoutCompleterInput[]
+  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutCompleterInput | Prisma.ActionCreateOrConnectWithoutCompleterInput[]
+  upsert?: Prisma.ActionUpsertWithWhereUniqueWithoutCompleterInput | Prisma.ActionUpsertWithWhereUniqueWithoutCompleterInput[]
+  createMany?: Prisma.ActionCreateManyCompleterInputEnvelope
   set?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   disconnect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   delete?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   connect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
-  update?: Prisma.ActionUpdateWithWhereUniqueWithoutCompletedByUserInput | Prisma.ActionUpdateWithWhereUniqueWithoutCompletedByUserInput[]
-  updateMany?: Prisma.ActionUpdateManyWithWhereWithoutCompletedByUserInput | Prisma.ActionUpdateManyWithWhereWithoutCompletedByUserInput[]
+  update?: Prisma.ActionUpdateWithWhereUniqueWithoutCompleterInput | Prisma.ActionUpdateWithWhereUniqueWithoutCompleterInput[]
+  updateMany?: Prisma.ActionUpdateManyWithWhereWithoutCompleterInput | Prisma.ActionUpdateManyWithWhereWithoutCompleterInput[]
   deleteMany?: Prisma.ActionScalarWhereInput | Prisma.ActionScalarWhereInput[]
 }
 
-export type ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput = {
-  create?: Prisma.XOR<Prisma.ActionCreateWithoutVerifiedByUserInput, Prisma.ActionUncheckedCreateWithoutVerifiedByUserInput> | Prisma.ActionCreateWithoutVerifiedByUserInput[] | Prisma.ActionUncheckedCreateWithoutVerifiedByUserInput[]
-  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutVerifiedByUserInput | Prisma.ActionCreateOrConnectWithoutVerifiedByUserInput[]
-  upsert?: Prisma.ActionUpsertWithWhereUniqueWithoutVerifiedByUserInput | Prisma.ActionUpsertWithWhereUniqueWithoutVerifiedByUserInput[]
-  createMany?: Prisma.ActionCreateManyVerifiedByUserInputEnvelope
+export type ActionUncheckedUpdateManyWithoutVerifierNestedInput = {
+  create?: Prisma.XOR<Prisma.ActionCreateWithoutVerifierInput, Prisma.ActionUncheckedCreateWithoutVerifierInput> | Prisma.ActionCreateWithoutVerifierInput[] | Prisma.ActionUncheckedCreateWithoutVerifierInput[]
+  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutVerifierInput | Prisma.ActionCreateOrConnectWithoutVerifierInput[]
+  upsert?: Prisma.ActionUpsertWithWhereUniqueWithoutVerifierInput | Prisma.ActionUpsertWithWhereUniqueWithoutVerifierInput[]
+  createMany?: Prisma.ActionCreateManyVerifierInputEnvelope
   set?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   disconnect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   delete?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
   connect?: Prisma.ActionWhereUniqueInput | Prisma.ActionWhereUniqueInput[]
-  update?: Prisma.ActionUpdateWithWhereUniqueWithoutVerifiedByUserInput | Prisma.ActionUpdateWithWhereUniqueWithoutVerifiedByUserInput[]
-  updateMany?: Prisma.ActionUpdateManyWithWhereWithoutVerifiedByUserInput | Prisma.ActionUpdateManyWithWhereWithoutVerifiedByUserInput[]
+  update?: Prisma.ActionUpdateWithWhereUniqueWithoutVerifierInput | Prisma.ActionUpdateWithWhereUniqueWithoutVerifierInput[]
+  updateMany?: Prisma.ActionUpdateManyWithWhereWithoutVerifierInput | Prisma.ActionUpdateManyWithWhereWithoutVerifierInput[]
   deleteMany?: Prisma.ActionScalarWhereInput | Prisma.ActionScalarWhereInput[]
 }
 
@@ -869,38 +891,40 @@ export type ActionCreateWithoutAssigneeInput = {
   id?: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
-  completionDate?: Date | string | null
-  verificationDate?: Date | string | null
+  priority: string
+  status?: string
+  completedAt?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  recommendation?: Prisma.RecommendationCreateNestedOneWithoutActionsInput
   engagement: Prisma.EngagementCreateNestedOneWithoutActionsInput
-  completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
-  verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
+  recommendation: Prisma.RecommendationCreateNestedOneWithoutActionsInput
+  completer?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
+  verifier?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
 }
 
 export type ActionUncheckedCreateWithoutAssigneeInput = {
   id?: string
-  recommendationId?: string | null
   engagementId: string
+  recommendationId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   completedBy?: string | null
-  completionDate?: Date | string | null
+  completedAt?: Date | string | null
   verifiedBy?: string | null
-  verificationDate?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -914,102 +938,106 @@ export type ActionCreateManyAssigneeInputEnvelope = {
   data: Prisma.ActionCreateManyAssigneeInput | Prisma.ActionCreateManyAssigneeInput[]
 }
 
-export type ActionCreateWithoutCompletedByUserInput = {
+export type ActionCreateWithoutCompleterInput = {
   id?: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
-  completionDate?: Date | string | null
-  verificationDate?: Date | string | null
+  priority: string
+  status?: string
+  completedAt?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  recommendation?: Prisma.RecommendationCreateNestedOneWithoutActionsInput
   engagement: Prisma.EngagementCreateNestedOneWithoutActionsInput
+  recommendation: Prisma.RecommendationCreateNestedOneWithoutActionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
-  verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
+  verifier?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
 }
 
-export type ActionUncheckedCreateWithoutCompletedByUserInput = {
+export type ActionUncheckedCreateWithoutCompleterInput = {
   id?: string
-  recommendationId?: string | null
   engagementId: string
+  recommendationId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   assignedTo?: string | null
-  completionDate?: Date | string | null
+  completedAt?: Date | string | null
   verifiedBy?: string | null
-  verificationDate?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
-export type ActionCreateOrConnectWithoutCompletedByUserInput = {
+export type ActionCreateOrConnectWithoutCompleterInput = {
   where: Prisma.ActionWhereUniqueInput
-  create: Prisma.XOR<Prisma.ActionCreateWithoutCompletedByUserInput, Prisma.ActionUncheckedCreateWithoutCompletedByUserInput>
+  create: Prisma.XOR<Prisma.ActionCreateWithoutCompleterInput, Prisma.ActionUncheckedCreateWithoutCompleterInput>
 }
 
-export type ActionCreateManyCompletedByUserInputEnvelope = {
-  data: Prisma.ActionCreateManyCompletedByUserInput | Prisma.ActionCreateManyCompletedByUserInput[]
+export type ActionCreateManyCompleterInputEnvelope = {
+  data: Prisma.ActionCreateManyCompleterInput | Prisma.ActionCreateManyCompleterInput[]
 }
 
-export type ActionCreateWithoutVerifiedByUserInput = {
+export type ActionCreateWithoutVerifierInput = {
   id?: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
-  completionDate?: Date | string | null
-  verificationDate?: Date | string | null
+  priority: string
+  status?: string
+  completedAt?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  recommendation?: Prisma.RecommendationCreateNestedOneWithoutActionsInput
   engagement: Prisma.EngagementCreateNestedOneWithoutActionsInput
+  recommendation: Prisma.RecommendationCreateNestedOneWithoutActionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
-  completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
+  completer?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
 }
 
-export type ActionUncheckedCreateWithoutVerifiedByUserInput = {
+export type ActionUncheckedCreateWithoutVerifierInput = {
   id?: string
-  recommendationId?: string | null
   engagementId: string
+  recommendationId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   assignedTo?: string | null
   completedBy?: string | null
-  completionDate?: Date | string | null
-  verificationDate?: Date | string | null
+  completedAt?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
-export type ActionCreateOrConnectWithoutVerifiedByUserInput = {
+export type ActionCreateOrConnectWithoutVerifierInput = {
   where: Prisma.ActionWhereUniqueInput
-  create: Prisma.XOR<Prisma.ActionCreateWithoutVerifiedByUserInput, Prisma.ActionUncheckedCreateWithoutVerifiedByUserInput>
+  create: Prisma.XOR<Prisma.ActionCreateWithoutVerifierInput, Prisma.ActionUncheckedCreateWithoutVerifierInput>
 }
 
-export type ActionCreateManyVerifiedByUserInputEnvelope = {
-  data: Prisma.ActionCreateManyVerifiedByUserInput | Prisma.ActionCreateManyVerifiedByUserInput[]
+export type ActionCreateManyVerifierInputEnvelope = {
+  data: Prisma.ActionCreateManyVerifierInput | Prisma.ActionCreateManyVerifierInput[]
 }
 
 export type ActionUpsertWithWhereUniqueWithoutAssigneeInput = {
@@ -1033,93 +1061,96 @@ export type ActionScalarWhereInput = {
   OR?: Prisma.ActionScalarWhereInput[]
   NOT?: Prisma.ActionScalarWhereInput | Prisma.ActionScalarWhereInput[]
   id?: Prisma.StringFilter<"Action"> | string
-  recommendationId?: Prisma.StringNullableFilter<"Action"> | string | null
   engagementId?: Prisma.StringFilter<"Action"> | string
+  recommendationId?: Prisma.StringFilter<"Action"> | string
   title?: Prisma.StringFilter<"Action"> | string
   description?: Prisma.StringNullableFilter<"Action"> | string | null
-  status?: Prisma.StringFilter<"Action"> | string
-  priority?: Prisma.StringFilter<"Action"> | string
   dueDate?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  priority?: Prisma.StringFilter<"Action"> | string
+  status?: Prisma.StringFilter<"Action"> | string
   assignedTo?: Prisma.StringNullableFilter<"Action"> | string | null
   completedBy?: Prisma.StringNullableFilter<"Action"> | string | null
-  completionDate?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  completedAt?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
   verifiedBy?: Prisma.StringNullableFilter<"Action"> | string | null
-  verificationDate?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  verifiedAt?: Prisma.DateTimeNullableFilter<"Action"> | Date | string | null
+  notes?: Prisma.StringNullableFilter<"Action"> | string | null
+  blockerReason?: Prisma.StringNullableFilter<"Action"> | string | null
   version?: Prisma.IntFilter<"Action"> | number
   visibility?: Prisma.StringFilter<"Action"> | string
-  blockerReason?: Prisma.StringNullableFilter<"Action"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Action"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Action"> | Date | string
 }
 
-export type ActionUpsertWithWhereUniqueWithoutCompletedByUserInput = {
+export type ActionUpsertWithWhereUniqueWithoutCompleterInput = {
   where: Prisma.ActionWhereUniqueInput
-  update: Prisma.XOR<Prisma.ActionUpdateWithoutCompletedByUserInput, Prisma.ActionUncheckedUpdateWithoutCompletedByUserInput>
-  create: Prisma.XOR<Prisma.ActionCreateWithoutCompletedByUserInput, Prisma.ActionUncheckedCreateWithoutCompletedByUserInput>
+  update: Prisma.XOR<Prisma.ActionUpdateWithoutCompleterInput, Prisma.ActionUncheckedUpdateWithoutCompleterInput>
+  create: Prisma.XOR<Prisma.ActionCreateWithoutCompleterInput, Prisma.ActionUncheckedCreateWithoutCompleterInput>
 }
 
-export type ActionUpdateWithWhereUniqueWithoutCompletedByUserInput = {
+export type ActionUpdateWithWhereUniqueWithoutCompleterInput = {
   where: Prisma.ActionWhereUniqueInput
-  data: Prisma.XOR<Prisma.ActionUpdateWithoutCompletedByUserInput, Prisma.ActionUncheckedUpdateWithoutCompletedByUserInput>
+  data: Prisma.XOR<Prisma.ActionUpdateWithoutCompleterInput, Prisma.ActionUncheckedUpdateWithoutCompleterInput>
 }
 
-export type ActionUpdateManyWithWhereWithoutCompletedByUserInput = {
+export type ActionUpdateManyWithWhereWithoutCompleterInput = {
   where: Prisma.ActionScalarWhereInput
-  data: Prisma.XOR<Prisma.ActionUpdateManyMutationInput, Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserInput>
+  data: Prisma.XOR<Prisma.ActionUpdateManyMutationInput, Prisma.ActionUncheckedUpdateManyWithoutCompleterInput>
 }
 
-export type ActionUpsertWithWhereUniqueWithoutVerifiedByUserInput = {
+export type ActionUpsertWithWhereUniqueWithoutVerifierInput = {
   where: Prisma.ActionWhereUniqueInput
-  update: Prisma.XOR<Prisma.ActionUpdateWithoutVerifiedByUserInput, Prisma.ActionUncheckedUpdateWithoutVerifiedByUserInput>
-  create: Prisma.XOR<Prisma.ActionCreateWithoutVerifiedByUserInput, Prisma.ActionUncheckedCreateWithoutVerifiedByUserInput>
+  update: Prisma.XOR<Prisma.ActionUpdateWithoutVerifierInput, Prisma.ActionUncheckedUpdateWithoutVerifierInput>
+  create: Prisma.XOR<Prisma.ActionCreateWithoutVerifierInput, Prisma.ActionUncheckedCreateWithoutVerifierInput>
 }
 
-export type ActionUpdateWithWhereUniqueWithoutVerifiedByUserInput = {
+export type ActionUpdateWithWhereUniqueWithoutVerifierInput = {
   where: Prisma.ActionWhereUniqueInput
-  data: Prisma.XOR<Prisma.ActionUpdateWithoutVerifiedByUserInput, Prisma.ActionUncheckedUpdateWithoutVerifiedByUserInput>
+  data: Prisma.XOR<Prisma.ActionUpdateWithoutVerifierInput, Prisma.ActionUncheckedUpdateWithoutVerifierInput>
 }
 
-export type ActionUpdateManyWithWhereWithoutVerifiedByUserInput = {
+export type ActionUpdateManyWithWhereWithoutVerifierInput = {
   where: Prisma.ActionScalarWhereInput
-  data: Prisma.XOR<Prisma.ActionUpdateManyMutationInput, Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserInput>
+  data: Prisma.XOR<Prisma.ActionUpdateManyMutationInput, Prisma.ActionUncheckedUpdateManyWithoutVerifierInput>
 }
 
 export type ActionCreateWithoutEngagementInput = {
   id?: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
-  completionDate?: Date | string | null
-  verificationDate?: Date | string | null
+  priority: string
+  status?: string
+  completedAt?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  recommendation?: Prisma.RecommendationCreateNestedOneWithoutActionsInput
+  recommendation: Prisma.RecommendationCreateNestedOneWithoutActionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
-  completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
-  verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
+  completer?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
+  verifier?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
 }
 
 export type ActionUncheckedCreateWithoutEngagementInput = {
   id?: string
-  recommendationId?: string | null
+  recommendationId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   assignedTo?: string | null
   completedBy?: string | null
-  completionDate?: Date | string | null
+  completedAt?: Date | string | null
   verifiedBy?: string | null
-  verificationDate?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1153,20 +1184,21 @@ export type ActionCreateWithoutRecommendationInput = {
   id?: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
-  completionDate?: Date | string | null
-  verificationDate?: Date | string | null
+  priority: string
+  status?: string
+  completedAt?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   engagement: Prisma.EngagementCreateNestedOneWithoutActionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
-  completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
-  verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
+  completer?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
+  verifier?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
 }
 
 export type ActionUncheckedCreateWithoutRecommendationInput = {
@@ -1174,17 +1206,18 @@ export type ActionUncheckedCreateWithoutRecommendationInput = {
   engagementId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   assignedTo?: string | null
   completedBy?: string | null
-  completionDate?: Date | string | null
+  completedAt?: Date | string | null
   verifiedBy?: string | null
-  verificationDate?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1216,60 +1249,63 @@ export type ActionUpdateManyWithWhereWithoutRecommendationInput = {
 
 export type ActionCreateManyAssigneeInput = {
   id?: string
-  recommendationId?: string | null
   engagementId: string
+  recommendationId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   completedBy?: string | null
-  completionDate?: Date | string | null
+  completedAt?: Date | string | null
   verifiedBy?: string | null
-  verificationDate?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
-export type ActionCreateManyCompletedByUserInput = {
+export type ActionCreateManyCompleterInput = {
   id?: string
-  recommendationId?: string | null
   engagementId: string
+  recommendationId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   assignedTo?: string | null
-  completionDate?: Date | string | null
+  completedAt?: Date | string | null
   verifiedBy?: string | null
-  verificationDate?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
 
-export type ActionCreateManyVerifiedByUserInput = {
+export type ActionCreateManyVerifierInput = {
   id?: string
-  recommendationId?: string | null
   engagementId: string
+  recommendationId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   assignedTo?: string | null
   completedBy?: string | null
-  completionDate?: Date | string | null
-  verificationDate?: Date | string | null
+  completedAt?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1278,198 +1314,208 @@ export type ActionUpdateWithoutAssigneeInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  recommendation?: Prisma.RecommendationUpdateOneWithoutActionsNestedInput
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutActionsNestedInput
-  completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
-  verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
+  recommendation?: Prisma.RecommendationUpdateOneRequiredWithoutActionsNestedInput
+  completer?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
+  verifier?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
 }
 
 export type ActionUncheckedUpdateWithoutAssigneeInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  recommendationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ActionUncheckedUpdateManyWithoutAssigneeInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  recommendationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type ActionUpdateWithoutCompletedByUserInput = {
+export type ActionUpdateWithoutCompleterInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  recommendation?: Prisma.RecommendationUpdateOneWithoutActionsNestedInput
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutActionsNestedInput
+  recommendation?: Prisma.RecommendationUpdateOneRequiredWithoutActionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
-  verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
+  verifier?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
 }
 
-export type ActionUncheckedUpdateWithoutCompletedByUserInput = {
+export type ActionUncheckedUpdateWithoutCompleterInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  recommendationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type ActionUncheckedUpdateManyWithoutCompletedByUserInput = {
+export type ActionUncheckedUpdateManyWithoutCompleterInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  recommendationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type ActionUpdateWithoutVerifiedByUserInput = {
+export type ActionUpdateWithoutVerifierInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  recommendation?: Prisma.RecommendationUpdateOneWithoutActionsNestedInput
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutActionsNestedInput
+  recommendation?: Prisma.RecommendationUpdateOneRequiredWithoutActionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
-  completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
+  completer?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
 }
 
-export type ActionUncheckedUpdateWithoutVerifiedByUserInput = {
+export type ActionUncheckedUpdateWithoutVerifierInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  recommendationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-export type ActionUncheckedUpdateManyWithoutVerifiedByUserInput = {
+export type ActionUncheckedUpdateManyWithoutVerifierInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  recommendationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ActionCreateManyEngagementInput = {
   id?: string
-  recommendationId?: string | null
+  recommendationId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   assignedTo?: string | null
   completedBy?: string | null
-  completionDate?: Date | string | null
+  completedAt?: Date | string | null
   verifiedBy?: string | null
-  verificationDate?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1478,58 +1524,61 @@ export type ActionUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  recommendation?: Prisma.RecommendationUpdateOneWithoutActionsNestedInput
+  recommendation?: Prisma.RecommendationUpdateOneRequiredWithoutActionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
-  completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
-  verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
+  completer?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
+  verifier?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
 }
 
 export type ActionUncheckedUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recommendationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ActionUncheckedUpdateManyWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  recommendationId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1539,17 +1588,18 @@ export type ActionCreateManyRecommendationInput = {
   engagementId: string
   title: string
   description?: string | null
-  status?: string
-  priority?: string
   dueDate?: Date | string | null
+  priority: string
+  status?: string
   assignedTo?: string | null
   completedBy?: string | null
-  completionDate?: Date | string | null
+  completedAt?: Date | string | null
   verifiedBy?: string | null
-  verificationDate?: Date | string | null
+  verifiedAt?: Date | string | null
+  notes?: string | null
+  blockerReason?: string | null
   version?: number
   visibility?: string
-  blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1558,20 +1608,21 @@ export type ActionUpdateWithoutRecommendationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutActionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
-  completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
-  verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
+  completer?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
+  verifier?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
 }
 
 export type ActionUncheckedUpdateWithoutRecommendationInput = {
@@ -1579,17 +1630,18 @@ export type ActionUncheckedUpdateWithoutRecommendationInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1599,17 +1651,18 @@ export type ActionUncheckedUpdateManyWithoutRecommendationInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
   dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  priority?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  verifiedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
   visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1618,152 +1671,157 @@ export type ActionUncheckedUpdateManyWithoutRecommendationInput = {
 
 export type ActionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  recommendationId?: boolean
   engagementId?: boolean
+  recommendationId?: boolean
   title?: boolean
   description?: boolean
-  status?: boolean
-  priority?: boolean
   dueDate?: boolean
+  priority?: boolean
+  status?: boolean
   assignedTo?: boolean
   completedBy?: boolean
-  completionDate?: boolean
+  completedAt?: boolean
   verifiedBy?: boolean
-  verificationDate?: boolean
+  verifiedAt?: boolean
+  notes?: boolean
+  blockerReason?: boolean
   version?: boolean
   visibility?: boolean
-  blockerReason?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  recommendation?: boolean | Prisma.Action$recommendationArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  recommendation?: boolean | Prisma.RecommendationDefaultArgs<ExtArgs>
   assignee?: boolean | Prisma.Action$assigneeArgs<ExtArgs>
-  completedByUser?: boolean | Prisma.Action$completedByUserArgs<ExtArgs>
-  verifiedByUser?: boolean | Prisma.Action$verifiedByUserArgs<ExtArgs>
+  completer?: boolean | Prisma.Action$completerArgs<ExtArgs>
+  verifier?: boolean | Prisma.Action$verifierArgs<ExtArgs>
 }, ExtArgs["result"]["action"]>
 
 export type ActionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  recommendationId?: boolean
   engagementId?: boolean
+  recommendationId?: boolean
   title?: boolean
   description?: boolean
-  status?: boolean
-  priority?: boolean
   dueDate?: boolean
+  priority?: boolean
+  status?: boolean
   assignedTo?: boolean
   completedBy?: boolean
-  completionDate?: boolean
+  completedAt?: boolean
   verifiedBy?: boolean
-  verificationDate?: boolean
+  verifiedAt?: boolean
+  notes?: boolean
+  blockerReason?: boolean
   version?: boolean
   visibility?: boolean
-  blockerReason?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  recommendation?: boolean | Prisma.Action$recommendationArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  recommendation?: boolean | Prisma.RecommendationDefaultArgs<ExtArgs>
   assignee?: boolean | Prisma.Action$assigneeArgs<ExtArgs>
-  completedByUser?: boolean | Prisma.Action$completedByUserArgs<ExtArgs>
-  verifiedByUser?: boolean | Prisma.Action$verifiedByUserArgs<ExtArgs>
+  completer?: boolean | Prisma.Action$completerArgs<ExtArgs>
+  verifier?: boolean | Prisma.Action$verifierArgs<ExtArgs>
 }, ExtArgs["result"]["action"]>
 
 export type ActionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  recommendationId?: boolean
   engagementId?: boolean
+  recommendationId?: boolean
   title?: boolean
   description?: boolean
-  status?: boolean
-  priority?: boolean
   dueDate?: boolean
+  priority?: boolean
+  status?: boolean
   assignedTo?: boolean
   completedBy?: boolean
-  completionDate?: boolean
+  completedAt?: boolean
   verifiedBy?: boolean
-  verificationDate?: boolean
+  verifiedAt?: boolean
+  notes?: boolean
+  blockerReason?: boolean
   version?: boolean
   visibility?: boolean
-  blockerReason?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  recommendation?: boolean | Prisma.Action$recommendationArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  recommendation?: boolean | Prisma.RecommendationDefaultArgs<ExtArgs>
   assignee?: boolean | Prisma.Action$assigneeArgs<ExtArgs>
-  completedByUser?: boolean | Prisma.Action$completedByUserArgs<ExtArgs>
-  verifiedByUser?: boolean | Prisma.Action$verifiedByUserArgs<ExtArgs>
+  completer?: boolean | Prisma.Action$completerArgs<ExtArgs>
+  verifier?: boolean | Prisma.Action$verifierArgs<ExtArgs>
 }, ExtArgs["result"]["action"]>
 
 export type ActionSelectScalar = {
   id?: boolean
-  recommendationId?: boolean
   engagementId?: boolean
+  recommendationId?: boolean
   title?: boolean
   description?: boolean
-  status?: boolean
-  priority?: boolean
   dueDate?: boolean
+  priority?: boolean
+  status?: boolean
   assignedTo?: boolean
   completedBy?: boolean
-  completionDate?: boolean
+  completedAt?: boolean
   verifiedBy?: boolean
-  verificationDate?: boolean
+  verifiedAt?: boolean
+  notes?: boolean
+  blockerReason?: boolean
   version?: boolean
   visibility?: boolean
-  blockerReason?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ActionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "recommendationId" | "engagementId" | "title" | "description" | "status" | "priority" | "dueDate" | "assignedTo" | "completedBy" | "completionDate" | "verifiedBy" | "verificationDate" | "version" | "visibility" | "blockerReason" | "createdAt" | "updatedAt", ExtArgs["result"]["action"]>
+export type ActionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "recommendationId" | "title" | "description" | "dueDate" | "priority" | "status" | "assignedTo" | "completedBy" | "completedAt" | "verifiedBy" | "verifiedAt" | "notes" | "blockerReason" | "version" | "visibility" | "createdAt" | "updatedAt", ExtArgs["result"]["action"]>
 export type ActionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  recommendation?: boolean | Prisma.Action$recommendationArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  recommendation?: boolean | Prisma.RecommendationDefaultArgs<ExtArgs>
   assignee?: boolean | Prisma.Action$assigneeArgs<ExtArgs>
-  completedByUser?: boolean | Prisma.Action$completedByUserArgs<ExtArgs>
-  verifiedByUser?: boolean | Prisma.Action$verifiedByUserArgs<ExtArgs>
+  completer?: boolean | Prisma.Action$completerArgs<ExtArgs>
+  verifier?: boolean | Prisma.Action$verifierArgs<ExtArgs>
 }
 export type ActionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  recommendation?: boolean | Prisma.Action$recommendationArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  recommendation?: boolean | Prisma.RecommendationDefaultArgs<ExtArgs>
   assignee?: boolean | Prisma.Action$assigneeArgs<ExtArgs>
-  completedByUser?: boolean | Prisma.Action$completedByUserArgs<ExtArgs>
-  verifiedByUser?: boolean | Prisma.Action$verifiedByUserArgs<ExtArgs>
+  completer?: boolean | Prisma.Action$completerArgs<ExtArgs>
+  verifier?: boolean | Prisma.Action$verifierArgs<ExtArgs>
 }
 export type ActionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  recommendation?: boolean | Prisma.Action$recommendationArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  recommendation?: boolean | Prisma.RecommendationDefaultArgs<ExtArgs>
   assignee?: boolean | Prisma.Action$assigneeArgs<ExtArgs>
-  completedByUser?: boolean | Prisma.Action$completedByUserArgs<ExtArgs>
-  verifiedByUser?: boolean | Prisma.Action$verifiedByUserArgs<ExtArgs>
+  completer?: boolean | Prisma.Action$completerArgs<ExtArgs>
+  verifier?: boolean | Prisma.Action$verifierArgs<ExtArgs>
 }
 
 export type $ActionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Action"
   objects: {
-    recommendation: Prisma.$RecommendationPayload<ExtArgs> | null
     engagement: Prisma.$EngagementPayload<ExtArgs>
+    recommendation: Prisma.$RecommendationPayload<ExtArgs>
     assignee: Prisma.$UserPayload<ExtArgs> | null
-    completedByUser: Prisma.$UserPayload<ExtArgs> | null
-    verifiedByUser: Prisma.$UserPayload<ExtArgs> | null
+    completer: Prisma.$UserPayload<ExtArgs> | null
+    verifier: Prisma.$UserPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    recommendationId: string | null
     engagementId: string
+    recommendationId: string
     title: string
     description: string | null
-    status: string
-    priority: string
     dueDate: Date | null
+    priority: string
+    status: string
     assignedTo: string | null
     completedBy: string | null
-    completionDate: Date | null
+    completedAt: Date | null
     verifiedBy: string | null
-    verificationDate: Date | null
+    verifiedAt: Date | null
+    notes: string | null
+    blockerReason: string | null
     version: number
     visibility: string
-    blockerReason: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["action"]>
@@ -2160,11 +2218,11 @@ readonly fields: ActionFieldRefs;
  */
 export interface Prisma__ActionClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  recommendation<T extends Prisma.Action$recommendationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Action$recommendationArgs<ExtArgs>>): Prisma.Prisma__RecommendationClient<runtime.Types.Result.GetResult<Prisma.$RecommendationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   engagement<T extends Prisma.EngagementDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EngagementDefaultArgs<ExtArgs>>): Prisma.Prisma__EngagementClient<runtime.Types.Result.GetResult<Prisma.$EngagementPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  recommendation<T extends Prisma.RecommendationDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.RecommendationDefaultArgs<ExtArgs>>): Prisma.Prisma__RecommendationClient<runtime.Types.Result.GetResult<Prisma.$RecommendationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   assignee<T extends Prisma.Action$assigneeArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Action$assigneeArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  completedByUser<T extends Prisma.Action$completedByUserArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Action$completedByUserArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  verifiedByUser<T extends Prisma.Action$verifiedByUserArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Action$verifiedByUserArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  completer<T extends Prisma.Action$completerArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Action$completerArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  verifier<T extends Prisma.Action$verifierArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Action$verifierArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2195,21 +2253,22 @@ export interface Prisma__ActionClient<T, Null = never, ExtArgs extends runtime.T
  */
 export interface ActionFieldRefs {
   readonly id: Prisma.FieldRef<"Action", 'String'>
-  readonly recommendationId: Prisma.FieldRef<"Action", 'String'>
   readonly engagementId: Prisma.FieldRef<"Action", 'String'>
+  readonly recommendationId: Prisma.FieldRef<"Action", 'String'>
   readonly title: Prisma.FieldRef<"Action", 'String'>
   readonly description: Prisma.FieldRef<"Action", 'String'>
-  readonly status: Prisma.FieldRef<"Action", 'String'>
-  readonly priority: Prisma.FieldRef<"Action", 'String'>
   readonly dueDate: Prisma.FieldRef<"Action", 'DateTime'>
+  readonly priority: Prisma.FieldRef<"Action", 'String'>
+  readonly status: Prisma.FieldRef<"Action", 'String'>
   readonly assignedTo: Prisma.FieldRef<"Action", 'String'>
   readonly completedBy: Prisma.FieldRef<"Action", 'String'>
-  readonly completionDate: Prisma.FieldRef<"Action", 'DateTime'>
+  readonly completedAt: Prisma.FieldRef<"Action", 'DateTime'>
   readonly verifiedBy: Prisma.FieldRef<"Action", 'String'>
-  readonly verificationDate: Prisma.FieldRef<"Action", 'DateTime'>
+  readonly verifiedAt: Prisma.FieldRef<"Action", 'DateTime'>
+  readonly notes: Prisma.FieldRef<"Action", 'String'>
+  readonly blockerReason: Prisma.FieldRef<"Action", 'String'>
   readonly version: Prisma.FieldRef<"Action", 'Int'>
   readonly visibility: Prisma.FieldRef<"Action", 'String'>
-  readonly blockerReason: Prisma.FieldRef<"Action", 'String'>
   readonly createdAt: Prisma.FieldRef<"Action", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Action", 'DateTime'>
 }
@@ -2611,25 +2670,6 @@ export type ActionDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
 }
 
 /**
- * Action.recommendation
- */
-export type Action$recommendationArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Recommendation
-   */
-  select?: Prisma.RecommendationSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Recommendation
-   */
-  omit?: Prisma.RecommendationOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.RecommendationInclude<ExtArgs> | null
-  where?: Prisma.RecommendationWhereInput
-}
-
-/**
  * Action.assignee
  */
 export type Action$assigneeArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -2649,9 +2689,9 @@ export type Action$assigneeArgs<ExtArgs extends runtime.Types.Extensions.Interna
 }
 
 /**
- * Action.completedByUser
+ * Action.completer
  */
-export type Action$completedByUserArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Action$completerArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
    * Select specific fields to fetch from the User
    */
@@ -2668,9 +2708,9 @@ export type Action$completedByUserArgs<ExtArgs extends runtime.Types.Extensions.
 }
 
 /**
- * Action.verifiedByUser
+ * Action.verifier
  */
-export type Action$verifiedByUserArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Action$verifierArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
    * Select specific fields to fetch from the User
    */

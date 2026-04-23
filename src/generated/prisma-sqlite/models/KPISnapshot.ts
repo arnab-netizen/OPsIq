@@ -39,6 +39,7 @@ export type KPISnapshotMinAggregateOutputType = {
   kpiId: string | null
   value: number | null
   recordedAt: Date | null
+  recordedBy: string | null
 }
 
 export type KPISnapshotMaxAggregateOutputType = {
@@ -46,6 +47,7 @@ export type KPISnapshotMaxAggregateOutputType = {
   kpiId: string | null
   value: number | null
   recordedAt: Date | null
+  recordedBy: string | null
 }
 
 export type KPISnapshotCountAggregateOutputType = {
@@ -53,6 +55,7 @@ export type KPISnapshotCountAggregateOutputType = {
   kpiId: number
   value: number
   recordedAt: number
+  recordedBy: number
   _all: number
 }
 
@@ -70,6 +73,7 @@ export type KPISnapshotMinAggregateInputType = {
   kpiId?: true
   value?: true
   recordedAt?: true
+  recordedBy?: true
 }
 
 export type KPISnapshotMaxAggregateInputType = {
@@ -77,6 +81,7 @@ export type KPISnapshotMaxAggregateInputType = {
   kpiId?: true
   value?: true
   recordedAt?: true
+  recordedBy?: true
 }
 
 export type KPISnapshotCountAggregateInputType = {
@@ -84,6 +89,7 @@ export type KPISnapshotCountAggregateInputType = {
   kpiId?: true
   value?: true
   recordedAt?: true
+  recordedBy?: true
   _all?: true
 }
 
@@ -178,6 +184,7 @@ export type KPISnapshotGroupByOutputType = {
   kpiId: string
   value: number
   recordedAt: Date
+  recordedBy: string | null
   _count: KPISnapshotCountAggregateOutputType | null
   _avg: KPISnapshotAvgAggregateOutputType | null
   _sum: KPISnapshotSumAggregateOutputType | null
@@ -208,6 +215,7 @@ export type KPISnapshotWhereInput = {
   kpiId?: Prisma.StringFilter<"KPISnapshot"> | string
   value?: Prisma.FloatFilter<"KPISnapshot"> | number
   recordedAt?: Prisma.DateTimeFilter<"KPISnapshot"> | Date | string
+  recordedBy?: Prisma.StringNullableFilter<"KPISnapshot"> | string | null
   kpi?: Prisma.XOR<Prisma.KPIScalarRelationFilter, Prisma.KPIWhereInput>
 }
 
@@ -216,6 +224,7 @@ export type KPISnapshotOrderByWithRelationInput = {
   kpiId?: Prisma.SortOrder
   value?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  recordedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   kpi?: Prisma.KPIOrderByWithRelationInput
 }
 
@@ -227,6 +236,7 @@ export type KPISnapshotWhereUniqueInput = Prisma.AtLeast<{
   kpiId?: Prisma.StringFilter<"KPISnapshot"> | string
   value?: Prisma.FloatFilter<"KPISnapshot"> | number
   recordedAt?: Prisma.DateTimeFilter<"KPISnapshot"> | Date | string
+  recordedBy?: Prisma.StringNullableFilter<"KPISnapshot"> | string | null
   kpi?: Prisma.XOR<Prisma.KPIScalarRelationFilter, Prisma.KPIWhereInput>
 }, "id">
 
@@ -235,6 +245,7 @@ export type KPISnapshotOrderByWithAggregationInput = {
   kpiId?: Prisma.SortOrder
   value?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  recordedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.KPISnapshotCountOrderByAggregateInput
   _avg?: Prisma.KPISnapshotAvgOrderByAggregateInput
   _max?: Prisma.KPISnapshotMaxOrderByAggregateInput
@@ -250,12 +261,14 @@ export type KPISnapshotScalarWhereWithAggregatesInput = {
   kpiId?: Prisma.StringWithAggregatesFilter<"KPISnapshot"> | string
   value?: Prisma.FloatWithAggregatesFilter<"KPISnapshot"> | number
   recordedAt?: Prisma.DateTimeWithAggregatesFilter<"KPISnapshot"> | Date | string
+  recordedBy?: Prisma.StringNullableWithAggregatesFilter<"KPISnapshot"> | string | null
 }
 
 export type KPISnapshotCreateInput = {
   id?: string
   value: number
   recordedAt?: Date | string
+  recordedBy?: string | null
   kpi: Prisma.KPICreateNestedOneWithoutSnapshotsInput
 }
 
@@ -264,12 +277,14 @@ export type KPISnapshotUncheckedCreateInput = {
   kpiId: string
   value: number
   recordedAt?: Date | string
+  recordedBy?: string | null
 }
 
 export type KPISnapshotUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.FloatFieldUpdateOperationsInput | number
   recordedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recordedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   kpi?: Prisma.KPIUpdateOneRequiredWithoutSnapshotsNestedInput
 }
 
@@ -278,6 +293,7 @@ export type KPISnapshotUncheckedUpdateInput = {
   kpiId?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.FloatFieldUpdateOperationsInput | number
   recordedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recordedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type KPISnapshotCreateManyInput = {
@@ -285,12 +301,14 @@ export type KPISnapshotCreateManyInput = {
   kpiId: string
   value: number
   recordedAt?: Date | string
+  recordedBy?: string | null
 }
 
 export type KPISnapshotUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.FloatFieldUpdateOperationsInput | number
   recordedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recordedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type KPISnapshotUncheckedUpdateManyInput = {
@@ -298,6 +316,7 @@ export type KPISnapshotUncheckedUpdateManyInput = {
   kpiId?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.FloatFieldUpdateOperationsInput | number
   recordedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recordedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type KPISnapshotListRelationFilter = {
@@ -315,6 +334,7 @@ export type KPISnapshotCountOrderByAggregateInput = {
   kpiId?: Prisma.SortOrder
   value?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  recordedBy?: Prisma.SortOrder
 }
 
 export type KPISnapshotAvgOrderByAggregateInput = {
@@ -326,6 +346,7 @@ export type KPISnapshotMaxOrderByAggregateInput = {
   kpiId?: Prisma.SortOrder
   value?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  recordedBy?: Prisma.SortOrder
 }
 
 export type KPISnapshotMinOrderByAggregateInput = {
@@ -333,6 +354,7 @@ export type KPISnapshotMinOrderByAggregateInput = {
   kpiId?: Prisma.SortOrder
   value?: Prisma.SortOrder
   recordedAt?: Prisma.SortOrder
+  recordedBy?: Prisma.SortOrder
 }
 
 export type KPISnapshotSumOrderByAggregateInput = {
@@ -393,12 +415,14 @@ export type KPISnapshotCreateWithoutKpiInput = {
   id?: string
   value: number
   recordedAt?: Date | string
+  recordedBy?: string | null
 }
 
 export type KPISnapshotUncheckedCreateWithoutKpiInput = {
   id?: string
   value: number
   recordedAt?: Date | string
+  recordedBy?: string | null
 }
 
 export type KPISnapshotCreateOrConnectWithoutKpiInput = {
@@ -434,30 +458,35 @@ export type KPISnapshotScalarWhereInput = {
   kpiId?: Prisma.StringFilter<"KPISnapshot"> | string
   value?: Prisma.FloatFilter<"KPISnapshot"> | number
   recordedAt?: Prisma.DateTimeFilter<"KPISnapshot"> | Date | string
+  recordedBy?: Prisma.StringNullableFilter<"KPISnapshot"> | string | null
 }
 
 export type KPISnapshotCreateManyKpiInput = {
   id?: string
   value: number
   recordedAt?: Date | string
+  recordedBy?: string | null
 }
 
 export type KPISnapshotUpdateWithoutKpiInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.FloatFieldUpdateOperationsInput | number
   recordedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recordedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type KPISnapshotUncheckedUpdateWithoutKpiInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.FloatFieldUpdateOperationsInput | number
   recordedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recordedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type KPISnapshotUncheckedUpdateManyWithoutKpiInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   value?: Prisma.FloatFieldUpdateOperationsInput | number
   recordedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  recordedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -467,6 +496,7 @@ export type KPISnapshotSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   kpiId?: boolean
   value?: boolean
   recordedAt?: boolean
+  recordedBy?: boolean
   kpi?: boolean | Prisma.KPIDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["kPISnapshot"]>
 
@@ -475,6 +505,7 @@ export type KPISnapshotSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   kpiId?: boolean
   value?: boolean
   recordedAt?: boolean
+  recordedBy?: boolean
   kpi?: boolean | Prisma.KPIDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["kPISnapshot"]>
 
@@ -483,6 +514,7 @@ export type KPISnapshotSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   kpiId?: boolean
   value?: boolean
   recordedAt?: boolean
+  recordedBy?: boolean
   kpi?: boolean | Prisma.KPIDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["kPISnapshot"]>
 
@@ -491,9 +523,10 @@ export type KPISnapshotSelectScalar = {
   kpiId?: boolean
   value?: boolean
   recordedAt?: boolean
+  recordedBy?: boolean
 }
 
-export type KPISnapshotOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "kpiId" | "value" | "recordedAt", ExtArgs["result"]["kPISnapshot"]>
+export type KPISnapshotOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "kpiId" | "value" | "recordedAt" | "recordedBy", ExtArgs["result"]["kPISnapshot"]>
 export type KPISnapshotInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   kpi?: boolean | Prisma.KPIDefaultArgs<ExtArgs>
 }
@@ -514,6 +547,7 @@ export type $KPISnapshotPayload<ExtArgs extends runtime.Types.Extensions.Interna
     kpiId: string
     value: number
     recordedAt: Date
+    recordedBy: string | null
   }, ExtArgs["result"]["kPISnapshot"]>
   composites: {}
 }
@@ -942,6 +976,7 @@ export interface KPISnapshotFieldRefs {
   readonly kpiId: Prisma.FieldRef<"KPISnapshot", 'String'>
   readonly value: Prisma.FieldRef<"KPISnapshot", 'Float'>
   readonly recordedAt: Prisma.FieldRef<"KPISnapshot", 'DateTime'>
+  readonly recordedBy: Prisma.FieldRef<"KPISnapshot", 'String'>
 }
     
 

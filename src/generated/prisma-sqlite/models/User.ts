@@ -357,8 +357,8 @@ export type UserCreateInput = {
   validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifierInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -379,8 +379,8 @@ export type UserUncheckedCreateInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifierInput
 }
 
 export type UserUpdateInput = {
@@ -401,8 +401,8 @@ export type UserUpdateInput = {
   validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -423,8 +423,8 @@ export type UserUncheckedUpdateInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -587,38 +587,6 @@ export type UserUpdateOneRequiredWithoutEngagementMembershipsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutEngagementMembershipsInput, Prisma.UserUpdateWithoutEngagementMembershipsInput>, Prisma.UserUncheckedUpdateWithoutEngagementMembershipsInput>
 }
 
-export type UserCreateNestedOneWithoutAuditEventsInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutAuditEventsInput, Prisma.UserUncheckedCreateWithoutAuditEventsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAuditEventsInput
-  connect?: Prisma.UserWhereUniqueInput
-}
-
-export type UserUpdateOneWithoutAuditEventsNestedInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutAuditEventsInput, Prisma.UserUncheckedCreateWithoutAuditEventsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAuditEventsInput
-  upsert?: Prisma.UserUpsertWithoutAuditEventsInput
-  disconnect?: Prisma.UserWhereInput | boolean
-  delete?: Prisma.UserWhereInput | boolean
-  connect?: Prisma.UserWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAuditEventsInput, Prisma.UserUpdateWithoutAuditEventsInput>, Prisma.UserUncheckedUpdateWithoutAuditEventsInput>
-}
-
-export type UserCreateNestedOneWithoutRecommendationApprovalsInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedCreateWithoutRecommendationApprovalsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutRecommendationApprovalsInput
-  connect?: Prisma.UserWhereUniqueInput
-}
-
-export type UserUpdateOneWithoutRecommendationApprovalsNestedInput = {
-  create?: Prisma.XOR<Prisma.UserCreateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedCreateWithoutRecommendationApprovalsInput>
-  connectOrCreate?: Prisma.UserCreateOrConnectWithoutRecommendationApprovalsInput
-  upsert?: Prisma.UserUpsertWithoutRecommendationApprovalsInput
-  disconnect?: Prisma.UserWhereInput | boolean
-  delete?: Prisma.UserWhereInput | boolean
-  connect?: Prisma.UserWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutRecommendationApprovalsInput, Prisma.UserUpdateWithoutRecommendationApprovalsInput>, Prisma.UserUncheckedUpdateWithoutRecommendationApprovalsInput>
-}
-
 export type UserCreateNestedOneWithoutSubmittedEvidenceInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutSubmittedEvidenceInput, Prisma.UserUncheckedCreateWithoutSubmittedEvidenceInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutSubmittedEvidenceInput
@@ -649,6 +617,22 @@ export type UserUpdateOneWithoutValidatedEvidenceNestedInput = {
   delete?: Prisma.UserWhereInput | boolean
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutValidatedEvidenceInput, Prisma.UserUpdateWithoutValidatedEvidenceInput>, Prisma.UserUncheckedUpdateWithoutValidatedEvidenceInput>
+}
+
+export type UserCreateNestedOneWithoutRecommendationApprovalsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedCreateWithoutRecommendationApprovalsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutRecommendationApprovalsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutRecommendationApprovalsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedCreateWithoutRecommendationApprovalsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutRecommendationApprovalsInput
+  upsert?: Prisma.UserUpsertWithoutRecommendationApprovalsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutRecommendationApprovalsInput, Prisma.UserUpdateWithoutRecommendationApprovalsInput>, Prisma.UserUncheckedUpdateWithoutRecommendationApprovalsInput>
 }
 
 export type UserCreateNestedOneWithoutAssignedActionsInput = {
@@ -699,6 +683,22 @@ export type UserUpdateOneWithoutVerifiedActionsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutVerifiedActionsInput, Prisma.UserUpdateWithoutVerifiedActionsInput>, Prisma.UserUncheckedUpdateWithoutVerifiedActionsInput>
 }
 
+export type UserCreateNestedOneWithoutAuditEventsInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAuditEventsInput, Prisma.UserUncheckedCreateWithoutAuditEventsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAuditEventsInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneWithoutAuditEventsNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAuditEventsInput, Prisma.UserUncheckedCreateWithoutAuditEventsInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAuditEventsInput
+  upsert?: Prisma.UserUpsertWithoutAuditEventsInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAuditEventsInput, Prisma.UserUpdateWithoutAuditEventsInput>, Prisma.UserUncheckedUpdateWithoutAuditEventsInput>
+}
+
 export type UserCreateWithoutSessionsInput = {
   id?: string
   email: string
@@ -716,8 +716,8 @@ export type UserCreateWithoutSessionsInput = {
   validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifierInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -737,8 +737,8 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifierInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -774,8 +774,8 @@ export type UserUpdateWithoutSessionsInput = {
   validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -795,8 +795,8 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserCreateWithoutRoleAssignmentsInput = {
@@ -816,8 +816,8 @@ export type UserCreateWithoutRoleAssignmentsInput = {
   validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifierInput
 }
 
 export type UserUncheckedCreateWithoutRoleAssignmentsInput = {
@@ -837,8 +837,8 @@ export type UserUncheckedCreateWithoutRoleAssignmentsInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifierInput
 }
 
 export type UserCreateOrConnectWithoutRoleAssignmentsInput = {
@@ -874,8 +874,8 @@ export type UserUpdateWithoutRoleAssignmentsInput = {
   validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRoleAssignmentsInput = {
@@ -895,8 +895,8 @@ export type UserUncheckedUpdateWithoutRoleAssignmentsInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserCreateWithoutEngagementMembershipsInput = {
@@ -916,8 +916,8 @@ export type UserCreateWithoutEngagementMembershipsInput = {
   validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifierInput
 }
 
 export type UserUncheckedCreateWithoutEngagementMembershipsInput = {
@@ -937,8 +937,8 @@ export type UserUncheckedCreateWithoutEngagementMembershipsInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifierInput
 }
 
 export type UserCreateOrConnectWithoutEngagementMembershipsInput = {
@@ -974,8 +974,8 @@ export type UserUpdateWithoutEngagementMembershipsInput = {
   validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEngagementMembershipsInput = {
@@ -995,208 +995,8 @@ export type UserUncheckedUpdateWithoutEngagementMembershipsInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput
-}
-
-export type UserCreateWithoutAuditEventsInput = {
-  id?: string
-  email: string
-  name?: string | null
-  hashedPassword?: string | null
-  isActive?: boolean
-  version?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deactivatedAt?: Date | string | null
-  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
-  roleAssignments?: Prisma.UserRoleAssignmentCreateNestedManyWithoutUserInput
-  engagementMemberships?: Prisma.EngagementMembershipCreateNestedManyWithoutUserInput
-  submittedEvidence?: Prisma.EvidenceCreateNestedManyWithoutSubmitterInput
-  validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
-  recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
-  assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifiedByUserInput
-}
-
-export type UserUncheckedCreateWithoutAuditEventsInput = {
-  id?: string
-  email: string
-  name?: string | null
-  hashedPassword?: string | null
-  isActive?: boolean
-  version?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deactivatedAt?: Date | string | null
-  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
-  roleAssignments?: Prisma.UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
-  engagementMemberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutUserInput
-  submittedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutSubmitterInput
-  validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
-  recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
-  assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput
-}
-
-export type UserCreateOrConnectWithoutAuditEventsInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutAuditEventsInput, Prisma.UserUncheckedCreateWithoutAuditEventsInput>
-}
-
-export type UserUpsertWithoutAuditEventsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutAuditEventsInput, Prisma.UserUncheckedUpdateWithoutAuditEventsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutAuditEventsInput, Prisma.UserUncheckedCreateWithoutAuditEventsInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutAuditEventsInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutAuditEventsInput, Prisma.UserUncheckedUpdateWithoutAuditEventsInput>
-}
-
-export type UserUpdateWithoutAuditEventsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  hashedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deactivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
-  roleAssignments?: Prisma.UserRoleAssignmentUpdateManyWithoutUserNestedInput
-  engagementMemberships?: Prisma.EngagementMembershipUpdateManyWithoutUserNestedInput
-  submittedEvidence?: Prisma.EvidenceUpdateManyWithoutSubmitterNestedInput
-  validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
-  recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
-  assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifiedByUserNestedInput
-}
-
-export type UserUncheckedUpdateWithoutAuditEventsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  hashedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deactivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
-  roleAssignments?: Prisma.UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
-  engagementMemberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutUserNestedInput
-  submittedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutSubmitterNestedInput
-  validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
-  recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
-  assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput
-}
-
-export type UserCreateWithoutRecommendationApprovalsInput = {
-  id?: string
-  email: string
-  name?: string | null
-  hashedPassword?: string | null
-  isActive?: boolean
-  version?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deactivatedAt?: Date | string | null
-  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
-  roleAssignments?: Prisma.UserRoleAssignmentCreateNestedManyWithoutUserInput
-  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutActorInput
-  engagementMemberships?: Prisma.EngagementMembershipCreateNestedManyWithoutUserInput
-  submittedEvidence?: Prisma.EvidenceCreateNestedManyWithoutSubmitterInput
-  validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
-  assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifiedByUserInput
-}
-
-export type UserUncheckedCreateWithoutRecommendationApprovalsInput = {
-  id?: string
-  email: string
-  name?: string | null
-  hashedPassword?: string | null
-  isActive?: boolean
-  version?: number
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  deactivatedAt?: Date | string | null
-  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
-  roleAssignments?: Prisma.UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
-  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutActorInput
-  engagementMemberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutUserInput
-  submittedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutSubmitterInput
-  validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
-  assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput
-}
-
-export type UserCreateOrConnectWithoutRecommendationApprovalsInput = {
-  where: Prisma.UserWhereUniqueInput
-  create: Prisma.XOR<Prisma.UserCreateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedCreateWithoutRecommendationApprovalsInput>
-}
-
-export type UserUpsertWithoutRecommendationApprovalsInput = {
-  update: Prisma.XOR<Prisma.UserUpdateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedUpdateWithoutRecommendationApprovalsInput>
-  create: Prisma.XOR<Prisma.UserCreateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedCreateWithoutRecommendationApprovalsInput>
-  where?: Prisma.UserWhereInput
-}
-
-export type UserUpdateToOneWithWhereWithoutRecommendationApprovalsInput = {
-  where?: Prisma.UserWhereInput
-  data: Prisma.XOR<Prisma.UserUpdateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedUpdateWithoutRecommendationApprovalsInput>
-}
-
-export type UserUpdateWithoutRecommendationApprovalsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  hashedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deactivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
-  roleAssignments?: Prisma.UserRoleAssignmentUpdateManyWithoutUserNestedInput
-  auditEvents?: Prisma.AuditEventUpdateManyWithoutActorNestedInput
-  engagementMemberships?: Prisma.EngagementMembershipUpdateManyWithoutUserNestedInput
-  submittedEvidence?: Prisma.EvidenceUpdateManyWithoutSubmitterNestedInput
-  validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
-  assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifiedByUserNestedInput
-}
-
-export type UserUncheckedUpdateWithoutRecommendationApprovalsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  email?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  hashedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  deactivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
-  roleAssignments?: Prisma.UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
-  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutActorNestedInput
-  engagementMemberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutUserNestedInput
-  submittedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutSubmitterNestedInput
-  validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
-  assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserCreateWithoutSubmittedEvidenceInput = {
@@ -1216,8 +1016,8 @@ export type UserCreateWithoutSubmittedEvidenceInput = {
   validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifierInput
 }
 
 export type UserUncheckedCreateWithoutSubmittedEvidenceInput = {
@@ -1237,8 +1037,8 @@ export type UserUncheckedCreateWithoutSubmittedEvidenceInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifierInput
 }
 
 export type UserCreateOrConnectWithoutSubmittedEvidenceInput = {
@@ -1263,8 +1063,8 @@ export type UserCreateWithoutValidatedEvidenceInput = {
   submittedEvidence?: Prisma.EvidenceCreateNestedManyWithoutSubmitterInput
   recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifierInput
 }
 
 export type UserUncheckedCreateWithoutValidatedEvidenceInput = {
@@ -1284,8 +1084,8 @@ export type UserUncheckedCreateWithoutValidatedEvidenceInput = {
   submittedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutSubmitterInput
   recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifierInput
 }
 
 export type UserCreateOrConnectWithoutValidatedEvidenceInput = {
@@ -1321,8 +1121,8 @@ export type UserUpdateWithoutSubmittedEvidenceInput = {
   validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSubmittedEvidenceInput = {
@@ -1342,8 +1142,8 @@ export type UserUncheckedUpdateWithoutSubmittedEvidenceInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUpsertWithoutValidatedEvidenceInput = {
@@ -1374,8 +1174,8 @@ export type UserUpdateWithoutValidatedEvidenceInput = {
   submittedEvidence?: Prisma.EvidenceUpdateManyWithoutSubmitterNestedInput
   recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUncheckedUpdateWithoutValidatedEvidenceInput = {
@@ -1395,8 +1195,108 @@ export type UserUncheckedUpdateWithoutValidatedEvidenceInput = {
   submittedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutSubmitterNestedInput
   recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifierNestedInput
+}
+
+export type UserCreateWithoutRecommendationApprovalsInput = {
+  id?: string
+  email: string
+  name?: string | null
+  hashedPassword?: string | null
+  isActive?: boolean
+  version?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deactivatedAt?: Date | string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  roleAssignments?: Prisma.UserRoleAssignmentCreateNestedManyWithoutUserInput
+  auditEvents?: Prisma.AuditEventCreateNestedManyWithoutActorInput
+  engagementMemberships?: Prisma.EngagementMembershipCreateNestedManyWithoutUserInput
+  submittedEvidence?: Prisma.EvidenceCreateNestedManyWithoutSubmitterInput
+  validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
+  assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
+  completedActions?: Prisma.ActionCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifierInput
+}
+
+export type UserUncheckedCreateWithoutRecommendationApprovalsInput = {
+  id?: string
+  email: string
+  name?: string | null
+  hashedPassword?: string | null
+  isActive?: boolean
+  version?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deactivatedAt?: Date | string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  roleAssignments?: Prisma.UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+  auditEvents?: Prisma.AuditEventUncheckedCreateNestedManyWithoutActorInput
+  engagementMemberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutUserInput
+  submittedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutSubmitterInput
+  validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
+  assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
+  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifierInput
+}
+
+export type UserCreateOrConnectWithoutRecommendationApprovalsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedCreateWithoutRecommendationApprovalsInput>
+}
+
+export type UserUpsertWithoutRecommendationApprovalsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedUpdateWithoutRecommendationApprovalsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedCreateWithoutRecommendationApprovalsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutRecommendationApprovalsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutRecommendationApprovalsInput, Prisma.UserUncheckedUpdateWithoutRecommendationApprovalsInput>
+}
+
+export type UserUpdateWithoutRecommendationApprovalsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hashedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deactivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  roleAssignments?: Prisma.UserRoleAssignmentUpdateManyWithoutUserNestedInput
+  auditEvents?: Prisma.AuditEventUpdateManyWithoutActorNestedInput
+  engagementMemberships?: Prisma.EngagementMembershipUpdateManyWithoutUserNestedInput
+  submittedEvidence?: Prisma.EvidenceUpdateManyWithoutSubmitterNestedInput
+  validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
+  assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
+  completedActions?: Prisma.ActionUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifierNestedInput
+}
+
+export type UserUncheckedUpdateWithoutRecommendationApprovalsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hashedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deactivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  roleAssignments?: Prisma.UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+  auditEvents?: Prisma.AuditEventUncheckedUpdateManyWithoutActorNestedInput
+  engagementMemberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutUserNestedInput
+  submittedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutSubmitterNestedInput
+  validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
+  assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
+  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserCreateWithoutAssignedActionsInput = {
@@ -1416,8 +1316,8 @@ export type UserCreateWithoutAssignedActionsInput = {
   submittedEvidence?: Prisma.EvidenceCreateNestedManyWithoutSubmitterInput
   validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
-  completedActions?: Prisma.ActionCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifierInput
 }
 
 export type UserUncheckedCreateWithoutAssignedActionsInput = {
@@ -1437,8 +1337,8 @@ export type UserUncheckedCreateWithoutAssignedActionsInput = {
   submittedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutSubmitterInput
   validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
-  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompletedByUserInput
-  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifierInput
 }
 
 export type UserCreateOrConnectWithoutAssignedActionsInput = {
@@ -1464,7 +1364,7 @@ export type UserCreateWithoutCompletedActionsInput = {
   validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
-  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifiedByUserInput
+  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifierInput
 }
 
 export type UserUncheckedCreateWithoutCompletedActionsInput = {
@@ -1485,7 +1385,7 @@ export type UserUncheckedCreateWithoutCompletedActionsInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
-  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifiedByUserInput
+  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifierInput
 }
 
 export type UserCreateOrConnectWithoutCompletedActionsInput = {
@@ -1511,7 +1411,7 @@ export type UserCreateWithoutVerifiedActionsInput = {
   validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionCreateNestedManyWithoutCompletedByUserInput
+  completedActions?: Prisma.ActionCreateNestedManyWithoutCompleterInput
 }
 
 export type UserUncheckedCreateWithoutVerifiedActionsInput = {
@@ -1532,7 +1432,7 @@ export type UserUncheckedCreateWithoutVerifiedActionsInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
   recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
   assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
-  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompletedByUserInput
+  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompleterInput
 }
 
 export type UserCreateOrConnectWithoutVerifiedActionsInput = {
@@ -1568,8 +1468,8 @@ export type UserUpdateWithoutAssignedActionsInput = {
   submittedEvidence?: Prisma.EvidenceUpdateManyWithoutSubmitterNestedInput
   validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
-  completedActions?: Prisma.ActionUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAssignedActionsInput = {
@@ -1589,8 +1489,8 @@ export type UserUncheckedUpdateWithoutAssignedActionsInput = {
   submittedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutSubmitterNestedInput
   validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
-  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput
-  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUpsertWithoutCompletedActionsInput = {
@@ -1622,7 +1522,7 @@ export type UserUpdateWithoutCompletedActionsInput = {
   validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
-  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifiedByUserNestedInput
+  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCompletedActionsInput = {
@@ -1643,7 +1543,7 @@ export type UserUncheckedUpdateWithoutCompletedActionsInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
-  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifiedByUserNestedInput
+  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifierNestedInput
 }
 
 export type UserUpsertWithoutVerifiedActionsInput = {
@@ -1675,7 +1575,7 @@ export type UserUpdateWithoutVerifiedActionsInput = {
   validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUpdateManyWithoutCompletedByUserNestedInput
+  completedActions?: Prisma.ActionUpdateManyWithoutCompleterNestedInput
 }
 
 export type UserUncheckedUpdateWithoutVerifiedActionsInput = {
@@ -1696,7 +1596,107 @@ export type UserUncheckedUpdateWithoutVerifiedActionsInput = {
   validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
   recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
   assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
-  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompletedByUserNestedInput
+  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompleterNestedInput
+}
+
+export type UserCreateWithoutAuditEventsInput = {
+  id?: string
+  email: string
+  name?: string | null
+  hashedPassword?: string | null
+  isActive?: boolean
+  version?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deactivatedAt?: Date | string | null
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  roleAssignments?: Prisma.UserRoleAssignmentCreateNestedManyWithoutUserInput
+  engagementMemberships?: Prisma.EngagementMembershipCreateNestedManyWithoutUserInput
+  submittedEvidence?: Prisma.EvidenceCreateNestedManyWithoutSubmitterInput
+  validatedEvidence?: Prisma.EvidenceCreateNestedManyWithoutValidatorInput
+  recommendationApprovals?: Prisma.RecommendationCreateNestedManyWithoutApproverInput
+  assignedActions?: Prisma.ActionCreateNestedManyWithoutAssigneeInput
+  completedActions?: Prisma.ActionCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionCreateNestedManyWithoutVerifierInput
+}
+
+export type UserUncheckedCreateWithoutAuditEventsInput = {
+  id?: string
+  email: string
+  name?: string | null
+  hashedPassword?: string | null
+  isActive?: boolean
+  version?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  deactivatedAt?: Date | string | null
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  roleAssignments?: Prisma.UserRoleAssignmentUncheckedCreateNestedManyWithoutUserInput
+  engagementMemberships?: Prisma.EngagementMembershipUncheckedCreateNestedManyWithoutUserInput
+  submittedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutSubmitterInput
+  validatedEvidence?: Prisma.EvidenceUncheckedCreateNestedManyWithoutValidatorInput
+  recommendationApprovals?: Prisma.RecommendationUncheckedCreateNestedManyWithoutApproverInput
+  assignedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutAssigneeInput
+  completedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutCompleterInput
+  verifiedActions?: Prisma.ActionUncheckedCreateNestedManyWithoutVerifierInput
+}
+
+export type UserCreateOrConnectWithoutAuditEventsInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAuditEventsInput, Prisma.UserUncheckedCreateWithoutAuditEventsInput>
+}
+
+export type UserUpsertWithoutAuditEventsInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAuditEventsInput, Prisma.UserUncheckedUpdateWithoutAuditEventsInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAuditEventsInput, Prisma.UserUncheckedCreateWithoutAuditEventsInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAuditEventsInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAuditEventsInput, Prisma.UserUncheckedUpdateWithoutAuditEventsInput>
+}
+
+export type UserUpdateWithoutAuditEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hashedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deactivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  roleAssignments?: Prisma.UserRoleAssignmentUpdateManyWithoutUserNestedInput
+  engagementMemberships?: Prisma.EngagementMembershipUpdateManyWithoutUserNestedInput
+  submittedEvidence?: Prisma.EvidenceUpdateManyWithoutSubmitterNestedInput
+  validatedEvidence?: Prisma.EvidenceUpdateManyWithoutValidatorNestedInput
+  recommendationApprovals?: Prisma.RecommendationUpdateManyWithoutApproverNestedInput
+  assignedActions?: Prisma.ActionUpdateManyWithoutAssigneeNestedInput
+  completedActions?: Prisma.ActionUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUpdateManyWithoutVerifierNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAuditEventsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  hashedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  version?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deactivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  roleAssignments?: Prisma.UserRoleAssignmentUncheckedUpdateManyWithoutUserNestedInput
+  engagementMemberships?: Prisma.EngagementMembershipUncheckedUpdateManyWithoutUserNestedInput
+  submittedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutSubmitterNestedInput
+  validatedEvidence?: Prisma.EvidenceUncheckedUpdateManyWithoutValidatorNestedInput
+  recommendationApprovals?: Prisma.RecommendationUncheckedUpdateManyWithoutApproverNestedInput
+  assignedActions?: Prisma.ActionUncheckedUpdateManyWithoutAssigneeNestedInput
+  completedActions?: Prisma.ActionUncheckedUpdateManyWithoutCompleterNestedInput
+  verifiedActions?: Prisma.ActionUncheckedUpdateManyWithoutVerifierNestedInput
 }
 
 

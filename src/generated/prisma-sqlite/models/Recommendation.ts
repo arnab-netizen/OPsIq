@@ -36,45 +36,54 @@ export type RecommendationSumAggregateOutputType = {
 
 export type RecommendationMinAggregateOutputType = {
   id: string | null
-  findingId: string | null
   engagementId: string | null
+  findingId: string | null
   title: string | null
   description: string | null
+  rationale: string | null
   priority: string | null
+  estimatedImpact: string | null
   status: string | null
   approvedBy: string | null
-  approvalDate: Date | null
+  approvedAt: Date | null
   version: number | null
+  visibility: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
 
 export type RecommendationMaxAggregateOutputType = {
   id: string | null
-  findingId: string | null
   engagementId: string | null
+  findingId: string | null
   title: string | null
   description: string | null
+  rationale: string | null
   priority: string | null
+  estimatedImpact: string | null
   status: string | null
   approvedBy: string | null
-  approvalDate: Date | null
+  approvedAt: Date | null
   version: number | null
+  visibility: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
 
 export type RecommendationCountAggregateOutputType = {
   id: number
-  findingId: number
   engagementId: number
+  findingId: number
   title: number
   description: number
+  rationale: number
   priority: number
+  estimatedImpact: number
   status: number
   approvedBy: number
-  approvalDate: number
+  approvedAt: number
   version: number
+  visibility: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -91,45 +100,54 @@ export type RecommendationSumAggregateInputType = {
 
 export type RecommendationMinAggregateInputType = {
   id?: true
-  findingId?: true
   engagementId?: true
+  findingId?: true
   title?: true
   description?: true
+  rationale?: true
   priority?: true
+  estimatedImpact?: true
   status?: true
   approvedBy?: true
-  approvalDate?: true
+  approvedAt?: true
   version?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
 }
 
 export type RecommendationMaxAggregateInputType = {
   id?: true
-  findingId?: true
   engagementId?: true
+  findingId?: true
   title?: true
   description?: true
+  rationale?: true
   priority?: true
+  estimatedImpact?: true
   status?: true
   approvedBy?: true
-  approvalDate?: true
+  approvedAt?: true
   version?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
 }
 
 export type RecommendationCountAggregateInputType = {
   id?: true
-  findingId?: true
   engagementId?: true
+  findingId?: true
   title?: true
   description?: true
+  rationale?: true
   priority?: true
+  estimatedImpact?: true
   status?: true
   approvedBy?: true
-  approvalDate?: true
+  approvedAt?: true
   version?: true
+  visibility?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -223,15 +241,18 @@ export type RecommendationGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 
 export type RecommendationGroupByOutputType = {
   id: string
-  findingId: string
   engagementId: string
+  findingId: string | null
   title: string
   description: string | null
+  rationale: string | null
   priority: string
+  estimatedImpact: string | null
   status: string
   approvedBy: string | null
-  approvalDate: Date | null
+  approvedAt: Date | null
   version: number
+  visibility: string
   createdAt: Date
   updatedAt: Date
   _count: RecommendationCountAggregateOutputType | null
@@ -261,75 +282,88 @@ export type RecommendationWhereInput = {
   OR?: Prisma.RecommendationWhereInput[]
   NOT?: Prisma.RecommendationWhereInput | Prisma.RecommendationWhereInput[]
   id?: Prisma.StringFilter<"Recommendation"> | string
-  findingId?: Prisma.StringFilter<"Recommendation"> | string
   engagementId?: Prisma.StringFilter<"Recommendation"> | string
+  findingId?: Prisma.StringNullableFilter<"Recommendation"> | string | null
   title?: Prisma.StringFilter<"Recommendation"> | string
   description?: Prisma.StringNullableFilter<"Recommendation"> | string | null
+  rationale?: Prisma.StringNullableFilter<"Recommendation"> | string | null
   priority?: Prisma.StringFilter<"Recommendation"> | string
+  estimatedImpact?: Prisma.StringNullableFilter<"Recommendation"> | string | null
   status?: Prisma.StringFilter<"Recommendation"> | string
   approvedBy?: Prisma.StringNullableFilter<"Recommendation"> | string | null
-  approvalDate?: Prisma.DateTimeNullableFilter<"Recommendation"> | Date | string | null
+  approvedAt?: Prisma.DateTimeNullableFilter<"Recommendation"> | Date | string | null
   version?: Prisma.IntFilter<"Recommendation"> | number
+  visibility?: Prisma.StringFilter<"Recommendation"> | string
   createdAt?: Prisma.DateTimeFilter<"Recommendation"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Recommendation"> | Date | string
-  finding?: Prisma.XOR<Prisma.FindingScalarRelationFilter, Prisma.FindingWhereInput>
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
+  finding?: Prisma.XOR<Prisma.FindingNullableScalarRelationFilter, Prisma.FindingWhereInput> | null
   approver?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   actions?: Prisma.ActionListRelationFilter
 }
 
 export type RecommendationOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  findingId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
+  findingId?: Prisma.SortOrderInput | Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  rationale?: Prisma.SortOrderInput | Prisma.SortOrder
   priority?: Prisma.SortOrder
+  estimatedImpact?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  approvalDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  approvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   version?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
-  finding?: Prisma.FindingOrderByWithRelationInput
   engagement?: Prisma.EngagementOrderByWithRelationInput
+  finding?: Prisma.FindingOrderByWithRelationInput
   approver?: Prisma.UserOrderByWithRelationInput
   actions?: Prisma.ActionOrderByRelationAggregateInput
 }
 
 export type RecommendationWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  findingId_title?: Prisma.RecommendationFindingIdTitleCompoundUniqueInput
   AND?: Prisma.RecommendationWhereInput | Prisma.RecommendationWhereInput[]
   OR?: Prisma.RecommendationWhereInput[]
   NOT?: Prisma.RecommendationWhereInput | Prisma.RecommendationWhereInput[]
-  findingId?: Prisma.StringFilter<"Recommendation"> | string
   engagementId?: Prisma.StringFilter<"Recommendation"> | string
+  findingId?: Prisma.StringNullableFilter<"Recommendation"> | string | null
   title?: Prisma.StringFilter<"Recommendation"> | string
   description?: Prisma.StringNullableFilter<"Recommendation"> | string | null
+  rationale?: Prisma.StringNullableFilter<"Recommendation"> | string | null
   priority?: Prisma.StringFilter<"Recommendation"> | string
+  estimatedImpact?: Prisma.StringNullableFilter<"Recommendation"> | string | null
   status?: Prisma.StringFilter<"Recommendation"> | string
   approvedBy?: Prisma.StringNullableFilter<"Recommendation"> | string | null
-  approvalDate?: Prisma.DateTimeNullableFilter<"Recommendation"> | Date | string | null
+  approvedAt?: Prisma.DateTimeNullableFilter<"Recommendation"> | Date | string | null
   version?: Prisma.IntFilter<"Recommendation"> | number
+  visibility?: Prisma.StringFilter<"Recommendation"> | string
   createdAt?: Prisma.DateTimeFilter<"Recommendation"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Recommendation"> | Date | string
-  finding?: Prisma.XOR<Prisma.FindingScalarRelationFilter, Prisma.FindingWhereInput>
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
+  finding?: Prisma.XOR<Prisma.FindingNullableScalarRelationFilter, Prisma.FindingWhereInput> | null
   approver?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   actions?: Prisma.ActionListRelationFilter
-}, "id">
+}, "id" | "findingId_title">
 
 export type RecommendationOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  findingId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
+  findingId?: Prisma.SortOrderInput | Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrderInput | Prisma.SortOrder
+  rationale?: Prisma.SortOrderInput | Prisma.SortOrder
   priority?: Prisma.SortOrder
+  estimatedImpact?: Prisma.SortOrderInput | Prisma.SortOrder
   status?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrderInput | Prisma.SortOrder
-  approvalDate?: Prisma.SortOrderInput | Prisma.SortOrder
+  approvedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   version?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.RecommendationCountOrderByAggregateInput
@@ -344,15 +378,18 @@ export type RecommendationScalarWhereWithAggregatesInput = {
   OR?: Prisma.RecommendationScalarWhereWithAggregatesInput[]
   NOT?: Prisma.RecommendationScalarWhereWithAggregatesInput | Prisma.RecommendationScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Recommendation"> | string
-  findingId?: Prisma.StringWithAggregatesFilter<"Recommendation"> | string
   engagementId?: Prisma.StringWithAggregatesFilter<"Recommendation"> | string
+  findingId?: Prisma.StringNullableWithAggregatesFilter<"Recommendation"> | string | null
   title?: Prisma.StringWithAggregatesFilter<"Recommendation"> | string
   description?: Prisma.StringNullableWithAggregatesFilter<"Recommendation"> | string | null
+  rationale?: Prisma.StringNullableWithAggregatesFilter<"Recommendation"> | string | null
   priority?: Prisma.StringWithAggregatesFilter<"Recommendation"> | string
+  estimatedImpact?: Prisma.StringNullableWithAggregatesFilter<"Recommendation"> | string | null
   status?: Prisma.StringWithAggregatesFilter<"Recommendation"> | string
   approvedBy?: Prisma.StringNullableWithAggregatesFilter<"Recommendation"> | string | null
-  approvalDate?: Prisma.DateTimeNullableWithAggregatesFilter<"Recommendation"> | Date | string | null
+  approvedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Recommendation"> | Date | string | null
   version?: Prisma.IntWithAggregatesFilter<"Recommendation"> | number
+  visibility?: Prisma.StringWithAggregatesFilter<"Recommendation"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Recommendation"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Recommendation"> | Date | string
 }
@@ -361,29 +398,35 @@ export type RecommendationCreateInput = {
   id?: string
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
-  finding: Prisma.FindingCreateNestedOneWithoutRecommendationsInput
   engagement: Prisma.EngagementCreateNestedOneWithoutRecommendationsInput
+  finding?: Prisma.FindingCreateNestedOneWithoutRecommendationsInput
   approver?: Prisma.UserCreateNestedOneWithoutRecommendationApprovalsInput
   actions?: Prisma.ActionCreateNestedManyWithoutRecommendationInput
 }
 
 export type RecommendationUncheckedCreateInput = {
   id?: string
-  findingId: string
   engagementId: string
+  findingId?: string | null
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
   approvedBy?: string | null
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutRecommendationInput
@@ -393,29 +436,35 @@ export type RecommendationUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  finding?: Prisma.FindingUpdateOneRequiredWithoutRecommendationsNestedInput
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutRecommendationsNestedInput
+  finding?: Prisma.FindingUpdateOneWithoutRecommendationsNestedInput
   approver?: Prisma.UserUpdateOneWithoutRecommendationApprovalsNestedInput
   actions?: Prisma.ActionUpdateManyWithoutRecommendationNestedInput
 }
 
 export type RecommendationUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  findingId?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  findingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   actions?: Prisma.ActionUncheckedUpdateManyWithoutRecommendationNestedInput
@@ -423,15 +472,18 @@ export type RecommendationUncheckedUpdateInput = {
 
 export type RecommendationCreateManyInput = {
   id?: string
-  findingId: string
   engagementId: string
+  findingId?: string | null
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
   approvedBy?: string | null
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -440,25 +492,31 @@ export type RecommendationUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type RecommendationUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  findingId?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  findingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -473,17 +531,25 @@ export type RecommendationOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type RecommendationFindingIdTitleCompoundUniqueInput = {
+  findingId: string
+  title: string
+}
+
 export type RecommendationCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  findingId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
+  findingId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  rationale?: Prisma.SortOrder
   priority?: Prisma.SortOrder
+  estimatedImpact?: Prisma.SortOrder
   status?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrder
-  approvalDate?: Prisma.SortOrder
+  approvedAt?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -494,30 +560,36 @@ export type RecommendationAvgOrderByAggregateInput = {
 
 export type RecommendationMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  findingId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
+  findingId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  rationale?: Prisma.SortOrder
   priority?: Prisma.SortOrder
+  estimatedImpact?: Prisma.SortOrder
   status?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrder
-  approvalDate?: Prisma.SortOrder
+  approvedAt?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
 
 export type RecommendationMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  findingId?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
+  findingId?: Prisma.SortOrder
   title?: Prisma.SortOrder
   description?: Prisma.SortOrder
+  rationale?: Prisma.SortOrder
   priority?: Prisma.SortOrder
+  estimatedImpact?: Prisma.SortOrder
   status?: Prisma.SortOrder
   approvedBy?: Prisma.SortOrder
-  approvalDate?: Prisma.SortOrder
+  approvedAt?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -526,9 +598,9 @@ export type RecommendationSumOrderByAggregateInput = {
   version?: Prisma.SortOrder
 }
 
-export type RecommendationNullableScalarRelationFilter = {
-  is?: Prisma.RecommendationWhereInput | null
-  isNot?: Prisma.RecommendationWhereInput | null
+export type RecommendationScalarRelationFilter = {
+  is?: Prisma.RecommendationWhereInput
+  isNot?: Prisma.RecommendationWhereInput
 }
 
 export type RecommendationCreateNestedManyWithoutApproverInput = {
@@ -663,12 +735,10 @@ export type RecommendationCreateNestedOneWithoutActionsInput = {
   connect?: Prisma.RecommendationWhereUniqueInput
 }
 
-export type RecommendationUpdateOneWithoutActionsNestedInput = {
+export type RecommendationUpdateOneRequiredWithoutActionsNestedInput = {
   create?: Prisma.XOR<Prisma.RecommendationCreateWithoutActionsInput, Prisma.RecommendationUncheckedCreateWithoutActionsInput>
   connectOrCreate?: Prisma.RecommendationCreateOrConnectWithoutActionsInput
   upsert?: Prisma.RecommendationUpsertWithoutActionsInput
-  disconnect?: Prisma.RecommendationWhereInput | boolean
-  delete?: Prisma.RecommendationWhereInput | boolean
   connect?: Prisma.RecommendationWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.RecommendationUpdateToOneWithWhereWithoutActionsInput, Prisma.RecommendationUpdateWithoutActionsInput>, Prisma.RecommendationUncheckedUpdateWithoutActionsInput>
 }
@@ -677,27 +747,33 @@ export type RecommendationCreateWithoutApproverInput = {
   id?: string
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
-  finding: Prisma.FindingCreateNestedOneWithoutRecommendationsInput
   engagement: Prisma.EngagementCreateNestedOneWithoutRecommendationsInput
+  finding?: Prisma.FindingCreateNestedOneWithoutRecommendationsInput
   actions?: Prisma.ActionCreateNestedManyWithoutRecommendationInput
 }
 
 export type RecommendationUncheckedCreateWithoutApproverInput = {
   id?: string
-  findingId: string
   engagementId: string
+  findingId?: string | null
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutRecommendationInput
@@ -733,15 +809,18 @@ export type RecommendationScalarWhereInput = {
   OR?: Prisma.RecommendationScalarWhereInput[]
   NOT?: Prisma.RecommendationScalarWhereInput | Prisma.RecommendationScalarWhereInput[]
   id?: Prisma.StringFilter<"Recommendation"> | string
-  findingId?: Prisma.StringFilter<"Recommendation"> | string
   engagementId?: Prisma.StringFilter<"Recommendation"> | string
+  findingId?: Prisma.StringNullableFilter<"Recommendation"> | string | null
   title?: Prisma.StringFilter<"Recommendation"> | string
   description?: Prisma.StringNullableFilter<"Recommendation"> | string | null
+  rationale?: Prisma.StringNullableFilter<"Recommendation"> | string | null
   priority?: Prisma.StringFilter<"Recommendation"> | string
+  estimatedImpact?: Prisma.StringNullableFilter<"Recommendation"> | string | null
   status?: Prisma.StringFilter<"Recommendation"> | string
   approvedBy?: Prisma.StringNullableFilter<"Recommendation"> | string | null
-  approvalDate?: Prisma.DateTimeNullableFilter<"Recommendation"> | Date | string | null
+  approvedAt?: Prisma.DateTimeNullableFilter<"Recommendation"> | Date | string | null
   version?: Prisma.IntFilter<"Recommendation"> | number
+  visibility?: Prisma.StringFilter<"Recommendation"> | string
   createdAt?: Prisma.DateTimeFilter<"Recommendation"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Recommendation"> | Date | string
 }
@@ -750,27 +829,33 @@ export type RecommendationCreateWithoutEngagementInput = {
   id?: string
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
-  finding: Prisma.FindingCreateNestedOneWithoutRecommendationsInput
+  finding?: Prisma.FindingCreateNestedOneWithoutRecommendationsInput
   approver?: Prisma.UserCreateNestedOneWithoutRecommendationApprovalsInput
   actions?: Prisma.ActionCreateNestedManyWithoutRecommendationInput
 }
 
 export type RecommendationUncheckedCreateWithoutEngagementInput = {
   id?: string
-  findingId: string
+  findingId?: string | null
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
   approvedBy?: string | null
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutRecommendationInput
@@ -805,10 +890,13 @@ export type RecommendationCreateWithoutFindingInput = {
   id?: string
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   engagement: Prisma.EngagementCreateNestedOneWithoutRecommendationsInput
@@ -821,11 +909,14 @@ export type RecommendationUncheckedCreateWithoutFindingInput = {
   engagementId: string
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
   approvedBy?: string | null
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
   actions?: Prisma.ActionUncheckedCreateNestedManyWithoutRecommendationInput
@@ -860,28 +951,34 @@ export type RecommendationCreateWithoutActionsInput = {
   id?: string
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
-  finding: Prisma.FindingCreateNestedOneWithoutRecommendationsInput
   engagement: Prisma.EngagementCreateNestedOneWithoutRecommendationsInput
+  finding?: Prisma.FindingCreateNestedOneWithoutRecommendationsInput
   approver?: Prisma.UserCreateNestedOneWithoutRecommendationApprovalsInput
 }
 
 export type RecommendationUncheckedCreateWithoutActionsInput = {
   id?: string
-  findingId: string
   engagementId: string
+  findingId?: string | null
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
   approvedBy?: string | null
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -906,42 +1003,51 @@ export type RecommendationUpdateWithoutActionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  finding?: Prisma.FindingUpdateOneRequiredWithoutRecommendationsNestedInput
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutRecommendationsNestedInput
+  finding?: Prisma.FindingUpdateOneWithoutRecommendationsNestedInput
   approver?: Prisma.UserUpdateOneWithoutRecommendationApprovalsNestedInput
 }
 
 export type RecommendationUncheckedUpdateWithoutActionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  findingId?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  findingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type RecommendationCreateManyApproverInput = {
   id?: string
-  findingId: string
   engagementId: string
+  findingId?: string | null
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -950,27 +1056,33 @@ export type RecommendationUpdateWithoutApproverInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  finding?: Prisma.FindingUpdateOneRequiredWithoutRecommendationsNestedInput
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutRecommendationsNestedInput
+  finding?: Prisma.FindingUpdateOneWithoutRecommendationsNestedInput
   actions?: Prisma.ActionUpdateManyWithoutRecommendationNestedInput
 }
 
 export type RecommendationUncheckedUpdateWithoutApproverInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  findingId?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  findingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   actions?: Prisma.ActionUncheckedUpdateManyWithoutRecommendationNestedInput
@@ -978,28 +1090,34 @@ export type RecommendationUncheckedUpdateWithoutApproverInput = {
 
 export type RecommendationUncheckedUpdateManyWithoutApproverInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  findingId?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
+  findingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type RecommendationCreateManyEngagementInput = {
   id?: string
-  findingId: string
+  findingId?: string | null
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
   approvedBy?: string | null
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1008,27 +1126,33 @@ export type RecommendationUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  finding?: Prisma.FindingUpdateOneRequiredWithoutRecommendationsNestedInput
+  finding?: Prisma.FindingUpdateOneWithoutRecommendationsNestedInput
   approver?: Prisma.UserUpdateOneWithoutRecommendationApprovalsNestedInput
   actions?: Prisma.ActionUpdateManyWithoutRecommendationNestedInput
 }
 
 export type RecommendationUncheckedUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  findingId?: Prisma.StringFieldUpdateOperationsInput | string
+  findingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   actions?: Prisma.ActionUncheckedUpdateManyWithoutRecommendationNestedInput
@@ -1036,14 +1160,17 @@ export type RecommendationUncheckedUpdateWithoutEngagementInput = {
 
 export type RecommendationUncheckedUpdateManyWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  findingId?: Prisma.StringFieldUpdateOperationsInput | string
+  findingId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1053,11 +1180,14 @@ export type RecommendationCreateManyFindingInput = {
   engagementId: string
   title: string
   description?: string | null
-  priority?: string
+  rationale?: string | null
+  priority: string
+  estimatedImpact?: string | null
   status?: string
   approvedBy?: string | null
-  approvalDate?: Date | string | null
+  approvedAt?: Date | string | null
   version?: number
+  visibility?: string
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1066,10 +1196,13 @@ export type RecommendationUpdateWithoutFindingInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutRecommendationsNestedInput
@@ -1082,11 +1215,14 @@ export type RecommendationUncheckedUpdateWithoutFindingInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   actions?: Prisma.ActionUncheckedUpdateManyWithoutRecommendationNestedInput
@@ -1097,11 +1233,14 @@ export type RecommendationUncheckedUpdateManyWithoutFindingInput = {
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
   title?: Prisma.StringFieldUpdateOperationsInput | string
   description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  rationale?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   priority?: Prisma.StringFieldUpdateOperationsInput | string
+  estimatedImpact?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   status?: Prisma.StringFieldUpdateOperationsInput | string
   approvedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  approvalDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  approvedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1139,19 +1278,22 @@ export type RecommendationCountOutputTypeCountActionsArgs<ExtArgs extends runtim
 
 export type RecommendationSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  findingId?: boolean
   engagementId?: boolean
+  findingId?: boolean
   title?: boolean
   description?: boolean
+  rationale?: boolean
   priority?: boolean
+  estimatedImpact?: boolean
   status?: boolean
   approvedBy?: boolean
-  approvalDate?: boolean
+  approvedAt?: boolean
   version?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  finding?: boolean | Prisma.FindingDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Recommendation$findingArgs<ExtArgs>
   approver?: boolean | Prisma.Recommendation$approverArgs<ExtArgs>
   actions?: boolean | Prisma.Recommendation$actionsArgs<ExtArgs>
   _count?: boolean | Prisma.RecommendationCountOutputTypeDefaultArgs<ExtArgs>
@@ -1159,93 +1301,105 @@ export type RecommendationSelect<ExtArgs extends runtime.Types.Extensions.Intern
 
 export type RecommendationSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  findingId?: boolean
   engagementId?: boolean
+  findingId?: boolean
   title?: boolean
   description?: boolean
+  rationale?: boolean
   priority?: boolean
+  estimatedImpact?: boolean
   status?: boolean
   approvedBy?: boolean
-  approvalDate?: boolean
+  approvedAt?: boolean
   version?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  finding?: boolean | Prisma.FindingDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Recommendation$findingArgs<ExtArgs>
   approver?: boolean | Prisma.Recommendation$approverArgs<ExtArgs>
 }, ExtArgs["result"]["recommendation"]>
 
 export type RecommendationSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  findingId?: boolean
   engagementId?: boolean
+  findingId?: boolean
   title?: boolean
   description?: boolean
+  rationale?: boolean
   priority?: boolean
+  estimatedImpact?: boolean
   status?: boolean
   approvedBy?: boolean
-  approvalDate?: boolean
+  approvedAt?: boolean
   version?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
-  finding?: boolean | Prisma.FindingDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Recommendation$findingArgs<ExtArgs>
   approver?: boolean | Prisma.Recommendation$approverArgs<ExtArgs>
 }, ExtArgs["result"]["recommendation"]>
 
 export type RecommendationSelectScalar = {
   id?: boolean
-  findingId?: boolean
   engagementId?: boolean
+  findingId?: boolean
   title?: boolean
   description?: boolean
+  rationale?: boolean
   priority?: boolean
+  estimatedImpact?: boolean
   status?: boolean
   approvedBy?: boolean
-  approvalDate?: boolean
+  approvedAt?: boolean
   version?: boolean
+  visibility?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type RecommendationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "findingId" | "engagementId" | "title" | "description" | "priority" | "status" | "approvedBy" | "approvalDate" | "version" | "createdAt" | "updatedAt", ExtArgs["result"]["recommendation"]>
+export type RecommendationOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "findingId" | "title" | "description" | "rationale" | "priority" | "estimatedImpact" | "status" | "approvedBy" | "approvedAt" | "version" | "visibility" | "createdAt" | "updatedAt", ExtArgs["result"]["recommendation"]>
 export type RecommendationInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  finding?: boolean | Prisma.FindingDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Recommendation$findingArgs<ExtArgs>
   approver?: boolean | Prisma.Recommendation$approverArgs<ExtArgs>
   actions?: boolean | Prisma.Recommendation$actionsArgs<ExtArgs>
   _count?: boolean | Prisma.RecommendationCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type RecommendationIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  finding?: boolean | Prisma.FindingDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Recommendation$findingArgs<ExtArgs>
   approver?: boolean | Prisma.Recommendation$approverArgs<ExtArgs>
 }
 export type RecommendationIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  finding?: boolean | Prisma.FindingDefaultArgs<ExtArgs>
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
+  finding?: boolean | Prisma.Recommendation$findingArgs<ExtArgs>
   approver?: boolean | Prisma.Recommendation$approverArgs<ExtArgs>
 }
 
 export type $RecommendationPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Recommendation"
   objects: {
-    finding: Prisma.$FindingPayload<ExtArgs>
     engagement: Prisma.$EngagementPayload<ExtArgs>
+    finding: Prisma.$FindingPayload<ExtArgs> | null
     approver: Prisma.$UserPayload<ExtArgs> | null
     actions: Prisma.$ActionPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    findingId: string
     engagementId: string
+    findingId: string | null
     title: string
     description: string | null
+    rationale: string | null
     priority: string
+    estimatedImpact: string | null
     status: string
     approvedBy: string | null
-    approvalDate: Date | null
+    approvedAt: Date | null
     version: number
+    visibility: string
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["recommendation"]>
@@ -1642,8 +1796,8 @@ readonly fields: RecommendationFieldRefs;
  */
 export interface Prisma__RecommendationClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  finding<T extends Prisma.FindingDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.FindingDefaultArgs<ExtArgs>>): Prisma.Prisma__FindingClient<runtime.Types.Result.GetResult<Prisma.$FindingPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   engagement<T extends Prisma.EngagementDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.EngagementDefaultArgs<ExtArgs>>): Prisma.Prisma__EngagementClient<runtime.Types.Result.GetResult<Prisma.$EngagementPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  finding<T extends Prisma.Recommendation$findingArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recommendation$findingArgs<ExtArgs>>): Prisma.Prisma__FindingClient<runtime.Types.Result.GetResult<Prisma.$FindingPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   approver<T extends Prisma.Recommendation$approverArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recommendation$approverArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   actions<T extends Prisma.Recommendation$actionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recommendation$actionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
@@ -1676,15 +1830,18 @@ export interface Prisma__RecommendationClient<T, Null = never, ExtArgs extends r
  */
 export interface RecommendationFieldRefs {
   readonly id: Prisma.FieldRef<"Recommendation", 'String'>
-  readonly findingId: Prisma.FieldRef<"Recommendation", 'String'>
   readonly engagementId: Prisma.FieldRef<"Recommendation", 'String'>
+  readonly findingId: Prisma.FieldRef<"Recommendation", 'String'>
   readonly title: Prisma.FieldRef<"Recommendation", 'String'>
   readonly description: Prisma.FieldRef<"Recommendation", 'String'>
+  readonly rationale: Prisma.FieldRef<"Recommendation", 'String'>
   readonly priority: Prisma.FieldRef<"Recommendation", 'String'>
+  readonly estimatedImpact: Prisma.FieldRef<"Recommendation", 'String'>
   readonly status: Prisma.FieldRef<"Recommendation", 'String'>
   readonly approvedBy: Prisma.FieldRef<"Recommendation", 'String'>
-  readonly approvalDate: Prisma.FieldRef<"Recommendation", 'DateTime'>
+  readonly approvedAt: Prisma.FieldRef<"Recommendation", 'DateTime'>
   readonly version: Prisma.FieldRef<"Recommendation", 'Int'>
+  readonly visibility: Prisma.FieldRef<"Recommendation", 'String'>
   readonly createdAt: Prisma.FieldRef<"Recommendation", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Recommendation", 'DateTime'>
 }
@@ -2083,6 +2240,25 @@ export type RecommendationDeleteManyArgs<ExtArgs extends runtime.Types.Extension
    * Limit how many Recommendations to delete.
    */
   limit?: number
+}
+
+/**
+ * Recommendation.finding
+ */
+export type Recommendation$findingArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Finding
+   */
+  select?: Prisma.FindingSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Finding
+   */
+  omit?: Prisma.FindingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FindingInclude<ExtArgs> | null
+  where?: Prisma.FindingWhereInput
 }
 
 /**

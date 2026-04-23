@@ -27,87 +27,175 @@ export type AggregateBusinessConditionProfile = {
 }
 
 export type BusinessConditionProfileAvgAggregateOutputType = {
+  severityScore: number | null
   version: number | null
 }
 
 export type BusinessConditionProfileSumAggregateOutputType = {
+  severityScore: number | null
   version: number | null
 }
 
 export type BusinessConditionProfileMinAggregateOutputType = {
   id: string | null
   engagementId: string | null
-  financialHealth: string | null
-  operationalEfficiency: string | null
-  marketPosition: string | null
-  teamCapability: string | null
-  timestamp: Date | null
+  businessStatus: string | null
+  severityScore: number | null
+  urgencyLevel: string | null
+  cashPressureLevel: string | null
+  marginPressureLevel: string | null
+  clientConcentrationRisk: string | null
+  ownerDependencyRisk: string | null
+  keyPersonDependencyRisk: string | null
+  processMaturityLevel: string | null
+  managementMaturityLevel: string | null
+  executionCapacityLevel: string | null
+  moraleFragilityLevel: string | null
+  resilienceLevel: string | null
+  growthReadinessLevel: string | null
+  notes: string | null
+  assessedBy: string | null
   version: number | null
+  isCurrent: boolean | null
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type BusinessConditionProfileMaxAggregateOutputType = {
   id: string | null
   engagementId: string | null
-  financialHealth: string | null
-  operationalEfficiency: string | null
-  marketPosition: string | null
-  teamCapability: string | null
-  timestamp: Date | null
+  businessStatus: string | null
+  severityScore: number | null
+  urgencyLevel: string | null
+  cashPressureLevel: string | null
+  marginPressureLevel: string | null
+  clientConcentrationRisk: string | null
+  ownerDependencyRisk: string | null
+  keyPersonDependencyRisk: string | null
+  processMaturityLevel: string | null
+  managementMaturityLevel: string | null
+  executionCapacityLevel: string | null
+  moraleFragilityLevel: string | null
+  resilienceLevel: string | null
+  growthReadinessLevel: string | null
+  notes: string | null
+  assessedBy: string | null
   version: number | null
+  isCurrent: boolean | null
+  createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export type BusinessConditionProfileCountAggregateOutputType = {
   id: number
   engagementId: number
-  financialHealth: number
-  operationalEfficiency: number
-  marketPosition: number
-  teamCapability: number
-  timestamp: number
+  businessStatus: number
+  severityScore: number
+  urgencyLevel: number
+  cashPressureLevel: number
+  marginPressureLevel: number
+  clientConcentrationRisk: number
+  ownerDependencyRisk: number
+  keyPersonDependencyRisk: number
+  processMaturityLevel: number
+  managementMaturityLevel: number
+  executionCapacityLevel: number
+  moraleFragilityLevel: number
+  resilienceLevel: number
+  growthReadinessLevel: number
+  notes: number
+  assessedBy: number
   version: number
+  isCurrent: number
+  createdAt: number
+  updatedAt: number
   _all: number
 }
 
 
 export type BusinessConditionProfileAvgAggregateInputType = {
+  severityScore?: true
   version?: true
 }
 
 export type BusinessConditionProfileSumAggregateInputType = {
+  severityScore?: true
   version?: true
 }
 
 export type BusinessConditionProfileMinAggregateInputType = {
   id?: true
   engagementId?: true
-  financialHealth?: true
-  operationalEfficiency?: true
-  marketPosition?: true
-  teamCapability?: true
-  timestamp?: true
+  businessStatus?: true
+  severityScore?: true
+  urgencyLevel?: true
+  cashPressureLevel?: true
+  marginPressureLevel?: true
+  clientConcentrationRisk?: true
+  ownerDependencyRisk?: true
+  keyPersonDependencyRisk?: true
+  processMaturityLevel?: true
+  managementMaturityLevel?: true
+  executionCapacityLevel?: true
+  moraleFragilityLevel?: true
+  resilienceLevel?: true
+  growthReadinessLevel?: true
+  notes?: true
+  assessedBy?: true
   version?: true
+  isCurrent?: true
+  createdAt?: true
+  updatedAt?: true
 }
 
 export type BusinessConditionProfileMaxAggregateInputType = {
   id?: true
   engagementId?: true
-  financialHealth?: true
-  operationalEfficiency?: true
-  marketPosition?: true
-  teamCapability?: true
-  timestamp?: true
+  businessStatus?: true
+  severityScore?: true
+  urgencyLevel?: true
+  cashPressureLevel?: true
+  marginPressureLevel?: true
+  clientConcentrationRisk?: true
+  ownerDependencyRisk?: true
+  keyPersonDependencyRisk?: true
+  processMaturityLevel?: true
+  managementMaturityLevel?: true
+  executionCapacityLevel?: true
+  moraleFragilityLevel?: true
+  resilienceLevel?: true
+  growthReadinessLevel?: true
+  notes?: true
+  assessedBy?: true
   version?: true
+  isCurrent?: true
+  createdAt?: true
+  updatedAt?: true
 }
 
 export type BusinessConditionProfileCountAggregateInputType = {
   id?: true
   engagementId?: true
-  financialHealth?: true
-  operationalEfficiency?: true
-  marketPosition?: true
-  teamCapability?: true
-  timestamp?: true
+  businessStatus?: true
+  severityScore?: true
+  urgencyLevel?: true
+  cashPressureLevel?: true
+  marginPressureLevel?: true
+  clientConcentrationRisk?: true
+  ownerDependencyRisk?: true
+  keyPersonDependencyRisk?: true
+  processMaturityLevel?: true
+  managementMaturityLevel?: true
+  executionCapacityLevel?: true
+  moraleFragilityLevel?: true
+  resilienceLevel?: true
+  growthReadinessLevel?: true
+  notes?: true
+  assessedBy?: true
   version?: true
+  isCurrent?: true
+  createdAt?: true
+  updatedAt?: true
   _all?: true
 }
 
@@ -200,12 +288,26 @@ export type BusinessConditionProfileGroupByArgs<ExtArgs extends runtime.Types.Ex
 export type BusinessConditionProfileGroupByOutputType = {
   id: string
   engagementId: string
-  financialHealth: string
-  operationalEfficiency: string
-  marketPosition: string
-  teamCapability: string
-  timestamp: Date
+  businessStatus: string
+  severityScore: number
+  urgencyLevel: string
+  cashPressureLevel: string
+  marginPressureLevel: string
+  clientConcentrationRisk: string
+  ownerDependencyRisk: string
+  keyPersonDependencyRisk: string
+  processMaturityLevel: string
+  managementMaturityLevel: string
+  executionCapacityLevel: string
+  moraleFragilityLevel: string
+  resilienceLevel: string
+  growthReadinessLevel: string
+  notes: string | null
+  assessedBy: string | null
   version: number
+  isCurrent: boolean
+  createdAt: Date
+  updatedAt: Date
   _count: BusinessConditionProfileCountAggregateOutputType | null
   _avg: BusinessConditionProfileAvgAggregateOutputType | null
   _sum: BusinessConditionProfileSumAggregateOutputType | null
@@ -234,24 +336,52 @@ export type BusinessConditionProfileWhereInput = {
   NOT?: Prisma.BusinessConditionProfileWhereInput | Prisma.BusinessConditionProfileWhereInput[]
   id?: Prisma.StringFilter<"BusinessConditionProfile"> | string
   engagementId?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  financialHealth?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  operationalEfficiency?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  marketPosition?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  teamCapability?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  timestamp?: Prisma.DateTimeFilter<"BusinessConditionProfile"> | Date | string
+  businessStatus?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  severityScore?: Prisma.IntFilter<"BusinessConditionProfile"> | number
+  urgencyLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  cashPressureLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  marginPressureLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  clientConcentrationRisk?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  ownerDependencyRisk?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  keyPersonDependencyRisk?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  processMaturityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  managementMaturityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  executionCapacityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  moraleFragilityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  resilienceLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  growthReadinessLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  notes?: Prisma.StringNullableFilter<"BusinessConditionProfile"> | string | null
+  assessedBy?: Prisma.StringNullableFilter<"BusinessConditionProfile"> | string | null
   version?: Prisma.IntFilter<"BusinessConditionProfile"> | number
+  isCurrent?: Prisma.BoolFilter<"BusinessConditionProfile"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"BusinessConditionProfile"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"BusinessConditionProfile"> | Date | string
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
 }
 
 export type BusinessConditionProfileOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  financialHealth?: Prisma.SortOrder
-  operationalEfficiency?: Prisma.SortOrder
-  marketPosition?: Prisma.SortOrder
-  teamCapability?: Prisma.SortOrder
-  timestamp?: Prisma.SortOrder
+  businessStatus?: Prisma.SortOrder
+  severityScore?: Prisma.SortOrder
+  urgencyLevel?: Prisma.SortOrder
+  cashPressureLevel?: Prisma.SortOrder
+  marginPressureLevel?: Prisma.SortOrder
+  clientConcentrationRisk?: Prisma.SortOrder
+  ownerDependencyRisk?: Prisma.SortOrder
+  keyPersonDependencyRisk?: Prisma.SortOrder
+  processMaturityLevel?: Prisma.SortOrder
+  managementMaturityLevel?: Prisma.SortOrder
+  executionCapacityLevel?: Prisma.SortOrder
+  moraleFragilityLevel?: Prisma.SortOrder
+  resilienceLevel?: Prisma.SortOrder
+  growthReadinessLevel?: Prisma.SortOrder
+  notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  assessedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   version?: Prisma.SortOrder
+  isCurrent?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   engagement?: Prisma.EngagementOrderByWithRelationInput
 }
 
@@ -261,24 +391,52 @@ export type BusinessConditionProfileWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.BusinessConditionProfileWhereInput[]
   NOT?: Prisma.BusinessConditionProfileWhereInput | Prisma.BusinessConditionProfileWhereInput[]
   engagementId?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  financialHealth?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  operationalEfficiency?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  marketPosition?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  teamCapability?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  timestamp?: Prisma.DateTimeFilter<"BusinessConditionProfile"> | Date | string
+  businessStatus?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  severityScore?: Prisma.IntFilter<"BusinessConditionProfile"> | number
+  urgencyLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  cashPressureLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  marginPressureLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  clientConcentrationRisk?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  ownerDependencyRisk?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  keyPersonDependencyRisk?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  processMaturityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  managementMaturityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  executionCapacityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  moraleFragilityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  resilienceLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  growthReadinessLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  notes?: Prisma.StringNullableFilter<"BusinessConditionProfile"> | string | null
+  assessedBy?: Prisma.StringNullableFilter<"BusinessConditionProfile"> | string | null
   version?: Prisma.IntFilter<"BusinessConditionProfile"> | number
+  isCurrent?: Prisma.BoolFilter<"BusinessConditionProfile"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"BusinessConditionProfile"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"BusinessConditionProfile"> | Date | string
   engagement?: Prisma.XOR<Prisma.EngagementScalarRelationFilter, Prisma.EngagementWhereInput>
 }, "id">
 
 export type BusinessConditionProfileOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  financialHealth?: Prisma.SortOrder
-  operationalEfficiency?: Prisma.SortOrder
-  marketPosition?: Prisma.SortOrder
-  teamCapability?: Prisma.SortOrder
-  timestamp?: Prisma.SortOrder
+  businessStatus?: Prisma.SortOrder
+  severityScore?: Prisma.SortOrder
+  urgencyLevel?: Prisma.SortOrder
+  cashPressureLevel?: Prisma.SortOrder
+  marginPressureLevel?: Prisma.SortOrder
+  clientConcentrationRisk?: Prisma.SortOrder
+  ownerDependencyRisk?: Prisma.SortOrder
+  keyPersonDependencyRisk?: Prisma.SortOrder
+  processMaturityLevel?: Prisma.SortOrder
+  managementMaturityLevel?: Prisma.SortOrder
+  executionCapacityLevel?: Prisma.SortOrder
+  moraleFragilityLevel?: Prisma.SortOrder
+  resilienceLevel?: Prisma.SortOrder
+  growthReadinessLevel?: Prisma.SortOrder
+  notes?: Prisma.SortOrderInput | Prisma.SortOrder
+  assessedBy?: Prisma.SortOrderInput | Prisma.SortOrder
   version?: Prisma.SortOrder
+  isCurrent?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
   _count?: Prisma.BusinessConditionProfileCountOrderByAggregateInput
   _avg?: Prisma.BusinessConditionProfileAvgOrderByAggregateInput
   _max?: Prisma.BusinessConditionProfileMaxOrderByAggregateInput
@@ -292,88 +450,200 @@ export type BusinessConditionProfileScalarWhereWithAggregatesInput = {
   NOT?: Prisma.BusinessConditionProfileScalarWhereWithAggregatesInput | Prisma.BusinessConditionProfileScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
   engagementId?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
-  financialHealth?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
-  operationalEfficiency?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
-  marketPosition?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
-  teamCapability?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
-  timestamp?: Prisma.DateTimeWithAggregatesFilter<"BusinessConditionProfile"> | Date | string
+  businessStatus?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  severityScore?: Prisma.IntWithAggregatesFilter<"BusinessConditionProfile"> | number
+  urgencyLevel?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  cashPressureLevel?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  marginPressureLevel?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  clientConcentrationRisk?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  ownerDependencyRisk?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  keyPersonDependencyRisk?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  processMaturityLevel?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  managementMaturityLevel?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  executionCapacityLevel?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  moraleFragilityLevel?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  resilienceLevel?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  growthReadinessLevel?: Prisma.StringWithAggregatesFilter<"BusinessConditionProfile"> | string
+  notes?: Prisma.StringNullableWithAggregatesFilter<"BusinessConditionProfile"> | string | null
+  assessedBy?: Prisma.StringNullableWithAggregatesFilter<"BusinessConditionProfile"> | string | null
   version?: Prisma.IntWithAggregatesFilter<"BusinessConditionProfile"> | number
+  isCurrent?: Prisma.BoolWithAggregatesFilter<"BusinessConditionProfile"> | boolean
+  createdAt?: Prisma.DateTimeWithAggregatesFilter<"BusinessConditionProfile"> | Date | string
+  updatedAt?: Prisma.DateTimeWithAggregatesFilter<"BusinessConditionProfile"> | Date | string
 }
 
 export type BusinessConditionProfileCreateInput = {
   id?: string
-  financialHealth: string
-  operationalEfficiency: string
-  marketPosition: string
-  teamCapability: string
-  timestamp?: Date | string
+  businessStatus: string
+  severityScore: number
+  urgencyLevel: string
+  cashPressureLevel: string
+  marginPressureLevel: string
+  clientConcentrationRisk: string
+  ownerDependencyRisk: string
+  keyPersonDependencyRisk: string
+  processMaturityLevel: string
+  managementMaturityLevel: string
+  executionCapacityLevel: string
+  moraleFragilityLevel: string
+  resilienceLevel: string
+  growthReadinessLevel: string
+  notes?: string | null
+  assessedBy?: string | null
   version?: number
+  isCurrent?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
   engagement: Prisma.EngagementCreateNestedOneWithoutConditionProfilesInput
 }
 
 export type BusinessConditionProfileUncheckedCreateInput = {
   id?: string
   engagementId: string
-  financialHealth: string
-  operationalEfficiency: string
-  marketPosition: string
-  teamCapability: string
-  timestamp?: Date | string
+  businessStatus: string
+  severityScore: number
+  urgencyLevel: string
+  cashPressureLevel: string
+  marginPressureLevel: string
+  clientConcentrationRisk: string
+  ownerDependencyRisk: string
+  keyPersonDependencyRisk: string
+  processMaturityLevel: string
+  managementMaturityLevel: string
+  executionCapacityLevel: string
+  moraleFragilityLevel: string
+  resilienceLevel: string
+  growthReadinessLevel: string
+  notes?: string | null
+  assessedBy?: string | null
   version?: number
+  isCurrent?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type BusinessConditionProfileUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  financialHealth?: Prisma.StringFieldUpdateOperationsInput | string
-  operationalEfficiency?: Prisma.StringFieldUpdateOperationsInput | string
-  marketPosition?: Prisma.StringFieldUpdateOperationsInput | string
-  teamCapability?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  businessStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  severityScore?: Prisma.IntFieldUpdateOperationsInput | number
+  urgencyLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  cashPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  marginPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  clientConcentrationRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  keyPersonDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  processMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  managementMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  executionCapacityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  moraleFragilityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  resilienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  growthReadinessLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  isCurrent?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutConditionProfilesNestedInput
 }
 
 export type BusinessConditionProfileUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  financialHealth?: Prisma.StringFieldUpdateOperationsInput | string
-  operationalEfficiency?: Prisma.StringFieldUpdateOperationsInput | string
-  marketPosition?: Prisma.StringFieldUpdateOperationsInput | string
-  teamCapability?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  businessStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  severityScore?: Prisma.IntFieldUpdateOperationsInput | number
+  urgencyLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  cashPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  marginPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  clientConcentrationRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  keyPersonDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  processMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  managementMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  executionCapacityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  moraleFragilityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  resilienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  growthReadinessLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  isCurrent?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BusinessConditionProfileCreateManyInput = {
   id?: string
   engagementId: string
-  financialHealth: string
-  operationalEfficiency: string
-  marketPosition: string
-  teamCapability: string
-  timestamp?: Date | string
+  businessStatus: string
+  severityScore: number
+  urgencyLevel: string
+  cashPressureLevel: string
+  marginPressureLevel: string
+  clientConcentrationRisk: string
+  ownerDependencyRisk: string
+  keyPersonDependencyRisk: string
+  processMaturityLevel: string
+  managementMaturityLevel: string
+  executionCapacityLevel: string
+  moraleFragilityLevel: string
+  resilienceLevel: string
+  growthReadinessLevel: string
+  notes?: string | null
+  assessedBy?: string | null
   version?: number
+  isCurrent?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type BusinessConditionProfileUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  financialHealth?: Prisma.StringFieldUpdateOperationsInput | string
-  operationalEfficiency?: Prisma.StringFieldUpdateOperationsInput | string
-  marketPosition?: Prisma.StringFieldUpdateOperationsInput | string
-  teamCapability?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  businessStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  severityScore?: Prisma.IntFieldUpdateOperationsInput | number
+  urgencyLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  cashPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  marginPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  clientConcentrationRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  keyPersonDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  processMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  managementMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  executionCapacityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  moraleFragilityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  resilienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  growthReadinessLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  isCurrent?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BusinessConditionProfileUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  financialHealth?: Prisma.StringFieldUpdateOperationsInput | string
-  operationalEfficiency?: Prisma.StringFieldUpdateOperationsInput | string
-  marketPosition?: Prisma.StringFieldUpdateOperationsInput | string
-  teamCapability?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  businessStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  severityScore?: Prisma.IntFieldUpdateOperationsInput | number
+  urgencyLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  cashPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  marginPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  clientConcentrationRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  keyPersonDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  processMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  managementMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  executionCapacityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  moraleFragilityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  resilienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  growthReadinessLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  isCurrent?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BusinessConditionProfileListRelationFilter = {
@@ -389,41 +659,85 @@ export type BusinessConditionProfileOrderByRelationAggregateInput = {
 export type BusinessConditionProfileCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  financialHealth?: Prisma.SortOrder
-  operationalEfficiency?: Prisma.SortOrder
-  marketPosition?: Prisma.SortOrder
-  teamCapability?: Prisma.SortOrder
-  timestamp?: Prisma.SortOrder
+  businessStatus?: Prisma.SortOrder
+  severityScore?: Prisma.SortOrder
+  urgencyLevel?: Prisma.SortOrder
+  cashPressureLevel?: Prisma.SortOrder
+  marginPressureLevel?: Prisma.SortOrder
+  clientConcentrationRisk?: Prisma.SortOrder
+  ownerDependencyRisk?: Prisma.SortOrder
+  keyPersonDependencyRisk?: Prisma.SortOrder
+  processMaturityLevel?: Prisma.SortOrder
+  managementMaturityLevel?: Prisma.SortOrder
+  executionCapacityLevel?: Prisma.SortOrder
+  moraleFragilityLevel?: Prisma.SortOrder
+  resilienceLevel?: Prisma.SortOrder
+  growthReadinessLevel?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  assessedBy?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  isCurrent?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type BusinessConditionProfileAvgOrderByAggregateInput = {
+  severityScore?: Prisma.SortOrder
   version?: Prisma.SortOrder
 }
 
 export type BusinessConditionProfileMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  financialHealth?: Prisma.SortOrder
-  operationalEfficiency?: Prisma.SortOrder
-  marketPosition?: Prisma.SortOrder
-  teamCapability?: Prisma.SortOrder
-  timestamp?: Prisma.SortOrder
+  businessStatus?: Prisma.SortOrder
+  severityScore?: Prisma.SortOrder
+  urgencyLevel?: Prisma.SortOrder
+  cashPressureLevel?: Prisma.SortOrder
+  marginPressureLevel?: Prisma.SortOrder
+  clientConcentrationRisk?: Prisma.SortOrder
+  ownerDependencyRisk?: Prisma.SortOrder
+  keyPersonDependencyRisk?: Prisma.SortOrder
+  processMaturityLevel?: Prisma.SortOrder
+  managementMaturityLevel?: Prisma.SortOrder
+  executionCapacityLevel?: Prisma.SortOrder
+  moraleFragilityLevel?: Prisma.SortOrder
+  resilienceLevel?: Prisma.SortOrder
+  growthReadinessLevel?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  assessedBy?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  isCurrent?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type BusinessConditionProfileMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   engagementId?: Prisma.SortOrder
-  financialHealth?: Prisma.SortOrder
-  operationalEfficiency?: Prisma.SortOrder
-  marketPosition?: Prisma.SortOrder
-  teamCapability?: Prisma.SortOrder
-  timestamp?: Prisma.SortOrder
+  businessStatus?: Prisma.SortOrder
+  severityScore?: Prisma.SortOrder
+  urgencyLevel?: Prisma.SortOrder
+  cashPressureLevel?: Prisma.SortOrder
+  marginPressureLevel?: Prisma.SortOrder
+  clientConcentrationRisk?: Prisma.SortOrder
+  ownerDependencyRisk?: Prisma.SortOrder
+  keyPersonDependencyRisk?: Prisma.SortOrder
+  processMaturityLevel?: Prisma.SortOrder
+  managementMaturityLevel?: Prisma.SortOrder
+  executionCapacityLevel?: Prisma.SortOrder
+  moraleFragilityLevel?: Prisma.SortOrder
+  resilienceLevel?: Prisma.SortOrder
+  growthReadinessLevel?: Prisma.SortOrder
+  notes?: Prisma.SortOrder
+  assessedBy?: Prisma.SortOrder
   version?: Prisma.SortOrder
+  isCurrent?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
+  updatedAt?: Prisma.SortOrder
 }
 
 export type BusinessConditionProfileSumOrderByAggregateInput = {
+  severityScore?: Prisma.SortOrder
   version?: Prisma.SortOrder
 }
 
@@ -471,22 +785,50 @@ export type BusinessConditionProfileUncheckedUpdateManyWithoutEngagementNestedIn
 
 export type BusinessConditionProfileCreateWithoutEngagementInput = {
   id?: string
-  financialHealth: string
-  operationalEfficiency: string
-  marketPosition: string
-  teamCapability: string
-  timestamp?: Date | string
+  businessStatus: string
+  severityScore: number
+  urgencyLevel: string
+  cashPressureLevel: string
+  marginPressureLevel: string
+  clientConcentrationRisk: string
+  ownerDependencyRisk: string
+  keyPersonDependencyRisk: string
+  processMaturityLevel: string
+  managementMaturityLevel: string
+  executionCapacityLevel: string
+  moraleFragilityLevel: string
+  resilienceLevel: string
+  growthReadinessLevel: string
+  notes?: string | null
+  assessedBy?: string | null
   version?: number
+  isCurrent?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type BusinessConditionProfileUncheckedCreateWithoutEngagementInput = {
   id?: string
-  financialHealth: string
-  operationalEfficiency: string
-  marketPosition: string
-  teamCapability: string
-  timestamp?: Date | string
+  businessStatus: string
+  severityScore: number
+  urgencyLevel: string
+  cashPressureLevel: string
+  marginPressureLevel: string
+  clientConcentrationRisk: string
+  ownerDependencyRisk: string
+  keyPersonDependencyRisk: string
+  processMaturityLevel: string
+  managementMaturityLevel: string
+  executionCapacityLevel: string
+  moraleFragilityLevel: string
+  resilienceLevel: string
+  growthReadinessLevel: string
+  notes?: string | null
+  assessedBy?: string | null
   version?: number
+  isCurrent?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type BusinessConditionProfileCreateOrConnectWithoutEngagementInput = {
@@ -520,52 +862,122 @@ export type BusinessConditionProfileScalarWhereInput = {
   NOT?: Prisma.BusinessConditionProfileScalarWhereInput | Prisma.BusinessConditionProfileScalarWhereInput[]
   id?: Prisma.StringFilter<"BusinessConditionProfile"> | string
   engagementId?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  financialHealth?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  operationalEfficiency?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  marketPosition?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  teamCapability?: Prisma.StringFilter<"BusinessConditionProfile"> | string
-  timestamp?: Prisma.DateTimeFilter<"BusinessConditionProfile"> | Date | string
+  businessStatus?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  severityScore?: Prisma.IntFilter<"BusinessConditionProfile"> | number
+  urgencyLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  cashPressureLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  marginPressureLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  clientConcentrationRisk?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  ownerDependencyRisk?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  keyPersonDependencyRisk?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  processMaturityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  managementMaturityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  executionCapacityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  moraleFragilityLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  resilienceLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  growthReadinessLevel?: Prisma.StringFilter<"BusinessConditionProfile"> | string
+  notes?: Prisma.StringNullableFilter<"BusinessConditionProfile"> | string | null
+  assessedBy?: Prisma.StringNullableFilter<"BusinessConditionProfile"> | string | null
   version?: Prisma.IntFilter<"BusinessConditionProfile"> | number
+  isCurrent?: Prisma.BoolFilter<"BusinessConditionProfile"> | boolean
+  createdAt?: Prisma.DateTimeFilter<"BusinessConditionProfile"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"BusinessConditionProfile"> | Date | string
 }
 
 export type BusinessConditionProfileCreateManyEngagementInput = {
   id?: string
-  financialHealth: string
-  operationalEfficiency: string
-  marketPosition: string
-  teamCapability: string
-  timestamp?: Date | string
+  businessStatus: string
+  severityScore: number
+  urgencyLevel: string
+  cashPressureLevel: string
+  marginPressureLevel: string
+  clientConcentrationRisk: string
+  ownerDependencyRisk: string
+  keyPersonDependencyRisk: string
+  processMaturityLevel: string
+  managementMaturityLevel: string
+  executionCapacityLevel: string
+  moraleFragilityLevel: string
+  resilienceLevel: string
+  growthReadinessLevel: string
+  notes?: string | null
+  assessedBy?: string | null
   version?: number
+  isCurrent?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
 }
 
 export type BusinessConditionProfileUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  financialHealth?: Prisma.StringFieldUpdateOperationsInput | string
-  operationalEfficiency?: Prisma.StringFieldUpdateOperationsInput | string
-  marketPosition?: Prisma.StringFieldUpdateOperationsInput | string
-  teamCapability?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  businessStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  severityScore?: Prisma.IntFieldUpdateOperationsInput | number
+  urgencyLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  cashPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  marginPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  clientConcentrationRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  keyPersonDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  processMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  managementMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  executionCapacityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  moraleFragilityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  resilienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  growthReadinessLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  isCurrent?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BusinessConditionProfileUncheckedUpdateWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  financialHealth?: Prisma.StringFieldUpdateOperationsInput | string
-  operationalEfficiency?: Prisma.StringFieldUpdateOperationsInput | string
-  marketPosition?: Prisma.StringFieldUpdateOperationsInput | string
-  teamCapability?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  businessStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  severityScore?: Prisma.IntFieldUpdateOperationsInput | number
+  urgencyLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  cashPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  marginPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  clientConcentrationRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  keyPersonDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  processMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  managementMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  executionCapacityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  moraleFragilityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  resilienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  growthReadinessLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  isCurrent?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BusinessConditionProfileUncheckedUpdateManyWithoutEngagementInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  financialHealth?: Prisma.StringFieldUpdateOperationsInput | string
-  operationalEfficiency?: Prisma.StringFieldUpdateOperationsInput | string
-  marketPosition?: Prisma.StringFieldUpdateOperationsInput | string
-  teamCapability?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  businessStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  severityScore?: Prisma.IntFieldUpdateOperationsInput | number
+  urgencyLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  cashPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  marginPressureLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  clientConcentrationRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  ownerDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  keyPersonDependencyRisk?: Prisma.StringFieldUpdateOperationsInput | string
+  processMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  managementMaturityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  executionCapacityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  moraleFragilityLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  resilienceLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  growthReadinessLevel?: Prisma.StringFieldUpdateOperationsInput | string
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  assessedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   version?: Prisma.IntFieldUpdateOperationsInput | number
+  isCurrent?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -573,51 +985,107 @@ export type BusinessConditionProfileUncheckedUpdateManyWithoutEngagementInput = 
 export type BusinessConditionProfileSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   engagementId?: boolean
-  financialHealth?: boolean
-  operationalEfficiency?: boolean
-  marketPosition?: boolean
-  teamCapability?: boolean
-  timestamp?: boolean
+  businessStatus?: boolean
+  severityScore?: boolean
+  urgencyLevel?: boolean
+  cashPressureLevel?: boolean
+  marginPressureLevel?: boolean
+  clientConcentrationRisk?: boolean
+  ownerDependencyRisk?: boolean
+  keyPersonDependencyRisk?: boolean
+  processMaturityLevel?: boolean
+  managementMaturityLevel?: boolean
+  executionCapacityLevel?: boolean
+  moraleFragilityLevel?: boolean
+  resilienceLevel?: boolean
+  growthReadinessLevel?: boolean
+  notes?: boolean
+  assessedBy?: boolean
   version?: boolean
+  isCurrent?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["businessConditionProfile"]>
 
 export type BusinessConditionProfileSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   engagementId?: boolean
-  financialHealth?: boolean
-  operationalEfficiency?: boolean
-  marketPosition?: boolean
-  teamCapability?: boolean
-  timestamp?: boolean
+  businessStatus?: boolean
+  severityScore?: boolean
+  urgencyLevel?: boolean
+  cashPressureLevel?: boolean
+  marginPressureLevel?: boolean
+  clientConcentrationRisk?: boolean
+  ownerDependencyRisk?: boolean
+  keyPersonDependencyRisk?: boolean
+  processMaturityLevel?: boolean
+  managementMaturityLevel?: boolean
+  executionCapacityLevel?: boolean
+  moraleFragilityLevel?: boolean
+  resilienceLevel?: boolean
+  growthReadinessLevel?: boolean
+  notes?: boolean
+  assessedBy?: boolean
   version?: boolean
+  isCurrent?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["businessConditionProfile"]>
 
 export type BusinessConditionProfileSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   engagementId?: boolean
-  financialHealth?: boolean
-  operationalEfficiency?: boolean
-  marketPosition?: boolean
-  teamCapability?: boolean
-  timestamp?: boolean
+  businessStatus?: boolean
+  severityScore?: boolean
+  urgencyLevel?: boolean
+  cashPressureLevel?: boolean
+  marginPressureLevel?: boolean
+  clientConcentrationRisk?: boolean
+  ownerDependencyRisk?: boolean
+  keyPersonDependencyRisk?: boolean
+  processMaturityLevel?: boolean
+  managementMaturityLevel?: boolean
+  executionCapacityLevel?: boolean
+  moraleFragilityLevel?: boolean
+  resilienceLevel?: boolean
+  growthReadinessLevel?: boolean
+  notes?: boolean
+  assessedBy?: boolean
   version?: boolean
+  isCurrent?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["businessConditionProfile"]>
 
 export type BusinessConditionProfileSelectScalar = {
   id?: boolean
   engagementId?: boolean
-  financialHealth?: boolean
-  operationalEfficiency?: boolean
-  marketPosition?: boolean
-  teamCapability?: boolean
-  timestamp?: boolean
+  businessStatus?: boolean
+  severityScore?: boolean
+  urgencyLevel?: boolean
+  cashPressureLevel?: boolean
+  marginPressureLevel?: boolean
+  clientConcentrationRisk?: boolean
+  ownerDependencyRisk?: boolean
+  keyPersonDependencyRisk?: boolean
+  processMaturityLevel?: boolean
+  managementMaturityLevel?: boolean
+  executionCapacityLevel?: boolean
+  moraleFragilityLevel?: boolean
+  resilienceLevel?: boolean
+  growthReadinessLevel?: boolean
+  notes?: boolean
+  assessedBy?: boolean
   version?: boolean
+  isCurrent?: boolean
+  createdAt?: boolean
+  updatedAt?: boolean
 }
 
-export type BusinessConditionProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "financialHealth" | "operationalEfficiency" | "marketPosition" | "teamCapability" | "timestamp" | "version", ExtArgs["result"]["businessConditionProfile"]>
+export type BusinessConditionProfileOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "engagementId" | "businessStatus" | "severityScore" | "urgencyLevel" | "cashPressureLevel" | "marginPressureLevel" | "clientConcentrationRisk" | "ownerDependencyRisk" | "keyPersonDependencyRisk" | "processMaturityLevel" | "managementMaturityLevel" | "executionCapacityLevel" | "moraleFragilityLevel" | "resilienceLevel" | "growthReadinessLevel" | "notes" | "assessedBy" | "version" | "isCurrent" | "createdAt" | "updatedAt", ExtArgs["result"]["businessConditionProfile"]>
 export type BusinessConditionProfileInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   engagement?: boolean | Prisma.EngagementDefaultArgs<ExtArgs>
 }
@@ -636,12 +1104,26 @@ export type $BusinessConditionProfilePayload<ExtArgs extends runtime.Types.Exten
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     engagementId: string
-    financialHealth: string
-    operationalEfficiency: string
-    marketPosition: string
-    teamCapability: string
-    timestamp: Date
+    businessStatus: string
+    severityScore: number
+    urgencyLevel: string
+    cashPressureLevel: string
+    marginPressureLevel: string
+    clientConcentrationRisk: string
+    ownerDependencyRisk: string
+    keyPersonDependencyRisk: string
+    processMaturityLevel: string
+    managementMaturityLevel: string
+    executionCapacityLevel: string
+    moraleFragilityLevel: string
+    resilienceLevel: string
+    growthReadinessLevel: string
+    notes: string | null
+    assessedBy: string | null
     version: number
+    isCurrent: boolean
+    createdAt: Date
+    updatedAt: Date
   }, ExtArgs["result"]["businessConditionProfile"]>
   composites: {}
 }
@@ -1068,12 +1550,26 @@ export interface Prisma__BusinessConditionProfileClient<T, Null = never, ExtArgs
 export interface BusinessConditionProfileFieldRefs {
   readonly id: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
   readonly engagementId: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
-  readonly financialHealth: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
-  readonly operationalEfficiency: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
-  readonly marketPosition: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
-  readonly teamCapability: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
-  readonly timestamp: Prisma.FieldRef<"BusinessConditionProfile", 'DateTime'>
+  readonly businessStatus: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly severityScore: Prisma.FieldRef<"BusinessConditionProfile", 'Int'>
+  readonly urgencyLevel: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly cashPressureLevel: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly marginPressureLevel: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly clientConcentrationRisk: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly ownerDependencyRisk: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly keyPersonDependencyRisk: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly processMaturityLevel: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly managementMaturityLevel: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly executionCapacityLevel: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly moraleFragilityLevel: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly resilienceLevel: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly growthReadinessLevel: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly notes: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
+  readonly assessedBy: Prisma.FieldRef<"BusinessConditionProfile", 'String'>
   readonly version: Prisma.FieldRef<"BusinessConditionProfile", 'Int'>
+  readonly isCurrent: Prisma.FieldRef<"BusinessConditionProfile", 'Boolean'>
+  readonly createdAt: Prisma.FieldRef<"BusinessConditionProfile", 'DateTime'>
+  readonly updatedAt: Prisma.FieldRef<"BusinessConditionProfile", 'DateTime'>
 }
     
 

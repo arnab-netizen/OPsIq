@@ -28,33 +28,39 @@ export type AuditEventMinAggregateOutputType = {
   id: string | null
   eventName: string | null
   actorId: string | null
+  actorType: string | null
   entityType: string | null
   entityId: string | null
-  changes: string | null
-  timestamp: Date | null
-  metadata: string | null
+  payload: string | null
+  correlationId: string | null
+  visibility: string | null
+  occurredAt: Date | null
 }
 
 export type AuditEventMaxAggregateOutputType = {
   id: string | null
   eventName: string | null
   actorId: string | null
+  actorType: string | null
   entityType: string | null
   entityId: string | null
-  changes: string | null
-  timestamp: Date | null
-  metadata: string | null
+  payload: string | null
+  correlationId: string | null
+  visibility: string | null
+  occurredAt: Date | null
 }
 
 export type AuditEventCountAggregateOutputType = {
   id: number
   eventName: number
   actorId: number
+  actorType: number
   entityType: number
   entityId: number
-  changes: number
-  timestamp: number
-  metadata: number
+  payload: number
+  correlationId: number
+  visibility: number
+  occurredAt: number
   _all: number
 }
 
@@ -63,33 +69,39 @@ export type AuditEventMinAggregateInputType = {
   id?: true
   eventName?: true
   actorId?: true
+  actorType?: true
   entityType?: true
   entityId?: true
-  changes?: true
-  timestamp?: true
-  metadata?: true
+  payload?: true
+  correlationId?: true
+  visibility?: true
+  occurredAt?: true
 }
 
 export type AuditEventMaxAggregateInputType = {
   id?: true
   eventName?: true
   actorId?: true
+  actorType?: true
   entityType?: true
   entityId?: true
-  changes?: true
-  timestamp?: true
-  metadata?: true
+  payload?: true
+  correlationId?: true
+  visibility?: true
+  occurredAt?: true
 }
 
 export type AuditEventCountAggregateInputType = {
   id?: true
   eventName?: true
   actorId?: true
+  actorType?: true
   entityType?: true
   entityId?: true
-  changes?: true
-  timestamp?: true
-  metadata?: true
+  payload?: true
+  correlationId?: true
+  visibility?: true
+  occurredAt?: true
   _all?: true
 }
 
@@ -169,11 +181,13 @@ export type AuditEventGroupByOutputType = {
   id: string
   eventName: string
   actorId: string | null
-  entityType: string
-  entityId: string
-  changes: string
-  timestamp: Date
-  metadata: string
+  actorType: string
+  entityType: string | null
+  entityId: string | null
+  payload: string | null
+  correlationId: string | null
+  visibility: string
+  occurredAt: Date
   _count: AuditEventCountAggregateOutputType | null
   _min: AuditEventMinAggregateOutputType | null
   _max: AuditEventMaxAggregateOutputType | null
@@ -201,11 +215,13 @@ export type AuditEventWhereInput = {
   id?: Prisma.StringFilter<"AuditEvent"> | string
   eventName?: Prisma.StringFilter<"AuditEvent"> | string
   actorId?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
-  entityType?: Prisma.StringFilter<"AuditEvent"> | string
-  entityId?: Prisma.StringFilter<"AuditEvent"> | string
-  changes?: Prisma.StringFilter<"AuditEvent"> | string
-  timestamp?: Prisma.DateTimeFilter<"AuditEvent"> | Date | string
-  metadata?: Prisma.StringFilter<"AuditEvent"> | string
+  actorType?: Prisma.StringFilter<"AuditEvent"> | string
+  entityType?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  entityId?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  payload?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  correlationId?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  visibility?: Prisma.StringFilter<"AuditEvent"> | string
+  occurredAt?: Prisma.DateTimeFilter<"AuditEvent"> | Date | string
   actor?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }
 
@@ -213,11 +229,13 @@ export type AuditEventOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   eventName?: Prisma.SortOrder
   actorId?: Prisma.SortOrderInput | Prisma.SortOrder
-  entityType?: Prisma.SortOrder
-  entityId?: Prisma.SortOrder
-  changes?: Prisma.SortOrder
-  timestamp?: Prisma.SortOrder
-  metadata?: Prisma.SortOrder
+  actorType?: Prisma.SortOrder
+  entityType?: Prisma.SortOrderInput | Prisma.SortOrder
+  entityId?: Prisma.SortOrderInput | Prisma.SortOrder
+  payload?: Prisma.SortOrderInput | Prisma.SortOrder
+  correlationId?: Prisma.SortOrderInput | Prisma.SortOrder
+  visibility?: Prisma.SortOrder
+  occurredAt?: Prisma.SortOrder
   actor?: Prisma.UserOrderByWithRelationInput
 }
 
@@ -228,11 +246,13 @@ export type AuditEventWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.AuditEventWhereInput | Prisma.AuditEventWhereInput[]
   eventName?: Prisma.StringFilter<"AuditEvent"> | string
   actorId?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
-  entityType?: Prisma.StringFilter<"AuditEvent"> | string
-  entityId?: Prisma.StringFilter<"AuditEvent"> | string
-  changes?: Prisma.StringFilter<"AuditEvent"> | string
-  timestamp?: Prisma.DateTimeFilter<"AuditEvent"> | Date | string
-  metadata?: Prisma.StringFilter<"AuditEvent"> | string
+  actorType?: Prisma.StringFilter<"AuditEvent"> | string
+  entityType?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  entityId?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  payload?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  correlationId?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  visibility?: Prisma.StringFilter<"AuditEvent"> | string
+  occurredAt?: Prisma.DateTimeFilter<"AuditEvent"> | Date | string
   actor?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
 }, "id">
 
@@ -240,11 +260,13 @@ export type AuditEventOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   eventName?: Prisma.SortOrder
   actorId?: Prisma.SortOrderInput | Prisma.SortOrder
-  entityType?: Prisma.SortOrder
-  entityId?: Prisma.SortOrder
-  changes?: Prisma.SortOrder
-  timestamp?: Prisma.SortOrder
-  metadata?: Prisma.SortOrder
+  actorType?: Prisma.SortOrder
+  entityType?: Prisma.SortOrderInput | Prisma.SortOrder
+  entityId?: Prisma.SortOrderInput | Prisma.SortOrder
+  payload?: Prisma.SortOrderInput | Prisma.SortOrder
+  correlationId?: Prisma.SortOrderInput | Prisma.SortOrder
+  visibility?: Prisma.SortOrder
+  occurredAt?: Prisma.SortOrder
   _count?: Prisma.AuditEventCountOrderByAggregateInput
   _max?: Prisma.AuditEventMaxOrderByAggregateInput
   _min?: Prisma.AuditEventMinOrderByAggregateInput
@@ -257,21 +279,25 @@ export type AuditEventScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"AuditEvent"> | string
   eventName?: Prisma.StringWithAggregatesFilter<"AuditEvent"> | string
   actorId?: Prisma.StringNullableWithAggregatesFilter<"AuditEvent"> | string | null
-  entityType?: Prisma.StringWithAggregatesFilter<"AuditEvent"> | string
-  entityId?: Prisma.StringWithAggregatesFilter<"AuditEvent"> | string
-  changes?: Prisma.StringWithAggregatesFilter<"AuditEvent"> | string
-  timestamp?: Prisma.DateTimeWithAggregatesFilter<"AuditEvent"> | Date | string
-  metadata?: Prisma.StringWithAggregatesFilter<"AuditEvent"> | string
+  actorType?: Prisma.StringWithAggregatesFilter<"AuditEvent"> | string
+  entityType?: Prisma.StringNullableWithAggregatesFilter<"AuditEvent"> | string | null
+  entityId?: Prisma.StringNullableWithAggregatesFilter<"AuditEvent"> | string | null
+  payload?: Prisma.StringNullableWithAggregatesFilter<"AuditEvent"> | string | null
+  correlationId?: Prisma.StringNullableWithAggregatesFilter<"AuditEvent"> | string | null
+  visibility?: Prisma.StringWithAggregatesFilter<"AuditEvent"> | string
+  occurredAt?: Prisma.DateTimeWithAggregatesFilter<"AuditEvent"> | Date | string
 }
 
 export type AuditEventCreateInput = {
   id?: string
   eventName: string
-  entityType: string
-  entityId: string
-  changes?: string
-  timestamp?: Date | string
-  metadata?: string
+  actorType?: string
+  entityType?: string | null
+  entityId?: string | null
+  payload?: string | null
+  correlationId?: string | null
+  visibility?: string
+  occurredAt?: Date | string
   actor?: Prisma.UserCreateNestedOneWithoutAuditEventsInput
 }
 
@@ -279,21 +305,25 @@ export type AuditEventUncheckedCreateInput = {
   id?: string
   eventName: string
   actorId?: string | null
-  entityType: string
-  entityId: string
-  changes?: string
-  timestamp?: Date | string
-  metadata?: string
+  actorType?: string
+  entityType?: string | null
+  entityId?: string | null
+  payload?: string | null
+  correlationId?: string | null
+  visibility?: string
+  occurredAt?: Date | string
 }
 
 export type AuditEventUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   eventName?: Prisma.StringFieldUpdateOperationsInput | string
-  entityType?: Prisma.StringFieldUpdateOperationsInput | string
-  entityId?: Prisma.StringFieldUpdateOperationsInput | string
-  changes?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  metadata?: Prisma.StringFieldUpdateOperationsInput | string
+  actorType?: Prisma.StringFieldUpdateOperationsInput | string
+  entityType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  correlationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  occurredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   actor?: Prisma.UserUpdateOneWithoutAuditEventsNestedInput
 }
 
@@ -301,43 +331,51 @@ export type AuditEventUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   eventName?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  entityType?: Prisma.StringFieldUpdateOperationsInput | string
-  entityId?: Prisma.StringFieldUpdateOperationsInput | string
-  changes?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  metadata?: Prisma.StringFieldUpdateOperationsInput | string
+  actorType?: Prisma.StringFieldUpdateOperationsInput | string
+  entityType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  correlationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  occurredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AuditEventCreateManyInput = {
   id?: string
   eventName: string
   actorId?: string | null
-  entityType: string
-  entityId: string
-  changes?: string
-  timestamp?: Date | string
-  metadata?: string
+  actorType?: string
+  entityType?: string | null
+  entityId?: string | null
+  payload?: string | null
+  correlationId?: string | null
+  visibility?: string
+  occurredAt?: Date | string
 }
 
 export type AuditEventUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   eventName?: Prisma.StringFieldUpdateOperationsInput | string
-  entityType?: Prisma.StringFieldUpdateOperationsInput | string
-  entityId?: Prisma.StringFieldUpdateOperationsInput | string
-  changes?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  metadata?: Prisma.StringFieldUpdateOperationsInput | string
+  actorType?: Prisma.StringFieldUpdateOperationsInput | string
+  entityType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  correlationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  occurredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AuditEventUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   eventName?: Prisma.StringFieldUpdateOperationsInput | string
   actorId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  entityType?: Prisma.StringFieldUpdateOperationsInput | string
-  entityId?: Prisma.StringFieldUpdateOperationsInput | string
-  changes?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  metadata?: Prisma.StringFieldUpdateOperationsInput | string
+  actorType?: Prisma.StringFieldUpdateOperationsInput | string
+  entityType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  correlationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  occurredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AuditEventListRelationFilter = {
@@ -354,33 +392,39 @@ export type AuditEventCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   eventName?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
+  actorType?: Prisma.SortOrder
   entityType?: Prisma.SortOrder
   entityId?: Prisma.SortOrder
-  changes?: Prisma.SortOrder
-  timestamp?: Prisma.SortOrder
-  metadata?: Prisma.SortOrder
+  payload?: Prisma.SortOrder
+  correlationId?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
+  occurredAt?: Prisma.SortOrder
 }
 
 export type AuditEventMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   eventName?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
+  actorType?: Prisma.SortOrder
   entityType?: Prisma.SortOrder
   entityId?: Prisma.SortOrder
-  changes?: Prisma.SortOrder
-  timestamp?: Prisma.SortOrder
-  metadata?: Prisma.SortOrder
+  payload?: Prisma.SortOrder
+  correlationId?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
+  occurredAt?: Prisma.SortOrder
 }
 
 export type AuditEventMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   eventName?: Prisma.SortOrder
   actorId?: Prisma.SortOrder
+  actorType?: Prisma.SortOrder
   entityType?: Prisma.SortOrder
   entityId?: Prisma.SortOrder
-  changes?: Prisma.SortOrder
-  timestamp?: Prisma.SortOrder
-  metadata?: Prisma.SortOrder
+  payload?: Prisma.SortOrder
+  correlationId?: Prisma.SortOrder
+  visibility?: Prisma.SortOrder
+  occurredAt?: Prisma.SortOrder
 }
 
 export type AuditEventCreateNestedManyWithoutActorInput = {
@@ -428,21 +472,25 @@ export type AuditEventUncheckedUpdateManyWithoutActorNestedInput = {
 export type AuditEventCreateWithoutActorInput = {
   id?: string
   eventName: string
-  entityType: string
-  entityId: string
-  changes?: string
-  timestamp?: Date | string
-  metadata?: string
+  actorType?: string
+  entityType?: string | null
+  entityId?: string | null
+  payload?: string | null
+  correlationId?: string | null
+  visibility?: string
+  occurredAt?: Date | string
 }
 
 export type AuditEventUncheckedCreateWithoutActorInput = {
   id?: string
   eventName: string
-  entityType: string
-  entityId: string
-  changes?: string
-  timestamp?: Date | string
-  metadata?: string
+  actorType?: string
+  entityType?: string | null
+  entityId?: string | null
+  payload?: string | null
+  correlationId?: string | null
+  visibility?: string
+  occurredAt?: Date | string
 }
 
 export type AuditEventCreateOrConnectWithoutActorInput = {
@@ -477,51 +525,61 @@ export type AuditEventScalarWhereInput = {
   id?: Prisma.StringFilter<"AuditEvent"> | string
   eventName?: Prisma.StringFilter<"AuditEvent"> | string
   actorId?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
-  entityType?: Prisma.StringFilter<"AuditEvent"> | string
-  entityId?: Prisma.StringFilter<"AuditEvent"> | string
-  changes?: Prisma.StringFilter<"AuditEvent"> | string
-  timestamp?: Prisma.DateTimeFilter<"AuditEvent"> | Date | string
-  metadata?: Prisma.StringFilter<"AuditEvent"> | string
+  actorType?: Prisma.StringFilter<"AuditEvent"> | string
+  entityType?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  entityId?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  payload?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  correlationId?: Prisma.StringNullableFilter<"AuditEvent"> | string | null
+  visibility?: Prisma.StringFilter<"AuditEvent"> | string
+  occurredAt?: Prisma.DateTimeFilter<"AuditEvent"> | Date | string
 }
 
 export type AuditEventCreateManyActorInput = {
   id?: string
   eventName: string
-  entityType: string
-  entityId: string
-  changes?: string
-  timestamp?: Date | string
-  metadata?: string
+  actorType?: string
+  entityType?: string | null
+  entityId?: string | null
+  payload?: string | null
+  correlationId?: string | null
+  visibility?: string
+  occurredAt?: Date | string
 }
 
 export type AuditEventUpdateWithoutActorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   eventName?: Prisma.StringFieldUpdateOperationsInput | string
-  entityType?: Prisma.StringFieldUpdateOperationsInput | string
-  entityId?: Prisma.StringFieldUpdateOperationsInput | string
-  changes?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  metadata?: Prisma.StringFieldUpdateOperationsInput | string
+  actorType?: Prisma.StringFieldUpdateOperationsInput | string
+  entityType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  correlationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  occurredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AuditEventUncheckedUpdateWithoutActorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   eventName?: Prisma.StringFieldUpdateOperationsInput | string
-  entityType?: Prisma.StringFieldUpdateOperationsInput | string
-  entityId?: Prisma.StringFieldUpdateOperationsInput | string
-  changes?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  metadata?: Prisma.StringFieldUpdateOperationsInput | string
+  actorType?: Prisma.StringFieldUpdateOperationsInput | string
+  entityType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  correlationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  occurredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type AuditEventUncheckedUpdateManyWithoutActorInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   eventName?: Prisma.StringFieldUpdateOperationsInput | string
-  entityType?: Prisma.StringFieldUpdateOperationsInput | string
-  entityId?: Prisma.StringFieldUpdateOperationsInput | string
-  changes?: Prisma.StringFieldUpdateOperationsInput | string
-  timestamp?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  metadata?: Prisma.StringFieldUpdateOperationsInput | string
+  actorType?: Prisma.StringFieldUpdateOperationsInput | string
+  entityType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  entityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  payload?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  correlationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  visibility?: Prisma.StringFieldUpdateOperationsInput | string
+  occurredAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 
@@ -530,11 +588,13 @@ export type AuditEventSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   id?: boolean
   eventName?: boolean
   actorId?: boolean
+  actorType?: boolean
   entityType?: boolean
   entityId?: boolean
-  changes?: boolean
-  timestamp?: boolean
-  metadata?: boolean
+  payload?: boolean
+  correlationId?: boolean
+  visibility?: boolean
+  occurredAt?: boolean
   actor?: boolean | Prisma.AuditEvent$actorArgs<ExtArgs>
 }, ExtArgs["result"]["auditEvent"]>
 
@@ -542,11 +602,13 @@ export type AuditEventSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   id?: boolean
   eventName?: boolean
   actorId?: boolean
+  actorType?: boolean
   entityType?: boolean
   entityId?: boolean
-  changes?: boolean
-  timestamp?: boolean
-  metadata?: boolean
+  payload?: boolean
+  correlationId?: boolean
+  visibility?: boolean
+  occurredAt?: boolean
   actor?: boolean | Prisma.AuditEvent$actorArgs<ExtArgs>
 }, ExtArgs["result"]["auditEvent"]>
 
@@ -554,11 +616,13 @@ export type AuditEventSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   id?: boolean
   eventName?: boolean
   actorId?: boolean
+  actorType?: boolean
   entityType?: boolean
   entityId?: boolean
-  changes?: boolean
-  timestamp?: boolean
-  metadata?: boolean
+  payload?: boolean
+  correlationId?: boolean
+  visibility?: boolean
+  occurredAt?: boolean
   actor?: boolean | Prisma.AuditEvent$actorArgs<ExtArgs>
 }, ExtArgs["result"]["auditEvent"]>
 
@@ -566,14 +630,16 @@ export type AuditEventSelectScalar = {
   id?: boolean
   eventName?: boolean
   actorId?: boolean
+  actorType?: boolean
   entityType?: boolean
   entityId?: boolean
-  changes?: boolean
-  timestamp?: boolean
-  metadata?: boolean
+  payload?: boolean
+  correlationId?: boolean
+  visibility?: boolean
+  occurredAt?: boolean
 }
 
-export type AuditEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "eventName" | "actorId" | "entityType" | "entityId" | "changes" | "timestamp" | "metadata", ExtArgs["result"]["auditEvent"]>
+export type AuditEventOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "eventName" | "actorId" | "actorType" | "entityType" | "entityId" | "payload" | "correlationId" | "visibility" | "occurredAt", ExtArgs["result"]["auditEvent"]>
 export type AuditEventInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   actor?: boolean | Prisma.AuditEvent$actorArgs<ExtArgs>
 }
@@ -593,11 +659,13 @@ export type $AuditEventPayload<ExtArgs extends runtime.Types.Extensions.Internal
     id: string
     eventName: string
     actorId: string | null
-    entityType: string
-    entityId: string
-    changes: string
-    timestamp: Date
-    metadata: string
+    actorType: string
+    entityType: string | null
+    entityId: string | null
+    payload: string | null
+    correlationId: string | null
+    visibility: string
+    occurredAt: Date
   }, ExtArgs["result"]["auditEvent"]>
   composites: {}
 }
@@ -1025,11 +1093,13 @@ export interface AuditEventFieldRefs {
   readonly id: Prisma.FieldRef<"AuditEvent", 'String'>
   readonly eventName: Prisma.FieldRef<"AuditEvent", 'String'>
   readonly actorId: Prisma.FieldRef<"AuditEvent", 'String'>
+  readonly actorType: Prisma.FieldRef<"AuditEvent", 'String'>
   readonly entityType: Prisma.FieldRef<"AuditEvent", 'String'>
   readonly entityId: Prisma.FieldRef<"AuditEvent", 'String'>
-  readonly changes: Prisma.FieldRef<"AuditEvent", 'String'>
-  readonly timestamp: Prisma.FieldRef<"AuditEvent", 'DateTime'>
-  readonly metadata: Prisma.FieldRef<"AuditEvent", 'String'>
+  readonly payload: Prisma.FieldRef<"AuditEvent", 'String'>
+  readonly correlationId: Prisma.FieldRef<"AuditEvent", 'String'>
+  readonly visibility: Prisma.FieldRef<"AuditEvent", 'String'>
+  readonly occurredAt: Prisma.FieldRef<"AuditEvent", 'DateTime'>
 }
     
 

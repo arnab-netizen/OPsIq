@@ -366,7 +366,7 @@ export type KPICreateInput = {
   target?: number | null
   currentValue?: number | null
   measurementDate?: Date | string | null
-  direction: string
+  direction?: string
   version?: number
   createdBy?: string | null
   createdAt?: Date | string
@@ -383,7 +383,7 @@ export type KPIUncheckedCreateInput = {
   target?: number | null
   currentValue?: number | null
   measurementDate?: Date | string | null
-  direction: string
+  direction?: string
   version?: number
   createdBy?: string | null
   createdAt?: Date | string
@@ -431,7 +431,7 @@ export type KPICreateManyInput = {
   target?: number | null
   currentValue?: number | null
   measurementDate?: Date | string | null
-  direction: string
+  direction?: string
   version?: number
   createdBy?: string | null
   createdAt?: Date | string
@@ -602,7 +602,7 @@ export type KPICreateWithoutEngagementInput = {
   target?: number | null
   currentValue?: number | null
   measurementDate?: Date | string | null
-  direction: string
+  direction?: string
   version?: number
   createdBy?: string | null
   createdAt?: Date | string
@@ -617,7 +617,7 @@ export type KPIUncheckedCreateWithoutEngagementInput = {
   target?: number | null
   currentValue?: number | null
   measurementDate?: Date | string | null
-  direction: string
+  direction?: string
   version?: number
   createdBy?: string | null
   createdAt?: Date | string
@@ -675,7 +675,7 @@ export type KPICreateWithoutSnapshotsInput = {
   target?: number | null
   currentValue?: number | null
   measurementDate?: Date | string | null
-  direction: string
+  direction?: string
   version?: number
   createdBy?: string | null
   createdAt?: Date | string
@@ -691,7 +691,7 @@ export type KPIUncheckedCreateWithoutSnapshotsInput = {
   target?: number | null
   currentValue?: number | null
   measurementDate?: Date | string | null
-  direction: string
+  direction?: string
   version?: number
   createdBy?: string | null
   createdAt?: Date | string
@@ -751,7 +751,7 @@ export type KPICreateManyEngagementInput = {
   target?: number | null
   currentValue?: number | null
   measurementDate?: Date | string | null
-  direction: string
+  direction?: string
   version?: number
   createdBy?: string | null
   createdAt?: Date | string
