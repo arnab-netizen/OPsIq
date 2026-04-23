@@ -114,7 +114,7 @@ describe("Idempotency System", () => {
   });
 
   describe("Payload hash validation", () => {
-    it.skip("should reject request with same key but different payload", async () => {
+    it("should reject request with same key but different payload", async () => {
       const payload1 = { test: "data1" };
       const payload2 = { test: "data2" };
       const payloadHash1 = computePayloadHash(payload1);
