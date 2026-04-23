@@ -101,12 +101,12 @@ export async function queryAuditEvents(
     where.eventName = filters.eventName;
   }
   if (filters.startDate || filters.endDate) {
-    where.createdAt = {};
+    where.occurredAt = {};
     if (filters.startDate) {
-      where.createdAt.gte = new Date(filters.startDate);
+      where.occurredAt.gte = new Date(filters.startDate);
     }
     if (filters.endDate) {
-      where.createdAt.lte = new Date(filters.endDate);
+      where.occurredAt.lte = new Date(filters.endDate);
     }
   }
 

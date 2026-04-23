@@ -50,74 +50,74 @@ vi.mock("@/infra/logger", () => ({
 describe("Intervention State Service", () => {
   describe("Phase transition validation", () => {
     it("allows valid transition from assessment to planning", () => {
-      const from = "assessment" as InterventionPhase;
-      const to = "planning" as InterventionPhase;
+      const from = "triage" as InterventionPhase;
+      const to = "stabilize" as InterventionPhase;
       expect(INTERVENTION_PHASES).toContain(from);
       expect(INTERVENTION_PHASES).toContain(to);
     });
 
     it("allows valid transition from planning to execution", () => {
-      const from = "planning" as InterventionPhase;
-      const to = "execution" as InterventionPhase;
+      const from = "stabilize" as InterventionPhase;
+      const to = "repair" as InterventionPhase;
       expect(INTERVENTION_PHASES).toContain(from);
       expect(INTERVENTION_PHASES).toContain(to);
     });
 
     it("allows valid transition from execution to review", () => {
-      const from = "execution" as InterventionPhase;
-      const to = "review" as InterventionPhase;
+      const from = "repair" as InterventionPhase;
+      const to = "strengthen" as InterventionPhase;
       expect(INTERVENTION_PHASES).toContain(from);
       expect(INTERVENTION_PHASES).toContain(to);
     });
 
     it("allows valid transition from review to handover", () => {
-      const from = "review" as InterventionPhase;
-      const to = "handover" as InterventionPhase;
+      const from = "strengthen" as InterventionPhase;
+      const to = "grow" as InterventionPhase;
       expect(INTERVENTION_PHASES).toContain(from);
       expect(INTERVENTION_PHASES).toContain(to);
     });
 
     it("allows valid transition from handover to closed", () => {
-      const from = "handover" as InterventionPhase;
-      const to = "closed" as InterventionPhase;
+      const from = "grow" as InterventionPhase;
+      const to = "protect" as InterventionPhase;
       expect(INTERVENTION_PHASES).toContain(from);
       expect(INTERVENTION_PHASES).toContain(to);
     });
 
     it("allows backward transitions (planning back to assessment)", () => {
-      const from = "planning" as InterventionPhase;
-      const to = "assessment" as InterventionPhase;
+      const from = "stabilize" as InterventionPhase;
+      const to = "triage" as InterventionPhase;
       expect(INTERVENTION_PHASES).toContain(from);
       expect(INTERVENTION_PHASES).toContain(to);
     });
 
     it("allows transition from execution to blocked", () => {
-      const from = "execution" as InterventionPhase;
+      const from = "repair" as InterventionPhase;
       expect(INTERVENTION_PHASES).toContain(from);
     });
 
     it("does not allow invalid transitions (assessment to review)", () => {
-      const from = "assessment" as InterventionPhase;
-      const to = "review" as InterventionPhase;
+      const from = "triage" as InterventionPhase;
+      const to = "strengthen" as InterventionPhase;
       // These phases exist but are not directly connected
       expect(INTERVENTION_PHASES).toContain(from);
       expect(INTERVENTION_PHASES).toContain(to);
     });
 
     it("closed phase has no allowed transitions", () => {
-      const from = "closed" as InterventionPhase;
+      const from = "protect" as InterventionPhase;
       expect(INTERVENTION_PHASES).toContain(from);
     });
   });
 
   describe("Phase constants", () => {
     it("includes all required intervention phases", () => {
-      expect(INTERVENTION_PHASES).toContain("assessment");
-      expect(INTERVENTION_PHASES).toContain("planning");
-      expect(INTERVENTION_PHASES).toContain("execution");
-      expect(INTERVENTION_PHASES).toContain("review");
-      expect(INTERVENTION_PHASES).toContain("handover");
-      expect(INTERVENTION_PHASES).toContain("closed");
+      expect(INTERVENTION_PHASES).toContain("triage");
+      expect(INTERVENTION_PHASES).toContain("stabilize");
+      expect(INTERVENTION_PHASES).toContain("repair");
+      expect(INTERVENTION_PHASES).toContain("strengthen");
+      expect(INTERVENTION_PHASES).toContain("grow");
+      expect(INTERVENTION_PHASES).toContain("protect");
     });
 
     it("has exactly 6 phases", () => {
@@ -135,7 +135,7 @@ describe("Intervention State Service", () => {
       mockDb.interventionState.create.mockResolvedValue({
         id: "state-1",
         engagementId: "eng-1",
-        currentPhase: "assessment",
+        currentPhase: "triage",
         previousPhase: null,
         version: 1,
       });
@@ -148,7 +148,7 @@ describe("Intervention State Service", () => {
 
       expect(result.id).toBe("state-1");
       expect(result.engagementId).toBe("eng-1");
-      expect(result.currentPhase).toBe("assessment");
+      expect(result.currentPhase).toBe("triage");
     });
 
     it("prevents duplicate initialization", async () => {
@@ -196,14 +196,14 @@ describe("Intervention State Service", () => {
       mockDb.interventionState.findUnique.mockResolvedValue({
         id: "state-1",
         engagementId: "eng-1",
-        currentPhase: "assessment",
+        currentPhase: "triage",
         previousPhase: null,
       });
       mockDb.interventionState.update.mockResolvedValue({
         id: "state-1",
         engagementId: "eng-1",
-        currentPhase: "planning",
-        previousPhase: "assessment",
+        currentPhase: "stabilize",
+        previousPhase: "triage",
       });
 
       mockDb.businessConditionProfile.findFirst.mockResolvedValue({
@@ -227,12 +227,12 @@ describe("Intervention State Service", () => {
       const { transitionPhase } = await import("./intervention-state");
       const result = await transitionPhase(
         "eng-1",
-        "planning" as InterventionPhase,
+        "stabilize" as InterventionPhase,
         "user-1"
       );
 
-      expect(result.currentPhase).toBe("planning");
-      expect(result.previousPhase).toBe("assessment");
+      expect(result.currentPhase).toBe("stabilize");
+      expect(result.previousPhase).toBe("triage");
     });
 
     it("throws error for invalid phase transition", async () => {
@@ -241,7 +241,7 @@ describe("Intervention State Service", () => {
       mockDb.interventionState.findUnique.mockResolvedValue({
         id: "state-1",
         engagementId: "eng-1",
-        currentPhase: "assessment",
+        currentPhase: "triage",
       });
 
       const { transitionPhase } = await import("./intervention-state");
@@ -249,7 +249,7 @@ describe("Intervention State Service", () => {
       try {
         await transitionPhase(
           "eng-1",
-          "review" as InterventionPhase,
+          "strengthen" as InterventionPhase,
           "user-1"
         );
         expect.fail("Should throw validation error");
@@ -266,7 +266,7 @@ describe("Intervention State Service", () => {
       const { transitionPhase } = await import("./intervention-state");
 
       try {
-        await transitionPhase("eng-1", "planning" as InterventionPhase, "user-1");
+        await transitionPhase("eng-1", "stabilize" as InterventionPhase, "user-1");
         expect.fail("Should throw not found error");
       } catch (error) {
         expect((error as any).message).toContain("not found");
@@ -281,8 +281,8 @@ describe("Intervention State Service", () => {
       mockDb.interventionState.findUnique.mockResolvedValue({
         id: "state-1",
         engagementId: "eng-1",
-        currentPhase: "execution",
-        previousPhase: "planning",
+        currentPhase: "repair",
+        previousPhase: "stabilize",
         version: 2,
         createdAt: new Date("2024-01-01"),
         updatedAt: new Date("2024-01-02"),
@@ -292,8 +292,8 @@ describe("Intervention State Service", () => {
       const result = await getInterventionState("eng-1");
 
       expect(result.id).toBe("state-1");
-      expect(result.currentPhase).toBe("execution");
-      expect(result.previousPhase).toBe("planning");
+      expect(result.currentPhase).toBe("repair");
+      expect(result.previousPhase).toBe("stabilize");
       expect(result.version).toBe(2);
     });
 
@@ -316,14 +316,14 @@ describe("Intervention State Service", () => {
   describe("Get allowed transitions", () => {
     it("returns allowed transitions from assessment", async () => {
       const { getPhaseAllowedTransitions } = await import("./intervention-state");
-      const allowed = getPhaseAllowedTransitions("assessment" as InterventionPhase);
+      const allowed = getPhaseAllowedTransitions("triage" as InterventionPhase);
       expect(allowed.length).toBeGreaterThan(0);
-      expect(allowed).toContain("planning");
+      expect(allowed).toContain("stabilize");
     });
 
     it("returns empty array for closed phase", async () => {
       const { getPhaseAllowedTransitions } = await import("./intervention-state");
-      const allowed = getPhaseAllowedTransitions("closed" as InterventionPhase);
+      const allowed = getPhaseAllowedTransitions("protect" as InterventionPhase);
       expect(allowed.length).toBe(0);
     });
   });
