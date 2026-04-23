@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { describeDatabase } from "@/__tests__/skip-database-tests";
 import { db } from "@/lib/db";
 import { getEvidenceItemDetail, listEvidenceForEngagement } from "./evidence";
 import { getFindingDetail, listFindingsForEngagement } from "./findings";
@@ -8,7 +7,7 @@ import { createClient } from "./client-account";
 import { createEvidenceItem } from "./evidence";
 import { createFinding } from "./findings";
 
-describeDatabase("Visibility Enforcement", () => {
+describe("Visibility Enforcement", () => {
   let clientId: string;
   let engagementId: string;
   let internalEvidenceId: string;

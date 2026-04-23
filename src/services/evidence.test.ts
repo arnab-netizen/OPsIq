@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { describeDatabase } from "@/__tests__/skip-database-tests";
 import { db } from "@/lib/db";
 import {
   createEvidenceItem,
@@ -15,7 +14,7 @@ import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
 import type { CreateEvidenceItemInput, CreateFileBlobInput } from "./evidence";
 
-describeDatabase("Evidence Service", () => {
+describe("Evidence Service", () => {
   let clientId: string;
   let engagementId: string;
   let actorId = "test-actor-id";

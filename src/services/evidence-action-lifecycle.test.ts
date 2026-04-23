@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { describeDatabase } from "@/__tests__/skip-database-tests";
 import { db } from "@/lib/db";
 import { createEvidence, getEvidenceById } from "@/services/evidence";
 import { createFinding } from "@/services/findings";
@@ -10,7 +9,7 @@ import { createEngagement } from "@/services/engagement";
 import { createUser } from "@/services/user";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
-describeDatabase("Evidence → Finding → Recommendation → Action Lifecycle", () => {
+describe("Evidence → Finding → Recommendation → Action Lifecycle", () => {
   let userId: string;
   let clientId: string;
   let engagementId: string;

@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { describeDatabase } from "@/__tests__/skip-database-tests";
 import { db } from "@/lib/db";
 import {
   createKPI,
@@ -14,7 +13,7 @@ import { createAction } from "./action";
 import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
 
-describeDatabase("KPI Service", () => {
+describe("KPI Service", () => {
   let clientId: string;
   let engagementId: string;
   let actionId: string;

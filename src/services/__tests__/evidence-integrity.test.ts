@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { describeDatabase } from "@/__tests__/skip-database-tests";
 
 // Mock all dependencies before importing services
 vi.mock("@/lib/db");
@@ -28,7 +27,7 @@ import { linkEvidenceToFinding, unlinkEvidenceFromFinding, validateFinding } fro
 import { db } from "@/lib/db";
 import { ValidationError } from "@/infra/errors";
 
-describeDatabase("Evidence Integrity - Link/Unlink", () => {
+describe("Evidence Integrity - Link/Unlink", () => {
   const engagementId1 = "eng-1";
   const engagementId2 = "eng-2";
   const findingId1 = "finding-1";
