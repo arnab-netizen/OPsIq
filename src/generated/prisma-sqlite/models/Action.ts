@@ -325,7 +325,6 @@ export type ActionWhereInput = {
   assignee?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   completedByUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   verifiedByUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
-  idempotencyRecords?: Prisma.IdempotencyRecordListRelationFilter
 }
 
 export type ActionOrderByWithRelationInput = {
@@ -352,7 +351,6 @@ export type ActionOrderByWithRelationInput = {
   assignee?: Prisma.UserOrderByWithRelationInput
   completedByUser?: Prisma.UserOrderByWithRelationInput
   verifiedByUser?: Prisma.UserOrderByWithRelationInput
-  idempotencyRecords?: Prisma.IdempotencyRecordOrderByRelationAggregateInput
 }
 
 export type ActionWhereUniqueInput = Prisma.AtLeast<{
@@ -382,7 +380,6 @@ export type ActionWhereUniqueInput = Prisma.AtLeast<{
   assignee?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   completedByUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   verifiedByUser?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
-  idempotencyRecords?: Prisma.IdempotencyRecordListRelationFilter
 }, "id">
 
 export type ActionOrderByWithAggregationInput = {
@@ -454,7 +451,6 @@ export type ActionCreateInput = {
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
   completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
   verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
-  idempotencyRecords?: Prisma.IdempotencyRecordCreateNestedManyWithoutActionInput
 }
 
 export type ActionUncheckedCreateInput = {
@@ -476,7 +472,6 @@ export type ActionUncheckedCreateInput = {
   blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedCreateNestedManyWithoutActionInput
 }
 
 export type ActionUpdateInput = {
@@ -498,7 +493,6 @@ export type ActionUpdateInput = {
   assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
   completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
   verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
-  idempotencyRecords?: Prisma.IdempotencyRecordUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateInput = {
@@ -520,7 +514,6 @@ export type ActionUncheckedUpdateInput = {
   blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedUpdateManyWithoutActionNestedInput
 }
 
 export type ActionCreateManyInput = {
@@ -660,11 +653,6 @@ export type ActionMinOrderByAggregateInput = {
 
 export type ActionSumOrderByAggregateInput = {
   version?: Prisma.SortOrder
-}
-
-export type ActionNullableScalarRelationFilter = {
-  is?: Prisma.ActionWhereInput | null
-  isNot?: Prisma.ActionWhereInput | null
 }
 
 export type ActionCreateNestedManyWithoutAssigneeInput = {
@@ -877,22 +865,6 @@ export type ActionUncheckedUpdateManyWithoutRecommendationNestedInput = {
   deleteMany?: Prisma.ActionScalarWhereInput | Prisma.ActionScalarWhereInput[]
 }
 
-export type ActionCreateNestedOneWithoutIdempotencyRecordsInput = {
-  create?: Prisma.XOR<Prisma.ActionCreateWithoutIdempotencyRecordsInput, Prisma.ActionUncheckedCreateWithoutIdempotencyRecordsInput>
-  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutIdempotencyRecordsInput
-  connect?: Prisma.ActionWhereUniqueInput
-}
-
-export type ActionUpdateOneWithoutIdempotencyRecordsNestedInput = {
-  create?: Prisma.XOR<Prisma.ActionCreateWithoutIdempotencyRecordsInput, Prisma.ActionUncheckedCreateWithoutIdempotencyRecordsInput>
-  connectOrCreate?: Prisma.ActionCreateOrConnectWithoutIdempotencyRecordsInput
-  upsert?: Prisma.ActionUpsertWithoutIdempotencyRecordsInput
-  disconnect?: Prisma.ActionWhereInput | boolean
-  delete?: Prisma.ActionWhereInput | boolean
-  connect?: Prisma.ActionWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.ActionUpdateToOneWithWhereWithoutIdempotencyRecordsInput, Prisma.ActionUpdateWithoutIdempotencyRecordsInput>, Prisma.ActionUncheckedUpdateWithoutIdempotencyRecordsInput>
-}
-
 export type ActionCreateWithoutAssigneeInput = {
   id?: string
   title: string
@@ -911,7 +883,6 @@ export type ActionCreateWithoutAssigneeInput = {
   engagement: Prisma.EngagementCreateNestedOneWithoutActionsInput
   completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
   verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
-  idempotencyRecords?: Prisma.IdempotencyRecordCreateNestedManyWithoutActionInput
 }
 
 export type ActionUncheckedCreateWithoutAssigneeInput = {
@@ -932,7 +903,6 @@ export type ActionUncheckedCreateWithoutAssigneeInput = {
   blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedCreateNestedManyWithoutActionInput
 }
 
 export type ActionCreateOrConnectWithoutAssigneeInput = {
@@ -962,7 +932,6 @@ export type ActionCreateWithoutCompletedByUserInput = {
   engagement: Prisma.EngagementCreateNestedOneWithoutActionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
   verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
-  idempotencyRecords?: Prisma.IdempotencyRecordCreateNestedManyWithoutActionInput
 }
 
 export type ActionUncheckedCreateWithoutCompletedByUserInput = {
@@ -983,7 +952,6 @@ export type ActionUncheckedCreateWithoutCompletedByUserInput = {
   blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedCreateNestedManyWithoutActionInput
 }
 
 export type ActionCreateOrConnectWithoutCompletedByUserInput = {
@@ -1013,7 +981,6 @@ export type ActionCreateWithoutVerifiedByUserInput = {
   engagement: Prisma.EngagementCreateNestedOneWithoutActionsInput
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
   completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
-  idempotencyRecords?: Prisma.IdempotencyRecordCreateNestedManyWithoutActionInput
 }
 
 export type ActionUncheckedCreateWithoutVerifiedByUserInput = {
@@ -1034,7 +1001,6 @@ export type ActionUncheckedCreateWithoutVerifiedByUserInput = {
   blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedCreateNestedManyWithoutActionInput
 }
 
 export type ActionCreateOrConnectWithoutVerifiedByUserInput = {
@@ -1136,7 +1102,6 @@ export type ActionCreateWithoutEngagementInput = {
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
   completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
   verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
-  idempotencyRecords?: Prisma.IdempotencyRecordCreateNestedManyWithoutActionInput
 }
 
 export type ActionUncheckedCreateWithoutEngagementInput = {
@@ -1157,7 +1122,6 @@ export type ActionUncheckedCreateWithoutEngagementInput = {
   blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedCreateNestedManyWithoutActionInput
 }
 
 export type ActionCreateOrConnectWithoutEngagementInput = {
@@ -1203,7 +1167,6 @@ export type ActionCreateWithoutRecommendationInput = {
   assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
   completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
   verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
-  idempotencyRecords?: Prisma.IdempotencyRecordCreateNestedManyWithoutActionInput
 }
 
 export type ActionUncheckedCreateWithoutRecommendationInput = {
@@ -1224,7 +1187,6 @@ export type ActionUncheckedCreateWithoutRecommendationInput = {
   blockerReason?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedCreateNestedManyWithoutActionInput
 }
 
 export type ActionCreateOrConnectWithoutRecommendationInput = {
@@ -1250,106 +1212,6 @@ export type ActionUpdateWithWhereUniqueWithoutRecommendationInput = {
 export type ActionUpdateManyWithWhereWithoutRecommendationInput = {
   where: Prisma.ActionScalarWhereInput
   data: Prisma.XOR<Prisma.ActionUpdateManyMutationInput, Prisma.ActionUncheckedUpdateManyWithoutRecommendationInput>
-}
-
-export type ActionCreateWithoutIdempotencyRecordsInput = {
-  id?: string
-  title: string
-  description?: string | null
-  status?: string
-  priority?: string
-  dueDate?: Date | string | null
-  completionDate?: Date | string | null
-  verificationDate?: Date | string | null
-  version?: number
-  visibility?: string
-  blockerReason?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  recommendation?: Prisma.RecommendationCreateNestedOneWithoutActionsInput
-  engagement: Prisma.EngagementCreateNestedOneWithoutActionsInput
-  assignee?: Prisma.UserCreateNestedOneWithoutAssignedActionsInput
-  completedByUser?: Prisma.UserCreateNestedOneWithoutCompletedActionsInput
-  verifiedByUser?: Prisma.UserCreateNestedOneWithoutVerifiedActionsInput
-}
-
-export type ActionUncheckedCreateWithoutIdempotencyRecordsInput = {
-  id?: string
-  recommendationId?: string | null
-  engagementId: string
-  title: string
-  description?: string | null
-  status?: string
-  priority?: string
-  dueDate?: Date | string | null
-  assignedTo?: string | null
-  completedBy?: string | null
-  completionDate?: Date | string | null
-  verifiedBy?: string | null
-  verificationDate?: Date | string | null
-  version?: number
-  visibility?: string
-  blockerReason?: string | null
-  createdAt?: Date | string
-  updatedAt?: Date | string
-}
-
-export type ActionCreateOrConnectWithoutIdempotencyRecordsInput = {
-  where: Prisma.ActionWhereUniqueInput
-  create: Prisma.XOR<Prisma.ActionCreateWithoutIdempotencyRecordsInput, Prisma.ActionUncheckedCreateWithoutIdempotencyRecordsInput>
-}
-
-export type ActionUpsertWithoutIdempotencyRecordsInput = {
-  update: Prisma.XOR<Prisma.ActionUpdateWithoutIdempotencyRecordsInput, Prisma.ActionUncheckedUpdateWithoutIdempotencyRecordsInput>
-  create: Prisma.XOR<Prisma.ActionCreateWithoutIdempotencyRecordsInput, Prisma.ActionUncheckedCreateWithoutIdempotencyRecordsInput>
-  where?: Prisma.ActionWhereInput
-}
-
-export type ActionUpdateToOneWithWhereWithoutIdempotencyRecordsInput = {
-  where?: Prisma.ActionWhereInput
-  data: Prisma.XOR<Prisma.ActionUpdateWithoutIdempotencyRecordsInput, Prisma.ActionUncheckedUpdateWithoutIdempotencyRecordsInput>
-}
-
-export type ActionUpdateWithoutIdempotencyRecordsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
-  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  recommendation?: Prisma.RecommendationUpdateOneWithoutActionsNestedInput
-  engagement?: Prisma.EngagementUpdateOneRequiredWithoutActionsNestedInput
-  assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
-  completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
-  verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
-}
-
-export type ActionUncheckedUpdateWithoutIdempotencyRecordsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  recommendationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  engagementId?: Prisma.StringFieldUpdateOperationsInput | string
-  title?: Prisma.StringFieldUpdateOperationsInput | string
-  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?: Prisma.StringFieldUpdateOperationsInput | string
-  priority?: Prisma.StringFieldUpdateOperationsInput | string
-  dueDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  assignedTo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  completionDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  verifiedBy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  verificationDate?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-  version?: Prisma.IntFieldUpdateOperationsInput | number
-  visibility?: Prisma.StringFieldUpdateOperationsInput | string
-  blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type ActionCreateManyAssigneeInput = {
@@ -1430,7 +1292,6 @@ export type ActionUpdateWithoutAssigneeInput = {
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutActionsNestedInput
   completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
   verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
-  idempotencyRecords?: Prisma.IdempotencyRecordUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateWithoutAssigneeInput = {
@@ -1451,7 +1312,6 @@ export type ActionUncheckedUpdateWithoutAssigneeInput = {
   blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateManyWithoutAssigneeInput = {
@@ -1492,7 +1352,6 @@ export type ActionUpdateWithoutCompletedByUserInput = {
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutActionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
   verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
-  idempotencyRecords?: Prisma.IdempotencyRecordUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateWithoutCompletedByUserInput = {
@@ -1513,7 +1372,6 @@ export type ActionUncheckedUpdateWithoutCompletedByUserInput = {
   blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateManyWithoutCompletedByUserInput = {
@@ -1554,7 +1412,6 @@ export type ActionUpdateWithoutVerifiedByUserInput = {
   engagement?: Prisma.EngagementUpdateOneRequiredWithoutActionsNestedInput
   assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
   completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
-  idempotencyRecords?: Prisma.IdempotencyRecordUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateWithoutVerifiedByUserInput = {
@@ -1575,7 +1432,6 @@ export type ActionUncheckedUpdateWithoutVerifiedByUserInput = {
   blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateManyWithoutVerifiedByUserInput = {
@@ -1636,7 +1492,6 @@ export type ActionUpdateWithoutEngagementInput = {
   assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
   completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
   verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
-  idempotencyRecords?: Prisma.IdempotencyRecordUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateWithoutEngagementInput = {
@@ -1657,7 +1512,6 @@ export type ActionUncheckedUpdateWithoutEngagementInput = {
   blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateManyWithoutEngagementInput = {
@@ -1718,7 +1572,6 @@ export type ActionUpdateWithoutRecommendationInput = {
   assignee?: Prisma.UserUpdateOneWithoutAssignedActionsNestedInput
   completedByUser?: Prisma.UserUpdateOneWithoutCompletedActionsNestedInput
   verifiedByUser?: Prisma.UserUpdateOneWithoutVerifiedActionsNestedInput
-  idempotencyRecords?: Prisma.IdempotencyRecordUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateWithoutRecommendationInput = {
@@ -1739,7 +1592,6 @@ export type ActionUncheckedUpdateWithoutRecommendationInput = {
   blockerReason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  idempotencyRecords?: Prisma.IdempotencyRecordUncheckedUpdateManyWithoutActionNestedInput
 }
 
 export type ActionUncheckedUpdateManyWithoutRecommendationInput = {
@@ -1762,35 +1614,6 @@ export type ActionUncheckedUpdateManyWithoutRecommendationInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
-
-/**
- * Count Type ActionCountOutputType
- */
-
-export type ActionCountOutputType = {
-  idempotencyRecords: number
-}
-
-export type ActionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  idempotencyRecords?: boolean | ActionCountOutputTypeCountIdempotencyRecordsArgs
-}
-
-/**
- * ActionCountOutputType without action
- */
-export type ActionCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the ActionCountOutputType
-   */
-  select?: Prisma.ActionCountOutputTypeSelect<ExtArgs> | null
-}
-
-/**
- * ActionCountOutputType without action
- */
-export type ActionCountOutputTypeCountIdempotencyRecordsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.IdempotencyRecordWhereInput
-}
 
 
 export type ActionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1817,8 +1640,6 @@ export type ActionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   assignee?: boolean | Prisma.Action$assigneeArgs<ExtArgs>
   completedByUser?: boolean | Prisma.Action$completedByUserArgs<ExtArgs>
   verifiedByUser?: boolean | Prisma.Action$verifiedByUserArgs<ExtArgs>
-  idempotencyRecords?: boolean | Prisma.Action$idempotencyRecordsArgs<ExtArgs>
-  _count?: boolean | Prisma.ActionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["action"]>
 
 export type ActionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1901,8 +1722,6 @@ export type ActionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   assignee?: boolean | Prisma.Action$assigneeArgs<ExtArgs>
   completedByUser?: boolean | Prisma.Action$completedByUserArgs<ExtArgs>
   verifiedByUser?: boolean | Prisma.Action$verifiedByUserArgs<ExtArgs>
-  idempotencyRecords?: boolean | Prisma.Action$idempotencyRecordsArgs<ExtArgs>
-  _count?: boolean | Prisma.ActionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ActionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   recommendation?: boolean | Prisma.Action$recommendationArgs<ExtArgs>
@@ -1927,7 +1746,6 @@ export type $ActionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     assignee: Prisma.$UserPayload<ExtArgs> | null
     completedByUser: Prisma.$UserPayload<ExtArgs> | null
     verifiedByUser: Prisma.$UserPayload<ExtArgs> | null
-    idempotencyRecords: Prisma.$IdempotencyRecordPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2347,7 +2165,6 @@ export interface Prisma__ActionClient<T, Null = never, ExtArgs extends runtime.T
   assignee<T extends Prisma.Action$assigneeArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Action$assigneeArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   completedByUser<T extends Prisma.Action$completedByUserArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Action$completedByUserArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   verifiedByUser<T extends Prisma.Action$verifiedByUserArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Action$verifiedByUserArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  idempotencyRecords<T extends Prisma.Action$idempotencyRecordsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Action$idempotencyRecordsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$IdempotencyRecordPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2867,30 +2684,6 @@ export type Action$verifiedByUserArgs<ExtArgs extends runtime.Types.Extensions.I
    */
   include?: Prisma.UserInclude<ExtArgs> | null
   where?: Prisma.UserWhereInput
-}
-
-/**
- * Action.idempotencyRecords
- */
-export type Action$idempotencyRecordsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the IdempotencyRecord
-   */
-  select?: Prisma.IdempotencyRecordSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the IdempotencyRecord
-   */
-  omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
-  where?: Prisma.IdempotencyRecordWhereInput
-  orderBy?: Prisma.IdempotencyRecordOrderByWithRelationInput | Prisma.IdempotencyRecordOrderByWithRelationInput[]
-  cursor?: Prisma.IdempotencyRecordWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.IdempotencyRecordScalarFieldEnum | Prisma.IdempotencyRecordScalarFieldEnum[]
 }
 
 /**

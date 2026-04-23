@@ -2609,10 +2609,13 @@ export type InterventionHistoryScalarFieldEnum = (typeof InterventionHistoryScal
 
 export const IdempotencyRecordScalarFieldEnum = {
   id: 'id',
-  requestKey: 'requestKey',
-  actionId: 'actionId',
-  resultHash: 'resultHash',
+  idempotencyKey: 'idempotencyKey',
+  operationName: 'operationName',
+  status: 'status',
+  responseCode: 'responseCode',
+  responseBody: 'responseBody',
   createdAt: 'createdAt',
+  completedAt: 'completedAt',
   expiresAt: 'expiresAt'
 } as const
 

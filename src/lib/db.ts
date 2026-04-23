@@ -30,8 +30,6 @@ async function createPrismaClient() {
         throw new Error("PrismaSqlite class not found in adapter module");
       }
 
-      console.debug(`[db.ts] Node version: ${process.version}`);
-
       const dbPath = databaseUrl || "file:./test.db";
       const adapter = new createSqliteAdapter({ url: dbPath });
 

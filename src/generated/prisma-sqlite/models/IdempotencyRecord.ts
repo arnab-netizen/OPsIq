@@ -20,63 +20,99 @@ export type IdempotencyRecordModel = runtime.Types.Result.DefaultSelection<Prism
 
 export type AggregateIdempotencyRecord = {
   _count: IdempotencyRecordCountAggregateOutputType | null
+  _avg: IdempotencyRecordAvgAggregateOutputType | null
+  _sum: IdempotencyRecordSumAggregateOutputType | null
   _min: IdempotencyRecordMinAggregateOutputType | null
   _max: IdempotencyRecordMaxAggregateOutputType | null
 }
 
+export type IdempotencyRecordAvgAggregateOutputType = {
+  responseCode: number | null
+}
+
+export type IdempotencyRecordSumAggregateOutputType = {
+  responseCode: number | null
+}
+
 export type IdempotencyRecordMinAggregateOutputType = {
   id: string | null
-  requestKey: string | null
-  actionId: string | null
-  resultHash: string | null
+  idempotencyKey: string | null
+  operationName: string | null
+  status: string | null
+  responseCode: number | null
+  responseBody: string | null
   createdAt: Date | null
+  completedAt: Date | null
   expiresAt: Date | null
 }
 
 export type IdempotencyRecordMaxAggregateOutputType = {
   id: string | null
-  requestKey: string | null
-  actionId: string | null
-  resultHash: string | null
+  idempotencyKey: string | null
+  operationName: string | null
+  status: string | null
+  responseCode: number | null
+  responseBody: string | null
   createdAt: Date | null
+  completedAt: Date | null
   expiresAt: Date | null
 }
 
 export type IdempotencyRecordCountAggregateOutputType = {
   id: number
-  requestKey: number
-  actionId: number
-  resultHash: number
+  idempotencyKey: number
+  operationName: number
+  status: number
+  responseCode: number
+  responseBody: number
   createdAt: number
+  completedAt: number
   expiresAt: number
   _all: number
 }
 
 
+export type IdempotencyRecordAvgAggregateInputType = {
+  responseCode?: true
+}
+
+export type IdempotencyRecordSumAggregateInputType = {
+  responseCode?: true
+}
+
 export type IdempotencyRecordMinAggregateInputType = {
   id?: true
-  requestKey?: true
-  actionId?: true
-  resultHash?: true
+  idempotencyKey?: true
+  operationName?: true
+  status?: true
+  responseCode?: true
+  responseBody?: true
   createdAt?: true
+  completedAt?: true
   expiresAt?: true
 }
 
 export type IdempotencyRecordMaxAggregateInputType = {
   id?: true
-  requestKey?: true
-  actionId?: true
-  resultHash?: true
+  idempotencyKey?: true
+  operationName?: true
+  status?: true
+  responseCode?: true
+  responseBody?: true
   createdAt?: true
+  completedAt?: true
   expiresAt?: true
 }
 
 export type IdempotencyRecordCountAggregateInputType = {
   id?: true
-  requestKey?: true
-  actionId?: true
-  resultHash?: true
+  idempotencyKey?: true
+  operationName?: true
+  status?: true
+  responseCode?: true
+  responseBody?: true
   createdAt?: true
+  completedAt?: true
   expiresAt?: true
   _all?: true
 }
@@ -119,6 +155,18 @@ export type IdempotencyRecordAggregateArgs<ExtArgs extends runtime.Types.Extensi
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: IdempotencyRecordAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: IdempotencyRecordSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: IdempotencyRecordMinAggregateInputType
@@ -149,18 +197,25 @@ export type IdempotencyRecordGroupByArgs<ExtArgs extends runtime.Types.Extension
   take?: number
   skip?: number
   _count?: IdempotencyRecordCountAggregateInputType | true
+  _avg?: IdempotencyRecordAvgAggregateInputType
+  _sum?: IdempotencyRecordSumAggregateInputType
   _min?: IdempotencyRecordMinAggregateInputType
   _max?: IdempotencyRecordMaxAggregateInputType
 }
 
 export type IdempotencyRecordGroupByOutputType = {
   id: string
-  requestKey: string
-  actionId: string | null
-  resultHash: string
+  idempotencyKey: string
+  operationName: string
+  status: string
+  responseCode: number | null
+  responseBody: string | null
   createdAt: Date
+  completedAt: Date | null
   expiresAt: Date
   _count: IdempotencyRecordCountAggregateOutputType | null
+  _avg: IdempotencyRecordAvgAggregateOutputType | null
+  _sum: IdempotencyRecordSumAggregateOutputType | null
   _min: IdempotencyRecordMinAggregateOutputType | null
   _max: IdempotencyRecordMaxAggregateOutputType | null
 }
@@ -185,47 +240,58 @@ export type IdempotencyRecordWhereInput = {
   OR?: Prisma.IdempotencyRecordWhereInput[]
   NOT?: Prisma.IdempotencyRecordWhereInput | Prisma.IdempotencyRecordWhereInput[]
   id?: Prisma.StringFilter<"IdempotencyRecord"> | string
-  requestKey?: Prisma.StringFilter<"IdempotencyRecord"> | string
-  actionId?: Prisma.StringNullableFilter<"IdempotencyRecord"> | string | null
-  resultHash?: Prisma.StringFilter<"IdempotencyRecord"> | string
+  idempotencyKey?: Prisma.StringFilter<"IdempotencyRecord"> | string
+  operationName?: Prisma.StringFilter<"IdempotencyRecord"> | string
+  status?: Prisma.StringFilter<"IdempotencyRecord"> | string
+  responseCode?: Prisma.IntNullableFilter<"IdempotencyRecord"> | number | null
+  responseBody?: Prisma.StringNullableFilter<"IdempotencyRecord"> | string | null
   createdAt?: Prisma.DateTimeFilter<"IdempotencyRecord"> | Date | string
+  completedAt?: Prisma.DateTimeNullableFilter<"IdempotencyRecord"> | Date | string | null
   expiresAt?: Prisma.DateTimeFilter<"IdempotencyRecord"> | Date | string
-  action?: Prisma.XOR<Prisma.ActionNullableScalarRelationFilter, Prisma.ActionWhereInput> | null
 }
 
 export type IdempotencyRecordOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  requestKey?: Prisma.SortOrder
-  actionId?: Prisma.SortOrderInput | Prisma.SortOrder
-  resultHash?: Prisma.SortOrder
+  idempotencyKey?: Prisma.SortOrder
+  operationName?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  responseCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  responseBody?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
-  action?: Prisma.ActionOrderByWithRelationInput
 }
 
 export type IdempotencyRecordWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  requestKey?: string
+  idempotencyKey?: string
   AND?: Prisma.IdempotencyRecordWhereInput | Prisma.IdempotencyRecordWhereInput[]
   OR?: Prisma.IdempotencyRecordWhereInput[]
   NOT?: Prisma.IdempotencyRecordWhereInput | Prisma.IdempotencyRecordWhereInput[]
-  actionId?: Prisma.StringNullableFilter<"IdempotencyRecord"> | string | null
-  resultHash?: Prisma.StringFilter<"IdempotencyRecord"> | string
+  operationName?: Prisma.StringFilter<"IdempotencyRecord"> | string
+  status?: Prisma.StringFilter<"IdempotencyRecord"> | string
+  responseCode?: Prisma.IntNullableFilter<"IdempotencyRecord"> | number | null
+  responseBody?: Prisma.StringNullableFilter<"IdempotencyRecord"> | string | null
   createdAt?: Prisma.DateTimeFilter<"IdempotencyRecord"> | Date | string
+  completedAt?: Prisma.DateTimeNullableFilter<"IdempotencyRecord"> | Date | string | null
   expiresAt?: Prisma.DateTimeFilter<"IdempotencyRecord"> | Date | string
-  action?: Prisma.XOR<Prisma.ActionNullableScalarRelationFilter, Prisma.ActionWhereInput> | null
-}, "id" | "requestKey">
+}, "id" | "idempotencyKey">
 
 export type IdempotencyRecordOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  requestKey?: Prisma.SortOrder
-  actionId?: Prisma.SortOrderInput | Prisma.SortOrder
-  resultHash?: Prisma.SortOrder
+  idempotencyKey?: Prisma.SortOrder
+  operationName?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  responseCode?: Prisma.SortOrderInput | Prisma.SortOrder
+  responseBody?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
   _count?: Prisma.IdempotencyRecordCountOrderByAggregateInput
+  _avg?: Prisma.IdempotencyRecordAvgOrderByAggregateInput
   _max?: Prisma.IdempotencyRecordMaxOrderByAggregateInput
   _min?: Prisma.IdempotencyRecordMinOrderByAggregateInput
+  _sum?: Prisma.IdempotencyRecordSumOrderByAggregateInput
 }
 
 export type IdempotencyRecordScalarWhereWithAggregatesInput = {
@@ -233,302 +299,216 @@ export type IdempotencyRecordScalarWhereWithAggregatesInput = {
   OR?: Prisma.IdempotencyRecordScalarWhereWithAggregatesInput[]
   NOT?: Prisma.IdempotencyRecordScalarWhereWithAggregatesInput | Prisma.IdempotencyRecordScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"IdempotencyRecord"> | string
-  requestKey?: Prisma.StringWithAggregatesFilter<"IdempotencyRecord"> | string
-  actionId?: Prisma.StringNullableWithAggregatesFilter<"IdempotencyRecord"> | string | null
-  resultHash?: Prisma.StringWithAggregatesFilter<"IdempotencyRecord"> | string
+  idempotencyKey?: Prisma.StringWithAggregatesFilter<"IdempotencyRecord"> | string
+  operationName?: Prisma.StringWithAggregatesFilter<"IdempotencyRecord"> | string
+  status?: Prisma.StringWithAggregatesFilter<"IdempotencyRecord"> | string
+  responseCode?: Prisma.IntNullableWithAggregatesFilter<"IdempotencyRecord"> | number | null
+  responseBody?: Prisma.StringNullableWithAggregatesFilter<"IdempotencyRecord"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"IdempotencyRecord"> | Date | string
+  completedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"IdempotencyRecord"> | Date | string | null
   expiresAt?: Prisma.DateTimeWithAggregatesFilter<"IdempotencyRecord"> | Date | string
 }
 
 export type IdempotencyRecordCreateInput = {
   id?: string
-  requestKey: string
-  resultHash: string
+  idempotencyKey: string
+  operationName: string
+  status?: string
+  responseCode?: number | null
+  responseBody?: string | null
   createdAt?: Date | string
+  completedAt?: Date | string | null
   expiresAt: Date | string
-  action?: Prisma.ActionCreateNestedOneWithoutIdempotencyRecordsInput
 }
 
 export type IdempotencyRecordUncheckedCreateInput = {
   id?: string
-  requestKey: string
-  actionId?: string | null
-  resultHash: string
+  idempotencyKey: string
+  operationName: string
+  status?: string
+  responseCode?: number | null
+  responseBody?: string | null
   createdAt?: Date | string
+  completedAt?: Date | string | null
   expiresAt: Date | string
 }
 
 export type IdempotencyRecordUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  requestKey?: Prisma.StringFieldUpdateOperationsInput | string
-  resultHash?: Prisma.StringFieldUpdateOperationsInput | string
+  idempotencyKey?: Prisma.StringFieldUpdateOperationsInput | string
+  operationName?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  responseCode?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  responseBody?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  action?: Prisma.ActionUpdateOneWithoutIdempotencyRecordsNestedInput
 }
 
 export type IdempotencyRecordUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  requestKey?: Prisma.StringFieldUpdateOperationsInput | string
-  actionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resultHash?: Prisma.StringFieldUpdateOperationsInput | string
+  idempotencyKey?: Prisma.StringFieldUpdateOperationsInput | string
+  operationName?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  responseCode?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  responseBody?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type IdempotencyRecordCreateManyInput = {
   id?: string
-  requestKey: string
-  actionId?: string | null
-  resultHash: string
+  idempotencyKey: string
+  operationName: string
+  status?: string
+  responseCode?: number | null
+  responseBody?: string | null
   createdAt?: Date | string
+  completedAt?: Date | string | null
   expiresAt: Date | string
 }
 
 export type IdempotencyRecordUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  requestKey?: Prisma.StringFieldUpdateOperationsInput | string
-  resultHash?: Prisma.StringFieldUpdateOperationsInput | string
+  idempotencyKey?: Prisma.StringFieldUpdateOperationsInput | string
+  operationName?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  responseCode?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  responseBody?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type IdempotencyRecordUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  requestKey?: Prisma.StringFieldUpdateOperationsInput | string
-  actionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  resultHash?: Prisma.StringFieldUpdateOperationsInput | string
+  idempotencyKey?: Prisma.StringFieldUpdateOperationsInput | string
+  operationName?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  responseCode?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  responseBody?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  completedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-}
-
-export type IdempotencyRecordListRelationFilter = {
-  every?: Prisma.IdempotencyRecordWhereInput
-  some?: Prisma.IdempotencyRecordWhereInput
-  none?: Prisma.IdempotencyRecordWhereInput
-}
-
-export type IdempotencyRecordOrderByRelationAggregateInput = {
-  _count?: Prisma.SortOrder
 }
 
 export type IdempotencyRecordCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  requestKey?: Prisma.SortOrder
-  actionId?: Prisma.SortOrder
-  resultHash?: Prisma.SortOrder
+  idempotencyKey?: Prisma.SortOrder
+  operationName?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  responseCode?: Prisma.SortOrder
+  responseBody?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
+}
+
+export type IdempotencyRecordAvgOrderByAggregateInput = {
+  responseCode?: Prisma.SortOrder
 }
 
 export type IdempotencyRecordMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  requestKey?: Prisma.SortOrder
-  actionId?: Prisma.SortOrder
-  resultHash?: Prisma.SortOrder
+  idempotencyKey?: Prisma.SortOrder
+  operationName?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  responseCode?: Prisma.SortOrder
+  responseBody?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
 }
 
 export type IdempotencyRecordMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  requestKey?: Prisma.SortOrder
-  actionId?: Prisma.SortOrder
-  resultHash?: Prisma.SortOrder
+  idempotencyKey?: Prisma.SortOrder
+  operationName?: Prisma.SortOrder
+  status?: Prisma.SortOrder
+  responseCode?: Prisma.SortOrder
+  responseBody?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  completedAt?: Prisma.SortOrder
   expiresAt?: Prisma.SortOrder
 }
 
-export type IdempotencyRecordCreateNestedManyWithoutActionInput = {
-  create?: Prisma.XOR<Prisma.IdempotencyRecordCreateWithoutActionInput, Prisma.IdempotencyRecordUncheckedCreateWithoutActionInput> | Prisma.IdempotencyRecordCreateWithoutActionInput[] | Prisma.IdempotencyRecordUncheckedCreateWithoutActionInput[]
-  connectOrCreate?: Prisma.IdempotencyRecordCreateOrConnectWithoutActionInput | Prisma.IdempotencyRecordCreateOrConnectWithoutActionInput[]
-  createMany?: Prisma.IdempotencyRecordCreateManyActionInputEnvelope
-  connect?: Prisma.IdempotencyRecordWhereUniqueInput | Prisma.IdempotencyRecordWhereUniqueInput[]
+export type IdempotencyRecordSumOrderByAggregateInput = {
+  responseCode?: Prisma.SortOrder
 }
 
-export type IdempotencyRecordUncheckedCreateNestedManyWithoutActionInput = {
-  create?: Prisma.XOR<Prisma.IdempotencyRecordCreateWithoutActionInput, Prisma.IdempotencyRecordUncheckedCreateWithoutActionInput> | Prisma.IdempotencyRecordCreateWithoutActionInput[] | Prisma.IdempotencyRecordUncheckedCreateWithoutActionInput[]
-  connectOrCreate?: Prisma.IdempotencyRecordCreateOrConnectWithoutActionInput | Prisma.IdempotencyRecordCreateOrConnectWithoutActionInput[]
-  createMany?: Prisma.IdempotencyRecordCreateManyActionInputEnvelope
-  connect?: Prisma.IdempotencyRecordWhereUniqueInput | Prisma.IdempotencyRecordWhereUniqueInput[]
-}
-
-export type IdempotencyRecordUpdateManyWithoutActionNestedInput = {
-  create?: Prisma.XOR<Prisma.IdempotencyRecordCreateWithoutActionInput, Prisma.IdempotencyRecordUncheckedCreateWithoutActionInput> | Prisma.IdempotencyRecordCreateWithoutActionInput[] | Prisma.IdempotencyRecordUncheckedCreateWithoutActionInput[]
-  connectOrCreate?: Prisma.IdempotencyRecordCreateOrConnectWithoutActionInput | Prisma.IdempotencyRecordCreateOrConnectWithoutActionInput[]
-  upsert?: Prisma.IdempotencyRecordUpsertWithWhereUniqueWithoutActionInput | Prisma.IdempotencyRecordUpsertWithWhereUniqueWithoutActionInput[]
-  createMany?: Prisma.IdempotencyRecordCreateManyActionInputEnvelope
-  set?: Prisma.IdempotencyRecordWhereUniqueInput | Prisma.IdempotencyRecordWhereUniqueInput[]
-  disconnect?: Prisma.IdempotencyRecordWhereUniqueInput | Prisma.IdempotencyRecordWhereUniqueInput[]
-  delete?: Prisma.IdempotencyRecordWhereUniqueInput | Prisma.IdempotencyRecordWhereUniqueInput[]
-  connect?: Prisma.IdempotencyRecordWhereUniqueInput | Prisma.IdempotencyRecordWhereUniqueInput[]
-  update?: Prisma.IdempotencyRecordUpdateWithWhereUniqueWithoutActionInput | Prisma.IdempotencyRecordUpdateWithWhereUniqueWithoutActionInput[]
-  updateMany?: Prisma.IdempotencyRecordUpdateManyWithWhereWithoutActionInput | Prisma.IdempotencyRecordUpdateManyWithWhereWithoutActionInput[]
-  deleteMany?: Prisma.IdempotencyRecordScalarWhereInput | Prisma.IdempotencyRecordScalarWhereInput[]
-}
-
-export type IdempotencyRecordUncheckedUpdateManyWithoutActionNestedInput = {
-  create?: Prisma.XOR<Prisma.IdempotencyRecordCreateWithoutActionInput, Prisma.IdempotencyRecordUncheckedCreateWithoutActionInput> | Prisma.IdempotencyRecordCreateWithoutActionInput[] | Prisma.IdempotencyRecordUncheckedCreateWithoutActionInput[]
-  connectOrCreate?: Prisma.IdempotencyRecordCreateOrConnectWithoutActionInput | Prisma.IdempotencyRecordCreateOrConnectWithoutActionInput[]
-  upsert?: Prisma.IdempotencyRecordUpsertWithWhereUniqueWithoutActionInput | Prisma.IdempotencyRecordUpsertWithWhereUniqueWithoutActionInput[]
-  createMany?: Prisma.IdempotencyRecordCreateManyActionInputEnvelope
-  set?: Prisma.IdempotencyRecordWhereUniqueInput | Prisma.IdempotencyRecordWhereUniqueInput[]
-  disconnect?: Prisma.IdempotencyRecordWhereUniqueInput | Prisma.IdempotencyRecordWhereUniqueInput[]
-  delete?: Prisma.IdempotencyRecordWhereUniqueInput | Prisma.IdempotencyRecordWhereUniqueInput[]
-  connect?: Prisma.IdempotencyRecordWhereUniqueInput | Prisma.IdempotencyRecordWhereUniqueInput[]
-  update?: Prisma.IdempotencyRecordUpdateWithWhereUniqueWithoutActionInput | Prisma.IdempotencyRecordUpdateWithWhereUniqueWithoutActionInput[]
-  updateMany?: Prisma.IdempotencyRecordUpdateManyWithWhereWithoutActionInput | Prisma.IdempotencyRecordUpdateManyWithWhereWithoutActionInput[]
-  deleteMany?: Prisma.IdempotencyRecordScalarWhereInput | Prisma.IdempotencyRecordScalarWhereInput[]
-}
-
-export type IdempotencyRecordCreateWithoutActionInput = {
-  id?: string
-  requestKey: string
-  resultHash: string
-  createdAt?: Date | string
-  expiresAt: Date | string
-}
-
-export type IdempotencyRecordUncheckedCreateWithoutActionInput = {
-  id?: string
-  requestKey: string
-  resultHash: string
-  createdAt?: Date | string
-  expiresAt: Date | string
-}
-
-export type IdempotencyRecordCreateOrConnectWithoutActionInput = {
-  where: Prisma.IdempotencyRecordWhereUniqueInput
-  create: Prisma.XOR<Prisma.IdempotencyRecordCreateWithoutActionInput, Prisma.IdempotencyRecordUncheckedCreateWithoutActionInput>
-}
-
-export type IdempotencyRecordCreateManyActionInputEnvelope = {
-  data: Prisma.IdempotencyRecordCreateManyActionInput | Prisma.IdempotencyRecordCreateManyActionInput[]
-}
-
-export type IdempotencyRecordUpsertWithWhereUniqueWithoutActionInput = {
-  where: Prisma.IdempotencyRecordWhereUniqueInput
-  update: Prisma.XOR<Prisma.IdempotencyRecordUpdateWithoutActionInput, Prisma.IdempotencyRecordUncheckedUpdateWithoutActionInput>
-  create: Prisma.XOR<Prisma.IdempotencyRecordCreateWithoutActionInput, Prisma.IdempotencyRecordUncheckedCreateWithoutActionInput>
-}
-
-export type IdempotencyRecordUpdateWithWhereUniqueWithoutActionInput = {
-  where: Prisma.IdempotencyRecordWhereUniqueInput
-  data: Prisma.XOR<Prisma.IdempotencyRecordUpdateWithoutActionInput, Prisma.IdempotencyRecordUncheckedUpdateWithoutActionInput>
-}
-
-export type IdempotencyRecordUpdateManyWithWhereWithoutActionInput = {
-  where: Prisma.IdempotencyRecordScalarWhereInput
-  data: Prisma.XOR<Prisma.IdempotencyRecordUpdateManyMutationInput, Prisma.IdempotencyRecordUncheckedUpdateManyWithoutActionInput>
-}
-
-export type IdempotencyRecordScalarWhereInput = {
-  AND?: Prisma.IdempotencyRecordScalarWhereInput | Prisma.IdempotencyRecordScalarWhereInput[]
-  OR?: Prisma.IdempotencyRecordScalarWhereInput[]
-  NOT?: Prisma.IdempotencyRecordScalarWhereInput | Prisma.IdempotencyRecordScalarWhereInput[]
-  id?: Prisma.StringFilter<"IdempotencyRecord"> | string
-  requestKey?: Prisma.StringFilter<"IdempotencyRecord"> | string
-  actionId?: Prisma.StringNullableFilter<"IdempotencyRecord"> | string | null
-  resultHash?: Prisma.StringFilter<"IdempotencyRecord"> | string
-  createdAt?: Prisma.DateTimeFilter<"IdempotencyRecord"> | Date | string
-  expiresAt?: Prisma.DateTimeFilter<"IdempotencyRecord"> | Date | string
-}
-
-export type IdempotencyRecordCreateManyActionInput = {
-  id?: string
-  requestKey: string
-  resultHash: string
-  createdAt?: Date | string
-  expiresAt: Date | string
-}
-
-export type IdempotencyRecordUpdateWithoutActionInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  requestKey?: Prisma.StringFieldUpdateOperationsInput | string
-  resultHash?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-}
-
-export type IdempotencyRecordUncheckedUpdateWithoutActionInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  requestKey?: Prisma.StringFieldUpdateOperationsInput | string
-  resultHash?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-}
-
-export type IdempotencyRecordUncheckedUpdateManyWithoutActionInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  requestKey?: Prisma.StringFieldUpdateOperationsInput | string
-  resultHash?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  expiresAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+export type NullableIntFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
 }
 
 
 
 export type IdempotencyRecordSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  requestKey?: boolean
-  actionId?: boolean
-  resultHash?: boolean
+  idempotencyKey?: boolean
+  operationName?: boolean
+  status?: boolean
+  responseCode?: boolean
+  responseBody?: boolean
   createdAt?: boolean
+  completedAt?: boolean
   expiresAt?: boolean
-  action?: boolean | Prisma.IdempotencyRecord$actionArgs<ExtArgs>
 }, ExtArgs["result"]["idempotencyRecord"]>
 
 export type IdempotencyRecordSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  requestKey?: boolean
-  actionId?: boolean
-  resultHash?: boolean
+  idempotencyKey?: boolean
+  operationName?: boolean
+  status?: boolean
+  responseCode?: boolean
+  responseBody?: boolean
   createdAt?: boolean
+  completedAt?: boolean
   expiresAt?: boolean
-  action?: boolean | Prisma.IdempotencyRecord$actionArgs<ExtArgs>
 }, ExtArgs["result"]["idempotencyRecord"]>
 
 export type IdempotencyRecordSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
-  requestKey?: boolean
-  actionId?: boolean
-  resultHash?: boolean
+  idempotencyKey?: boolean
+  operationName?: boolean
+  status?: boolean
+  responseCode?: boolean
+  responseBody?: boolean
   createdAt?: boolean
+  completedAt?: boolean
   expiresAt?: boolean
-  action?: boolean | Prisma.IdempotencyRecord$actionArgs<ExtArgs>
 }, ExtArgs["result"]["idempotencyRecord"]>
 
 export type IdempotencyRecordSelectScalar = {
   id?: boolean
-  requestKey?: boolean
-  actionId?: boolean
-  resultHash?: boolean
+  idempotencyKey?: boolean
+  operationName?: boolean
+  status?: boolean
+  responseCode?: boolean
+  responseBody?: boolean
   createdAt?: boolean
+  completedAt?: boolean
   expiresAt?: boolean
 }
 
-export type IdempotencyRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "requestKey" | "actionId" | "resultHash" | "createdAt" | "expiresAt", ExtArgs["result"]["idempotencyRecord"]>
-export type IdempotencyRecordInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  action?: boolean | Prisma.IdempotencyRecord$actionArgs<ExtArgs>
-}
-export type IdempotencyRecordIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  action?: boolean | Prisma.IdempotencyRecord$actionArgs<ExtArgs>
-}
-export type IdempotencyRecordIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  action?: boolean | Prisma.IdempotencyRecord$actionArgs<ExtArgs>
-}
+export type IdempotencyRecordOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "idempotencyKey" | "operationName" | "status" | "responseCode" | "responseBody" | "createdAt" | "completedAt" | "expiresAt", ExtArgs["result"]["idempotencyRecord"]>
 
 export type $IdempotencyRecordPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "IdempotencyRecord"
-  objects: {
-    action: Prisma.$ActionPayload<ExtArgs> | null
-  }
+  objects: {}
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
-    requestKey: string
-    actionId: string | null
-    resultHash: string
+    idempotencyKey: string
+    operationName: string
+    status: string
+    responseCode: number | null
+    responseBody: string | null
     createdAt: Date
+    completedAt: Date | null
     expiresAt: Date
   }, ExtArgs["result"]["idempotencyRecord"]>
   composites: {}
@@ -924,7 +904,6 @@ readonly fields: IdempotencyRecordFieldRefs;
  */
 export interface Prisma__IdempotencyRecordClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  action<T extends Prisma.IdempotencyRecord$actionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.IdempotencyRecord$actionArgs<ExtArgs>>): Prisma.Prisma__ActionClient<runtime.Types.Result.GetResult<Prisma.$ActionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -955,10 +934,13 @@ export interface Prisma__IdempotencyRecordClient<T, Null = never, ExtArgs extend
  */
 export interface IdempotencyRecordFieldRefs {
   readonly id: Prisma.FieldRef<"IdempotencyRecord", 'String'>
-  readonly requestKey: Prisma.FieldRef<"IdempotencyRecord", 'String'>
-  readonly actionId: Prisma.FieldRef<"IdempotencyRecord", 'String'>
-  readonly resultHash: Prisma.FieldRef<"IdempotencyRecord", 'String'>
+  readonly idempotencyKey: Prisma.FieldRef<"IdempotencyRecord", 'String'>
+  readonly operationName: Prisma.FieldRef<"IdempotencyRecord", 'String'>
+  readonly status: Prisma.FieldRef<"IdempotencyRecord", 'String'>
+  readonly responseCode: Prisma.FieldRef<"IdempotencyRecord", 'Int'>
+  readonly responseBody: Prisma.FieldRef<"IdempotencyRecord", 'String'>
   readonly createdAt: Prisma.FieldRef<"IdempotencyRecord", 'DateTime'>
+  readonly completedAt: Prisma.FieldRef<"IdempotencyRecord", 'DateTime'>
   readonly expiresAt: Prisma.FieldRef<"IdempotencyRecord", 'DateTime'>
 }
     
@@ -976,10 +958,6 @@ export type IdempotencyRecordFindUniqueArgs<ExtArgs extends runtime.Types.Extens
    * Omit specific fields from the IdempotencyRecord
    */
   omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
   /**
    * Filter, which IdempotencyRecord to fetch.
    */
@@ -999,10 +977,6 @@ export type IdempotencyRecordFindUniqueOrThrowArgs<ExtArgs extends runtime.Types
    */
   omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
   /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
-  /**
    * Filter, which IdempotencyRecord to fetch.
    */
   where: Prisma.IdempotencyRecordWhereUniqueInput
@@ -1020,10 +994,6 @@ export type IdempotencyRecordFindFirstArgs<ExtArgs extends runtime.Types.Extensi
    * Omit specific fields from the IdempotencyRecord
    */
   omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
   /**
    * Filter, which IdempotencyRecord to fetch.
    */
@@ -1073,10 +1043,6 @@ export type IdempotencyRecordFindFirstOrThrowArgs<ExtArgs extends runtime.Types.
    */
   omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
   /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
-  /**
    * Filter, which IdempotencyRecord to fetch.
    */
   where?: Prisma.IdempotencyRecordWhereInput
@@ -1124,10 +1090,6 @@ export type IdempotencyRecordFindManyArgs<ExtArgs extends runtime.Types.Extensio
    * Omit specific fields from the IdempotencyRecord
    */
   omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
   /**
    * Filter, which IdempotencyRecords to fetch.
    */
@@ -1177,10 +1139,6 @@ export type IdempotencyRecordCreateArgs<ExtArgs extends runtime.Types.Extensions
    */
   omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
   /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
-  /**
    * The data needed to create a IdempotencyRecord.
    */
   data: Prisma.XOR<Prisma.IdempotencyRecordCreateInput, Prisma.IdempotencyRecordUncheckedCreateInput>
@@ -1212,10 +1170,6 @@ export type IdempotencyRecordCreateManyAndReturnArgs<ExtArgs extends runtime.Typ
    * The data used to create many IdempotencyRecords.
    */
   data: Prisma.IdempotencyRecordCreateManyInput | Prisma.IdempotencyRecordCreateManyInput[]
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1230,10 +1184,6 @@ export type IdempotencyRecordUpdateArgs<ExtArgs extends runtime.Types.Extensions
    * Omit specific fields from the IdempotencyRecord
    */
   omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
   /**
    * The data needed to update a IdempotencyRecord.
    */
@@ -1286,10 +1236,6 @@ export type IdempotencyRecordUpdateManyAndReturnArgs<ExtArgs extends runtime.Typ
    * Limit how many IdempotencyRecords to update.
    */
   limit?: number
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1304,10 +1250,6 @@ export type IdempotencyRecordUpsertArgs<ExtArgs extends runtime.Types.Extensions
    * Omit specific fields from the IdempotencyRecord
    */
   omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
   /**
    * The filter to search for the IdempotencyRecord to update in case it exists.
    */
@@ -1335,10 +1277,6 @@ export type IdempotencyRecordDeleteArgs<ExtArgs extends runtime.Types.Extensions
    */
   omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
   /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
-  /**
    * Filter which IdempotencyRecord to delete.
    */
   where: Prisma.IdempotencyRecordWhereUniqueInput
@@ -1359,25 +1297,6 @@ export type IdempotencyRecordDeleteManyArgs<ExtArgs extends runtime.Types.Extens
 }
 
 /**
- * IdempotencyRecord.action
- */
-export type IdempotencyRecord$actionArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the Action
-   */
-  select?: Prisma.ActionSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the Action
-   */
-  omit?: Prisma.ActionOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.ActionInclude<ExtArgs> | null
-  where?: Prisma.ActionWhereInput
-}
-
-/**
  * IdempotencyRecord without action
  */
 export type IdempotencyRecordDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1389,8 +1308,4 @@ export type IdempotencyRecordDefaultArgs<ExtArgs extends runtime.Types.Extension
    * Omit specific fields from the IdempotencyRecord
    */
   omit?: Prisma.IdempotencyRecordOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.IdempotencyRecordInclude<ExtArgs> | null
 }
