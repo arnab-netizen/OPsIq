@@ -14,6 +14,7 @@ export interface CreateRecommendationInput {
   description?: string;
   expectedImpact?: string;
   implementationPhase?: string;
+  scoringInput?: RecommendationScoringInput;
 }
 
 export interface UpdateRecommendationInput {
@@ -70,6 +71,12 @@ export function calculateRecommendationScore(input: RecommendationScoringInput):
   return Math.min(Math.max(score, 0), 1);
 }
 
+export function mapScoreToPriority(score: number): string {
+  if (score >= 0.75) return "high";
+  if (score >= 0.5) return "medium";
+  return "low";
+}
+
 export async function createRecommendation(
   input: CreateRecommendationInput,
   actorId: string
@@ -79,16 +86,25 @@ export async function createRecommendation(
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
+  let derivedPriority = input.priority;
+  let scoreValue: number | null = null;
+
+  if (input.scoringInput) {
+    scoreValue = calculateRecommendationScore(input.scoringInput);
+    derivedPriority = mapScoreToPriority(scoreValue);
+  }
+
   const recommendation = await db.recommendation.create({
     data: {
       engagementId: input.engagementId,
       findingId: input.findingId ?? null,
-      priority: input.priority,
+      priority: derivedPriority,
       title: input.title,
       description: input.description ?? null,
       expectedImpact: input.expectedImpact ?? null,
       implementationPhase: input.implementationPhase ?? null,
       recommendedBy: actorId,
+      score: scoreValue,
     },
   });
 
@@ -188,4 +204,53 @@ export async function updateRecommendationStatus(
   });
 
   return updated;
+}
+
+export async function updateRecommendationPriorityFromScore(
+  recommendationId: string,
+  scoringInput: RecommendationScoringInput,
+  actorId: string
+): Promise<{ id: string; score: number; priority: string }> {
+  const rec = await db.recommendation.findUnique({
+    where: { id: recommendationId },
+  });
+  if (!rec) throw new NotFoundError("Recommendation", recommendationId);
+
+  const score = calculateRecommendationScore(scoringInput);
+  const newPriority = mapScoreToPriority(score);
+
+  const updated = await db.recommendation.update({
+    where: { id: recommendationId },
+    data: {
+      score,
+      priority: newPriority,
+      version: { increment: 1 },
+    },
+    select: {
+      id: true,
+      score: true,
+      priority: true,
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
+    actorId,
+    entityType: "recommendation",
+    entityId: recommendationId,
+    payload: {
+      score,
+      priority: newPriority,
+      source: "re-evaluation",
+    },
+    visibility: "internal",
+  });
+
+  logger.info("Recommendation priority updated from score", {
+    recommendationId,
+    score,
+    priority: newPriority,
+  });
+
+  return updated as { id: string; score: number; priority: string };
 }
