@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
+import { reRankRecommendationsInEngagement } from "@/services/recommendation";
 import {
   INTERVENTION_MODES,
   INTERVENTION_PHASES,
@@ -657,6 +658,23 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       if (updated.length > 0) {
         auditPayload.recommendationPriorityShift = priorityImpact.recommendationPriorityShift;
         auditPayload.recommendationsAffected = updated.length;
+      }
+    }
+
+    // 5. Dynamic re-ranking based on scoring metrics
+    if (targets.recommendationPriority) {
+      const reRankResult = await reRankRecommendationsInEngagement(event.engagementId, event.triggeredBy);
+
+      if (reRankResult.updated > 0) {
+        auditPayload.recommendationReRankingResult = {
+          count: reRankResult.updated,
+          recommendations: reRankResult.recommendations.map((r) => ({
+            id: r.id,
+            oldPriority: r.oldPriority,
+            newPriority: r.newPriority,
+            score: r.score,
+          })),
+        };
       }
     }
 

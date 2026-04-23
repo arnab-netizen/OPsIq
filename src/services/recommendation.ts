@@ -105,6 +105,7 @@ export async function createRecommendation(
       implementationPhase: input.implementationPhase ?? null,
       recommendedBy: actorId,
       score: scoreValue,
+      scoringMetrics: input.scoringInput ? JSON.stringify(input.scoringInput) : null,
     },
   });
 
@@ -253,4 +254,78 @@ export async function updateRecommendationPriorityFromScore(
   });
 
   return updated as { id: string; score: number; priority: string };
+}
+
+export async function reRankRecommendationsInEngagement(
+  engagementId: string,
+  actorId: string
+): Promise<{ updated: number; recommendations: Array<{ id: string; oldPriority: string; newPriority: string; score: number }> }> {
+  const recommendations = await db.recommendation.findMany({
+    where: { engagementId },
+    select: {
+      id: true,
+      priority: true,
+      score: true,
+      scoringMetrics: true,
+    },
+  });
+
+  const updated: Array<{ id: string; oldPriority: string; newPriority: string; score: number }> = [];
+
+  for (const rec of recommendations) {
+    if (!rec.scoringMetrics) {
+      continue;
+    }
+
+    try {
+      const metrics = typeof rec.scoringMetrics === "string"
+        ? JSON.parse(rec.scoringMetrics)
+        : rec.scoringMetrics;
+
+      const newScore = calculateRecommendationScore(metrics as RecommendationScoringInput);
+      const newPriority = mapScoreToPriority(newScore);
+
+      if (newPriority !== rec.priority) {
+        await db.recommendation.update({
+          where: { id: rec.id },
+          data: {
+            priority: newPriority,
+            score: newScore,
+            version: { increment: 1 },
+          },
+        });
+
+        await emitAuditEvent({
+          eventName: "RECOMMENDATION_REPRIORITIZED",
+          actorId,
+          entityType: "recommendation",
+          entityId: rec.id,
+          payload: {
+            oldPriority: rec.priority,
+            newPriority,
+            score: newScore,
+            source: "re-evaluation",
+          },
+          visibility: "internal",
+        });
+
+        updated.push({
+          id: rec.id,
+          oldPriority: rec.priority,
+          newPriority,
+          score: newScore,
+        });
+      }
+    } catch (error) {
+      logger.error("Failed to re-rank recommendation", {
+        recommendationId: rec.id,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+
+  return {
+    updated: updated.length,
+    recommendations: updated,
+  };
 }
