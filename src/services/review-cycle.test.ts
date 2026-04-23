@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describeDatabase } from "@/__tests__/skip-database-tests";
 import { db } from "@/lib/db";
 import {
   generateReviewCycle,
@@ -12,7 +13,7 @@ import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
 import { createFinding } from "./findings";
 
-describe("Review Cycle Service", () => {
+describeDatabase("Review Cycle Service", () => {
   let clientId: string;
   let engagementId: string;
   let actionId: string;

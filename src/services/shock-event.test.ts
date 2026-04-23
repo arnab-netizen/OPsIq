@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describeDatabase } from "@/__tests__/skip-database-tests";
 import { db } from "@/lib/db";
 import {
   createShockEvent,
@@ -10,7 +11,7 @@ import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
 import type { CreateShockEventInput } from "./shock-event";
 
-describe("ShockEvent Service", () => {
+describeDatabase("ShockEvent Service", () => {
   let clientId: string;
   let engagementId: string;
   let actorId = "test-actor-id";

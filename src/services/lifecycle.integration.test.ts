@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { describeDatabase } from "@/__tests__/skip-database-tests";
 import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -14,7 +15,7 @@ import {
 import { createEngagement } from "@/services/engagement";
 import { ValidationError, NotFoundError } from "@/infra/errors";
 
-describe("Evidence → Finding → Recommendation → Action lifecycle", () => {
+describeDatabase("Evidence → Finding → Recommendation → Action lifecycle", () => {
   let engagementId: string;
   let evidenceId: string;
   let findingId: string;

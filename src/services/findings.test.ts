@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describeDatabase } from "@/__tests__/skip-database-tests";
 import { db } from "@/lib/db";
 import {
   createFinding,
@@ -15,7 +16,7 @@ import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
 import type { CreateFindingInput } from "./findings";
 
-describe("Findings Service", () => {
+describeDatabase("Findings Service", () => {
   let clientId: string;
   let engagementId: string;
   let evidenceId: string;

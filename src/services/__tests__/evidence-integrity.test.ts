@@ -1,17 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describeDatabase } from "@/__tests__/skip-database-tests";
+
+// Mock all dependencies before importing services
+vi.mock("@/lib/db");
+vi.mock("@/infra/logger", () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/services/re-evaluation", () => ({
+  triggerReEvaluation: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/lib/optimistic-lock", () => ({
+  optimisticUpdate: vi.fn().mockResolvedValue(undefined),
+  withVersionCheck: (w: any) => w,
+  withVersionIncrement: (d: any) => d,
+}));
+vi.mock("@/lib/visibility", () => ({
+  assertEngagementAccess: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock("@/infra/idempotency", () => ({
+  withIdempotency: vi.fn((key, name, fn) => fn()),
+}));
+
 import { linkEvidenceToFinding, unlinkEvidenceFromFinding, validateFinding } from "@/services/findings";
 import { db } from "@/lib/db";
 import { ValidationError } from "@/infra/errors";
 
-vi.mock("@/infra/audit", () => ({
-  emitAuditEvent: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock("@/services/re-evaluation", () => ({
-  triggerReEvaluation: vi.fn().mockResolvedValue(undefined),
-}));
-
-describe("Evidence Integrity - Link/Unlink", () => {
+describeDatabase("Evidence Integrity - Link/Unlink", () => {
   const engagementId1 = "eng-1";
   const engagementId2 = "eng-2";
   const findingId1 = "finding-1";
