@@ -329,7 +329,7 @@ model Finding {
   impactArea      String?   @map("impact_area") // "revenue", "cost", "execution", "risk"
   severity        String    // "low" | "medium" | "high" | "critical"
   rootCause       String?   @map("root_cause")
-  linkedEvidence  String    @default("[]") @db.Text @map("linked_evidence") // array of Evidence IDs as JSON
+  linkedEvidence  String[]  @map("linked_evidence") // array of Evidence IDs
   createdBy       String?   @map("created_by") @db.Uuid
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
