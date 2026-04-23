@@ -5,6 +5,7 @@ import { NotFoundError, ConflictError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
+import { withIdempotency } from "@/infra/idempotency";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -205,12 +206,90 @@ export function mapScoreToPriority(score: number): string {
 
 export async function createRecommendation(
   input: CreateRecommendationInput,
-  actorId: string
+  actorId: string,
+  idempotencyKey?: string
 ) {
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
+
+  if (idempotencyKey) {
+    const result = await withIdempotency(
+      idempotencyKey,
+      "recommendation.create",
+      async () => {
+        return await db.$transaction(async (tx) => {
+          let derivedPriority = input.priority;
+          let scoreValue: number | null = null;
+          let scoreBreakdown: ScoreBreakdown | null = null;
+
+          if (input.scoringInput) {
+            scoreBreakdown = calculateRecommendationScoreBreakdown(input.scoringInput, input.class);
+            scoreValue = scoreBreakdown.finalScore;
+            derivedPriority = mapScoreToPriority(scoreValue);
+          }
+
+          const recommendation = await tx.recommendation.create({
+            data: {
+              engagementId: input.engagementId,
+              findingId: input.findingId ?? null,
+              priority: derivedPriority,
+              title: input.title,
+              description: input.description ?? null,
+              expectedImpact: input.expectedImpact ?? null,
+              implementationPhase: input.implementationPhase ?? null,
+              class: input.class ?? null,
+              recommendedBy: actorId,
+              score: scoreValue,
+              scoringMetrics: input.scoringInput ? JSON.stringify(input.scoringInput) : null,
+              scoreBreakdown: scoreBreakdown ? JSON.stringify(scoreBreakdown) : null,
+            },
+          });
+
+          await emitAuditEvent({
+            eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
+            actorId,
+            entityType: "recommendation",
+            entityId: recommendation.id,
+            payload: {
+              engagementId: input.engagementId,
+              priority: input.priority,
+            },
+            visibility: "internal",
+          });
+
+          return recommendation;
+        });
+      },
+      input,
+      actorId
+    );
+
+    if (!result.isNew) {
+      logger.info("Recommendation creation - idempotency replay", {
+        recommendationId: result.result.id,
+        engagementId: input.engagementId,
+      });
+    } else {
+      await triggerReEvaluation({
+        changeType: "recommendation",
+        entityType: "recommendation",
+        entityId: result.result.id,
+        engagementId: input.engagementId,
+        severity: (input.priority === "critical" || input.priority === "urgent" ? "high" : "medium") as "low" | "medium" | "high" | "critical",
+        description: `Recommendation created: ${input.title}`,
+        triggeredBy: actorId,
+      });
+
+      logger.info("Recommendation created", {
+        recommendationId: result.result.id,
+        engagementId: input.engagementId,
+      });
+    }
+
+    return result.result;
+  }
 
   let derivedPriority = input.priority;
   let scoreValue: number | null = null;
@@ -251,7 +330,6 @@ export async function createRecommendation(
     visibility: "internal",
   });
 
-  // Trigger re-evaluation due to new recommendation
   await triggerReEvaluation({
     changeType: "recommendation",
     entityType: "recommendation",
