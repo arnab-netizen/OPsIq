@@ -18,10 +18,12 @@ export interface CreateFindingInput {
   stageId?: string;
   primaryEvidenceId: string;
   title: string;
-  summary: string;
+  summary?: string;
+  statement?: string; // Alias for summary
   severity: string;
   impactArea: string;
   confidenceScore?: number;
+  confidenceLabel?: string; // Alias for confidenceScore
   hypothesis?: string;
   rootCause?: string;
   consequence?: string;
@@ -67,7 +69,8 @@ export async function createFinding(
   if (!input.title || input.title.trim().length === 0) {
     throw new ValidationError("title is required");
   }
-  if (!input.summary || input.summary.trim().length === 0) {
+  const summary = input.summary || input.statement;
+  if (!summary || summary.trim().length === 0) {
     throw new ValidationError("summary is required");
   }
 
@@ -92,7 +95,7 @@ export async function createFinding(
     data: {
       engagementId: input.engagementId,
       title: input.title,
-      description: input.summary,
+      description: summary,
       findingType: findingType,
       impactArea: input.impactArea,
       severity: input.severity,
@@ -135,12 +138,19 @@ export async function updateFinding(
   input: UpdateFindingInput,
   actorId: string
 ): Promise<{ id: string }> {
-  // Validate finding exists
+  // Validate finding exists and check version
   const existing = await db.finding.findUnique({
     where: { id: findingId },
-    select: { id: true, engagementId: true },
+    select: { id: true, engagementId: true, version: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
+
+  // Check for version conflict
+  if (existing.version !== input.version) {
+    throw new ValidationError(
+      `Version conflict: current version is ${existing.version}, expected ${input.version}`
+    );
+  }
 
   // Validate severity if provided
   if (input.severity) {
@@ -168,6 +178,8 @@ export async function updateFinding(
   if (input.severity) data.severity = input.severity;
   if (input.impactArea) data.impactArea = input.impactArea;
   if (input.rootCause !== undefined) data.rootCause = input.rootCause;
+  // Increment version on update
+  data.version = existing.version + 1;
 
   const updated = await db.finding.update({
     where: { id: findingId },
@@ -215,9 +227,15 @@ export async function validateFinding(
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
 
-  if (existing.linkedEvidence.length === 0) {
+  if (existing.linkedEvidence && existing.linkedEvidence.length === 0) {
     throw new ValidationError("Finding must have at least one linked evidence before validation");
   }
+
+  // Update finding status to validated
+  await db.finding.update({
+    where: { id: findingId },
+    data: { status: "validated" },
+  });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_VALIDATED,
@@ -254,6 +272,12 @@ export async function disputeFinding(
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
 
+  // Update finding status to disputed
+  await db.finding.update({
+    where: { id: findingId },
+    data: { status: "disputed" },
+  });
+
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_DISPUTED,
     actorId,
@@ -279,21 +303,30 @@ export async function supersedeFinding(
   });
   if (!oldFinding) throw new NotFoundError("Finding", oldFindingId);
 
+  // Handle summary/statement field
+  const summary = newFindingInput.summary || newFindingInput.statement;
+
   // Create new finding using the new field names
   const findingType = newFindingInput.impactArea === "revenue" ? "market" : "operational";
   const newFinding = await db.finding.create({
     data: {
       engagementId: newFindingInput.engagementId,
       title: newFindingInput.title,
-      description: newFindingInput.summary || null,
+      description: summary || null,
       findingType: findingType,
       impactArea: newFindingInput.impactArea,
       severity: newFindingInput.severity,
       rootCause: newFindingInput.rootCause || null,
-      linkedEvidence: newFindingInput.primaryEvidenceId ? [newFindingInput.primaryEvidenceId] : [],
+      linkedEvidence: newFindingInput.primaryEvidenceId || null,
       createdBy: actorId,
     },
     select: { id: true, engagementId: true },
+  });
+
+  // Update old finding status to superseded
+  await db.finding.update({
+    where: { id: oldFindingId },
+    data: { status: "superseded" },
   });
 
   await emitAuditEvent({
@@ -496,6 +529,9 @@ export async function getFindingDetail(
   impactArea: string | null;
   rootCause: string | null;
   linkedEvidence: string[];
+  status: string;
+  version: number;
+  provisionalFlag: boolean;
   createdAt: Date;
   updatedAt: Date;
   evidenceLinks?: Array<{
@@ -539,6 +575,9 @@ export async function getFindingDetail(
       impactArea: true,
       rootCause: true,
       linkedEvidence: true,
+      status: true,
+      version: true,
+      provisionalFlag: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -547,4 +586,5 @@ export async function getFindingDetail(
   if (!detailFinding) throw new NotFoundError("Finding", findingId);
 
   return detailFinding;
+}
 }

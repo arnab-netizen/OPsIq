@@ -330,6 +330,9 @@ model Finding {
   severity        String    // "low" | "medium" | "high" | "critical"
   rootCause       String?   @map("root_cause")
   linkedEvidence  String[]  @map("linked_evidence") // array of Evidence IDs
+  status          String    @default("draft")
+  version         Int       @default(1)
+  provisionalFlag Boolean   @default(false) @map("provisional_flag")
   createdBy       String?   @map("created_by") @db.Uuid
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
