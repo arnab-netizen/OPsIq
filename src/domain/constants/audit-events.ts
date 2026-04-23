@@ -146,6 +146,11 @@ export const AUDIT_EVENTS = {
   // Review
   REVIEW_CYCLE_STARTED: "review.cycle_started",
   REVIEW_CYCLE_COMPLETED: "review.cycle_completed",
+  REVIEW_DUE_FLAGGED: "review.due_flagged",
+
+  // Escalation
+  ESCALATION_ALERT_HIGH_PRIORITY_OVERDUE: "escalation.high_priority_overdue",
+  ESCALATION_ALERT_KPI_DETERIORATION_PATTERN: "escalation.kpi_deterioration_pattern",
 
   // Human Factors
   HUMAN_FACTORS_ASSESSED: "human_factors.assessed",

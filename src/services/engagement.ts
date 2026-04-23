@@ -381,3 +381,79 @@ export async function listEngagements(
 
   return { engagements, total, limit, offset };
 }
+
+export async function computeNextReviewDate(
+  engagementId: string,
+  actorId: string
+): Promise<{ nextReviewDate: Date; isDueSoon: boolean; daysUntilDue: number }> {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    include: {
+      conditionProfiles: {
+        where: { isCurrent: true },
+        select: { urgencyLevel: true },
+      },
+    },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  const latestReview = await db.reviewCycle.findFirst({
+    where: { engagementId },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true, status: true },
+  });
+
+  const baseInterval = 7; // Base interval in days
+  let intervalAdjustment = 0;
+
+  const condition = engagement.conditionProfiles[0];
+  if (condition) {
+    if (condition.urgencyLevel === "critical") {
+      intervalAdjustment = -5; // Review in 2 days
+    } else if (condition.urgencyLevel === "high") {
+      intervalAdjustment = -3; // Review in 4 days
+    } else if (condition.urgencyLevel === "medium") {
+      intervalAdjustment = 0; // Review in 7 days
+    } else {
+      intervalAdjustment = 3; // Review in 10 days
+    }
+  }
+
+  const reviewInterval = Math.max(1, baseInterval + intervalAdjustment);
+  const lastReviewDate = latestReview?.createdAt || engagement.startDate || new Date();
+  const nextReviewDate = new Date(lastReviewDate.getTime() + reviewInterval * 24 * 60 * 60 * 1000);
+
+  const now = new Date();
+  const daysUntilDue = Math.ceil(
+    (nextReviewDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)
+  );
+  const isDueSoon = daysUntilDue <= 0 || daysUntilDue <= 2;
+
+  if (isDueSoon) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.REVIEW_DUE_FLAGGED,
+      actorId,
+      entityType: "engagement",
+      entityId: engagementId,
+      payload: {
+        engagementId,
+        nextReviewDate: nextReviewDate.toISOString(),
+        daysUntilDue,
+        isDueSoon,
+      },
+      visibility: "internal",
+    });
+
+    logger.info("Review due flagged", {
+      engagementId,
+      nextReviewDate,
+      daysUntilDue,
+    });
+  }
+
+  return {
+    nextReviewDate,
+    isDueSoon,
+    daysUntilDue,
+  };
+}

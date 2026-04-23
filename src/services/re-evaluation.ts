@@ -3,6 +3,8 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { reRankRecommendationsInEngagement } from "@/services/recommendation";
+import { checkEngagementEscalations } from "@/services/escalation";
+import { computeNextReviewDate } from "@/services/engagement";
 import {
   INTERVENTION_MODES,
   INTERVENTION_PHASES,
@@ -703,6 +705,17 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       interventionModeImpact: interventionModeImpact.recommendedMode,
       healthStatus: healthStatusImpact.recommendedStatus,
     });
+
+    // Phase 7: Post-re-evaluation escalation and review checks
+    try {
+      await checkEngagementEscalations(event.engagementId, event.triggeredBy);
+      await computeNextReviewDate(event.engagementId, event.triggeredBy);
+    } catch (escalationError) {
+      logger.warn("Escalation/review check failed (non-blocking)", {
+        engagementId: event.engagementId,
+        error: escalationError instanceof Error ? escalationError.message : String(escalationError),
+      });
+    }
 
     return {
       targets,
