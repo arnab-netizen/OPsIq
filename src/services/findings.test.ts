@@ -48,13 +48,11 @@ describe("Findings Service", () => {
     const evidence = await createEvidence(
       {
         engagementId,
-        category: "financial",
-        type: "revenue_decline",
-        sourceType: "metric",
-        sourceLabel: "Monthly revenue reports",
-        captureMethod: "extracted",
-        capturedAt: "2026-04-20T10:00:00Z",
-        statement: "Revenue down 25% YoY",
+        title: "Monthly revenue reports",
+        description: "Financial metrics showing revenue decline",
+        evidenceType: "metric",
+        sourceReference: "Q1 2026 Financial Reports",
+        severity: "high",
       },
       actorId
     );
@@ -72,11 +70,11 @@ describe("Findings Service", () => {
     it("should create finding with valid input", async () => {
       const input: CreateFindingInput = {
         engagementId,
+        primaryEvidenceId: evidenceId,
         title: "Declining Cash Position",
-        statement: "The company is experiencing a significant cash decline due to operational losses",
+        summary: "The company is experiencing a significant cash decline due to operational losses",
         severity: "critical",
-        confidenceLabel: "high",
-        clientVisibilityStatus: "client_visible",
+        impactArea: "revenue",
       };
 
       const result = await createFinding(input, actorId);

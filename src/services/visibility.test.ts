@@ -43,14 +43,11 @@ describe("Visibility Enforcement", () => {
     const internalEvidence = await createEvidence(
       {
         engagementId,
-        category: "operational",
-        type: "internal_process",
-        sourceType: "observation",
-        sourceLabel: "Internal audit",
-        captureMethod: "manual",
-        capturedAt: "2026-04-22T10:00:00Z",
-        visibilityClassification: "internal",
-        statement: "Internal process issue",
+        title: "Internal audit observation",
+        description: "Internal process issue",
+        evidenceType: "observation",
+        sourceReference: "Internal audit",
+        severity: "medium",
       },
       actorId
     );
@@ -60,14 +57,11 @@ describe("Visibility Enforcement", () => {
     const clientEvidence = await createEvidence(
       {
         engagementId,
-        category: "financial",
-        type: "revenue_analysis",
-        sourceType: "document",
-        sourceLabel: "Financial reports",
-        captureMethod: "uploaded",
-        capturedAt: "2026-04-22T10:00:00Z",
-        visibilityClassification: "client_visible",
-        statement: "Revenue trend analysis",
+        title: "Financial reports",
+        description: "Revenue trend analysis",
+        evidenceType: "document",
+        sourceReference: "Q1 2026 Financial Analysis",
+        severity: "high",
       },
       actorId
     );
@@ -77,11 +71,11 @@ describe("Visibility Enforcement", () => {
     const internalFinding = await createFinding(
       {
         engagementId,
+        primaryEvidenceId: internalEvidenceId,
         title: "Internal Management Issue",
-        statement: "Internal management concern not to be shared",
+        summary: "Internal management concern requiring attention",
         severity: "medium",
-        confidenceLabel: "high",
-        clientVisibilityStatus: "internal",
+        impactArea: "execution",
       },
       actorId
     );
@@ -91,11 +85,11 @@ describe("Visibility Enforcement", () => {
     const clientFinding = await createFinding(
       {
         engagementId,
+        primaryEvidenceId: clientVisibleEvidenceId,
         title: "Financial Performance Finding",
-        statement: "Financial analysis finding that can be shared",
+        summary: "Financial analysis finding that can be shared with client",
         severity: "high",
-        confidenceLabel: "high",
-        clientVisibilityStatus: "client_visible",
+        impactArea: "revenue",
       },
       actorId
     );
@@ -105,7 +99,7 @@ describe("Visibility Enforcement", () => {
   afterAll(async () => {
     try {
       await (db.finding.deleteMany as any)({ where: { engagementId } });
-      await (db.evidenceItem.deleteMany as any)({ where: { engagementId } });
+      await (db.evidence.deleteMany as any)({ where: { engagementId } });
       await (db.engagement.deleteMany as any)({ where: { id: engagementId } });
       await (db.clientAccount.deleteMany as any)({ where: { id: clientId } });
     } catch {
