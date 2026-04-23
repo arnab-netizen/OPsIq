@@ -434,6 +434,7 @@ model IdempotencyRecord {
   idempotencyKey String  @unique @map("idempotency_key")
   operationName String   @map("operation_name")
   status        String   @default("pending")
+  payload       String?  @map("payload")
   responseCode  Int?     @map("response_code")
   responseBody  String?  @map("response_body")
   createdAt     DateTime @default(now()) @map("created_at")

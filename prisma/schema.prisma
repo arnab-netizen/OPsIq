@@ -436,6 +436,7 @@ model IdempotencyRecord {
   idempotencyKey String  @unique @map("idempotency_key")
   operationName String   @map("operation_name")
   status        String   @default("pending") // "pending" | "completed" | "failed"
+  payload       String?  @map("payload") // SHA256 hash of request payload for validation
   responseCode  Int?     @map("response_code")
   responseBody  Json?    @map("response_body")
   createdAt     DateTime @default(now()) @map("created_at")

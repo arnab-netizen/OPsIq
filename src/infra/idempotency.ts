@@ -1,11 +1,17 @@
 import { db } from "@/lib/db";
-import { Prisma } from "@/generated/prisma/client";
-import { DuplicateSubmissionError } from "@/infra/errors";
+import { DuplicateSubmissionError, ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { createHash } from "crypto";
 
 const DEFAULT_TTL_HOURS = 24;
+
+function computePayloadHash(payload: unknown): string | null {
+  if (payload === undefined) return null;
+  const normalized = JSON.stringify(payload);
+  return createHash("sha256").update(normalized).digest("hex");
+}
 
 export interface IdempotencyResult<T> {
   isNew: boolean;
@@ -21,12 +27,19 @@ export async function withIdempotency<T>(
   ttlHours: number = DEFAULT_TTL_HOURS
 ): Promise<IdempotencyResult<T>> {
   const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+  const incomingPayloadHash = computePayloadHash(payload);
 
   const existing = await db.idempotencyRecord.findUnique({
     where: { idempotencyKey },
   });
 
   if (existing) {
+    if (existing.payload !== null && incomingPayloadHash !== existing.payload) {
+      throw new ValidationError(
+        "Idempotency key reused with different payload"
+      );
+    }
+
     if (existing.status === "completed" && existing.responseBody !== null) {
       logger.info("Idempotency cache hit", {
         idempotencyKey,
@@ -47,7 +60,10 @@ export async function withIdempotency<T>(
         });
       }
 
-      return { isNew: false, result: existing.responseBody as T };
+      const cachedResult = typeof existing.responseBody === "string"
+        ? JSON.parse(existing.responseBody)
+        : existing.responseBody;
+      return { isNew: false, result: cachedResult as T };
     }
 
     if (existing.status === "pending") {
@@ -66,6 +82,7 @@ export async function withIdempotency<T>(
           operationName,
           status: "pending",
           expiresAt,
+          payload: incomingPayloadHash,
         },
       });
 
@@ -77,7 +94,7 @@ export async function withIdempotency<T>(
       data: {
         status: "completed",
         responseCode: 200,
-        responseBody: (result ?? Prisma.DbNull) as Prisma.InputJsonValue,
+        responseBody: result !== null && result !== undefined ? JSON.stringify(result) : null,
         completedAt: new Date(),
       },
     });

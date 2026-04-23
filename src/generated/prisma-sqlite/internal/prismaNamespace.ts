@@ -2475,6 +2475,7 @@ export const IdempotencyRecordScalarFieldEnum = {
   idempotencyKey: 'idempotencyKey',
   operationName: 'operationName',
   status: 'status',
+  payload: 'payload',
   responseCode: 'responseCode',
   responseBody: 'responseBody',
   createdAt: 'createdAt',
