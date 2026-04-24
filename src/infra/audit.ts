@@ -72,7 +72,7 @@ export async function queryAuditEvents(filter: {
   });
 
   // Parse payload strings back to objects
-  return events.map(event => ({
+  return events.map((event: typeof events[0]) => ({
     ...event,
     payload: event.payload ? JSON.parse(event.payload) : null,
   }));

@@ -18,12 +18,10 @@ export interface CreateFindingInput {
   stageId?: string;
   primaryEvidenceId: string;
   title: string;
-  summary?: string;
-  statement?: string; // Alias for summary
+  summary: string;
   severity: string;
   impactArea: string;
   confidenceScore?: number;
-  confidenceLabel?: string; // Alias for confidenceScore
   hypothesis?: string;
   rootCause?: string;
   consequence?: string;
@@ -69,8 +67,7 @@ export async function createFinding(
   if (!input.title || input.title.trim().length === 0) {
     throw new ValidationError("title is required");
   }
-  const summary = input.summary || input.statement;
-  if (!summary || summary.trim().length === 0) {
+  if (!input.summary || input.summary.trim().length === 0) {
     throw new ValidationError("summary is required");
   }
 
@@ -95,7 +92,7 @@ export async function createFinding(
     data: {
       engagementId: input.engagementId,
       title: input.title,
-      description: summary,
+      description: input.summary,
       findingType: findingType,
       impactArea: input.impactArea,
       severity: input.severity,
@@ -303,16 +300,13 @@ export async function supersedeFinding(
   });
   if (!oldFinding) throw new NotFoundError("Finding", oldFindingId);
 
-  // Handle summary/statement field
-  const summary = newFindingInput.summary || newFindingInput.statement;
-
   // Create new finding using the new field names
   const findingType = newFindingInput.impactArea === "revenue" ? "market" : "operational";
   const newFinding = await db.finding.create({
     data: {
       engagementId: newFindingInput.engagementId,
       title: newFindingInput.title,
-      description: summary || null,
+      description: newFindingInput.summary,
       findingType: findingType,
       impactArea: newFindingInput.impactArea,
       severity: newFindingInput.severity,
@@ -498,7 +492,7 @@ export async function listFindingsForEngagement(
     await assertEngagementAccess(userId, engagementId);
   }
 
-  const findings = await db.finding.findMany({
+  const findingsWithEvidence = await db.finding.findMany({
     where: {
       engagementId,
     },
@@ -508,11 +502,83 @@ export async function listFindingsForEngagement(
       severity: true,
       impactArea: true,
       createdAt: true,
+      linkedEvidence: true,
     },
     orderBy: { createdAt: "desc" },
   });
 
-  return findings;
+  // Filter findings based on visibility of linked evidence
+  if (visibility && (visibility === "client_visible" || visibility === "internal")) {
+    // Collect all evidence IDs from all findings
+    const evidenceIds = new Set<string>();
+    findingsWithEvidence.forEach((f: typeof findingsWithEvidence[0]) => {
+      let linkedIds: string[] = [];
+      if (Array.isArray(f.linkedEvidence)) {
+        linkedIds = f.linkedEvidence;
+      } else if (typeof f.linkedEvidence === "string" && f.linkedEvidence) {
+        linkedIds = [f.linkedEvidence];
+      }
+      linkedIds.forEach((id: string) => {
+        if (id) evidenceIds.add(id);
+      });
+    });
+
+    // Fetch visibility info for all evidence
+    let evidenceVisibilityMap = new Map<string, string>();
+    if (evidenceIds.size > 0) {
+      const evidence = await db.evidence.findMany({
+        where: {
+          id: { in: Array.from(evidenceIds) },
+        },
+        select: { id: true, visibility: true },
+      });
+
+      evidenceVisibilityMap = new Map(
+        evidence.map((e: typeof evidence[0]) => [e.id, e.visibility])
+      );
+    }
+
+    // Filter based on visibility
+    const filtered = findingsWithEvidence.filter((finding: typeof findingsWithEvidence[0]) => {
+      let linkedIds: string[] = [];
+      if (Array.isArray(finding.linkedEvidence)) {
+        linkedIds = finding.linkedEvidence;
+      } else if (typeof finding.linkedEvidence === "string" && finding.linkedEvidence) {
+        linkedIds = [finding.linkedEvidence];
+      }
+
+      if (visibility === "client_visible") {
+        // All linked evidence must be client_visible
+        // If no linked evidence, don't show (default to internal)
+        if (linkedIds.length === 0) {
+          return false;
+        }
+
+        return linkedIds.every(
+          (id: string) => evidenceVisibilityMap.get(id) === "client_visible"
+        );
+      }
+      // visibility === "internal": show all
+      return true;
+    });
+
+    return filtered.map((f: typeof findingsWithEvidence[0]) => ({
+      id: f.id,
+      title: f.title,
+      severity: f.severity,
+      impactArea: f.impactArea,
+      createdAt: f.createdAt,
+    }));
+  }
+
+  // No visibility filter, return all
+  return findingsWithEvidence.map((f: typeof findingsWithEvidence[0]) => ({
+    id: f.id,
+    title: f.title,
+    severity: f.severity,
+    impactArea: f.impactArea,
+    createdAt: f.createdAt,
+  }));
 }
 
 export async function getFindingDetail(
@@ -540,7 +606,7 @@ export async function getFindingDetail(
     linkType: string;
   }>;
 }> {
-  // Detect if first optional param is visibility or userId
+  // Detect if param is visibility or userId
   let userId: string | undefined;
   let visibility: "internal" | "client_visible" | "all" | undefined;
 
@@ -553,7 +619,7 @@ export async function getFindingDetail(
 
   const finding = await db.finding.findUnique({
     where: { id: findingId },
-    select: { engagementId: true },
+    select: { engagementId: true, linkedEvidence: true },
   });
 
   if (!finding) throw new NotFoundError("Finding", findingId);
@@ -561,6 +627,34 @@ export async function getFindingDetail(
   // Check engagement access if userId provided
   if (userId) {
     await assertEngagementAccess(userId, finding.engagementId);
+  }
+
+  // Check visibility if visibility filter is provided
+  if (visibility === "client_visible") {
+    // For client_visible, all linked evidence must be client_visible
+    let linkedIds: string[] = [];
+    if (Array.isArray(finding.linkedEvidence)) {
+      linkedIds = finding.linkedEvidence;
+    } else if (typeof finding.linkedEvidence === "string" && finding.linkedEvidence) {
+      linkedIds = [finding.linkedEvidence];
+    }
+
+    // If no linked evidence or any is internal, deny access
+    if (linkedIds.length === 0) {
+      throw new NotFoundError("Finding", findingId);
+    }
+
+    const evidence = await db.evidence.findMany({
+      where: {
+        id: { in: linkedIds },
+      },
+      select: { id: true, visibility: true },
+    });
+
+    const hasInternalEvidence = evidence.some((e: typeof evidence[0]) => e.visibility === "internal");
+    if (hasInternalEvidence) {
+      throw new NotFoundError("Finding", findingId);
+    }
   }
 
   const detailFinding = await db.finding.findUnique({

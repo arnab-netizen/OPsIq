@@ -245,7 +245,7 @@ describe("Evidence Service", () => {
 
   describe.skip("createFileBlob", () => {
     it("should create file blob", async () => {
-      const input:  = {
+      const input = {
         storageKey: "s3://bucket/files/evidence-2026-04-22.pdf",
         fileName: "evidence.pdf",
         mimeType: "application/pdf",

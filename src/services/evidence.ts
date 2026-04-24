@@ -18,18 +18,11 @@ import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
 
 export interface CreateEvidenceInput {
   engagementId: string;
-  title?: string;
+  title: string;
   description?: string;
-  evidenceType?: "document" | "interview" | "metric" | "observation";
+  evidenceType: "document" | "interview" | "metric" | "observation";
   sourceReference?: string;
   severity?: "low" | "medium" | "high" | "critical";
-  // Alternative field names for compatibility
-  category?: string;
-  type?: string;
-  sourceType?: string;
-  sourceLabel?: string;
-  captureMethod?: string;
-  capturedAt?: string;
 }
 
 export interface UpdateEvidenceInput {
@@ -55,36 +48,34 @@ export async function createEvidence(
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
-  // Handle alternative field names
-  const title = input.title || input.sourceLabel || "Evidence";
-  const evidenceType = input.evidenceType || input.type || "document";
-  const sourceReference = input.sourceReference || input.sourceType || null;
-  const severity = input.severity || "medium";
-
   // Validate evidence type
   const validTypes = ["document", "interview", "metric", "observation"];
-  if (!validTypes.includes(evidenceType)) {
+  if (!validTypes.includes(input.evidenceType)) {
     throw new ValidationError(
-      `Invalid evidence type: ${evidenceType}. Must be one of: ${validTypes.join(", ")}`
+      `Invalid evidence type: ${input.evidenceType}. Must be one of: ${validTypes.join(", ")}`
     );
   }
 
-  const idempotencyKey = `evidence-create:${input.engagementId}:${title}:${actorId}`;
+  const idempotencyKey = `evidence-create:${input.engagementId}:${input.title}:${actorId}`;
 
   const result = await withIdempotency(
     idempotencyKey,
     "evidence.create",
     async () => {
+      // Determine visibility based on evidence type
+      const visibility = input.evidenceType === "document" ? "client_visible" : "internal";
+
       const evidence = await db.evidence.create({
         data: {
           engagementId: input.engagementId,
-          title: title,
+          title: input.title,
           description: input.description ?? null,
-          evidenceType: evidenceType,
-          sourceReference: sourceReference,
-          severity: severity,
+          evidenceType: input.evidenceType,
+          sourceReference: input.sourceReference ?? null,
+          severity: input.severity ?? null,
           submittedBy: actorId,
           status: "submitted",
+          visibility,
         },
       });
       return { id: evidence.id };
@@ -98,8 +89,8 @@ export async function createEvidence(
     entityId: result.result.id,
     payload: {
       engagementId: input.engagementId,
-      evidenceType: evidenceType,
-      title: title,
+      evidenceType: input.evidenceType,
+      title: input.title,
     },
     visibility: "internal",
   });
@@ -110,8 +101,8 @@ export async function createEvidence(
     entityType: "evidence",
     entityId: result.result.id,
     engagementId: input.engagementId,
-    severity: severity as "low" | "medium" | "high" | "critical",
-    description: `Evidence submitted: ${title}`,
+    severity: (input.severity ?? "medium") as "low" | "medium" | "high" | "critical",
+    description: `Evidence submitted: ${input.title}`,
     triggeredBy: actorId,
   });
 
@@ -209,6 +200,11 @@ export async function getEvidenceById(
 
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
+  // Check visibility if visibility filter is provided
+  if (visibility === "client_visible" && evidence.visibility === "internal") {
+    throw new NotFoundError("Evidence", evidenceId);
+  }
+
   // Check engagement access if userId provided
   if (userId) {
     await assertEngagementAccess(userId, evidence.engagementId);
@@ -268,6 +264,8 @@ export async function listEvidence(
   const where = {
     ...(engagementId && { engagementId }),
     ...(status && { status }),
+    ...(visibility === "internal" && { visibility: "internal" }),
+    ...(visibility === "client_visible" && { visibility: "client_visible" }),
   };
 
   const [evidence, total] = await Promise.all([

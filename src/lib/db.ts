@@ -61,7 +61,7 @@ async function createPrismaClient() {
       auditEvent: {
         payload: {
           needs: { payload: true },
-          compute(event) {
+          compute(event: { payload: string | null }) {
             if (!event.payload) return null;
             if (typeof event.payload === "string") {
               try {
