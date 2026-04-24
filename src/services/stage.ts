@@ -15,16 +15,12 @@ export interface CreateStageInput {
   title: string;
   description?: string;
   status: GovernedStageState;
-  dueAt?: string;
-  ownerId?: string;
 }
 
 export interface UpdateStageInput {
   title?: string;
   description?: string;
   status?: GovernedStageState;
-  dueAt?: string;
-  ownerId?: string;
   version: number;
 }
 
@@ -120,8 +116,6 @@ export async function updateStage(
       title: input.title ?? undefined,
       description: input.description ?? undefined,
       status: input.status ?? undefined,
-      dueAt: input.dueAt ? new Date(input.dueAt) : undefined,
-      ownerId: input.ownerId ?? undefined,
     }),
   });
 
@@ -157,14 +151,7 @@ export async function blockStage(
     throw new ValidationError("Version mismatch");
   }
 
-  // Note: Stage blocking is not tracked in the schema
-  await db.stage.update({
-    where: { id },
-    data: withVersionIncrement({
-      blockerReason: input.blockerReason,
-      blockedAt: new Date(),
-    }),
-  });
+  // Note: Stage blocking is not tracked in the schema - tracking via audit event only
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.STAGE_BLOCKED,
@@ -208,11 +195,7 @@ export async function unblockStage(
     throw new ValidationError("Version mismatch");
   }
 
-  // Note: Stage blocking is not tracked in the schema
-  await db.stage.update({
-    where: { id },
-    data: withVersionIncrement({}),
-  });
+  // Note: Stage blocking is not tracked in the schema - tracking via audit event only
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.STAGE_UNBLOCKED,
