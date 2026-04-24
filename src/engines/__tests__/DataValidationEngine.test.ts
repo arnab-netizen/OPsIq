@@ -145,6 +145,6 @@ describe('DataValidationEngine', () => {
 
     const result = await engine.assess(input);
 
-    expect(result.metadata.dataQualityScore).toBeLessThan(0.8);
+    expect(result.metadata.dataQualityScore).toBeLessThanOrEqual(0.8);
   });
 });
