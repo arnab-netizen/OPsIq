@@ -18,11 +18,20 @@ import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
 
 export interface CreateEvidenceInput {
   engagementId: string;
-  title: string;
+  title?: string;
   description?: string;
-  evidenceType: "document" | "interview" | "metric" | "observation";
+  evidenceType?: "document" | "interview" | "metric" | "observation";
   sourceReference?: string;
   severity?: "low" | "medium" | "high" | "critical";
+  // Backward compatibility with old field names
+  category?: string;
+  type?: string;
+  sourceType?: string;
+  sourceLabel?: string;
+  sourceOwner?: string;
+  captureMethod?: string;
+  capturedAt?: string;
+  statement?: string;
 }
 
 export interface UpdateEvidenceInput {
@@ -41,7 +50,41 @@ export interface UpdateEvidenceInput {
 export async function createEvidence(
   input: CreateEvidenceInput,
   actorId: string
-): Promise<{ id: string }> {
+): Promise<{ id: string; engagementId?: string }> {
+  // Map old field names to new ones for backward compatibility
+  const title = input.title || input.sourceLabel || "";
+
+  // Map sourceType to evidenceType
+  let mappedSourceType = input.sourceType || input.evidenceType || "observation";
+  if (mappedSourceType === "client_feedback") {
+    mappedSourceType = "observation";
+  }
+
+  const evidenceType = (input.evidenceType || mappedSourceType) as "document" | "interview" | "metric" | "observation";
+  const sourceReference = input.sourceReference || input.sourceType || null;
+  const description = input.description || input.statement || null;
+
+  // Validate category if using old interface
+  if (input.category) {
+    const validCategories = ["financial", "operational", "human", "resilience", "client", "commercial", "leadership", "execution"];
+    if (!validCategories.includes(input.category)) {
+      throw new ValidationError(`Invalid evidence category: ${input.category}`);
+    }
+  }
+
+  // Validate source type if using old interface
+  if (input.sourceType && !["document", "interview", "metric", "observation", "client_feedback"].includes(input.sourceType)) {
+    throw new ValidationError(`Invalid source type: ${input.sourceType}`);
+  }
+
+  // Validate capture method if using old interface
+  if (input.captureMethod) {
+    const validMethods = ["uploaded", "manual", "extracted", "generated"];
+    if (!validMethods.includes(input.captureMethod)) {
+      throw new ValidationError(`Invalid capture method: ${input.captureMethod}`);
+    }
+  }
+
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
@@ -50,28 +93,28 @@ export async function createEvidence(
 
   // Validate evidence type
   const validTypes = ["document", "interview", "metric", "observation"];
-  if (!validTypes.includes(input.evidenceType)) {
+  if (!validTypes.includes(evidenceType)) {
     throw new ValidationError(
-      `Invalid evidence type: ${input.evidenceType}. Must be one of: ${validTypes.join(", ")}`
+      `Invalid evidence type: ${evidenceType}. Must be one of: ${validTypes.join(", ")}`
     );
   }
 
-  const idempotencyKey = `evidence-create:${input.engagementId}:${input.title}:${actorId}`;
+  const idempotencyKey = `evidence-create:${input.engagementId}:${title}:${actorId}`;
 
   const result = await withIdempotency(
     idempotencyKey,
     "evidence.create",
     async () => {
       // Determine visibility based on evidence type
-      const visibility = input.evidenceType === "document" ? "client_visible" : "internal";
+      const visibility = evidenceType === "document" ? "client_visible" : "internal";
 
       const evidence = await db.evidence.create({
         data: {
           engagementId: input.engagementId,
-          title: input.title,
-          description: input.description ?? null,
-          evidenceType: input.evidenceType,
-          sourceReference: input.sourceReference ?? null,
+          title,
+          description,
+          evidenceType,
+          sourceReference,
           severity: input.severity ?? null,
           submittedBy: actorId,
           status: "submitted",
@@ -89,8 +132,8 @@ export async function createEvidence(
     entityId: result.result.id,
     payload: {
       engagementId: input.engagementId,
-      evidenceType: input.evidenceType,
-      title: input.title,
+      evidenceType,
+      title,
     },
     visibility: "internal",
   });
@@ -102,7 +145,7 @@ export async function createEvidence(
     entityId: result.result.id,
     engagementId: input.engagementId,
     severity: (input.severity ?? "medium") as "low" | "medium" | "high" | "critical",
-    description: `Evidence submitted: ${input.title}`,
+    description: `Evidence submitted: ${title}`,
     triggeredBy: actorId,
   });
 
@@ -111,7 +154,7 @@ export async function createEvidence(
     engagementId: input.engagementId,
   });
 
-  return { id: result.result.id };
+  return { id: result.result.id, engagementId: input.engagementId };
 }
 
 export async function updateEvidence(
@@ -220,7 +263,16 @@ export async function getEvidenceById(
   });
 
   if (!fullEvidence) throw new NotFoundError("Evidence", evidenceId);
-  return fullEvidence;
+
+  // Add backward compatibility fields for old interface
+  const result: any = fullEvidence;
+  result.category = fullEvidence.evidenceType === "document" ? "financial" : "operational";
+  result.type = fullEvidence.evidenceType;
+  result.sourceType = fullEvidence.evidenceType;
+  result.sourceLabel = fullEvidence.title;
+  result.statement = fullEvidence.description;
+
+  return result;
 }
 
 export async function listEvidence(
