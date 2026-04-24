@@ -8,6 +8,10 @@ import { createAction } from "@/services/action";
 import { assessCondition } from "@/services/business-condition";
 import { logger } from "@/infra/logger";
 import type { InterventionPhase } from "@/domain/constants/statuses";
+import { DataValidationEngine } from "@/engines/DataValidationEngine";
+import { FinancialEngine } from "@/engines/FinancialEngine";
+import { DiagnosisOrchestrator } from "@/engines/DiagnosisOrchestrator";
+import type { BusinessAssessment, OrchestratedDiagnosis } from "@/engines/contracts";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -52,6 +56,10 @@ export interface DiagnosisResult {
   executiveBrief: ExecutiveBrief;
   confidence: "low" | "medium" | "high";
   dataWarnings: string[];
+  _engineMetadata?: {
+    orchestratedDiagnosis: OrchestratedDiagnosis;
+    enginesUsed: string[];
+  };
 }
 
 // ─── Data Quality & Impact Analysis ───────────────────────────────────────
@@ -597,6 +605,25 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
 export async function diagnoseBusiness(input: BusinessProblemInput, actorId: string): Promise<DiagnosisResult> {
   validateBusinessProblem(input);
 
+  // Engine layer: orchestrate diagnosis from multiple engines
+  const businessAssessment: BusinessAssessment = {
+    businessName: input.businessName,
+    businessType: input.businessType,
+    problemStatement: input.problemStatement,
+    mainIssue: input.mainIssue,
+    monthlyRevenue: input.monthlyRevenue,
+    monthlyCosts: input.monthlyCosts,
+    customerCount: input.customerCount,
+  };
+
+  const orchestrator = new DiagnosisOrchestrator([
+    new DataValidationEngine(),
+    new FinancialEngine(),
+  ]);
+
+  const engineDiagnosis = await orchestrator.orchestrate(businessAssessment);
+
+  // Use engine outputs to inform diagnosis, but preserve existing logic for backward compatibility
   const severity = calculateSeverity(input);
   const category = determinePrimaryCategory(input.mainIssue);
   const phase = determineInterventionPhase(severity);
@@ -768,5 +795,9 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
     executiveBrief,
     confidence,
     dataWarnings,
+    _engineMetadata: {
+      orchestratedDiagnosis: engineDiagnosis,
+      enginesUsed: engineDiagnosis.allEngineResults.map((r) => r.engine),
+    },
   };
 }
