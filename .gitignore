@@ -46,4 +46,10 @@ next-env.d.ts
 
 # uploads (local storage dev)
 /uploads
+
+# local database files
+*.db
+*.db-shm
+*.db-wal
 test.db
+dev.db
