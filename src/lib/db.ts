@@ -4,13 +4,19 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 async function createPrismaClient() {
-  const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL || "file:./dev.db";
-
   try {
-    const { PrismaClient } = await import("@prisma/client");
-    const client = new PrismaClient({
-      datasourceUrl: databaseUrl,
-    });
+    const { PrismaClient } = await import("@/generated/prisma/client");
+    const { PrismaBetterSqlite3Adapter } = await import("@prisma/adapter-better-sqlite3");
+    const Database = (await import("better-sqlite3")).default;
+
+    // Parse database URL (remove "file://" prefix if present)
+    const dbUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL || "file:./dev.db";
+    const dbPath = dbUrl.replace(/^file:/, "");
+
+    const db = new Database(dbPath);
+    const adapter = new PrismaBetterSqlite3Adapter(db);
+
+    const client = new PrismaClient({ adapter });
 
     // Extend client to auto-parse audit event payloads
     return client.$extends({
