@@ -13,13 +13,14 @@ import {
 import { createEvidence } from "./evidence";
 import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 import type { CreateFindingInput } from "./findings";
 
 describe("Findings Service", () => {
   let clientId: string;
   let engagementId: string;
   let evidenceId: string;
-  let actorId = "test-actor-id";
+  let actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeAll(async () => {
     const client = await createClient(

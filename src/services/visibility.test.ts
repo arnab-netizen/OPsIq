@@ -6,6 +6,7 @@ import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
 import { createEvidence } from "./evidence";
 import { createFinding } from "./findings";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 describe("Visibility Enforcement", () => {
   let clientId: string;
@@ -14,7 +15,7 @@ describe("Visibility Enforcement", () => {
   let clientVisibleEvidenceId: string;
   let internalFindingId: string;
   let clientVisibleFindingId: string;
-  let actorId = "test-actor-id";
+  let actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeAll(async () => {
     const client = await createClient(

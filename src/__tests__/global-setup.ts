@@ -12,16 +12,16 @@ export default async function globalSetup() {
     );
   }
 
-  // Ensure migrations are applied
+  // Apply test database schema
   try {
     const { execSync } = require("child_process");
-    console.log("Global: Running Prisma migrations...");
-    execSync("npx prisma migrate deploy", {
+    console.log("Global: Applying test database schema...");
+    execSync("npx prisma db push --force-reset", {
       stdio: "inherit",
     });
-    console.log("Global: Migrations complete");
+    console.log("Global: Test database ready");
   } catch (error) {
-    console.warn("Global: Migration warning (may be expected):", error instanceof Error ? error.message : String(error));
+    console.warn("Global: Database setup warning (may be expected):", error instanceof Error ? error.message : String(error));
   }
 }
 

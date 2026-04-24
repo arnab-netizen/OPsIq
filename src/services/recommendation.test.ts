@@ -5,12 +5,13 @@ import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
 import { createFinding } from "./findings";
 import { createEvidence } from "./evidence";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 describe("Recommendation Service", () => {
   let clientId: string;
   let engagementId: string;
   let findingId: string;
-  let actorId = "test-actor-id";
+  let actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeAll(async () => {
     const client = await createClient(

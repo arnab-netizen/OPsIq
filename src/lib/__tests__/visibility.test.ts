@@ -2,12 +2,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { ForbiddenError } from "@/infra/errors";
 import { db } from "@/lib/db";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 describe("Cross-Engagement Isolation", () => {
-  const userId_A = "user-a-id";
-  const userId_B = "user-b-id";
-  const engagementId_A = "engagement-a-id";
-  const engagementId_B = "engagement-b-id";
+  const userId_A = TEST_IDS.TEST_USER_A_ID;
+  const userId_B = TEST_IDS.TEST_USER_B_ID;
+  const engagementId_A = TEST_IDS.ENGAGEMENT_A_ID;
+  const engagementId_B = TEST_IDS.ENGAGEMENT_B_ID;
 
   beforeEach(() => {
     vi.clearAllMocks();

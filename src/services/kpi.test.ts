@@ -12,12 +12,13 @@ import {
 import { createAction } from "./action";
 import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 describe("KPI Service", () => {
   let clientId: string;
   let engagementId: string;
   let actionId: string;
-  let actorId = "test-actor-id";
+  let actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeAll(async () => {
     const client = await createClient(
