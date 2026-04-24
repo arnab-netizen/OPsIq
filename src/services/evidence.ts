@@ -43,6 +43,9 @@ export interface UpdateEvidenceInput {
   status?: EvidenceStatus;
   rejectionReason?: string;
   version: number;
+  // Backward compatibility
+  statement?: string;
+  validationStatus?: "submitted" | "validated" | "rejected";
 }
 
 // ─── Service ───────────────────────────────────────────────────────────────
@@ -161,11 +164,18 @@ export async function updateEvidence(
   evidenceId: string,
   input: UpdateEvidenceInput,
   actorId: string
-): Promise<void> {
+): Promise<{ id: string }> {
   const evidence = await db.evidence.findUnique({
     where: { id: evidenceId },
   });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
+
+  // Check version first
+  if (evidence.version !== input.version) {
+    throw new ValidationError(
+      `Version conflict: current version is ${evidence.version}, expected ${input.version}`
+    );
+  }
 
   // Cannot update validated or rejected evidence
   if (evidence.status === "validated" || evidence.status === "rejected") {
@@ -174,15 +184,23 @@ export async function updateEvidence(
     );
   }
 
-  const { version, ...fields } = input;
+  const { version, statement, validationStatus, ...fields } = input;
   const data: Record<string, unknown> = {};
+
+  // Map backward compatibility fields
+  const actualStatus = input.status || validationStatus;
+  const actualDescription = input.description || statement;
 
   for (const [k, v] of Object.entries(fields)) {
     if (v === undefined) continue;
     data[k] = v;
   }
 
-  const statusChanged = input.status && input.status !== evidence.status;
+  // Add mapped fields
+  if (actualDescription !== undefined) data.description = actualDescription;
+  if (actualStatus !== undefined) data.status = actualStatus;
+
+  const statusChanged = actualStatus && actualStatus !== evidence.status;
 
   await optimisticUpdate("evidence", evidenceId, version, () =>
     db.evidence.update({
@@ -221,6 +239,7 @@ export async function updateEvidence(
   }
 
   logger.info("Evidence updated", { evidenceId });
+  return { id: evidenceId };
 }
 
 export async function getEvidenceById(
@@ -271,6 +290,7 @@ export async function getEvidenceById(
   result.sourceType = fullEvidence.evidenceType;
   result.sourceLabel = fullEvidence.title;
   result.statement = fullEvidence.description;
+  result.validationStatus = fullEvidence.status;
 
   return result;
 }
@@ -308,7 +328,16 @@ export async function listEvidence(
     offset = engagementIdOrParams.offset ?? 0;
   }
 
-  // Check engagement access if engagementId provided
+  // Check engagement exists if provided
+  if (engagementId) {
+    const engagement = await db.engagement.findUnique({
+      where: { id: engagementId },
+      select: { id: true },
+    });
+    if (!engagement) throw new NotFoundError("Engagement", engagementId);
+  }
+
+  // Check engagement access if userId provided
   if (engagementId && userId) {
     await assertEngagementAccess(userId, engagementId);
   }
@@ -458,6 +487,13 @@ export async function getEvidenceBundleById(bundleId: string) {
 }
 
 export async function listEvidenceBundles(engagementId: string) {
+  // Check engagement exists
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: { id: true },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
   return db.evidenceBundle.findMany({
     where: { engagementId, status: "active" },
     include: {

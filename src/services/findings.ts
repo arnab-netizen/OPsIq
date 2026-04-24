@@ -16,9 +16,9 @@ import type {
 export interface CreateFindingInput {
   engagementId: string;
   stageId?: string;
-  primaryEvidenceId: string;
+  primaryEvidenceId?: string;
   title: string;
-  summary: string;
+  summary?: string;
   severity: string;
   impactArea: string;
   confidenceScore?: number;
@@ -27,6 +27,11 @@ export interface CreateFindingInput {
   consequence?: string;
   ownerId?: string;
   dueAt?: string;
+  // Backward compatibility
+  description?: string;
+  findingType?: string;
+  linkedEvidenceIds?: string[];
+  statement?: string;
 }
 
 export interface UpdateFindingInput {
@@ -48,6 +53,10 @@ export async function createFinding(
   input: CreateFindingInput,
   actorId: string
 ): Promise<{ id: string; engagementId: string }> {
+  // Map backward compatibility fields
+  const summary = input.summary || input.description || input.statement || "";
+  const primaryEvidenceId = input.primaryEvidenceId || (input.linkedEvidenceIds?.[0]) || null;
+
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
@@ -67,7 +76,7 @@ export async function createFinding(
   if (!input.title || input.title.trim().length === 0) {
     throw new ValidationError("title is required");
   }
-  if (!input.summary || input.summary.trim().length === 0) {
+  if (!summary || summary.trim().length === 0) {
     throw new ValidationError("summary is required");
   }
 
@@ -92,12 +101,12 @@ export async function createFinding(
     data: {
       engagementId: input.engagementId,
       title: input.title,
-      description: input.summary,
+      description: summary,
       findingType: findingType,
       impactArea: input.impactArea,
       severity: input.severity,
       rootCause: input.rootCause || null,
-      linkedEvidence: input.primaryEvidenceId || null,
+      linkedEvidence: primaryEvidenceId || null,
       createdBy: actorId,
     },
     select: { id: true, engagementId: true },
