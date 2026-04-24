@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@prisma/client";
 import { ValidationError } from "@/infra/errors";
 import crypto from "crypto";
 

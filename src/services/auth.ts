@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { UserRoleAssignment } from "@/generated/prisma/client";
+import type { UserRoleAssignment } from "@prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import type { PolicyContext } from "@/policies/capability-check";

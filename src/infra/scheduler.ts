@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@prisma/client";
 import { logger } from "@/infra/logger";
 import { v4 as uuidv4 } from "uuid";
 
