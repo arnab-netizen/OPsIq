@@ -4,9 +4,23 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 async function createPrismaClient() {
+  const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
+
+  if (!databaseUrl) {
+    throw new Error(
+      "DATABASE_URL or TEST_DATABASE_URL environment variable is not set. " +
+      "Tests require a PostgreSQL database connection. " +
+      "Set DATABASE_URL=postgresql://user:password@host/dbname or TEST_DATABASE_URL=... and try again."
+    );
+  }
+
   try {
-    const { PrismaClient } = await import("@/generated/prisma/client");
-    const client = new PrismaClient();
+    const { PrismaClient: PgClient } = await import("@/generated/prisma/client");
+    const { PrismaPg } = await import("@prisma/adapter-pg");
+    const adapter = new PrismaPg({
+      connectionString: databaseUrl,
+    });
+    const client = new PgClient({ adapter });
 
     // Extend client to auto-parse audit event payloads
     return client.$extends({
@@ -31,7 +45,7 @@ async function createPrismaClient() {
     });
   } catch (error) {
     throw new Error(
-      `Failed to initialize Prisma client: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to initialize PostgreSQL Prisma client: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
