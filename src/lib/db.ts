@@ -6,17 +6,7 @@ const globalForPrisma = globalThis as unknown as {
 async function createPrismaClient() {
   try {
     const { PrismaClient } = await import("@/generated/prisma/client");
-    const { PrismaBetterSqlite3 } = await import("@prisma/adapter-better-sqlite3");
-    const Database = (await import("better-sqlite3")).default;
-
-    // Parse database URL (remove "file://" prefix if present)
-    const dbUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL || "file:./dev.db";
-    const dbPath = dbUrl.replace(/^file:/, "");
-
-    const db = new Database(dbPath);
-    const adapter = new PrismaBetterSqlite3(db);
-
-    const client = new PrismaClient({ adapter });
+    const client = new PrismaClient();
 
     // Extend client to auto-parse audit event payloads
     return client.$extends({
