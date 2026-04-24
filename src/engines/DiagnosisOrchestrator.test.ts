@@ -95,27 +95,50 @@ describe("DiagnosisOrchestrator", () => {
     expect(diagnosis.category).toBe("general_business_recovery");
   });
 
-  it("should map severity to correct phase", async () => {
-    const severityPhaseMap: Record<string, string> = {
-      critical: "triage",
-      high: "stabilize",
-      medium: "repair",
-      low: "protect",
+  it("should map critical severity to triage phase", async () => {
+    const input: BusinessAssessment = {
+      businessName: "Critical",
+      businessType: "Services",
+      problemStatement: "Costs exceed revenue",
+      mainIssue: "high_costs",
+      monthlyRevenue: 50000,
+      monthlyCosts: 80000,
     };
 
-    for (const [severity, expectedPhase] of Object.entries(severityPhaseMap)) {
-      const input: BusinessAssessment = {
-        businessName: `Test-${severity}`,
-        businessType: "Services",
-        problemStatement: "Phase test",
-        mainIssue: "unclear",
-      };
+    const diagnosis = await orchestrator.orchestrate(input);
+    expect(diagnosis.severity).toBe("critical");
+    expect(diagnosis.phase).toBe("triage");
+  });
 
-      // This is a simplified test - in reality we'd need to craft inputs
-      // that produce each severity level
-      const diagnosis = await orchestrator.orchestrate(input);
-      expect(diagnosis.phase).toBeDefined();
-    }
+  it("should map high severity to stabilization phase", async () => {
+    const input: BusinessAssessment = {
+      businessName: "High",
+      businessType: "Services",
+      problemStatement: "Costs slightly exceed revenue",
+      mainIssue: "high_costs",
+      monthlyRevenue: 50000,
+      monthlyCosts: 55000,
+    };
+
+    const diagnosis = await orchestrator.orchestrate(input);
+    expect(diagnosis.severity).toBe("high");
+    expect(diagnosis.phase).toBe("stabilization");
+  });
+
+  it("should map medium/low severity to recovery/growth phases", async () => {
+    const input: BusinessAssessment = {
+      businessName: "Healthy",
+      businessType: "Services",
+      problemStatement: "Seeking optimization",
+      mainIssue: "operations",
+      monthlyRevenue: 100000,
+      monthlyCosts: 70000,
+      customerCount: 100,
+    };
+
+    const diagnosis = await orchestrator.orchestrate(input);
+    expect(["medium", "low"]).toContain(diagnosis.severity);
+    expect(["recovery", "growth"]).toContain(diagnosis.phase);
   });
 
   it("should include all engine results in output", async () => {

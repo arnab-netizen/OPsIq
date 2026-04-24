@@ -185,7 +185,7 @@ describe("diagnosis service", () => {
       expect(result.interventionPhase).toBe("triage");
     });
 
-    it("assigns stabilize phase for high severity", async () => {
+    it("assigns stabilization phase for high severity", async () => {
       const input: BusinessProblemInput = {
         businessName: "Test Co",
         businessType: "SaaS",
@@ -194,10 +194,10 @@ describe("diagnosis service", () => {
       };
 
       const result = await diagnoseBusiness(input, "test-actor");
-      expect(result.interventionPhase).toBe("stabilize");
+      expect(result.interventionPhase).toBe("stabilization");
     });
 
-    it("assigns repair phase for medium severity", async () => {
+    it("assigns recovery phase for medium severity", async () => {
       const input: BusinessProblemInput = {
         businessName: "Test Co",
         businessType: "Consulting",
@@ -206,7 +206,7 @@ describe("diagnosis service", () => {
       };
 
       const result = await diagnoseBusiness(input, "test-actor");
-      expect(result.interventionPhase).toBe("repair");
+      expect(result.interventionPhase).toBe("recovery");
     });
   });
 
@@ -437,11 +437,119 @@ describe("diagnosis service", () => {
       const result = await diagnoseBusiness(input, "test-actor");
 
       expect(result.severity).toBe("high");
-      expect(result.interventionPhase).toBe("stabilize");
+      expect(result.interventionPhase).toBe("stabilization");
       expect(result.primaryProblemCategory).toBe("revenue_generation");
       expect(result.actionPlan.length).toBeGreaterThanOrEqual(5);
       expect(result.findings.length).toBeGreaterThan(0);
       expect(result.actionPlan[0]?.priority).toBe("high");
+    });
+  });
+
+  describe("engine layer - orchestrator influences final diagnosis", () => {
+    it("uses orchestrator severity in final diagnosis (critical financial severity)", async () => {
+      const input: BusinessProblemInput = {
+        businessName: "FinancialTest",
+        businessType: "Retail",
+        problemStatement: "Costs out of control",
+        mainIssue: "unclear", // Not indicating critical, but financial data is critical
+        monthlyRevenue: 50000,
+        monthlyCosts: 80000, // 160% - critical
+      };
+
+      const result = await diagnoseBusiness(input, "test-actor");
+
+      // Engine should override mainIssue and detect critical from financial data
+      expect(result.severity).toBe("critical");
+      expect(result.interventionPhase).toBe("triage");
+      expect(result._engineMetadata?.enginesUsed).toContain("Financial");
+    });
+
+    it("uses orchestrator category when engine evidence is strong", async () => {
+      const input: BusinessProblemInput = {
+        businessName: "CategoryTest",
+        businessType: "SaaS",
+        problemStatement: "Multiple problems",
+        mainIssue: "unclear", // Ambiguous
+        monthlyRevenue: 30000,
+        monthlyCosts: 60000, // Cost problem is obvious from data
+      };
+
+      const result = await diagnoseBusiness(input, "test-actor");
+
+      // Engine evidence overrides unclear mainIssue
+      expect(result.primaryProblemCategory).toBe("cost_control");
+      expect(result.severity).toBe("critical");
+    });
+
+    it("uses canonical intervention phases from orchestrator", async () => {
+      const phases: Record<string, string> = {
+        critical_case: "triage",
+        high_case: "stabilization",
+        medium_case: "recovery",
+      };
+
+      const criticalInput: BusinessProblemInput = {
+        businessName: "Critical",
+        businessType: "Services",
+        problemStatement: "Critical issue",
+        mainIssue: "high_costs",
+        monthlyRevenue: 10000,
+        monthlyCosts: 13000,
+      };
+
+      const result = await diagnoseBusiness(criticalInput, "test-actor");
+      expect(result.interventionPhase).toBe("triage");
+      expect(["triage", "stabilization", "recovery", "growth"]).toContain(
+        result.interventionPhase
+      );
+    });
+
+    it("stores engine metadata but final diagnosis uses orchestrator output", async () => {
+      const input: BusinessProblemInput = {
+        businessName: "MetadataTest",
+        businessType: "Retail",
+        problemStatement: "Cost analysis",
+        mainIssue: "high_costs",
+        monthlyRevenue: 40000,
+        monthlyCosts: 55000,
+      };
+
+      const result = await diagnoseBusiness(input, "test-actor");
+
+      // Verify engine metadata exists
+      expect(result._engineMetadata).toBeDefined();
+      expect(result._engineMetadata?.orchestratedDiagnosis).toBeDefined();
+      expect(result._engineMetadata?.enginesUsed.length).toBeGreaterThan(0);
+
+      // Verify FINAL diagnosis uses orchestrator values (not just in metadata)
+      expect(result.severity).toBe(
+        result._engineMetadata?.orchestratedDiagnosis.severity
+      );
+      expect(result.interventionPhase).toBe(
+        result._engineMetadata?.orchestratedDiagnosis.phase
+      );
+      expect(result.primaryProblemCategory).toBe(
+        result._engineMetadata?.orchestratedDiagnosis.category
+      );
+    });
+
+    it("mainIssue serves as tiebreaker, not override", async () => {
+      const input: BusinessProblemInput = {
+        businessName: "TiebreakerTest",
+        businessType: "Consulting",
+        problemStatement: "Unclear situation",
+        mainIssue: "operations", // User guesses operations
+        monthlyRevenue: 50000,
+        monthlyCosts: 50000, // Balanced - no strong signal
+        customerCount: 50, // Reasonable
+      };
+
+      const result = await diagnoseBusiness(input, "test-actor");
+
+      // When engines don't provide strong signal, mainIssue can influence
+      // But engine data (balanced finances) prevents incorrect severity escalation
+      expect(result.severity).not.toBe("critical");
+      expect(["low", "medium"]).toContain(result.severity);
     });
   });
 });

@@ -37,12 +37,10 @@ export interface UpdateInterventionModeInput {
 // ─── Phase Transition Validation ──────────────────────────────────────────
 
 const PHASE_TRANSITIONS: Partial<Record<InterventionPhase, readonly InterventionPhase[]>> = {
-  triage: ["stabilize"],
-  stabilize: ["repair", "triage"],
-  repair: ["strengthen", "stabilize"],
-  strengthen: ["grow", "repair"],
-  grow: ["protect", "strengthen"],
-  protect: [],
+  triage: ["stabilization"],
+  stabilization: ["recovery", "triage"],
+  recovery: ["growth", "stabilization"],
+  growth: [],
 };
 
 function validatePhaseTransition(from: InterventionPhase, to: InterventionPhase): void {

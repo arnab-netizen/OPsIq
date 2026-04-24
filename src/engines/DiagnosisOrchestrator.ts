@@ -116,9 +116,9 @@ export class DiagnosisOrchestrator {
   ): InterventionPhase {
     const phaseMap: Record<string, InterventionPhase> = {
       critical: "triage",
-      high: "stabilize",
-      medium: "repair",
-      low: "protect",
+      high: "stabilization",
+      medium: "recovery",
+      low: "growth",
     };
     return phaseMap[severity] || "triage";
   }

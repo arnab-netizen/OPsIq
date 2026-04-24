@@ -42,11 +42,9 @@ export interface OrchestratedDiagnosis {
 
 export type InterventionPhase =
   | "triage"
-  | "stabilize"
-  | "repair"
-  | "strengthen"
-  | "grow"
-  | "protect";
+  | "stabilization"
+  | "recovery"
+  | "growth";
 
 export interface Engine {
   name: string;

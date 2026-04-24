@@ -174,9 +174,9 @@ function calculateSeverity(input: BusinessProblemInput): "low" | "medium" | "hig
 function determineInterventionPhase(severity: string): InterventionPhase {
   const phaseMap: Record<string, InterventionPhase> = {
     critical: "triage",
-    high: "stabilize",
-    medium: "repair",
-    low: "protect",
+    high: "stabilization",
+    medium: "recovery",
+    low: "growth",
   };
   return phaseMap[severity] || "triage";
 }
@@ -621,20 +621,28 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
     new FinancialEngine(),
   ]);
 
+  // Engine layer: orchestrate diagnosis from multiple engines
   const engineDiagnosis = await orchestrator.orchestrate(businessAssessment);
 
-  // Use engine outputs to inform diagnosis, but preserve existing logic for backward compatibility
-  const severity = calculateSeverity(input);
-  const category = determinePrimaryCategory(input.mainIssue);
-  const phase = determineInterventionPhase(severity);
+  // Engine output drives final diagnosis (not just stored in metadata)
+  const severity = engineDiagnosis.severity;
+  const category = engineDiagnosis.category;
+  const phase = engineDiagnosis.phase;
+
+  // Generate outputs based on orchestrated diagnosis
   const summary = generateDiagnosisSummary(input, category, severity);
   const findingsData = generateFindings(input, category, severity);
   const recommendationsData = generateRecommendations(category, severity);
   const actionPlanData = generateActionPlan(category, severity);
 
-  // V2 enhancements
-  const dataWarnings = detectDataIssues(input);
-  const confidence = calculateConfidence(input, dataWarnings);
+  // V2 enhancements - merge with engine findings
+  const dataWarnings = engineDiagnosis.issues.length > 0
+    ? engineDiagnosis.issues
+    : detectDataIssues(input);
+  const confidence: "low" | "medium" | "high" =
+    engineDiagnosis.diagnosticConfidence >= 0.75 ? "high" :
+    engineDiagnosis.diagnosticConfidence >= 0.5 ? "medium" :
+    "low";
   const impact = calculateBusinessImpact(input);
 
   const executiveBrief: ExecutiveBrief = {

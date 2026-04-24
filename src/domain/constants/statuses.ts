@@ -93,11 +93,9 @@ export type InterventionMode = (typeof INTERVENTION_MODES)[number];
 
 export const INTERVENTION_PHASES = [
   "triage",
-  "stabilize",
-  "repair",
-  "strengthen",
-  "grow",
-  "protect",
+  "stabilization",
+  "recovery",
+  "growth",
 ] as const;
 
 export type InterventionPhase = (typeof INTERVENTION_PHASES)[number];

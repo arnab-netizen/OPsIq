@@ -314,18 +314,18 @@ async function evaluateInterventionPhaseImpact(engagementId: string) {
   if (findings.length === 0) {
     recommendedPhase = "triage";
   } else if (actions.length === 0) {
-    recommendedPhase = "stabilize";
+    recommendedPhase = "stabilization";
   } else {
     const completedCount = actions.filter((a: any) => a.status === "completed").length;
     const activeCount = actions.filter((a: any) => a.status !== "completed" && a.status !== "cancelled")
       .length;
 
     if (activeCount > 0) {
-      recommendedPhase = "repair";
+      recommendedPhase = "recovery";
     } else if (completedCount === actions.length) {
-      recommendedPhase = "strengthen";
+      recommendedPhase = "growth";
     } else {
-      recommendedPhase = "repair";
+      recommendedPhase = "recovery";
     }
   }
 
