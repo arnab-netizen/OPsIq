@@ -4,78 +4,50 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 async function createPrismaClient() {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
 
-  let client: any;
+  if (!databaseUrl) {
+    throw new Error(
+      "DATABASE_URL or TEST_DATABASE_URL environment variable is not set. " +
+      "Tests require a PostgreSQL database connection. " +
+      "Set DATABASE_URL=postgresql://user:password@host/dbname or TEST_DATABASE_URL=... and try again."
+    );
+  }
 
-  if (!databaseUrl || databaseUrl.startsWith("file:")) {
-    // SQLite mode (default for tests)
-    try {
-      let SqliteClient: any;
-      let createSqliteAdapter: any;
-
-      try {
-        const clientModule = await import("../generated/prisma-sqlite/client");
-        SqliteClient = clientModule.PrismaClient;
-      } catch (importError) {
-        throw new Error(`Failed to import SQLite Prisma client: ${importError instanceof Error ? importError.message : String(importError)}`);
-      }
-
-      try {
-        const { PrismaSqlite } = await import("prisma-adapter-sqlite");
-        createSqliteAdapter = PrismaSqlite;
-      } catch (importError) {
-        throw new Error(`Failed to import SQLite adapter: ${importError instanceof Error ? importError.message : String(importError)}`);
-      }
-
-      if (!createSqliteAdapter) {
-        throw new Error("PrismaSqlite class not found in adapter module");
-      }
-
-      const dbPath = databaseUrl || "file:./test.db";
-      const adapter = new createSqliteAdapter({ url: dbPath });
-
-      if (!adapter) {
-        throw new Error("PrismaSqlite instantiation returned undefined/null");
-      }
-
-      client = new SqliteClient({ adapter });
-    } catch (error) {
-      throw new Error(
-        `Failed to initialize SQLite Prisma client: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
-  } else {
-    // PostgreSQL mode (production)
+  try {
     const { PrismaClient: PgClient } = await import("../generated/prisma/client");
     const { PrismaPg } = await import("@prisma/adapter-pg");
     const adapter = new PrismaPg({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: databaseUrl,
     });
-    client = new PgClient({ adapter });
-  }
+    const client = new PgClient({ adapter });
 
-  // Extend client to auto-parse audit event payloads
-  return client.$extends({
-    result: {
-      auditEvent: {
-        payload: {
-          needs: { payload: true },
-          compute(event: { payload: string | null }) {
-            if (!event.payload) return null;
-            if (typeof event.payload === "string") {
-              try {
-                return JSON.parse(event.payload);
-              } catch {
-                return null;
+    // Extend client to auto-parse audit event payloads
+    return client.$extends({
+      result: {
+        auditEvent: {
+          payload: {
+            needs: { payload: true },
+            compute(event: { payload: string | null }) {
+              if (!event.payload) return null;
+              if (typeof event.payload === "string") {
+                try {
+                  return JSON.parse(event.payload);
+                } catch {
+                  return null;
+                }
               }
-            }
-            return event.payload;
+              return event.payload;
+            },
           },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    throw new Error(
+      `Failed to initialize PostgreSQL Prisma client: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
 }
 
 async function getDb() {
