@@ -6,6 +6,7 @@ import { computeNextReviewDate } from "@/services/engagement";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { createHash } from "crypto";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 vi.mock("@/infra/audit", () => ({
   emitAuditEvent: vi.fn().mockResolvedValue("event-id"),
@@ -49,7 +50,7 @@ vi.mock("@/lib/db", () => ({
 
 describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
   const engagementId = "eng-123";
-  const actorId = "actor-1";
+  const actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeEach(() => {
     vi.clearAllMocks();

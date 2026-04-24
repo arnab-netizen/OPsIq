@@ -3,6 +3,7 @@ import { withIdempotency } from "@/infra/idempotency";
 import { db } from "@/lib/db";
 import { ValidationError, DuplicateSubmissionError } from "@/infra/errors";
 import { createHash } from "crypto";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 function computePayloadHash(payload: unknown): string {
   const normalized = JSON.stringify(payload);
@@ -16,7 +17,7 @@ vi.mock("@/infra/audit", () => ({
 describe("Idempotency System", () => {
   const idempotencyKey = "test-key-12345";
   const operationName = "test.operation";
-  const actorId = "actor-1";
+  const actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -26,6 +26,7 @@ vi.mock("@/infra/idempotency", () => ({
 import { linkEvidenceToFinding, unlinkEvidenceFromFinding, validateFinding } from "@/services/findings";
 import { db } from "@/lib/db";
 import { ValidationError } from "@/infra/errors";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 describe("Evidence Integrity - Link/Unlink", () => {
   const engagementId1 = "eng-1";
@@ -33,7 +34,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
   const findingId1 = "finding-1";
   const evidenceId1 = "evidence-1";
   const evidenceId2 = "evidence-2";
-  const actorId = "actor-1";
+  const actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeEach(() => {
     vi.clearAllMocks();

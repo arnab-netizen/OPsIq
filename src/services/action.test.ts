@@ -3,6 +3,7 @@ import { createAction, updateActionStatus } from "./action";
 import { ValidationError, ConflictError } from "@/infra/errors";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -37,7 +38,7 @@ describe("Action Service", () => {
     blockerReason: null,
   };
 
-  const actorId = "actor-1";
+  const actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeEach(() => {
     vi.clearAllMocks();

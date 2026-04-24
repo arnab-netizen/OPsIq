@@ -282,23 +282,17 @@ describe("Cross-Engagement Isolation", () => {
     it("User B should not access User A engagement", async () => {
       vi.spyOn(db.engagementMembership, "findFirst").mockResolvedValueOnce(null);
 
-      const error = await assertEngagementAccess(
-        userId_B,
-        engagementId_A
-      ).catch((e) => e);
-
-      expect(error).toBeInstanceOf(ForbiddenError);
+      await expect(
+        assertEngagementAccess(userId_B, engagementId_A)
+      ).rejects.toThrow(ForbiddenError);
     });
 
     it("User A should not access User B engagement", async () => {
       vi.spyOn(db.engagementMembership, "findFirst").mockResolvedValueOnce(null);
 
-      const error = await assertEngagementAccess(
-        userId_A,
-        engagementId_B
-      ).catch((e) => e);
-
-      expect(error).toBeInstanceOf(ForbiddenError);
+      await expect(
+        assertEngagementAccess(userId_A, engagementId_B)
+      ).rejects.toThrow(ForbiddenError);
     });
   });
 });

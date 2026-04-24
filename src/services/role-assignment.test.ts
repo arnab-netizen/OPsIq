@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { ROLES, ROLE_HIERARCHY } from "@/domain/constants/roles";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 // We test the validation logic by extracting it. Since the real service
 // depends on DB/Prisma, we test the pure business rules here.
@@ -93,13 +94,13 @@ describe("Role assignment business rules", () => {
 
   describe("self-assignment prevention", () => {
     it("blocks when userId equals actorId", () => {
-      const actorId = "user-123";
+      const actorId = TEST_IDS.TEST_USER_A_ID;
       const userId: string = actorId; // same reference
       expect(userId).toBe(actorId);
     });
 
     it("allows when userId differs from actorId", () => {
-      const actorId = "user-123";
+      const actorId = TEST_IDS.TEST_USER_A_ID;
       const userId = "user-456";
       expect(userId).not.toBe(actorId);
     });

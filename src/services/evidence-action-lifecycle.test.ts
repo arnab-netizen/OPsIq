@@ -8,6 +8,7 @@ import { createClient } from "@/services/client-account";
 import { createEngagement } from "@/services/engagement";
 import { createUser } from "@/services/user";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 describe("Evidence → Finding → Recommendation → Action Lifecycle", () => {
   let userId: string;
@@ -26,7 +27,7 @@ describe("Evidence → Finding → Recommendation → Action Lifecycle", () => {
         name: "Lifecycle Tester",
         hashedPassword: "hashed-test-password",
       },
-      "system"
+      TEST_IDS.SYSTEM_ACTOR_ID
     );
     userId = userResult.id;
 
