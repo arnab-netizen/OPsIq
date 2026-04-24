@@ -81,6 +81,10 @@ export const CAPABILITIES = {
   CONDITION_ASSESS: "condition:assess",
   CONDITION_VIEW: "condition:view",
 
+  // Diagnosis
+  DIAGNOSIS_RUN: "diagnosis:run",
+  DIAGNOSIS_VIEW: "diagnosis:view",
+
   // Intervention
   INTERVENTION_MANAGE: "intervention:manage",
   INTERVENTION_VIEW: "intervention:view",

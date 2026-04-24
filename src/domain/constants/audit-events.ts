@@ -108,6 +108,9 @@ export const AUDIT_EVENTS = {
   CONDITION_ASSESSED: "condition.assessed",
   CONDITION_CHANGED: "condition.changed",
 
+  // Diagnosis
+  DIAGNOSIS_COMPLETED: "diagnosis.completed",
+
   // Intervention
   INTERVENTION_MODE_CHANGED: "intervention.mode_changed",
   INTERVENTION_PHASE_CHANGED: "intervention.phase_changed",
