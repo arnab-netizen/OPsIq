@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, it, expect } from 'vitest';
 import { DataValidationEngine } from '../DataValidationEngine';
 import type { BusinessAssessment } from '../contracts';
 

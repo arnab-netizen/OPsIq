@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { performDiagnosis, type DiagnosisRequest, type DiagnosisResult } from '../diagnosis';
 
 // Mock audit event emission
-jest.mock('@/infra/audit', () => ({
-  emitAuditEvent: jest.fn(),
+vi.mock('@/infra/audit', () => ({
+  emitAuditEvent: vi.fn(),
 }));
 
-jest.mock('@/infra/logger', () => ({
+vi.mock('@/infra/logger', () => ({
   logger: {
-    info: jest.fn(),
-    error: jest.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
   },
 }));
 

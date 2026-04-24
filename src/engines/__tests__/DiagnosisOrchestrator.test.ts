@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { DiagnosisOrchestrator } from '../DiagnosisOrchestrator';
 import { DataValidationEngine } from '../DataValidationEngine';
 import { FinancialEngine } from '../FinancialEngine';
