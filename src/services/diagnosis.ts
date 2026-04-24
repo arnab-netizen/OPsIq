@@ -28,6 +28,13 @@ export interface ActionPlanItem {
   ownerRole: string;
   dueInDays: number;
   successMetric: string;
+  urgency?: "immediate" | "next";
+}
+
+export interface ExecutiveBrief {
+  title: string;
+  summary: string;
+  warnings: string[];
 }
 
 export interface DiagnosisResult {
@@ -42,6 +49,52 @@ export interface DiagnosisResult {
   actionPlan: ActionPlanItem[];
   engagementId: string;
   createdAt: string;
+  executiveBrief: ExecutiveBrief;
+  confidence: "low" | "medium" | "high";
+  dataWarnings: string[];
+}
+
+// ─── Data Quality & Impact Analysis ───────────────────────────────────────
+
+function detectDataIssues(input: BusinessProblemInput): string[] {
+  const issues: string[] = [];
+
+  if (input.customerCount && input.monthlyRevenue) {
+    const revenuePerCustomer = input.monthlyRevenue / input.customerCount;
+
+    if (revenuePerCustomer > 2000) {
+      issues.push("Revenue per customer unusually high — verify customer count or pricing model");
+    }
+
+    if (revenuePerCustomer < 10) {
+      issues.push("Revenue per customer unusually low — possible pricing or demand issue");
+    }
+  }
+
+  if (input.monthlyCosts && input.monthlyRevenue && input.monthlyCosts > input.monthlyRevenue * 1.5) {
+    issues.push("Costs significantly exceed revenue — business may be in critical cash burn");
+  }
+
+  return issues;
+}
+
+function calculateConfidence(input: BusinessProblemInput, issues: string[]): "low" | "medium" | "high" {
+  if (issues.length >= 2) return "low";
+  if (issues.length === 1) return "medium";
+  return "high";
+}
+
+function calculateBusinessImpact(input: BusinessProblemInput): { monthlyLoss: number; riskLevel: "severe" | "moderate" } | null {
+  if (!input.monthlyRevenue || !input.monthlyCosts) return null;
+
+  const loss = input.monthlyCosts - input.monthlyRevenue;
+
+  if (loss <= 0) return null;
+
+  return {
+    monthlyLoss: loss,
+    riskLevel: loss > input.monthlyRevenue * 0.5 ? "severe" : "moderate",
+  };
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────
@@ -334,7 +387,7 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
       title: "Categorize All Expenses",
       description: "Break down all monthly expenses by category (payroll, vendor, overhead, etc.).",
       priority: "high",
-      ownerRole: "CFO/Finance",
+      ownerRole: "Owner/Manager",
       dueInDays: baseDays,
       successMetric: "Detailed expense breakdown with year-to-date trends",
     });
@@ -342,7 +395,7 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
       title: "Identify Top 5 Cost Drivers",
       description: "Focus on the 5 largest expense categories that represent 80% of costs.",
       priority: "high",
-      ownerRole: "CFO/Finance",
+      ownerRole: "Owner/Manager",
       dueInDays: baseDays + 3,
       successMetric: "Analysis showing top 5 cost categories and % of total",
     });
@@ -375,7 +428,7 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
       title: "Model Cash Flow",
       description: "Create 13-week rolling cash flow forecast to identify peaks and valleys.",
       priority: "high",
-      ownerRole: "CFO/Finance",
+      ownerRole: "Owner/Manager",
       dueInDays: baseDays,
       successMetric: "13-week cash forecast with revenue, expense, and payment timing",
     });
@@ -383,7 +436,7 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
       title: "Accelerate Collections",
       description: "Review customer payment terms and develop collection plan for overdue receivables.",
       priority: "high",
-      ownerRole: "Finance",
+      ownerRole: "Manager",
       dueInDays: baseDays + 3,
       successMetric: "A/R aging report and action plan for 30+ day overdue accounts",
     });
@@ -399,7 +452,7 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
       title: "Establish Cash Reserves",
       description: "Establish target cash reserve (3-6 months of burn rate) and develop funding plan.",
       priority: "medium",
-      ownerRole: "CFO",
+      ownerRole: "Owner",
       dueInDays: baseDays + 10,
       successMetric: "Cash reserve target and funding strategy documented",
     });
@@ -407,7 +460,7 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
       title: "Explore Financing Options",
       description: "Evaluate credit line, invoice factoring, or other financing options as safety net.",
       priority: "medium",
-      ownerRole: "CFO",
+      ownerRole: "Owner",
       dueInDays: baseDays + 14,
       successMetric: "3 financing options evaluated with terms and conditions",
     });
@@ -552,6 +605,17 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
   const recommendationsData = generateRecommendations(category, severity);
   const actionPlanData = generateActionPlan(category, severity);
 
+  // V2 enhancements
+  const dataWarnings = detectDataIssues(input);
+  const confidence = calculateConfidence(input, dataWarnings);
+  const impact = calculateBusinessImpact(input);
+
+  const executiveBrief: ExecutiveBrief = {
+    title: severity === "critical" ? "🚨 CRITICAL BUSINESS ALERT" : "⚠️ BUSINESS DIAGNOSIS",
+    summary: `${input.businessName} is currently facing a ${severity.toUpperCase()} business risk.${impact ? ` Estimated monthly loss: $${impact.monthlyLoss.toLocaleString()}` : ""} Primary issue: ${category.replace(/_/g, " ")}.${impact ? " Immediate intervention required to prevent further financial deterioration." : ""}`,
+    warnings: dataWarnings,
+  };
+
   // Get or create client
   let client = await db.clientAccount.findFirst({
     where: { name: input.businessName },
@@ -674,6 +738,11 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
     },
   });
 
+  const actionPlanWithUrgency = actionPlanData.map((action, index) => ({
+    ...action,
+    urgency: (index < 2 ? "immediate" : "next") as "immediate" | "next",
+  }));
+
   return {
     id: engagement.id,
     input,
@@ -693,8 +762,11 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
       priority: recommendationsData[i]?.priority || "medium",
       description: recommendationsData[i]?.description || "",
     })),
-    actionPlan: actionPlanData,
+    actionPlan: actionPlanWithUrgency,
     engagementId: engagement.id,
     createdAt: engagement.createdAt.toISOString(),
+    executiveBrief,
+    confidence,
+    dataWarnings,
   };
 }

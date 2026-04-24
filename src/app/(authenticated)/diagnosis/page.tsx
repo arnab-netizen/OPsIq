@@ -19,9 +19,13 @@ interface DiagnosisResult {
     ownerRole: string;
     dueInDays: number;
     successMetric: string;
+    urgency?: "immediate" | "next";
   }>;
   engagementId: string;
   createdAt: string;
+  executiveBrief?: { title: string; summary: string; warnings: string[] };
+  confidence?: "low" | "medium" | "high";
+  dataWarnings?: string[];
 }
 
 const SEVERITY_COLORS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
@@ -112,6 +116,37 @@ export default function DiagnosisPage() {
             Engagement ID: {result.engagementId}
           </p>
 
+          {result.executiveBrief && (
+            <div className={`rounded-lg p-4 mb-6 ${result.severity === "critical" ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200"}`}>
+              <h2 className={`font-bold text-lg mb-2 ${result.severity === "critical" ? "text-red-900" : "text-amber-900"}`}>
+                {result.executiveBrief.title}
+              </h2>
+              <p className={`text-sm leading-relaxed mb-3 ${result.severity === "critical" ? "text-red-800" : "text-amber-800"}`}>
+                {result.executiveBrief.summary}
+              </p>
+              {result.executiveBrief.warnings.length > 0 && (
+                <div className="space-y-1">
+                  <p className={`text-xs font-semibold ${result.severity === "critical" ? "text-red-900" : "text-amber-900"}`}>
+                    DATA ISSUES DETECTED:
+                  </p>
+                  {result.executiveBrief.warnings.map((warning, idx) => (
+                    <p key={idx} className={`text-xs ${result.severity === "critical" ? "text-red-700" : "text-amber-700"}`}>
+                      • {warning}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {result.confidence && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Confidence:</span>
+                  <Badge variant={result.confidence === "high" ? "success" : result.confidence === "medium" ? "default" : "warning"}>
+                    {result.confidence.toUpperCase()}
+                  </Badge>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-4 gap-4 mb-6">
             <div className="border rounded p-3">
               <div className="text-xs text-muted-foreground font-semibold uppercase">Severity</div>
@@ -188,27 +223,64 @@ export default function DiagnosisPage() {
         {result.actionPlan.length > 0 && (
           <div className="border rounded-lg p-6 bg-white shadow-sm mb-6">
             <h2 className="text-xl font-bold text-foreground mb-4">Action Plan ({result.actionPlan.length})</h2>
-            <div className="space-y-4">
-              {result.actionPlan.map((action, idx) => (
-                <div key={idx} className="border rounded p-3 bg-gray-50">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{action.title}</h3>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Owner: {action.ownerRole} • Due in {action.dueInDays} days
-                      </p>
-                    </div>
-                    <Badge variant={PRIORITY_COLORS[action.priority]}>
-                      {action.priority}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">{action.description}</p>
-                  <div className="text-xs bg-white border rounded p-2">
-                    <strong>Success metric:</strong> {action.successMetric}
-                  </div>
+
+            {result.actionPlan.filter(a => a.urgency === "immediate").length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-red-900 mb-3 pb-2 border-b-2 border-red-200">🚨 IMMEDIATE ACTIONS</h3>
+                <div className="space-y-4">
+                  {result.actionPlan
+                    .filter(a => a.urgency === "immediate")
+                    .map((action, idx) => (
+                      <div key={idx} className="border rounded p-3 bg-red-50 border-red-200">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="font-semibold text-foreground">{action.title}</h3>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Owner: {action.ownerRole} • Due in {action.dueInDays} days
+                            </p>
+                          </div>
+                          <Badge variant={PRIORITY_COLORS[action.priority]}>
+                            {action.priority}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{action.description}</p>
+                        <div className="text-xs bg-white border rounded p-2">
+                          <strong>Success metric:</strong> {action.successMetric}
+                        </div>
+                      </div>
+                    ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
+
+            {result.actionPlan.filter(a => a.urgency === "next").length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-amber-900 mb-3 pb-2 border-b-2 border-amber-200">📋 NEXT ACTIONS</h3>
+                <div className="space-y-4">
+                  {result.actionPlan
+                    .filter(a => a.urgency === "next")
+                    .map((action, idx) => (
+                      <div key={idx} className="border rounded p-3 bg-gray-50">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="font-semibold text-foreground">{action.title}</h3>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Owner: {action.ownerRole} • Due in {action.dueInDays} days
+                            </p>
+                          </div>
+                          <Badge variant={PRIORITY_COLORS[action.priority]}>
+                            {action.priority}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{action.description}</p>
+                        <div className="text-xs bg-white border rounded p-2">
+                          <strong>Success metric:</strong> {action.successMetric}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
