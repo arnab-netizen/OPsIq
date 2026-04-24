@@ -151,7 +151,24 @@ export async function blockStage(
     throw new ValidationError("Version mismatch");
   }
 
-  // Note: Stage blocking is not tracked in the schema - tracking via audit event only
+  // Block the engagement (source of truth for blocking state)
+  const engagement = await db.engagement.findUnique({
+    where: { id: stage.engagementId },
+    select: { version: true, isBlocked: true },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", stage.engagementId);
+
+  if (!engagement.isBlocked) {
+    await db.engagement.update({
+      where: { id: stage.engagementId },
+      data: {
+        isBlocked: true,
+        blockerReason: input.blockerReason,
+        blockedAt: new Date(),
+        version: { increment: 1 },
+      },
+    });
+  }
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.STAGE_BLOCKED,
@@ -195,7 +212,24 @@ export async function unblockStage(
     throw new ValidationError("Version mismatch");
   }
 
-  // Note: Stage blocking is not tracked in the schema - tracking via audit event only
+  // Unblock the engagement (source of truth for blocking state)
+  const engagement = await db.engagement.findUnique({
+    where: { id: stage.engagementId },
+    select: { version: true, isBlocked: true },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", stage.engagementId);
+
+  if (engagement.isBlocked) {
+    await db.engagement.update({
+      where: { id: stage.engagementId },
+      data: {
+        isBlocked: false,
+        blockerReason: null,
+        blockedAt: null,
+        version: { increment: 1 },
+      },
+    });
+  }
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.STAGE_UNBLOCKED,

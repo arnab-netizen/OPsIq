@@ -32,6 +32,7 @@ export const SIGNIFICANT_CHANGE_TYPES = [
   "key_employee_loss",
   "risk_escalation",
   "stage_blocked",
+  "engagement_blocked",
   "intervention_override",
 ] as const;
 
@@ -136,6 +137,7 @@ function determineReEvaluationTargets(
 
     case "unresolved_critical_blocker":
     case "stage_blocked":
+    case "engagement_blocked":
       return {
         businessConditionProfile: false,
         interventionMode: false,

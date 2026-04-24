@@ -179,6 +179,9 @@ model Engagement {
   healthStatus          String    @default("healthy") @map("health_status") // "healthy" | "at_risk" | "critical" | "unknown"
   interventionMode      String?   @map("intervention_mode") // governed by INTERVENTION_MODES, null until initialized
   interventionPhase     String?   @map("intervention_phase") // governed by INTERVENTION_PHASES, null until initialized
+  isBlocked             Boolean   @default(false) @map("is_blocked")
+  blockerReason         String?   @map("blocker_reason")
+  blockedAt             DateTime? @map("blocked_at")
   description           String?
   startDate             DateTime? @map("start_date")
   targetEndDate         DateTime? @map("target_end_date")

@@ -335,3 +335,110 @@ export async function transitionPhase(
 export function getPhaseAllowedTransitions(phase: InterventionPhase): InterventionPhase[] {
   return (PHASE_TRANSITIONS[phase] || []) as InterventionPhase[];
 }
+
+/**
+ * Block an engagement with a reason and severity tracking via audit event.
+ */
+export async function blockEngagement(
+  engagementId: string,
+  blockerReason: string,
+  version: number,
+  actorId: string
+): Promise<void> {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: { id: true, version: true, isBlocked: true },
+  });
+
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  if (engagement.version !== version) {
+    throw new ValidationError("Version mismatch");
+  }
+
+  if (engagement.isBlocked) {
+    throw new ValidationError("Engagement is already blocked");
+  }
+
+  await db.engagement.update({
+    where: { id: engagementId },
+    data: withVersionIncrement({
+      isBlocked: true,
+      blockerReason,
+      blockedAt: new Date(),
+    }),
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.ENGAGEMENT_BLOCKED,
+    actorId,
+    entityType: "engagement",
+    entityId: engagementId,
+    payload: {
+      blockerReason,
+    },
+    visibility: "internal",
+  });
+
+  // Trigger re-evaluation due to engagement block
+  await triggerReEvaluation({
+    changeType: "engagement_blocked",
+    entityType: "engagement",
+    entityId: engagementId,
+    engagementId,
+    severity: "critical",
+    description: `Engagement blocked: ${blockerReason}`,
+    triggeredBy: actorId,
+  });
+
+  logger.info("Engagement blocked", {
+    engagementId,
+    blockerReason,
+  });
+}
+
+/**
+ * Unblock an engagement.
+ */
+export async function unblockEngagement(
+  engagementId: string,
+  version: number,
+  actorId: string
+): Promise<void> {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: { id: true, version: true, isBlocked: true },
+  });
+
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  if (engagement.version !== version) {
+    throw new ValidationError("Version mismatch");
+  }
+
+  if (!engagement.isBlocked) {
+    throw new ValidationError("Engagement is not blocked");
+  }
+
+  await db.engagement.update({
+    where: { id: engagementId },
+    data: withVersionIncrement({
+      isBlocked: false,
+      blockerReason: null,
+      blockedAt: null,
+    }),
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.ENGAGEMENT_UNBLOCKED,
+    actorId,
+    entityType: "engagement",
+    entityId: engagementId,
+    payload: {},
+    visibility: "internal",
+  });
+
+  logger.info("Engagement unblocked", {
+    engagementId,
+  });
+}

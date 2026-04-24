@@ -45,6 +45,8 @@ export const AUDIT_EVENTS = {
   ENGAGEMENT_STAGE_CHANGED: "engagement.stage_changed",
   ENGAGEMENT_COMPLETED: "engagement.completed",
   ENGAGEMENT_CANCELLED: "engagement.cancelled",
+  ENGAGEMENT_BLOCKED: "engagement.blocked",
+  ENGAGEMENT_UNBLOCKED: "engagement.unblocked",
 
   // Stage
   STAGE_CREATED: "stage.created",
