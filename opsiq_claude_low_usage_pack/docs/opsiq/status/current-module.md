@@ -1,20 +1,27 @@
 # Current module
 
 ## Module
-Module 02 — Clients, Leads, Engagements, and Business Condition
+Module 11 — Workflow and Governance
 
 ## Current slice
-recovery
+schema (next: StageTemplate, StageBlocker, ApprovalRecord, ScopeVersion, ScopeChangeRequest, RiskRecord, AssumptionRecord, ReferralRecord)
 
-## Goal
-Reconcile the existing partial Module 02 work with the repository rules before adding more code.
+## Completed modules
+1. Module 02 ✅ — Clients, Leads, Engagements, Business Condition
+2. Module 03 ✅ (partial) — Intervention State, Stage, KPI, Deliverable, Risk (phase name divergence outstanding)
+3. Module 04 ✅ — Shock Events (ShockEvent model added, SHOCK_EVENT_TYPES defined)
+4. Module 05 ✅ — Evidence Vault
+5. Module 06 ✅ — Findings
+6. Module 07 ✅ (partial) — Recommendations with weighted scoring (3 classes implemented, spec has 5)
+7. Module 08 ✅ (partial) — Actions (no ActionDependency)
+8. Module 09 ✅ (partial) — KPIs (model named KPI not KPIDefinition; confidence/category missing)
+9. Module 10 ✅ (partial) — Deliverables (no DeliverableVersion)
+10. Module 12 ✅ (partial) — Review cycles (RetainerCycle not yet in schema)
 
 ## Next slices in order
-1. recovery
-2. schema
-3. backend
-4. ui
-5. tests
-6. audit
-7. integration
-8. status update
+1. schema — add StageTemplate, StageBlocker, ApprovalRecord, ScopeVersion, ScopeChangeRequest
+2. backend — governance services
+3. ui — governance views
+4. tests — coverage
+5. integration — cross-module verification
+6. status update
