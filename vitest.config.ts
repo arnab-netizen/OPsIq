@@ -5,10 +5,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
-    // Excluded from test runs:
-    // - *.integration.test.ts (requires database)
-    // - *.placeholder.test.ts (empty/broken test files pending removal)
     exclude: [
       "**/node_modules/**",
       "**/.next/**",
