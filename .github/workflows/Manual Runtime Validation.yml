@@ -6,7 +6,7 @@ on:
       reset_database:
         description: "DANGER: Drop public schema before deploy"
         required: true
-        default: "true"
+        default: "false"
       run_tests:
         description: "Run unit tests"
         required: true
@@ -21,17 +21,22 @@ jobs:
       DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - run: npx prisma validate
+      - name: Prisma validate
+        run: npx prisma validate
 
-      - run: npx prisma generate
+      - name: Prisma generate
+        run: npx prisma generate
 
       - name: Hard reset public schema
         if: ${{ inputs.reset_database == 'true' }}
@@ -39,16 +44,25 @@ jobs:
           npx prisma db execute --stdin <<'SQL'
           DROP SCHEMA IF EXISTS public CASCADE;
           CREATE SCHEMA public;
+          GRANT ALL ON SCHEMA public TO public;
           SQL
 
       - name: Apply migrations
         run: npx prisma migrate deploy
 
-      - run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --exit-code
+      - name: Check schema drift
+        run: |
+          npx prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema prisma/schema.prisma \
+            --exit-code
 
-      - run: npm run build
+      - name: Build application
+        run: npm run build
 
-      - run: npm run test:merge
+      - name: Run unit tests
         if: ${{ inputs.run_tests == 'true' }}
+        run: npm run test:merge
 
-      - run: echo "DB RESET + MIGRATIONS + BUILD + TESTS PASSED"
+      - name: Success note
+        run: echo "DB RESET + MIGRATIONS + BUILD + TESTS PASSED"
