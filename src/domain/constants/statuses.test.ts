@@ -48,13 +48,11 @@ describe("Domain status constants", () => {
   });
 
   it("INTERVENTION_PHASES has all required phases", () => {
-    expect(INTERVENTION_PHASES).toHaveLength(6);
+    expect(INTERVENTION_PHASES).toHaveLength(4);
     expect(INTERVENTION_PHASES).toContain("triage");
-    expect(INTERVENTION_PHASES).toContain("stabilize");
-    expect(INTERVENTION_PHASES).toContain("repair");
-    expect(INTERVENTION_PHASES).toContain("strengthen");
-    expect(INTERVENTION_PHASES).toContain("grow");
-    expect(INTERVENTION_PHASES).toContain("protect");
+    expect(INTERVENTION_PHASES).toContain("stabilization");
+    expect(INTERVENTION_PHASES).toContain("recovery");
+    expect(INTERVENTION_PHASES).toContain("growth");
   });
 
   it("BUSINESS_CONDITION_RATINGS has 6 levels", () => {

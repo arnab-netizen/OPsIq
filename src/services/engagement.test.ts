@@ -39,11 +39,29 @@ describe("engagement service", () => {
       };
       mockDb.engagement = {
         count: vi.fn().mockResolvedValue(0),
-        findUnique: vi.fn().mockResolvedValue(null),
+        findUnique: vi.fn().mockImplementation(({ where }) => {
+          if (where.id === mockEngagementId) {
+            return Promise.resolve({
+              id: mockEngagementId,
+              code: "TEST-001",
+              title: input.title,
+              interventionMode: null,
+            });
+          }
+          return Promise.resolve(null);
+        }),
         create: vi.fn().mockResolvedValue({
           id: mockEngagementId,
           code: "TEST-001",
           title: input.title,
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: mockEngagementId,
+          code: "TEST-001",
+          title: input.title,
+          interventionMode: input.interventionMode,
+          interventionPhase: "triage",
+          version: 1,
         }),
       };
       mockDb.idempotencyRecord = {

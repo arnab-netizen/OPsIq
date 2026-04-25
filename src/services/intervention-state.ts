@@ -21,7 +21,6 @@ import {
 export interface InterventionState {
   engagementId: string;
   interventionMode: string;
-  interventionPhase: string;
   version: number;
 }
 
@@ -38,12 +37,10 @@ export interface UpdateInterventionModeInput {
 // ─── Phase Transition Validation ──────────────────────────────────────────
 
 const PHASE_TRANSITIONS: Partial<Record<InterventionPhase, readonly InterventionPhase[]>> = {
-  assessment: ["planning"],
-  planning: ["execution", "assessment"],
-  execution: ["review", "planning"],
-  review: ["handover", "execution"],
-  handover: ["closed", "execution"],
-  closed: [],
+  triage: ["stabilization"],
+  stabilization: ["recovery", "triage"],
+  recovery: ["growth", "stabilization"],
+  growth: [],
 };
 
 function validatePhaseTransition(from: InterventionPhase, to: InterventionPhase): void {
@@ -86,7 +83,7 @@ function validateInterventionMode(mode: string): void {
 
 /**
  * Get current intervention state for an engagement.
- * Note: interventionMode and interventionPhase are stored on Engagement model.
+ * Note: interventionMode is stored on Engagement model.
  */
 export async function getInterventionState(
   engagementId: string
@@ -96,7 +93,6 @@ export async function getInterventionState(
     select: {
       id: true,
       interventionMode: true,
-      interventionPhase: true,
       version: true,
     },
   });
@@ -106,7 +102,6 @@ export async function getInterventionState(
   return {
     engagementId: engagement.id,
     interventionMode: engagement.interventionMode,
-    interventionPhase: engagement.interventionPhase,
     version: engagement.version,
   };
 }
@@ -260,5 +255,190 @@ export async function updateInterventionMode(
     engagementId,
     previousMode,
     newMode: input.interventionMode,
+  });
+}
+
+export async function initializeInterventionState(
+  engagementId: string,
+  interventionMode: string,
+  actorId: string
+) {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  if (engagement.interventionMode) {
+    throw new ValidationError("Intervention state already initialized for this engagement");
+  }
+
+  const updated = await db.engagement.update({
+    where: { id: engagementId },
+    data: {
+      interventionMode: interventionMode as InterventionMode,
+      interventionPhase: "triage" as InterventionPhase,
+      version: { increment: 1 },
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.INTERVENTION_STATE_INITIALIZED,
+    actorId,
+    entityType: "engagement",
+    entityId: engagementId,
+    payload: {
+      interventionMode,
+      interventionPhase: "triage",
+    },
+    visibility: "internal",
+  });
+
+  return updated;
+}
+
+export async function transitionPhase(
+  engagementId: string,
+  newPhase: string,
+  actorId: string
+) {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  const currentPhase = engagement.interventionPhase as InterventionPhase;
+  validatePhaseTransition(currentPhase, newPhase as InterventionPhase);
+
+  const updated = await db.engagement.update({
+    where: { id: engagementId },
+    data: {
+      interventionPhase: newPhase as InterventionPhase,
+      version: { increment: 1 },
+    },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.INTERVENTION_PHASE_CHANGED,
+    actorId,
+    entityType: "engagement",
+    entityId: engagementId,
+    payload: {
+      fromPhase: currentPhase,
+      toPhase: newPhase,
+    },
+    visibility: "internal",
+  });
+
+  return updated;
+}
+
+export function getPhaseAllowedTransitions(phase: InterventionPhase): InterventionPhase[] {
+  return (PHASE_TRANSITIONS[phase] || []) as InterventionPhase[];
+}
+
+/**
+ * Block an engagement with a reason and severity tracking via audit event.
+ */
+export async function blockEngagement(
+  engagementId: string,
+  blockerReason: string,
+  version: number,
+  actorId: string
+): Promise<void> {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: { id: true, version: true, isBlocked: true },
+  });
+
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  if (engagement.version !== version) {
+    throw new ValidationError("Version mismatch");
+  }
+
+  if (engagement.isBlocked) {
+    throw new ValidationError("Engagement is already blocked");
+  }
+
+  await db.engagement.update({
+    where: { id: engagementId },
+    data: withVersionIncrement({
+      isBlocked: true,
+      blockerReason,
+      blockedAt: new Date(),
+    }),
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.ENGAGEMENT_BLOCKED,
+    actorId,
+    entityType: "engagement",
+    entityId: engagementId,
+    payload: {
+      blockerReason,
+    },
+    visibility: "internal",
+  });
+
+  // Trigger re-evaluation due to engagement block
+  await triggerReEvaluation({
+    changeType: "engagement_blocked",
+    entityType: "engagement",
+    entityId: engagementId,
+    engagementId,
+    severity: "critical",
+    description: `Engagement blocked: ${blockerReason}`,
+    triggeredBy: actorId,
+  });
+
+  logger.info("Engagement blocked", {
+    engagementId,
+    blockerReason,
+  });
+}
+
+/**
+ * Unblock an engagement.
+ */
+export async function unblockEngagement(
+  engagementId: string,
+  version: number,
+  actorId: string
+): Promise<void> {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: { id: true, version: true, isBlocked: true },
+  });
+
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  if (engagement.version !== version) {
+    throw new ValidationError("Version mismatch");
+  }
+
+  if (!engagement.isBlocked) {
+    throw new ValidationError("Engagement is not blocked");
+  }
+
+  await db.engagement.update({
+    where: { id: engagementId },
+    data: withVersionIncrement({
+      isBlocked: false,
+      blockerReason: null,
+      blockedAt: null,
+    }),
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.ENGAGEMENT_UNBLOCKED,
+    actorId,
+    entityType: "engagement",
+    entityId: engagementId,
+    payload: {},
+    visibility: "internal",
+  });
+
+  logger.info("Engagement unblocked", {
+    engagementId,
   });
 }

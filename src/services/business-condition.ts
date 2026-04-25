@@ -120,7 +120,7 @@ export async function assessCondition(
     async () => {
       // Use transaction to prevent race condition on isCurrent flag
       // Both updateMany and create happen atomically
-      const profile = await db.$transaction(async (tx) => {
+      const profile = await db.$transaction(async (tx: any) => {
         // Mark previous current profile as non-current
         await tx.businessConditionProfile.updateMany({
           where: { engagementId: input.engagementId, isCurrent: true },
@@ -181,8 +181,8 @@ export async function assessCondition(
     entityType: "business_condition_profile",
     entityId: result.result.id,
     engagementId: input.engagementId,
-    severity: profile.severityScore >= 7 ? "high" : "medium",
-    description: `Business condition assessed: ${input.businessStatus} (severity ${profile.severityScore}/10)`,
+    severity: result.result.severityScore >= 7 ? "high" : "medium",
+    description: `Business condition assessed: ${input.businessStatus} (severity ${result.result.severityScore}/10)`,
     triggeredBy: actorId,
   });
 

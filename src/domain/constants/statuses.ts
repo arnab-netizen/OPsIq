@@ -93,11 +93,9 @@ export type InterventionMode = (typeof INTERVENTION_MODES)[number];
 
 export const INTERVENTION_PHASES = [
   "triage",
-  "stabilize",
-  "repair",
-  "strengthen",
-  "grow",
-  "protect",
+  "stabilization",
+  "recovery",
+  "growth",
 ] as const;
 
 export type InterventionPhase = (typeof INTERVENTION_PHASES)[number];
@@ -298,3 +296,16 @@ export const BLOCKER_TYPES = [
 ] as const;
 
 export type BlockerType = (typeof BLOCKER_TYPES)[number];
+
+export const SHOCK_EVENT_TYPES = [
+  "key_employee_loss",
+  "major_client_loss",
+  "margin_collapse",
+  "payroll_pressure",
+  "service_breakdown",
+  "supplier_failure",
+  "owner_withdrawal",
+  "compliance_issue",
+] as const;
+
+export type ShockEventType = (typeof SHOCK_EVENT_TYPES)[number];

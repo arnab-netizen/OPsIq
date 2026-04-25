@@ -15,16 +15,12 @@ export interface CreateStageInput {
   title: string;
   description?: string;
   status: GovernedStageState;
-  dueAt?: string;
-  ownerId?: string;
 }
 
 export interface UpdateStageInput {
   title?: string;
   description?: string;
   status?: GovernedStageState;
-  dueAt?: string;
-  ownerId?: string;
   version: number;
 }
 
@@ -56,8 +52,6 @@ export async function createStage(
       title: input.title,
       description: input.description ?? null,
       status: input.status,
-      dueAt: input.dueAt ? new Date(input.dueAt) : null,
-      ownerId: input.ownerId ?? null,
     },
   });
 
@@ -114,10 +108,6 @@ export async function updateStage(
 
   if (input.status && input.status !== stage.status) {
     validateStageTransition(stage.status as GovernedStageState, input.status);
-
-    if (stage.isBlocked && input.status !== "active" && input.status !== "deferred") {
-      throw new ValidationError("Cannot transition blocked stage to this status");
-    }
   }
 
   await db.stage.update({
@@ -126,8 +116,6 @@ export async function updateStage(
       title: input.title ?? undefined,
       description: input.description ?? undefined,
       status: input.status ?? undefined,
-      dueAt: input.dueAt ? new Date(input.dueAt) : undefined,
-      ownerId: input.ownerId ?? undefined,
     }),
   });
 
@@ -163,20 +151,24 @@ export async function blockStage(
     throw new ValidationError("Version mismatch");
   }
 
-  if (stage.isBlocked) {
-    throw new ValidationError("Stage is already blocked");
-  }
-
-  await db.stage.update({
-    where: { id },
-    data: withVersionIncrement({
-      isBlocked: true,
-      blockerSeverity: input.blockerSeverity,
-      blockerType: input.blockerType,
-      blockerReason: input.blockerReason,
-      blockedAt: new Date(),
-    }),
+  // Block the engagement (source of truth for blocking state)
+  const engagement = await db.engagement.findUnique({
+    where: { id: stage.engagementId },
+    select: { version: true, isBlocked: true },
   });
+  if (!engagement) throw new NotFoundError("Engagement", stage.engagementId);
+
+  if (!engagement.isBlocked) {
+    await db.engagement.update({
+      where: { id: stage.engagementId },
+      data: {
+        isBlocked: true,
+        blockerReason: input.blockerReason,
+        blockedAt: new Date(),
+        version: { increment: 1 },
+      },
+    });
+  }
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.STAGE_BLOCKED,
@@ -220,20 +212,24 @@ export async function unblockStage(
     throw new ValidationError("Version mismatch");
   }
 
-  if (!stage.isBlocked) {
-    throw new ValidationError("Stage is not blocked");
-  }
-
-  await db.stage.update({
-    where: { id },
-    data: withVersionIncrement({
-      isBlocked: false,
-      blockerSeverity: null,
-      blockerType: null,
-      blockerReason: null,
-      unblockedAt: new Date(),
-    }),
+  // Unblock the engagement (source of truth for blocking state)
+  const engagement = await db.engagement.findUnique({
+    where: { id: stage.engagementId },
+    select: { version: true, isBlocked: true },
   });
+  if (!engagement) throw new NotFoundError("Engagement", stage.engagementId);
+
+  if (engagement.isBlocked) {
+    await db.engagement.update({
+      where: { id: stage.engagementId },
+      data: {
+        isBlocked: false,
+        blockerReason: null,
+        blockedAt: null,
+        version: { increment: 1 },
+      },
+    });
+  }
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.STAGE_UNBLOCKED,

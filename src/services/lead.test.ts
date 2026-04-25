@@ -138,7 +138,7 @@ describe("lead service", () => {
 
       expect(triggerReEvaluation).toHaveBeenCalledWith(
         expect.objectContaining({
-          changeType: "scope_change",
+          changeType: "new_critical_evidence",
           severity: "medium",
         })
       );

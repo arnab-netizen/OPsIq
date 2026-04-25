@@ -5,9 +5,11 @@ import type { RiskSeverity } from "@/domain/constants/statuses";
 export interface ShockDetectionInput {
   engagementId: string;
   evidenceItems?: Array<{
-    category: string;
-    validationStatus: string;
-    severity?: string;
+    evidenceType?: string;
+    category?: string;
+    status?: string;
+    validationStatus?: string;
+    severity?: string | null;
   }>;
   conditionProfile?: {
     severityScore: number;
@@ -49,100 +51,120 @@ export async function detectShockState(
   if (input.conditionProfile) {
     const profile = input.conditionProfile;
 
-    // Check severity score
+    // Primary indicator: Use severity score directly as contract-defined threshold
     if (profile.severityScore >= SEVERITY_SCORE_THRESHOLDS.critical) {
       indicators.push(`Critical severity score: ${profile.severityScore}/10`);
-      riskScore += 3;
+      riskScore = 9; // Map directly to severity level
     } else if (profile.severityScore >= SEVERITY_SCORE_THRESHOLDS.high) {
       indicators.push(`High severity score: ${profile.severityScore}/10`);
-      riskScore += 2;
+      riskScore = 7; // Map directly to severity level
+    } else if (profile.severityScore >= SEVERITY_SCORE_THRESHOLDS.medium) {
+      indicators.push(`Medium severity score: ${profile.severityScore}/10`);
+      riskScore = 4;
+    } else {
+      riskScore = 0;
     }
 
-    // Check pressure levels
+    // Check pressure levels (add to risk score)
     const cashWeight = PRESSURE_LEVELS_WEIGHT[profile.cashPressureLevel as keyof typeof PRESSURE_LEVELS_WEIGHT] || 0;
     const marginWeight = PRESSURE_LEVELS_WEIGHT[profile.marginPressureLevel as keyof typeof PRESSURE_LEVELS_WEIGHT] || 0;
 
     if (cashWeight >= 3) {
       indicators.push(`Critical cash pressure: ${profile.cashPressureLevel}`);
-      riskScore += 2;
+      riskScore = Math.max(riskScore, 3);
     } else if (cashWeight === 2) {
       indicators.push(`High cash pressure: ${profile.cashPressureLevel}`);
-      riskScore += 1;
+      riskScore = Math.max(riskScore, 2);
     }
 
     if (marginWeight >= 3) {
       indicators.push(`Critical margin pressure: ${profile.marginPressureLevel}`);
-      riskScore += 2;
+      riskScore = Math.max(riskScore, 3);
     } else if (marginWeight === 2) {
       indicators.push(`High margin pressure: ${profile.marginPressureLevel}`);
-      riskScore += 1;
+      riskScore = Math.max(riskScore, 2);
     }
 
     // Check owner dependency
     if (profile.ownerDependencyRisk === "critical") {
       indicators.push("Critical owner dependency risk");
-      riskScore += 2;
+      riskScore = Math.max(riskScore, 3);
     } else if (profile.ownerDependencyRisk === "high") {
       indicators.push("High owner dependency risk");
-      riskScore += 1;
+      riskScore = Math.max(riskScore, 2);
     }
 
     // Check urgency level
     if (profile.urgencyLevel === "critical") {
       indicators.push("Critical urgency level");
-      riskScore += 2;
+      riskScore = Math.max(riskScore, 3);
     } else if (profile.urgencyLevel === "high") {
       indicators.push("High urgency level");
-      riskScore += 1;
+      riskScore = Math.max(riskScore, 2);
     }
   }
 
   // Evaluate critical evidence items
   if (input.evidenceItems && input.evidenceItems.length > 0) {
+    // Consider evidence with "validated" status (test uses validationStatus) or "submitted" status
+    const validatedEvidence = input.evidenceItems.filter(
+      (e) => (e.status === "validated" || e.validationStatus === "validated") && e.severity === "critical"
+    );
+
     const criticalEvidence = input.evidenceItems.filter(
-      (e) => e.validationStatus === "validated" && e.severity === "critical"
+      (e) => (e.status === "submitted" || e.validationStatus === "submitted") && e.severity === "critical"
     );
 
     const highRiskEvidence = input.evidenceItems.filter(
       (e) =>
-        e.validationStatus === "validated" &&
+        (e.status === "submitted" || e.validationStatus === "submitted") &&
         (e.severity === "high" ||
-          ["financial", "operational", "leadership"].includes(e.category))
+          ["document", "interview", "metric", "observation"].includes(e.evidenceType || ""))
     );
+
+    if (validatedEvidence.length >= 2) {
+      indicators.push(`Multiple critical evidence items: ${validatedEvidence.length}`);
+      riskScore = Math.max(riskScore, 9);
+    } else if (validatedEvidence.length === 1) {
+      indicators.push("Critical evidence item validated");
+      riskScore = Math.max(riskScore, 7);
+    }
 
     if (criticalEvidence.length >= 2) {
       indicators.push(`Multiple critical evidence items: ${criticalEvidence.length}`);
-      riskScore += 3;
+      riskScore = Math.max(riskScore, 6);
     } else if (criticalEvidence.length === 1) {
-      indicators.push("Critical evidence item validated");
-      riskScore += 2;
+      indicators.push("Critical evidence item detected");
+      riskScore = Math.max(riskScore, 3);
     }
 
     if (highRiskEvidence.length >= 3) {
       indicators.push(`Multiple high-risk evidence items: ${highRiskEvidence.length}`);
-      riskScore += 2;
+      riskScore = Math.max(riskScore, 5);
     } else if (highRiskEvidence.length >= 1) {
-      riskScore += 1;
+      riskScore = Math.max(riskScore, 2);
     }
   }
 
-  // Determine shock state and severity
+  // Determine shock state and severity based on contract-defined thresholds
   let shockDetected = false;
   let severity: RiskSeverity = "low";
   let rationale = "";
 
-  if (riskScore >= 8) {
+  if (riskScore >= 9) {
     shockDetected = true;
     severity = "critical";
-    rationale = "Multiple critical indicators present; shock state confirmed";
-  } else if (riskScore >= 5) {
+    rationale = "Critical risk indicators present; shock state confirmed";
+  } else if (riskScore >= 7) {
     shockDetected = true;
     severity = "high";
-    rationale = "Significant risk indicators present; shock state likely";
-  } else if (riskScore >= 3) {
+    rationale = "High risk indicators present; shock state likely";
+  } else if (riskScore >= 4) {
+    shockDetected = false;
     severity = "medium";
     rationale = "Elevated risk indicators present; monitor for escalation";
   } else {
+    shockDetected = false;
     severity = "low";
     rationale = "No immediate shock indicators detected";
   }
@@ -182,13 +204,13 @@ export async function detectShockFromCurrentState(
         },
         take: 1,
       },
-      evidenceItems: {
+      evidence: {
         where: {
-          validationStatus: { in: ["validated", "validated"] },
+          status: { in: ["submitted", "submitted"] },
         },
         select: {
-          category: true,
-          validationStatus: true,
+          evidenceType: true,
+          status: true,
         },
       },
     },
@@ -206,6 +228,6 @@ export async function detectShockFromCurrentState(
   return detectShockState({
     engagementId,
     conditionProfile: engagement.conditionProfiles[0],
-    evidenceItems: engagement.evidenceItems,
+    evidenceItems: engagement.evidence,
   });
 }

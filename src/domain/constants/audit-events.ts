@@ -45,6 +45,8 @@ export const AUDIT_EVENTS = {
   ENGAGEMENT_STAGE_CHANGED: "engagement.stage_changed",
   ENGAGEMENT_COMPLETED: "engagement.completed",
   ENGAGEMENT_CANCELLED: "engagement.cancelled",
+  ENGAGEMENT_BLOCKED: "engagement.blocked",
+  ENGAGEMENT_UNBLOCKED: "engagement.unblocked",
 
   // Stage
   STAGE_CREATED: "stage.created",
@@ -108,7 +110,11 @@ export const AUDIT_EVENTS = {
   CONDITION_ASSESSED: "condition.assessed",
   CONDITION_CHANGED: "condition.changed",
 
+  // Diagnosis
+  DIAGNOSIS_COMPLETED: "diagnosis.completed",
+
   // Intervention
+  INTERVENTION_STATE_INITIALIZED: "intervention.state_initialized",
   INTERVENTION_MODE_CHANGED: "intervention.mode_changed",
   INTERVENTION_PHASE_CHANGED: "intervention.phase_changed",
 
@@ -117,16 +123,12 @@ export const AUDIT_EVENTS = {
   SHOCK_EVENT_UPDATED: "shock.event_updated",
   SHOCK_EVENT_RESOLVED: "shock.event_resolved",
 
-  // Evidence
+  // Evidence (new item/file events)
   EVIDENCE_ITEM_CREATED: "evidence.item_created",
   EVIDENCE_ITEM_UPDATED: "evidence.item_updated",
-  EVIDENCE_BUNDLE_CREATED: "evidence.bundle_created",
-  EVIDENCE_BUNDLE_UPDATED: "evidence.bundle_updated",
   EVIDENCE_FILE_UPLOADED: "evidence.file_uploaded",
 
-  // Finding
-  FINDING_CREATED: "finding.created",
-  FINDING_UPDATED: "finding.updated",
+  // Finding (additional events)
   FINDING_VALIDATED: "finding.validated",
   FINDING_DISPUTED: "finding.disputed",
   FINDING_SUPERSEDED: "finding.superseded",

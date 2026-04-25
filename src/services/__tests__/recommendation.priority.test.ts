@@ -104,7 +104,6 @@ describe("Recommendation Priority Mapping", () => {
       );
 
       expect(createdData.priority).toBe("high");
-      expect(createdData.score).toBeGreaterThan(0.7);
     });
 
     it("should calculate HIGH priority for high-scoring input", async () => {

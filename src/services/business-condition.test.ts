@@ -53,6 +53,14 @@ describe("business-condition service", () => {
           isCurrent: true,
         }),
       };
+      mockDb.idempotencyRecord = {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({}),
+        update: vi.fn().mockResolvedValue({}),
+      };
+      mockDb.$transaction = vi.fn(async (callback) => {
+        return callback(mockDb);
+      });
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
       vi.mocked(triggerReEvaluation).mockResolvedValue({
@@ -100,6 +108,14 @@ describe("business-condition service", () => {
           severityScore: 9,
         }),
       };
+      mockDb.idempotencyRecord = {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({}),
+        update: vi.fn().mockResolvedValue({}),
+      };
+      mockDb.$transaction = vi.fn(async (callback) => {
+        return callback(mockDb);
+      });
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
       vi.mocked(triggerReEvaluation).mockResolvedValue({
