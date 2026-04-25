@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError } from "@/infra/errors";
+import { NotFoundError, ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -9,6 +9,15 @@ import { logger } from "@/infra/logger";
 export interface CreateContactInput {
   clientId: string;
   name: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  isPrimary?: boolean;
+  notes?: string;
+}
+
+export interface UpdateContactInput {
+  name?: string;
   email?: string;
   phone?: string;
   role?: string;
@@ -36,6 +45,7 @@ export async function createContact(
       role: input.role ?? null,
       isPrimary: input.isPrimary ?? false,
       notes: input.notes ?? null,
+      createdBy: actorId,
     },
   });
 
@@ -46,7 +56,7 @@ export async function createContact(
     entityId: contact.id,
     payload: {
       clientId: input.clientId,
-      name: input.name,
+      name: contact.name,
       role: input.role ?? null,
     },
     visibility: "internal",
@@ -58,6 +68,77 @@ export async function createContact(
   });
 
   return { id: contact.id };
+}
+
+export async function deactivateContact(
+  contactId: string,
+  actorId: string
+): Promise<void> {
+  const contact = await db.clientContact.findUnique({
+    where: { id: contactId },
+  });
+  if (!contact) throw new NotFoundError("ClientContact", contactId);
+
+  // Idempotent: if already inactive, return success (duplicate request protection)
+  if (!contact.isActive) {
+    logger.info("Contact already deactivated, returning success", { contactId });
+    return;
+  }
+
+  await db.clientContact.update({
+    where: { id: contactId },
+    data: { isActive: false },
+  });
+
+  await emitAuditEvent({
+    eventName: "contact.deactivated",
+    actorId,
+    entityType: "client_contact",
+    entityId: contactId,
+    payload: { clientId: contact.clientId },
+    visibility: "internal",
+  });
+
+  logger.info("Client contact deactivated", {
+    contactId,
+    clientId: contact.clientId,
+  });
+}
+
+export async function updateContact(
+  contactId: string,
+  input: UpdateContactInput,
+  actorId: string
+): Promise<void> {
+  const contact = await db.clientContact.findUnique({
+    where: { id: contactId },
+  });
+  if (!contact) throw new NotFoundError("ClientContact", contactId);
+
+  if (!contact.isActive) {
+    throw new ValidationError("Cannot update an inactive contact");
+  }
+
+  const data: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (v !== undefined) data[k] = v;
+  }
+
+  await db.clientContact.update({
+    where: { id: contactId },
+    data,
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.CLIENT_CONTACT_UPDATED,
+    actorId,
+    entityType: "client_contact",
+    entityId: contactId,
+    payload: data,
+    visibility: "internal",
+  });
+
+  logger.info("Client contact updated", { contactId });
 }
 
 export async function getContactsForClient(clientId: string) {

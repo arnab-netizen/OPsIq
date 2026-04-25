@@ -155,6 +155,8 @@ export async function removeMember(
 ): Promise<void> {
   validateRoleName(input.role);
 
+  const idempotencyKey = `membership-remove:${input.userId}:${input.engagementId}:${input.role}`;
+
   const membership = await db.engagementMembership.findFirst({
     where: {
       userId: input.userId,
@@ -164,20 +166,31 @@ export async function removeMember(
     },
   });
 
+  // Idempotent: if already removed or never existed, return success (duplicate request protection)
   if (!membership) {
-    throw new NotFoundError(
-      "EngagementMembership",
-      `${input.userId}:${input.engagementId}:${input.role}`
-    );
+    // Idempotent: if already removed or never existed, no-op
+    logger.info("Member already removed or not found", {
+      userId: input.userId,
+      engagementId: input.engagementId,
+      role: input.role,
+    });
+    return;
   }
 
-  await db.engagementMembership.update({
-    where: { id: membership.id },
-    data: {
-      isActive: false,
-      removedAt: new Date(),
-    },
-  });
+  await withIdempotency(
+    idempotencyKey,
+    "engagement_membership.remove",
+    async () => {
+      await db.engagementMembership.update({
+        where: { id: membership.id },
+        data: {
+          isActive: false,
+          removedAt: new Date(),
+        },
+      });
+      return { id: membership.id };
+    }
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ENGAGEMENT_MEMBER_REMOVED,

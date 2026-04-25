@@ -27,6 +27,8 @@ export const AUDIT_EVENTS = {
   CLIENT_ACCOUNT_UPDATED: "client_account.updated",
   CLIENT_ACCOUNT_ARCHIVED: "client_account.archived",
   CLIENT_CONTACT_CREATED: "client_contact.created",
+  CLIENT_CONTACT_UPDATED: "client_contact.updated",
+  CLIENT_CONTACT_DEACTIVATED: "client_contact.deactivated",
 
   // Legacy aliases (Module 0 forward declarations)
   CLIENT_CREATED: "client.created",
@@ -50,18 +52,27 @@ export const AUDIT_EVENTS = {
   STAGE_BLOCKED: "stage.blocked",
   STAGE_UNBLOCKED: "stage.unblocked",
 
-  // Evidence
+  // Evidence (legacy names, superseded by EVIDENCE_ITEM_*)
   EVIDENCE_SUBMITTED: "evidence.submitted",
   EVIDENCE_VALIDATED: "evidence.validated",
   EVIDENCE_REJECTED: "evidence.rejected",
+  EVIDENCE_BUNDLE_CREATED: "evidence_bundle.created",
+  EVIDENCE_BUNDLE_UPDATED: "evidence_bundle.updated",
+  EVIDENCE_BUNDLE_ITEM_ADDED: "evidence_bundle.evidence_added",
+  EVIDENCE_BUNDLE_ITEM_REMOVED: "evidence_bundle.evidence_removed",
 
   // Finding
   FINDING_CREATED: "finding.created",
   FINDING_UPDATED: "finding.updated",
+  FINDING_STATUS_CHANGED: "finding.status_changed",
+  FINDING_ARCHIVED: "finding.archived",
   FINDING_LINKED: "finding.linked",
 
   // Recommendation
   RECOMMENDATION_CREATED: "recommendation.created",
+  RECOMMENDATION_UPDATED: "recommendation.updated",
+  RECOMMENDATION_STATUS_CHANGED: "recommendation.status_changed",
+  RECOMMENDATION_ARCHIVED: "recommendation.archived",
   RECOMMENDATION_APPROVED: "recommendation.approved",
   RECOMMENDATION_SUPERSEDED: "recommendation.superseded",
 
@@ -81,6 +92,7 @@ export const AUDIT_EVENTS = {
   DELIVERABLE_VERSION_SUBMITTED: "deliverable.version_submitted",
   DELIVERABLE_APPROVED: "deliverable.approved",
   DELIVERABLE_REJECTED: "deliverable.rejected",
+  DELIVERABLE_GENERATED: "deliverable.generated",
 
   // Approval
   APPROVAL_REQUESTED: "approval.requested",
@@ -102,7 +114,24 @@ export const AUDIT_EVENTS = {
 
   // Shock Event
   SHOCK_EVENT_RECORDED: "shock.event_recorded",
+  SHOCK_EVENT_UPDATED: "shock.event_updated",
   SHOCK_EVENT_RESOLVED: "shock.event_resolved",
+
+  // Evidence
+  EVIDENCE_ITEM_CREATED: "evidence.item_created",
+  EVIDENCE_ITEM_UPDATED: "evidence.item_updated",
+  EVIDENCE_BUNDLE_CREATED: "evidence.bundle_created",
+  EVIDENCE_BUNDLE_UPDATED: "evidence.bundle_updated",
+  EVIDENCE_FILE_UPLOADED: "evidence.file_uploaded",
+
+  // Finding
+  FINDING_CREATED: "finding.created",
+  FINDING_UPDATED: "finding.updated",
+  FINDING_VALIDATED: "finding.validated",
+  FINDING_DISPUTED: "finding.disputed",
+  FINDING_SUPERSEDED: "finding.superseded",
+  FINDING_EVIDENCE_LINKED: "finding.evidence_linked",
+  FINDING_EVIDENCE_UNLINKED: "finding.evidence_unlinked",
 
   // Risk
   RISK_IDENTIFIED: "risk.identified",
@@ -117,6 +146,11 @@ export const AUDIT_EVENTS = {
   // Review
   REVIEW_CYCLE_STARTED: "review.cycle_started",
   REVIEW_CYCLE_COMPLETED: "review.cycle_completed",
+  REVIEW_DUE_FLAGGED: "review.due_flagged",
+
+  // Escalation
+  ESCALATION_ALERT_HIGH_PRIORITY_OVERDUE: "escalation.high_priority_overdue",
+  ESCALATION_ALERT_KPI_DETERIORATION_PATTERN: "escalation.kpi_deterioration_pattern",
 
   // Human Factors
   HUMAN_FACTORS_ASSESSED: "human_factors.assessed",
@@ -126,6 +160,9 @@ export const AUDIT_EVENTS = {
   FILE_UPLOADED: "file.uploaded",
   FILE_DELETED: "file.deleted",
   FILE_ACCESS_CHANGED: "file.access_changed",
+
+  // Idempotency
+  IDEMPOTENCY_REPLAY_DETECTED: "idempotency.replay_detected",
 
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",

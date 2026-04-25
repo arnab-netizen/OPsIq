@@ -16,6 +16,7 @@ const updateLeadSchema = z.object({
   estimatedValue: z.number().positive().optional(),
   status: z.enum(LEAD_STATUSES).optional(),
   assignedTo: z.string().uuid().optional(),
+  version: z.number().int().min(1),
 });
 
 const linkLeadSchema = z.object({

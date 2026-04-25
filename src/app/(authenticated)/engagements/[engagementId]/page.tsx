@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/ui/primitives";
+import { InterventionStateDisplay } from "@/ui/intervention-state-display";
+import { RecommendationsView } from "@/ui/recommendations-view";
+import { ActionCenter } from "@/ui/action-center";
+import { KPITrend } from "@/ui/kpi-trend";
+import { AuditTimeline } from "@/ui/audit-timeline";
 
 const STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   draft: "muted",
@@ -27,6 +32,33 @@ const CONDITION_VARIANTS: Record<string, "default" | "success" | "warning" | "de
   strong: "success",
 };
 
+const PHASE_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  assessment: "default",
+  planning: "default",
+  execution: "success",
+  review: "warning",
+  handover: "warning",
+  closed: "muted",
+};
+
+const SEVERITY_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  critical: "destructive",
+  high: "warning",
+  medium: "default",
+  low: "muted",
+};
+
+const STATUS_BADGE_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  draft: "muted",
+  open: "warning",
+  in_progress: "default",
+  completed: "success",
+  assigned: "default",
+  blocked: "destructive",
+  verified: "success",
+  cancelled: "muted",
+};
+
 async function fetchEngagement(engagementId: string) {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}`,
@@ -36,17 +68,72 @@ async function fetchEngagement(engagementId: string) {
   return res.json();
 }
 
+async function fetchFindings(engagementId: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}/findings`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchRecommendations(engagementId: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}/recommendations`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchActions(engagementId: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}/actions`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchKPIs(engagementId: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${engagementId}/kpis`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchDeliverables(engagementId: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/deliverables?engagementId=${engagementId}`,
+    { cache: "no-store" }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export default async function EngagementDetailPage({
   params,
 }: {
   params: Promise<{ engagementId: string }>;
 }) {
   const { engagementId } = await params;
-  const engagement = await fetchEngagement(engagementId);
+  const [engagement, findings, recommendations, actions, kpis, deliverables] = await Promise.all([
+    fetchEngagement(engagementId),
+    fetchFindings(engagementId),
+    fetchRecommendations(engagementId),
+    fetchActions(engagementId),
+    fetchKPIs(engagementId),
+    fetchDeliverables(engagementId),
+  ]);
 
   if (!engagement) notFound();
 
   const currentCondition = engagement.conditionProfiles?.[0] ?? null;
+  const openActions = actions.filter((a: any) => a.status === "open" || a.status === "in_progress");
+  const criticalFindings = findings.filter((f: any) => f.severity === "critical");
+  const kpisWithMovement = kpis.filter((k: any) => k.currentValue !== null && k.baseline !== null);
 
   return (
     <div>
@@ -86,14 +173,10 @@ export default async function EngagementDetailPage({
               </Badge>
             </div>
           </div>
-          <div className="rounded-md border border-border bg-background p-3">
-            <p className="text-xs font-medium uppercase text-muted-foreground">Intervention Mode</p>
-            <div className="mt-1">
-              <Badge variant="outline">
-                {engagement.interventionMode.replace("_", " ")}
-              </Badge>
-            </div>
-          </div>
+          <InterventionStateDisplay
+            mode={engagement.interventionMode}
+            phase={engagement.interventionPhase}
+          />
           <div className="rounded-md border border-border bg-background p-3">
             <p className="text-xs font-medium uppercase text-muted-foreground">Business Condition</p>
             <div className="mt-1">
@@ -149,6 +232,41 @@ export default async function EngagementDetailPage({
           </dl>
         </div>
 
+        {/* Intervention State */}
+        <div className="rounded-lg border border-border p-6">
+          <h2 className="text-lg font-semibold text-foreground">Intervention State</h2>
+          {engagement.interventionMode && engagement.interventionPhase ? (
+            <dl className="mt-4 space-y-3">
+              <div>
+                <dt className="text-sm text-muted-foreground">Mode</dt>
+                <dd className="mt-1">
+                  <Badge variant="default">
+                    {engagement.interventionMode.replace("_", " ")}
+                  </Badge>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm text-muted-foreground">Phase</dt>
+                <dd className="mt-1">
+                  <Badge variant="default">
+                    {engagement.interventionPhase.replace("_", " ")}
+                  </Badge>
+                </dd>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                <p>
+                  Mode reflects the chosen intervention approach.
+                  Phase indicates the current stage in the structured intervention process.
+                </p>
+              </div>
+            </dl>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Intervention state has not been set yet.
+            </p>
+          )}
+        </div>
+
         {/* Business Condition Profile */}
         <div className="rounded-lg border border-border p-6">
           <h2 className="text-lg font-semibold text-foreground">Business Condition</h2>
@@ -190,6 +308,35 @@ export default async function EngagementDetailPage({
           ) : (
             <p className="mt-4 text-sm text-muted-foreground">
               No business condition assessment has been recorded yet.
+            </p>
+          )}
+        </div>
+
+        {/* Intervention Phase */}
+        <div className="rounded-lg border border-border p-6">
+          <h2 className="text-lg font-semibold text-foreground">Intervention Phase</h2>
+          {engagement.interventionState ? (
+            <dl className="mt-4 space-y-2">
+              <div className="flex justify-between">
+                <dt className="text-sm text-muted-foreground">Current Phase</dt>
+                <dd>
+                  <Badge variant={PHASE_VARIANTS[engagement.interventionState.currentPhase] ?? "muted"}>
+                    {engagement.interventionState.currentPhase.replace("_", " ")}
+                  </Badge>
+                </dd>
+              </div>
+              {engagement.interventionState.previousPhase && (
+                <div className="flex justify-between">
+                  <dt className="text-sm text-muted-foreground">Previous Phase</dt>
+                  <dd className="text-sm text-muted-foreground">
+                    {engagement.interventionState.previousPhase.replace("_", " ")}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">
+              Intervention phase not yet initialized.
             </p>
           )}
         </div>
@@ -253,6 +400,90 @@ export default async function EngagementDetailPage({
               </div>
             )}
           </div>
+        )}
+      </div>
+
+      {/* ─── Findings Section ──────────────────────────────────────────── */}
+      <div className="mt-8 rounded-lg border border-border p-6">
+        <h2 className="text-lg font-semibold text-foreground">
+          Findings ({findings.length})
+        </h2>
+        {findings.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            {findings.slice(0, 5).map((f: any) => (
+              <div key={f.id} className="rounded-md border border-border p-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-foreground">{f.title}</h3>
+                    {f.description && (
+                      <p className="mt-1 text-xs text-muted-foreground">{f.description}</p>
+                    )}
+                    <div className="mt-2 flex gap-2">
+                      <Badge variant={SEVERITY_VARIANTS[f.severity] ?? "muted"}>
+                        {f.severity}
+                      </Badge>
+                      <Badge variant="outline">{f.category}</Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {findings.length > 5 && (
+              <p className="text-xs text-muted-foreground">... and {findings.length - 5} more findings</p>
+            )}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">No findings recorded.</p>
+        )}
+      </div>
+
+      {/* ─── Recommendations Section ────────────────────────────────────── */}
+      <div className="mt-8">
+        <RecommendationsView recommendations={recommendations} />
+      </div>
+
+      {/* ─── Audit Timeline Section ────────────────────────────────────── */}
+      <div className="mt-8">
+        <AuditTimeline engagementId={engagementId} />
+      </div>
+
+      {/* ─── Actions Section ───────────────────────────────────────────── */}
+      <div className="mt-8">
+        <ActionCenter actions={actions} engagementId={engagementId} />
+      </div>
+
+      {/* ─── KPIs Section ──────────────────────────────────────────────── */}
+      <div className="mt-8">
+        <KPITrend kpis={kpis} />
+      </div>
+
+      {/* ─── Deliverables Section ──────────────────────────────────────── */}
+      <div className="mt-8 rounded-lg border border-border p-6">
+        <h2 className="text-lg font-semibold text-foreground">
+          Deliverables ({deliverables.length})
+        </h2>
+        {deliverables.length > 0 ? (
+          <div className="mt-4 space-y-2">
+            {deliverables.map((d: any) => (
+              <Link
+                key={d.id}
+                href={`/deliverables/${d.id}`}
+                className="block rounded-md border border-border p-3 hover:bg-muted/50"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium text-foreground">{d.title}</h3>
+                    <p className="text-xs text-muted-foreground capitalize">{d.type.replace(/_/g, " ")}</p>
+                  </div>
+                  <Badge variant={STATUS_BADGE_VARIANTS[d.reviewStatus] ?? "muted"}>
+                    {d.reviewStatus.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-muted-foreground">No deliverables yet.</p>
         )}
       </div>
     </div>

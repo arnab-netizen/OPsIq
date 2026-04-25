@@ -1,7 +1,10 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { DuplicateSubmissionError } from "@/infra/errors";
+import { createHash } from "crypto";
+import { DuplicateSubmissionError, ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 const DEFAULT_TTL_HOURS = 24;
 
@@ -10,24 +13,53 @@ export interface IdempotencyResult<T> {
   result: T;
 }
 
+function computePayloadHash(payload: unknown): string {
+  const normalized = JSON.stringify(payload);
+  return createHash("sha256").update(normalized).digest("hex");
+}
+
 export async function withIdempotency<T>(
   idempotencyKey: string,
   operationName: string,
   operation: () => Promise<T>,
+  payload?: unknown,
+  actorId?: string,
   ttlHours: number = DEFAULT_TTL_HOURS
 ): Promise<IdempotencyResult<T>> {
   const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+  const payloadHash = payload ? computePayloadHash(payload) : null;
 
   const existing = await db.idempotencyRecord.findUnique({
     where: { idempotencyKey },
   });
 
   if (existing) {
+    if (payloadHash && existing.payload && existing.payload !== payloadHash) {
+      throw new ValidationError(
+        `Idempotency key reused with different payload for operation: ${operationName}`
+      );
+    }
+
     if (existing.status === "completed" && existing.responseBody !== null) {
       logger.info("Idempotency cache hit", {
         idempotencyKey,
         operationName,
       });
+
+      if (actorId) {
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.IDEMPOTENCY_REPLAY_DETECTED,
+          actorId,
+          entityType: "IdempotencyRecord",
+          entityId: existing.id,
+          payload: {
+            operationName,
+            idempotencyKey,
+          },
+          visibility: "internal",
+        });
+      }
+
       return { isNew: false, result: existing.responseBody as T };
     }
 
@@ -46,6 +78,7 @@ export async function withIdempotency<T>(
           idempotencyKey,
           operationName,
           status: "pending",
+          payload: payloadHash,
           expiresAt,
         },
       });

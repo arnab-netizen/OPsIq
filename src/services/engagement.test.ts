@@ -1,0 +1,233 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import * as engagementService from "./engagement";
+import { db } from "@/lib/db";
+import { emitAuditEvent } from "@/infra/audit";
+import { triggerReEvaluation } from "./re-evaluation";
+import { NotFoundError, ValidationError } from "@/infra/errors";
+
+vi.mock("@/lib/db");
+vi.mock("@/infra/audit");
+vi.mock("./re-evaluation");
+vi.mock("@/infra/logger");
+
+const mockUserId = "user-123";
+const mockClientId = "client-123";
+const mockEngagementId = "eng-123";
+
+describe("engagement service", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("createEngagement", () => {
+    it("creates engagement with valid intervention mode", async () => {
+      const input = {
+        title: "Recovery",
+        clientId: mockClientId,
+        serviceTier: "premium",
+        engagementMode: "expert",
+        interventionMode: "recovery",
+      };
+
+      const mockDb = db as any;
+      mockDb.clientAccount = {
+        findUnique: vi.fn().mockResolvedValue({
+          id: mockClientId,
+          name: "Test Client",
+          status: "active",
+        }),
+      };
+      mockDb.engagement = {
+        count: vi.fn().mockResolvedValue(0),
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({
+          id: mockEngagementId,
+          code: "TEST-001",
+          title: input.title,
+        }),
+      };
+      mockDb.idempotencyRecord = {
+        findUnique: vi.fn().mockResolvedValue(null),
+        create: vi.fn().mockResolvedValue({}),
+        update: vi.fn().mockResolvedValue({}),
+      };
+
+      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
+
+      const result = await engagementService.createEngagement(input, mockUserId);
+
+      expect(result.id).toBe(mockEngagementId);
+      expect(emitAuditEvent).toHaveBeenCalled();
+    });
+
+    it("throws on invalid intervention mode", async () => {
+      const input = {
+        title: "Test",
+        clientId: mockClientId,
+        serviceTier: "premium",
+        engagementMode: "expert",
+        interventionMode: "invalid",
+      };
+
+      const mockDb = db as any;
+      mockDb.clientAccount = {
+        findUnique: vi.fn().mockResolvedValue({
+          status: "active",
+          name: "Test Client",
+        }),
+      };
+
+      await expect(
+        engagementService.createEngagement(input, mockUserId)
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("throws when client archived", async () => {
+      const input = {
+        title: "Test",
+        clientId: mockClientId,
+        serviceTier: "premium",
+        engagementMode: "expert",
+        interventionMode: "recovery",
+      };
+
+      const mockDb = db as any;
+      mockDb.clientAccount = {
+        findUnique: vi.fn().mockResolvedValue({ status: "archived" }),
+      };
+
+      await expect(
+        engagementService.createEngagement(input, mockUserId)
+      ).rejects.toThrow(ValidationError);
+    });
+  });
+
+  describe("updateEngagement", () => {
+    it("updates status and emits event", async () => {
+      const mockDb = db as any;
+      mockDb.engagement = {
+        findUnique: vi.fn().mockResolvedValue({
+          id: mockEngagementId,
+          status: "draft",
+          interventionMode: "recovery",
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: mockEngagementId,
+          status: "active",
+        }),
+      };
+
+      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
+
+      await engagementService.updateEngagement(
+        mockEngagementId,
+        { status: "active", version: 1 },
+        mockUserId
+      );
+
+      expect(emitAuditEvent).toHaveBeenCalled();
+    });
+
+    it("triggers re-evaluation on intervention mode change", async () => {
+      const mockDb = db as any;
+      mockDb.engagement = {
+        findUnique: vi.fn().mockResolvedValue({
+          id: mockEngagementId,
+          status: "active",
+          interventionMode: "recovery",
+        }),
+        update: vi.fn().mockResolvedValue({
+          id: mockEngagementId,
+          interventionMode: "growth",
+        }),
+      };
+
+      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
+      vi.mocked(triggerReEvaluation).mockResolvedValue({
+        targets: {} as any,
+        auditEventId: "eval-id",
+      });
+
+      const response = await engagementService.updateEngagement(
+        mockEngagementId,
+        { interventionMode: "growth", version: 1 },
+        mockUserId
+      );
+
+      expect(triggerReEvaluation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          changeType: "intervention_override",
+        })
+      );
+    });
+
+    it("emits completed event on status transition", async () => {
+      const mockDb = db as any;
+      mockDb.engagement = {
+        findUnique: vi.fn().mockResolvedValue({
+          id: mockEngagementId,
+          status: "active",
+          interventionMode: "recovery",
+        }),
+        update: vi.fn().mockResolvedValue({
+          status: "completed",
+        }),
+      };
+
+      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
+
+      await engagementService.updateEngagement(
+        mockEngagementId,
+        { status: "completed", version: 1 },
+        mockUserId
+      );
+
+      // Should emit both ENGAGEMENT_UPDATED and ENGAGEMENT_COMPLETED
+      expect(emitAuditEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: "engagement.completed",
+        })
+      );
+    });
+  });
+
+  describe("getEngagementById", () => {
+    it("returns engagement with relations", async () => {
+      const mockDb = db as any;
+      mockDb.engagement = {
+        findUnique: vi.fn().mockResolvedValue({
+          id: mockEngagementId,
+          code: "TEST-001",
+          visibility: "internal",
+          client: { id: mockClientId },
+          conditionProfiles: [],
+          memberships: [],
+          parent: null,
+          children: [],
+          _count: { leads: 0 },
+        }),
+      };
+
+      const result = await engagementService.getEngagementById(mockEngagementId, true);
+
+      expect(result.id).toBe(mockEngagementId);
+    });
+  });
+
+  describe("listEngagements", () => {
+    it("returns paginated engagements", async () => {
+      const mockDb = db as any;
+      mockDb.engagement = {
+        findMany: vi.fn().mockResolvedValue([
+          { id: "eng-1", code: "TEST-001" },
+        ]),
+        count: vi.fn().mockResolvedValue(1),
+      };
+
+      const result = await engagementService.listEngagements();
+
+      expect(result.engagements).toHaveLength(1);
+      expect(result.total).toBe(1);
+    });
+  });
+});

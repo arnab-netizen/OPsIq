@@ -98,6 +98,8 @@ export async function updateClient(
     if (v !== undefined) data[k] = v;
   }
 
+  // Duplicate request protection: optimistic locking via version check
+  // Duplicate requests with old version fail fast with 409 Conflict
   await optimisticUpdate("client_account", clientId, version, () =>
     db.clientAccount.update({
       where: withVersionCheck({ id: clientId }, version),
@@ -127,8 +129,11 @@ export async function archiveClient(
   });
 
   if (!client) throw new NotFoundError("ClientAccount", clientId);
+
+  // Idempotent: if already archived, return success (duplicate request protection)
   if (client.status === "archived") {
-    throw new ValidationError("Client is already archived");
+    logger.info("Client already archived, returning success", { clientId });
+    return;
   }
 
   await optimisticUpdate("client_account", clientId, version, () =>
@@ -152,7 +157,9 @@ export async function archiveClient(
   logger.info("Client account archived", { clientId });
 }
 
-export async function getClientById(clientId: string) {
+export async function getClientById(clientId: string, hasInternalAccess: boolean = false) {
+  const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
+
   const client = await db.clientAccount.findUnique({
     where: { id: clientId },
     include: {
@@ -162,18 +169,28 @@ export async function getClientById(clientId: string) {
   });
 
   if (!client) throw new NotFoundError("ClientAccount", clientId);
+  if (!hasInternalAccess && client.visibility !== "client_visible") {
+    throw new NotFoundError("ClientAccount", clientId);
+  }
+
   return client;
 }
 
-export async function listClients(params: {
-  limit?: number;
-  offset?: number;
-  status?: string;
-  search?: string;
-} = {}) {
+export async function listClients(
+  params: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    search?: string;
+  } = {},
+  hasInternalAccess: boolean = false
+) {
   const { limit = 25, offset = 0, status, search } = params;
 
+  const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
+
   const where = {
+    ...visibilityFilter,
     ...(status && { status }),
     ...(search && {
       OR: [

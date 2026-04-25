@@ -3,9 +3,15 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import type { LeadStatus } from "@/domain/constants/statuses";
 import { LEAD_STATUSES } from "@/domain/constants/statuses";
+import {
+  optimisticUpdate,
+  withVersionCheck,
+  withVersionIncrement,
+} from "@/lib/optimistic-lock";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -30,6 +36,7 @@ export interface UpdateLeadInput {
   estimatedValue?: number;
   status?: LeadStatus;
   assignedTo?: string;
+  version: number;
 }
 
 // ─── Transition Map ────────────────────────────────────────────────────────
@@ -114,15 +121,18 @@ export async function updateLead(
     validateLeadTransition(lead.status as LeadStatus, input.status);
   }
 
+  const { version, ...fields } = input;
   const data: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(input)) {
+  for (const [k, v] of Object.entries(fields)) {
     if (v !== undefined) data[k] = v;
   }
 
-  await db.leadRecord.update({
-    where: { id: leadId },
-    data,
-  });
+  await optimisticUpdate("lead_record", leadId, version, () =>
+    db.leadRecord.update({
+      where: withVersionCheck({ id: leadId }, version),
+      data: withVersionIncrement(data),
+    })
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_UPDATED,
@@ -151,14 +161,46 @@ export async function linkLeadToEngagement(
     );
   }
 
-  await db.leadRecord.update({
-    where: { id: leadId },
-    data: {
-      status: "converted",
-      convertedToClientId: clientId,
-      engagementId,
-    },
+  if (lead.convertedToClientId) {
+    // Already converted; check if it's to the same engagement (idempotency)
+    if (lead.engagementId !== engagementId || lead.convertedToClientId !== clientId) {
+      throw new ValidationError(
+        "Lead is already converted to a different engagement or client"
+      );
+    }
+    // Idempotent: already in desired state, no-op
+    return;
+  }
+
+  // Validate that the engagement belongs to the specified client
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    select: { clientId: true },
   });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+  if (engagement.clientId !== clientId) {
+    throw new ValidationError(
+      "Engagement does not belong to the specified client"
+    );
+  }
+
+  const idempotencyKey = `lead-link:${leadId}:${engagementId}:${clientId}`;
+
+  await withIdempotency(
+    idempotencyKey,
+    "lead.link_to_engagement",
+    async () => {
+      await db.leadRecord.update({
+        where: { id: leadId },
+        data: {
+          status: "converted",
+          convertedToClientId: clientId,
+          engagementId,
+        },
+      });
+      return { id: leadId };
+    }
+  );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_LINKED_TO_ENGAGEMENT,
@@ -167,6 +209,17 @@ export async function linkLeadToEngagement(
     entityId: leadId,
     payload: { engagementId, clientId },
     visibility: "internal",
+  });
+
+  // Lead conversion is significant client/engagement event
+  await triggerReEvaluation({
+    changeType: "new_critical_evidence",
+    entityType: "lead_record",
+    entityId: leadId,
+    engagementId,
+    severity: "medium",
+    description: `Lead converted to client and linked to engagement ${engagementId}`,
+    triggeredBy: actorId,
   });
 
   logger.info("Lead linked to engagement", { leadId, engagementId, clientId });

@@ -5,7 +5,9 @@ import {
   assessCondition,
   getConditionHistory,
 } from "@/services/business-condition";
+import { assertEngagementAccess } from "@/lib/visibility";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import {
   BUSINESS_CONDITION_RATINGS,
@@ -34,7 +36,9 @@ const assessConditionSchema = z.object({
 export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  await withAuth({ capability: CAPABILITIES.CONDITION_VIEW });
+  const { session } = await withAuth({ capability: CAPABILITIES.CONDITION_VIEW });
+
+  await assertEngagementAccess(session.user.id, engagementId);
 
   const history = await getConditionHistory(engagementId);
   return Response.json({ profiles: history });
@@ -48,11 +52,42 @@ export const POST = withRequestContext(async (request, context) => {
     internalOnly: true,
   });
 
-  const body = await parseRequestBody(request, assessConditionSchema);
-  const result = await assessCondition(
-    { ...body, engagementId },
-    session.user.id
-  );
+  await assertEngagementAccess(session.user.id, engagementId);
 
-  return Response.json(result, { status: 201 });
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
+
+  const body = await parseRequestBody(request, assessConditionSchema);
+
+  // Check idempotency
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "assessCondition",
+    actorId: session.user.id,
+    payload: { engagementId, ...body },
+  });
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
+  }
+
+  try {
+    const result = await assessCondition(
+      { ...body, engagementId },
+      session.user.id
+    );
+    await recordIdempotencyResponse(idempotencyKey, 201, result);
+    return Response.json(result, { status: 201 });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
+    throw error;
+  }
 });

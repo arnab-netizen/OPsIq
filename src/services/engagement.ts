@@ -10,6 +10,7 @@ import {
 } from "@/lib/optimistic-lock";
 import { validateEngagementTransition } from "@/policies/state-transition";
 import { triggerReEvaluation } from "@/services/re-evaluation";
+import { initializeInterventionState } from "@/services/intervention-state";
 import { logger } from "@/infra/logger";
 import type { EngagementStatus, InterventionMode } from "@/domain/constants/statuses";
 import { ENGAGEMENT_STATUSES, INTERVENTION_MODES } from "@/domain/constants/statuses";
@@ -130,6 +131,13 @@ export async function createEngagement(
           healthStatus: "unknown",
         },
       });
+
+      // Initialize intervention state for this engagement
+      await initializeInterventionState(
+        { engagementId: engagement.id },
+        actorId
+      );
+
       return { id: engagement.id, code: engagement.code, title: engagement.title };
     }
   );
@@ -146,6 +154,17 @@ export async function createEngagement(
       interventionMode: input.interventionMode,
     },
     visibility: "internal",
+  });
+
+  // New engagement is significant intervention scope change
+  await triggerReEvaluation({
+    changeType: "scope_change",
+    entityType: "engagement",
+    entityId: result.result.id,
+    engagementId: result.result.id,
+    severity: "high",
+    description: `New engagement created: ${result.result.code} (${input.interventionMode})`,
+    triggeredBy: actorId,
   });
 
   logger.info("Engagement created", {
@@ -207,6 +226,8 @@ export async function updateEngagement(
   // Track if status is changing for specific audit events
   const statusChanged = input.status && input.status !== currentStatus;
 
+  // Duplicate request protection: optimistic locking via version check
+  // Duplicate requests with old version fail fast with 409 Conflict
   await optimisticUpdate("engagement", engagementId, version, () =>
     db.engagement.update({
       where: withVersionCheck({ id: engagementId }, version),
@@ -274,7 +295,7 @@ export async function updateEngagement(
   logger.info("Engagement updated", { engagementId });
 }
 
-export async function getEngagementById(engagementId: string) {
+export async function getEngagementById(engagementId: string, hasInternalAccess: boolean = false) {
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
     include: {
@@ -292,24 +313,41 @@ export async function getEngagementById(engagementId: string) {
           user: { select: { id: true, name: true, email: true } },
         },
       },
+      interventionState: {
+        select: {
+          id: true,
+          currentPhase: true,
+          previousPhase: true,
+        },
+      },
       _count: { select: { leads: true } },
     },
   });
 
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
+  if (!hasInternalAccess && engagement.visibility !== "client_visible") {
+    throw new NotFoundError("Engagement", engagementId);
+  }
+
   return engagement;
 }
 
-export async function listEngagements(params: {
-  limit?: number;
-  offset?: number;
-  status?: string;
-  clientId?: string;
-  search?: string;
-} = {}) {
+export async function listEngagements(
+  params: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+    clientId?: string;
+    search?: string;
+  } = {},
+  hasInternalAccess: boolean = false
+) {
   const { limit = 25, offset = 0, status, clientId, search } = params;
 
+  const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
+
   const where = {
+    ...visibilityFilter,
     ...(status && { status }),
     ...(clientId && { clientId }),
     ...(search && {
@@ -342,4 +380,80 @@ export async function listEngagements(params: {
   ]);
 
   return { engagements, total, limit, offset };
+}
+
+export async function computeNextReviewDate(
+  engagementId: string,
+  actorId: string
+): Promise<{ nextReviewDate: Date; isDueSoon: boolean; daysUntilDue: number }> {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId },
+    include: {
+      conditionProfiles: {
+        where: { isCurrent: true },
+        select: { urgencyLevel: true },
+      },
+    },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+  const latestReview = await db.reviewCycle.findFirst({
+    where: { engagementId },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true, status: true },
+  });
+
+  const baseInterval = 7; // Base interval in days
+  let intervalAdjustment = 0;
+
+  const condition = engagement.conditionProfiles[0];
+  if (condition) {
+    if (condition.urgencyLevel === "critical") {
+      intervalAdjustment = -5; // Review in 2 days
+    } else if (condition.urgencyLevel === "high") {
+      intervalAdjustment = -3; // Review in 4 days
+    } else if (condition.urgencyLevel === "medium") {
+      intervalAdjustment = 0; // Review in 7 days
+    } else {
+      intervalAdjustment = 3; // Review in 10 days
+    }
+  }
+
+  const reviewInterval = Math.max(1, baseInterval + intervalAdjustment);
+  const lastReviewDate = latestReview?.createdAt || engagement.startDate || new Date();
+  const nextReviewDate = new Date(lastReviewDate.getTime() + reviewInterval * 24 * 60 * 60 * 1000);
+
+  const now = new Date();
+  const daysUntilDue = Math.ceil(
+    (nextReviewDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)
+  );
+  const isDueSoon = daysUntilDue <= 0 || daysUntilDue <= 2;
+
+  if (isDueSoon) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.REVIEW_DUE_FLAGGED,
+      actorId,
+      entityType: "engagement",
+      entityId: engagementId,
+      payload: {
+        engagementId,
+        nextReviewDate: nextReviewDate.toISOString(),
+        daysUntilDue,
+        isDueSoon,
+      },
+      visibility: "internal",
+    });
+
+    logger.info("Review due flagged", {
+      engagementId,
+      nextReviewDate,
+      daysUntilDue,
+    });
+  }
+
+  return {
+    nextReviewDate,
+    isDueSoon,
+    daysUntilDue,
+  };
 }

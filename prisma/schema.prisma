@@ -20,10 +20,16 @@ model User {
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deactivatedAt  DateTime? @map("deactivated_at")
 
-  sessions              Session[]
-  roleAssignments       UserRoleAssignment[]
-  auditEvents           AuditEvent[]
-  engagementMemberships EngagementMembership[]
+  sessions                  Session[]
+  roleAssignments           UserRoleAssignment[]
+  auditEvents               AuditEvent[]
+  engagementMemberships     EngagementMembership[]
+  submittedEvidence         Evidence[]                @relation("SubmittedEvidence")
+  validatedEvidence         Evidence[]                @relation("ValidatedEvidence")
+  recommendationApprovals   Recommendation[]
+  assignedActions           Action[]                  @relation("AssignedActions")
+  completedActions          Action[]                  @relation("CompletedActions")
+  verifiedActions           Action[]                  @relation("VerifiedActions")
 
   @@map("users")
 }
@@ -100,6 +106,7 @@ model LeadRecord {
   engagementId    String?   @map("engagement_id") @db.Uuid
   assignedTo      String?   @map("assigned_to") @db.Uuid
   createdBy       String?   @map("created_by") @db.Uuid
+  version         Int       @default(1)
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -149,6 +156,7 @@ model ClientContact {
   isPrimary       Boolean   @default(false) @map("is_primary")
   isActive        Boolean   @default(true) @map("is_active")
   notes           String?
+  createdBy       String?   @map("created_by") @db.Uuid
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
@@ -190,6 +198,15 @@ model Engagement {
   conditionProfiles     BusinessConditionProfile[]
   memberships           EngagementMembership[]
   leads                 LeadRecord[]
+  stages                Stage[]
+  findings              Finding[]
+  recommendations       Recommendation[]
+  evidence              Evidence[]
+  actions               Action[]
+  kpis                  KPI[]
+  deliverables          Deliverable[]
+  risks                 Risk[]
+  shockEvents           ShockEvent[]
 
   @@index([clientId])
   @@index([status])
@@ -226,9 +243,128 @@ model BusinessConditionProfile {
 
   engagement              Engagement @relation(fields: [engagementId], references: [id])
 
+  // NOTE: Requires database-level partial unique constraint:
+  // CREATE UNIQUE INDEX idx_bcp_current ON business_condition_profiles(engagement_id) WHERE is_current = true
   @@index([engagementId, isCurrent])
   @@index([engagementId])
   @@map("business_condition_profiles")
+}
+
+// ─── Module: Evidence, Finding, Recommendation, Action ─────────────────────
+
+model Evidence {
+  id                String    @id @default(uuid()) @db.Uuid
+  engagementId      String    @map("engagement_id") @db.Uuid
+  title             String
+  description       String?
+  evidenceType      String    @map("evidence_type") // "document", "interview", "metric", "observation"
+  sourceReference   String?   @map("source_reference") // link, file path, etc.
+  status            String    @default("submitted") @map("status") // governed by EVIDENCE_STATUSES
+  severity          String?   // "low" | "medium" | "high" | "critical"
+  relatedFindingId  String?   @map("related_finding_id") @db.Uuid
+  submittedBy       String?   @map("submitted_by") @db.Uuid
+  validatedBy       String?   @map("validated_by") @db.Uuid
+  validatedAt       DateTime? @map("validated_at")
+  rejectionReason   String?   @map("rejection_reason")
+  version           Int       @default(1)
+  visibility        String    @default("internal") // "internal" | "client_visible"
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  engagement   Engagement @relation(fields: [engagementId], references: [id])
+  finding      Finding?   @relation(fields: [relatedFindingId], references: [id])
+  submitter    User?      @relation("SubmittedEvidence", fields: [submittedBy], references: [id])
+  validator    User?      @relation("ValidatedEvidence", fields: [validatedBy], references: [id])
+
+  @@index([engagementId])
+  @@index([status])
+  @@index([relatedFindingId])
+  @@map("evidence")
+}
+
+model Finding {
+  id              String    @id @default(uuid()) @db.Uuid
+  engagementId    String    @map("engagement_id") @db.Uuid
+  title           String
+  description     String?
+  findingType     String    @map("finding_type") // "technical", "operational", "human_factor", "market"
+  impactArea      String?   @map("impact_area") // "revenue", "cost", "execution", "risk"
+  severity        String    // "low" | "medium" | "high" | "critical"
+  rootCause       String?   @map("root_cause")
+  linkedEvidence  String[]  @map("linked_evidence") // array of Evidence IDs
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  engagement       Engagement @relation(fields: [engagementId], references: [id])
+  recommendations  Recommendation[]
+  evidence         Evidence[]
+
+  @@index([engagementId])
+  @@index([severity])
+  @@map("findings")
+}
+
+model Recommendation {
+  id              String    @id @default(uuid()) @db.Uuid
+  engagementId    String    @map("engagement_id") @db.Uuid
+  findingId       String    @map("finding_id") @db.Uuid
+  title           String
+  description     String?
+  rationale       String?
+  priority        String    // "low" | "medium" | "high" | "critical"
+  estimatedImpact String?   @map("estimated_impact") // "low" | "medium" | "high"
+  status          String    @default("pending") // "pending" | "approved" | "rejected" | "superseded"
+  approvedBy      String?   @map("approved_by") @db.Uuid
+  approvedAt      DateTime? @map("approved_at")
+  version         Int       @default(1)
+  visibility      String    @default("internal") // "internal" | "client_visible"
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  finding    Finding    @relation(fields: [findingId], references: [id])
+  approver   User?      @relation(fields: [approvedBy], references: [id])
+  actions    Action[]
+
+  @@unique([findingId, title])
+  @@index([engagementId])
+  @@index([status])
+  @@map("recommendations")
+}
+
+model Action {
+  id                  String    @id @default(uuid()) @db.Uuid
+  engagementId        String    @map("engagement_id") @db.Uuid
+  recommendationId    String    @map("recommendation_id") @db.Uuid
+  title               String
+  description         String?
+  dueDate             DateTime? @map("due_date")
+  priority            String    // "low" | "medium" | "high" | "critical"
+  status              String    @default("draft") @map("status") // governed by ACTION_STATUSES
+  assignedTo          String?   @map("assigned_to") @db.Uuid
+  completedBy         String?   @map("completed_by") @db.Uuid
+  completedAt         DateTime? @map("completed_at")
+  verifiedBy          String?   @map("verified_by") @db.Uuid
+  verifiedAt          DateTime? @map("verified_at")
+  notes               String?
+  blockerReason       String?   @map("blocker_reason")
+  version             Int       @default(1)
+  visibility          String    @default("internal") // "internal" | "client_visible"
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  engagement      Engagement      @relation(fields: [engagementId], references: [id])
+  recommendation  Recommendation  @relation(fields: [recommendationId], references: [id])
+  assignee        User?           @relation("AssignedActions", fields: [assignedTo], references: [id])
+  completer       User?           @relation("CompletedActions", fields: [completedBy], references: [id])
+  verifier        User?           @relation("VerifiedActions", fields: [verifiedBy], references: [id])
+
+  @@index([engagementId])
+  @@index([status])
+  @@index([recommendationId])
+  @@index([assignedTo])
+  @@map("actions")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────
@@ -292,4 +428,138 @@ model ScheduledTask {
   @@index([status, scheduledFor])
   @@index([taskName])
   @@map("scheduled_tasks")
+}
+
+// ─── Module 3: Stage ────────────────────────────────────────────────────────
+
+model Stage {
+  id                String    @id @default(uuid()) @db.Uuid
+  engagementId      String    @map("engagement_id") @db.Uuid
+  title             String
+  status            String    @default("draft") // governed by GOVERNED_STAGE_STATES
+  description       String?
+  notes             String?
+  version           Int       @default(1)
+  startDate         DateTime? @map("start_date")
+  targetEndDate     DateTime? @map("target_end_date")
+  completedAt       DateTime? @map("completed_at")
+  createdBy         String?   @map("created_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  engagement        Engagement @relation(fields: [engagementId], references: [id])
+  deliverables      Deliverable[]
+  risks             Risk[]
+
+  @@index([engagementId])
+  @@index([status])
+  @@map("stages")
+}
+
+// ─── Module 3: KPI ──────────────────────────────────────────────────────────
+
+model KPI {
+  id                String    @id @default(uuid()) @db.Uuid
+  engagementId      String    @map("engagement_id") @db.Uuid
+  name              String
+  description       String?
+  target            Float?
+  createdBy         String?   @map("created_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  engagement        Engagement @relation(fields: [engagementId], references: [id])
+  snapshots         KPISnapshot[]
+
+  @@index([engagementId])
+  @@map("kpis")
+}
+
+model KPISnapshot {
+  id                String    @id @default(uuid()) @db.Uuid
+  kpiId             String    @map("kpi_id") @db.Uuid
+  value             Float
+  recordedAt        DateTime  @default(now()) @map("recorded_at")
+  recordedBy        String?   @map("recorded_by") @db.Uuid
+
+  kpi               KPI       @relation(fields: [kpiId], references: [id])
+
+  @@index([kpiId])
+  @@index([recordedAt])
+  @@map("kpi_snapshots")
+}
+
+// ─── Module 3: Deliverable ──────────────────────────────────────────────────
+
+model Deliverable {
+  id                String    @id @default(uuid()) @db.Uuid
+  stageId           String    @map("stage_id") @db.Uuid
+  engagementId      String    @map("engagement_id") @db.Uuid
+  title             String
+  description       String?
+  status            String    @default("draft") // governed by DELIVERABLE_STATUSES
+  version           Int       @default(1)
+  submittedBy       String?   @map("submitted_by") @db.Uuid
+  submittedAt       DateTime? @map("submitted_at")
+  approvedBy        String?   @map("approved_by") @db.Uuid
+  approvedAt        DateTime? @map("approved_at")
+  rejectionReason   String?   @map("rejection_reason")
+  createdBy         String?   @map("created_by") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  stage             Stage     @relation(fields: [stageId], references: [id])
+  engagement        Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([stageId])
+  @@index([engagementId])
+  @@index([status])
+  @@map("deliverables")
+}
+
+// ─── Module 3: Risk ─────────────────────────────────────────────────────────
+
+model Risk {
+  id                String    @id @default(uuid()) @db.Uuid
+  stageId           String    @map("stage_id") @db.Uuid
+  engagementId      String    @map("engagement_id") @db.Uuid
+  title             String
+  description       String?
+  status            String    @default("identified") // governed by RISK_STATUSES
+  identifiedAt      DateTime  @default(now()) @map("identified_at")
+  identifiedBy      String?   @map("identified_by") @db.Uuid
+  assessedAt        DateTime? @map("assessed_at")
+  assessedBy        String?   @map("assessed_by") @db.Uuid
+  mitigationStrategy String?  @map("mitigation_strategy")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  stage             Stage     @relation(fields: [stageId], references: [id])
+  engagement        Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([stageId])
+  @@index([engagementId])
+  @@index([status])
+  @@map("risks")
+}
+
+// ─── Module 4: Shock Event ──────────────────────────────────────────────────
+
+model ShockEvent {
+  id           String    @id @default(uuid()) @db.Uuid
+  engagementId String    @map("engagement_id") @db.Uuid
+  type         String    // governed by SHOCK_EVENT_TYPES
+  severity     String    // governed by RISK_SEVERITIES
+  happenedAt   DateTime  @map("happened_at")
+  notes        String?
+  version      Int       @default(1)
+  createdBy    String?   @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  engagement   Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@index([happenedAt])
+  @@map("shock_events")
 }
