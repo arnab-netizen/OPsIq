@@ -109,15 +109,13 @@ describe("Intervention State Service", () => {
   describe("Phase constants", () => {
     it("includes all required intervention phases", () => {
       expect(INTERVENTION_PHASES).toContain("triage");
-      expect(INTERVENTION_PHASES).toContain("stabilize");
-      expect(INTERVENTION_PHASES).toContain("repair");
-      expect(INTERVENTION_PHASES).toContain("strengthen");
-      expect(INTERVENTION_PHASES).toContain("grow");
-      expect(INTERVENTION_PHASES).toContain("protect");
+      expect(INTERVENTION_PHASES).toContain("stabilization");
+      expect(INTERVENTION_PHASES).toContain("recovery");
+      expect(INTERVENTION_PHASES).toContain("growth");
     });
 
-    it("has exactly 6 phases", () => {
-      expect(INTERVENTION_PHASES.length).toBe(6);
+    it("has exactly 4 phases", () => {
+      expect(INTERVENTION_PHASES.length).toBe(4);
     });
   });
 
@@ -189,17 +187,17 @@ describe("Intervention State Service", () => {
       });
       mockDb.engagement.update.mockResolvedValue({
         id: "eng-1",
-        interventionPhase: "stabilize",
+        interventionPhase: "stabilization",
       });
 
       const { transitionPhase } = await import("./intervention-state");
       const result = await transitionPhase(
         "eng-1",
-        "stabilize" as InterventionPhase,
+        "stabilization" as InterventionPhase,
         "user-1"
       );
 
-      expect(result.interventionPhase).toBe("stabilize");
+      expect(result.interventionPhase).toBe("stabilization");
     });
 
     it("throws error for invalid phase transition", async () => {
@@ -215,7 +213,7 @@ describe("Intervention State Service", () => {
       try {
         await transitionPhase(
           "eng-1",
-          "strengthen" as InterventionPhase,
+          "triage" as InterventionPhase,
           "user-1"
         );
         expect.fail("Should throw validation error");
@@ -279,12 +277,12 @@ describe("Intervention State Service", () => {
       const { getPhaseAllowedTransitions } = await import("./intervention-state");
       const allowed = getPhaseAllowedTransitions("triage" as InterventionPhase);
       expect(allowed.length).toBeGreaterThan(0);
-      expect(allowed).toContain("stabilize");
+      expect(allowed).toContain("stabilization");
     });
 
     it("returns empty array for closed phase", async () => {
       const { getPhaseAllowedTransitions } = await import("./intervention-state");
-      const allowed = getPhaseAllowedTransitions("protect" as InterventionPhase);
+      const allowed = getPhaseAllowedTransitions("growth" as InterventionPhase);
       expect(allowed.length).toBe(0);
     });
   });

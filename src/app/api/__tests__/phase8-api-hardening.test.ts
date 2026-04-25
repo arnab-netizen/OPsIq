@@ -16,7 +16,7 @@ vi.mock("@/lib/db", () => ({
           entityId: "action-1",
           payload: '{"title":"Test"}',
           correlationId: "corr-1",
-          createdAt: new Date(),
+          occurredAt: new Date(),
         },
       ]),
       count: vi.fn().mockResolvedValue(1),
@@ -173,7 +173,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
       expect(result.events[0]).toHaveProperty("entityType");
       expect(result.events[0]).toHaveProperty("entityId");
       expect(result.events[0]).toHaveProperty("payload");
-      expect(result.events[0]).toHaveProperty("createdAt");
+      expect(result.events[0]).toHaveProperty("occurredAt");
     });
   });
 
@@ -301,7 +301,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
     it("should format createdAt as ISO string", async () => {
       const result = await queryAuditEvents({ limit: 50, offset: 0 });
 
-      expect(result.events[0].createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+      expect(result.events[0].occurredAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
   });
 
