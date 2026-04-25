@@ -1,0 +1,54 @@
+name: Manual Runtime Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      reset_database:
+        description: "DANGER: Drop public schema before deploy"
+        required: true
+        default: "true"
+      run_tests:
+        description: "Run unit tests"
+        required: true
+        default: "true"
+
+jobs:
+  validate:
+    name: Runtime validation against Neon DB
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - run: npx prisma validate
+
+      - run: npx prisma generate
+
+      - name: Hard reset public schema
+        if: ${{ inputs.reset_database == 'true' }}
+        run: |
+          npx prisma db execute --stdin <<'SQL'
+          DROP SCHEMA IF EXISTS public CASCADE;
+          CREATE SCHEMA public;
+          SQL
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --exit-code
+
+      - run: npm run build
+
+      - run: npm run test:merge
+        if: ${{ inputs.run_tests == 'true' }}
+
+      - run: echo "DB RESET + MIGRATIONS + BUILD + TESTS PASSED"
