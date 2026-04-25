@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import { ValidationError } from "@/infra/errors";
 import crypto from "crypto";
 
@@ -97,7 +98,7 @@ export async function recordIdempotencyResponse(
     data: {
       status: "completed",
       responseCode: statusCode,
-      responseBody: responseBody,
+      responseBody: responseBody as Prisma.InputJsonValue,
       completedAt: new Date(),
     },
   });

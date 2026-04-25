@@ -124,11 +124,22 @@ async function seedDemoData() {
     });
 
     if (!exists) {
+      const categoryToType: Record<string, string> = {
+        finance: "market",
+        people: "operational",
+        operations: "operational",
+      };
+
       await db.finding.create({
         data: {
           engagementId: engagement.id,
-          ...fd,
-          discoveredBy: user.id,
+          title: fd.title,
+          description: `${fd.description}\n\nEvidence: ${fd.evidence}`,
+          findingType: categoryToType[fd.category] || "technical",
+          impactArea: fd.category === "finance" ? "revenue" : "execution",
+          severity: fd.severity,
+          linkedEvidence: [],
+          createdBy: user.id,
         },
       });
     }
@@ -160,17 +171,32 @@ async function seedDemoData() {
     },
   ];
 
-  for (const rd of recommendationData) {
+  // Get findings for linking recommendations
+  const findings = await db.finding.findMany({
+    where: { engagementId: engagement.id },
+    select: { id: true },
+  });
+
+  for (let i = 0; i < recommendationData.length; i++) {
+    const rd = recommendationData[i];
     const exists = await db.recommendation.findFirst({
       where: { engagementId: engagement.id, title: rd.title },
     });
 
     if (!exists) {
+      // Link to corresponding finding if it exists, otherwise use first finding
+      const findingId = findings[i]?.id || findings[0]?.id;
+      if (!findingId) continue; // Skip if no findings exist
+
       await db.recommendation.create({
         data: {
           engagementId: engagement.id,
-          ...rd,
-          recommendedBy: user.id,
+          findingId,
+          title: rd.title,
+          description: rd.description,
+          priority: rd.priority,
+          estimatedImpact: rd.expectedImpact,
+          status: "pending",
         },
       });
     }
@@ -210,16 +236,33 @@ async function seedDemoData() {
     },
   ];
 
-  for (const ad of actionData) {
+  // Get recommendations for linking actions
+  const recommendations = await db.recommendation.findMany({
+    where: { engagementId: engagement.id },
+    select: { id: true },
+  });
+
+  for (let i = 0; i < actionData.length; i++) {
+    const ad = actionData[i];
     const exists = await db.action.findFirst({
       where: { engagementId: engagement.id, title: ad.title },
     });
 
     if (!exists) {
+      // Link to corresponding recommendation if it exists, otherwise use first
+      const recommendationId = recommendations[i]?.id || recommendations[0]?.id;
+      if (!recommendationId) continue; // Skip if no recommendations exist
+
       await db.action.create({
         data: {
           engagementId: engagement.id,
-          ...ad,
+          recommendationId,
+          title: ad.title,
+          description: ad.description,
+          dueDate: ad.dueDate,
+          priority: ad.priority,
+          status: ad.status,
+          blockerReason: ad.blockageReason,
         },
       });
     }
@@ -268,53 +311,27 @@ async function seedDemoData() {
     });
 
     if (!exists) {
-      await db.kPI.create({
+      const kpi = await db.kPI.create({
         data: {
           engagementId: engagement.id,
-          ...kd,
-          measurementDate: new Date(),
+          name: kd.name,
+          description: `${kd.unit} - Target: ${kd.targetValue}${kd.unit}`,
+          target: kd.targetValue,
+          createdBy: user.id,
+        },
+      });
+
+      // Create initial snapshot with current value
+      await db.kPISnapshot.create({
+        data: {
+          kpiId: kpi.id,
+          value: kd.currentValue,
+          recordedBy: user.id,
         },
       });
     }
   }
   console.log("✓ Created demo KPIs");
-
-  // Create deliverable
-  let deliverable = await db.deliverable.findFirst({
-    where: { engagementId: engagement.id, title: "Initial Assessment Report" },
-  });
-
-  if (!deliverable) {
-    deliverable = await db.deliverable.create({
-      data: {
-        engagementId: engagement.id,
-        type: "assessment",
-        title: "Initial Assessment Report",
-        summary: "Comprehensive assessment of current state, root causes, and intervention roadmap",
-        findings: JSON.stringify([
-          { title: "Critical cash flow deterioration", severity: "critical" },
-          { title: "Key person dependency", severity: "critical" },
-        ]),
-        recommendations: JSON.stringify([
-          { title: "Implement cash management system", priority: "critical" },
-          { title: "Delegate decision authority", priority: "critical" },
-        ]),
-        actions: JSON.stringify([
-          { title: "Implement cash forecasting tool", status: "in_progress" },
-          { title: "Create delegation framework", status: "open" },
-        ]),
-        kpis: JSON.stringify([
-          { name: "Cash Position", baseline: 500000, current: 300000, target: 600000 },
-          { name: "Gross Margin", baseline: 35, current: 32, target: 40 },
-        ]),
-        reviewStatus: "approved",
-        reviewedBy: user.id,
-        reviewedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        deliveredDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      },
-    });
-    console.log("✓ Created demo deliverable");
-  }
 
   console.log("✅ Demo data seeding complete");
 }

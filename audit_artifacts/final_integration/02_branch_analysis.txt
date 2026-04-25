@@ -1,0 +1,12 @@
+BRANCH: claude/audit-opsiq-repo-Zf8hu
+has package.json
+Commits ahead of main: 65
+BRANCH: claude/opsiq-domain-foundation-Y7Cqb
+has package.json
+Commits ahead of main: 0
+BRANCH: claude/opsiq-integration-mainline-rsxNK
+has package.json
+Commits ahead of main: 50
+BRANCH: integrate/diagnosis-engines-v1
+has package.json
+Commits ahead of main: 4

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 // Test the pure business validation rules from UserService.
 // The actual DB-dependent service logic is tested via integration tests;
@@ -7,13 +8,13 @@ import { describe, it, expect } from "vitest";
 describe("User service business rules", () => {
   describe("self-deactivation prevention", () => {
     it("blocks deactivation when userId equals actorId", () => {
-      const actorId = "user-abc";
+      const actorId = TEST_IDS.TEST_USER_A_ID;
       const userId: string = actorId;
       expect(userId).toBe(actorId);
     });
 
     it("allows deactivation when userId differs from actorId", () => {
-      const actorId = "user-abc";
+      const actorId = TEST_IDS.TEST_USER_A_ID;
       const userId = "user-xyz";
       expect(userId).not.toBe(actorId);
     });

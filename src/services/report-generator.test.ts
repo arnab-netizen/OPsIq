@@ -15,6 +15,7 @@ import { createFinding } from "./findings";
 import { createRecommendation } from "./recommendation";
 import { createAction } from "./action";
 import { defineKPI, recordKPISnapshot } from "./kpi";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 describe("Report Generation Service", () => {
   let clientId: string;
@@ -25,14 +26,14 @@ describe("Report Generation Service", () => {
     // Create test data
     const client = await createClient(
       {
-        name: "Test Client",
+        name: "Test Client - Report Generator",
         industry: "Technology",
         size: "medium",
       },
-      "test-actor"
+      TEST_IDS.TEST_ACTOR_ID
     );
     clientId = client.id;
-    actorId = "test-actor";
+    actorId = TEST_IDS.TEST_ACTOR_ID;
 
     const engagement = await createEngagement(
       {

@@ -3,6 +3,7 @@ import { createAction, updateActionStatus } from "./action";
 import { ValidationError, ConflictError } from "@/infra/errors";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 vi.mock("@/lib/db", () => ({
   db: {
@@ -34,10 +35,10 @@ describe("Action Service", () => {
     title: "Test Action",
     status: "draft" as const,
     version: 1,
-    blockageReason: null,
+    blockerReason: null,
   };
 
-  const actorId = "actor-1";
+  const actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -124,7 +125,7 @@ describe("Action Service", () => {
         },
         data: {
           status: "assigned",
-          blockageReason: null,
+          blockerReason: null,
           version: { increment: 1 },
         },
       });
@@ -158,7 +159,7 @@ describe("Action Service", () => {
         payload: {
           previousStatus: "draft",
           newStatus: "assigned",
-          blockageReason: undefined,
+          blockerReason: undefined,
         },
         visibility: "internal",
       });
@@ -181,12 +182,12 @@ describe("Action Service", () => {
       expect(promise).rejects.toThrow(/modified by another process/);
     });
 
-    it("should preserve blockageReason on transition", async () => {
+    it("should preserve blockerReason on transition", async () => {
       const actionWithBlockage = {
         ...mockAction,
         status: "blocked" as const,
         version: 2,
-        blockageReason: "Waiting for client",
+        blockerReason: "Waiting for client",
       };
 
       (db.action.findUnique as any)
@@ -215,7 +216,7 @@ describe("Action Service", () => {
         },
         data: {
           status: "assigned",
-          blockageReason: "Waiting for client",
+          blockerReason: "Waiting for client",
           version: { increment: 1 },
         },
       });

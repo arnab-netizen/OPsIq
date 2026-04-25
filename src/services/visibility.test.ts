@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { db } from "@/lib/db";
-import { getEvidenceItemDetail, listEvidenceForEngagement } from "./evidence";
+import { getEvidenceById, listEvidence } from "./evidence";
 import { getFindingDetail, listFindingsForEngagement } from "./findings";
 import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
-import { createEvidenceItem } from "./evidence";
+import { createEvidence } from "./evidence";
 import { createFinding } from "./findings";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 
 describe("Visibility Enforcement", () => {
   let clientId: string;
@@ -14,12 +15,12 @@ describe("Visibility Enforcement", () => {
   let clientVisibleEvidenceId: string;
   let internalFindingId: string;
   let clientVisibleFindingId: string;
-  let actorId = "test-actor-id";
+  let actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeAll(async () => {
     const client = await createClient(
       {
-        name: "Test Client",
+        name: "Test Client - Visibility",
         industry: "Technology",
         size: "large",
       },
@@ -40,34 +41,28 @@ describe("Visibility Enforcement", () => {
     engagementId = engagement.id;
 
     // Create internal-only evidence
-    const internalEvidence = await createEvidenceItem(
+    const internalEvidence = await createEvidence(
       {
         engagementId,
-        category: "operational",
-        type: "internal_process",
-        sourceType: "observation",
-        sourceLabel: "Internal audit",
-        captureMethod: "manual",
-        capturedAt: "2026-04-22T10:00:00Z",
-        visibilityClassification: "internal",
-        statement: "Internal process issue",
+        title: "Internal audit observation",
+        description: "Internal process issue",
+        evidenceType: "observation",
+        sourceReference: "Internal audit",
+        severity: "medium",
       },
       actorId
     );
     internalEvidenceId = internalEvidence.id;
 
     // Create client-visible evidence
-    const clientEvidence = await createEvidenceItem(
+    const clientEvidence = await createEvidence(
       {
         engagementId,
-        category: "financial",
-        type: "revenue_analysis",
-        sourceType: "document",
-        sourceLabel: "Financial reports",
-        captureMethod: "uploaded",
-        capturedAt: "2026-04-22T10:00:00Z",
-        visibilityClassification: "client_visible",
-        statement: "Revenue trend analysis",
+        title: "Financial reports",
+        description: "Revenue trend analysis",
+        evidenceType: "document",
+        sourceReference: "Q1 2026 Financial Analysis",
+        severity: "high",
       },
       actorId
     );
@@ -77,11 +72,11 @@ describe("Visibility Enforcement", () => {
     const internalFinding = await createFinding(
       {
         engagementId,
+        primaryEvidenceId: internalEvidenceId,
         title: "Internal Management Issue",
-        statement: "Internal management concern not to be shared",
+        summary: "Internal management concern requiring attention",
         severity: "medium",
-        confidenceLabel: "high",
-        clientVisibilityStatus: "internal",
+        impactArea: "execution",
       },
       actorId
     );
@@ -91,11 +86,11 @@ describe("Visibility Enforcement", () => {
     const clientFinding = await createFinding(
       {
         engagementId,
+        primaryEvidenceId: clientVisibleEvidenceId,
         title: "Financial Performance Finding",
-        statement: "Financial analysis finding that can be shared",
+        summary: "Financial analysis finding that can be shared with client",
         severity: "high",
-        confidenceLabel: "high",
-        clientVisibilityStatus: "client_visible",
+        impactArea: "revenue",
       },
       actorId
     );
@@ -105,7 +100,7 @@ describe("Visibility Enforcement", () => {
   afterAll(async () => {
     try {
       await (db.finding.deleteMany as any)({ where: { engagementId } });
-      await (db.evidenceItem.deleteMany as any)({ where: { engagementId } });
+      await (db.evidence.deleteMany as any)({ where: { engagementId } });
       await (db.engagement.deleteMany as any)({ where: { id: engagementId } });
       await (db.clientAccount.deleteMany as any)({ where: { id: clientId } });
     } catch {
@@ -115,14 +110,14 @@ describe("Visibility Enforcement", () => {
 
   describe("evidence visibility enforcement", () => {
     it("should filter internal-only evidence from client view", async () => {
-      const internalOnly = await listEvidenceForEngagement(
+      const internalOnly = await listEvidence(
         engagementId,
         undefined,
         "internal"
       );
       expect(internalOnly.some((e) => e.id === internalEvidenceId)).toBe(true);
 
-      const clientVisible = await listEvidenceForEngagement(
+      const clientVisible = await listEvidence(
         engagementId,
         undefined,
         "client_visible"
@@ -135,12 +130,12 @@ describe("Visibility Enforcement", () => {
 
     it("should throw when accessing internal-only evidence with client visibility", async () => {
       expect(async () => {
-        await getEvidenceItemDetail(internalEvidenceId, "client_visible");
+        await getEvidenceById(internalEvidenceId, "client_visible");
       }).rejects.toThrow("not found");
     });
 
     it("should allow accessing client-visible evidence", async () => {
-      const evidence = await getEvidenceItemDetail(
+      const evidence = await getEvidenceById(
         clientVisibleEvidenceId,
         "client_visible"
       );
@@ -148,12 +143,12 @@ describe("Visibility Enforcement", () => {
     });
 
     it("should not expose visibility classification in response", async () => {
-      const evidence = await getEvidenceItemDetail(internalEvidenceId, "all");
+      const evidence = await getEvidenceById(internalEvidenceId, "all");
       expect((evidence as any).visibilityClassification).toBeUndefined();
     });
 
     it("should allow accessing all evidence with 'all' visibility", async () => {
-      const all = await listEvidenceForEngagement(
+      const all = await listEvidence(
         engagementId,
         undefined,
         "all"
@@ -216,7 +211,7 @@ describe("Visibility Enforcement", () => {
   describe("security boundaries", () => {
     it("should prevent client from accessing internal evidence", async () => {
       // Simulate client request with client_visible filter
-      const clientEvidence = await listEvidenceForEngagement(
+      const clientEvidence = await listEvidence(
         engagementId,
         undefined,
         "client_visible"

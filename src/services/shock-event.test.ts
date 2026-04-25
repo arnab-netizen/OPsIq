@@ -8,18 +8,19 @@ import {
 } from "./shock-event";
 import { createEngagement } from "./engagement";
 import { createClient } from "./client-account";
+import { TEST_IDS } from "@/domain/constants/test-ids";
 import type { CreateShockEventInput } from "./shock-event";
 
 describe("ShockEvent Service", () => {
   let clientId: string;
   let engagementId: string;
-  let actorId = "test-actor-id";
+  let actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeAll(async () => {
     // Create test client
     const client = await createClient(
       {
-        name: "Test Client",
+        name: "Test Client - Shock Event",
         industry: "Technology",
         size: "large",
       },

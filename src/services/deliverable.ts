@@ -6,13 +6,9 @@ import { logger } from "@/infra/logger";
 
 export interface CreateDeliverableInput {
   engagementId: string;
-  type: string;
+  stageId: string;
   title: string;
-  summary?: string;
-  findings?: string;
-  recommendations?: string;
-  actions?: string;
-  kpis?: string;
+  description?: string;
 }
 
 export interface UpdateDeliverableInput {
@@ -34,13 +30,10 @@ export async function createDeliverable(
   const deliverable = await db.deliverable.create({
     data: {
       engagementId: input.engagementId,
-      type: input.type,
+      stageId: input.stageId,
       title: input.title,
-      summary: input.summary ?? null,
-      findings: input.findings ?? null,
-      recommendations: input.recommendations ?? null,
-      actions: input.actions ?? null,
-      kpis: input.kpis ?? null,
+      description: input.description || null,
+      createdBy: actorId,
     },
   });
 
@@ -51,7 +44,7 @@ export async function createDeliverable(
     entityId: deliverable.id,
     payload: {
       engagementId: input.engagementId,
-      type: input.type,
+      title: input.title,
     },
     visibility: "internal",
   });
@@ -98,9 +91,9 @@ export async function updateDeliverableReviewStatus(
   const updated = await db.deliverable.update({
     where: { id: deliverableId },
     data: {
-      reviewStatus: input.reviewStatus ?? deliv.reviewStatus,
-      reviewedBy: input.reviewedBy ?? actorId,
-      reviewedAt: input.reviewedAt ? new Date(input.reviewedAt) : new Date(),
+      approvedBy: actorId,
+      approvedAt: new Date(),
+      status: "approved",
       version: input.version + 1,
     },
   });
@@ -111,7 +104,7 @@ export async function updateDeliverableReviewStatus(
     entityType: "deliverable",
     entityId: deliverableId,
     payload: {
-      reviewStatus: input.reviewStatus,
+      status: "approved",
     },
     visibility: "internal",
   });
