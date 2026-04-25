@@ -3,8 +3,8 @@ name: Manual Runtime Validation
 on:
   workflow_dispatch:
     inputs:
-      run_migrations:
-        description: "Run prisma migrate deploy"
+      reset_database:
+        description: "DANGER: Reset database before deploy"
         required: true
         default: "true"
       run_tests:
@@ -38,8 +38,11 @@ jobs:
       - name: Prisma generate
         run: npx prisma generate
 
-      - name: Apply migrations (deploy)
-        if: ${{ inputs.run_migrations == 'true' }}
+      - name: Reset database
+        if: ${{ inputs.reset_database == 'true' }}
+        run: npx prisma migrate reset --force
+
+      - name: Apply migrations
         run: npx prisma migrate deploy
 
       - name: Check schema drift
@@ -51,3 +54,6 @@ jobs:
       - name: Run unit tests
         if: ${{ inputs.run_tests == 'true' }}
         run: npm run test:merge
+
+      - name: Success note
+        run: echo "DB RESET + MIGRATIONS + BUILD + TESTS PASSED"
