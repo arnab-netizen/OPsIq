@@ -1,0 +1,53 @@
+name: Manual Runtime Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_migrations:
+        description: "Run prisma migrate deploy"
+        required: true
+        default: "true"
+      run_tests:
+        description: "Run unit tests"
+        required: true
+        default: "true"
+
+jobs:
+  validate:
+    name: Runtime validation against Neon DB
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma validate
+        run: npx prisma validate
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Apply migrations (deploy)
+        if: ${{ inputs.run_migrations == 'true' }}
+        run: npx prisma migrate deploy
+
+      - name: Check schema drift
+        run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --exit-code
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run unit tests
+        if: ${{ inputs.run_tests == 'true' }}
+        run: npm run test:merge
