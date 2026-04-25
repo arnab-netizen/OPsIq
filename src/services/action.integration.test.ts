@@ -57,8 +57,8 @@ describe("Action Service", () => {
         actorId
       );
 
-      expect(promise).rejects.toThrow(ValidationError);
-      expect(promise).rejects.toThrow(/Invalid action status/);
+      await expect(promise).rejects.toThrow(ValidationError);
+      await expect(promise).rejects.toThrow(/Invalid action status/);
     });
 
     it("should reject invalid transition", async () => {
@@ -73,8 +73,8 @@ describe("Action Service", () => {
         actorId
       );
 
-      expect(promise).rejects.toThrow(ValidationError);
-      expect(promise).rejects.toThrow(/Invalid action transition/);
+      await expect(promise).rejects.toThrow(ValidationError);
+      await expect(promise).rejects.toThrow(/Invalid action transition/);
     });
 
     it("should reject stale version", async () => {
@@ -92,8 +92,8 @@ describe("Action Service", () => {
         actorId
       );
 
-      expect(promise).rejects.toThrow(ConflictError);
-      expect(promise).rejects.toThrow(/Current version: 2/);
+      await expect(promise).rejects.toThrow(ConflictError);
+      await expect(promise).rejects.toThrow(/Current version: 2/);
     });
 
     it("should succeed with valid transition and version", async () => {
@@ -151,7 +151,7 @@ describe("Action Service", () => {
         actorId
       );
 
-      expect(emitAuditEvent).toHaveBeenCalledWith({
+      await expect(emitAuditEvent).toHaveBeenCalledWith({
         eventName: expect.anything(),
         actorId,
         entityType: "action",
@@ -178,8 +178,8 @@ describe("Action Service", () => {
         actorId
       );
 
-      expect(promise).rejects.toThrow(ConflictError);
-      expect(promise).rejects.toThrow(/modified by another process/);
+      await expect(promise).rejects.toThrow(ConflictError);
+      await expect(promise).rejects.toThrow(/modified by another process/);
     });
 
     it("should preserve blockerReason on transition", async () => {

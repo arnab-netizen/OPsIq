@@ -179,7 +179,7 @@ describe("Evidence → Finding → Recommendation → Action lifecycle", () => {
   it("prevents recommendation conversion without action", async () => {
     const rec = await getRecommendation(recommendationId);
 
-    expect(
+    await expect(
       updateRecommendation(
         recommendationId,
         {
@@ -250,7 +250,7 @@ describe("Evidence → Finding → Recommendation → Action lifecycle", () => {
       },
     });
 
-    expect(
+    await expect(
       updateFinding(
         newFinding.id,
         {

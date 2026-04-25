@@ -33,7 +33,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
         body: JSON.stringify({ name: "John", age: 30, unknownField: "test" }),
       });
 
-      expect(async () => {
+      await expect(async () => {
         await parseRequestBody(request, schema);
       }).rejects.toThrow(ValidationError);
     });
@@ -46,7 +46,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
       });
 
       const result = await parseRequestBody(request, schema);
-      expect(result).toEqual({ name: "John", age: 30 });
+      await expect(result).toEqual({ name: "John", age: 30 });
     });
 
     it("should enforce enum validation", async () => {
@@ -56,7 +56,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
         body: JSON.stringify({ status: "invalid" }),
       });
 
-      expect(async () => {
+      await expect(async () => {
         await parseRequestBody(request, schema);
       }).rejects.toThrow(ValidationError);
     });
@@ -68,7 +68,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
         body: "invalid json",
       });
 
-      expect(async () => {
+      await expect(async () => {
         await parseRequestBody(request, schema);
       }).rejects.toThrow(ValidationError);
     });
@@ -313,7 +313,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
         body: JSON.stringify({ name: "test", extra: "field" }),
       });
 
-      expect(async () => {
+      await expect(async () => {
         await parseRequestBody(request, schema);
       }).rejects.toThrow(ValidationError);
     });

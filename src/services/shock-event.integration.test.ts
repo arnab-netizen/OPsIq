@@ -66,13 +66,13 @@ describe("ShockEvent Service", () => {
 
       const result = await createShockEvent(input, actorId);
 
-      expect(result.id).toBeDefined();
-      expect(result.engagementId).toBe(engagementId);
+      await expect(result.id).toBeDefined();
+      await expect(result.engagementId).toBe(engagementId);
 
       const event = await getShockEventDetail(result.id);
-      expect(event.type).toBe("key_employee_loss");
-      expect(event.severity).toBe("high");
-      expect(event.notes).toBe("VP of Operations resigned unexpectedly");
+      await expect(event.type).toBe("key_employee_loss");
+      await expect(event.severity).toBe("high");
+      await expect(event.notes).toBe("VP of Operations resigned unexpectedly");
     });
 
     it("should reject invalid shock event type", async () => {
@@ -83,7 +83,7 @@ describe("ShockEvent Service", () => {
         happenedAt: "2026-04-22T10:00:00Z",
       } as any;
 
-      expect(async () => {
+      await expect(async () => {
         await createShockEvent(input, actorId);
       }).rejects.toThrow("Invalid shock event type");
     });
@@ -96,7 +96,7 @@ describe("ShockEvent Service", () => {
         happenedAt: "2026-04-22T10:00:00Z",
       } as any;
 
-      expect(async () => {
+      await expect(async () => {
         await createShockEvent(input, actorId);
       }).rejects.toThrow("Invalid severity");
     });
@@ -109,7 +109,7 @@ describe("ShockEvent Service", () => {
         happenedAt: "not-a-date",
       };
 
-      expect(async () => {
+      await expect(async () => {
         await createShockEvent(input, actorId);
       }).rejects.toThrow("must be a valid ISO 8601 date string");
     });
@@ -122,7 +122,7 @@ describe("ShockEvent Service", () => {
         happenedAt: "2026-04-22T10:00:00Z",
       };
 
-      expect(async () => {
+      await expect(async () => {
         await createShockEvent(input, actorId);
       }).rejects.toThrow("not found");
     });
@@ -163,7 +163,7 @@ describe("ShockEvent Service", () => {
     });
 
     it("should reject version conflict", async () => {
-      expect(async () => {
+      await expect(async () => {
         await updateShockEvent(
           shockEventId,
           {
@@ -177,7 +177,7 @@ describe("ShockEvent Service", () => {
 
     it("should reject invalid new severity", async () => {
       const existing = await getShockEventDetail(shockEventId);
-      expect(async () => {
+      await expect(async () => {
         await updateShockEvent(
           shockEventId,
           {
@@ -221,7 +221,7 @@ describe("ShockEvent Service", () => {
     });
 
     it("should return empty list for non-existent engagement", async () => {
-      expect(async () => {
+      await expect(async () => {
         await listShockEventsForEngagement("non-existent-id");
       }).rejects.toThrow("not found");
     });
@@ -254,7 +254,7 @@ describe("ShockEvent Service", () => {
     });
 
     it("should throw for non-existent shock event", async () => {
-      expect(async () => {
+      await expect(async () => {
         await getShockEventDetail("non-existent-id");
       }).rejects.toThrow("not found");
     });

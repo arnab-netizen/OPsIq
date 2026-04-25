@@ -106,8 +106,8 @@ describe("Review Cycle Service", () => {
     it("should generate review cycle for engagement", async () => {
       const cycle = await generateReviewCycle(engagementId, actorId);
 
-      expect(cycle.id).toBeDefined();
-      expect(cycle.engagementId).toBe(engagementId);
+      await expect(cycle.id).toBeDefined();
+      await expect(cycle.engagementId).toBe(engagementId);
       expect(cycle.status).toMatch(/improving|stagnant|worsening/);
       expect(cycle.kpiProgressSummary).toBeDefined();
       expect(cycle.unresolvedFindingsCount).toBe(1);
@@ -269,13 +269,13 @@ describe("Review Cycle Service", () => {
 
   describe("security boundaries", () => {
     it("should prevent review cycle generation for non-existent engagement", async () => {
-      expect(async () => {
+      await expect(async () => {
         await generateReviewCycle("non-existent", actorId);
       }).rejects.toThrow("Engagement");
     });
 
     it("should prevent listing review cycles for non-existent engagement", async () => {
-      expect(async () => {
+      await expect(async () => {
         await listReviewCyclesForEngagement("non-existent");
       }).rejects.toThrow("Engagement");
     });

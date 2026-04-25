@@ -87,15 +87,15 @@ describe("KPI Service", () => {
         actorId
       );
 
-      expect(kpi.id).toBeDefined();
-      expect(kpi.name).toBe("Revenue Growth");
-      expect(kpi.currentValue).toBe(1000000); // Initialized to baseline
-      expect(kpi.baselineValue).toBe(1000000);
-      expect(kpi.targetValue).toBe(1500000);
+      await expect(kpi.id).toBeDefined();
+      await expect(kpi.name).toBe("Revenue Growth");
+      await expect(kpi.currentValue).toBe(1000000); // Initialized to baseline
+      await expect(kpi.baselineValue).toBe(1000000);
+      await expect(kpi.targetValue).toBe(1500000);
     });
 
     it("should reject KPI with same baseline and target", async () => {
-      expect(async () => {
+      await expect(async () => {
         await createKPI(
           {
             engagementId,
@@ -112,7 +112,7 @@ describe("KPI Service", () => {
     });
 
     it("should reject invalid direction", async () => {
-      expect(async () => {
+      await expect(async () => {
         await createKPI(
           {
             engagementId,
@@ -225,7 +225,7 @@ describe("KPI Service", () => {
     });
 
     it("should prevent duplicate impact recording", async () => {
-      expect(async () => {
+      await expect(async () => {
         await recordActionKPIImpact(
           kpiId,
           actionId,
@@ -353,7 +353,7 @@ describe("KPI Service", () => {
     });
 
     it("should throw on internal-only KPI with client visibility", async () => {
-      expect(async () => {
+      await expect(async () => {
         await getKPIDetail(kpiId, "internal");
       }).rejects.toThrow("not found");
     });
@@ -385,13 +385,13 @@ describe("KPI Service", () => {
 
   describe("security boundaries", () => {
     it("should prevent access to non-existent KPI", async () => {
-      expect(async () => {
+      await expect(async () => {
         await getKPIDetail("non-existent-id");
       }).rejects.toThrow("not found");
     });
 
     it("should reject KPI for non-existent engagement", async () => {
-      expect(async () => {
+      await expect(async () => {
         await createKPI(
           {
             engagementId: "non-existent",
@@ -446,7 +446,7 @@ describe("KPI Service", () => {
         actorId
       );
 
-      expect(async () => {
+      await expect(async () => {
         await recordActionKPIImpact(kpi.id, action2.id, 50, "Invalid", actorId);
       }).rejects.toThrow("same engagement");
 

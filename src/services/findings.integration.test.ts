@@ -80,14 +80,14 @@ describe("Findings Service", () => {
       };
 
       const result = await createFinding(input, actorId);
-      expect(result.id).toBeDefined();
-      expect(result.engagementId).toBe(engagementId);
+      await expect(result.id).toBeDefined();
+      await expect(result.engagementId).toBe(engagementId);
 
       const finding = await getFindingDetail(result.id);
-      expect(finding.title).toBe("Declining Cash Position");
-      expect(finding.severity).toBe("critical");
-      expect(finding.status).toBe("draft");
-      expect(finding.provisionalFlag).toBe(false);
+      await expect(finding.title).toBe("Declining Cash Position");
+      await expect(finding.severity).toBe("critical");
+      await expect(finding.status).toBe("draft");
+      await expect(finding.provisionalFlag).toBe(false);
     });
 
     it("should reject invalid severity", async () => {
@@ -99,7 +99,7 @@ describe("Findings Service", () => {
         severity: "extreme",
       } as any;
 
-      expect(async () => {
+      await expect(async () => {
         await createFinding(input, actorId);
       }).rejects.toThrow("Invalid severity");
     });
@@ -113,7 +113,7 @@ describe("Findings Service", () => {
         severity: "high",
       } as any;
 
-      expect(async () => {
+      await expect(async () => {
         await createFinding(input, actorId);
       }).rejects.toThrow("Invalid impact area");
     });
@@ -127,7 +127,7 @@ describe("Findings Service", () => {
         severity: "medium",
       };
 
-      expect(async () => {
+      await expect(async () => {
         await createFinding(input, actorId);
       }).rejects.toThrow("title is required");
     });
@@ -142,7 +142,7 @@ describe("Findings Service", () => {
         impactArea: "execution",
       };
 
-      expect(async () => {
+      await expect(async () => {
         await createFinding(input, actorId);
       }).rejects.toThrow("summary is required");
     });
@@ -206,7 +206,7 @@ describe("Findings Service", () => {
     });
 
     it("should reject version conflict", async () => {
-      expect(async () => {
+      await expect(async () => {
         await updateFinding(
           findingId,
           {
@@ -220,7 +220,7 @@ describe("Findings Service", () => {
 
     it("should reject invalid status", async () => {
       const existing = await getFindingDetail(findingId);
-      expect(async () => {
+      await expect(async () => {
         await updateFinding(
           findingId,
           {
@@ -266,7 +266,7 @@ describe("Findings Service", () => {
     });
 
     it("should throw for non-existent engagement", async () => {
-      expect(async () => {
+      await expect(async () => {
         await listFindingsForEngagement("non-existent-id");
       }).rejects.toThrow("not found");
     });
@@ -449,7 +449,7 @@ describe("Findings Service", () => {
     });
 
     it("should reject invalid link type", async () => {
-      expect(async () => {
+      await expect(async () => {
         await linkEvidenceToFinding(
           findingId,
           evidenceId,
@@ -494,7 +494,7 @@ describe("Findings Service", () => {
         actorId
       );
 
-      expect(async () => {
+      await expect(async () => {
         await linkEvidenceToFinding(
           findingId,
           evidence3.id,

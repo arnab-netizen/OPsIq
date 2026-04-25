@@ -115,21 +115,21 @@ describe("Visibility Enforcement", () => {
         undefined,
         "internal"
       );
-      expect(internalOnly.some((e) => e.id === internalEvidenceId)).toBe(true);
+      await expect(internalOnly.some((e) => e.id === internalEvidenceId)).toBe(true);
 
       const clientVisible = await listEvidence(
         engagementId,
         undefined,
         "client_visible"
       );
-      expect(clientVisible.some((e) => e.id === internalEvidenceId)).toBe(false);
+      await expect(clientVisible.some((e) => e.id === internalEvidenceId)).toBe(false);
       expect(clientVisible.some((e) => e.id === clientVisibleEvidenceId)).toBe(
         true
       );
     });
 
     it("should throw when accessing internal-only evidence with client visibility", async () => {
-      expect(async () => {
+      await expect(async () => {
         await getEvidenceById(internalEvidenceId, "client_visible");
       }).rejects.toThrow("not found");
     });
@@ -179,7 +179,7 @@ describe("Visibility Enforcement", () => {
     });
 
     it("should throw when accessing internal-only finding with client visibility", async () => {
-      expect(async () => {
+      await expect(async () => {
         await getFindingDetail(internalFindingId, "client_visible");
       }).rejects.toThrow("not found");
     });

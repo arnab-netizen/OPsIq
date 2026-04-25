@@ -64,12 +64,12 @@ describe("Evidence Service", () => {
       };
 
       const result = await createEvidence(input, actorId);
-      expect(result.id).toBeDefined();
-      expect(result.engagementId).toBe(engagementId);
+      await expect(result.id).toBeDefined();
+      await expect(result.engagementId).toBe(engagementId);
 
       const item = await getEvidenceById(result.id);
-      expect(item.category).toBe("financial");
-      expect(item.sourceType).toBe("document");
+      await expect(item.category).toBe("financial");
+      await expect(item.sourceType).toBe("document");
     });
 
     it("should reject invalid category", async () => {
@@ -83,7 +83,7 @@ describe("Evidence Service", () => {
         capturedAt: "2026-04-22T10:00:00Z",
       } as any;
 
-      expect(async () => {
+      await expect(async () => {
         await createEvidence(input, actorId);
       }).rejects.toThrow("Invalid evidence category");
     });
@@ -99,7 +99,7 @@ describe("Evidence Service", () => {
         capturedAt: "2026-04-22T10:00:00Z",
       } as any;
 
-      expect(async () => {
+      await expect(async () => {
         await createEvidence(input, actorId);
       }).rejects.toThrow("Invalid source type");
     });
@@ -115,7 +115,7 @@ describe("Evidence Service", () => {
         capturedAt: "2026-04-22T10:00:00Z",
       } as any;
 
-      expect(async () => {
+      await expect(async () => {
         await createEvidence(input, actorId);
       }).rejects.toThrow("Invalid capture method");
     });
@@ -145,7 +145,7 @@ describe("Evidence Service", () => {
           },
           actorId
         );
-        expect(result.id).toBeDefined();
+        await expect(result.id).toBeDefined();
       }
     });
   });
@@ -190,7 +190,7 @@ describe("Evidence Service", () => {
     });
 
     it("should reject version conflict", async () => {
-      expect(async () => {
+      await expect(async () => {
         await updateEvidence(
           evidenceId,
           {
@@ -238,7 +238,7 @@ describe("Evidence Service", () => {
     });
 
     it("should throw for non-existent engagement", async () => {
-      expect(async () => {
+      await expect(async () => {
         await listEvidence("non-existent-id");
       }).rejects.toThrow("not found");
     });
@@ -271,7 +271,7 @@ describe("Evidence Service", () => {
         size: 1024,
       };
 
-      expect(async () => {
+      await expect(async () => {
         await createFileBlob(input, actorId);
       }).rejects.toThrow("Invalid file blob input");
     });
@@ -324,7 +324,7 @@ describe("Evidence Service", () => {
     });
 
     it("should reject linking to non-existent evidence", async () => {
-      expect(async () => {
+      await expect(async () => {
         await linkFileToEvidenceItem(
           "non-existent-id",
           fileBlobId,
@@ -373,7 +373,7 @@ describe("Evidence Service", () => {
     });
 
     it("should throw for non-existent engagement", async () => {
-      expect(async () => {
+      await expect(async () => {
         await listEvidenceBundles("non-existent-id");
       }).rejects.toThrow("not found");
     });
