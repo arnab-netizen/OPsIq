@@ -46,9 +46,14 @@ export function RecommendationsView({
 
   return (
     <div className="rounded-lg border border-border p-6">
-      <h2 className="text-lg font-semibold text-foreground">
-        Recommendations ({recommendations.length})
-      </h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-foreground">
+          Recommendations
+        </h2>
+        <span className="text-sm text-muted-foreground">
+          ({recommendations.length})
+        </span>
+      </div>
       {sorted.length > 0 ? (
         <div className="mt-4 space-y-3">
           {sorted.map((rec) => (

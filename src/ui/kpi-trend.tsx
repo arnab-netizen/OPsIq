@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Badge } from "@/ui/primitives";
 
 interface KPISnapshot {
@@ -23,35 +22,6 @@ interface KPITrendProps {
 }
 
 export function KPITrend({ kpis }: KPITrendProps) {
-  const [withSnapshots, setWithSnapshots] = useState<KPI[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function enrichKPIs() {
-      try {
-        const enriched = await Promise.all(
-          kpis.map(async (kpi) => {
-            // Snapshots would ideally come from the API, but using stored data
-            return kpi;
-          })
-        );
-        setWithSnapshots(enriched);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    enrichKPIs();
-  }, [kpis]);
-
-  if (loading) {
-    return (
-      <div className="rounded-lg border border-border p-6">
-        <h2 className="text-lg font-semibold text-foreground">KPI Trends</h2>
-        <p className="mt-4 text-sm text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
 
   const getTrendDirection = (kpi: KPI) => {
     if (!kpi.snapshots || kpi.snapshots.length < 2) return null;
@@ -71,9 +41,10 @@ export function KPITrend({ kpis }: KPITrendProps) {
 
   return (
     <div className="rounded-lg border border-border p-6">
-      <h2 className="text-lg font-semibold text-foreground">
-        KPI Trends ({kpis.length})
-      </h2>
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-foreground">KPI Trends</h2>
+        <span className="text-sm text-muted-foreground">({kpis.length})</span>
+      </div>
       {kpis.length > 0 ? (
         <div className="mt-4 space-y-4">
           {kpis.map((kpi) => {
