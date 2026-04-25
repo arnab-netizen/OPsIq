@@ -298,3 +298,18 @@ export const BLOCKER_TYPES = [
 ] as const;
 
 export type BlockerType = (typeof BLOCKER_TYPES)[number];
+
+export const SHOCK_EVENT_TYPES = [
+  "major_client_loss",
+  "key_employee_loss",
+  "payroll_pressure",
+  "margin_collapse",
+  "owner_withdrawal",
+  "supplier_failure",
+  "service_breakdown",
+  "compliance_issue",
+  "regulatory_shock",
+  "competitive_disruption",
+] as const;
+
+export type ShockEventType = (typeof SHOCK_EVENT_TYPES)[number];

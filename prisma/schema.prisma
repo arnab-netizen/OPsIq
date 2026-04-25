@@ -206,6 +206,7 @@ model Engagement {
   kpis                  KPI[]
   deliverables          Deliverable[]
   risks                 Risk[]
+  shockEvents           ShockEvent[]
 
   @@index([clientId])
   @@index([status])
@@ -540,4 +541,25 @@ model Risk {
   @@index([engagementId])
   @@index([status])
   @@map("risks")
+}
+
+// ─── Module 4: Shock Event ──────────────────────────────────────────────────
+
+model ShockEvent {
+  id           String    @id @default(uuid()) @db.Uuid
+  engagementId String    @map("engagement_id") @db.Uuid
+  type         String    // governed by SHOCK_EVENT_TYPES
+  severity     String    // governed by RISK_SEVERITIES
+  happenedAt   DateTime  @map("happened_at")
+  notes        String?
+  version      Int       @default(1)
+  createdBy    String?   @map("created_by") @db.Uuid
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  engagement   Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@index([happenedAt])
+  @@map("shock_events")
 }
