@@ -11,6 +11,7 @@ import {
 import { validateEngagementTransition } from "@/policies/state-transition";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { initializeInterventionState } from "@/services/intervention-state";
+import { computeEngagementHealth, enforceEngagementHealth } from "@/services/engagement-health";
 import { logger } from "@/infra/logger";
 import type { EngagementStatus, InterventionMode } from "@/domain/constants/statuses";
 import { ENGAGEMENT_STATUSES, INTERVENTION_MODES } from "@/domain/constants/statuses";
@@ -195,6 +196,45 @@ export async function updateEngagement(
   // Validate status transition if changing status
   if (input.status && input.status !== currentStatus) {
     validateEngagementTransition(currentStatus, input.status);
+
+    // Enforce health check for critical transitions
+    if (input.status === "completed" || input.status === "archived") {
+      const canProceed = await enforceEngagementHealth(engagementId, input.status);
+      if (!canProceed) {
+        const health = await computeEngagementHealth(engagementId);
+        throw new ValidationError(
+          `Cannot transition engagement to ${input.status} due to critical issues: ${health.reasons.join("; ")}`
+        );
+      }
+
+      // Emit health-related audit events
+      const health = await computeEngagementHealth(engagementId);
+      if (health.status === "blocked") {
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.ENGAGEMENT_BLOCKED,
+          actorId,
+          entityType: "engagement",
+          entityId: engagementId,
+          payload: {
+            reasons: health.reasons,
+            blockingDetails: health.details,
+          },
+          visibility: "internal",
+        });
+      } else if (health.status === "at_risk") {
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.RISK_IDENTIFIED,
+          actorId,
+          entityType: "engagement",
+          entityId: engagementId,
+          payload: {
+            reasons: health.reasons,
+            riskDetails: health.details,
+          },
+          visibility: "internal",
+        });
+      }
+    }
   }
 
   // Validate intervention mode if changing

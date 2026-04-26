@@ -8,7 +8,11 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 vi.mock("@/lib/db");
 vi.mock("@/infra/audit");
 vi.mock("./re-evaluation");
+vi.mock("./engagement-health");
 vi.mock("@/infra/logger");
+
+// Import mocked modules to set up default behavior
+import { computeEngagementHealth, enforceEngagementHealth } from "./engagement-health";
 
 const mockUserId = "user-123";
 const mockClientId = "client-123";
@@ -17,6 +21,20 @@ const mockEngagementId = "eng-123";
 describe("engagement service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Setup default mocks for engagement-health
+    vi.mocked(enforceEngagementHealth).mockResolvedValue(true);
+    vi.mocked(computeEngagementHealth).mockResolvedValue({
+      status: "healthy",
+      reasons: [],
+      requiresIntervention: false,
+      details: {
+        criticalFindings: 0,
+        criticalActions: 0,
+        overdueActions: 0,
+        blockedCriticalActions: 0,
+        highPriorityActions: 0,
+      },
+    });
   });
 
   describe("createEngagement", () => {
