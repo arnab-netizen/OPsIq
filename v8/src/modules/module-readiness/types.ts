@@ -1,0 +1,5 @@
+export type OpsiqModuleStatus = 'implemented_by_existing_repo' | 'implemented_v6' | 'implemented_v6_partial' | 'partial' | 'planned';
+export type OpsiqRuntimePolicy = 'implemented-runtime' | 'existing-or-partial-runtime' | 'contract-only-do-not-call-at-runtime';
+export interface OpsiqModuleSpec { readonly packNumber: number; readonly key: string; readonly name: string; readonly status: OpsiqModuleStatus; readonly purpose: string; readonly dependencies: readonly string[]; readonly mergeRisk: 'low' | 'medium' | 'medium-high' | 'high'; readonly runtimePolicy: OpsiqRuntimePolicy; readonly requiredBeforeImplementation: readonly string[]; readonly acceptanceCriteria: readonly string[]; readonly defaultRoutes: readonly string[]; readonly defaultDataStores: readonly string[]; }
+export interface ModuleReadinessFinding { readonly moduleKey: string; readonly severity: 'info' | 'warning' | 'blocker'; readonly message: string; }
+export interface ModuleImplementationGateResult { readonly moduleKey: string; readonly canImplementNow: boolean; readonly findings: readonly ModuleReadinessFinding[]; readonly dependencyKeys: readonly string[]; }

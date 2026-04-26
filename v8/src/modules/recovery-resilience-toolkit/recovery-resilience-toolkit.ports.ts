@@ -1,0 +1,3 @@
+export interface RecoveryResilienceToolkitReadinessView { readonly moduleKey: 'recovery-resilience-toolkit'; readonly status: 'partial'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface RecoveryResilienceToolkitServicePort { getReadinessView(): Promise<RecoveryResilienceToolkitReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface RecoveryResilienceToolkitRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'recovery-resilience-toolkit'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

@@ -1,0 +1,3 @@
+export interface BusinessStateEngineReadinessView { readonly moduleKey: 'business-state-engine'; readonly status: 'implemented_v6'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface BusinessStateEngineServicePort { getReadinessView(): Promise<BusinessStateEngineReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface BusinessStateEngineRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'business-state-engine'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

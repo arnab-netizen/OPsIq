@@ -1,0 +1,3 @@
+export interface ObservabilityHealthReadinessView { readonly moduleKey: 'observability-health'; readonly status: 'partial'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface ObservabilityHealthServicePort { getReadinessView(): Promise<ObservabilityHealthReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface ObservabilityHealthRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'observability-health'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

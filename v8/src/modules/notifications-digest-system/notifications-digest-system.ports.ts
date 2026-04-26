@@ -1,0 +1,3 @@
+export interface NotificationsDigestSystemReadinessView { readonly moduleKey: 'notifications-digest-system'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface NotificationsDigestSystemServicePort { getReadinessView(): Promise<NotificationsDigestSystemReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface NotificationsDigestSystemRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'notifications-digest-system'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }
