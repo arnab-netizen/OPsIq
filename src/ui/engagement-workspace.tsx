@@ -102,6 +102,15 @@ export function EngagementWorkspace({
 
   return (
     <div className="space-y-6">
+      {/* Header with Report Button */}
+      <div className="flex items-center justify-end">
+        <Link href={`/engagements/${engagement.id}/report`}>
+          <Button size="sm" variant="outline">
+            View Report
+          </Button>
+        </Link>
+      </div>
+
       {/* Error State */}
       {error && (
         <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
