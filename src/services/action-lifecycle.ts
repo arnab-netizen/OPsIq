@@ -7,7 +7,7 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 
 // ─── Action Lifecycle States ──────────────────────────────────────────────────
 
-export type ActionLifecycleState = "created" | "in_progress" | "blocked" | "completed" | "verified" | "cancelled";
+export type ActionLifecycleState = "draft" | "created" | "in_progress" | "blocked" | "completed" | "verified" | "cancelled";
 
 export interface ActionStateTransition {
   from: ActionLifecycleState;
@@ -27,6 +27,7 @@ export interface EnforcementRule {
 // ─── State Machine Definition ──────────────────────────────────────────────────
 
 const STATE_MACHINE: Record<ActionLifecycleState, ActionLifecycleState[]> = {
+  draft: ["created", "in_progress", "blocked", "cancelled"],
   created: ["in_progress", "blocked", "cancelled"],
   in_progress: ["blocked", "completed", "created"],
   blocked: ["in_progress", "created", "cancelled"],
@@ -248,6 +249,7 @@ export async function countActionsByEngagementState(
     "cancelled",
   ];
   const counts: Record<ActionLifecycleState, number> = {
+    draft: 0,
     created: 0,
     in_progress: 0,
     blocked: 0,

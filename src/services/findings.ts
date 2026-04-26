@@ -106,7 +106,7 @@ export async function createFinding(
       impactArea: input.impactArea,
       severity: input.severity,
       rootCause: input.rootCause || null,
-      linkedEvidence: primaryEvidenceId || null,
+      linkedEvidence: primaryEvidenceId ? [primaryEvidenceId] : [],
       createdBy: actorId,
     },
     select: { id: true, engagementId: true },

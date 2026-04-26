@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Textarea, Select } from "@/ui/primitives";
 
+export const dynamic = "force-dynamic";
+
 export default function NewClientPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
