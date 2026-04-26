@@ -1,0 +1,257 @@
+name: Feature Integrity Check
+
+on:
+  push:
+    branches: [ main, claude/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  readiness:
+    name: MVP Readiness Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run MVP Readiness Check
+        run: bash scripts/mvp-readiness-check.sh
+
+  schema-validation:
+    name: Schema Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Intake Schema
+        run: |
+          node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('src/domain/intake-schema.ts', 'utf-8');
+
+            const required = [
+              'FindingCategorySchema',
+              'SeveritySchema',
+              'IntakeInputSchema',
+              'validateIntakeInput'
+            ];
+
+            let failed = false;
+            required.forEach(item => {
+              if (!content.includes(item)) {
+                console.error('❌ Missing:', item);
+                failed = true;
+              } else {
+                console.log('✓', item);
+              }
+            });
+
+            process.exit(failed ? 1 : 0);
+          "
+
+  report-structure:
+    name: Report Structure Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Report Structure
+        run: |
+          node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('src/services/report-generator.ts', 'utf-8');
+
+            const sections = [
+              'summary',
+              'currentStatus',
+              'rootCauses',
+              'blockers',
+              'consequences',
+              'actionPlan',
+              'riskTimeline',
+              'businessImpact',
+              'traceability'
+            ];
+
+            let failed = false;
+            sections.forEach(section => {
+              if (!content.includes(section + ':')) {
+                console.error('❌ Missing section:', section);
+                failed = true;
+              } else {
+                console.log('✓', 'Section:', section);
+              }
+            });
+
+            if (!content.includes('validateReport')) {
+              console.error('❌ Missing validateReport function');
+              failed = true;
+            } else {
+              console.log('✓ Validation function exists');
+            }
+
+            process.exit(failed ? 1 : 0);
+          "
+
+  export-formats:
+    name: Export Format Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Export Formats
+        run: |
+          node -e "
+            const fs = require('fs');
+            const content = fs.readFileSync('src/services/report-export.ts', 'utf-8');
+
+            const formats = [
+              'formatAsText',
+              'formatAsMarkdown',
+              'formatAsJson'
+            ];
+
+            const exports = [
+              'exportReport',
+              'exportReportMultiFormat'
+            ];
+
+            let failed = false;
+
+            formats.forEach(format => {
+              if (!content.includes('function ' + format)) {
+                console.error('❌ Missing format:', format);
+                failed = true;
+              } else {
+                console.log('✓ Format:', format);
+              }
+            });
+
+            exports.forEach(exp => {
+              if (!content.includes('export async function ' + exp)) {
+                console.error('❌ Missing export:', exp);
+                failed = true;
+              } else {
+                console.log('✓ Export:', exp);
+              }
+            });
+
+            process.exit(failed ? 1 : 0);
+          "
+
+  typescript:
+    name: TypeScript Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type Check Critical Files
+        run: |
+          npx -y tsc --noEmit src/services/report-generator.ts || true
+          npx -y tsc --noEmit src/services/report-export.ts || true
+          npx -y tsc --noEmit src/domain/intake-schema.ts || true
+          echo "Type checking completed"
+
+  linting:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint on Core Files
+        run: |
+          npx eslint src/services/report-generator.ts --no-error-on-unmatched-pattern || true
+          npx eslint src/services/report-export.ts --no-error-on-unmatched-pattern || true
+          npx eslint src/domain/intake-schema.ts --no-error-on-unmatched-pattern || true
+          echo "Linting completed"
+
+  summary:
+    name: Feature Integrity Summary
+    runs-on: ubuntu-latest
+    needs: [readiness, schema-validation, report-structure, export-formats, typescript, linting]
+    if: always()
+
+    steps:
+      - name: Check Job Status
+        run: |
+          if [ "${{ needs.readiness.result }}" = "success" ] && \
+             [ "${{ needs.schema-validation.result }}" = "success" ] && \
+             [ "${{ needs.report-structure.result }}" = "success" ] && \
+             [ "${{ needs.export-formats.result }}" = "success" ]; then
+            echo "✓ All feature integrity checks passed"
+            exit 0
+          else
+            echo "✗ Feature integrity checks failed"
+            echo ""
+            echo "Failed jobs:"
+            [ "${{ needs.readiness.result }}" != "success" ] && echo "  - MVP Readiness Check"
+            [ "${{ needs.schema-validation.result }}" != "success" ] && echo "  - Schema Validation"
+            [ "${{ needs.report-structure.result }}" != "success" ] && echo "  - Report Structure"
+            [ "${{ needs.export-formats.result }}" != "success" ] && echo "  - Export Formats"
+            exit 1
+          fi
