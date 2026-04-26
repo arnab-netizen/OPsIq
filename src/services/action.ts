@@ -7,6 +7,7 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { withIdempotency } from "@/infra/idempotency";
+import { validateStateTransition, enforceActionRules } from "@/services/action-lifecycle";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -220,6 +221,19 @@ export async function updateActionStatus(
     if (newStatus !== previousStatus) {
       validateActionTransition(previousStatus, newStatus);
     }
+  }
+
+  // Enforce action lifecycle rules
+  const updatedActionData = {
+    ...action,
+    status: newStatus,
+    blockerReason: input.blockerReason ?? input.blockageReason ?? action.blockerReason,
+  };
+  const violations = await enforceActionRules(updatedActionData);
+  if (violations.length > 0) {
+    throw new ValidationError(
+      `Action enforcement rules violated:\n${violations.join("\n")}`
+    );
   }
 
   // Optimistic locking: update only if version matches
