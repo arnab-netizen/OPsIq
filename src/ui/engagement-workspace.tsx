@@ -267,16 +267,11 @@ export function EngagementWorkspace({
             </Button>
           </div>
           {actions.length > 0 ? (
-            <div className="space-y-4">
-              <ActionCenter actions={actions} engagementId={engagement.id} />
-              {blockedActions.length > 0 && (
-                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
-                  <p className="text-sm font-medium text-destructive">
-                    {blockedActions.length} action{blockedActions.length !== 1 ? "s" : ""} blocked
-                  </p>
-                </div>
-              )}
-            </div>
+            <ActionCenter
+              actions={actions}
+              engagementId={engagement.id}
+              onActionUpdated={refreshData}
+            />
           ) : (
             <div className="rounded-lg border border-border p-8 text-center">
               <p className="text-muted-foreground">No actions defined yet.</p>
