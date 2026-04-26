@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:merge": "vitest run",
-    "test:integration": "vitest run --include='**/*.integration.test.ts' --exclude='**/*.placeholder.test.ts'"
+    "test:integration": "vitest run --include='**/*.integration.test.ts' --exclude='**/*.placeholder.test.ts'",
+    "test:mvp": "vitest run src/__tests__/mvp-operational-flow.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
