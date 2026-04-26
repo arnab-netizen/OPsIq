@@ -21,7 +21,8 @@
     "test:integration": "vitest run --include='**/*.integration.test.ts' --exclude='**/*.placeholder.test.ts'",
     "test:mvp": "vitest run src/__tests__/mvp-operational-flow.test.ts",
     "test:db": "vitest run src/__tests__/mvp-db-execution.test.ts",
-    "run:opsiq": "tsx scripts/run-opsiq.ts"
+    "run:opsiq": "tsx scripts/run-opsiq.ts",
+    "demo:opsiq": "tsx scripts/demo-scenario.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
