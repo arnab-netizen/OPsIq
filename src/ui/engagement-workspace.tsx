@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Badge, Button } from "@/ui/primitives";
-import { RecommendationsView } from "@/ui/recommendations-view";
+import { FindingsManager } from "@/ui/findings-manager";
+import { RecommendationsManager } from "@/ui/recommendations-manager";
 import { ActionCenter } from "@/ui/action-center";
 import { KPITrend } from "@/ui/kpi-trend";
 
@@ -213,28 +214,11 @@ export function EngagementWorkspace({
               Refresh
             </Button>
           </div>
-          {findings.length > 0 ? (
-            <div className="space-y-2">
-              {findings.map((f) => (
-                <div key={f.id} className="rounded-lg border border-border p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-medium">{f.title}</h4>
-                      {f.summary && <p className="mt-1 text-sm text-muted-foreground">{f.summary}</p>}
-                    </div>
-                    <Badge variant={SEVERITY_VARIANTS[f.severity] ?? "muted"} className="ml-2">
-                      {f.severity}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border p-8 text-center">
-              <p className="text-muted-foreground">No findings recorded yet.</p>
-              <p className="mt-2 text-sm text-muted-foreground">Run a diagnosis to generate findings from evidence.</p>
-            </div>
-          )}
+          <FindingsManager
+            findings={findings}
+            engagementId={engagement.id}
+            onFindingUpdated={refreshData}
+          />
         </div>
       )}
 
@@ -247,13 +231,11 @@ export function EngagementWorkspace({
               Refresh
             </Button>
           </div>
-          {recommendations.length > 0 ? (
-            <RecommendationsView recommendations={recommendations} />
-          ) : (
-            <div className="rounded-lg border border-border p-8 text-center">
-              <p className="text-muted-foreground">No recommendations generated yet.</p>
-            </div>
-          )}
+          <RecommendationsManager
+            recommendations={recommendations}
+            engagementId={engagement.id}
+            onRecommendationUpdated={refreshData}
+          />
         </div>
       )}
 
