@@ -20,12 +20,21 @@ interface FindingsManagerProps {
 }
 
 const SEVERITY_OPTIONS = ["critical", "high", "medium", "low"];
+const STATUS_OPTIONS = ["identified", "validated", "prioritized", "resolved", "dismissed"];
 
 const SEVERITY_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
   critical: "destructive",
   high: "warning",
   medium: "default",
   low: "muted",
+};
+
+const STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  identified: "muted",
+  validated: "warning",
+  prioritized: "warning",
+  resolved: "success",
+  dismissed: "muted",
 };
 
 export function FindingsManager({
@@ -97,7 +106,10 @@ export function FindingsManager({
     }
   };
 
-  const handleUpdateFinding = async (findingId: string, newSeverity: string) => {
+  const handleUpdateFinding = async (
+    findingId: string,
+    updates: { severity?: string; status?: string }
+  ) => {
     const finding = localFindings.find((f) => f.id === findingId);
     if (!finding) return;
 
@@ -109,7 +121,7 @@ export function FindingsManager({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          severity: newSeverity,
+          ...updates,
           version: finding.version,
         }),
       });
@@ -127,7 +139,8 @@ export function FindingsManager({
           f.id === findingId
             ? {
                 ...f,
-                severity: updated.severity || newSeverity,
+                severity: updated.severity || f.severity,
+                status: updated.status || f.status,
                 version: (updated.version || finding.version) + 1,
               }
             : f
@@ -260,14 +273,26 @@ export function FindingsManager({
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <select
+                    value={finding.status || "identified"}
+                    onChange={(e) => handleUpdateFinding(finding.id, { status: e.target.value })}
+                    disabled={updating === finding.id}
+                    className="rounded border border-border bg-background p-1 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </option>
+                    ))}
+                  </select>
                   {SEVERITY_OPTIONS.map((severity) => (
                     <Button
                       key={severity}
                       size="sm"
                       variant={finding.severity === severity ? "primary" : "outline"}
                       disabled={updating === finding.id}
-                      onClick={() => handleUpdateFinding(finding.id, severity)}
+                      onClick={() => handleUpdateFinding(finding.id, { severity })}
                     >
                       {severity}
                     </Button>
@@ -307,14 +332,26 @@ export function FindingsManager({
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <select
+                    value={finding.status || "identified"}
+                    onChange={(e) => handleUpdateFinding(finding.id, { status: e.target.value })}
+                    disabled={updating === finding.id}
+                    className="rounded border border-border bg-background p-1 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </option>
+                    ))}
+                  </select>
                   {SEVERITY_OPTIONS.map((severity) => (
                     <Button
                       key={severity}
                       size="sm"
                       variant={finding.severity === severity ? "primary" : "outline"}
                       disabled={updating === finding.id}
-                      onClick={() => handleUpdateFinding(finding.id, severity)}
+                      onClick={() => handleUpdateFinding(finding.id, { severity })}
                     >
                       {severity}
                     </Button>
@@ -354,14 +391,26 @@ export function FindingsManager({
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <select
+                    value={finding.status || "identified"}
+                    onChange={(e) => handleUpdateFinding(finding.id, { status: e.target.value })}
+                    disabled={updating === finding.id}
+                    className="rounded border border-border bg-background p-1 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </option>
+                    ))}
+                  </select>
                   {SEVERITY_OPTIONS.map((severity) => (
                     <Button
                       key={severity}
                       size="sm"
                       variant={finding.severity === severity ? "primary" : "outline"}
                       disabled={updating === finding.id}
-                      onClick={() => handleUpdateFinding(finding.id, severity)}
+                      onClick={() => handleUpdateFinding(finding.id, { severity })}
                     >
                       {severity}
                     </Button>
