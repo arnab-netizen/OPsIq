@@ -23,6 +23,7 @@
     "test:db": "vitest run src/__tests__/mvp-db-execution.test.ts",
     "run:opsiq": "tsx scripts/run-opsiq.ts",
     "demo:opsiq": "tsx scripts/demo-scenario.ts",
+    "demo:failure": "tsx scripts/failure-demo.ts",
     "report:opsiq": "tsx scripts/generate-report.ts"
   },
   "dependencies": {
