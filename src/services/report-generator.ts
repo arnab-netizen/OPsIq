@@ -28,6 +28,7 @@ export interface ActionSummary {
   priority: string;
   status: string;
   dueDate?: string;
+  urgency?: "overdue" | "due-soon" | "on-track";
 }
 
 export interface KPISummary {
@@ -63,14 +64,94 @@ export interface ReviewStatus {
   completedActionCount: number;
 }
 
+export interface ExecutiveSummary {
+  totalFindings: number;
+  criticalFindings: number;
+  highPriorityActions: number;
+  overallRiskLevel: "high" | "medium" | "low";
+  immediateActionRequired: boolean;
+  riskReasoning: string;
+}
+
+export interface ReportMetadata {
+  generatedAt: string;
+  version: string;
+  dataCompleteness: {
+    hasFindings: boolean;
+    hasRecommendations: boolean;
+    hasActions: boolean;
+    hasKPIs: boolean;
+    hasConditionProfile: boolean;
+  };
+}
+
 export interface EngagementReport {
   summary: EngagementReportSummary;
+  executiveSummary: ExecutiveSummary;
   findings: FindingSummary[];
   recommendations: RecommendationSummary[];
   actions: ActionSummary[];
   kpis: KPISummary[];
   reviewStatus: ReviewStatus;
-  generatedAt: string;
+  metadata: ReportMetadata;
+}
+
+// ─── Helpers: Risk & Urgency Calculation ──────────────────────────────────
+
+type ActionData = { status: string; dueDate?: Date; priority?: string };
+type FindingData = { severity: string; status?: string };
+
+function calculateActionUrgency(
+  dueDate: Date | null | undefined,
+  status: string
+): "overdue" | "due-soon" | "on-track" | undefined {
+  if (!dueDate || status === "completed" || status === "cancelled") {
+    return undefined;
+  }
+
+  const now = new Date();
+  const daysDue = Math.ceil(
+    (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysDue < 0) {
+    return "overdue";
+  } else if (daysDue <= 7) {
+    return "due-soon";
+  } else {
+    return "on-track";
+  }
+}
+
+function calculateRiskLevel(
+  findings: FindingData[],
+  actions: ActionData[],
+  criticalFindingCount: number
+): { level: "high" | "medium" | "low"; reasoning: string } {
+  const criticalPresent = criticalFindingCount > 0;
+  const overdueActions = actions.filter((a) => calculateActionUrgency(a.dueDate, a.status) === "overdue");
+  const highPriorityActions = actions.filter((a) => a.priority === "critical" || a.priority === "high");
+
+  if (criticalPresent || overdueActions.length > 0) {
+    return {
+      level: "high",
+      reasoning: criticalPresent
+        ? `${criticalFindingCount} critical finding(s) require immediate attention`
+        : `${overdueActions.length} overdue action(s) need resolution`,
+    };
+  }
+
+  if (highPriorityActions.length > 3) {
+    return {
+      level: "medium",
+      reasoning: `${highPriorityActions.length} high-priority actions in progress`,
+    };
+  }
+
+  return {
+    level: "low",
+    reasoning: "Engagement tracking well with no critical blockers",
+  };
 }
 
 // ─── Report Generation ─────────────────────────────────────────────────────
@@ -153,7 +234,7 @@ export async function generateEngagementReport(
     })
   );
 
-  // Build actions summary
+  // Build actions summary with urgency flags
   const actionsSummary: ActionSummary[] = actions.map(
     (a: typeof actions[0]) => ({
       id: a.id,
@@ -161,6 +242,7 @@ export async function generateEngagementReport(
       priority: a.priority,
       status: a.status,
       dueDate: a.dueDate?.toISOString(),
+      urgency: calculateActionUrgency(a.dueDate, a.status),
     })
   );
 
@@ -182,23 +264,60 @@ export async function generateEngagementReport(
     currentCondition
   );
 
+  // Calculate executive summary
+  const criticalFindings = findings.filter((f: typeof findings[0]) => f.severity === "critical");
+  const highPriorityActions = actions.filter(
+    (a: typeof actions[0]) => a.priority === "critical" || a.priority === "high"
+  );
+
+  const riskCalculation = calculateRiskLevel(
+    findings,
+    actions,
+    criticalFindings.length
+  );
+
+  const executiveSummary: ExecutiveSummary = {
+    totalFindings: findings.length,
+    criticalFindings: criticalFindings.length,
+    highPriorityActions: highPriorityActions.length,
+    overallRiskLevel: riskCalculation.level,
+    immediateActionRequired:
+      riskCalculation.level === "high" ||
+      criticalFindings.length > 0 ||
+      actions.some(
+        (a: typeof actions[0]) => calculateActionUrgency(a.dueDate, a.status) === "overdue"
+      ),
+    riskReasoning: riskCalculation.reasoning,
+  };
+
+  // Calculate data completeness
+  const metadata: ReportMetadata = {
+    generatedAt: new Date().toISOString(),
+    version: "2.0",
+    dataCompleteness: {
+      hasFindings: findings.length > 0,
+      hasRecommendations: recommendations.length > 0,
+      hasActions: actions.length > 0,
+      hasKPIs: kpis.length > 0,
+      hasConditionProfile: !!currentCondition,
+    },
+  };
+
   const report: EngagementReport = {
     summary,
+    executiveSummary,
     findings: findingsSummary,
     recommendations: recommendationsSummary,
     actions: actionsSummary,
     kpis: kpisSummary,
     reviewStatus,
-    generatedAt: new Date().toISOString(),
+    metadata,
   };
 
   return report;
 }
 
 // ─── Helper: Calculate Review Status ────────────────────────────────────────
-
-type FindingData = { severity: string; status?: string };
-type ActionData = { status: string };
 
 function calculateReviewStatus(
   findings: FindingData[],

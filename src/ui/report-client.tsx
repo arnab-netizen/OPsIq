@@ -22,7 +22,11 @@ interface Report {
   actions: Array<any>;
   kpis: Array<any>;
   reviewStatus: any;
-  generatedAt: string;
+  metadata: {
+    generatedAt: string;
+    version: string;
+    dataCompleteness: any;
+  };
 }
 
 export function ReportClient({ report, engagementId }: { report: Report; engagementId: string }) {

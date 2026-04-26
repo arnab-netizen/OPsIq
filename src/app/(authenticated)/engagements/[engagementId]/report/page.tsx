@@ -23,6 +23,18 @@ const TREND_VARIANTS: Record<string, "default" | "success" | "warning" | "destru
   worsening: "destructive",
 };
 
+const RISK_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  high: "destructive",
+  medium: "warning",
+  low: "success",
+};
+
+const URGENCY_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {
+  overdue: "destructive",
+  "due-soon": "warning",
+  "on-track": "success",
+};
+
 interface Report {
   summary: {
     engagementId: string;
@@ -36,6 +48,14 @@ interface Report {
       severityScore: number;
       assessedAt: string;
     };
+  };
+  executiveSummary: {
+    totalFindings: number;
+    criticalFindings: number;
+    highPriorityActions: number;
+    overallRiskLevel: "high" | "medium" | "low";
+    immediateActionRequired: boolean;
+    riskReasoning: string;
   };
   findings: Array<{
     id: string;
@@ -55,6 +75,7 @@ interface Report {
     priority: string;
     status: string;
     dueDate?: string;
+    urgency?: "overdue" | "due-soon" | "on-track";
   }>;
   kpis: Array<{
     id: string;
@@ -71,7 +92,17 @@ interface Report {
     openActionCount: number;
     completedActionCount: number;
   };
-  generatedAt: string;
+  metadata: {
+    generatedAt: string;
+    version: string;
+    dataCompleteness: {
+      hasFindings: boolean;
+      hasRecommendations: boolean;
+      hasActions: boolean;
+      hasKPIs: boolean;
+      hasConditionProfile: boolean;
+    };
+  };
 }
 
 async function fetchReport(engagementId: string): Promise<Report | null> {
@@ -135,6 +166,50 @@ export default async function ReportPage({
 
       {/* Report Content */}
       <div className="space-y-6">
+        {/* Executive Summary */}
+        <section className={`rounded-lg border-2 p-6 ${
+          report.executiveSummary.immediateActionRequired
+            ? "border-destructive/50 bg-destructive/5"
+            : "border-border"
+        }`}>
+          <div className="flex items-start justify-between">
+            <h2 className="text-xl font-semibold">Executive Summary</h2>
+            <Badge variant={RISK_VARIANTS[report.executiveSummary.overallRiskLevel] ?? "muted"}>
+              {report.executiveSummary.overallRiskLevel.toUpperCase()} RISK
+            </Badge>
+          </div>
+          {report.executiveSummary.immediateActionRequired && (
+            <div className="mt-3 rounded-md bg-destructive/10 p-3 border border-destructive/20">
+              <p className="text-sm font-medium text-destructive">⚠️ Immediate action required</p>
+            </div>
+          )}
+          <div className="mt-4 grid gap-4 sm:grid-cols-4">
+            <div>
+              <p className="text-xs font-medium uppercase text-muted-foreground">Total Findings</p>
+              <p className="mt-2 text-2xl font-bold">{report.executiveSummary.totalFindings}</p>
+              {report.executiveSummary.criticalFindings > 0 && (
+                <p className="mt-1 text-xs text-destructive">{report.executiveSummary.criticalFindings} critical</p>
+              )}
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-muted-foreground">High Priority Actions</p>
+              <p className="mt-2 text-2xl font-bold">{report.executiveSummary.highPriorityActions}</p>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-muted-foreground">Risk Level</p>
+              <div className="mt-2">
+                <Badge variant={RISK_VARIANTS[report.executiveSummary.overallRiskLevel] ?? "muted"}>
+                  {report.executiveSummary.overallRiskLevel}
+                </Badge>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-medium uppercase text-muted-foreground">Assessment</p>
+              <p className="mt-2 text-sm text-muted-foreground">{report.executiveSummary.riskReasoning}</p>
+            </div>
+          </div>
+        </section>
+
         {/* Summary */}
         <section className="rounded-lg border border-border p-6">
           <h2 className="text-xl font-semibold">Summary</h2>
@@ -158,7 +233,7 @@ export default async function ReportPage({
             <div>
               <dt className="text-sm text-muted-foreground">Generated</dt>
               <dd className="mt-1 text-sm">
-                {new Date(report.generatedAt).toLocaleDateString()}
+                {new Date(report.metadata.generatedAt).toLocaleDateString()}
               </dd>
             </div>
           </dl>
@@ -274,17 +349,24 @@ export default async function ReportPage({
           {report.actions.length > 0 ? (
             <div className="mt-4 space-y-3">
               {report.actions.map((a) => (
-                <div key={a.id} className="rounded-md border border-border/50 p-3">
+                <div key={a.id} className={`rounded-md border p-3 ${
+                  a.urgency === "overdue" ? "border-destructive/50 bg-destructive/5" : "border-border/50"
+                }`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h3 className="font-medium text-sm">{a.title}</h3>
-                      <div className="mt-2 flex gap-2">
+                      <div className="mt-2 flex gap-2 flex-wrap">
                         <Badge variant={PRIORITY_VARIANTS[a.priority] ?? "muted"} className="text-xs">
                           {a.priority}
                         </Badge>
                         <Badge variant="outline" className="text-xs">
                           {a.status}
                         </Badge>
+                        {a.urgency && (
+                          <Badge variant={URGENCY_VARIANTS[a.urgency] ?? "muted"} className="text-xs">
+                            {a.urgency.replace("-", " ")}
+                          </Badge>
+                        )}
                       </div>
                       {a.dueDate && (
                         <p className="mt-2 text-xs text-muted-foreground">

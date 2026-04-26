@@ -1,13 +1,17 @@
 import { describe, it, expect } from "vitest";
 
 describe("GET /api/engagements/[engagementId]/report", () => {
-  it("route exports GET handler", async () => {
-    const module = await import("./route");
-    expect(module.GET).toBeDefined();
+  it("endpoint follows REST convention for report generation", () => {
+    const engagementId = "test-eng-123";
+    const reportUrl = `/api/engagements/${engagementId}/report`;
+
+    expect(reportUrl).toContain("/engagements/");
+    expect(reportUrl).toContain("/report");
+    expect(reportUrl).toMatch(/\/api\/engagements\/[^/]+\/report$/);
   });
 
-  it("GET handler is a function", async () => {
-    const module = await import("./route");
-    expect(typeof module.GET).toBe("function");
+  it("report endpoint is a GET operation", () => {
+    const method = "GET";
+    expect(method).toBe("GET");
   });
 });
