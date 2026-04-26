@@ -1,6 +1,7 @@
 {
   "name": "opsiq",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "postinstall": "prisma generate",
@@ -20,7 +21,7 @@
     "test:integration": "vitest run --include='**/*.integration.test.ts' --exclude='**/*.placeholder.test.ts'",
     "test:mvp": "vitest run src/__tests__/mvp-operational-flow.test.ts",
     "test:db": "vitest run src/__tests__/mvp-db-execution.test.ts",
-    "run:opsiq": "ts-node scripts/run-opsiq.ts"
+    "run:opsiq": "tsx scripts/run-opsiq.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
@@ -49,6 +50,8 @@
     "jsdom": "^29.0.2",
     "prisma": "^7.7.0",
     "tailwindcss": "^4",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "vitest": "^4.1.4"
   }

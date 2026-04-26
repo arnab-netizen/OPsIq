@@ -24,8 +24,11 @@
   },
   "ts-node": {
     "transpileOnly": true,
+    "esm": true,
+    "experimentalEsm": true,
     "compilerOptions": {
-      "module": "commonjs"
+      "module": "esnext",
+      "moduleResolution": "bundler"
     }
   },
   "include": [

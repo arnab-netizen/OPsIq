@@ -1,7 +1,8 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env tsx
 
+import "dotenv/config";
 import * as readline from "readline";
-import { executeWorkflow, ExecuteInput } from "../src/services/execute";
+import { executeWorkflow, ExecuteInput } from "../src/services/execute.js";
 
 const rl = readline.createInterface({
   input: process.stdin,
