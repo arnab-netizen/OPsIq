@@ -34,6 +34,17 @@ export interface StandardizedReport {
     event: string;
     severity: string;
   }>;
+
+  // TRACEABILITY (audit trail)
+  traceability: {
+    engagementId: string;
+    timestamp: string;
+    findingsCount: number;
+    actionsCount: number;
+    stateTransitionsCount: number;
+    dataSource: string;
+    executionEngine: string;
+  };
 }
 
 function deriveRootCauses(
@@ -424,6 +435,10 @@ export async function generateReport(
   // Build timeline
   const riskTimeline = deriveRiskTimeline(timeToFailure, findings);
 
+  // Count state transitions (actions that changed status)
+  const actionsWithStatus = actions.filter((a) => a.status);
+  const stateTransitionsCount = actionsWithStatus.length;
+
   // Assemble report
   const report: StandardizedReport = {
     title: "Business Recovery Report",
@@ -444,6 +459,15 @@ export async function generateReport(
       week_7days,
     },
     riskTimeline,
+    traceability: {
+      engagementId,
+      timestamp: new Date().toISOString(),
+      findingsCount: findings.length,
+      actionsCount: actions.length,
+      stateTransitionsCount,
+      dataSource: "OPSIQ verified execution engine",
+      executionEngine: "StandardizedReportGenerator v1.0",
+    },
   };
 
   // Validate before returning
