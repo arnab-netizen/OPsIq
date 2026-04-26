@@ -112,51 +112,56 @@ export async function createEngagement(
     idempotencyKey,
     "engagement.create",
     async () => {
-      const engagement = await db.engagement.create({
-        data: {
-          code,
-          title: input.title,
-          clientId: input.clientId,
-          serviceTier: input.serviceTier,
-          engagementMode: input.engagementMode,
-          description: input.description ?? null,
-          startDate: input.startDate ? new Date(input.startDate) : null,
-          targetEndDate: input.targetEndDate ? new Date(input.targetEndDate) : null,
-          ownerId: input.ownerId ?? null,
-          assignedConsultantId: input.assignedConsultantId ?? null,
-          parentEngagementId: input.parentEngagementId ?? null,
-          createdBy: actorId,
-          status: "draft",
-          healthStatus: "unknown",
-        },
+      return await db.$transaction(async (tx: any) => {
+        const engagement = await tx.engagement.create({
+          data: {
+            code,
+            title: input.title,
+            clientId: input.clientId,
+            serviceTier: input.serviceTier,
+            engagementMode: input.engagementMode,
+            description: input.description ?? null,
+            startDate: input.startDate ? new Date(input.startDate) : null,
+            targetEndDate: input.targetEndDate ? new Date(input.targetEndDate) : null,
+            ownerId: input.ownerId ?? null,
+            assignedConsultantId: input.assignedConsultantId ?? null,
+            parentEngagementId: input.parentEngagementId ?? null,
+            createdBy: actorId,
+            status: "draft",
+            healthStatus: "unknown",
+          },
+        });
+
+        // Initialize intervention state for this engagement (within transaction)
+        await initializeInterventionState(
+          engagement.id,
+          input.interventionMode,
+          actorId
+        );
+
+        // Emit audit event within transaction
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.ENGAGEMENT_CREATED,
+          actorId,
+          entityType: "engagement",
+          entityId: engagement.id,
+          payload: {
+            code: engagement.code,
+            title: engagement.title,
+            clientId: input.clientId,
+            interventionMode: input.interventionMode,
+          },
+          visibility: "internal",
+        });
+
+        return { id: engagement.id, code: engagement.code, title: engagement.title };
       });
-
-      // Initialize intervention state for this engagement
-      await initializeInterventionState(
-        engagement.id,
-        input.interventionMode,
-        actorId
-      );
-
-      return { id: engagement.id, code: engagement.code, title: engagement.title };
-    }
+    },
+    input,
+    actorId
   );
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.ENGAGEMENT_CREATED,
-    actorId,
-    entityType: "engagement",
-    entityId: result.result.id,
-    payload: {
-      code: result.result.code,
-      title: result.result.title,
-      clientId: input.clientId,
-      interventionMode: input.interventionMode,
-    },
-    visibility: "internal",
-  });
-
-  // New engagement is significant intervention scope change
+  // Trigger re-evaluation AFTER transaction commits successfully
   await triggerReEvaluation({
     changeType: "scope_change",
     entityType: "engagement",
@@ -226,61 +231,70 @@ export async function updateEngagement(
   // Track if status is changing for specific audit events
   const statusChanged = input.status && input.status !== currentStatus;
 
-  // Duplicate request protection: optimistic locking via version check
-  // Duplicate requests with old version fail fast with 409 Conflict
-  await optimisticUpdate("engagement", engagementId, version, () =>
-    db.engagement.update({
+  // Wrap multi-step update in transaction: version check + update + audit events
+  await db.$transaction(async (tx: any) => {
+    // Duplicate request protection: optimistic locking via version check
+    const updateResult = await tx.engagement.updateMany({
       where: withVersionCheck({ id: engagementId }, version),
       data: withVersionIncrement(data),
-    })
-  );
+    });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.ENGAGEMENT_UPDATED,
-    actorId,
-    entityType: "engagement",
-    entityId: engagementId,
-    payload: data,
-    visibility: "internal",
-  });
-
-  // Emit specific status-change audit events
-  if (statusChanged) {
-    if (input.status === "completed") {
-      await emitAuditEvent({
-        eventName: AUDIT_EVENTS.ENGAGEMENT_COMPLETED,
-        actorId,
-        entityType: "engagement",
-        entityId: engagementId,
-        payload: { previousStatus: currentStatus },
-        visibility: "internal",
-      });
-    } else if (input.status === "cancelled") {
-      await emitAuditEvent({
-        eventName: AUDIT_EVENTS.ENGAGEMENT_CANCELLED,
-        actorId,
-        entityType: "engagement",
-        entityId: engagementId,
-        payload: { previousStatus: currentStatus },
-        visibility: "internal",
-      });
+    if (updateResult.count === 0) {
+      throw new Error("OPTIMISTIC_LOCK_FAILED");
     }
-  }
 
-  // Trigger re-evaluation if intervention mode changed
-  if (interventionModeChanged) {
+
+    // Emit update audit event
     await emitAuditEvent({
-      eventName: AUDIT_EVENTS.INTERVENTION_MODE_CHANGED,
+      eventName: AUDIT_EVENTS.ENGAGEMENT_UPDATED,
       actorId,
       entityType: "engagement",
       entityId: engagementId,
-      payload: {
-        previousMode: engagement.interventionMode,
-        newMode: input.interventionMode,
-      },
+      payload: data,
       visibility: "internal",
     });
 
+    // Emit specific status-change audit events
+    if (statusChanged) {
+      if (input.status === "completed") {
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.ENGAGEMENT_COMPLETED,
+          actorId,
+          entityType: "engagement",
+          entityId: engagementId,
+          payload: { previousStatus: currentStatus },
+          visibility: "internal",
+        });
+      } else if (input.status === "cancelled") {
+        await emitAuditEvent({
+          eventName: AUDIT_EVENTS.ENGAGEMENT_CANCELLED,
+          actorId,
+          entityType: "engagement",
+          entityId: engagementId,
+          payload: { previousStatus: currentStatus },
+          visibility: "internal",
+        });
+      }
+    }
+
+    // Emit intervention mode change audit event
+    if (interventionModeChanged) {
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.INTERVENTION_MODE_CHANGED,
+        actorId,
+        entityType: "engagement",
+        entityId: engagementId,
+        payload: {
+          previousMode: engagement.interventionMode,
+          newMode: input.interventionMode,
+        },
+        visibility: "internal",
+      });
+    }
+  });
+
+  // Trigger re-evaluation AFTER transaction commits
+  if (interventionModeChanged) {
     await triggerReEvaluation({
       changeType: "intervention_override",
       entityType: "engagement",

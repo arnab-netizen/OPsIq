@@ -97,35 +97,40 @@ export async function createFinding(
   };
   const findingType = findingTypeMap[input.impactArea] || "technical";
 
-  const finding = await db.finding.create({
-    data: {
-      engagementId: input.engagementId,
-      title: input.title,
-      description: summary,
-      findingType: findingType,
-      impactArea: input.impactArea,
-      severity: input.severity,
-      rootCause: input.rootCause || null,
-      linkedEvidence: primaryEvidenceId || null,
-      createdBy: actorId,
-    },
-    select: { id: true, engagementId: true },
+  // Wrap create + audit event in transaction
+  const finding = await db.$transaction(async (tx: any) => {
+    const newFinding = await tx.finding.create({
+      data: {
+        engagementId: input.engagementId,
+        title: input.title,
+        description: summary,
+        findingType: findingType,
+        impactArea: input.impactArea,
+        severity: input.severity,
+        rootCause: input.rootCause || null,
+        linkedEvidence: primaryEvidenceId || null,
+        createdBy: actorId,
+      },
+      select: { id: true, engagementId: true },
+    });
+
+    // Emit audit event inside transaction
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.FINDING_CREATED,
+      actorId,
+      entityType: "Finding",
+      entityId: newFinding.id,
+      payload: {
+        engagementId: input.engagementId,
+        severity: input.severity,
+        title: input.title,
+      },
+    });
+
+    return newFinding;
   });
 
-  // Emit audit event as side effect
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.FINDING_CREATED,
-    actorId,
-    entityType: "Finding",
-    entityId: finding.id,
-    payload: {
-      engagementId: input.engagementId,
-      severity: input.severity,
-      title: input.title,
-    },
-  });
-
-  // Trigger re-evaluation as side effect
+  // Trigger re-evaluation outside transaction
   await triggerReEvaluation({
     changeType: "new_critical_evidence",
     entityType: "Finding",
@@ -178,34 +183,39 @@ export async function updateFinding(
     }
   }
 
-  const data: Record<string, unknown> = {};
-  if (input.title) data.title = input.title;
-  if (input.summary) data.description = input.summary;
-  if (input.severity) data.severity = input.severity;
-  if (input.impactArea) data.impactArea = input.impactArea;
-  if (input.rootCause !== undefined) data.rootCause = input.rootCause;
-  // Increment version on update
-  data.version = existing.version + 1;
+  // Wrap update + audit event in transaction
+  const updated = await db.$transaction(async (tx: any) => {
+    const data: Record<string, unknown> = {};
+    if (input.title) data.title = input.title;
+    if (input.summary) data.description = input.summary;
+    if (input.severity) data.severity = input.severity;
+    if (input.impactArea) data.impactArea = input.impactArea;
+    if (input.rootCause !== undefined) data.rootCause = input.rootCause;
+    // Increment version on update
+    data.version = existing.version + 1;
 
-  const updated = await db.finding.update({
-    where: { id: findingId },
-    data,
-    select: { id: true, engagementId: true },
+    const updatedFinding = await tx.finding.update({
+      where: { id: findingId },
+      data,
+      select: { id: true, engagementId: true },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.FINDING_UPDATED,
+      actorId,
+      entityType: "Finding",
+      entityId: findingId,
+      payload: {
+        engagementId: updatedFinding.engagementId,
+        severity: input.severity,
+        title: input.title,
+      },
+    });
+
+    return updatedFinding;
   });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.FINDING_UPDATED,
-    actorId,
-    entityType: "Finding",
-    entityId: findingId,
-    payload: {
-      engagementId: updated.engagementId,
-      severity: input.severity,
-      title: input.title,
-    },
-  });
-
-  // Trigger re-evaluation due to finding update
+  // Trigger re-evaluation outside transaction
   const updateSeverity = input.severity ?
     (input.severity === "critical" ? "critical" : input.severity === "high" ? "high" : "medium") :
     "medium";
@@ -237,24 +247,27 @@ export async function validateFinding(
     throw new ValidationError("Finding must have at least one linked evidence before validation");
   }
 
-  // Update finding status to validated
-  await db.finding.update({
-    where: { id: findingId },
-    data: { status: "validated" },
+  // Wrap update + audit event in transaction
+  await db.$transaction(async (tx: any) => {
+    // Update finding status to validated
+    await tx.finding.update({
+      where: { id: findingId },
+      data: { status: "validated" },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.FINDING_VALIDATED,
+      actorId,
+      entityType: "Finding",
+      entityId: findingId,
+      payload: {
+        engagementId: existing.engagementId,
+      },
+      visibility: "internal",
+    });
   });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.FINDING_VALIDATED,
-    actorId,
-    entityType: "Finding",
-    entityId: findingId,
-    payload: {
-      engagementId: existing.engagementId,
-    },
-    visibility: "internal",
-  });
-
-  // Trigger re-evaluation due to finding validation
+  // Trigger re-evaluation outside transaction
   await triggerReEvaluation({
     changeType: "new_critical_evidence",
     entityType: "Finding",
@@ -278,20 +291,23 @@ export async function disputeFinding(
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
 
-  // Update finding status to disputed
-  await db.finding.update({
-    where: { id: findingId },
-    data: { status: "disputed" },
-  });
+  // Wrap update + audit event in transaction
+  await db.$transaction(async (tx: any) => {
+    // Update finding status to disputed
+    await tx.finding.update({
+      where: { id: findingId },
+      data: { status: "disputed" },
+    });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.FINDING_DISPUTED,
-    actorId,
-    entityType: "Finding",
-    entityId: findingId,
-    payload: {
-      engagementId: existing.engagementId,
-    },
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.FINDING_DISPUTED,
+      actorId,
+      entityType: "Finding",
+      entityId: findingId,
+      payload: {
+        engagementId: existing.engagementId,
+      },
+    });
   });
 
   return { id: existing.id };
@@ -309,38 +325,43 @@ export async function supersedeFinding(
   });
   if (!oldFinding) throw new NotFoundError("Finding", oldFindingId);
 
-  // Create new finding using the new field names
-  const findingType = newFindingInput.impactArea === "revenue" ? "market" : "operational";
-  const newFinding = await db.finding.create({
-    data: {
-      engagementId: newFindingInput.engagementId,
-      title: newFindingInput.title,
-      description: newFindingInput.summary,
-      findingType: findingType,
-      impactArea: newFindingInput.impactArea,
-      severity: newFindingInput.severity,
-      rootCause: newFindingInput.rootCause || null,
-      linkedEvidence: newFindingInput.primaryEvidenceId || null,
-      createdBy: actorId,
-    },
-    select: { id: true, engagementId: true },
-  });
+  // Wrap multi-step write in transaction
+  const newFinding = await db.$transaction(async (tx: any) => {
+    // Create new finding using the new field names
+    const findingType = newFindingInput.impactArea === "revenue" ? "market" : "operational";
+    const createdFinding = await tx.finding.create({
+      data: {
+        engagementId: newFindingInput.engagementId,
+        title: newFindingInput.title,
+        description: newFindingInput.summary,
+        findingType: findingType,
+        impactArea: newFindingInput.impactArea,
+        severity: newFindingInput.severity,
+        rootCause: newFindingInput.rootCause || null,
+        linkedEvidence: newFindingInput.primaryEvidenceId || null,
+        createdBy: actorId,
+      },
+      select: { id: true, engagementId: true },
+    });
 
-  // Update old finding status to superseded
-  await db.finding.update({
-    where: { id: oldFindingId },
-    data: { status: "superseded" },
-  });
+    // Update old finding status to superseded
+    await tx.finding.update({
+      where: { id: oldFindingId },
+      data: { status: "superseded" },
+    });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.FINDING_SUPERSEDED,
-    actorId,
-    entityType: "Finding",
-    entityId: newFinding.id,
-    payload: {
-      engagementId: newFinding.engagementId,
-      supersedes: oldFindingId,
-    },
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.FINDING_SUPERSEDED,
+      actorId,
+      entityType: "Finding",
+      entityId: createdFinding.id,
+      payload: {
+        engagementId: createdFinding.engagementId,
+        supersedes: oldFindingId,
+      },
+    });
+
+    return createdFinding;
   });
 
   return { id: newFinding.id, supersededFindingId: oldFindingId };
@@ -408,20 +429,20 @@ export async function linkEvidenceToFinding(
       data: { relatedFindingId: findingId },
     });
 
-    return updatedFinding;
-  });
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.FINDING_EVIDENCE_LINKED,
+      actorId,
+      entityType: "Finding",
+      entityId: findingId,
+      payload: {
+        findingId,
+        evidenceId,
+        action: "linked",
+      },
+      visibility: "internal",
+    });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.FINDING_EVIDENCE_LINKED,
-    actorId,
-    entityType: "Finding",
-    entityId: findingId,
-    payload: {
-      findingId,
-      evidenceId,
-      action: "linked",
-    },
-    visibility: "internal",
+    return updatedFinding;
   });
 
   return { findingId: updated.id, evidenceId };
@@ -466,20 +487,20 @@ export async function unlinkEvidenceFromFinding(
       data: { relatedFindingId: null },
     });
 
-    return updatedFinding;
-  });
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.FINDING_EVIDENCE_UNLINKED,
+      actorId,
+      entityType: "Finding",
+      entityId: findingId,
+      payload: {
+        findingId,
+        evidenceId,
+        action: "unlinked",
+      },
+      visibility: "internal",
+    });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.FINDING_EVIDENCE_UNLINKED,
-    actorId,
-    entityType: "Finding",
-    entityId: findingId,
-    payload: {
-      findingId,
-      evidenceId,
-      action: "unlinked",
-    },
-    visibility: "internal",
+    return updatedFinding;
   });
 
   return { findingId: updated.id, evidenceId };

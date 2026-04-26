@@ -275,37 +275,42 @@ export async function createRecommendation(
     return result.result;
   }
 
-  let derivedPriority = input.priority;
-  let scoreValue: number | null = null;
-  let scoreBreakdown: ScoreBreakdown | null = null;
+  // Fallback path without idempotency: wrap with transaction
+  const recommendation = await db.$transaction(async (tx: any) => {
+    let derivedPriority = input.priority;
+    let scoreValue: number | null = null;
+    let scoreBreakdown: ScoreBreakdown | null = null;
 
-  if (input.scoringInput) {
-    scoreBreakdown = calculateRecommendationScoreBreakdown(input.scoringInput, input.class);
-    scoreValue = scoreBreakdown.finalScore;
-    derivedPriority = mapScoreToPriority(scoreValue);
-  }
+    if (input.scoringInput) {
+      scoreBreakdown = calculateRecommendationScoreBreakdown(input.scoringInput, input.class);
+      scoreValue = scoreBreakdown.finalScore;
+      derivedPriority = mapScoreToPriority(scoreValue);
+    }
 
-  const recommendation = await db.recommendation.create({
-    data: {
-      engagementId: input.engagementId,
-      findingId: input.findingId,
-      priority: derivedPriority,
-      title: input.title,
-      description: input.description,
-      estimatedImpact: input.expectedImpact,
-    },
-  });
+    const newRecommendation = await tx.recommendation.create({
+      data: {
+        engagementId: input.engagementId,
+        findingId: input.findingId,
+        priority: derivedPriority,
+        title: input.title,
+        description: input.description,
+        estimatedImpact: input.expectedImpact,
+      },
+    });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
-    actorId,
-    entityType: "recommendation",
-    entityId: recommendation.id,
-    payload: {
-      engagementId: input.engagementId,
-      priority: input.priority,
-    },
-    visibility: "internal",
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
+      actorId,
+      entityType: "recommendation",
+      entityId: newRecommendation.id,
+      payload: {
+        engagementId: input.engagementId,
+        priority: input.priority,
+      },
+      visibility: "internal",
+    });
+
+    return newRecommendation;
   });
 
   logger.info("Recommendation created", {
@@ -345,39 +350,44 @@ export async function updateRecommendationStatus(
     );
   }
 
-  // Optimistic locking: update only if version matches
-  const updateResult = await db.recommendation.updateMany({
-    where: {
-      id: recommendationId,
-      version: input.version,
-    },
-    data: {
-      status: input.status ?? rec.status,
-      version: { increment: 1 },
-    },
-  });
+  // Wrap update + audit event in transaction
+  const updated = await db.$transaction(async (tx: any) => {
+    // Optimistic locking: update only if version matches
+    const updateResult = await tx.recommendation.updateMany({
+      where: {
+        id: recommendationId,
+        version: input.version,
+      },
+      data: {
+        status: input.status ?? rec.status,
+        version: { increment: 1 },
+      },
+    });
 
-  if (updateResult.count === 0) {
-    throw new ConflictError(
-      "Recommendation has been modified by another process",
-      { code: "OPTIMISTIC_LOCK_FAILED" }
-    );
-  }
+    if (updateResult.count === 0) {
+      throw new ConflictError(
+        "Recommendation has been modified by another process",
+        { code: "OPTIMISTIC_LOCK_FAILED" }
+      );
+    }
 
-  const updated = await db.recommendation.findUnique({
-    where: { id: recommendationId },
-  });
-  if (!updated) throw new NotFoundError("Recommendation", recommendationId);
+    const updatedRec = await tx.recommendation.findUnique({
+      where: { id: recommendationId },
+    });
+    if (!updatedRec) throw new NotFoundError("Recommendation", recommendationId);
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
-    actorId,
-    entityType: "recommendation",
-    entityId: recommendationId,
-    payload: {
-      status: input.status,
-    },
-    visibility: "internal",
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
+      actorId,
+      entityType: "recommendation",
+      entityId: recommendationId,
+      payload: {
+        status: input.status,
+      },
+      visibility: "internal",
+    });
+
+    return updatedRec;
   });
 
   return updated;
@@ -397,29 +407,34 @@ export async function updateRecommendationPriorityFromScore(
   const score = calculateRecommendationScore(scoringInput, recommendationClass);
   const newPriority = mapScoreToPriority(score);
 
-  const updated = await db.recommendation.update({
-    where: { id: recommendationId },
-    data: {
-      priority: newPriority,
-      version: { increment: 1 },
-    },
-    select: {
-      id: true,
-      priority: true,
-    },
-  });
+  // Wrap update + audit event in transaction
+  const updated = await db.$transaction(async (tx: any) => {
+    const updatedRec = await tx.recommendation.update({
+      where: { id: recommendationId },
+      data: {
+        priority: newPriority,
+        version: { increment: 1 },
+      },
+      select: {
+        id: true,
+        priority: true,
+      },
+    });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
-    actorId,
-    entityType: "recommendation",
-    entityId: recommendationId,
-    payload: {
-      score,
-      priority: newPriority,
-      source: "re-evaluation",
-    },
-    visibility: "internal",
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
+      actorId,
+      entityType: "recommendation",
+      entityId: recommendationId,
+      payload: {
+        score,
+        priority: newPriority,
+        source: "re-evaluation",
+      },
+      visibility: "internal",
+    });
+
+    return updatedRec;
   });
 
   logger.info("Recommendation priority updated from score", {
@@ -456,27 +471,30 @@ export async function reRankRecommendationsInEngagement(
       const oldPriority = rec.priority;
 
       if (newPriority !== oldPriority) {
-        // Update the recommendation
-        await db.recommendation.update({
-          where: { id: rec.id },
-          data: {
-            priority: newPriority,
-            version: { increment: 1 },
-          },
-        });
+        // Wrap each update + audit event in transaction
+        await db.$transaction(async (tx: any) => {
+          // Update the recommendation
+          await tx.recommendation.update({
+            where: { id: rec.id },
+            data: {
+              priority: newPriority,
+              version: { increment: 1 },
+            },
+          });
 
-        // Emit audit event
-        await emitAuditEvent({
-          eventName: AUDIT_EVENTS.RECOMMENDATION_UPDATED,
-          actorId,
-          entityType: "recommendation",
-          entityId: rec.id,
-          payload: {
-            oldPriority,
-            newPriority,
-            score: newScore,
-          },
-          visibility: "internal",
+          // Emit audit event inside transaction
+          await emitAuditEvent({
+            eventName: AUDIT_EVENTS.RECOMMENDATION_UPDATED,
+            actorId,
+            entityType: "recommendation",
+            entityId: rec.id,
+            payload: {
+              oldPriority,
+              newPriority,
+              score: newScore,
+            },
+            visibility: "internal",
+          });
         });
 
         updated.push({
@@ -522,22 +540,27 @@ export async function updateRecommendation(
     throw new Error("Recommendation was modified. Please refresh and try again.");
   }
 
-  const updates: any = { version: { increment: 1 } };
-  if (input.status) updates.status = input.status;
-  if (input.priority) updates.priority = input.priority;
+  // Wrap update + audit event in transaction
+  const updated = await db.$transaction(async (tx: any) => {
+    const updates: any = { version: { increment: 1 } };
+    if (input.status) updates.status = input.status;
+    if (input.priority) updates.priority = input.priority;
 
-  const updated = await db.recommendation.update({
-    where: { id: recommendationId },
-    data: updates,
-  });
+    const updatedRec = await tx.recommendation.update({
+      where: { id: recommendationId },
+      data: updates,
+    });
 
-  await emitAuditEvent({
-    eventName: "recommendation.updated",
-    actorId,
-    entityType: "recommendation",
-    entityId: recommendationId,
-    payload: updates,
-    visibility: "internal",
+    await emitAuditEvent({
+      eventName: "recommendation.updated",
+      actorId,
+      entityType: "recommendation",
+      entityId: recommendationId,
+      payload: updates,
+      visibility: "internal",
+    });
+
+    return updatedRec;
   });
 
   return updated;

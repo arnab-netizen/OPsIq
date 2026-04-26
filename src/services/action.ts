@@ -115,7 +115,7 @@ export async function createAction(
         engagementId: input.engagementId,
       });
     } else {
-      // Trigger re-evaluation only on first creation if critical
+      // Trigger re-evaluation only on first creation if critical (outside transaction)
       if (input.priority === "critical") {
         await triggerReEvaluation({
           changeType: "unresolved_critical_blocker",
@@ -137,31 +137,36 @@ export async function createAction(
     return result.result;
   }
 
-  const action = await db.action.create({
-    data: {
-      engagementId: input.engagementId,
-      recommendationId: input.recommendationId,
-      title: input.title,
-      description: input.description || null,
-      assignedTo: input.assignedTo || null,
-      dueDate: input.dueDate ? new Date(input.dueDate) : null,
-      priority: input.priority || "medium",
-    },
+  // Fallback path without idempotency: wrap with transaction
+  const action = await db.$transaction(async (tx: any) => {
+    const newAction = await tx.action.create({
+      data: {
+        engagementId: input.engagementId,
+        recommendationId: input.recommendationId,
+        title: input.title,
+        description: input.description || null,
+        assignedTo: input.assignedTo || null,
+        dueDate: input.dueDate ? new Date(input.dueDate) : null,
+        priority: input.priority || "medium",
+      },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ACTION_CREATED,
+      actorId,
+      entityType: "action",
+      entityId: newAction.id,
+      payload: {
+        engagementId: input.engagementId,
+        priority: input.priority,
+      },
+      visibility: "internal",
+    });
+
+    return newAction;
   });
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.ACTION_CREATED,
-    actorId,
-    entityType: "action",
-    entityId: action.id,
-    payload: {
-      engagementId: input.engagementId,
-      priority: input.priority,
-    },
-    visibility: "internal",
-  });
-
-  // Trigger re-evaluation due to new action if critical
+  // Trigger re-evaluation due to new action if critical (outside transaction)
   if (input.priority === "critical") {
     await triggerReEvaluation({
       changeType: "unresolved_critical_blocker",
@@ -222,46 +227,51 @@ export async function updateActionStatus(
     }
   }
 
-  // Optimistic locking: update only if version matches
-  const blockerReason = input.blockerReason ?? input.blockageReason ?? action.blockerReason;
-  const updateResult = await db.action.updateMany({
-    where: {
-      id: actionId,
-      version: input.version,
-    },
-    data: {
-      status: newStatus,
-      blockerReason: blockerReason ?? null,
-      version: { increment: 1 },
-    },
+  // Wrap version check + update + audit event in transaction
+  const updated = await db.$transaction(async (tx: any) => {
+    // Optimistic locking: update only if version matches
+    const blockerReason = input.blockerReason ?? input.blockageReason ?? action.blockerReason;
+    const updateResult = await tx.action.updateMany({
+      where: {
+        id: actionId,
+        version: input.version,
+      },
+      data: {
+        status: newStatus,
+        blockerReason: blockerReason ?? null,
+        version: { increment: 1 },
+      },
+    });
+
+    if (updateResult.count === 0) {
+      throw new ConflictError(
+        "Action has been modified by another process",
+        { code: "OPTIMISTIC_LOCK_FAILED" }
+      );
+    }
+
+    const updatedAction = await tx.action.findUnique({
+      where: { id: actionId },
+    });
+    if (!updatedAction) throw new NotFoundError("Action", actionId);
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ACTION_UPDATED,
+      actorId,
+      entityType: "action",
+      entityId: actionId,
+      payload: {
+        previousStatus,
+        newStatus,
+        blockageReason: input.blockageReason,
+      },
+      visibility: "internal",
+    });
+
+    return updatedAction;
   });
 
-  if (updateResult.count === 0) {
-    throw new ConflictError(
-      "Action has been modified by another process",
-      { code: "OPTIMISTIC_LOCK_FAILED" }
-    );
-  }
-
-  const updated = await db.action.findUnique({
-    where: { id: actionId },
-  });
-  if (!updated) throw new NotFoundError("Action", actionId);
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.ACTION_UPDATED,
-    actorId,
-    entityType: "action",
-    entityId: actionId,
-    payload: {
-      previousStatus,
-      newStatus,
-      blockageReason: input.blockageReason,
-    },
-    visibility: "internal",
-  });
-
-  // Trigger re-evaluation due to action status change if blocked
+  // Trigger re-evaluation due to action status change if blocked (outside transaction)
   if (newStatus !== previousStatus && newStatus === "blocked") {
     await triggerReEvaluation({
       changeType: "unresolved_critical_blocker",
@@ -298,31 +308,37 @@ export async function detectOverdueActions(engagementId: string, actorId: string
   const results = [];
 
   for (const action of overdueActions) {
-    // Emit overdue event
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.ACTION_OVERDUE,
-      actorId,
-      entityType: "action",
-      entityId: action.id,
-      payload: {
-        engagementId,
-        dueDate: action.dueDate,
-        currentStatus: action.status,
-      },
-      visibility: "internal",
-    });
-
-    // Increase priority if high/critical
-    if (action.priority !== "critical") {
-      const newPriority = action.priority === "high" ? "critical" : "high";
-      await db.action.update({
-        where: { id: action.id },
-        data: {
-          priority: newPriority,
-          version: { increment: 1 },
+    // Wrap update + audit event in transaction
+    await db.$transaction(async (tx: any) => {
+      // Emit overdue event
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.ACTION_OVERDUE,
+        actorId,
+        entityType: "action",
+        entityId: action.id,
+        payload: {
+          engagementId,
+          dueDate: action.dueDate,
+          currentStatus: action.status,
         },
+        visibility: "internal",
       });
 
+      // Increase priority if high/critical
+      if (action.priority !== "critical") {
+        const newPriority = action.priority === "high" ? "critical" : "high";
+        await tx.action.update({
+          where: { id: action.id },
+          data: {
+            priority: newPriority,
+            version: { increment: 1 },
+          },
+        });
+      }
+    });
+
+    if (action.priority !== "critical") {
+      const newPriority = action.priority === "high" ? "critical" : "high";
       results.push({
         actionId: action.id,
         overdue: true,
@@ -371,41 +387,46 @@ export async function updateAction(
     throw new ConflictError("Action was modified. Please refresh and try again.");
   }
 
-  const updates: any = { version: { increment: 1 } };
+  // Wrap update + audit event in transaction
+  const updated = await db.$transaction(async (tx: any) => {
+    const updates: any = { version: { increment: 1 } };
 
-  if (input.status) {
-    validateActionTransition(action.status as ActionStatus, input.status as ActionStatus);
-    updates.status = input.status;
-  }
-  if (input.title !== undefined) updates.title = input.title;
-  if (input.description !== undefined) updates.description = input.description;
-  if (input.dueDate !== undefined) updates.dueDate = input.dueDate ? new Date(input.dueDate) : null;
-  if (input.priority !== undefined) updates.priority = input.priority;
-  if (input.assignedTo !== undefined) updates.owner = input.assignedTo;
-  if (input.completedAt !== undefined) updates.completedAt = input.completedAt ? new Date(input.completedAt) : null;
-  if (input.verifiedAt !== undefined) updates.verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : null;
-  if (input.blockerReason !== undefined) updates.blockageReason = input.blockerReason;
-  if (input.blockageReason !== undefined) updates.blockageReason = input.blockageReason;
-  if (input.notes !== undefined) updates.notes = input.notes;
+    if (input.status) {
+      validateActionTransition(action.status as ActionStatus, input.status as ActionStatus);
+      updates.status = input.status;
+    }
+    if (input.title !== undefined) updates.title = input.title;
+    if (input.description !== undefined) updates.description = input.description;
+    if (input.dueDate !== undefined) updates.dueDate = input.dueDate ? new Date(input.dueDate) : null;
+    if (input.priority !== undefined) updates.priority = input.priority;
+    if (input.assignedTo !== undefined) updates.owner = input.assignedTo;
+    if (input.completedAt !== undefined) updates.completedAt = input.completedAt ? new Date(input.completedAt) : null;
+    if (input.verifiedAt !== undefined) updates.verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : null;
+    if (input.blockerReason !== undefined) updates.blockageReason = input.blockerReason;
+    if (input.blockageReason !== undefined) updates.blockageReason = input.blockageReason;
+    if (input.notes !== undefined) updates.notes = input.notes;
 
-  const updated = await db.action.update({
-    where: { id: actionId },
-    data: updates,
-  });
-
-  if (input.status) {
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.ACTION_UPDATED,
-      actorId,
-      entityType: "action",
-      entityId: actionId,
-      payload: {
-        fromStatus: action.status,
-        toStatus: input.status,
-      },
-      visibility: "internal",
+    const updatedAction = await tx.action.update({
+      where: { id: actionId },
+      data: updates,
     });
-  }
+
+    if (input.status) {
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.ACTION_UPDATED,
+        actorId,
+        entityType: "action",
+        entityId: actionId,
+        payload: {
+          fromStatus: action.status,
+          toStatus: input.status,
+        },
+        visibility: "internal",
+      });
+    }
+
+    return updatedAction;
+  });
 
   return updated;
 }
