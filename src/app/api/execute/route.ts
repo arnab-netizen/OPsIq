@@ -3,14 +3,7 @@ import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { executeWorkflow } from "@/services/execute";
 import { parseRequestBody } from "@/lib/validation";
-import { z } from "zod";
-
-const executeSchema = z.object({
-  clientName: z.string().min(1, "Client name is required"),
-  problem: z.string().min(1, "Problem statement is required"),
-  findings: z.array(z.string().min(1)).min(1, "At least one finding is required"),
-  priority: z.enum(["low", "medium", "high", "critical"]),
-});
+import { IntakeInputSchema } from "@/domain/intake-schema";
 
 export const POST = withRequestContext(async (request) => {
   const { session } = await withAuth({
@@ -18,8 +11,37 @@ export const POST = withRequestContext(async (request) => {
     internalOnly: true,
   });
 
-  const body = await parseRequestBody(request, executeSchema);
-  const result = await executeWorkflow(body, session.user.id);
+  const body = await parseRequestBody(request, IntakeInputSchema);
 
-  return Response.json(result, { status: 200 });
+  const result = await executeWorkflow(
+    {
+      clientName: body.clientName,
+      problem: body.problemSummary,
+      findings: body.findings.map((f) => f.description),
+      priority: body.findings.some((f) => f.severity === "critical")
+        ? "critical"
+        : body.findings.some((f) => f.severity === "high")
+          ? "high"
+          : "medium",
+    },
+    session.user.id
+  );
+
+  return Response.json(
+    {
+      ...result,
+      intakeMetadata: {
+        clientName: body.clientName,
+        industry: body.industry,
+        revenueImpact: body.revenueImpact,
+        timeToFailure: body.timeToFailure,
+        findingCategories: body.findings.map((f) => ({
+          category: f.category,
+          severity: f.severity,
+          description: f.description,
+        })),
+      },
+    },
+    { status: 200 }
+  );
 });
