@@ -19,115 +19,90 @@ function question(prompt: string): Promise<string> {
 
 async function main() {
   console.log("\n═══════════════════════════════════════════════════════════");
-  console.log("                 OPSIQ REPORT GENERATOR");
+  console.log("                 BUSINESS RECOVERY REPORT");
   console.log("═══════════════════════════════════════════════════════════\n");
 
   try {
-    const engagementId = await question("Engagement ID: ");
+    const engagementId = await question("Engagement Reference: ");
     if (!engagementId) {
-      console.error("Error: Engagement ID is required");
+      console.error("Error: Engagement reference is required");
       process.exit(1);
     }
 
     rl.close();
 
-    console.log("\n📊 Generating report...\n");
+    console.log("\nGenerating report...\n");
 
     const report = await generateReport(engagementId, "report-generator");
 
     console.log("═══════════════════════════════════════════════════════════");
-    console.log("                   OPSIQ ENGAGEMENT REPORT");
+    console.log("           BUSINESS RECOVERY REPORT");
     console.log("═══════════════════════════════════════════════════════════\n");
 
-    console.log(`📋 CLIENT & ENGAGEMENT:`);
-    console.log(`   Client: ${report.clientName}`);
-    console.log(`   Engagement ID: ${report.engagementId}`);
-    console.log();
+    console.log(`CLIENT:`);
+    console.log(`${report.client}\n`);
 
-    console.log(`📝 SUMMARY:`);
-    console.log(`   ${report.summary}`);
-    console.log();
+    console.log(`PROBLEM:`);
+    console.log(`${report.problem}\n`);
 
-    console.log(`💊 HEALTH ASSESSMENT:`);
-    const healthBadge = {
-      blocked: "🔴 BLOCKED",
-      at_risk: "🟠 AT RISK",
-      healthy: "🟢 HEALTHY",
-      unknown: "⚪ UNKNOWN",
-    }[report.healthStatus] || "UNKNOWN";
-    console.log(`   Status: ${healthBadge}`);
-    console.log(`   Assessment: ${report.healthReason}`);
-    console.log();
+    console.log(`CURRENT STATUS:`);
+    console.log(`Health: ${report.currentStatus.health}`);
+    console.log(`Risk Level: ${report.currentStatus.riskLevel}`);
+    console.log(`\n${report.currentStatus.summary}\n`);
 
-    if (report.keyBlockers.length > 0) {
-      console.log(`🛑 KEY BLOCKERS (${report.keyBlockers.length}):`);
-      report.keyBlockers.forEach((blocker, idx) => {
-        const severityBadge = {
-          critical: "🔴",
-          high: "🟠",
-          medium: "🟡",
-          low: "🟢",
-        }[blocker.severity];
-        console.log(`\n   ${idx + 1}. ${severityBadge} ${blocker.issue}`);
-        console.log(`      WHY: ${blocker.why}`);
-        console.log(`      IMPACT: ${blocker.impact}`);
-      });
-      console.log();
-    } else {
-      console.log(`🛑 KEY BLOCKERS: None identified\n`);
-    }
-
-    if (report.criticalActions.length > 0) {
-      console.log(`✅ CRITICAL ACTIONS (${report.criticalActions.length}):`);
-      report.criticalActions.forEach((action, idx) => {
-        const priorityBadge = {
-          high: "🔴",
-          medium: "🟡",
-          low: "🟢",
-        }[action.priority];
-        console.log(`\n   ${idx + 1}. ${priorityBadge} ${action.title}`);
-        console.log(`      WHAT: ${action.rationale}`);
-        if (action.dueDate) {
-          console.log(`      DUE: ${action.dueDate}`);
-        }
-        if (action.owner) {
-          console.log(`      OWNER: ${action.owner}`);
-        } else {
-          console.log(`      OWNER: ⚠️ UNASSIGNED`);
-        }
-      });
-      console.log();
-    } else {
-      console.log(`✅ CRITICAL ACTIONS: None pending\n`);
-    }
-
-    if (report.recommendedNextSteps.length > 0) {
-      console.log(`🎯 RECOMMENDED NEXT STEPS:`);
-      report.recommendedNextSteps.forEach((step, idx) => {
-        console.log(`   ${idx + 1}. ${step}`);
+    if (report.criticalIssues.length > 0) {
+      console.log(`CRITICAL ISSUES:`);
+      report.criticalIssues.forEach((issue) => {
+        console.log(`• ${issue}`);
       });
       console.log();
     }
 
-    console.log(`📈 METADATA:`);
-    console.log(`   Findings: ${report.metadata.findingsCount}`);
-    console.log(`   Actions: ${report.metadata.actionsCount}`);
-    console.log(`   Generated: ${new Date(report.metadata.generatedAt).toLocaleString()}`);
+    if (report.blockers.length > 0) {
+      console.log(`BLOCKERS:`);
+      report.blockers.forEach((blocker, idx) => {
+        console.log(`\n${idx + 1}. ${blocker.title}`);
+        console.log(`   Why: ${blocker.description}`);
+        console.log(`   Impact: ${blocker.impact}`);
+      });
+      console.log();
+    }
+
+    if (report.actionPlan.length > 0) {
+      console.log(`ACTION PLAN:`);
+      report.actionPlan.forEach((action) => {
+        const dueStr = action.dueDate ? ` - Due: ${action.dueDate}` : "";
+        const ownerStr = action.owner ? ` - Owner: ${action.owner}` : "";
+        console.log(
+          `${action.sequence}. [${action.state}] ${action.action}${ownerStr}${dueStr}`
+        );
+      });
+      console.log();
+    }
+
+    if (report.nextSteps.length > 0) {
+      console.log(`NEXT STEPS:`);
+      report.nextSteps.forEach((step, idx) => {
+        console.log(`${idx + 1}. ${step}`);
+      });
+      console.log();
+    }
+
+    console.log(`Report generated: ${new Date(report.generatedAt).toLocaleString()}`);
     console.log();
 
     console.log("═══════════════════════════════════════════════════════════");
-    console.log("                    REPORT COMPLETED");
+    console.log("End of Report");
     console.log("═══════════════════════════════════════════════════════════\n");
 
     process.exit(0);
   } catch (error) {
-    console.error("\n❌ Error generating report:");
+    console.error("\nError generating report:");
     if (error instanceof Error) {
-      console.error(`   ${error.message}`);
+      console.error(`${error.message}`);
     } else {
-      console.error(`   ${String(error)}`);
+      console.error(`${String(error)}`);
     }
-    console.error("\n📝 NOTE: Ensure the engagement ID is correct and database is accessible.\n");
     process.exit(1);
   }
 }

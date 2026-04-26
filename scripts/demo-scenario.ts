@@ -40,103 +40,87 @@ async function runDemoScenario() {
     );
 
     console.log("═══════════════════════════════════════════════════════════");
-    console.log("                  OPSIQ EXECUTION REPORT");
+    console.log("          BUSINESS RECOVERY REPORT");
     console.log("═══════════════════════════════════════════════════════════\n");
 
-    console.log(`📊 ENGAGEMENT DETAILS:`);
-    console.log(`   Engagement ID: ${result.engagementId}`);
-    console.log(`   Client ID: ${result.clientId}`);
-    console.log(`   Client: Retail Store Losing Revenue`);
-    console.log(`   Problem: Revenue dropped 40% in 3 months due to operational failures`);
-    console.log(`   Status: ${result.status.toUpperCase()}\n`);
+    console.log(`CLIENT:`);
+    console.log(`Retail Store Losing Revenue\n`);
 
-    console.log(`💊 HEALTH ASSESSMENT:`);
-    console.log(`   Health Status: ${result.health.status.toUpperCase()}`);
-    console.log(`   Assessment: ${
-      result.health.status === "blocked"
-        ? "CRITICAL - Immediate intervention required"
-        : result.health.status === "at_risk"
-        ? "HIGH RISK - Urgent action needed"
-        : "STABLE"
-    }`);
+    console.log(`PROBLEM:`);
+    console.log(`Revenue dropped 40% in 3 months due to operational failures\n`);
+
+    console.log(`CURRENT STATUS:`);
+    const healthMap: { [key: string]: string } = {
+      blocked: "Critical - Action Required",
+      at_risk: "At Risk - Intervention Needed",
+      healthy: "On Track",
+      unknown: "Assessment Pending"
+    };
+    const riskMap: { [key: string]: string } = {
+      blocked: "Severe",
+      at_risk: "High",
+      healthy: "Low",
+      unknown: "Unclear"
+    };
+    console.log(`Health: ${healthMap[result.health.status] || "Unknown"}`);
+    console.log(`Risk Level: ${riskMap[result.health.status] || "Unknown"}`);
+    console.log();
     if (result.health.reasons.length > 0) {
-      console.log(`   Concerns:`);
-      result.health.reasons.forEach((reason) => {
-        console.log(`     • ${reason}`);
-      });
+      console.log(`Status: ${result.health.reasons[0]}`);
     } else {
-      console.log("   No concerns identified");
+      console.log("Status: Assessment in progress");
     }
     console.log();
 
-    console.log(`📌 FINDINGS IDENTIFIED (${result.findings.length}):`);
-    result.findings.forEach((finding, idx) => {
-      console.log(`   ${idx + 1}. [ID: ${finding.id.substring(0, 8)}...] ${finding.title}`);
-    });
-    console.log();
+    if (result.findings.length > 0) {
+      console.log(`CRITICAL ISSUES:`);
+      result.findings.forEach((finding) => {
+        console.log(`• ${finding.title}`);
+      });
+      console.log();
+    }
 
-    console.log(`✅ RECOMMENDED ACTIONS (${result.actions.length}):`);
+    if (result.blockers.length > 0 || result.risks.length > 0) {
+      console.log(`BLOCKERS:`);
+      const allBlockers = [...(result.blockers || []), ...(result.risks || [])];
+      allBlockers.slice(0, 3).forEach((blocker, idx) => {
+        console.log(`\n${idx + 1}. ${blocker}`);
+        console.log(`   Impact: Requires immediate attention`);
+      });
+      console.log();
+    }
+
     if (result.actions.length > 0) {
+      console.log(`ACTION PLAN:`);
       result.actions.forEach((action, idx) => {
-        const priorityBadge = {
-          critical: "🔴",
-          high: "🟠",
-          medium: "🟡",
-          low: "🟢"
-        }[action.priority] || "⚪";
-        console.log(`   ${idx + 1}. ${priorityBadge} ${action.title}`);
-        console.log(`      Priority: ${action.priority.toUpperCase()}`);
-      });
-    } else {
-      console.log("   No actions recommended");
-    }
-    console.log();
-
-    if (result.blockers.length > 0) {
-      console.log(`🛑 BLOCKERS IDENTIFIED (${result.blockers.length}):`);
-      result.blockers.forEach((blocker, idx) => {
-        console.log(`   ${idx + 1}. ${blocker}`);
+        const stateMap = {
+          critical: "Priority",
+          high: "Priority",
+          medium: "Standard",
+          low: "Planned"
+        };
+        console.log(`${idx + 1}. [${stateMap[action.priority] || "Planned"}] ${action.title}`);
       });
       console.log();
     }
 
-    if (result.risks.length > 0) {
-      console.log(`⚠️  CRITICAL RISKS (${result.risks.length}):`);
-      result.risks.forEach((risk, idx) => {
-        console.log(`   ${idx + 1}. ${risk}`);
-      });
-      console.log();
-    }
+    console.log(`NEXT STEPS:`);
+    console.log(`1. Hold immediate recovery meeting`);
+    console.log(`2. Assign ownership for each action`);
+    console.log(`3. Establish weekly review cadence`);
+    console.log(`4. Monitor and report progress to leadership\n`);
 
     console.log("═══════════════════════════════════════════════════════════");
-    console.log("                    EXECUTION COMPLETED");
+    console.log("End of Report");
     console.log("═══════════════════════════════════════════════════════════\n");
 
     // Summary
-    console.log("📈 EXECUTION SUMMARY:");
-    console.log(`   ✓ Client account created`);
-    console.log(`   ✓ Engagement established (ID: ${result.engagementId.substring(0, 8)}...)`);
-    console.log(`   ✓ ${result.findings.length} findings registered from input`);
-    console.log(`   ✓ ${result.actions.length} recommended actions generated`);
-    console.log(`   ✓ Health assessment: ${result.health.status.toUpperCase()}`);
-
-    // Check for state transitions and blocked conditions
-    const hasBlockers = result.blockers.length > 0;
-    const hasRisks = result.risks.length > 0;
-    const isAtRiskOrBlocked = result.health.status === "blocked" || result.health.status === "at_risk";
-
-    if (hasBlockers) {
-      console.log(`   ✓ ${result.blockers.length} blocking condition(s) identified`);
-    }
-    if (hasRisks) {
-      console.log(`   ✓ ${result.risks.length} critical risk(s) detected`);
-    }
-    if (isAtRiskOrBlocked) {
-      console.log(`   ✓ State transitioned to: ${result.health.status.toUpperCase()}`);
-      console.log(`   ✓ Intervention workflow activated`);
-    }
-
-    console.log(`\n✅ Demo scenario completed successfully!\n`);
+    console.log("✅ Demo Scenario Completed:");
+    console.log(`   ✓ Business assessment completed`);
+    console.log(`   ✓ ${result.findings.length} key issues identified`);
+    console.log(`   ✓ ${result.actions.length} action items prioritized`);
+    console.log(`   ✓ Risk assessment: ${healthMap[result.health.status] || "Unknown"}`);
+    console.log(`\n✅ Recovery plan ready for implementation!\n`);
 
   } catch (error) {
     console.error("\n❌ ERROR EXECUTING WORKFLOW:");

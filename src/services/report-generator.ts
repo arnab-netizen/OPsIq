@@ -20,19 +20,29 @@ export interface CriticalAction {
 }
 
 export interface ReportOutput {
-  engagementId: string;
-  clientName: string;
-  summary: string;
-  healthStatus: "blocked" | "at_risk" | "healthy" | "unknown";
-  healthReason: string;
-  keyBlockers: KeyBlocker[];
-  criticalActions: CriticalAction[];
-  recommendedNextSteps: string[];
-  metadata: {
-    findingsCount: number;
-    actionsCount: number;
-    generatedAt: string;
+  title: string;
+  client: string;
+  problem: string;
+  currentStatus: {
+    health: string;
+    riskLevel: string;
+    summary: string;
   };
+  criticalIssues: string[];
+  blockers: Array<{
+    title: string;
+    description: string;
+    impact: string;
+  }>;
+  actionPlan: Array<{
+    sequence: number;
+    state: string;
+    action: string;
+    owner?: string;
+    dueDate?: string;
+  }>;
+  nextSteps: string[];
+  generatedAt: string;
 }
 
 async function analyzeBlockers(
@@ -121,34 +131,52 @@ function generateNextSteps(
   const steps: string[] = [];
 
   if (healthStatus === "blocked") {
-    steps.push("🚨 IMMEDIATE: Address all critical blockers before proceeding");
-    steps.push("📋 Schedule intervention meeting within 24 hours");
-    steps.push("✅ Create resolution plan for each blocker with clear owners");
+    steps.push("Hold emergency recovery meeting within 24 hours");
+    steps.push(
+      "Develop detailed resolution plan for each critical blocker with assigned owners"
+    );
+    steps.push("Establish daily check-ins until blockers are cleared");
+    steps.push(
+      "Communicate status updates to all stakeholders immediately"
+    );
   } else if (healthStatus === "at_risk") {
-    steps.push("⚠️ URGENT: Develop mitigation plan for high-risk issues");
-    steps.push("👥 Assign clear ownership to unresolved actions");
-    steps.push("📅 Establish escalation triggers and checkpoints");
+    steps.push("Schedule recovery planning session this week");
+    steps.push(
+      "Assign clear ownership and accountability for all pending actions"
+    );
+    steps.push("Establish weekly review cadence to monitor progress");
+    steps.push(
+      "Identify and remove barriers preventing action completion"
+    );
+  } else {
+    steps.push(
+      "Maintain current execution pace on all planned initiatives"
+    );
+    steps.push(
+      "Schedule monthly progress reviews to ensure sustained momentum"
+    );
   }
 
   const inProgress = actions.filter((a) => a.status === "in_progress");
   if (inProgress.length > 0) {
     steps.push(
-      `📍 Progress ${inProgress.length} in-progress action(s) toward completion`
+      `Accelerate completion of ${inProgress.length} active initiative(s) toward final delivery`
     );
   }
 
-  const unresolvedFindings = actions.filter(
+  const unresolvedCount = actions.filter(
     (a) =>
       a.status !== "completed" &&
       a.status !== "verified" &&
       a.status !== "cancelled"
-  );
-  if (unresolvedFindings.length > 3) {
-    steps.push("🎯 Focus on completing at least 3 actions this week");
+  ).length;
+
+  if (unresolvedCount > 3) {
+    steps.push(`Complete at least 3 pending actions within the next 7 days`);
   }
 
-  steps.push("📊 Schedule weekly review to track progress against milestones");
-  steps.push("🔄 Re-assess health status after implementing critical changes");
+  steps.push("Review and adjust resource allocation based on priorities");
+  steps.push("Reassess status weekly and report to leadership");
 
   return steps;
 }
@@ -247,36 +275,81 @@ export async function generateReport(
 
   const nextSteps = generateNextSteps(finalHealthStatus, blockers, actions);
 
-  let healthReason = "";
+  // Format health status for clients
+  const healthStatusLabel: { [key: string]: string } = {
+    blocked: "Critical - Action Required",
+    at_risk: "At Risk - Intervention Needed",
+    healthy: "On Track",
+    unknown: "Needs Assessment",
+  };
+
+  const riskLevelLabel: { [key: string]: string } = {
+    blocked: "Severe",
+    at_risk: "High",
+    healthy: "Low",
+    unknown: "Unclear",
+  };
+
+  let statusSummary = "";
   switch (finalHealthStatus) {
     case "blocked":
-      healthReason = `${blockers.length} critical blocker(s) prevent progress. Immediate intervention required.`;
+      statusSummary = `Business recovery is blocked by ${blockers.length} critical issue(s). Immediate intervention required to prevent further deterioration.`;
       break;
     case "at_risk":
-      healthReason = `${blockers.length} high-priority issue(s) pose execution risk. Action required this week.`;
+      statusSummary = `Business recovery is at risk due to ${blockers.length} unresolved issue(s). Action required this week to maintain momentum.`;
       break;
     case "healthy":
-      healthReason = "All critical milestones on track. Continue monitoring.";
+      statusSummary = `Recovery plan is progressing on schedule. Continue executing on all action items.`;
       break;
     default:
-      healthReason =
-        "Insufficient data to assess health. Gather more engagement details.";
+      statusSummary = `Assessment is in progress. Insufficient data available to determine status.`;
   }
 
+  // Extract critical issues from findings
+  const criticalIssues = findings
+    .filter((f) => f.severity === "critical" || f.severity === "high")
+    .slice(0, 5)
+    .map((f) => f.title);
+
+  // Format blockers for client
+  const clientBlockers = blockers.map((b) => ({
+    title: b.issue,
+    description: b.why,
+    impact: b.impact,
+  }));
+
+  // Format action plan for client
+  const clientActionPlan = criticalActions
+    .map((action, idx) => {
+      const stateLabel = {
+        high: "Priority",
+        medium: "Standard",
+        low: "Planned",
+      }[action.priority] || "Planned";
+
+      return {
+        sequence: idx + 1,
+        state: stateLabel,
+        action: action.title,
+        owner: action.owner ? action.owner : undefined,
+        dueDate: action.dueDate,
+      };
+    });
+
   const report: ReportOutput = {
-    engagementId,
-    clientName,
-    summary,
-    healthStatus: finalHealthStatus,
-    healthReason,
-    keyBlockers: blockers,
-    criticalActions,
-    recommendedNextSteps: nextSteps,
-    metadata: {
-      findingsCount: findings.length,
-      actionsCount: actions.length,
-      generatedAt: new Date().toISOString(),
+    title: "Business Recovery Report",
+    client: clientName,
+    problem: engagement.description || title,
+    currentStatus: {
+      health: healthStatusLabel[finalHealthStatus],
+      riskLevel: riskLevelLabel[finalHealthStatus],
+      summary: statusSummary,
     },
+    criticalIssues,
+    blockers: clientBlockers,
+    actionPlan: clientActionPlan,
+    nextSteps,
+    generatedAt: new Date().toISOString(),
   };
 
   logger.info("Report generated successfully", {
