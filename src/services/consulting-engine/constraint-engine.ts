@@ -33,7 +33,7 @@ const constraintPatterns: ConstraintPattern[] = [
           e.dimension === "operational_efficiency" &&
           e.isCritical &&
           e.finding.toLowerCase().includes("turnaround")
-      ) && context.industryRequiresCapital,
+      ) && (context.industryRequiresCapital ?? false),
     constraint: (evidence, context) => ({
       id: uuidv4(),
       type: ConstraintType.RESOURCE,

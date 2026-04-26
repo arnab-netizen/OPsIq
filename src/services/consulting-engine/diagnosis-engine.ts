@@ -261,15 +261,12 @@ export function diagnoseRootCause(
     };
   }
 
-  const primary = matchedPatterns[0].pattern.diagnosis(
-    evidence,
-    businessProblem
-  );
-  primary.confidence = matchedPatterns[0].confidence;
+  const primary = matchedPatterns[0].pattern.diagnosis(evidence);
+  (primary as any).confidence = matchedPatterns[0].confidence;
 
   const alternatives = matchedPatterns.slice(1).map((m) => {
-    const diagnosis = m.pattern.diagnosis(evidence, businessProblem);
-    diagnosis.confidence = m.confidence;
+    const diagnosis = m.pattern.diagnosis(evidence);
+    (diagnosis as any).confidence = m.confidence;
     return diagnosis;
   });
 
@@ -303,21 +300,22 @@ export function diagnoseRootCause(
 
 export function formatDiagnosis(result: DiagnosisResult): string {
   const lines: string[] = [];
-  lines.push(`PRIMARY ROOT CAUSE: ${result.primaryRootCause.primary}`);
+  lines.push(`PRIMARY ROOT CAUSE TYPE: ${result.primaryRootCause.type}`);
+  lines.push(`Description: ${result.primaryRootCause.description}`);
   lines.push(`Confidence: ${result.confidence}`);
   lines.push(`Mechanism: ${result.primaryRootCause.mechanismDescription}`);
 
-  if (result.primaryRootCause.secondary.length > 0) {
-    lines.push(`\nSecondary causes:`);
-    for (const sec of result.primaryRootCause.secondary) {
-      lines.push(`  - ${sec}`);
+  if (result.primaryRootCause.alternativeExplanations && result.primaryRootCause.alternativeExplanations.length > 0) {
+    lines.push(`\nAlternative explanations:`);
+    for (const alt of result.primaryRootCause.alternativeExplanations) {
+      lines.push(`  - ${alt}`);
     }
   }
 
   if (result.alternativeRootCauses.length > 0) {
-    lines.push(`\nAlternative explanations:`);
-    for (const alt of result.primaryRootCause.alternativeExplanations || []) {
-      lines.push(`  - ${alt}`);
+    lines.push(`\nAlternative root causes:`);
+    for (const altCause of result.alternativeRootCauses) {
+      lines.push(`  - ${altCause.description}`);
     }
   }
 

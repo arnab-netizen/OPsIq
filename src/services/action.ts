@@ -448,3 +448,69 @@ export async function listActions(params: any) {
     },
   };
 }
+
+export async function createActionsFromInterventions(
+  engagementId: string,
+  interventions: any[], // PrioritizedIntervention[] from consulting-engine
+  actorId: string
+) {
+  if (!interventions || interventions.length === 0) {
+    return [];
+  }
+
+  const actions = [];
+
+  // Find or create a placeholder recommendation for consulting engine results
+  const existingRec = await db.recommendation.findFirst({
+    where: { engagementId, title: { contains: "Consulting Engine" } },
+  });
+
+  let recommendationId: string;
+  if (existingRec) {
+    recommendationId = existingRec.id;
+  } else {
+    // Create a synthetic recommendation to hold consulting engine actions
+    const synthRec = await db.recommendation.create({
+      data: {
+        engagementId,
+        title: "Consulting Engine Recommendations",
+        description: "Actions generated from consulting engine analysis",
+        priority: "high",
+      },
+    });
+    recommendationId = synthRec.id;
+  }
+
+  for (const priIntervention of interventions) {
+    const intervention = priIntervention.intervention;
+
+    // Map ownerRole to assignedTo: we don't have user IDs, so we'll leave unassigned
+    // In Phase 2B, this can be enhanced to map roles to actual users
+
+    // Calculate due date based on estimated days
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + intervention.estimatedTotalDays);
+
+    // Create one action per intervention (not per step, as steps are more granular)
+    const input: CreateActionInput = {
+      engagementId,
+      recommendationId,
+      title: intervention.title,
+      description: `Objective: ${intervention.objective}\n\nSteps: ${intervention.steps.length}\n\nOwner role: ${intervention.ownerRole}`,
+      dueDate: dueDate.toISOString().split("T")[0],
+      priority: mapPriorityScore(priIntervention.priorityScore),
+    };
+
+    const action = await createAction(input, actorId);
+    actions.push(action);
+  }
+
+  return actions;
+}
+
+function mapPriorityScore(score: number): string {
+  if (score >= 80) return "critical";
+  if (score >= 60) return "high";
+  if (score >= 40) return "medium";
+  return "low";
+}

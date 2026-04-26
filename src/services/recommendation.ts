@@ -542,3 +542,44 @@ export async function updateRecommendation(
 
   return updated;
 }
+
+export async function createRecommendationsFromInterventions(
+  engagementId: string,
+  interventions: any[], // PrioritizedIntervention[] from consulting-engine
+  actorId: string
+) {
+  if (!interventions || interventions.length === 0) {
+    return [];
+  }
+
+  const recommendations = [];
+
+  for (const priIntervention of interventions) {
+    const intervention = priIntervention.intervention;
+
+    const mapClassToRecommendationClass = (interventionClass: string): RecommendationClass => {
+      const mapping: Record<string, RecommendationClass> = {
+        CONTAINMENT: "containment",
+        STABILIZATION: "stabilization",
+        STRUCTURAL_REPAIR: "growth",
+        GROWTH_ENABLEMENT: "growth",
+        RESILIENCE_PROTECTION: "stabilization",
+      };
+      return mapping[interventionClass] || "stabilization";
+    };
+
+    const input: CreateRecommendationInput = {
+      engagementId,
+      title: intervention.title,
+      description: `${intervention.objective}\n\nRationale: ${intervention.rationale}\n\nWhy now: ${intervention.whyThisNow}\n\nFallback plan: ${intervention.fallbackPlan}`,
+      expectedImpact: intervention.expectedImpactOnRevenue,
+      priority: mapScoreToPriority(priIntervention.priorityScore),
+      class: mapClassToRecommendationClass(intervention.class),
+    };
+
+    const rec = await createRecommendation(input, actorId);
+    recommendations.push(rec);
+  }
+
+  return recommendations;
+}

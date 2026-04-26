@@ -124,13 +124,14 @@ export function formatDecisionMemo(memo: DecisionMemo): string {
   lines.push("");
 
   lines.push("## ROOT CAUSE DIAGNOSIS");
-  lines.push(`**Primary**: ${memo.rootCauseDiagnosis.primary}`);
+  lines.push(`**Type**: ${memo.rootCauseDiagnosis.type}`);
+  lines.push(`**Description**: ${memo.rootCauseDiagnosis.description}`);
   lines.push(`**Confidence**: ${memo.diagnosisConfidence}`);
   lines.push(`**Mechanism**: ${memo.rootCauseDiagnosis.mechanismDescription}`);
-  if (memo.rootCauseDiagnosis.secondary.length > 0) {
-    lines.push(`**Secondary Causes**:`);
-    for (const secondary of memo.rootCauseDiagnosis.secondary) {
-      lines.push(`  • ${secondary}`);
+  if (memo.rootCauseDiagnosis.alternativeExplanations && memo.rootCauseDiagnosis.alternativeExplanations.length > 0) {
+    lines.push(`**Alternative Explanations**:`);
+    for (const alt of memo.rootCauseDiagnosis.alternativeExplanations) {
+      lines.push(`  • ${alt}`);
     }
   }
   lines.push("");
