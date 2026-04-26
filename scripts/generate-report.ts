@@ -105,6 +105,13 @@ async function main() {
     });
     console.log();
 
+    console.log("BUSINESS IMPACT:");
+    console.log(`Estimated Loss if No Action: ${report.businessImpact.estimatedLossIfNoAction}`);
+    console.log(`Risk Level: ${report.businessImpact.riskLevel}`);
+    console.log(`Urgency Score: ${report.businessImpact.urgencyScore}/10`);
+    console.log(`Recommended Engagement: ${report.businessImpact.recommendedEngagementLevel.toUpperCase()}`);
+    console.log();
+
     console.log("AUDIT TRAIL & TRACEABILITY:");
     console.log(`Engagement ID: ${report.traceability.engagementId}`);
     console.log(`Findings Count: ${report.traceability.findingsCount}`);

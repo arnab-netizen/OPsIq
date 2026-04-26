@@ -34,6 +34,12 @@ export interface StandardizedReport {
     event: string;
     severity: string;
   }>;
+  businessImpact: {
+    estimatedLossIfNoAction: string;
+    riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    urgencyScore: number;
+    recommendedEngagementLevel: "advisory" | "intervention" | "emergency";
+  };
 
   // TRACEABILITY (audit trail)
   traceability: {
@@ -225,6 +231,99 @@ function deriveRiskTimeline(
   return timeline;
 }
 
+function deriveBusinessImpact(
+  findings: any[],
+  actions: any[],
+  timeToFailure?: number,
+  revenueImpact?: number
+): {
+  estimatedLossIfNoAction: string;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  urgencyScore: number;
+  recommendedEngagementLevel: "advisory" | "intervention" | "emergency";
+} {
+  const criticalCount = findings.filter((f) => f.severity === "critical").length;
+  const highCount = findings.filter((f) => f.severity === "high").length;
+  const unresolvedHighPriority = actions.filter(
+    (a) =>
+      a.priority === "high" &&
+      a.status !== "completed" &&
+      a.status !== "verified"
+  ).length;
+
+  // Determine risk level
+  let riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  if (
+    criticalCount >= 3 ||
+    (timeToFailure !== undefined && timeToFailure <= 7) ||
+    criticalCount >= 1
+  ) {
+    riskLevel = "CRITICAL";
+  } else if (
+    criticalCount === 1 ||
+    highCount >= 5 ||
+    (timeToFailure !== undefined && timeToFailure <= 30) ||
+    unresolvedHighPriority >= 3
+  ) {
+    riskLevel = "HIGH";
+  } else if (
+    highCount >= 2 ||
+    (timeToFailure !== undefined && timeToFailure <= 90)
+  ) {
+    riskLevel = "MEDIUM";
+  } else {
+    riskLevel = "LOW";
+  }
+
+  // Calculate urgency score (1-10)
+  let urgencyScore = 1;
+  urgencyScore += Math.min(criticalCount * 2, 6);
+  if (highCount > 3) urgencyScore += 1;
+  if (timeToFailure !== undefined && timeToFailure <= 7) urgencyScore += 2;
+  else if (timeToFailure !== undefined && timeToFailure <= 30) urgencyScore += 1;
+  if (unresolvedHighPriority >= 3) urgencyScore += 1;
+  urgencyScore = Math.min(urgencyScore, 10);
+
+  // Estimate loss if no action
+  let estimatedLossIfNoAction: string;
+  if (revenueImpact !== undefined && revenueImpact > 0) {
+    estimatedLossIfNoAction = `$${(revenueImpact / 1000).toFixed(0)}K+ revenue impact if issues continue unresolved`;
+  } else if (timeToFailure !== undefined && timeToFailure > 0) {
+    estimatedLossIfNoAction = `Business failure projected in ${timeToFailure} days without intervention`;
+  } else if (criticalCount > 0) {
+    estimatedLossIfNoAction =
+      "Unable to quantify without financial baseline, but critical severity indicates material business impact";
+  } else {
+    estimatedLossIfNoAction =
+      "Insufficient financial data for precise estimation; however, unresolved issues carry cumulative risk";
+  }
+
+  // Determine recommended engagement level
+  let recommendedEngagementLevel: "advisory" | "intervention" | "emergency";
+  if (
+    riskLevel === "CRITICAL" ||
+    urgencyScore >= 8 ||
+    (timeToFailure !== undefined && timeToFailure <= 7)
+  ) {
+    recommendedEngagementLevel = "emergency";
+  } else if (
+    riskLevel === "HIGH" ||
+    (urgencyScore >= 5 && urgencyScore < 8) ||
+    (timeToFailure !== undefined && timeToFailure > 7 && timeToFailure <= 30)
+  ) {
+    recommendedEngagementLevel = "intervention";
+  } else {
+    recommendedEngagementLevel = "advisory";
+  }
+
+  return {
+    estimatedLossIfNoAction,
+    riskLevel,
+    urgencyScore,
+    recommendedEngagementLevel,
+  };
+}
+
 function validateReport(report: StandardizedReport): void {
   const errors: string[] = [];
 
@@ -283,6 +382,21 @@ function validateReport(report: StandardizedReport): void {
     );
   }
 
+  if (
+    !report.businessImpact ||
+    !report.businessImpact.estimatedLossIfNoAction ||
+    !report.businessImpact.riskLevel ||
+    report.businessImpact.urgencyScore === undefined ||
+    !report.businessImpact.recommendedEngagementLevel
+  ) {
+    errors.push("BUSINESS IMPACT: Missing or incomplete (must be data-derived)");
+  } else if (
+    report.businessImpact.urgencyScore < 1 ||
+    report.businessImpact.urgencyScore > 10
+  ) {
+    errors.push("BUSINESS IMPACT: Urgency score must be between 1 and 10");
+  }
+
   if (errors.length > 0) {
     const errorMessage = "REPORT VALIDATION FAILED:\n" + errors.join("\n");
     logger.error("Report validation failed", {
@@ -295,6 +409,7 @@ function validateReport(report: StandardizedReport): void {
         hasConsequences: !!report.consequences?.length,
         hasActionPlan: !!report.actionPlan,
         hasTimeline: !!report.riskTimeline?.length,
+        hasBusinessImpact: !!report.businessImpact?.riskLevel,
       },
     });
     throw new ValidationError(errorMessage);
@@ -435,6 +550,14 @@ export async function generateReport(
   // Build timeline
   const riskTimeline = deriveRiskTimeline(timeToFailure, findings);
 
+  // Derive business impact metrics
+  const businessImpact = deriveBusinessImpact(
+    findings,
+    actions,
+    timeToFailure,
+    revenueImpact
+  );
+
   // Count state transitions (actions that changed status)
   const actionsWithStatus = actions.filter((a) => a.status);
   const stateTransitionsCount = actionsWithStatus.length;
@@ -459,6 +582,7 @@ export async function generateReport(
       week_7days,
     },
     riskTimeline,
+    businessImpact,
     traceability: {
       engagementId,
       timestamp: new Date().toISOString(),

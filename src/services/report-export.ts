@@ -98,6 +98,15 @@ function formatAsText(report: StandardizedReport): string {
   });
   lines.push("");
 
+  lines.push("─".repeat(70));
+  lines.push("BUSINESS IMPACT");
+  lines.push("─".repeat(70));
+  lines.push(`Estimated Loss if No Action: ${report.businessImpact.estimatedLossIfNoAction}`);
+  lines.push(`Risk Level: ${report.businessImpact.riskLevel}`);
+  lines.push(`Urgency Score: ${report.businessImpact.urgencyScore}/10`);
+  lines.push(`Recommended Engagement: ${report.businessImpact.recommendedEngagementLevel.toUpperCase()}`);
+  lines.push("");
+
   lines.push(separator);
   lines.push("AUDIT TRAIL & TRACEABILITY");
   lines.push(separator);
@@ -197,6 +206,17 @@ function formatAsMarkdown(report: StandardizedReport): string {
       `- **Day ${event.day}:** ${event.event} _(${event.severity.toUpperCase()})_`
     );
   });
+  lines.push("");
+
+  lines.push("## Business Impact");
+  lines.push("");
+  lines.push(`**Estimated Loss if No Action:** ${report.businessImpact.estimatedLossIfNoAction}`);
+  lines.push("");
+  lines.push(`| Metric | Value |`);
+  lines.push(`|--------|-------|`);
+  lines.push(`| Risk Level | ${report.businessImpact.riskLevel} |`);
+  lines.push(`| Urgency Score | ${report.businessImpact.urgencyScore}/10 |`);
+  lines.push(`| Recommended Engagement | ${report.businessImpact.recommendedEngagementLevel.toUpperCase()} |`);
   lines.push("");
 
   lines.push("---");
