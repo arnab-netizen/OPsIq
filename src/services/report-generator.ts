@@ -1,344 +1,289 @@
-import { db } from "@/lib/db";
-import { NotFoundError } from "@/infra/errors";
-import { logger } from "@/infra/logger";
-import { emitAuditEvent } from "@/infra/audit";
-import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { getEngagementById } from "./engagement.js";
+import { listFindingsForEngagement } from "./findings.js";
+import { getActionsForEngagement } from "./action.js";
+import { NotFoundError } from "../infra/errors.js";
+import { logger } from "../infra/logger.js";
 
-// ─── Report Types ──────────────────────────────────────────────────────────
-
-export interface FindingSummary {
-  id: string;
-  title: string;
-  severity: string;
-  category?: string;
-  status?: string;
+export interface KeyBlocker {
+  issue: string;
+  why: string;
+  impact: string;
+  severity: "critical" | "high" | "medium" | "low";
 }
 
-export interface RecommendationSummary {
-  id: string;
+export interface CriticalAction {
   title: string;
-  priority: string;
-  status: string;
-  linkedFindingId?: string;
-}
-
-export interface ActionSummary {
-  id: string;
-  title: string;
-  priority: string;
-  status: string;
+  priority: "high" | "medium" | "low";
+  rationale: string;
   dueDate?: string;
+  owner?: string;
 }
 
-export interface KPISummary {
-  id: string;
-  name: string;
-  unit?: string;
-  baseline?: number;
-  current?: number;
-  target?: number;
-  direction?: string;
-}
-
-export interface EngagementReportSummary {
+export interface ReportOutput {
   engagementId: string;
-  engagementCode: string;
-  engagementTitle: string;
-  status: string;
-  healthStatus: string;
-  interventionMode: string;
-  currentCondition?: {
-    businessStatus: string;
-    severityScore: number;
-    assessedAt: string;
+  clientName: string;
+  summary: string;
+  healthStatus: "blocked" | "at_risk" | "healthy" | "unknown";
+  healthReason: string;
+  keyBlockers: KeyBlocker[];
+  criticalActions: CriticalAction[];
+  recommendedNextSteps: string[];
+  metadata: {
+    findingsCount: number;
+    actionsCount: number;
+    generatedAt: string;
   };
 }
 
-export interface ReviewStatus {
-  trend: "improving" | "stagnant" | "worsening";
-  reasoning: string;
-  findingCount: number;
-  criticalFindingCount: number;
-  openActionCount: number;
-  completedActionCount: number;
+async function analyzeBlockers(
+  engagementId: string,
+  findings: any[],
+  actions: any[]
+): Promise<{ blockers: KeyBlocker[]; healthStatus: string }> {
+  const blockers: KeyBlocker[] = [];
+  let healthStatus = "healthy";
+
+  const criticalFindings = findings.filter((f) => f.severity === "critical");
+  const highFindings = findings.filter((f) => f.severity === "high");
+
+  if (criticalFindings.length > 0) {
+    healthStatus = "blocked";
+    criticalFindings.forEach((finding) => {
+      blockers.push({
+        issue: finding.title,
+        why: finding.summary || `Critical issue: ${finding.title}`,
+        impact: "Prevents engagement progress and delivery milestones",
+        severity: "critical",
+      });
+    });
+  } else if (highFindings.length > 0) {
+    healthStatus = "at_risk";
+    highFindings.slice(0, 2).forEach((finding) => {
+      blockers.push({
+        issue: finding.title,
+        why: finding.summary || `High priority issue: ${finding.title}`,
+        impact: "May impact timeline and quality of delivery",
+        severity: "high",
+      });
+    });
+  }
+
+  const overdueActions = actions.filter(
+    (a) =>
+      a.status !== "completed" &&
+      a.status !== "verified" &&
+      a.dueDate &&
+      new Date(a.dueDate) < new Date()
+  );
+
+  if (overdueActions.length > 0) {
+    if (healthStatus === "healthy") {
+      healthStatus = "at_risk";
+    }
+    overdueActions.slice(0, 1).forEach((action) => {
+      blockers.push({
+        issue: `Overdue action: ${action.title}`,
+        why: `Task was due on ${new Date(action.dueDate).toLocaleDateString()} and remains unresolved`,
+        impact: "Delays downstream activities and increases risk exposure",
+        severity: "high",
+      });
+    });
+  }
+
+  const unassignedCritical = actions.filter(
+    (a) =>
+      a.priority === "high" &&
+      !a.assignedTo &&
+      a.status !== "completed" &&
+      a.status !== "verified"
+  );
+
+  if (unassignedCritical.length > 0 && blockers.length === 0) {
+    if (healthStatus === "healthy") {
+      healthStatus = "at_risk";
+    }
+    blockers.push({
+      issue: "Unassigned critical actions",
+      why: `${unassignedCritical.length} high-priority action(s) lack clear ownership`,
+      impact: "Accountability gaps lead to missed deadlines and execution failures",
+      severity: "high",
+    });
+  }
+
+  return { blockers, healthStatus };
 }
 
-export interface EngagementReport {
-  summary: EngagementReportSummary;
-  findings: FindingSummary[];
-  recommendations: RecommendationSummary[];
-  actions: ActionSummary[];
-  kpis: KPISummary[];
-  reviewStatus: ReviewStatus;
-  generatedAt: string;
+function generateNextSteps(
+  healthStatus: string,
+  blockers: KeyBlocker[],
+  actions: any[]
+): string[] {
+  const steps: string[] = [];
+
+  if (healthStatus === "blocked") {
+    steps.push("🚨 IMMEDIATE: Address all critical blockers before proceeding");
+    steps.push("📋 Schedule intervention meeting within 24 hours");
+    steps.push("✅ Create resolution plan for each blocker with clear owners");
+  } else if (healthStatus === "at_risk") {
+    steps.push("⚠️ URGENT: Develop mitigation plan for high-risk issues");
+    steps.push("👥 Assign clear ownership to unresolved actions");
+    steps.push("📅 Establish escalation triggers and checkpoints");
+  }
+
+  const inProgress = actions.filter((a) => a.status === "in_progress");
+  if (inProgress.length > 0) {
+    steps.push(
+      `📍 Progress ${inProgress.length} in-progress action(s) toward completion`
+    );
+  }
+
+  const unresolvedFindings = actions.filter(
+    (a) =>
+      a.status !== "completed" &&
+      a.status !== "verified" &&
+      a.status !== "cancelled"
+  );
+  if (unresolvedFindings.length > 3) {
+    steps.push("🎯 Focus on completing at least 3 actions this week");
+  }
+
+  steps.push("📊 Schedule weekly review to track progress against milestones");
+  steps.push("🔄 Re-assess health status after implementing critical changes");
+
+  return steps;
 }
 
-// ─── Report Generation ─────────────────────────────────────────────────────
+export async function generateReport(
+  engagementId: string,
+  userId?: string
+): Promise<ReportOutput> {
+  logger.info("Generating engagement report", { engagementId });
 
-export async function generateEngagementReport(
-  engagementId: string
-): Promise<EngagementReport> {
-  // Fetch engagement with all required data in one transaction-like operation
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
-    include: {
-      client: { select: { id: true, name: true } },
-    },
-  });
-
+  const engagement = await getEngagementById(engagementId, true);
   if (!engagement) {
     throw new NotFoundError("Engagement", engagementId);
   }
 
-  // Fetch all required data in parallel to ensure consistency
-  const [currentCondition, findings, recommendations, actions, kpis] =
-    await Promise.all([
-      db.businessConditionProfile.findFirst({
-        where: { engagementId, isCurrent: true },
-        orderBy: { createdAt: "desc" },
-      }),
-      db.finding.findMany({
-        where: { engagementId },
-        orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
-      }),
-      db.recommendation.findMany({
-        where: { engagementId },
-        orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-      }),
-      db.action.findMany({
-        where: { engagementId },
-        orderBy: [{ dueDate: "asc" }, { priority: "desc" }],
-      }),
-      db.kPI.findMany({
-        where: { engagementId },
-        orderBy: { createdAt: "asc" },
-      }),
-    ]);
+  const findings = await listFindingsForEngagement(engagementId);
 
-  // Build summary
-  const summary: EngagementReportSummary = {
-    engagementId: engagement.id,
-    engagementCode: engagement.code,
-    engagementTitle: engagement.title,
-    status: engagement.status,
-    healthStatus: engagement.healthStatus,
-    interventionMode: engagement.interventionMode,
-    ...(currentCondition && {
-      currentCondition: {
-        businessStatus: currentCondition.businessStatus,
-        severityScore: currentCondition.severityScore,
-        assessedAt: currentCondition.createdAt.toISOString(),
-      },
-    }),
-  };
+  const actions =
+    userId && engagement.client
+      ? await getActionsForEngagement(engagementId, userId).catch(() => [])
+      : [];
 
-  // Build findings summary
-  const findingsSummary: FindingSummary[] = findings.map(
-    (f: typeof findings[0]) => ({
-      id: f.id,
-      title: f.title,
-      severity: f.severity,
-      category: f.findingType,
-    })
+  const clientName = engagement.client?.name || "Unknown Client";
+  const title = engagement.title || "Unnamed Engagement";
+  const status = engagement.status || "unknown";
+
+  const summary =
+    `${clientName} engagement (${title}) is currently in ${status} state with ${findings.length} findings ` +
+    `and ${actions.length} actions. ` +
+    (engagement.description
+      ? `Focus areas: ${engagement.description}`
+      : "Comprehensive assessment in progress.");
+
+  const { blockers, healthStatus: computedHealthStatus } =
+    await analyzeBlockers(engagementId, findings, actions);
+
+  let finalHealthStatus: "blocked" | "at_risk" | "healthy" | "unknown" =
+    "unknown";
+  if (computedHealthStatus === "blocked") {
+    finalHealthStatus = "blocked";
+  } else if (computedHealthStatus === "at_risk") {
+    finalHealthStatus = "at_risk";
+  } else if (
+    findings.length === 0 &&
+    actions.every((a) => a.status === "completed" || a.status === "verified")
+  ) {
+    finalHealthStatus = "healthy";
+  } else if (findings.length > 0 || actions.length > 0) {
+    finalHealthStatus = "at_risk";
+  }
+
+  const criticalActions: CriticalAction[] = [];
+
+  const highPriorityActions = actions.filter(
+    (a) =>
+      a.priority === "high" &&
+      a.status !== "completed" &&
+      a.status !== "verified" &&
+      a.status !== "cancelled"
   );
 
-  // Build recommendations summary
-  const recommendationsSummary: RecommendationSummary[] = recommendations.map(
-    (r: typeof recommendations[0]) => ({
-      id: r.id,
-      title: r.title,
-      priority: r.priority,
-      status: r.status,
-      linkedFindingId: r.findingId ?? undefined,
-    })
-  );
+  highPriorityActions.slice(0, 3).forEach((action) => {
+    criticalActions.push({
+      title: action.title,
+      priority: "high",
+      rationale: `${action.description || "Critical action"}. Status: ${action.status}. ${
+        action.assignedTo ? `Owner: ${action.assignedTo}` : "⚠️ Unassigned"
+      }`,
+      dueDate: action.dueDate
+        ? new Date(action.dueDate).toLocaleDateString()
+        : undefined,
+      owner: action.assignedTo,
+    });
+  });
 
-  // Build actions summary
-  const actionsSummary: ActionSummary[] = actions.map(
-    (a: typeof actions[0]) => ({
-      id: a.id,
-      title: a.title,
-      priority: a.priority,
-      status: a.status,
-      dueDate: a.dueDate?.toISOString(),
-    })
-  );
+  if (criticalActions.length === 0) {
+    const mediumActions = actions.filter(
+      (a) =>
+        a.priority === "medium" &&
+        a.status !== "completed" &&
+        a.status !== "verified"
+    );
 
-  // Build KPIs summary
-  const kpisSummary: KPISummary[] = kpis.map((k: typeof kpis[0]) => ({
-    id: k.id,
-    name: k.name,
-    unit: k.description ?? undefined,
-    baseline: undefined,
-    current: k.currentValue ?? undefined,
-    target: k.target ?? undefined,
-    direction: k.direction,
-  }));
+    mediumActions.slice(0, 2).forEach((action) => {
+      criticalActions.push({
+        title: action.title,
+        priority: "medium",
+        rationale: action.description || "Planned action",
+        dueDate: action.dueDate
+          ? new Date(action.dueDate).toLocaleDateString()
+          : undefined,
+        owner: action.assignedTo,
+      });
+    });
+  }
 
-  // Calculate review status (deterministic based on collected data)
-  const reviewStatus = calculateReviewStatus(
-    findings,
-    actions,
-    currentCondition
-  );
+  const nextSteps = generateNextSteps(finalHealthStatus, blockers, actions);
 
-  const report: EngagementReport = {
+  let healthReason = "";
+  switch (finalHealthStatus) {
+    case "blocked":
+      healthReason = `${blockers.length} critical blocker(s) prevent progress. Immediate intervention required.`;
+      break;
+    case "at_risk":
+      healthReason = `${blockers.length} high-priority issue(s) pose execution risk. Action required this week.`;
+      break;
+    case "healthy":
+      healthReason = "All critical milestones on track. Continue monitoring.";
+      break;
+    default:
+      healthReason =
+        "Insufficient data to assess health. Gather more engagement details.";
+  }
+
+  const report: ReportOutput = {
+    engagementId,
+    clientName,
     summary,
-    findings: findingsSummary,
-    recommendations: recommendationsSummary,
-    actions: actionsSummary,
-    kpis: kpisSummary,
-    reviewStatus,
-    generatedAt: new Date().toISOString(),
+    healthStatus: finalHealthStatus,
+    healthReason,
+    keyBlockers: blockers,
+    criticalActions,
+    recommendedNextSteps: nextSteps,
+    metadata: {
+      findingsCount: findings.length,
+      actionsCount: actions.length,
+      generatedAt: new Date().toISOString(),
+    },
   };
+
+  logger.info("Report generated successfully", {
+    engagementId,
+    healthStatus: finalHealthStatus,
+    blockerCount: blockers.length,
+  });
 
   return report;
-}
-
-// ─── Helper: Calculate Review Status ────────────────────────────────────────
-
-type FindingData = { severity: string; status?: string };
-type ActionData = { status: string };
-
-function calculateReviewStatus(
-  findings: FindingData[],
-  actions: ActionData[],
-  currentCondition: { severityScore: number } | null
-): ReviewStatus {
-  const findingCount = findings.length;
-  const criticalFindingCount = findings.filter(
-    (f) => f.severity === "critical"
-  ).length;
-  const openActionCount = actions.filter(
-    (a) => a.status === "open" || a.status === "in_progress"
-  ).length;
-  const completedActionCount = actions.filter(
-    (a) => a.status === "completed"
-  ).length;
-
-  // Deterministic trend calculation
-  let trend: "improving" | "stagnant" | "worsening";
-  let reasoning: string;
-
-  // If no findings and all actions are completed
-  if (findingCount === 0 && openActionCount === 0) {
-    trend = "improving";
-    reasoning = "No critical findings and all actions completed or closed";
-  }
-  // If critical findings exist
-  else if (criticalFindingCount > 0) {
-    trend = "worsening";
-    reasoning = `${criticalFindingCount} critical finding(s) present`;
-  }
-  // If more actions completed than open
-  else if (completedActionCount > openActionCount) {
-    trend = "improving";
-    reasoning = `${completedActionCount} actions completed vs ${openActionCount} open`;
-  }
-  // If more actions open than completed
-  else if (openActionCount > completedActionCount) {
-    trend = "worsening";
-    reasoning = `${openActionCount} open actions vs ${completedActionCount} completed`;
-  }
-  // If severity score is high
-  else if (currentCondition && currentCondition.severityScore >= 7) {
-    trend = "worsening";
-    reasoning = `High severity score (${currentCondition.severityScore}/10)`;
-  }
-  // Default to stagnant
-  else {
-    trend = "stagnant";
-    reasoning = "Engagement status stable with mixed indicators";
-  }
-
-  return {
-    trend,
-    reasoning,
-    findingCount,
-    criticalFindingCount,
-    openActionCount,
-    completedActionCount,
-  };
-}
-
-// ─── Deliverable Generation & Storage ──────────────────────────────────────
-
-export async function generateAndStoreReport(
-  engagementId: string,
-  actorId: string,
-  type: "report" | "summary" | "alert" = "report",
-  visibility: "internal" | "client_visible" = "internal"
-): Promise<{ id: string; report: EngagementReport }> {
-  // Generate the report
-  const report = await generateEngagementReport(engagementId);
-
-  // Use engagement ID as the deliverable ID for now
-  const deliverableId = `report-${engagementId}-${Date.now()}`;
-
-  // Emit audit event
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.DELIVERABLE_GENERATED,
-    actorId,
-    entityType: "deliverable",
-    entityId: deliverableId,
-    payload: {
-      engagementId,
-      deliverableType: type,
-      reportType: "engagement_report",
-    },
-    visibility,
-  });
-
-  logger.info("Report generated and stored", {
-    engagementId,
-    deliverableId,
-    type,
-    visibility,
-  });
-
-  return { id: deliverableId, report };
-}
-
-// ─── Deliverable Retrieval ─────────────────────────────────────────────────
-
-export async function getDeliverableReport(
-  deliverableId: string
-): Promise<EngagementReport> {
-  // Note: Report snapshots are not persisted in the current schema.
-  // This function returns an empty report structure.
-  throw new NotFoundError("Deliverable", deliverableId);
-}
-
-export async function listEngagementDeliverables(
-  engagementId: string,
-  options?: { limit?: number; offset?: number }
-) {
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
-  });
-  if (!engagement) {
-    throw new NotFoundError("Engagement", engagementId);
-  }
-
-  const limit = options?.limit ?? 25;
-  const offset = options?.offset ?? 0;
-
-  const [deliverables, total] = await Promise.all([
-    db.deliverable.findMany({
-      where: { engagementId },
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        createdAt: true,
-        createdBy: true,
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: offset,
-    }),
-    db.deliverable.count({ where: { engagementId } }),
-  ]);
-
-  return { deliverables, total, limit, offset };
 }
