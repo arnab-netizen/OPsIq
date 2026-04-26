@@ -26,7 +26,8 @@
     "demo:opsiq": "tsx scripts/demo-scenario.ts",
     "demo:failure": "tsx scripts/failure-demo.ts",
     "demo:pack": "tsx scripts/demo-pack.ts",
-    "report:opsiq": "tsx scripts/generate-report.ts"
+    "report:opsiq": "tsx scripts/generate-report.ts",
+    "export:opsiq": "tsx scripts/export-report.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
