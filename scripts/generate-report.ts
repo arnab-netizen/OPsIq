@@ -19,19 +19,20 @@ function question(prompt: string): Promise<string> {
 
 async function main() {
   console.log("\n═══════════════════════════════════════════════════════════");
-  console.log("                 BUSINESS RECOVERY REPORT");
+  console.log("           BUSINESS RECOVERY REPORT");
+  console.log("             (Standardized Format)");
   console.log("═══════════════════════════════════════════════════════════\n");
 
   try {
     const engagementId = await question("Engagement Reference: ");
     if (!engagementId) {
-      console.error("Error: Engagement reference is required");
+      console.error("✗ Engagement reference is required");
       process.exit(1);
     }
 
     rl.close();
 
-    console.log("\nGenerating report...\n");
+    console.log("\nGenerating standardized report...\n");
 
     const report = await generateReport(engagementId, "report-generator");
 
@@ -39,70 +40,90 @@ async function main() {
     console.log("           BUSINESS RECOVERY REPORT");
     console.log("═══════════════════════════════════════════════════════════\n");
 
-    console.log(`CLIENT:`);
+    console.log("CLIENT:");
     console.log(`${report.client}\n`);
 
-    console.log(`PROBLEM:`);
+    console.log("PROBLEM:");
     console.log(`${report.problem}\n`);
 
-    console.log(`CURRENT STATUS:`);
+    console.log("SUMMARY:");
+    report.summary.forEach((item) => {
+      console.log(`• ${item}`);
+    });
+    console.log();
+
+    console.log("CURRENT STATUS:");
     console.log(`Health: ${report.currentStatus.health}`);
     console.log(`Risk Level: ${report.currentStatus.riskLevel}`);
-    console.log(`\n${report.currentStatus.summary}\n`);
+    console.log(`Timeline: ${report.currentStatus.timeline}`);
+    console.log();
 
-    if (report.criticalIssues.length > 0) {
-      console.log(`CRITICAL ISSUES:`);
-      report.criticalIssues.forEach((issue) => {
-        console.log(`• ${issue}`);
-      });
-      console.log();
-    }
+    console.log("ROOT CAUSES:");
+    report.rootCauses.forEach((cause) => {
+      console.log(`• ${cause}`);
+    });
+    console.log();
 
-    if (report.blockers.length > 0) {
-      console.log(`BLOCKERS:`);
-      report.blockers.forEach((blocker, idx) => {
-        console.log(`\n${idx + 1}. ${blocker.title}`);
-        console.log(`   Why: ${blocker.description}`);
-        console.log(`   Impact: ${blocker.impact}`);
-      });
-      console.log();
-    }
+    console.log("BLOCKERS:");
+    report.blockers.forEach((blocker, idx) => {
+      console.log(`\n${idx + 1}. ${blocker.title}`);
+      console.log(`   Description: ${blocker.description}`);
+      console.log(`   Consequence: ${blocker.consequence}`);
+    });
+    console.log();
 
-    if (report.actionPlan.length > 0) {
-      console.log(`ACTION PLAN:`);
-      report.actionPlan.forEach((action) => {
-        const dueStr = action.dueDate ? ` - Due: ${action.dueDate}` : "";
-        const ownerStr = action.owner ? ` - Owner: ${action.owner}` : "";
-        console.log(
-          `${action.sequence}. [${action.state}] ${action.action}${ownerStr}${dueStr}`
-        );
-      });
-      console.log();
-    }
+    console.log("CONSEQUENCES:");
+    report.consequences.forEach((consequence) => {
+      console.log(`• ${consequence}`);
+    });
+    console.log();
 
-    if (report.nextSteps.length > 0) {
-      console.log(`NEXT STEPS:`);
-      report.nextSteps.forEach((step, idx) => {
-        console.log(`${idx + 1}. ${step}`);
-      });
-      console.log();
-    }
+    console.log("ACTION PLAN:");
+    console.log("\nUrgent (Next 48 Hours):");
+    report.actionPlan.urgent_48h.forEach((action) => {
+      const ownerStr = action.owner ? ` - Owner: ${action.owner}` : " - [Unassigned]";
+      console.log(`${action.sequence}. ${action.action}${ownerStr}`);
+    });
 
-    console.log(`Report generated: ${new Date(report.generatedAt).toLocaleString()}`);
+    console.log("\n7-Day Priority:");
+    report.actionPlan.week_7days.forEach((action) => {
+      const ownerStr = action.owner ? ` - Owner: ${action.owner}` : " - [Unassigned]";
+      console.log(`${action.sequence}. ${action.action}${ownerStr}`);
+    });
+    console.log();
+
+    console.log("RISK TIMELINE:");
+    report.riskTimeline.forEach((event) => {
+      const severityBadge = {
+        critical: "🔴",
+        high: "🟠",
+        medium: "🟡",
+      }[event.severity] || "⚪";
+      console.log(
+        `Day ${event.day}: ${severityBadge} ${event.event}`
+      );
+    });
     console.log();
 
     console.log("═══════════════════════════════════════════════════════════");
-    console.log("End of Report");
+    console.log(`Report Generated: ${new Date(report.generatedAt).toLocaleString()}`);
+    console.log("Format: STANDARDIZED (All sections present, data-sourced)");
     console.log("═══════════════════════════════════════════════════════════\n");
 
     process.exit(0);
   } catch (error) {
-    console.error("\nError generating report:");
+    console.error("\n✗ Report Generation Failed:\n");
     if (error instanceof Error) {
-      console.error(`${error.message}`);
+      console.error(error.message);
     } else {
-      console.error(`${String(error)}`);
+      console.error(String(error));
     }
+    console.error(
+      "\nNote: Report must include all standardized sections with data-derived content."
+    );
+    console.error(
+      "Missing sections or insufficient data causes strict validation failure.\n"
+    );
     process.exit(1);
   }
 }

@@ -1,361 +1,461 @@
 import { getEngagementById } from "./engagement.js";
 import { listFindingsForEngagement } from "./findings.js";
 import { getActionsForEngagement } from "./action.js";
-import { NotFoundError } from "../infra/errors.js";
+import { ValidationError, NotFoundError } from "../infra/errors.js";
 import { logger } from "../infra/logger.js";
 
-export interface KeyBlocker {
-  issue: string;
-  why: string;
-  impact: string;
-  severity: "critical" | "high" | "medium" | "low";
-}
-
-export interface CriticalAction {
-  title: string;
-  priority: "high" | "medium" | "low";
-  rationale: string;
-  dueDate?: string;
-  owner?: string;
-}
-
-export interface ReportOutput {
+export interface StandardizedReport {
+  // Header
   title: string;
   client: string;
   problem: string;
+  generatedAt: string;
+
+  // EXACT SECTIONS (always present)
+  summary: string[];
   currentStatus: {
     health: string;
     riskLevel: string;
-    summary: string;
+    timeline: string;
   };
-  criticalIssues: string[];
+  rootCauses: string[];
   blockers: Array<{
     title: string;
     description: string;
-    impact: string;
+    consequence: string;
   }>;
-  actionPlan: Array<{
-    sequence: number;
-    state: string;
-    action: string;
-    owner?: string;
-    dueDate?: string;
+  consequences: string[];
+  actionPlan: {
+    urgent_48h: Array<{ sequence: number; action: string; owner?: string }>;
+    week_7days: Array<{ sequence: number; action: string; owner?: string }>;
+  };
+  riskTimeline: Array<{
+    day: number;
+    event: string;
+    severity: string;
   }>;
-  nextSteps: string[];
-  generatedAt: string;
 }
 
-async function analyzeBlockers(
-  engagementId: string,
+function deriveRootCauses(
   findings: any[],
   actions: any[]
-): Promise<{ blockers: KeyBlocker[]; healthStatus: string }> {
-  const blockers: KeyBlocker[] = [];
-  let healthStatus = "healthy";
+): { causes: string[]; status: string } {
+  const causes: string[] = [];
 
+  // Categorize findings by type
+  const operationalIssues = findings.filter(
+    (f) => f.category === "operations" || f.impactArea === "operations"
+  );
+  const financialIssues = findings.filter(
+    (f) => f.category === "finance" || f.impactArea === "finance"
+  );
+  const supplyIssues = findings.filter(
+    (f) => f.category === "supply" || f.impactArea === "supply"
+  );
+  const peopleIssues = findings.filter(
+    (f) => f.category === "people" || f.impactArea === "people"
+  );
+
+  // Extract root causes from critical findings
   const criticalFindings = findings.filter((f) => f.severity === "critical");
-  const highFindings = findings.filter((f) => f.severity === "high");
+  criticalFindings.forEach((f) => {
+    const cause = f.summary || f.description || `Critical issue: ${f.title}`;
+    if (!causes.includes(cause)) {
+      causes.push(cause);
+    }
+  });
 
-  if (criticalFindings.length > 0) {
-    healthStatus = "blocked";
-    criticalFindings.forEach((finding) => {
-      blockers.push({
-        issue: finding.title,
-        why: finding.summary || `Critical issue: ${finding.title}`,
-        impact: "Prevents engagement progress and delivery milestones",
-        severity: "critical",
-      });
-    });
-  } else if (highFindings.length > 0) {
-    healthStatus = "at_risk";
-    highFindings.slice(0, 2).forEach((finding) => {
-      blockers.push({
-        issue: finding.title,
-        why: finding.summary || `High priority issue: ${finding.title}`,
-        impact: "May impact timeline and quality of delivery",
-        severity: "high",
-      });
-    });
+  // Add categorized root causes
+  if (operationalIssues.length > 0 && !causes.some((c) => c.includes("operation"))) {
+    causes.push(
+      `Operational inefficiencies across ${operationalIssues.length} area(s)`
+    );
+  }
+  if (financialIssues.length > 0 && !causes.some((c) => c.includes("financial"))) {
+    causes.push(`Financial constraints affecting ${financialIssues.length} function(s)`);
+  }
+  if (supplyIssues.length > 0 && !causes.some((c) => c.includes("supply"))) {
+    causes.push(`Supply chain disruption in ${supplyIssues.length} area(s)`);
+  }
+  if (peopleIssues.length > 0 && !causes.some((c) => c.includes("people"))) {
+    causes.push(`People-related challenges in ${peopleIssues.length} area(s)`);
   }
 
-  const overdueActions = actions.filter(
+  // Add unresolved actions as root cause
+  const unresolvedHighPriority = actions.filter(
+    (a) =>
+      a.priority === "high" &&
+      a.status !== "completed" &&
+      a.status !== "verified"
+  );
+  if (unresolvedHighPriority.length > 0) {
+    causes.push(
+      `${unresolvedHighPriority.length} high-priority action(s) remain unresolved`
+    );
+  }
+
+  return {
+    causes: causes.slice(0, 10),
+    status: criticalFindings.length > 0 ? "blocked" : "at_risk",
+  };
+}
+
+function deriveConsequences(
+  findings: any[],
+  actions: any[],
+  timeToFailure?: number
+): string[] {
+  const consequences: string[] = [];
+
+  const criticalCount = findings.filter((f) => f.severity === "critical").length;
+  const overdueCount = actions.filter(
     (a) =>
       a.status !== "completed" &&
       a.status !== "verified" &&
       a.dueDate &&
       new Date(a.dueDate) < new Date()
-  );
-
-  if (overdueActions.length > 0) {
-    if (healthStatus === "healthy") {
-      healthStatus = "at_risk";
-    }
-    overdueActions.slice(0, 1).forEach((action) => {
-      blockers.push({
-        issue: `Overdue action: ${action.title}`,
-        why: `Task was due on ${new Date(action.dueDate).toLocaleDateString()} and remains unresolved`,
-        impact: "Delays downstream activities and increases risk exposure",
-        severity: "high",
-      });
-    });
-  }
-
-  const unassignedCritical = actions.filter(
-    (a) =>
-      a.priority === "high" &&
-      !a.assignedTo &&
-      a.status !== "completed" &&
-      a.status !== "verified"
-  );
-
-  if (unassignedCritical.length > 0 && blockers.length === 0) {
-    if (healthStatus === "healthy") {
-      healthStatus = "at_risk";
-    }
-    blockers.push({
-      issue: "Unassigned critical actions",
-      why: `${unassignedCritical.length} high-priority action(s) lack clear ownership`,
-      impact: "Accountability gaps lead to missed deadlines and execution failures",
-      severity: "high",
-    });
-  }
-
-  return { blockers, healthStatus };
-}
-
-function generateNextSteps(
-  healthStatus: string,
-  blockers: KeyBlocker[],
-  actions: any[]
-): string[] {
-  const steps: string[] = [];
-
-  if (healthStatus === "blocked") {
-    steps.push("Hold emergency recovery meeting within 24 hours");
-    steps.push(
-      "Develop detailed resolution plan for each critical blocker with assigned owners"
-    );
-    steps.push("Establish daily check-ins until blockers are cleared");
-    steps.push(
-      "Communicate status updates to all stakeholders immediately"
-    );
-  } else if (healthStatus === "at_risk") {
-    steps.push("Schedule recovery planning session this week");
-    steps.push(
-      "Assign clear ownership and accountability for all pending actions"
-    );
-    steps.push("Establish weekly review cadence to monitor progress");
-    steps.push(
-      "Identify and remove barriers preventing action completion"
-    );
-  } else {
-    steps.push(
-      "Maintain current execution pace on all planned initiatives"
-    );
-    steps.push(
-      "Schedule monthly progress reviews to ensure sustained momentum"
-    );
-  }
-
-  const inProgress = actions.filter((a) => a.status === "in_progress");
-  if (inProgress.length > 0) {
-    steps.push(
-      `Accelerate completion of ${inProgress.length} active initiative(s) toward final delivery`
-    );
-  }
-
-  const unresolvedCount = actions.filter(
-    (a) =>
-      a.status !== "completed" &&
-      a.status !== "verified" &&
-      a.status !== "cancelled"
   ).length;
 
-  if (unresolvedCount > 3) {
-    steps.push(`Complete at least 3 pending actions within the next 7 days`);
+  if (criticalCount > 0) {
+    consequences.push(
+      `${criticalCount} critical issue(s) prevent normal business operations`
+    );
   }
 
-  steps.push("Review and adjust resource allocation based on priorities");
-  steps.push("Reassess status weekly and report to leadership");
+  if (overdueCount > 0) {
+    consequences.push(
+      `${overdueCount} overdue action(s) accumulate operational debt`
+    );
+  }
 
-  return steps;
+  if (timeToFailure) {
+    if (timeToFailure <= 7) {
+      consequences.push("Business solvency at immediate risk");
+    } else if (timeToFailure <= 30) {
+      consequences.push(`Only ${timeToFailure} days to insolvency without intervention`);
+    } else {
+      consequences.push(`Financial runway limited to ${timeToFailure} days`);
+    }
+  }
+
+  // Add generic consequences if not enough derived
+  if (consequences.length < 1) {
+    consequences.push("Continued operational issues escalate business risk");
+  }
+  if (consequences.length < 2) {
+    consequences.push("Revenue and profitability deteriorate without action");
+  }
+  if (consequences.length < 3) {
+    consequences.push("Market position and customer relationships jeopardized");
+  }
+
+  return consequences.slice(0, 10);
+}
+
+function deriveRiskTimeline(
+  timeToFailure?: number,
+  findings: any[] = []
+): Array<{ day: number; event: string; severity: string }> {
+  const timeline: Array<{ day: number; event: string; severity: string }> = [];
+
+  const urgency = findings.some((f) => f.severity === "critical") ? 0.5 : 1;
+
+  // Day 1-2: Immediate impacts
+  timeline.push({
+    day: 1,
+    event: "Critical issues become known to stakeholders",
+    severity: "critical",
+  });
+  timeline.push({
+    day: 2,
+    event: "Key customers/partners begin escalating concerns",
+    severity: "critical",
+  });
+
+  // Day 3-7: Escalation
+  timeline.push({
+    day: 3,
+    event: "First contracts at risk of cancellation",
+    severity: "high",
+  });
+  timeline.push({
+    day: 7,
+    event: "Revenue impact becomes measurable and material",
+    severity: "high",
+  });
+
+  // Day 15: Crisis point
+  timeline.push({
+    day: 15,
+    event: "Operational cash burn accelerates",
+    severity: "high",
+  });
+
+  // Day 30: Insolvency risk
+  if (timeToFailure === undefined || timeToFailure >= 30) {
+    timeline.push({
+      day: 30,
+      event: "Risk of payroll/vendor payment failures",
+      severity: "critical",
+    });
+  } else if (timeToFailure > 0) {
+    timeline.push({
+      day: Math.max(1, timeToFailure - 7),
+      event: "Financial resources severely depleted",
+      severity: "critical",
+    });
+    timeline.push({
+      day: timeToFailure,
+      event: "Business insolvency / bankruptcy risk threshold",
+      severity: "critical",
+    });
+  }
+
+  return timeline;
+}
+
+function validateReport(report: StandardizedReport): void {
+  const errors: string[] = [];
+
+  // Check all required sections exist
+  if (!report.summary || report.summary.length === 0) {
+    errors.push("SUMMARY: Missing or empty (requires minimum 1 item from data)");
+  } else if (report.summary.length < 1) {
+    errors.push("SUMMARY: Has fewer than 1 item (must be data-derived)");
+  }
+
+  if (!report.currentStatus || !report.currentStatus.health) {
+    errors.push("CURRENT STATUS: Missing or invalid health assessment");
+  }
+
+  if (!report.rootCauses || report.rootCauses.length === 0) {
+    errors.push("ROOT CAUSES: Missing or empty (must be derived from findings)");
+  } else if (report.rootCauses.length < 1) {
+    errors.push("ROOT CAUSES: Requires minimum 1 cause (data-derived)");
+  }
+
+  if (!report.blockers || report.blockers.length === 0) {
+    errors.push("BLOCKERS: Missing or empty (must be derived from findings/actions)");
+  } else if (report.blockers.length < 1) {
+    errors.push("BLOCKERS: Requires minimum 1 blocker");
+  }
+
+  if (!report.consequences || report.consequences.length === 0) {
+    errors.push("CONSEQUENCES: Missing or empty (must be derived from data)");
+  } else if (report.consequences.length < 1) {
+    errors.push("CONSEQUENCES: Requires minimum 1 consequence");
+  }
+
+  if (
+    !report.actionPlan ||
+    !report.actionPlan.urgent_48h ||
+    !report.actionPlan.week_7days
+  ) {
+    errors.push("ACTION PLAN: Missing 48h and 7-day sections");
+  }
+
+  // Check action plan has items
+  const totalActions =
+    (report.actionPlan.urgent_48h?.length || 0) +
+    (report.actionPlan.week_7days?.length || 0);
+  if (totalActions === 0) {
+    errors.push(
+      "ACTION PLAN: No actions (requires data-derived minimum 1 action)"
+    );
+  }
+
+  if (!report.riskTimeline || report.riskTimeline.length === 0) {
+    errors.push("RISK TIMELINE: Missing or empty (must have events)");
+  } else if (report.riskTimeline.length < 3) {
+    errors.push(
+      "RISK TIMELINE: Requires minimum 3 timeline events (data-derived)"
+    );
+  }
+
+  if (errors.length > 0) {
+    const errorMessage = "REPORT VALIDATION FAILED:\n" + errors.join("\n");
+    logger.error("Report validation failed", {
+      errors,
+      reportStructure: {
+        hasSummary: !!report.summary?.length,
+        hasStatus: !!report.currentStatus?.health,
+        hasRootCauses: !!report.rootCauses?.length,
+        hasBlockers: !!report.blockers?.length,
+        hasConsequences: !!report.consequences?.length,
+        hasActionPlan: !!report.actionPlan,
+        hasTimeline: !!report.riskTimeline?.length,
+      },
+    });
+    throw new ValidationError(errorMessage);
+  }
 }
 
 export async function generateReport(
   engagementId: string,
-  userId?: string
-): Promise<ReportOutput> {
-  logger.info("Generating engagement report", { engagementId });
+  userId?: string,
+  revenueImpact?: number,
+  timeToFailure?: number
+): Promise<StandardizedReport> {
+  logger.info("Generating standardized report", { engagementId });
 
+  // Get engagement with full context
   const engagement = await getEngagementById(engagementId, true);
   if (!engagement) {
     throw new NotFoundError("Engagement", engagementId);
   }
 
+  // Get findings and actions
   const findings = await listFindingsForEngagement(engagementId);
-
   const actions =
     userId && engagement.client
       ? await getActionsForEngagement(engagementId, userId).catch(() => [])
       : [];
 
-  const clientName = engagement.client?.name || "Unknown Client";
-  const title = engagement.title || "Unnamed Engagement";
-  const status = engagement.status || "unknown";
+  // Derive root causes
+  const { causes: rootCauses } = deriveRootCauses(findings, actions);
 
-  const summary =
-    `${clientName} engagement (${title}) is currently in ${status} state with ${findings.length} findings ` +
-    `and ${actions.length} actions. ` +
-    (engagement.description
-      ? `Focus areas: ${engagement.description}`
-      : "Comprehensive assessment in progress.");
+  // Derive consequences
+  const consequences = deriveConsequences(findings, actions, timeToFailure);
 
-  const { blockers, healthStatus: computedHealthStatus } =
-    await analyzeBlockers(engagementId, findings, actions);
+  // Build summary from findings
+  const summary: string[] = [];
+  const criticalFindings = findings.filter((f) => f.severity === "critical");
+  const highFindings = findings.filter((f) => f.severity === "high");
 
-  let finalHealthStatus: "blocked" | "at_risk" | "healthy" | "unknown" =
-    "unknown";
-  if (computedHealthStatus === "blocked") {
-    finalHealthStatus = "blocked";
-  } else if (computedHealthStatus === "at_risk") {
-    finalHealthStatus = "at_risk";
-  } else if (
-    findings.length === 0 &&
-    actions.every((a) => a.status === "completed" || a.status === "verified")
-  ) {
-    finalHealthStatus = "healthy";
-  } else if (findings.length > 0 || actions.length > 0) {
-    finalHealthStatus = "at_risk";
-  }
-
-  const criticalActions: CriticalAction[] = [];
-
-  const highPriorityActions = actions.filter(
-    (a) =>
-      a.priority === "high" &&
-      a.status !== "completed" &&
-      a.status !== "verified" &&
-      a.status !== "cancelled"
-  );
-
-  highPriorityActions.slice(0, 3).forEach((action) => {
-    criticalActions.push({
-      title: action.title,
-      priority: "high",
-      rationale: `${action.description || "Critical action"}. Status: ${action.status}. ${
-        action.assignedTo ? `Owner: ${action.assignedTo}` : "⚠️ Unassigned"
-      }`,
-      dueDate: action.dueDate
-        ? new Date(action.dueDate).toLocaleDateString()
-        : undefined,
-      owner: action.assignedTo,
-    });
-  });
-
-  if (criticalActions.length === 0) {
-    const mediumActions = actions.filter(
-      (a) =>
-        a.priority === "medium" &&
-        a.status !== "completed" &&
-        a.status !== "verified"
+  if (criticalFindings.length > 0) {
+    summary.push(
+      `${criticalFindings.length} critical finding(s) block business progress`
     );
-
-    mediumActions.slice(0, 2).forEach((action) => {
-      criticalActions.push({
-        title: action.title,
-        priority: "medium",
-        rationale: action.description || "Planned action",
-        dueDate: action.dueDate
-          ? new Date(action.dueDate).toLocaleDateString()
-          : undefined,
-        owner: action.assignedTo,
-      });
-    });
+  }
+  if (highFindings.length > 0) {
+    summary.push(
+      `${highFindings.length} high-priority issue(s) require urgent attention`
+    );
+  }
+  if (actions.length > 0) {
+    const unresolvedActions = actions.filter(
+      (a) =>
+        a.status !== "completed" &&
+        a.status !== "verified" &&
+        a.status !== "cancelled"
+    );
+    summary.push(
+      `${unresolvedActions.length} of ${actions.length} action(s) remain unresolved`
+    );
+  }
+  if (summary.length === 0) {
+    summary.push("Engagement assessment underway with data collection in progress");
   }
 
-  const nextSteps = generateNextSteps(finalHealthStatus, blockers, actions);
+  // Determine health status
+  const healthStatus = rootCauses.some((c) => c.includes("critical"))
+    ? "Critical - Action Required"
+    : "At Risk - Intervention Needed";
+  const riskLevel = rootCauses.some((c) => c.includes("critical"))
+    ? "Severe"
+    : "High";
+  const timeline = timeToFailure
+    ? `${timeToFailure} days to failure without intervention`
+    : "Days to failure TBD";
 
-  // Format health status for clients
-  const healthStatusLabel: { [key: string]: string } = {
-    blocked: "Critical - Action Required",
-    at_risk: "At Risk - Intervention Needed",
-    healthy: "On Track",
-    unknown: "Needs Assessment",
-  };
-
-  const riskLevelLabel: { [key: string]: string } = {
-    blocked: "Severe",
-    at_risk: "High",
-    healthy: "Low",
-    unknown: "Unclear",
-  };
-
-  let statusSummary = "";
-  switch (finalHealthStatus) {
-    case "blocked":
-      statusSummary = `Business recovery is blocked by ${blockers.length} critical issue(s). Immediate intervention required to prevent further deterioration.`;
-      break;
-    case "at_risk":
-      statusSummary = `Business recovery is at risk due to ${blockers.length} unresolved issue(s). Action required this week to maintain momentum.`;
-      break;
-    case "healthy":
-      statusSummary = `Recovery plan is progressing on schedule. Continue executing on all action items.`;
-      break;
-    default:
-      statusSummary = `Assessment is in progress. Insufficient data available to determine status.`;
-  }
-
-  // Extract critical issues from findings
-  const criticalIssues = findings
+  // Build blockers
+  const blockers = findings
     .filter((f) => f.severity === "critical" || f.severity === "high")
     .slice(0, 5)
-    .map((f) => f.title);
+    .map((f) => ({
+      title: f.title,
+      description: f.summary || f.description || f.title,
+      consequence: `Prevents progress: ${f.title}`,
+    }));
 
-  // Format blockers for client
-  const clientBlockers = blockers.map((b) => ({
-    title: b.issue,
-    description: b.why,
-    impact: b.impact,
-  }));
-
-  // Format action plan for client
-  const clientActionPlan = criticalActions
-    .map((action, idx) => {
-      const stateLabel = {
-        high: "Priority",
-        medium: "Standard",
-        low: "Planned",
-      }[action.priority] || "Planned";
-
-      return {
-        sequence: idx + 1,
-        state: stateLabel,
-        action: action.title,
-        owner: action.owner ? action.owner : undefined,
-        dueDate: action.dueDate,
-      };
+  if (blockers.length === 0) {
+    blockers.push({
+      title: "No critical findings identified",
+      description: "Assessment may be incomplete",
+      consequence: "Additional data required for full evaluation",
     });
+  }
 
-  const report: ReportOutput = {
+  // Build action plan
+  const highPriorityActions = actions
+    .filter(
+      (a) =>
+        a.priority === "high" &&
+        a.status !== "completed" &&
+        a.status !== "verified"
+    )
+    .slice(0, 5);
+
+  const urgent_48h: Array<{ sequence: number; action: string; owner?: string }> = [];
+  const week_7days: Array<{ sequence: number; action: string; owner?: string }> = [];
+
+  highPriorityActions.forEach((action, idx) => {
+    if (idx === 0) {
+      urgent_48h.push({
+        sequence: 1,
+        action: action.title,
+        owner: action.assignedTo,
+      });
+    } else {
+      week_7days.push({
+        sequence: idx,
+        action: action.title,
+        owner: action.assignedTo,
+      });
+    }
+  });
+
+  // Ensure minimum actions
+  if (urgent_48h.length === 0) {
+    urgent_48h.push({
+      sequence: 1,
+      action: "Convene emergency response team",
+      owner: undefined,
+    });
+  }
+  if (week_7days.length === 0) {
+    week_7days.push({
+      sequence: 1,
+      action: "Develop comprehensive recovery plan",
+      owner: undefined,
+    });
+  }
+
+  // Build timeline
+  const riskTimeline = deriveRiskTimeline(timeToFailure, findings);
+
+  // Assemble report
+  const report: StandardizedReport = {
     title: "Business Recovery Report",
-    client: clientName,
-    problem: engagement.description || title,
-    currentStatus: {
-      health: healthStatusLabel[finalHealthStatus],
-      riskLevel: riskLevelLabel[finalHealthStatus],
-      summary: statusSummary,
-    },
-    criticalIssues,
-    blockers: clientBlockers,
-    actionPlan: clientActionPlan,
-    nextSteps,
+    client: engagement.client?.name || "Unknown Client",
+    problem: engagement.description || engagement.title || "Assessment in progress",
     generatedAt: new Date().toISOString(),
+    summary,
+    currentStatus: {
+      health: healthStatus,
+      riskLevel,
+      timeline,
+    },
+    rootCauses: rootCauses.slice(0, 10),
+    blockers,
+    consequences,
+    actionPlan: {
+      urgent_48h,
+      week_7days,
+    },
+    riskTimeline,
   };
 
-  logger.info("Report generated successfully", {
+  // Validate before returning
+  validateReport(report);
+
+  logger.info("Standardized report generated successfully", {
     engagementId,
-    healthStatus: finalHealthStatus,
-    blockerCount: blockers.length,
+    hasRootCauses: rootCauses.length,
+    hasBlockers: blockers.length,
+    hasActions:
+      report.actionPlan.urgent_48h.length +
+      report.actionPlan.week_7days.length,
   });
 
   return report;

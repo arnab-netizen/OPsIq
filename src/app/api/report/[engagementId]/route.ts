@@ -9,7 +9,36 @@ export const GET = withRequestContext(async (request, { params }) => {
   });
 
   const engagementId = params.engagementId;
-  const report = await generateReport(engagementId, session.user.id);
 
-  return Response.json(report, { status: 200 });
+  try {
+    const report = await generateReport(engagementId, session.user.id);
+
+    return Response.json(
+      {
+        success: true,
+        report,
+        validation: {
+          allSectionsPresent: true,
+          standardized: true,
+          dataSourced: true,
+        },
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("REPORT VALIDATION")) {
+      return Response.json(
+        {
+          success: false,
+          error: error.message,
+          validation: {
+            allSectionsPresent: false,
+            standardized: false,
+          },
+        },
+        { status: 400 }
+      );
+    }
+    throw error;
+  }
 });
