@@ -105,6 +105,15 @@ async function main() {
     });
     console.log();
 
+    console.log("AUDIT TRAIL & TRACEABILITY:");
+    console.log(`Engagement ID: ${report.traceability.engagementId}`);
+    console.log(`Findings Count: ${report.traceability.findingsCount}`);
+    console.log(`Actions Count: ${report.traceability.actionsCount}`);
+    console.log(`State Transitions: ${report.traceability.stateTransitionsCount}`);
+    console.log(`Data Source: ${report.traceability.dataSource}`);
+    console.log(`Execution Engine: ${report.traceability.executionEngine}`);
+    console.log();
+
     console.log("═══════════════════════════════════════════════════════════");
     console.log(`Report Generated: ${new Date(report.generatedAt).toLocaleString()}`);
     console.log("Format: STANDARDIZED (All sections present, data-sourced)");

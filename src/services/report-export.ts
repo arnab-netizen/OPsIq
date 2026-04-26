@@ -99,7 +99,16 @@ function formatAsText(report: StandardizedReport): string {
   lines.push("");
 
   lines.push(separator);
-  lines.push(`Generated: ${new Date(report.generatedAt).toLocaleString()}`);
+  lines.push("AUDIT TRAIL & TRACEABILITY");
+  lines.push(separator);
+  lines.push(`Engagement ID: ${report.traceability.engagementId}`);
+  lines.push(`Generated: ${new Date(report.traceability.timestamp).toLocaleString()}`);
+  lines.push(`Findings Count: ${report.traceability.findingsCount}`);
+  lines.push(`Actions Count: ${report.traceability.actionsCount}`);
+  lines.push(`State Transitions: ${report.traceability.stateTransitionsCount}`);
+  lines.push(`Data Source: ${report.traceability.dataSource}`);
+  lines.push(`Execution Engine: ${report.traceability.executionEngine}`);
+  lines.push(separator);
   lines.push("This report contains confidential business information.");
   lines.push(separator);
 
@@ -192,10 +201,23 @@ function formatAsMarkdown(report: StandardizedReport): string {
 
   lines.push("---");
   lines.push("");
+  lines.push("## Audit Trail & Traceability");
+  lines.push("");
+  lines.push(`| Field | Value |`);
+  lines.push(`|-------|-------|`);
+  lines.push(`| Engagement ID | ${report.traceability.engagementId} |`);
+  lines.push(`| Generated | ${new Date(report.traceability.timestamp).toLocaleString()} |`);
+  lines.push(`| Findings Count | ${report.traceability.findingsCount} |`);
+  lines.push(`| Actions Count | ${report.traceability.actionsCount} |`);
+  lines.push(`| State Transitions | ${report.traceability.stateTransitionsCount} |`);
+  lines.push(`| Data Source | ${report.traceability.dataSource} |`);
+  lines.push(`| Execution Engine | ${report.traceability.executionEngine} |`);
+  lines.push("");
+  lines.push("---");
+  lines.push("");
   lines.push(
-    "_This report contains confidential business information. "
+    "_This report contains confidential business information._"
   );
-  lines.push(`Generated: ${new Date(report.generatedAt).toLocaleString()}_`);
 
   return lines.join("\n");
 }
