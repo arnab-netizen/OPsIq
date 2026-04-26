@@ -140,6 +140,19 @@ if [[ -n "${DATABASE_URL:-}" ]]; then
     else
       warn "Migration deploy skipped"
     fi
+
+    echo -e "${BLUE}→${NC} Running database execution test"
+    if [[ -f "src/__tests__/mvp-db-execution.test.ts" ]]; then
+      if npm run test:db 2>&1 | grep -q "passed\|✓"; then
+        pass "Database execution test passed"
+        DB_READY=true
+      else
+        fail "Database execution test failed"
+        DB_READY=false
+      fi
+    else
+      warn "Database execution test not found"
+    fi
   fi
 else
   warn "DATABASE_URL not configured (static checks only)"
