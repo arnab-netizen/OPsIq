@@ -81,8 +81,12 @@ export const AUDIT_EVENTS = {
   // Action Item
   ACTION_CREATED: "action.created",
   ACTION_UPDATED: "action.updated",
+  ACTION_STARTED: "action.started",
   ACTION_COMPLETED: "action.completed",
   ACTION_OVERDUE: "action.overdue",
+
+  // Execution Commitment
+  EXECUTION_ACKNOWLEDGED: "execution.acknowledged",
 
   // KPI
   KPI_DEFINED: "kpi.defined",

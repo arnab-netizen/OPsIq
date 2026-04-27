@@ -122,29 +122,93 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
   const [data, setData] = useState<OwnerDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMutating, setIsMutating] = useState(false);
+
+  const fetchDashboard = async () => {
+    try {
+      setError(null);
+      const response = await fetch(
+        `/api/engagements/${engagementId}/dashboard`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to load dashboard");
+      }
+      const dashboardData = await response.json();
+      setData(dashboardData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    }
+  };
 
   useEffect(() => {
-    async function fetchDashboard() {
+    async function initialFetch() {
       try {
         setIsLoading(true);
-        setError(null);
-        const response = await fetch(
-          `/api/engagements/${engagementId}/dashboard`
-        );
-        if (!response.ok) {
-          throw new Error("Failed to load dashboard");
-        }
-        const dashboardData = await response.json();
-        setData(dashboardData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        await fetchDashboard();
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchDashboard();
+    initialFetch();
   }, [engagementId]);
+
+  const handleAcknowledge = async () => {
+    if (!data) return;
+    try {
+      setIsMutating(true);
+      const response = await fetch(
+        `/api/engagements/${engagementId}/acknowledge`,
+        { method: "POST" }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to acknowledge");
+      }
+      await fetchDashboard();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  const handleStartAction = async () => {
+    if (!data?.drift.requiredAction?.action) return;
+    try {
+      setIsMutating(true);
+      const actionId = data.drift.requiredAction.action.entityId;
+      const response = await fetch(`/api/actions/${actionId}/start`, {
+        method: "PATCH",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to start action");
+      }
+      await fetchDashboard();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    if (!data?.drift.requiredAction?.action) return;
+    try {
+      setIsMutating(true);
+      const actionId = data.drift.requiredAction.action.entityId;
+      const response = await fetch(`/api/actions/${actionId}/complete`, {
+        method: "PATCH",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to complete action");
+      }
+      await fetchDashboard();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsMutating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -298,8 +362,9 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
           <div className="mt-4 flex flex-wrap gap-2">
             {data.drift.requiredAction.commitment.status === "pending" && (
               <button
-                className="rounded bg-destructive px-3 py-2 text-xs font-medium text-white hover:bg-destructive/90"
-                onClick={() => console.log("Acknowledge action")}
+                disabled={isMutating}
+                className="rounded bg-destructive px-3 py-2 text-xs font-medium text-white hover:bg-destructive/90 disabled:opacity-50"
+                onClick={handleAcknowledge}
               >
                 👋 Acknowledge
               </button>
@@ -307,23 +372,26 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
             {(data.drift.requiredAction.commitment.status === "pending" ||
               data.drift.requiredAction.commitment.status === "acknowledged") && (
               <button
-                className="rounded bg-warning px-3 py-2 text-xs font-medium text-white hover:bg-warning/90"
-                onClick={() => console.log("Start action")}
+                disabled={isMutating}
+                className="rounded bg-warning px-3 py-2 text-xs font-medium text-white hover:bg-warning/90 disabled:opacity-50"
+                onClick={handleStartAction}
               >
                 ▶️ Start Action
               </button>
             )}
             {data.drift.requiredAction.commitment.status === "in_progress" && (
               <button
-                className="rounded bg-success px-3 py-2 text-xs font-medium text-white hover:bg-success/90"
-                onClick={() => console.log("Mark complete")}
+                disabled={isMutating}
+                className="rounded bg-success px-3 py-2 text-xs font-medium text-white hover:bg-success/90 disabled:opacity-50"
+                onClick={handleMarkComplete}
               >
                 ✓ Mark Complete
               </button>
             )}
             <button
-              className="rounded border border-border bg-background px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
-              onClick={() => console.log("View details")}
+              disabled={isMutating}
+              className="rounded border border-border bg-background px-3 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+              onClick={() => window.location.href = `/actions/${data.drift.requiredAction!.action.entityId}`}
             >
               📋 View Details
             </button>
