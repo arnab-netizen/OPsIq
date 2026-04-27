@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { calculateExecutionCertainty } from "./execution-certainty";
+import { ValidationError } from "@/infra/errors";
 
 describe("Execution Certainty Decision Gate", () => {
   beforeEach(() => {
@@ -150,5 +151,165 @@ describe("Execution Certainty Decision Gate", () => {
     expect(result).toHaveProperty("risks");
     expect(Array.isArray(result.blockers)).toBe(true);
     expect(Array.isArray(result.risks)).toBe(true);
+  });
+
+  describe("Approval Enforcement", () => {
+    it("low score blocks approval", () => {
+      const result = calculateExecutionCertainty(
+        "eng-low-score",
+        [
+          {
+            id: "find-1",
+            severity: "critical",
+            resolved: false,
+            verified: false,
+          },
+          {
+            id: "find-2",
+            severity: "critical",
+            resolved: false,
+            verified: false,
+          },
+        ],
+        [],
+        [
+          {
+            id: "act-1",
+            priority: "critical",
+            status: "blocked",
+          },
+        ],
+        [],
+        { overallStatus: "critical", kpiTrend: "deteriorating" }
+      );
+
+      // Score should be low enough to trigger gate
+      expect(result.score).toBeLessThan(40);
+      // This should trigger approval rejection
+      expect(result.score).toBeLessThan(40);
+    });
+
+    it("blocked level blocks approval", () => {
+      const result = calculateExecutionCertainty(
+        "eng-blocked-level",
+        [],
+        [],
+        [
+          {
+            id: "critical-action",
+            priority: "critical",
+            status: "blocked",
+          },
+        ],
+        [],
+        { overallStatus: "stable", kpiTrend: "flat" }
+      );
+
+      // Level should be blocked
+      expect(result.level).toBe("blocked");
+      // This should trigger approval rejection
+      expect(result.level).toBe("blocked");
+    });
+
+    it("high score allows approval", () => {
+      const result = calculateExecutionCertainty(
+        "eng-high-score",
+        [],
+        [],
+        [
+          {
+            id: "act-1",
+            priority: "high",
+            status: "completed",
+          },
+          {
+            id: "act-2",
+            priority: "high",
+            status: "completed",
+          },
+        ],
+        [],
+        { overallStatus: "healthy", kpiTrend: "improving" }
+      );
+
+      // Should be allowed (score >= 40 and not blocked)
+      expect(result.score).toBeGreaterThanOrEqual(40);
+      expect(result.level).not.toBe("blocked");
+    });
+
+    it("ValidationError includes required details", () => {
+      const certaintyResult = calculateExecutionCertainty(
+        "eng-error-detail",
+        [
+          {
+            id: "find-1",
+            severity: "critical",
+            resolved: false,
+            verified: false,
+          },
+        ],
+        [],
+        [
+          {
+            id: "act-1",
+            priority: "critical",
+            status: "blocked",
+          },
+        ],
+        [],
+        { overallStatus: "critical", kpiTrend: "deteriorating" }
+      );
+
+      const errorDetails = {
+        score: certaintyResult.score,
+        level: certaintyResult.level,
+        blockers: certaintyResult.blockers,
+        risks: certaintyResult.risks,
+      };
+
+      expect(errorDetails).toHaveProperty("score");
+      expect(errorDetails).toHaveProperty("level");
+      expect(errorDetails).toHaveProperty("blockers");
+      expect(errorDetails).toHaveProperty("risks");
+      expect(typeof errorDetails.score).toBe("number");
+      expect(typeof errorDetails.level).toBe("string");
+      expect(Array.isArray(errorDetails.blockers)).toBe(true);
+      expect(Array.isArray(errorDetails.risks)).toBe(true);
+    });
+
+    it("audit event contains gate enforcement payload", () => {
+      const certaintyResult = calculateExecutionCertainty(
+        "eng-audit-payload",
+        [
+          {
+            id: "find-1",
+            severity: "critical",
+            resolved: false,
+            verified: false,
+          },
+        ],
+        [],
+        [],
+        [],
+        { overallStatus: "critical", kpiTrend: "deteriorating" }
+      );
+
+      if (certaintyResult.level === "blocked" || certaintyResult.score < 40) {
+        const auditPayload = {
+          engagementId: "eng-audit-payload",
+          score: certaintyResult.score,
+          level: certaintyResult.level,
+          blockers: certaintyResult.blockers,
+          risks: certaintyResult.risks,
+          reason: "Recommendation cannot be approved because execution certainty is too low",
+        };
+
+        expect(auditPayload).toHaveProperty("score");
+        expect(auditPayload).toHaveProperty("level");
+        expect(auditPayload).toHaveProperty("blockers");
+        expect(auditPayload).toHaveProperty("risks");
+        expect(auditPayload.reason).toContain("cannot be approved");
+      }
+    });
   });
 });

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError, ConflictError } from "@/infra/errors";
+import { NotFoundError, ConflictError, ValidationError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
@@ -347,8 +347,8 @@ export async function updateRecommendationStatus(
     );
   }
 
-  // Check execution certainty before approval (observe-only mode)
-  if (input.status === "approved" || (input.status && input.status !== rec.status)) {
+  // Enforce execution certainty gate for approval
+  if (input.status === "approved") {
     try {
       const [findings, recommendations, actions] = await Promise.all([
         db.finding.findMany({
@@ -398,9 +398,9 @@ export async function updateRecommendationStatus(
           }
         );
 
-        // Emit warning if execution certainty is low (observe-only mode)
+        // Emit warning audit event (for observability)
         if (certaintyResult.level === "blocked" || certaintyResult.score < 40) {
-          logger.warn("Execution certainty warning before recommendation approval", {
+          logger.warn("Execution certainty gate blocking recommendation approval", {
             recommendationId,
             engagementId: rec.engagementId,
             score: certaintyResult.score,
@@ -420,19 +420,40 @@ export async function updateRecommendationStatus(
               level: certaintyResult.level,
               blockers: certaintyResult.blockers,
               risks: certaintyResult.risks,
-              reason: "Low execution certainty",
+              reason: "Recommendation cannot be approved because execution certainty is too low",
             },
             visibility: "internal",
           });
+
+          // Enforce gate: throw error to block approval
+          throw new ValidationError(
+            "Recommendation cannot be approved because execution certainty is too low",
+            {
+              score: certaintyResult.score,
+              level: certaintyResult.level,
+              blockers: certaintyResult.blockers,
+              risks: certaintyResult.risks,
+            }
+          );
         }
       }
     } catch (error) {
-      // Fail open: log but don't block the update
+      // Re-throw ValidationError (gate enforcement)
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      // For other errors, fail closed on approval attempts
       logger.error("Error checking execution certainty before approval", {
         recommendationId,
         engagementId: rec.engagementId,
         error: error instanceof Error ? error.message : "Unknown error",
       });
+      throw new ValidationError(
+        "Unable to validate execution certainty before approval. Please try again.",
+        {
+          originalError: error instanceof Error ? error.message : "Unknown error",
+        }
+      );
     }
   }
 
