@@ -234,6 +234,14 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
 
   return (
     <div className="space-y-6">
+      {/* Mutation Error Alert */}
+      {error && isMutating === false && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+          <p className="text-sm font-medium text-destructive">Error</p>
+          <p className="mt-1 text-xs text-destructive">{error}</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold">{data.engagementTitle}</h1>
@@ -366,7 +374,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
                 className="rounded bg-destructive px-3 py-2 text-xs font-medium text-white hover:bg-destructive/90 disabled:opacity-50"
                 onClick={handleAcknowledge}
               >
-                👋 Acknowledge
+                {isMutating ? "⏳ Acknowledging..." : "👋 Acknowledge"}
               </button>
             )}
             {(data.drift.requiredAction.commitment.status === "pending" ||
@@ -376,7 +384,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
                 className="rounded bg-warning px-3 py-2 text-xs font-medium text-white hover:bg-warning/90 disabled:opacity-50"
                 onClick={handleStartAction}
               >
-                ▶️ Start Action
+                {isMutating ? "⏳ Starting..." : "▶️ Start Action"}
               </button>
             )}
             {data.drift.requiredAction.commitment.status === "in_progress" && (
@@ -385,7 +393,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
                 className="rounded bg-success px-3 py-2 text-xs font-medium text-white hover:bg-success/90 disabled:opacity-50"
                 onClick={handleMarkComplete}
               >
-                ✓ Mark Complete
+                {isMutating ? "⏳ Completing..." : "✓ Mark Complete"}
               </button>
             )}
             <button
