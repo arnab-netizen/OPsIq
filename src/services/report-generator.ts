@@ -4,6 +4,7 @@ import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { calculateExecutionCertainty, type ExecutionCertaintyResult } from "./execution-certainty";
+import { generateBusinessImpact, type BusinessImpactResult } from "./business-impact/business-impact.service";
 
 // ─── Report Types ──────────────────────────────────────────────────────────
 
@@ -97,6 +98,26 @@ export interface ReportMetadata {
   };
 }
 
+export interface BusinessImpactSummary {
+  impactLevel: "low" | "medium" | "high" | "critical" | "existential";
+  estimatedLoss: number | null;
+  timeImpact: {
+    timelineToFailure: number | null;
+    delayRiskDays?: number;
+    urgencyWindow: "immediate" | "days" | "weeks" | "months" | "unknown";
+  };
+  recoveryImpact: {
+    recoveryProbability: "low" | "medium" | "high";
+  };
+  ownerDecision: {
+    required: boolean;
+    decision?: string;
+    deadlineDays?: number;
+    consequenceIfIgnored?: string;
+  };
+  topImpactDrivers: string[];
+}
+
 export interface EngagementReport {
   summary: EngagementReportSummary;
   executiveSummary: ExecutiveSummary;
@@ -107,6 +128,7 @@ export interface EngagementReport {
   reviewStatus: ReviewStatus;
   executionCertainty: ExecutionCertaintyResult;
   executionRiskGovernance: ExecutionRiskGovernance;
+  businessImpact: BusinessImpactSummary;
   metadata: ReportMetadata;
 }
 
@@ -368,6 +390,26 @@ export async function generateEngagementReport(
     reasons: executionCertainty.reasons,
   };
 
+  // Generate business impact assessment
+  const businessImpactResult = await generateBusinessImpact(engagementId, engagement.id);
+  const businessImpactSummary: BusinessImpactSummary = {
+    impactLevel: businessImpactResult.impactLevel,
+    estimatedLoss: businessImpactResult.estimatedLoss,
+    timeImpact: {
+      timelineToFailure: businessImpactResult.timeImpact.timelineToFailure,
+      urgencyWindow: businessImpactResult.timeImpact.urgencyWindow,
+    },
+    recoveryImpact: {
+      recoveryProbability: businessImpactResult.recoveryImpact.recoveryProbability,
+    },
+    ownerDecision: {
+      required: businessImpactResult.ownerDecision.required,
+      decision: businessImpactResult.ownerDecision.decision,
+      consequenceIfIgnored: businessImpactResult.ownerDecision.reason,
+    },
+    topImpactDrivers: businessImpactResult.topImpactDrivers.slice(0, 3),
+  };
+
   const report: EngagementReport = {
     summary,
     executiveSummary,
@@ -378,6 +420,7 @@ export async function generateEngagementReport(
     reviewStatus,
     executionCertainty,
     executionRiskGovernance,
+    businessImpact: businessImpactSummary,
     metadata,
   };
 

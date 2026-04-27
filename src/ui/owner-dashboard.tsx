@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/ui/primitives";
 
 interface DashboardAction {
@@ -141,6 +142,7 @@ const EXECUTION_CERTAINTY_COLORS: Record<string, "default" | "success" | "warnin
 };
 
 export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
+  const router = useRouter();
   const [data, setData] = useState<OwnerDashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -525,7 +527,8 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
       {/* Business Impact Level */}
       {data.businessImpact && "impactLevel" in data.businessImpact && (
         <div
-          className={`rounded-lg border p-4 ${
+          onClick={() => router.push(`/engagements/${engagementId}/business-impact`)}
+          className={`cursor-pointer rounded-lg border p-4 transition-opacity hover:opacity-80 ${
             data.businessImpact.impactLevel === "existential"
               ? "border-destructive/50 bg-destructive/10"
               : data.businessImpact.impactLevel === "critical"
