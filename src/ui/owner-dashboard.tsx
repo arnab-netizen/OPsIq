@@ -43,6 +43,14 @@ interface ExecutionCertaintyResult {
   reasons: string[];
 }
 
+interface RequiredAction {
+  type: string;
+  entityId: string;
+  label: string;
+  urgency: "high" | "critical";
+  reason: string;
+}
+
 interface DriftDetectionResult {
   engagementId: string;
   driftDetected: boolean;
@@ -50,6 +58,7 @@ interface DriftDetectionResult {
   reasons: string[];
   affectedActions: string[];
   requiredAttention: boolean;
+  requiredAction: RequiredAction | null;
   detectedAt: string;
 }
 
@@ -207,6 +216,38 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
           )}
         </div>
       </div>
+
+      {/* Required Next Action (if drift detected) */}
+      {data.drift.driftDetected && data.drift.requiredAction && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-5">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-bold text-destructive">🎯 Required Next Action</p>
+              <p className="mt-2 text-base font-semibold text-foreground">
+                {data.drift.requiredAction.label}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {data.drift.requiredAction.reason}
+              </p>
+              {data.drift.requiredAttention && (
+                <p className="mt-2 text-xs font-semibold uppercase text-destructive">
+                  ⚡ Critical Priority — Immediate Attention Required
+                </p>
+              )}
+            </div>
+            <Badge
+              variant={data.drift.requiredAction.urgency === "critical" ? "destructive" : "warning"}
+              className="ml-3"
+            >
+              {data.drift.requiredAction.urgency}
+            </Badge>
+          </div>
+          <div className="mt-3 space-y-2 rounded bg-white/50 p-2">
+            <p className="text-xs font-medium text-muted-foreground">Type: {data.drift.requiredAction.type}</p>
+            <p className="text-xs font-medium text-muted-foreground">ID: {data.drift.requiredAction.entityId}</p>
+          </div>
+        </div>
+      )}
 
       {/* Drift Detection */}
       {data.drift.driftDetected && (

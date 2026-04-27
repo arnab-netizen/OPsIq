@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { calculateExecutionCertainty } from "../execution-certainty";
+import { mapDriftToRequiredAction, type RequiredAction } from "./next-action.service";
 
 export interface DriftDetectionResult {
   engagementId: string;
@@ -10,6 +11,7 @@ export interface DriftDetectionResult {
   reasons: string[];
   affectedActions: string[];
   requiredAttention: boolean;
+  requiredAction: RequiredAction | null;
   detectedAt: string;
 }
 
@@ -182,14 +184,24 @@ export async function detectExecutionDrift(engagementId: string): Promise<DriftD
   // Determine if immediate attention is required
   const requiredAttention = severity === "critical" || (severity === "high" && driftDetected);
 
-  const result: DriftDetectionResult = {
+  // Create intermediate result to map to required action
+  const intermediateResult: DriftDetectionResult = {
     engagementId,
     driftDetected,
     severity,
     reasons: reasons.slice(0, 5), // Limit to top 5 reasons
     affectedActions: affectedActions.slice(0, 10), // Limit to 10 actions
     requiredAttention,
+    requiredAction: null, // Will be set below
     detectedAt: new Date().toISOString(),
+  };
+
+  // Map drift conditions to required action
+  const requiredAction = mapDriftToRequiredAction(intermediateResult);
+
+  const result: DriftDetectionResult = {
+    ...intermediateResult,
+    requiredAction,
   };
 
   logger.debug("Execution drift detected", {
