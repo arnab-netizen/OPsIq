@@ -9,6 +9,7 @@ vi.mock("next/link", () => ({
 describe("ExecutionCertaintyCard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("renders loading state initially", () => {
@@ -64,7 +65,7 @@ describe("ExecutionCertaintyCard", () => {
     render(<ExecutionCertaintyCard engagementId="eng-789" />);
 
     await waitFor(() => {
-      expect(screen.getByText("2 blocker(s)")).toBeTruthy();
+      expect(screen.getByText(/2 blocker/)).toBeTruthy();
     });
   });
 
@@ -144,6 +145,60 @@ describe("ExecutionCertaintyCard", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Failed to load/)).toBeTruthy();
+    });
+  });
+
+  it("blocked state UI renders correctly", async () => {
+    const mockData = {
+      score: 25,
+      level: "blocked" as const,
+      blockers: ["Critical action blocked: act-1"],
+      risks: ["Engagement at risk"],
+      reasons: [],
+      overrideApplied: false,
+    };
+
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockData),
+      } as Response)
+    );
+
+    render(<ExecutionCertaintyCard engagementId="eng-blocked" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Execution Risk: HIGH — Approval Blocked/i)).toBeTruthy();
+      expect(screen.getByText("25")).toBeTruthy();
+      expect(screen.getByText("blocked")).toBeTruthy();
+    });
+  });
+
+  it("override state UI renders correctly", async () => {
+    const mockData = {
+      score: 35,
+      level: "low" as const,
+      blockers: ["Critical action blocked: act-1"],
+      risks: [],
+      reasons: [],
+      overrideApplied: true,
+      overrideReason: "Business critical timeline",
+      overriddenBy: "executive-123",
+    };
+
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockData),
+      } as Response)
+    );
+
+    render(<ExecutionCertaintyCard engagementId="eng-override" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Override Applied/i)).toBeTruthy();
+      expect(screen.getByText(/Business critical timeline/)).toBeTruthy();
+      expect(screen.getByText(/executive-123/)).toBeTruthy();
     });
   });
 });

@@ -74,6 +74,17 @@ export interface ExecutiveSummary {
   riskReasoning: string;
 }
 
+export interface ExecutionRiskGovernance {
+  score: number;
+  level: "blocked" | "low" | "medium" | "high" | "certain";
+  blockers: string[];
+  risks: string[];
+  overrideApplied: boolean;
+  overrideReason?: string;
+  overriddenBy?: string;
+  reasons: string[];
+}
+
 export interface ReportMetadata {
   generatedAt: string;
   version: string;
@@ -95,6 +106,7 @@ export interface EngagementReport {
   kpis: KPISummary[];
   reviewStatus: ReviewStatus;
   executionCertainty: ExecutionCertaintyResult;
+  executionRiskGovernance: ExecutionRiskGovernance;
   metadata: ReportMetadata;
 }
 
@@ -347,6 +359,15 @@ export async function generateEngagementReport(
     healthForCertainty
   );
 
+  const executionRiskGovernance: ExecutionRiskGovernance = {
+    score: executionCertainty.score,
+    level: executionCertainty.level,
+    blockers: executionCertainty.blockers,
+    risks: executionCertainty.risks,
+    overrideApplied: false, // Override tracking would require DB schema extension
+    reasons: executionCertainty.reasons,
+  };
+
   const report: EngagementReport = {
     summary,
     executiveSummary,
@@ -356,6 +377,7 @@ export async function generateEngagementReport(
     kpis: kpisSummary,
     reviewStatus,
     executionCertainty,
+    executionRiskGovernance,
     metadata,
   };
 

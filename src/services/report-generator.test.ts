@@ -73,4 +73,75 @@ describe("report-generator with execution-certainty", () => {
     expect(result.blockers.length).toBeGreaterThan(0);
     expect(result.level).toBe("blocked");
   });
+
+  it("report includes execution risk governance section", () => {
+    const report: EngagementReport = {
+      summary: {
+        engagementId: "eng-risk",
+        engagementCode: "ENG-001",
+        engagementTitle: "Risk Report Test",
+        status: "active",
+        healthStatus: "stable",
+        interventionMode: "tactical",
+      },
+      executiveSummary: {
+        totalFindings: 1,
+        criticalFindings: 0,
+        highPriorityActions: 0,
+        overallRiskLevel: "low",
+        immediateActionRequired: false,
+        riskReasoning: "Low risk",
+      },
+      findings: [],
+      recommendations: [],
+      actions: [],
+      kpis: [],
+      reviewStatus: {
+        trend: "stable",
+        reasoning: "Stable",
+        findingCount: 0,
+        criticalFindingCount: 0,
+        openActionCount: 0,
+        completedActionCount: 0,
+      },
+      executionCertainty: {
+        engagementId: "eng-risk",
+        generatedAt: new Date().toISOString(),
+        score: 85,
+        level: "high",
+        blockers: [],
+        risks: [],
+        reasons: [],
+      },
+      executionRiskGovernance: {
+        score: 85,
+        level: "high",
+        blockers: [],
+        risks: [],
+        overrideApplied: false,
+        reasons: [],
+      },
+      metadata: {
+        generatedAt: new Date().toISOString(),
+        version: "2.0",
+        dataCompleteness: {
+          hasFindings: false,
+          hasRecommendations: false,
+          hasActions: false,
+          hasKPIs: false,
+          hasConditionProfile: false,
+        },
+      },
+    };
+
+    expect(report).toHaveProperty("executionRiskGovernance");
+    expect(report.executionRiskGovernance).toHaveProperty("score");
+    expect(report.executionRiskGovernance).toHaveProperty("level");
+    expect(report.executionRiskGovernance).toHaveProperty("blockers");
+    expect(report.executionRiskGovernance).toHaveProperty("risks");
+    expect(report.executionRiskGovernance).toHaveProperty("overrideApplied");
+    expect(report.executionRiskGovernance).toHaveProperty("reasons");
+    expect(report.executionRiskGovernance.score).toBe(85);
+    expect(report.executionRiskGovernance.level).toBe("high");
+  });
 });

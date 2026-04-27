@@ -9,6 +9,9 @@ interface ExecutionCertaintyData {
   blockers: string[];
   risks: string[];
   reasons: string[];
+  overrideApplied?: boolean;
+  overrideReason?: string;
+  overriddenBy?: string;
 }
 
 interface ExecutionCertaintyCardProps {
@@ -82,6 +85,96 @@ export function ExecutionCertaintyCard({ engagementId }: ExecutionCertaintyCardP
     );
   }
 
+  // Show blocked state
+  if (data.level === "blocked" || data.score < 40) {
+    if (data.overrideApplied) {
+      // Override applied state
+      return (
+        <div className="rounded-lg border border-warning/30 bg-warning/5 p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase text-warning">
+                Execution Risk: HIGH — Override Applied
+              </p>
+              <div className="mt-2 flex items-baseline gap-2">
+                <p className="text-2xl font-bold">{data.score}</p>
+                <Badge variant="warning" className="text-xs">
+                  {data.level}
+                </Badge>
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 space-y-2">
+            {data.overrideReason && (
+              <div>
+                <p className="text-xs font-medium text-foreground">Reason:</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {data.overrideReason}
+                </p>
+              </div>
+            )}
+            {data.overriddenBy && (
+              <p className="text-xs text-muted-foreground">
+                Approved by: {data.overriddenBy}
+              </p>
+            )}
+            {data.blockers.length > 0 && (
+              <p className="text-xs text-destructive">
+                {data.blockers.length} blocker(s)
+              </p>
+            )}
+            {data.risks.length > 0 && (
+              <p className="text-xs text-warning">
+                {data.risks.length} risk(s)
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Blocked state (no override)
+    return (
+      <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase text-destructive">
+              Execution Risk: HIGH — Approval Blocked
+            </p>
+            <div className="mt-2 flex items-baseline gap-2">
+              <p className="text-2xl font-bold">{data.score}</p>
+              <Badge variant="destructive" className="text-xs">
+                {data.level}
+              </Badge>
+            </div>
+          </div>
+        </div>
+        <div className="mt-3 space-y-2">
+          {data.blockers.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-destructive">
+                {data.blockers.length} blocker(s):
+              </p>
+              <div className="mt-1 space-y-1">
+                {data.blockers.slice(0, 2).map((blocker, i) => (
+                  <p key={i} className="text-xs text-destructive">
+                    • {blocker}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+          {data.risks.length > 0 && (
+            <p className="text-xs text-warning">
+              {data.risks.length} risk(s)
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Normal state (not blocked)
   return (
     <div className="rounded-lg border border-border bg-muted/10 p-4">
       <p className="text-xs font-medium uppercase text-muted-foreground">
