@@ -6,6 +6,7 @@ import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { withIdempotency } from "@/infra/idempotency";
+import { calculateExecutionCertainty } from "@/services/execution-certainty";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -334,6 +335,7 @@ export async function updateRecommendationStatus(
 ) {
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId },
+    include: { engagement: true },
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);
 
@@ -343,6 +345,95 @@ export async function updateRecommendationStatus(
       "Recommendation has been modified by another process. Current version: " + rec.version,
       { code: "STALE_VERSION" }
     );
+  }
+
+  // Check execution certainty before approval (observe-only mode)
+  if (input.status === "approved" || (input.status && input.status !== rec.status)) {
+    try {
+      const [findings, recommendations, actions] = await Promise.all([
+        db.finding.findMany({
+          where: { engagementId: rec.engagementId },
+        }),
+        db.recommendation.findMany({
+          where: { engagementId: rec.engagementId },
+        }),
+        db.action.findMany({
+          where: { engagementId: rec.engagementId },
+        }),
+      ]);
+
+      const engagement = await db.engagement.findUnique({
+        where: { id: rec.engagementId },
+      });
+
+      if (engagement) {
+        const findingsForCertainty = findings.map((f: typeof findings[0]) => ({
+          id: f.id,
+          severity: (f.severity as "critical" | "high" | "medium" | "low") || "low",
+          resolved: f.status === "resolved" || f.status === "closed",
+          verified: f.verified ?? false,
+        }));
+
+        const recommendationsForCertainty = recommendations.map((r: typeof recommendations[0]) => ({
+          id: r.id,
+          priority: (r.priority as "critical" | "high" | "medium" | "low") || "medium",
+          status: (r.status as "blocked" | "in_progress" | "completed") || "in_progress",
+        }));
+
+        const actionsForCertainty = actions.map((a: typeof actions[0]) => ({
+          id: a.id,
+          priority: (a.priority as "critical" | "high" | "medium" | "low") || "medium",
+          status: (a.status as "blocked" | "pending" | "in_progress" | "completed" | "verified") || "pending",
+        }));
+
+        const certaintyResult = calculateExecutionCertainty(
+          rec.engagementId,
+          findingsForCertainty,
+          recommendationsForCertainty,
+          actionsForCertainty,
+          [],
+          {
+            overallStatus: (engagement.healthStatus as "critical" | "at_risk" | "stable" | "healthy") || "stable",
+            kpiTrend: "flat" as const,
+          }
+        );
+
+        // Emit warning if execution certainty is low (observe-only mode)
+        if (certaintyResult.level === "blocked" || certaintyResult.score < 40) {
+          logger.warn("Execution certainty warning before recommendation approval", {
+            recommendationId,
+            engagementId: rec.engagementId,
+            score: certaintyResult.score,
+            level: certaintyResult.level,
+            blockers: certaintyResult.blockers,
+            risks: certaintyResult.risks,
+          });
+
+          await emitAuditEvent({
+            eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_WARNING,
+            actorId,
+            entityType: "recommendation",
+            entityId: recommendationId,
+            payload: {
+              engagementId: rec.engagementId,
+              score: certaintyResult.score,
+              level: certaintyResult.level,
+              blockers: certaintyResult.blockers,
+              risks: certaintyResult.risks,
+              reason: "Low execution certainty",
+            },
+            visibility: "internal",
+          });
+        }
+      }
+    } catch (error) {
+      // Fail open: log but don't block the update
+      logger.error("Error checking execution certainty before approval", {
+        recommendationId,
+        engagementId: rec.engagementId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
 
   // Optimistic locking: update only if version matches

@@ -154,6 +154,9 @@ export const AUDIT_EVENTS = {
   ESCALATION_ALERT_HIGH_PRIORITY_OVERDUE: "escalation.high_priority_overdue",
   ESCALATION_ALERT_KPI_DETERIORATION_PATTERN: "escalation.kpi_deterioration_pattern",
 
+  // Execution Certainty
+  EXECUTION_CERTAINTY_WARNING: "execution_certainty.warning",
+
   // Human Factors
   HUMAN_FACTORS_ASSESSED: "human_factors.assessed",
   HUMAN_FACTORS_UPDATED: "human_factors.updated",
