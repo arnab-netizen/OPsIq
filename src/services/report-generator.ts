@@ -3,6 +3,7 @@ import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { calculateExecutionCertainty, type ExecutionCertaintyResult } from "./execution-certainty";
 
 // ─── Report Types ──────────────────────────────────────────────────────────
 
@@ -93,6 +94,7 @@ export interface EngagementReport {
   actions: ActionSummary[];
   kpis: KPISummary[];
   reviewStatus: ReviewStatus;
+  executionCertainty: ExecutionCertaintyResult;
   metadata: ReportMetadata;
 }
 
@@ -303,6 +305,48 @@ export async function generateEngagementReport(
     },
   };
 
+  // Map findings to execution-certainty format
+  const findingsForCertainty = findings.map((f: typeof findings[0]) => ({
+    id: f.id,
+    severity: f.severity as "critical" | "high" | "medium" | "low",
+    resolved: f.status === "resolved" || f.status === "closed",
+    verified: f.verified ?? false,
+  }));
+
+  // Map recommendations to execution-certainty format
+  const recommendationsForCertainty = recommendations.map(
+    (r: typeof recommendations[0]) => ({
+      id: r.id,
+      priority: r.priority as "critical" | "high" | "medium" | "low",
+      status: r.status as "blocked" | "in_progress" | "completed",
+    })
+  );
+
+  // Map actions to execution-certainty format
+  const actionsForCertainty = actions.map((a: typeof actions[0]) => ({
+    id: a.id,
+    priority: a.priority as "critical" | "high" | "medium" | "low",
+    status: a.status as "blocked" | "pending" | "in_progress" | "completed" | "verified",
+  }));
+
+  // Map engagement health to execution-certainty format
+  const healthForCertainty = {
+    overallStatus: (engagement.healthStatus as "critical" | "at_risk" | "stable" | "healthy") ?? "stable",
+    kpiTrend: currentCondition
+      ? (currentCondition.businessStatus === "deteriorating" ? "deteriorating" : "improving" as "deteriorating" | "flat" | "improving")
+      : ("flat" as "deteriorating" | "flat" | "improving"),
+  };
+
+  // Calculate execution certainty
+  const executionCertainty = calculateExecutionCertainty(
+    engagementId,
+    findingsForCertainty,
+    recommendationsForCertainty,
+    actionsForCertainty,
+    [], // evidence not yet available from DB
+    healthForCertainty
+  );
+
   const report: EngagementReport = {
     summary,
     executiveSummary,
@@ -311,6 +355,7 @@ export async function generateEngagementReport(
     actions: actionsSummary,
     kpis: kpisSummary,
     reviewStatus,
+    executionCertainty,
     metadata,
   };
 
