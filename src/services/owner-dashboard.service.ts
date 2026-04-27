@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { calculateExecutionCertainty, type ExecutionCertaintyResult } from "./execution-certainty";
+import { detectExecutionDrift, type DriftDetectionResult } from "./execution-drift/execution-drift.service";
 
 export interface DashboardAction {
   id: string;
@@ -41,6 +42,7 @@ export interface OwnerDashboardData {
   healthStatus: string;
   interventionMode: string;
   executionCertainty: ExecutionCertaintyResult;
+  drift: DriftDetectionResult;
   criticalBlockers: string[];
   overdueActions: DashboardAction[];
   criticalActions: DashboardAction[];
@@ -243,6 +245,9 @@ export async function getOwnerDashboard(engagementId: string): Promise<OwnerDash
     healthStatus
   );
 
+  // Detect execution drift
+  const drift = await detectExecutionDrift(engagementId);
+
   const dashboard: OwnerDashboardData = {
     engagementId: engagement.id,
     engagementCode: engagement.code,
@@ -251,6 +256,7 @@ export async function getOwnerDashboard(engagementId: string): Promise<OwnerDash
     healthStatus: engagement.healthStatus,
     interventionMode: engagement.interventionMode,
     executionCertainty,
+    drift,
     criticalBlockers,
     overdueActions,
     criticalActions,

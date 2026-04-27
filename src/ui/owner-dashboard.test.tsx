@@ -6,6 +6,45 @@ vi.mock("next/link", () => ({
   default: ({ children, href }: any) => <a href={href}>{children}</a>,
 }));
 
+const createMockDashboardData = (overrides?: any) => ({
+  engagementId: "eng-123",
+  engagementCode: "ENG-001",
+  engagementTitle: "Test",
+  status: "active",
+  healthStatus: "healthy",
+  interventionMode: "tactical",
+  executionCertainty: {
+    engagementId: "eng-123",
+    generatedAt: new Date().toISOString(),
+    score: 85,
+    level: "high",
+    blockers: [],
+    risks: [],
+    reasons: [],
+  },
+  drift: {
+    engagementId: "eng-123",
+    driftDetected: false,
+    severity: "low",
+    reasons: [],
+    affectedActions: [],
+    requiredAttention: false,
+    detectedAt: new Date().toISOString(),
+  },
+  criticalBlockers: [],
+  overdueActions: [],
+  criticalActions: [],
+  openRecommendations: [],
+  nextBestAction: null,
+  businessImpact: {
+    summary: "Engagement tracking well",
+    keyRisks: [],
+    opportunities: [],
+  },
+  generatedAt: new Date().toISOString(),
+  ...overrides,
+});
+
 describe("OwnerDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -23,34 +62,10 @@ describe("OwnerDashboard", () => {
   });
 
   it("renders engagement title when data loads", async () => {
-    const mockData = {
-      engagementId: "eng-123",
-      engagementCode: "ENG-001",
+    const mockData = createMockDashboardData({
       engagementTitle: "Important Client",
-      status: "active",
-      healthStatus: "healthy",
-      interventionMode: "tactical",
-      executionCertainty: {
-        engagementId: "eng-123",
-        generatedAt: new Date().toISOString(),
-        score: 85,
-        level: "high",
-        blockers: [],
-        risks: [],
-        reasons: [],
-      },
-      criticalBlockers: [],
-      overdueActions: [],
-      criticalActions: [],
-      openRecommendations: [],
-      nextBestAction: null,
-      businessImpact: {
-        summary: "Engagement tracking well",
-        keyRisks: [],
-        opportunities: [],
-      },
-      generatedAt: new Date().toISOString(),
-    };
+      engagementCode: "ENG-001",
+    });
 
     global.fetch = vi.fn(() =>
       Promise.resolve({
@@ -68,34 +83,7 @@ describe("OwnerDashboard", () => {
   });
 
   it("displays health status badge", async () => {
-    const mockData = {
-      engagementId: "eng-123",
-      engagementCode: "ENG-001",
-      engagementTitle: "Test",
-      status: "active",
-      healthStatus: "healthy",
-      interventionMode: "tactical",
-      executionCertainty: {
-        engagementId: "eng-123",
-        generatedAt: new Date().toISOString(),
-        score: 85,
-        level: "high",
-        blockers: [],
-        risks: [],
-        reasons: [],
-      },
-      criticalBlockers: [],
-      overdueActions: [],
-      criticalActions: [],
-      openRecommendations: [],
-      nextBestAction: null,
-      businessImpact: {
-        summary: "Engagement tracking well",
-        keyRisks: [],
-        opportunities: [],
-      },
-      generatedAt: new Date().toISOString(),
-    };
+    const mockData = createMockDashboardData();
 
     global.fetch = vi.fn(() =>
       Promise.resolve({
@@ -112,13 +100,7 @@ describe("OwnerDashboard", () => {
   });
 
   it("displays execution certainty score and level", async () => {
-    const mockData = {
-      engagementId: "eng-123",
-      engagementCode: "ENG-001",
-      engagementTitle: "Test",
-      status: "active",
-      healthStatus: "healthy",
-      interventionMode: "tactical",
+    const mockData = createMockDashboardData({
       executionCertainty: {
         engagementId: "eng-123",
         generatedAt: new Date().toISOString(),
@@ -128,18 +110,7 @@ describe("OwnerDashboard", () => {
         risks: [],
         reasons: [],
       },
-      criticalBlockers: [],
-      overdueActions: [],
-      criticalActions: [],
-      openRecommendations: [],
-      nextBestAction: null,
-      businessImpact: {
-        summary: "Engagement tracking well",
-        keyRisks: [],
-        opportunities: [],
-      },
-      generatedAt: new Date().toISOString(),
-    };
+    });
 
     global.fetch = vi.fn(() =>
       Promise.resolve({
@@ -157,13 +128,8 @@ describe("OwnerDashboard", () => {
   });
 
   it("displays critical blockers when present", async () => {
-    const mockData = {
-      engagementId: "eng-123",
-      engagementCode: "ENG-001",
-      engagementTitle: "Test",
-      status: "active",
-      healthStatus: "healthy",
-      interventionMode: "tactical",
+    const mockData = createMockDashboardData({
+      criticalBlockers: ["Critical action blocked: act-1"],
       executionCertainty: {
         engagementId: "eng-123",
         generatedAt: new Date().toISOString(),
@@ -173,18 +139,7 @@ describe("OwnerDashboard", () => {
         risks: [],
         reasons: [],
       },
-      criticalBlockers: ["Critical action blocked: act-1"],
-      overdueActions: [],
-      criticalActions: [],
-      openRecommendations: [],
-      nextBestAction: null,
-      businessImpact: {
-        summary: "Blocked",
-        keyRisks: [],
-        opportunities: [],
-      },
-      generatedAt: new Date().toISOString(),
-    };
+    });
 
     global.fetch = vi.fn(() =>
       Promise.resolve({
@@ -201,23 +156,7 @@ describe("OwnerDashboard", () => {
   });
 
   it("displays overdue actions when present", async () => {
-    const mockData = {
-      engagementId: "eng-123",
-      engagementCode: "ENG-001",
-      engagementTitle: "Test",
-      status: "active",
-      healthStatus: "healthy",
-      interventionMode: "tactical",
-      executionCertainty: {
-        engagementId: "eng-123",
-        generatedAt: new Date().toISOString(),
-        score: 65,
-        level: "medium",
-        blockers: [],
-        risks: [],
-        reasons: [],
-      },
-      criticalBlockers: [],
+    const mockData = createMockDashboardData({
       overdueActions: [
         {
           id: "act-1",
@@ -228,16 +167,7 @@ describe("OwnerDashboard", () => {
           urgency: "overdue",
         },
       ],
-      criticalActions: [],
-      openRecommendations: [],
-      nextBestAction: null,
-      businessImpact: {
-        summary: "Mixed progress",
-        keyRisks: [],
-        opportunities: [],
-      },
-      generatedAt: new Date().toISOString(),
-    };
+    });
 
     global.fetch = vi.fn(() =>
       Promise.resolve({
@@ -255,26 +185,7 @@ describe("OwnerDashboard", () => {
   });
 
   it("displays next best action", async () => {
-    const mockData = {
-      engagementId: "eng-123",
-      engagementCode: "ENG-001",
-      engagementTitle: "Test",
-      status: "active",
-      healthStatus: "healthy",
-      interventionMode: "tactical",
-      executionCertainty: {
-        engagementId: "eng-123",
-        generatedAt: new Date().toISOString(),
-        score: 65,
-        level: "medium",
-        blockers: [],
-        risks: [],
-        reasons: [],
-      },
-      criticalBlockers: [],
-      overdueActions: [],
-      criticalActions: [],
-      openRecommendations: [],
+    const mockData = createMockDashboardData({
       nextBestAction: {
         type: "action",
         id: "act-1",
@@ -282,13 +193,7 @@ describe("OwnerDashboard", () => {
         reason: "Critical action is overdue",
         priority: "critical",
       },
-      businessImpact: {
-        summary: "On track",
-        keyRisks: [],
-        opportunities: [],
-      },
-      generatedAt: new Date().toISOString(),
-    };
+    });
 
     global.fetch = vi.fn(() =>
       Promise.resolve({
@@ -306,34 +211,13 @@ describe("OwnerDashboard", () => {
   });
 
   it("displays business impact summary", async () => {
-    const mockData = {
-      engagementId: "eng-123",
-      engagementCode: "ENG-001",
-      engagementTitle: "Test",
-      status: "active",
-      healthStatus: "healthy",
-      interventionMode: "tactical",
-      executionCertainty: {
-        engagementId: "eng-123",
-        generatedAt: new Date().toISOString(),
-        score: 85,
-        level: "high",
-        blockers: [],
-        risks: [],
-        reasons: [],
-      },
-      criticalBlockers: [],
-      overdueActions: [],
-      criticalActions: [],
-      openRecommendations: [],
-      nextBestAction: null,
+    const mockData = createMockDashboardData({
       businessImpact: {
         summary: "Strong execution certainty enables next phase",
         keyRisks: [],
         opportunities: ["Engagement health stable", "Strong execution"],
       },
-      generatedAt: new Date().toISOString(),
-    };
+    });
 
     global.fetch = vi.fn(() =>
       Promise.resolve({
@@ -351,13 +235,7 @@ describe("OwnerDashboard", () => {
   });
 
   it("shows empty state when no actions or recommendations", async () => {
-    const mockData = {
-      engagementId: "eng-123",
-      engagementCode: "ENG-001",
-      engagementTitle: "Test",
-      status: "active",
-      healthStatus: "healthy",
-      interventionMode: "tactical",
+    const mockData = createMockDashboardData({
       executionCertainty: {
         engagementId: "eng-123",
         generatedAt: new Date().toISOString(),
@@ -367,18 +245,7 @@ describe("OwnerDashboard", () => {
         risks: [],
         reasons: [],
       },
-      criticalBlockers: [],
-      overdueActions: [],
-      criticalActions: [],
-      openRecommendations: [],
-      nextBestAction: null,
-      businessImpact: {
-        summary: "All clear",
-        keyRisks: [],
-        opportunities: [],
-      },
-      generatedAt: new Date().toISOString(),
-    };
+    });
 
     global.fetch = vi.fn(() =>
       Promise.resolve({
@@ -418,6 +285,34 @@ describe("OwnerDashboard", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Unable to Load Dashboard/)).toBeTruthy();
+    });
+  });
+
+  it("displays drift detection when drift is detected", async () => {
+    const mockData = createMockDashboardData({
+      drift: {
+        engagementId: "eng-123",
+        driftDetected: true,
+        severity: "high",
+        reasons: ["2 critical action(s) are overdue"],
+        affectedActions: ["act-1"],
+        requiredAttention: true,
+        detectedAt: new Date().toISOString(),
+      },
+    });
+
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockData),
+      } as Response)
+    );
+
+    render(<OwnerDashboard engagementId="eng-123" />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Needs Attention/)).toBeTruthy();
+      expect(screen.getByText(/Execution Drift Detected/)).toBeTruthy();
     });
   });
 });

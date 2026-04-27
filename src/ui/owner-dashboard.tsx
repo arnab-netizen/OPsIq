@@ -43,6 +43,16 @@ interface ExecutionCertaintyResult {
   reasons: string[];
 }
 
+interface DriftDetectionResult {
+  engagementId: string;
+  driftDetected: boolean;
+  severity: "low" | "medium" | "high" | "critical";
+  reasons: string[];
+  affectedActions: string[];
+  requiredAttention: boolean;
+  detectedAt: string;
+}
+
 interface OwnerDashboardData {
   engagementId: string;
   engagementCode: string;
@@ -51,6 +61,7 @@ interface OwnerDashboardData {
   healthStatus: string;
   interventionMode: string;
   executionCertainty: ExecutionCertaintyResult;
+  drift: DriftDetectionResult;
   criticalBlockers: string[];
   overdueActions: DashboardAction[];
   criticalActions: DashboardAction[];
@@ -196,6 +207,56 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
           )}
         </div>
       </div>
+
+      {/* Drift Detection */}
+      {data.drift.driftDetected && (
+        <div
+          className={`rounded-lg border p-4 ${
+            data.drift.severity === "critical"
+              ? "border-destructive/30 bg-destructive/5"
+              : data.drift.severity === "high"
+              ? "border-destructive/30 bg-destructive/5"
+              : data.drift.severity === "medium"
+              ? "border-warning/30 bg-warning/5"
+              : "border-muted/30 bg-muted/5"
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p
+                className={`text-sm font-medium ${
+                  data.drift.severity === "critical" || data.drift.severity === "high"
+                    ? "text-destructive"
+                    : "text-warning"
+                }`}
+              >
+                ⚠️ Needs Attention — Execution Drift Detected
+              </p>
+              {data.drift.requiredAttention && (
+                <p className="mt-1 text-xs font-semibold text-destructive">
+                  Immediate action required
+                </p>
+              )}
+            </div>
+            <Badge
+              variant={
+                data.drift.severity === "critical" || data.drift.severity === "high"
+                  ? "destructive"
+                  : "warning"
+              }
+            >
+              {data.drift.severity}
+            </Badge>
+          </div>
+          <div className="mt-3 space-y-2">
+            {data.drift.reasons.map((reason, i) => (
+              <p key={i} className="text-xs text-muted-foreground">
+                • {reason}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Critical Blockers */}
       {data.criticalBlockers.length > 0 && (
