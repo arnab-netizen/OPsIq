@@ -74,6 +74,28 @@ interface DriftDetectionResult {
   detectedAt: string;
 }
 
+interface BusinessImpactLevel {
+  engagementId: string;
+  generatedAt: string;
+  impactLevel: "low" | "medium" | "high" | "critical" | "existential";
+  estimatedLoss: number | null;
+  timeImpact: {
+    timelineToFailure: number | null;
+    urgencyWindow: "immediate" | "days" | "weeks" | "months" | "unknown";
+  };
+  recoveryImpact: {
+    recoveryProbability: "low" | "medium" | "high";
+    recoveryTimeline: number | null;
+  };
+  ownerDecision: {
+    required: boolean;
+    reason?: string;
+    decision?: string;
+    decidedAt?: string;
+  };
+  topImpactDrivers: string[];
+}
+
 interface OwnerDashboardData {
   engagementId: string;
   engagementCode: string;
@@ -88,7 +110,7 @@ interface OwnerDashboardData {
   criticalActions: DashboardAction[];
   openRecommendations: DashboardRecommendation[];
   nextBestAction: NextBestAction | null;
-  businessImpact: BusinessImpact;
+  businessImpact: BusinessImpact | BusinessImpactLevel;
   generatedAt: string;
 }
 
@@ -500,37 +522,154 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
         </div>
       )}
 
-      {/* Business Impact */}
-      <div className="rounded-lg border border-border bg-card p-4">
-        <p className="text-sm font-medium">💼 Why This Matters</p>
-        <p className="mt-2 text-sm text-muted-foreground">{data.businessImpact.summary}</p>
-
-        {data.businessImpact.keyRisks.length > 0 && (
-          <div className="mt-4">
-            <p className="text-xs font-medium uppercase text-destructive">Key Risks</p>
-            <ul className="mt-2 space-y-1">
-              {data.businessImpact.keyRisks.map((risk, i) => (
-                <li key={i} className="text-xs text-muted-foreground">
-                  ⚠️ {risk}
-                </li>
-              ))}
-            </ul>
+      {/* Business Impact Level */}
+      {data.businessImpact && "impactLevel" in data.businessImpact && (
+        <div
+          className={`rounded-lg border p-4 ${
+            data.businessImpact.impactLevel === "existential"
+              ? "border-destructive/50 bg-destructive/10"
+              : data.businessImpact.impactLevel === "critical"
+                ? "border-destructive/30 bg-destructive/5"
+                : data.businessImpact.impactLevel === "high"
+                  ? "border-warning/30 bg-warning/5"
+                  : "border-border bg-card"
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium">📊 Business Impact Assessment</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {data.businessImpact.impactLevel === "existential"
+                  ? "Existential Risk"
+                  : data.businessImpact.impactLevel === "critical"
+                    ? "Critical Impact"
+                    : data.businessImpact.impactLevel === "high"
+                      ? "High Impact"
+                      : data.businessImpact.impactLevel === "medium"
+                        ? "Medium Impact"
+                        : "Low Impact"}
+              </p>
+            </div>
+            <Badge
+              variant={
+                data.businessImpact.impactLevel === "existential" ||
+                data.businessImpact.impactLevel === "critical"
+                  ? "destructive"
+                  : data.businessImpact.impactLevel === "high"
+                    ? "warning"
+                    : "default"
+              }
+            >
+              {String(data.businessImpact.impactLevel)}
+            </Badge>
           </div>
-        )}
 
-        {data.businessImpact.opportunities.length > 0 && (
-          <div className="mt-4">
-            <p className="text-xs font-medium uppercase text-success">Opportunities</p>
-            <ul className="mt-2 space-y-1">
-              {data.businessImpact.opportunities.map((opp, i) => (
-                <li key={i} className="text-xs text-muted-foreground">
-                  ✓ {opp}
-                </li>
-              ))}
-            </ul>
+          <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+            {data.businessImpact.estimatedLoss !== null && (
+              <div>
+                <p className="text-xs font-medium uppercase text-muted-foreground">Estimated Loss</p>
+                <p className="mt-1 text-lg font-bold text-destructive">
+                  ${(data.businessImpact.estimatedLoss / 1000).toFixed(0)}K
+                </p>
+              </div>
+            )}
+
+            <div>
+              <p className="text-xs font-medium uppercase text-muted-foreground">Recovery Probability</p>
+              <p
+                className={`mt-1 text-lg font-bold ${
+                  data.businessImpact.recoveryImpact.recoveryProbability === "high"
+                    ? "text-success"
+                    : data.businessImpact.recoveryImpact.recoveryProbability === "medium"
+                      ? "text-warning"
+                      : "text-destructive"
+                }`}
+              >
+                {data.businessImpact.recoveryImpact.recoveryProbability}
+              </p>
+            </div>
+
+            {data.businessImpact.timeImpact.timelineToFailure !== null && (
+              <div>
+                <p className="text-xs font-medium uppercase text-muted-foreground">Timeline to Failure</p>
+                <p className="mt-1 text-lg font-bold">{data.businessImpact.timeImpact.timelineToFailure} days</p>
+              </div>
+            )}
+
+            <div>
+              <p className="text-xs font-medium uppercase text-muted-foreground">Urgency Window</p>
+              <p className="mt-1 text-sm font-medium capitalize">{data.businessImpact.timeImpact.urgencyWindow}</p>
+            </div>
           </div>
-        )}
-      </div>
+
+          {data.businessImpact.topImpactDrivers.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-medium uppercase text-muted-foreground">Top Impact Drivers</p>
+              <ul className="mt-2 space-y-1">
+                {data.businessImpact.topImpactDrivers.map((driver, i) => (
+                  <li key={i} className="text-xs text-muted-foreground">
+                    • {driver}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {data.businessImpact.ownerDecision.required && (
+            <div className="mt-4 rounded bg-destructive/5 p-2">
+              <p className="text-xs font-medium text-destructive">⚠️ Decision Required</p>
+              <p className="mt-1 text-xs text-destructive">{data.businessImpact.ownerDecision.reason}</p>
+              {data.businessImpact.ownerDecision.decision && (
+                <p className="mt-1 text-xs font-medium text-foreground">
+                  Decision: {data.businessImpact.ownerDecision.decision}
+                </p>
+              )}
+            </div>
+          )}
+
+          {data.businessImpact.recoveryImpact.recoveryTimeline !== null && (
+            <div className="mt-3">
+              <p className="text-xs text-muted-foreground">
+                Estimated recovery timeline: <span className="font-medium">{data.businessImpact.recoveryImpact.recoveryTimeline} days</span>
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Business Impact - Summary */}
+      {data.businessImpact && "summary" in data.businessImpact && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-sm font-medium">💼 Why This Matters</p>
+          <p className="mt-2 text-sm text-muted-foreground">{data.businessImpact.summary}</p>
+
+          {data.businessImpact.keyRisks.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-medium uppercase text-destructive">Key Risks</p>
+              <ul className="mt-2 space-y-1">
+                {data.businessImpact.keyRisks.map((risk, i) => (
+                  <li key={i} className="text-xs text-muted-foreground">
+                    ⚠️ {risk}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {data.businessImpact.opportunities.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-medium uppercase text-success">Opportunities</p>
+              <ul className="mt-2 space-y-1">
+                {data.businessImpact.opportunities.map((opp, i) => (
+                  <li key={i} className="text-xs text-muted-foreground">
+                    ✓ {opp}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Overdue Actions */}
       {data.overdueActions.length > 0 && (
