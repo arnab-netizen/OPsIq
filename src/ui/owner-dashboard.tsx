@@ -43,12 +43,24 @@ interface ExecutionCertaintyResult {
   reasons: string[];
 }
 
+interface ActionCommitment {
+  status: "pending" | "acknowledged" | "in_progress" | "completed";
+  acknowledgedAt?: string;
+  startedAt?: string;
+  completedAt?: string;
+}
+
 interface RequiredAction {
   type: string;
   entityId: string;
   label: string;
   urgency: "high" | "critical";
   reason: string;
+}
+
+interface RequiredActionWithCommitment {
+  action: RequiredAction;
+  commitment: ActionCommitment;
 }
 
 interface DriftDetectionResult {
@@ -58,7 +70,7 @@ interface DriftDetectionResult {
   reasons: string[];
   affectedActions: string[];
   requiredAttention: boolean;
-  requiredAction: RequiredAction | null;
+  requiredAction: RequiredActionWithCommitment | null;
   detectedAt: string;
 }
 
@@ -222,12 +234,26 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-5">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm font-bold text-destructive">🎯 Required Next Action</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-destructive">🎯 Required Next Action</p>
+                <Badge
+                  variant={
+                    data.drift.requiredAction.commitment.status === "completed"
+                      ? "default"
+                      : data.drift.requiredAction.commitment.status === "in_progress"
+                      ? "warning"
+                      : "destructive"
+                  }
+                  className="text-xs"
+                >
+                  {data.drift.requiredAction.commitment.status}
+                </Badge>
+              </div>
               <p className="mt-2 text-base font-semibold text-foreground">
-                {data.drift.requiredAction.label}
+                {data.drift.requiredAction.action.label}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {data.drift.requiredAction.reason}
+                {data.drift.requiredAction.action.reason}
               </p>
               {data.drift.requiredAttention && (
                 <p className="mt-2 text-xs font-semibold uppercase text-destructive">
@@ -236,15 +262,77 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
               )}
             </div>
             <Badge
-              variant={data.drift.requiredAction.urgency === "critical" ? "destructive" : "warning"}
+              variant={data.drift.requiredAction.action.urgency === "critical" ? "destructive" : "warning"}
               className="ml-3"
             >
-              {data.drift.requiredAction.urgency}
+              {data.drift.requiredAction.action.urgency}
             </Badge>
           </div>
-          <div className="mt-3 space-y-2 rounded bg-white/50 p-2">
-            <p className="text-xs font-medium text-muted-foreground">Type: {data.drift.requiredAction.type}</p>
-            <p className="text-xs font-medium text-muted-foreground">ID: {data.drift.requiredAction.entityId}</p>
+
+          {/* Commitment Status Details */}
+          <div className="mt-4 rounded bg-white/30 p-3">
+            <p className="text-xs font-medium text-foreground">Commitment Status</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {data.drift.requiredAction.commitment.status === "pending" &&
+                "Awaiting acknowledgment and action start"}
+              {data.drift.requiredAction.commitment.status === "acknowledged" &&
+                "Acknowledged - ready to start"}
+              {data.drift.requiredAction.commitment.status === "in_progress" &&
+                "Currently in progress"}
+              {data.drift.requiredAction.commitment.status === "completed" &&
+                "Completed"}
+            </p>
+            {data.drift.requiredAction.commitment.startedAt && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Started: {new Date(data.drift.requiredAction.commitment.startedAt).toLocaleDateString()}
+              </p>
+            )}
+            {data.drift.requiredAction.commitment.completedAt && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Completed: {new Date(data.drift.requiredAction.commitment.completedAt).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {data.drift.requiredAction.commitment.status === "pending" && (
+              <button
+                className="rounded bg-destructive px-3 py-2 text-xs font-medium text-white hover:bg-destructive/90"
+                onClick={() => console.log("Acknowledge action")}
+              >
+                👋 Acknowledge
+              </button>
+            )}
+            {(data.drift.requiredAction.commitment.status === "pending" ||
+              data.drift.requiredAction.commitment.status === "acknowledged") && (
+              <button
+                className="rounded bg-warning px-3 py-2 text-xs font-medium text-white hover:bg-warning/90"
+                onClick={() => console.log("Start action")}
+              >
+                ▶️ Start Action
+              </button>
+            )}
+            {data.drift.requiredAction.commitment.status === "in_progress" && (
+              <button
+                className="rounded bg-success px-3 py-2 text-xs font-medium text-white hover:bg-success/90"
+                onClick={() => console.log("Mark complete")}
+              >
+                ✓ Mark Complete
+              </button>
+            )}
+            <button
+              className="rounded border border-border bg-background px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+              onClick={() => console.log("View details")}
+            >
+              📋 View Details
+            </button>
+          </div>
+
+          {/* Action Metadata */}
+          <div className="mt-3 space-y-1 rounded bg-white/50 p-2">
+            <p className="text-xs font-medium text-muted-foreground">Type: {data.drift.requiredAction.action.type}</p>
+            <p className="text-xs font-medium text-muted-foreground">ID: {data.drift.requiredAction.action.entityId}</p>
           </div>
         </div>
       )}

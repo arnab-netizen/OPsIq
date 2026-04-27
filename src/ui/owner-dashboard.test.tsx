@@ -29,6 +29,7 @@ const createMockDashboardData = (overrides?: any) => ({
     reasons: [],
     affectedActions: [],
     requiredAttention: false,
+    requiredAction: null,
     detectedAt: new Date().toISOString(),
   },
   criticalBlockers: [],
@@ -297,6 +298,18 @@ describe("OwnerDashboard", () => {
         reasons: ["2 critical action(s) are overdue"],
         affectedActions: ["act-1"],
         requiredAttention: true,
+        requiredAction: {
+          action: {
+            type: "action",
+            entityId: "act-1",
+            label: "Resume overdue critical action",
+            urgency: "critical",
+            reason: "Critical action is overdue",
+          },
+          commitment: {
+            status: "pending",
+          },
+        },
         detectedAt: new Date().toISOString(),
       },
     });

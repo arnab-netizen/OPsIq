@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { calculateExecutionCertainty } from "../execution-certainty";
-import { mapDriftToRequiredAction, type RequiredAction } from "./next-action.service";
+import { getRequiredActionWithCommitment, type RequiredActionWithCommitment } from "./next-action.service";
 
 export interface DriftDetectionResult {
   engagementId: string;
@@ -11,7 +11,7 @@ export interface DriftDetectionResult {
   reasons: string[];
   affectedActions: string[];
   requiredAttention: boolean;
-  requiredAction: RequiredAction | null;
+  requiredAction: RequiredActionWithCommitment | null;
   detectedAt: string;
 }
 
@@ -184,7 +184,7 @@ export async function detectExecutionDrift(engagementId: string): Promise<DriftD
   // Determine if immediate attention is required
   const requiredAttention = severity === "critical" || (severity === "high" && driftDetected);
 
-  // Create intermediate result to map to required action
+  // Create intermediate result to map to required action with commitment
   const intermediateResult: DriftDetectionResult = {
     engagementId,
     driftDetected,
@@ -196,8 +196,8 @@ export async function detectExecutionDrift(engagementId: string): Promise<DriftD
     detectedAt: new Date().toISOString(),
   };
 
-  // Map drift conditions to required action
-  const requiredAction = mapDriftToRequiredAction(intermediateResult);
+  // Map drift conditions to required action with commitment status
+  const requiredAction = await getRequiredActionWithCommitment(intermediateResult);
 
   const result: DriftDetectionResult = {
     ...intermediateResult,
