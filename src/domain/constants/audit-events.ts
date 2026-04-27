@@ -156,6 +156,7 @@ export const AUDIT_EVENTS = {
 
   // Execution Certainty
   EXECUTION_CERTAINTY_WARNING: "execution_certainty.warning",
+  EXECUTION_CERTAINTY_OVERRIDE: "execution_certainty.override",
 
   // Human Factors
   HUMAN_FACTORS_ASSESSED: "human_factors.assessed",

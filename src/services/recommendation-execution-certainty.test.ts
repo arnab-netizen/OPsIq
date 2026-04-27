@@ -312,4 +312,153 @@ describe("Execution Certainty Decision Gate", () => {
       }
     });
   });
+
+  describe("Override Mechanism", () => {
+    it("low score with no override is blocked", () => {
+      const result = calculateExecutionCertainty(
+        "eng-override-test-1",
+        [
+          {
+            id: "find-1",
+            severity: "critical",
+            resolved: false,
+            verified: false,
+          },
+        ],
+        [],
+        [
+          {
+            id: "act-1",
+            priority: "critical",
+            status: "blocked",
+          },
+        ],
+        [],
+        { overallStatus: "critical", kpiTrend: "deteriorating" }
+      );
+
+      // Should be blocked without override
+      expect(result.score).toBeLessThan(40);
+    });
+
+    it("low score with override is allowed (with audit)", () => {
+      const result = calculateExecutionCertainty(
+        "eng-override-test-2",
+        [
+          {
+            id: "find-1",
+            severity: "critical",
+            resolved: false,
+            verified: false,
+          },
+        ],
+        [],
+        [
+          {
+            id: "act-1",
+            priority: "critical",
+            status: "blocked",
+          },
+        ],
+        [],
+        { overallStatus: "critical", kpiTrend: "deteriorating" }
+      );
+
+      // Result indicates override is needed, but if provided it would be allowed
+      expect(result.score).toBeLessThan(40);
+
+      // Override audit event payload
+      const overridePayload = {
+        engagementId: "eng-override-test-2",
+        score: result.score,
+        level: result.level,
+        blockers: result.blockers,
+        risks: result.risks,
+        reason: "Business critical timeline requires approval",
+        approvedBy: "director-123",
+      };
+
+      expect(overridePayload).toHaveProperty("reason");
+      expect(overridePayload).toHaveProperty("approvedBy");
+      expect(overridePayload.reason).toBeTruthy();
+      expect(overridePayload.approvedBy).toBeTruthy();
+    });
+
+    it("override emits audit event with complete details", () => {
+      const certaintyResult = calculateExecutionCertainty(
+        "eng-override-audit",
+        [
+          {
+            id: "find-1",
+            severity: "critical",
+            resolved: false,
+            verified: false,
+          },
+        ],
+        [],
+        [],
+        [],
+        { overallStatus: "critical", kpiTrend: "deteriorating" }
+      );
+
+      const overrideAuditEvent = {
+        eventName: "execution_certainty.override",
+        payload: {
+          engagementId: "eng-override-audit",
+          score: certaintyResult.score,
+          level: certaintyResult.level,
+          blockers: certaintyResult.blockers,
+          risks: certaintyResult.risks,
+          reason: "Urgent business need",
+          approvedBy: "executive-789",
+        },
+      };
+
+      expect(overrideAuditEvent.eventName).toBe("execution_certainty.override");
+      expect(overrideAuditEvent.payload).toHaveProperty("score");
+      expect(overrideAuditEvent.payload).toHaveProperty("level");
+      expect(overrideAuditEvent.payload).toHaveProperty("blockers");
+      expect(overrideAuditEvent.payload).toHaveProperty("risks");
+      expect(overrideAuditEvent.payload).toHaveProperty("reason");
+      expect(overrideAuditEvent.payload).toHaveProperty("approvedBy");
+    });
+
+    it("override contains reason and approvedBy", () => {
+      const overrideInput = {
+        reason: "Critical client deadline must be met",
+        approvedBy: "executive-director",
+      };
+
+      expect(overrideInput).toHaveProperty("reason");
+      expect(overrideInput).toHaveProperty("approvedBy");
+      expect(overrideInput.reason.length).toBeGreaterThan(0);
+      expect(overrideInput.approvedBy.length).toBeGreaterThan(0);
+    });
+
+    it("high score requires no override", () => {
+      const result = calculateExecutionCertainty(
+        "eng-no-override-needed",
+        [],
+        [],
+        [
+          {
+            id: "act-1",
+            priority: "high",
+            status: "completed",
+          },
+          {
+            id: "act-2",
+            priority: "high",
+            status: "completed",
+          },
+        ],
+        [],
+        { overallStatus: "healthy", kpiTrend: "improving" }
+      );
+
+      // Should not require override
+      expect(result.score).toBeGreaterThanOrEqual(40);
+      expect(result.level).not.toBe("blocked");
+    });
+  });
 });

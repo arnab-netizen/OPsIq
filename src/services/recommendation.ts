@@ -24,6 +24,10 @@ export interface UpdateRecommendationInput {
   status?: string;
   priority?: string;
   version: number;
+  overrideExecutionCertainty?: {
+    reason: string;
+    approvedBy: string;
+  };
 }
 
 export interface RecommendationScoringInput {
@@ -398,43 +402,72 @@ export async function updateRecommendationStatus(
           }
         );
 
-        // Emit warning audit event (for observability)
+        // Check if execution certainty gate is failing
         if (certaintyResult.level === "blocked" || certaintyResult.score < 40) {
-          logger.warn("Execution certainty gate blocking recommendation approval", {
-            recommendationId,
-            engagementId: rec.engagementId,
-            score: certaintyResult.score,
-            level: certaintyResult.level,
-            blockers: certaintyResult.blockers,
-            risks: certaintyResult.risks,
-          });
+          // If override is provided, allow approval with override audit event
+          if (input.overrideExecutionCertainty) {
+            logger.warn("Execution certainty gate overridden for recommendation approval", {
+              recommendationId,
+              engagementId: rec.engagementId,
+              score: certaintyResult.score,
+              level: certaintyResult.level,
+              overrideReason: input.overrideExecutionCertainty.reason,
+              overriddenBy: input.overrideExecutionCertainty.approvedBy,
+            });
 
-          await emitAuditEvent({
-            eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_WARNING,
-            actorId,
-            entityType: "recommendation",
-            entityId: recommendationId,
-            payload: {
+            await emitAuditEvent({
+              eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_OVERRIDE,
+              actorId,
+              entityType: "recommendation",
+              entityId: recommendationId,
+              payload: {
+                engagementId: rec.engagementId,
+                score: certaintyResult.score,
+                level: certaintyResult.level,
+                blockers: certaintyResult.blockers,
+                risks: certaintyResult.risks,
+                reason: input.overrideExecutionCertainty.reason,
+                approvedBy: input.overrideExecutionCertainty.approvedBy,
+              },
+              visibility: "internal",
+            });
+          } else {
+            // No override provided, enforce gate by throwing error
+            logger.warn("Execution certainty gate blocking recommendation approval", {
+              recommendationId,
               engagementId: rec.engagementId,
               score: certaintyResult.score,
               level: certaintyResult.level,
               blockers: certaintyResult.blockers,
               risks: certaintyResult.risks,
-              reason: "Recommendation cannot be approved because execution certainty is too low",
-            },
-            visibility: "internal",
-          });
+            });
 
-          // Enforce gate: throw error to block approval
-          throw new ValidationError(
-            "Recommendation cannot be approved because execution certainty is too low",
-            {
-              score: certaintyResult.score,
-              level: certaintyResult.level,
-              blockers: certaintyResult.blockers,
-              risks: certaintyResult.risks,
-            }
-          );
+            await emitAuditEvent({
+              eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_WARNING,
+              actorId,
+              entityType: "recommendation",
+              entityId: recommendationId,
+              payload: {
+                engagementId: rec.engagementId,
+                score: certaintyResult.score,
+                level: certaintyResult.level,
+                blockers: certaintyResult.blockers,
+                risks: certaintyResult.risks,
+                reason: "Recommendation cannot be approved because execution certainty is too low",
+              },
+              visibility: "internal",
+            });
+
+            throw new ValidationError(
+              "Recommendation cannot be approved because execution certainty is too low",
+              {
+                score: certaintyResult.score,
+                level: certaintyResult.level,
+                blockers: certaintyResult.blockers,
+                risks: certaintyResult.risks,
+              }
+            );
+          }
         }
       }
     } catch (error) {
