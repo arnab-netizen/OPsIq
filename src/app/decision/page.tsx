@@ -14,6 +14,34 @@ interface DecisionResult {
   decision: 'APPROVED' | 'BLOCKED';
   expectedImpact: number;
   confidence: number;
+  explanation: {
+    summary: string;
+    drivers: Array<{
+      type: 'REVENUE' | 'COST' | 'NET';
+      value: number;
+      label?: string;
+    }>;
+    assumptions: string[];
+    risks: string[];
+    missingData: string[];
+    calculationTrace: {
+      baselineRevenue: number;
+      baselineCost: number;
+      revenueChange: number;
+      costChange: number;
+      netImpact: number;
+      formula: string;
+    };
+  };
+  reason?: 'LOW_CONFIDENCE' | 'NON_POSITIVE_IMPACT' | 'INVALID_INPUT';
+  decisionHash: string;
+  signedHash: string;
+  engineVersion: string;
+  inputsSnapshot: {
+    revenue: number;
+    cost: number;
+    timestamp: string;
+  };
 }
 
 export default function DecisionPage() {
@@ -53,6 +81,19 @@ export default function DecisionPage() {
     const costChange = parseFloat(formValues.costChange);
     const confidence = parseFloat(formValues.confidence);
 
+    // Validate all fields are present
+    if (
+      formValues.baselineRevenue.trim() === '' ||
+      formValues.baselineCost.trim() === '' ||
+      formValues.revenueChange.trim() === '' ||
+      formValues.costChange.trim() === '' ||
+      formValues.confidence.trim() === ''
+    ) {
+      setError('All fields are required');
+      return;
+    }
+
+    // Validate all are valid numbers
     if (
       isNaN(baselineRevenue) ||
       isNaN(baselineCost) ||
@@ -69,18 +110,59 @@ export default function DecisionPage() {
       return;
     }
 
-    // Log form values to console
-    console.log('Decision Form Submitted:', {
-      baselineRevenue,
-      baselineCost,
-      revenueChange,
-      costChange,
-      confidence,
-      timestamp: new Date().toISOString(),
-    });
+    setLoading(true);
 
-    // TODO: Call /api/run endpoint once ready
-    setLoading(false);
+    try {
+      // Prepare request payload per contract: POST /api/run
+      const requestPayload = {
+        revenue: baselineRevenue,
+        cost: baselineCost,
+      };
+
+      console.log('Calling /api/run with payload:', requestPayload);
+
+      const response = await fetch('/api/run', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      const data = await response.json() as DecisionResult;
+
+      if (!response.ok) {
+        // API returned error (HTTP 400 or 403)
+        // data still contains DecisionResult with reason explaining the block
+        const errorMessage =
+          data.reason === 'LOW_CONFIDENCE'
+            ? 'Decision blocked: Confidence level is too low'
+            : data.reason === 'NON_POSITIVE_IMPACT'
+              ? 'Decision blocked: Expected impact is not positive'
+              : data.reason === 'INVALID_INPUT'
+                ? 'Decision blocked: Invalid input parameters'
+                : `Decision blocked: ${data.explanation?.summary || 'Unknown error'}`;
+
+        setError(errorMessage);
+        // Still store result for transparency (user can see why it was blocked)
+        setResult(data);
+        setLoading(false);
+        return;
+      }
+
+      // Success: HTTP 200
+      console.log('Decision API response:', data);
+      setResult(data);
+      setError(null);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to get decision';
+      console.error('Decision API error:', err);
+      setError(`Network error: ${errorMessage}`);
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -224,33 +306,57 @@ export default function DecisionPage() {
           </button>
         </form>
 
-        {/* Result Display Placeholder */}
+        {/* Result Display */}
         {result && (
-          <div className="mt-8 rounded-lg border border-border bg-accent p-6">
-            <h2 className="text-lg font-semibold text-foreground mb-4">
-              Decision Result
-            </h2>
-            <div className="space-y-2">
-              <p>
-                <span className="font-medium">Decision:</span>{' '}
-                <span
-                  className={
-                    result.decision === 'APPROVED'
-                      ? 'text-success'
-                      : 'text-destructive'
-                  }
-                >
-                  {result.decision}
-                </span>
-              </p>
-              <p>
-                <span className="font-medium">Expected Impact:</span> $
-                {result.expectedImpact.toFixed(2)}
-              </p>
-              <p>
-                <span className="font-medium">Confidence:</span>{' '}
-                {(result.confidence * 100).toFixed(0)}%
-              </p>
+          <div className="mt-8 space-y-6">
+            {/* Decision Summary */}
+            <div className="rounded-lg border border-border bg-accent p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">
+                Decision Result
+              </h2>
+              <div className="space-y-2">
+                <p>
+                  <span className="font-medium">Decision:</span>{' '}
+                  <span
+                    className={
+                      result.decision === 'APPROVED'
+                        ? 'text-success font-semibold'
+                        : 'text-destructive font-semibold'
+                    }
+                  >
+                    {result.decision}
+                  </span>
+                </p>
+                {result.reason && (
+                  <p>
+                    <span className="font-medium">Reason:</span> {result.reason}
+                  </p>
+                )}
+                <p>
+                  <span className="font-medium">Expected Impact:</span> $
+                  {result.expectedImpact.toFixed(2)}
+                </p>
+                <p>
+                  <span className="font-medium">Confidence:</span>{' '}
+                  {(result.confidence * 100).toFixed(0)}%
+                </p>
+                <p>
+                  <span className="font-medium">Summary:</span>{' '}
+                  <span className="text-sm text-muted-foreground">
+                    {result.explanation.summary}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Debug Result - Raw JSON */}
+            <div className="rounded-lg border border-border bg-muted p-4">
+              <h3 className="text-sm font-medium text-foreground mb-2">
+                Debug Result (Raw JSON)
+              </h3>
+              <pre className="overflow-x-auto rounded bg-background p-3 text-xs text-foreground">
+                <code>{JSON.stringify(result, null, 2)}</code>
+              </pre>
             </div>
           </div>
         )}
