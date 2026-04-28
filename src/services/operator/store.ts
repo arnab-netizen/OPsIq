@@ -38,6 +38,15 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
     if (item.signedHash) {
       data.signedHash = item.signedHash;
     }
+    if (item.signature) {
+      data.signature = item.signature;
+    }
+    if (item.signatureAlgo) {
+      data.signatureAlgo = item.signatureAlgo;
+    }
+    if (item.publicKeyId) {
+      data.publicKeyId = item.publicKeyId;
+    }
     if (item.engineVersion) {
       data.engineVersion = item.engineVersion;
     }
@@ -67,6 +76,9 @@ export async function getItems(): Promise<OperatorItem[]> {
       : undefined,
     decisionHash: r.decisionHash || undefined,
     signedHash: r.signedHash || undefined,
+    signature: r.signature || undefined,
+    signatureAlgo: r.signatureAlgo || undefined,
+    publicKeyId: r.publicKeyId || undefined,
     engineVersion: r.engineVersion || "v1.0.0",
     createdAt: r.createdAt.toISOString(),
     blockingDependencies: [],
