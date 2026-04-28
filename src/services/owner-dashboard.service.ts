@@ -6,6 +6,7 @@ import { detectExecutionDrift, type DriftDetectionResult } from "./execution-dri
 import { computeDecisionConfidence, type DecisionConfidenceResult } from "./decision-confidence/decision-confidence.service";
 import { normalizeFinancialImpact, type FinancialImpactNormalized } from "./financial-normalization/financial-normalization.service";
 import { generateBusinessImpact } from "./business-impact/business-impact.service";
+import { getPrimaryDecision, type PrimaryDecision } from "./decision-control/decision-control.service";
 
 export interface DashboardAction {
   id: string;
@@ -52,6 +53,7 @@ export interface OwnerDashboardData {
   openRecommendations: DashboardRecommendation[];
   nextBestAction: NextBestAction | null;
   businessImpact: BusinessImpact;
+  primaryDecision?: PrimaryDecision;
   decisionConfidence?: DecisionConfidenceResult;
   financialImpactNormalized?: FinancialImpactNormalized;
   generatedAt: string;
@@ -253,10 +255,11 @@ export async function getOwnerDashboard(engagementId: string): Promise<OwnerDash
   // Detect execution drift
   const drift = await detectExecutionDrift(engagementId);
 
-  // Compute decision confidence and financial normalization in parallel
-  const [decisionConfidence, businessImpactResult] = await Promise.all([
+  // Compute decision confidence, financial normalization, and primary decision in parallel
+  const [decisionConfidence, businessImpactResult, primaryDecision] = await Promise.all([
     computeDecisionConfidence({ engagementId }),
     generateBusinessImpact(engagementId, engagement.id),
+    getPrimaryDecision(engagementId),
   ]);
 
   const financialImpactNormalized = normalizeFinancialImpact({
@@ -279,6 +282,7 @@ export async function getOwnerDashboard(engagementId: string): Promise<OwnerDash
     openRecommendations,
     nextBestAction,
     businessImpact,
+    primaryDecision,
     decisionConfidence,
     financialImpactNormalized,
     generatedAt: new Date().toISOString(),

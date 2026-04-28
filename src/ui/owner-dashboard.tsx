@@ -113,6 +113,17 @@ interface FinancialImpactNormalized {
   reasons: string[];
 }
 
+interface PrimaryDecision {
+  decisionId: string;
+  type: "immediate" | "urgent" | "recommended";
+  actionId: string | null;
+  title: string;
+  instruction: string;
+  consequence: string;
+  confidenceScore: number;
+  rationale: string[];
+}
+
 interface OwnerDashboardData {
   engagementId: string;
   engagementCode: string;
@@ -128,6 +139,7 @@ interface OwnerDashboardData {
   openRecommendations: DashboardRecommendation[];
   nextBestAction: NextBestAction | null;
   businessImpact: BusinessImpact | BusinessImpactLevel;
+  primaryDecision?: PrimaryDecision;
   decisionConfidence?: DecisionConfidenceResult;
   financialImpactNormalized?: FinancialImpactNormalized;
   generatedAt: string;
@@ -217,6 +229,9 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
 
     fetchImpactDelta();
   }, [data?.nextBestAction?.id]);
+
+  const isImmediateDecision = data?.primaryDecision?.type === "immediate";
+  const primaryActionId = data?.primaryDecision?.actionId;
 
   const handleAcknowledge = async () => {
     if (!data) return;
@@ -318,6 +333,71 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
           <span>Generated {new Date(data.generatedAt).toLocaleString()}</span>
         </div>
       </div>
+
+      {/* Primary Decision Banner */}
+      {data.primaryDecision && (
+        <div
+          className={`rounded-lg border p-4 ${
+            data.primaryDecision.type === "immediate"
+              ? "border-destructive/50 bg-destructive/10"
+              : data.primaryDecision.type === "urgent"
+                ? "border-warning/50 bg-warning/10"
+                : "border-blue-500/50 bg-blue-500/10"
+          }`}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={
+                    data.primaryDecision.type === "immediate"
+                      ? "destructive"
+                      : data.primaryDecision.type === "urgent"
+                        ? "warning"
+                        : "default"
+                  }
+                >
+                  {data.primaryDecision.type === "immediate"
+                    ? "Action Required Now"
+                    : data.primaryDecision.type === "urgent"
+                      ? "Urgent"
+                      : "Recommended"}
+                </Badge>
+              </div>
+              <h2 className="mt-2 font-semibold">{data.primaryDecision.title}</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{data.primaryDecision.instruction}</p>
+              <p className="mt-2 text-xs font-medium">Consequence:</p>
+              <p className="text-xs text-muted-foreground">{data.primaryDecision.consequence}</p>
+              {data.primaryDecision.rationale.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs font-medium">Why:</p>
+                  <ul className="mt-1 space-y-1">
+                    {data.primaryDecision.rationale.map((reason, idx) => (
+                      <li key={idx} className="text-xs text-muted-foreground">
+                        • {reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+            {data.primaryDecision.actionId && (
+              <button
+                onClick={() => {
+                  if (data.primaryDecision?.actionId) {
+                    router.push(
+                      `/engagements/${data.engagementId}/actions/${data.primaryDecision.actionId}`
+                    );
+                  }
+                }}
+                className="ml-4 whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                View Action
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Top Row: Engagement Health, Execution Certainty, Decision Confidence, Financial Impact */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -823,7 +903,13 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
 
       {/* Overdue Actions */}
       {data.overdueActions.length > 0 && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+        <div
+          className={`rounded-lg border border-destructive/30 bg-destructive/5 p-4 ${
+            isImmediateDecision && !data.overdueActions.some((a) => a.id === primaryActionId)
+              ? "pointer-events-none opacity-50"
+              : ""
+          }`}
+        >
           <p className="text-sm font-medium text-destructive">
             ⏰ {data.overdueActions.length} Overdue Action(s)
           </p>
@@ -849,7 +935,13 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
 
       {/* Critical Actions */}
       {data.criticalActions.length > 0 && (
-        <div className="rounded-lg border border-warning/30 bg-warning/5 p-4">
+        <div
+          className={`rounded-lg border border-warning/30 bg-warning/5 p-4 ${
+            isImmediateDecision && !data.criticalActions.some((a) => a.id === primaryActionId)
+              ? "pointer-events-none opacity-50"
+              : ""
+          }`}
+        >
           <p className="text-sm font-medium text-warning">
             🔥 {data.criticalActions.length} Critical Action(s)
           </p>
@@ -869,7 +961,13 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
 
       {/* Open Recommendations */}
       {data.openRecommendations.length > 0 && (
-        <div className="rounded-lg border border-border bg-card p-4">
+        <div
+          className={`rounded-lg border border-border bg-card p-4 ${
+            isImmediateDecision && !data.openRecommendations.some((r) => r.id === primaryActionId)
+              ? "pointer-events-none opacity-50"
+              : ""
+          }`}
+        >
           <p className="text-sm font-medium">
             💡 {data.openRecommendations.length} Open Recommendation(s)
           </p>
