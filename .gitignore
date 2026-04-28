@@ -51,3 +51,6 @@ test.db
 
 # v8 reference architecture (not for production)
 /v8
+
+# asymmetric signing keys (sensitive - never commit)
+/.keys/
