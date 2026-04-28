@@ -2,16 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { OperatorItem as OperatorItemComponent } from "@/components/OperatorItem";
-
-interface OperatorItem {
-  id: string;
-  problem: string;
-  action: string;
-  impactExpected: number;
-  confidence: number;
-  priorityScore: number;
-  status: "pending" | "in_progress" | "done";
-}
+import type { OperatorItem } from "@/domain/operator/types";
 
 export default function MyDayPage() {
   const [items, setItems] = useState<OperatorItem[]>([]);
