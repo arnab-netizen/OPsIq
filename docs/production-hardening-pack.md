@@ -510,9 +510,105 @@ All Phase 1–5 endpoints. Auth column = "session" (requireSession) or "none" (r
 ---
 
 ## 10. Test Matrix
-**Placeholder** — Will detail unit, API, regression tests for all 8 P0 areas.
+
+| Area | Unit Test | API Test | Acceptance Criteria |
+|------|-----------|----------|---|
+| **Persistence** | OperatorItem, CalibrationRecord, OverrideRecord CRUD | POST /api/operator, POST /api/override persists | Data survives DB query after POST; in-memory ≠ DB |
+| **Auth** | requireSession throws on invalid token | Unauthenticated POST returns 403 | No endpoint accepts unauthenticated mutation |
+| **Financial** | calculateImpact rejects confidence < 0.4 | POST /api/run validates baseline_id | Hardcoded values removed; baseline required |
+| **Audit** | emitAuditEvent writes to DB | POST /api/operator emits decision_run | All mutations create AuditEvent row; queryable |
+| **Safety** | Low confidence throws, zero impact throws | POST /api/run rejects invalid input | backbone.test.ts all 3 tests pass |
+| **Webhooks** | WebhookDelivery model CRUD | POST /api/operator creates pending delivery | No console.log; delivery row created; status tracked |
+| **Role Removal** | Fixture: no role param in POST bodies | Grep all routes for "role" in body | Zero occurrences of role from request body |
+| **Policy** | evaluatePolicy returns requiresApproval | POST /api/operator blocks >$100k impact | High-impact items blocked until approved |
+
+**Run Checks (all P0):**
+```bash
+npm test                          # backbone.test.ts + new tests pass
+npm run typecheck                 # No TS errors
+npm run lint                      # No lint warnings
+grep -r "console.log" src/app/api/operator src/app/api/override src/services/audit src/services/integration  # Should be empty
+grep -r "let store.*=" src/services/operator src/services/override src/services/entity  # Should be empty (migrated to DB)
+```
 
 ---
 
 ## 11. Implementation Sequence
-**Placeholder** — Will detail 8 token-safe prompts, one per P0 blocker, with exact files and acceptance criteria.
+
+### P0.1 Prompt: Add Prisma Models & Migrate Persistence
+
+**Files to modify:** `prisma/schema.prisma`, `prisma/migrations/*.sql`, `src/infra/seed.ts`
+
+**Task:** Create 8 models (OperatorItem, CalibrationRecord, OverrideRecord, Entity, EntityLink, WebhookDelivery, FinancialBaseline, AuditEvent if missing). Add UUID PKs, FKs to User, timestamps, indexes. Run migration. Seed in-memory data to DB.
+
+**Checks:** `npx prisma generate`, `npx prisma migrate dev`, `npx prisma db seed` succeed. All 8 tables exist in database.
+
+---
+
+### P0.2 Prompt: Add Session Auth to Phase 1–5 APIs
+
+**Files to modify:** `src/app/api/operator/route.ts`, `src/app/api/override/route.ts`, `src/app/api/entity/route.ts`, `src/app/api/scenario/route.ts`, `src/app/api/run/route.ts`
+
+**Task:** Import requireSession from `src/services/auth`. Add `const session = await requireSession()` at start of every POST handler. Return 403 if unauthorized. Remove role parameter from request body. Use `session.user.id` as actorId in audit event.
+
+**Checks:** `npm test`, `npm run typecheck`. Unauthenticated POST returns 403. No role param in any request body.
+
+---
+
+### P0.3 Prompt: Remove Role-from-Body Authorization
+
+**Files to modify:** All 6 mutation API routes (same as P0.2)
+
+**Task:** Delete `const { role } = body` lines. Delete canEdit/canView calls. Replace with requireCapability(session, capabilityName) or implicit permission from requireSession.
+
+**Checks:** Grep returns 0 matches for `role.*body` or `body.*role`. TypeCheck passes.
+
+---
+
+### P0.4 Prompt: Remove Hardcoded Baselines & Store Assumptions
+
+**Files to modify:** `src/services/finance/normalize.ts`, `src/services/system/run.ts`, `src/app/api/run/route.ts`, `src/app/api/scenario/route.ts`, `src/domain/finance/types.ts`
+
+**Task:** Remove hardcoded baseline (10000, 5000) from runSystem. Remove hardcoded multipliers (0.7, 1.3). Make calculateImpact accept multipliers as params. POST /api/run requires `baselineId` param (return 400 if missing). OperatorItem.assumptions stores {baseline_id, multipliers, confidence_threshold}.
+
+**Checks:** `npm test` (financial unit tests pass). grep finds 0 hardcoded multipliers in code. No baseline creation without explicit source.
+
+---
+
+### P0.5 Prompt: Emit Audit Events for All Mutations
+
+**Files to modify:** `src/app/api/operator/route.ts`, `src/app/api/override/route.ts`, `src/app/api/entity/route.ts`, `src/app/api/scenario/route.ts`, `src/app/api/run/route.ts`
+
+**Task:** Import emitAuditEvent from `src/infra/audit`. After every DB mutation, call emitAuditEvent({eventName: "operator_updated", actorId: session.user.id, entityType: "OperatorItem", entityId: item.id, payload: {before, after}}).
+
+**Checks:** `npm test`. Query database: `SELECT COUNT(*) FROM audit_events WHERE event_name='operator_updated'` > 0.
+
+---
+
+### P0.6 Prompt: Fix Fail-Closed Safety Checks
+
+**Files to modify:** `src/services/finance/normalize.ts`, `src/services/system/run.ts`, `src/domain/finance/types.ts`, `src/__tests__/backbone.test.ts`
+
+**Task:** Validate confidence < 0.4 BEFORE clamping. Validate final impact != 0 AFTER calculateImpact. Rename confidenceWeight → confidence in ImpactEstimate. Update tests to match.
+
+**Checks:** `npm test` passes all 3 backbone tests (high risk scenario, low confidence blocked, zero impact blocked). No clamp before validation.
+
+---
+
+### P0.7 Prompt: Persist Webhooks to DB with Retry Logic
+
+**Files to modify:** `src/services/integration/webhook.ts`, `src/app/api/operator/route.ts`
+
+**Task:** Replace console.log. On action completion, create WebhookDelivery row (status: pending, url: process.env.WEBHOOK_URL, payload: action snapshot). If no URL, skip. Add async delivery function with 3-retry backoff (5s, 25s, 125s).
+
+**Checks:** No console.log in webhook code. WebhookDelivery table has rows. grep returns 0 for `console.log.*webhook`.
+
+---
+
+### P0.8 Prompt: Fix Failing Tests
+
+**Files to modify:** `src/__tests__/backbone.test.ts`
+
+**Task:** Ensure all 3 backbone tests pass (high risk scenario, low confidence blocked, zero impact blocked). Fix field names (confidence vs confidenceWeight). Update test setup to not use hardcoded baseline.
+
+**Checks:** `npm test -- src/__tests__/backbone.test.ts` all pass. No skipped tests.
