@@ -8,6 +8,10 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { recordOutcome } from "@/services/outcome/outcome.service";
+import { logger } from "@/infra/logger";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export const PATCH = withRequestContext(async (_request, context) => {
   const { actionId } = await context.params;
@@ -58,7 +62,10 @@ export const PATCH = withRequestContext(async (_request, context) => {
     await recordOutcome(actionId);
   } catch (err) {
     // Log but don't fail the action completion
-    console.error("Failed to record outcome:", err);
+    logger.error("Failed to record outcome", {
+      actionId,
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 
   const result = await getActionById(actionId);

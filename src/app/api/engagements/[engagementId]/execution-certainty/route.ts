@@ -6,6 +6,9 @@ import { assertEngagementAccess } from "@/lib/visibility";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import { db } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);

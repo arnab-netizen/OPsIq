@@ -7,6 +7,9 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export const POST = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);

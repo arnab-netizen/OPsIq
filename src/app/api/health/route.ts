@@ -2,6 +2,9 @@ import { withRequestContext } from "@/lib/api-handler";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export const GET = withRequestContext(async () => {
   const checks: Record<string, { status: string; latencyMs?: number; error?: string }> = {};
 

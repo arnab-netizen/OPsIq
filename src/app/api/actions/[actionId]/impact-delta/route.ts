@@ -6,6 +6,9 @@ import { calculateImpactDelta } from "@/services/business-impact/impact-delta.se
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export const GET = withRequestContext(async (_request, context) => {
   const { actionId } = await context.params;
   parseOrThrow(uuidSchema, actionId);

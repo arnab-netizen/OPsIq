@@ -29,6 +29,9 @@ interface DetailResponse {
   };
 }
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);

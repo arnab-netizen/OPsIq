@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { ExecutionCertaintyCard } from "./execution-certainty-card";
 
 vi.mock("next/link", () => ({
-  default: ({ children, href }: any) => <a href={href}>{children}</a>,
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));
 
 describe("ExecutionCertaintyCard", () => {

@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     resolveAlias: {},
   },
+  webpack: (config) => {
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: /v8\/.*/,
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

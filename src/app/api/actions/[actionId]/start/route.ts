@@ -8,6 +8,9 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 export const PATCH = withRequestContext(async (_request, context) => {
   const { actionId } = await context.params;
   parseOrThrow(uuidSchema, actionId);

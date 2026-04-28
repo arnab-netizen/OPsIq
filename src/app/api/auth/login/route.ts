@@ -11,6 +11,9 @@ import { z } from "zod/v4";
 import { cookies } from "next/headers";
 import * as bcrypt from "bcryptjs";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 const loginSchema = z.object({
   email: z.email(),
   password: z.string().min(1),

@@ -124,6 +124,40 @@ interface PrimaryDecision {
   rationale: string[];
 }
 
+interface ActionImpactDelta {
+  current: {
+    impactLevel: string;
+  };
+  ifCompleted: {
+    impactLevel: string;
+    estimatedLossReduction?: number;
+  };
+}
+
+interface ActionOutcome {
+  actionId: string;
+  engagementId: string;
+  predictedImpact: string;
+  actualImpact: string;
+  predictedLossINR: number | null;
+  actualLossINR: number | null;
+  valueRecoveredINR: number | null;
+  delta: string;
+  accuracyScore: number;
+  timestamp: string;
+}
+
+interface EngagementOutcomes {
+  outcomes: ActionOutcome[];
+  averageAccuracy: number;
+  totalValueRecoveredINR: number;
+  financialMetrics: {
+    totalRecoveredINR: number;
+    currentRiskINR: number | null;
+    avgPerActionINR: number;
+  };
+}
+
 interface OwnerDashboardData {
   engagementId: string;
   engagementCode: string;
@@ -177,8 +211,8 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMutating, setIsMutating] = useState(false);
-  const [actionDelta, setActionDelta] = useState<any>(null);
-  const [outcomes, setOutcomes] = useState<any>(null);
+  const [actionDelta, setActionDelta] = useState<ActionImpactDelta | null>(null);
+  const [outcomes, setOutcomes] = useState<EngagementOutcomes | null>(null);
 
   const fetchDashboard = async () => {
     try {
@@ -1053,7 +1087,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
             <div className="mt-4">
               <p className="text-xs font-medium text-muted-foreground">Last 3 Outcomes</p>
               <div className="mt-2 space-y-2">
-                {outcomes.outcomes.slice(0, 3).map((outcome: any) => (
+                {outcomes.outcomes.slice(0, 3).map((outcome: ActionOutcome) => (
                   <div key={outcome.actionId} className="rounded bg-muted/50 p-2">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">

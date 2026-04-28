@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { OwnerDashboard } from "./owner-dashboard";
 
 vi.mock("next/link", () => ({
-  default: ({ children, href }: any) => <a href={href}>{children}</a>,
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => <a href={href}>{children}</a>,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -13,7 +13,11 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-const createMockDashboardData = (overrides?: any) => ({
+interface DashboardDataOverrides {
+  [key: string]: unknown;
+}
+
+const createMockDashboardData = (overrides?: DashboardDataOverrides) => ({
   engagementId: "eng-123",
   engagementCode: "ENG-001",
   engagementTitle: "Test",
