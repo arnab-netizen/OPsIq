@@ -65,6 +65,15 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    label: "Scenario Lab",
+    href: "/scenario",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.045-.75.045m.75-.045v.005m0 0h.008v.005m0 0H9A15.75 15.75 0 016.908 17.5M9.75 3.104v1.5a2.25 2.25 0 01-1.591.659H5.25c-.341 0-.671.041-.99.124m10.5 0h.008v.005m0 0H14.25c.341 0 .671-.041.99-.124M3 6.75V3m18 3.75V3m0 18h-18v-3.75m18 3.75V21m-18 3.75h18v-3.75" />
+      </svg>
+    ),
+  },
 ];
 
 export function SidebarNav() {
