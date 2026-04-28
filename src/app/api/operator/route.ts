@@ -1,7 +1,10 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getItems } from "@/services/operator/store";
+import {
+  getItems,
+  updateItem,
+  addCalibrationRecord,
+} from "@/services/operator/store";
 import { sortByPriority } from "@/services/operator/sort";
-import { updateItem } from "@/services/operator/store";
 
 export async function GET() {
   try {
@@ -24,6 +27,28 @@ export async function POST(request: NextRequest) {
         { error: "Missing required field: id" },
         { status: 400 }
       );
+    }
+
+    // Capture calibration when task is completed
+    if (status === "done") {
+      if (typeof actualOutcome !== "number") {
+        return NextResponse.json(
+          { error: "Missing or invalid field: actualOutcome must be a number" },
+          { status: 400 }
+        );
+      }
+
+      const items = getItems();
+      const item = items.find((i) => i.id === id);
+
+      if (item) {
+        addCalibrationRecord(
+          id,
+          item.impactExpected,
+          actualOutcome,
+          item.confidence
+        );
+      }
     }
 
     updateItem(id, { status, actualOutcome });
