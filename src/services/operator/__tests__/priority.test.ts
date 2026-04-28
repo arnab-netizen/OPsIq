@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { calculatePriorityScore, calculatePriority } from "../priority";
+import { calculatePriorityScore, calculatePriority, getCalibrationMultiplier } from "../priority";
 import { OperatorItem } from "@/domain/operator/types";
 
 describe("calculatePriorityScore - Deterministic Priority Scoring Engine", () => {
@@ -244,6 +244,248 @@ describe("calculatePriorityScore - Deterministic Priority Scoring Engine", () =>
   });
 });
 
+describe("getCalibrationMultiplier - Adaptive Priority Based on Accuracy", () => {
+  describe("Low Accuracy (< 0.5) - Reduce Priority Weight", () => {
+    it("should return 0.5 for zero accuracy (worst case)", () => {
+      const multiplier = getCalibrationMultiplier(0);
+      expect(multiplier).toBe(0.5);
+    });
+
+    it("should return 0.75 for accuracy = 0.25", () => {
+      const multiplier = getCalibrationMultiplier(0.25);
+      expect(multiplier).toBe(0.75); // 0.5 + (0.25 / 0.5) * 0.5 = 0.75
+    });
+
+    it("should return 1.0 for accuracy = 0.5 (boundary)", () => {
+      const multiplier = getCalibrationMultiplier(0.5);
+      expect(multiplier).toBe(1.0); // 0.5 + (0.5 / 0.5) * 0.5 = 1.0
+    });
+
+    it("should scale linearly from 0.5 to 1.0 for accuracies 0 to 0.5", () => {
+      const acc0 = getCalibrationMultiplier(0);
+      const acc025 = getCalibrationMultiplier(0.25);
+      const acc05 = getCalibrationMultiplier(0.5);
+
+      expect(acc0).toBe(0.5);
+      expect(acc025).toBe(0.75);
+      expect(acc05).toBe(1.0);
+
+      // Verify linear spacing
+      expect(acc025 - acc0).toBeCloseTo(0.25, 4);
+      expect(acc05 - acc025).toBeCloseTo(0.25, 4);
+    });
+  });
+
+  describe("Normal Accuracy (0.5-0.8) - Keep Weight", () => {
+    it("should return 1.0 for accuracy = 0.5", () => {
+      const multiplier = getCalibrationMultiplier(0.5);
+      expect(multiplier).toBe(1.0);
+    });
+
+    it("should return 1.0 for accuracy = 0.65", () => {
+      const multiplier = getCalibrationMultiplier(0.65);
+      expect(multiplier).toBe(1.0);
+    });
+
+    it("should return 1.0 for accuracy = 0.8", () => {
+      const multiplier = getCalibrationMultiplier(0.8);
+      expect(multiplier).toBe(1.0);
+    });
+  });
+
+  describe("High Accuracy (> 0.8) - Increase Priority Weight", () => {
+    it("should return 1.0 for accuracy = 0.8 (boundary)", () => {
+      const multiplier = getCalibrationMultiplier(0.8);
+      expect(multiplier).toBe(1.0);
+    });
+
+    it("should return ~1.143 for accuracy = 1.0 (perfect)", () => {
+      const multiplier = getCalibrationMultiplier(1.0);
+      // 1.0 + ((1.0 - 0.8) / 0.7) * 0.5 = 1.0 + (0.2/0.7)*0.5 ≈ 1.1429
+      expect(multiplier).toBeCloseTo(1.1429, 4);
+    });
+
+    it("should return 1.25 for accuracy = 1.15", () => {
+      const multiplier = getCalibrationMultiplier(1.15);
+      // 1.0 + ((1.15 - 0.8) / 0.7) * 0.5 = 1.0 + (0.35/0.7)*0.5 = 1.25
+      expect(multiplier).toBe(1.25);
+    });
+
+    it("should return 1.5 for accuracy = 1.5 (max bounded)", () => {
+      const multiplier = getCalibrationMultiplier(1.5);
+      expect(multiplier).toBe(1.5); // Capped at 1.5
+    });
+
+    it("should return 1.5 for accuracy = 2.0 (over-prediction, capped)", () => {
+      const multiplier = getCalibrationMultiplier(2.0);
+      expect(multiplier).toBe(1.5); // Capped at 1.5
+    });
+
+    it("should scale linearly from 1.0 to 1.5 for accuracies 0.8 to 1.5", () => {
+      const acc08 = getCalibrationMultiplier(0.8);
+      const acc115 = getCalibrationMultiplier(1.15);
+      const acc15 = getCalibrationMultiplier(1.5);
+
+      expect(acc08).toBe(1.0);
+      expect(acc115).toBe(1.25);
+      expect(acc15).toBe(1.5);
+
+      // Verify equal spacing: each should add 0.25
+      expect(acc115 - acc08).toBeCloseTo(0.25, 4);
+      expect(acc15 - acc115).toBeCloseTo(0.25, 4);
+    });
+  });
+
+  describe("Edge Cases and Null Safety", () => {
+    it("should return 1.0 for null accuracy", () => {
+      const multiplier = getCalibrationMultiplier(null);
+      expect(multiplier).toBe(1.0);
+    });
+
+    it("should return 1.0 for undefined accuracy", () => {
+      const multiplier = getCalibrationMultiplier(undefined);
+      expect(multiplier).toBe(1.0);
+    });
+
+    it("should return 1.0 for negative accuracy (invalid)", () => {
+      const multiplier = getCalibrationMultiplier(-0.5);
+      expect(multiplier).toBe(1.0);
+    });
+
+    it("should return 1.0 for accuracy > 2.0 (invalid)", () => {
+      const multiplier = getCalibrationMultiplier(3.0);
+      expect(multiplier).toBe(1.0);
+    });
+  });
+
+  describe("Deterministic Behavior", () => {
+    it("should produce same multiplier for same accuracy", () => {
+      const mult1 = getCalibrationMultiplier(0.75);
+      const mult2 = getCalibrationMultiplier(0.75);
+      const mult3 = getCalibrationMultiplier(0.75);
+
+      expect(mult1).toBe(mult2);
+      expect(mult2).toBe(mult3);
+    });
+  });
+});
+
+describe("calculatePriorityScore with Calibration", () => {
+  describe("Accuracy Adjustment Impact", () => {
+    it("should reduce priority when accuracy < 0.5", () => {
+      const baseInput = {
+        impactExpected: 100,
+        confidence: 0.8,
+        dueAt: undefined,
+      };
+
+      const noAccuracy = calculatePriorityScore(baseInput);
+      const lowAccuracy = calculatePriorityScore({
+        ...baseInput,
+        historicalAccuracy: 0.25,
+      });
+
+      expect(noAccuracy).toBe(80); // 100 * 0.8 * 1.0
+      expect(lowAccuracy).toBe(60); // 100 * 0.8 * 0.75
+      expect(lowAccuracy).toBeLessThan(noAccuracy);
+    });
+
+    it("should keep priority when accuracy is 0.5-0.8", () => {
+      const baseInput = {
+        impactExpected: 100,
+        confidence: 0.8,
+        dueAt: undefined,
+      };
+
+      const normalAccuracy = calculatePriorityScore({
+        ...baseInput,
+        historicalAccuracy: 0.65,
+      });
+
+      expect(normalAccuracy).toBe(80); // 100 * 0.8 * 1.0
+    });
+
+    it("should increase priority when accuracy > 0.8", () => {
+      const baseInput = {
+        impactExpected: 100,
+        confidence: 0.8,
+        dueAt: undefined,
+      };
+
+      const noAccuracy = calculatePriorityScore(baseInput);
+      const highAccuracy = calculatePriorityScore({
+        ...baseInput,
+        historicalAccuracy: 1.15,
+      });
+
+      expect(noAccuracy).toBe(80); // 100 * 0.8 * 1.0
+      expect(highAccuracy).toBe(100); // 100 * 0.8 * 1.25
+      expect(highAccuracy).toBeGreaterThan(noAccuracy);
+    });
+  });
+
+  describe("Combined Urgency and Calibration", () => {
+    it("should apply both urgency and calibration multipliers", () => {
+      const now = new Date();
+      const dueAt = new Date(now.getTime() + 9 * 60 * 60 * 1000); // 9 hours (2x urgency)
+
+      const score = calculatePriorityScore({
+        impactExpected: 100,
+        confidence: 0.5,
+        dueAt,
+        historicalAccuracy: 1.15, // 1.25x calibration
+      });
+
+      // 100 * 0.5 * 2 * 1.25 = 125
+      expect(score).toBe(125);
+    });
+
+    it("should reduce priority when urgency is high but accuracy is low", () => {
+      const now = new Date();
+      const dueAt = new Date(now.getTime() + 3 * 60 * 60 * 1000); // 3 hours (3x urgency)
+
+      const score = calculatePriorityScore({
+        impactExpected: 100,
+        confidence: 0.5,
+        dueAt,
+        historicalAccuracy: 0.25, // 0.75x calibration
+      });
+
+      // 100 * 0.5 * 3 * 0.75 = 112.5
+      expect(score).toBe(112.5);
+    });
+  });
+
+  describe("Bounded Behavior (No Priority Explosion)", () => {
+    it("should still clamp to 10000 with calibration multiplier", () => {
+      const score = calculatePriorityScore({
+        impactExpected: 100000,
+        confidence: 0.2,
+        dueAt: undefined,
+        historicalAccuracy: 1.0, // 1.25x multiplier
+      });
+
+      // Would be 100000 * 0.2 * 1.25 = 25000, clamped to 10000
+      expect(score).toBe(10000);
+    });
+
+    it("should maintain bounds with all multipliers combined", () => {
+      const now = new Date();
+      const dueAt = new Date(now.getTime() + 3 * 60 * 60 * 1000); // 3x urgency
+
+      const score = calculatePriorityScore({
+        impactExpected: 50000,
+        confidence: 0.5,
+        dueAt,
+        historicalAccuracy: 1.5, // Over-calibrated (capped at 1.5)
+      });
+
+      // Would be 50000 * 0.5 * 3 * 1.5 = 112500, clamped to 10000
+      expect(score).toBe(10000);
+    });
+  });
+});
+
 describe("calculatePriority - Legacy Function", () => {
   it("should work with OperatorItem and calculate deterministic priority", () => {
     const item: OperatorItem = {
@@ -265,7 +507,7 @@ describe("calculatePriority - Legacy Function", () => {
     };
 
     const score = calculatePriority(item);
-    expect(score).toBe(140); // 200 * 0.7 * 1
+    expect(score).toBe(140); // 200 * 0.7 * 1 (no historical accuracy)
   });
 
   it("should return 0 for items with zero or negative impact", () => {
@@ -289,5 +531,53 @@ describe("calculatePriority - Legacy Function", () => {
 
     const score = calculatePriority(item);
     expect(score).toBe(0);
+  });
+
+  it("should use decisionAccuracy from OperatorItem as historicalAccuracy", () => {
+    const itemWithLowAccuracy: OperatorItem = {
+      id: "test-1",
+      problem: "Test problem",
+      action: "Test action",
+      impactExpected: 100,
+      impactLow: 50,
+      impactHigh: 150,
+      confidence: 0.8,
+      priorityScore: 0,
+      status: "pending",
+      dueAt: null,
+      blockingDependencies: [],
+      expectedOutcome: null,
+      actualOutcome: null,
+      decisionAccuracy: 0.25, // Low accuracy
+      engineVersion: "v1.0.0",
+      createdAt: new Date().toISOString(),
+    };
+
+    const score = calculatePriority(itemWithLowAccuracy);
+    expect(score).toBe(60); // 100 * 0.8 * 0.75 (reduced by low accuracy)
+  });
+
+  it("should increase priority for items with high decisionAccuracy", () => {
+    const itemWithHighAccuracy: OperatorItem = {
+      id: "test-2",
+      problem: "Test problem",
+      action: "Test action",
+      impactExpected: 100,
+      impactLow: 50,
+      impactHigh: 150,
+      confidence: 0.8,
+      priorityScore: 0,
+      status: "pending",
+      dueAt: null,
+      blockingDependencies: [],
+      expectedOutcome: null,
+      actualOutcome: null,
+      decisionAccuracy: 1.15, // High accuracy
+      engineVersion: "v1.0.0",
+      createdAt: new Date().toISOString(),
+    };
+
+    const score = calculatePriority(itemWithHighAccuracy);
+    expect(score).toBe(100); // 100 * 0.8 * 1.25 (increased by high accuracy)
   });
 });
