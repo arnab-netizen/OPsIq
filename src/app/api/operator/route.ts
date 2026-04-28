@@ -11,6 +11,7 @@ import { resolveServerRole } from "@/services/auth/server-role";
 import { getSession } from "@/services/auth";
 import { sendWebhook } from "@/services/integration/webhook";
 import { logAuditEvent } from "@/services/audit/audit-log";
+import { validateStatusTransition, getStatusTransitionError } from "@/services/operator/validate";
 import type { PolicyRule } from "@/domain/policy/types";
 
 export async function GET() {
@@ -61,6 +62,19 @@ export async function POST(request: NextRequest) {
     const allItemsBefore = await getItems();
     const beforeItem = allItemsBefore.find((i) => i.id === id);
 
+    // Validate status transition
+    if (beforeItem && status) {
+      const currentStatus = beforeItem.status as "pending" | "in_progress" | "done" | "failed";
+      const newStatus = status as "pending" | "in_progress" | "done" | "failed";
+      const transitionError = getStatusTransitionError(currentStatus, newStatus);
+      if (transitionError) {
+        return NextResponse.json(
+          { error: transitionError },
+          { status: 400 }
+        );
+      }
+    }
+
     // Capture calibration when task is completed
     if (status === "done") {
       if (typeof actualOutcome !== "number") {
@@ -99,7 +113,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await updateItem(id, { status, actualOutcome });
+    await updateItem(id, {
+      status,
+      actualOutcomeValue: status === 'done' ? actualOutcome : undefined,
+      completedAt: status === 'done' ? new Date().toISOString() : undefined,
+      startedAt: status === 'in_progress' ? new Date().toISOString() : undefined,
+      executionStatus: status === 'done' ? 'completed' : status === 'in_progress' ? 'started' : undefined,
+    });
 
     // Capture after state and log audit event
     const allItemsAfter = await getItems();

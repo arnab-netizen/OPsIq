@@ -103,6 +103,11 @@ export async function updateItem(
   if (updates.dueAt !== undefined) updateData.dueAt = updates.dueAt ? new Date(updates.dueAt) : null;
   if (updates.expectedOutcome !== undefined) updateData.expectedOutcome = updates.expectedOutcome;
   if (updates.actualOutcome !== undefined) updateData.actualOutcome = updates.actualOutcome;
+  if (updates.actualOutcomeValue !== undefined) updateData.actualOutcomeValue = updates.actualOutcomeValue;
+  if (updates.outcomeNotes !== undefined) updateData.outcomeNotes = updates.outcomeNotes;
+  if (updates.startedAt !== undefined) updateData.startedAt = updates.startedAt ? new Date(updates.startedAt) : null;
+  if (updates.completedAt !== undefined) updateData.completedAt = updates.completedAt ? new Date(updates.completedAt) : null;
+  if (updates.executionStatus !== undefined) updateData.executionStatus = updates.executionStatus;
   if (updates.blockingDependencies !== undefined) updateData.blockingDependencies = updates.blockingDependencies && updates.blockingDependencies.length > 0 ? updates.blockingDependencies : null;
 
   await db.operatorItem.update({
