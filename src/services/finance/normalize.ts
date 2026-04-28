@@ -20,6 +20,16 @@ export function calculateImpact(
     throw new Error("Invalid numeric values: NaN detected");
   }
 
+  // Validate confidence threshold
+  if (confidence < 0.4) {
+    throw new Error("LOW_CONFIDENCE_BLOCKED");
+  }
+
+  // Validate impact exists
+  if (deltaRevenue === 0 && deltaCost === 0) {
+    throw new Error("NO_IMPACT");
+  }
+
   const expected = deltaRevenue - deltaCost;
   const impactLow = expected * 0.7;
   const impactHigh = expected * 1.3;
