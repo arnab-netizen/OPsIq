@@ -627,10 +627,15 @@ model OperatorItem {
   impactHigh          Float
   confidence          Float
   priorityScore       Float
-  status              String    @default("pending") // "pending" | "in_progress" | "done"
+  status              String    @default("pending") // "pending" | "in_progress" | "done" | "failed"
   dueAt               DateTime?  @map("due_at")
   expectedOutcome     String?    @map("expected_outcome")
   actualOutcome       String?    @map("actual_outcome")
+  actualOutcomeValue  Float?    @map("actual_outcome_value") // numeric measured result
+  outcomeNotes        String?    @map("outcome_notes")
+  startedAt           DateTime?  @map("started_at")
+  completedAt         DateTime?  @map("completed_at")
+  executionStatus     String    @default("not_started") @map("execution_status") // "not_started" | "started" | "completed"
   explanation         Json?      // DecisionExplanation JSONB
   inputsSnapshot      Json?      // Full input payload for replay
   decisionHash        String?    @map("decision_hash") // SHA256 hash for integrity
@@ -644,6 +649,8 @@ model OperatorItem {
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
   @@index([status])
+  @@index([priorityScore])
+  @@index([executionStatus])
   @@index([createdAt])
   @@index([decisionHash])
   @@index([signedHash])

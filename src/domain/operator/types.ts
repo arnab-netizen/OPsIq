@@ -13,7 +13,7 @@ export type OperatorItem = {
 
   priorityScore: number;
 
-  status: "pending" | "in_progress" | "done";
+  status: "pending" | "in_progress" | "done" | "failed";
 
   dueAt: string | null;
 
@@ -21,6 +21,12 @@ export type OperatorItem = {
 
   expectedOutcome: string | null;
   actualOutcome: string | null;
+  actualOutcomeValue?: number | null;
+  outcomeNotes?: string | null;
+
+  startedAt?: string | null;
+  completedAt?: string | null;
+  executionStatus?: "not_started" | "started" | "completed";
 
   explanation?: DecisionExplanation;
 
