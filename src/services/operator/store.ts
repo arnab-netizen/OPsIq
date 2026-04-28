@@ -44,3 +44,12 @@ export function addCalibrationRecord(
 export function getCalibrationRecords(): CalibrationRecord[] {
   return calibrationStore;
 }
+
+export function applyOverride(
+  id: string,
+  newAction: string
+): void {
+  store = store.map((i) =>
+    i.id === id ? { ...i, action: newAction } : i
+  );
+}
