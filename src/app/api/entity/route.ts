@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createEntity, getEntities } from "@/services/entity/store";
 import { resolveServerRole } from "@/services/auth/server-role";
+import { getSession } from "@/services/auth";
 import { canEdit } from "@/services/auth/access";
+import { logAuditEvent } from "@/services/audit/audit-log";
 import { randomUUID } from "crypto";
 
 export async function GET() {
@@ -50,14 +52,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const entityId = randomUUID();
     const entity = {
-      id: randomUUID(),
+      id: entityId,
       name,
       type,
       createdAt: new Date().toISOString(),
     };
 
+    // Get actor ID for audit
+    const session = await getSession();
+    const actorId = session?.user.id ?? null;
+
     createEntity(entity);
+
+    // Log audit event (fail-closed if audit fails)
+    await logAuditEvent({
+      eventName: "CREATE",
+      entityType: "Entity",
+      entityId,
+      actorId,
+      role,
+      before: null,
+      after: entity,
+    });
 
     return NextResponse.json(entity);
   } catch (error) {

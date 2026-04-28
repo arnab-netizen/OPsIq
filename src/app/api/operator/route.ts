@@ -8,7 +8,9 @@ import { sortByPriority } from "@/services/operator/sort";
 import { evaluatePolicy } from "@/services/policy/engine";
 import { canEdit } from "@/services/auth/access";
 import { resolveServerRole } from "@/services/auth/server-role";
+import { getSession } from "@/services/auth";
 import { sendWebhook } from "@/services/integration/webhook";
+import { logAuditEvent } from "@/services/audit/audit-log";
 import type { PolicyRule } from "@/domain/policy/types";
 
 export async function GET() {
@@ -51,6 +53,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get actor ID from session
+    const session = await getSession();
+    const actorId = session?.user.id ?? null;
+
+    // Capture before state for audit
+    const allItemsBefore = await getItems();
+    const beforeItem = allItemsBefore.find((i) => i.id === id);
+
     // Capture calibration when task is completed
     if (status === "done") {
       if (typeof actualOutcome !== "number") {
@@ -91,9 +101,26 @@ export async function POST(request: NextRequest) {
 
     await updateItem(id, { status, actualOutcome });
 
+    // Capture after state and log audit event
+    const allItemsAfter = await getItems();
+    const afterItem = allItemsAfter.find((i) => i.id === id);
+
+    // Determine event name
+    const eventName = status === "done" ? "COMPLETE" : "UPDATE";
+
+    // Log audit event (fail-closed if audit fails)
+    await logAuditEvent({
+      eventName,
+      entityType: "OperatorItem",
+      entityId: id,
+      actorId,
+      role,
+      before: beforeItem ?? null,
+      after: afterItem ?? null,
+    });
+
     if (status === "done") {
-      const updatedItems = await getItems();
-      const completedItem = updatedItems.find((i) => i.id === id);
+      const completedItem = afterItem;
       if (completedItem) {
         sendWebhook({
           event: "action_completed",

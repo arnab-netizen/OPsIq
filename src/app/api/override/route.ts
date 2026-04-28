@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { addOverride } from "@/services/override/store";
 import { getItems, applyOverride } from "@/services/operator/store";
 import { resolveServerRole } from "@/services/auth/server-role";
+import { getSession } from "@/services/auth";
 import { canEdit } from "@/services/auth/access";
+import { logAuditEvent } from "@/services/audit/audit-log";
 import { randomUUID } from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -58,8 +60,33 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
     };
 
+    // Get actor ID for audit
+    const session = await getSession();
+    const actorId = session?.user.id ?? null;
+
     addOverride(overrideRecord);
+    const beforeItem = item;
     await applyOverride(operatorItemId, overriddenAction);
+
+    // Capture after state
+    const itemsAfter = await getItems();
+    const afterItem = itemsAfter.find((i) => i.id === operatorItemId);
+
+    // Log audit event (fail-closed if audit fails)
+    await logAuditEvent({
+      eventName: "OVERRIDE",
+      entityType: "OperatorItem",
+      entityId: operatorItemId,
+      actorId,
+      role,
+      before: beforeItem,
+      after: afterItem ?? null,
+      metadata: {
+        originalAction: item.action,
+        overriddenAction,
+        reason,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
