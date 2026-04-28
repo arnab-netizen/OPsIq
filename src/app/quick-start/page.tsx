@@ -61,6 +61,18 @@ export default function QuickStartPage() {
 
   return (
     <div style={{ padding: "20px", fontFamily: "sans-serif", maxWidth: "600px" }}>
+      <nav style={{ marginBottom: "20px", paddingBottom: "10px", borderBottom: "1px solid #ccc" }}>
+        <a href="/quick-start" style={{ marginRight: "15px", textDecoration: "none", color: "#007bff" }}>
+          Quick Start
+        </a>
+        <a href="/my-day" style={{ marginRight: "15px", textDecoration: "none", color: "#007bff" }}>
+          My Day
+        </a>
+        <a href="/calibration" style={{ textDecoration: "none", color: "#007bff" }}>
+          Calibration
+        </a>
+      </nav>
+
       <h1>Quick Start Analysis</h1>
 
       <div style={{ marginBottom: "20px" }}>
