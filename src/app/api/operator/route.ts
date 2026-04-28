@@ -5,6 +5,8 @@ import {
   addCalibrationRecord,
 } from "@/services/operator/store";
 import { sortByPriority } from "@/services/operator/sort";
+import { evaluatePolicy } from "@/services/policy/engine";
+import type { PolicyRule } from "@/domain/policy/types";
 
 export async function GET() {
   try {
@@ -42,6 +44,22 @@ export async function POST(request: NextRequest) {
       const item = items.find((i) => i.id === id);
 
       if (item) {
+        const rules: PolicyRule[] = [
+          {
+            id: "high-impact",
+            condition: (impact: number) => impact > 100000,
+            requiresApproval: true,
+          },
+        ];
+
+        const policy = evaluatePolicy(item.impactExpected, rules);
+        if (policy.requiresApproval) {
+          return NextResponse.json(
+            { error: "High-impact action requires approval before completion" },
+            { status: 400 }
+          );
+        }
+
         addCalibrationRecord(
           id,
           item.impactExpected,
