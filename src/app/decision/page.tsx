@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { DecisionResultComponent } from '@/components/decision/DecisionResult';
 import { DecisionResult } from '@/domain/decision/types';
 
@@ -24,6 +25,7 @@ export default function DecisionPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DecisionResult | null>(null);
+  const [isApproved, setIsApproved] = useState(false);
 
   const handleInputChange = (field: keyof FormValues) => (
     e: React.ChangeEvent<HTMLInputElement>
@@ -41,6 +43,7 @@ export default function DecisionPage() {
     // Clear previous state
     setError(null);
     setResult(null);
+    setIsApproved(false);
 
     // Validate form values
     const baselineRevenue = parseFloat(formValues.baselineRevenue);
@@ -114,6 +117,7 @@ export default function DecisionPage() {
         setError(errorMessage);
         // Still store result for transparency (user can see why it was blocked)
         setResult(data);
+        setIsApproved(false);
         setLoading(false);
         return;
       }
@@ -122,12 +126,15 @@ export default function DecisionPage() {
       console.log('Decision API response:', data);
       setResult(data);
       setError(null);
+      // Set approved if decision was APPROVED
+      setIsApproved(data.decision === 'APPROVED');
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to get decision';
       console.error('Decision API error:', err);
       setError(`Network error: ${errorMessage}`);
       setResult(null);
+      setIsApproved(false);
     } finally {
       setLoading(false);
     }
@@ -274,9 +281,32 @@ export default function DecisionPage() {
           </button>
         </form>
 
+        {/* Success Banner */}
+        {isApproved && result && (
+          <div className="rounded-lg border border-success bg-success/5 p-4 md:p-6 mb-6 md:mb-8">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h2 className="text-base md:text-lg font-semibold text-success mb-1">
+                  ✓ Decision Approved
+                </h2>
+                <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
+                  This action has been added to My Day and will appear in your
+                  priority queue.
+                </p>
+                <Link
+                  href="/my-day"
+                  className="inline-block rounded-lg bg-success px-4 py-2 text-xs md:text-sm font-medium text-white transition-opacity hover:opacity-90"
+                >
+                  Go to My Day →
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Result Display */}
         {result && (
-          <div className="mt-6 md:mt-8">
+          <div className={isApproved ? 'mt-4 md:mt-6' : 'mt-6 md:mt-8'}>
             <DecisionResultComponent result={result} />
           </div>
         )}
