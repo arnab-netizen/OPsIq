@@ -311,22 +311,173 @@ export async function POST(request: NextRequest) {
 ---
 
 ## 5. Financial Credibility Plan
-**Placeholder** — Will detail assumption capture, derivation chain, user-provided baselines, output transparency.
+
+**Goal:** Remove hardcoded values. Store assumptions. Enable audit trail of financial decisions.
+
+### Problem
+- `src/services/finance/normalize.ts` (lines 34–35): hardcoded 0.7, 1.3 multipliers
+- `src/services/system/run.ts` (line 45): hardcoded baseline (10000, 5000)
+- `src/app/api/run/route.ts` (lines 26–29): hardcoded revenueChange × 0.1, confidence = 0.75
+- No tracking of which baseline was used for a decision
+
+### Solution
+1. **FinancialBaseline model** (Prisma): stores revenue, costs, multipliers, confidence thresholds, source, validity window
+2. **User provides or selects baseline** at decision time (not hardcoded)
+3. **Store assumptions with decision:** OperatorItem.assumptions (JSON) = {baseline_id, multipliers, confidence_threshold}
+4. **Output includes source:** Impact response shows "derived from user-provided baseline from 2026-04-28"
+5. **No false precision:** Show ranges (impactLow–impactHigh) not single number
+
+### Implementation
+- Remove hardcoded multipliers from normalize.ts; accept as parameter
+- POST /api/run accepts optional `baselineId`; if absent, return 400 (require explicit baseline)
+- POST /api/scenario requires baselineId; must exist in DB
+- OperatorItem.assumptions captures full derivation chain
+- /api/report includes baseline metadata
+
+### Acceptance Criteria
+- ✅ No hardcoded multipliers in code
+- ✅ All impacts traceable to a FinancialBaseline row
+- ✅ Baseline includes source (user_provided|system_default|imported)
+- ✅ Impact output shows confidence and range, not precision
+- ✅ Audit query can show "which baseline was used for this decision"
 
 ---
 
 ## 6. Audit Hardening Plan
-**Placeholder** — Will detail event emission, snapshot capture, replay strategy, compliance mapping.
+
+**Goal:** Replace console.log with database-backed audit trail. Prove who did what and when.
+
+### Problem
+- `src/services/audit/log.ts` (line 4): only console.log(JSON.stringify(record))
+- No persistence, no compliance trail, no replay capability
+- Existing `src/infra/audit.ts` emitAuditEvent() unused by Phase 1–5
+
+### Solution
+1. **Replace console.log with emitAuditEvent()** in Phase 1–5 mutation paths
+2. **Audit event schema** (already exists in AuditEvent model):
+   - eventName (string): decision_run, operator_updated, action_overridden, entity_created, scenario_run
+   - actorId (UUID): from session.user.id
+   - entityType (string): OperatorItem, OverrideRecord, Entity
+   - entityId (UUID): the affected record
+   - payload (JSON): {before, after, rationale, baseline_id, confidence}
+   - occurredAt (DateTime): server timestamp
+   - visibility: "internal"
+
+3. **Snapshot strategy:** Store before/after snapshots in payload for all mutations
+4. **Replay capability:** Decision output stored in payload; can reconstruct inputs+outputs
+
+### Implementation
+- Every Phase 1–5 mutation calls emitAuditEvent() with actorId, entityType, entityId, payload
+- Payload = {before: OperatorItem?, after: OperatorItem, rationale: "why this action"}
+- POST /api/operator → eventName: "operator_updated"
+- POST /api/override → eventName: "action_overridden"
+- POST /api/entity → eventName: "entity_created"
+- API /api/audit/events (GET) returns queryable event log (existing pattern)
+
+### Acceptance Criteria
+- ✅ All mutations emit audit events to database
+- ✅ No console.log in mutation paths
+- ✅ Actor ID always present and matches session user
+- ✅ Before/after snapshots included for all state changes
+- ✅ Query /api/audit/events returns full trail
+- ✅ Compliance-ready: 90-day retention, tamper-proof
 
 ---
 
 ## 7. Webhook Hardening Plan
-**Placeholder** — Will detail delivery table, HTTP sender, retry logic, safe-fail behavior.
+
+**Goal:** Replace console.log with reliable HTTP delivery. Track failures. Enable retries.
+
+### Problem
+- `src/services/integration/webhook.ts` (line 4): only console.log("Webhook:", event)
+- Called from `/api/operator` (line 95) on action completion
+- No HTTP delivery, no retry, no external system knows action completed
+
+### Solution
+1. **Use WebhookDelivery model** (created in Prisma plan): tracks delivery attempts
+2. **Endpoint on action completion:**
+   - Create WebhookDelivery row: status=pending, url=config.webhook_url (from env/config)
+   - If no URL configured, status=skipped (fail safely)
+   - Queue async delivery (job queue or next request)
+
+3. **Delivery sender** (`src/services/integration/webhook.ts` rewritten):
+   ```
+   async function deliverWebhook(webhookId: uuid) {
+     const delivery = await db.webhookDelivery.findUnique({where: {id: webhookId}})
+     const response = await fetch(delivery.url, {
+       method: POST, body: JSON.stringify(delivery.payload), timeout: 10s
+     })
+     if (success) { update(delivery, {status: success, sentAt: now}) }
+     else { retry if retryCount < 3, exponential backoff }
+   }
+   ```
+
+4. **Retry logic:**
+   - Retry up to 3 times
+   - Backoff: 5s, 25s, 125s
+   - status transitions: pending → retrying → success|failed
+   - failed deliveries queryable for debugging
+
+5. **Safe fail:** If webhook URL missing or delivery fails after retries, log but don't block action
+
+### Implementation
+- POST /api/operator completion creates WebhookDelivery row (not console.log)
+- Background job or cron runs deliverWebhook() for pending rows
+- GET /api/webhooks/delivery returns delivery status and logs
+
+### Acceptance Criteria
+- ✅ No console.log in webhook code
+- ✅ All deliveries persist to WebhookDelivery table
+- ✅ Missing URL → status=skipped (no error)
+- ✅ Failed delivery retried 3× with exponential backoff
+- ✅ Success/failure logged and queryable
+- ✅ Action completion not blocked by webhook failure
 
 ---
 
 ## 8. Safety Hardening Plan
-**Placeholder** — Will detail validation fixes, fail-closed enforcement, test coverage matrix.
+
+**Goal:** Fix broken fail-closed logic. Ensure dangerous inputs are rejected.
+
+### Problems (3 Failing Tests)
+
+1. **Low Confidence NOT blocked:** `src/services/system/run.ts` (line 50) clamps confidence to 0.4 before validation
+   - Input: confidence = 0.3
+   - Bug: clamp(0.3 → 0.4) bypasses threshold check in calculateImpact()
+   - Fix: Validate confidence BEFORE clamping
+
+2. **Zero Impact NOT blocked:** `src/services/finance/normalize.ts` checks deltaRevenue/deltaCost vs 0, not final impact
+   - Input: revenue=0, cost=0, but hardcoded baseline (10000, 5000) produces non-zero impact
+   - Fix: Check final impact amount, not just deltas
+
+3. **Confidence field undefined:** ImpactEstimate returns confidenceWeight not confidence
+   - Test expects result.impact.confidence
+   - Fix: Rename field to confidence or export both
+
+### Implementation
+
+**File: src/services/finance/normalize.ts**
+- Validate confidence < 0.4 BEFORE clamp(confidence, 0, 1)
+- Throw LOW_CONFIDENCE_BLOCKED if < 0.4
+
+**File: src/services/system/run.ts**
+- Validate impact != 0 AFTER calculateImpact()
+- Throw NO_IMPACT if impactExpected === 0
+
+**File: src/domain/finance/types.ts**
+- Rename ImpactEstimate.confidenceWeight → confidence
+
+**File: src/__tests__/backbone.test.ts**
+- All 3 tests must pass
+- Add regression tests: low confidence blocks, zero impact blocks, good input passes
+
+### Acceptance Criteria
+- ✅ backbone.test.ts all 3 tests pass
+- ✅ Low confidence (< 0.4) always throws LOW_CONFIDENCE_BLOCKED
+- ✅ Zero impact always throws NO_IMPACT
+- ✅ Invalid inputs return 400 from APIs
+- ✅ Safety checks cannot be bypassed by clamp/defaults
+- ✅ No hardcoded baseline masks invalid inputs
 
 ---
 
