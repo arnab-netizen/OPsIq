@@ -63,6 +63,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
         avgAccuracy: 1.0,
         avgError: 0,
+        weightedAccuracy: 1.0,
         successRate: 100,
         itemsAnalyzed: 1,
         successCount: 1,
@@ -94,6 +95,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
         avgAccuracy: 1.05,
         avgError: 5,
+        weightedAccuracy: 1.02,
         successRate: 75,
         itemsAnalyzed: 20,
         successCount: 15,
@@ -107,6 +109,7 @@ describe("GET /api/calibration", () => {
       expect(response.status).toBe(200);
       expect(data.avgAccuracy).toBe(1.05);
       expect(data.avgError).toBe(5);
+      expect(data.weightedAccuracy).toBe(1.02);
       expect(data.successRate).toBe(75);
       expect(data.itemsAnalyzed).toBe(20);
       expect(data.successCount).toBe(15);
@@ -118,6 +121,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
         avgAccuracy: null,
         avgError: null,
+        weightedAccuracy: null,
         successRate: null,
         itemsAnalyzed: 0,
         successCount: 0,
@@ -133,6 +137,7 @@ describe("GET /api/calibration", () => {
       expect(data.valid).toBe(false);
       expect(data.avgAccuracy).toBeNull();
       expect(data.successRate).toBeNull();
+      expect(data.weightedAccuracy).toBeNull();
     });
 
     it("should fetch all items and pass to calibration", async () => {
@@ -164,6 +169,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
         avgAccuracy: 1.5,
         avgError: 50,
+        weightedAccuracy: 1.5,
         successRate: 100,
         itemsAnalyzed: 1,
         successCount: 1,
@@ -190,6 +196,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
         avgAccuracy: null,
         avgError: null,
+        weightedAccuracy: null,
         successRate: null,
         itemsAnalyzed: 0,
         successCount: 0,
@@ -219,6 +226,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
         avgAccuracy: 1.0,
         avgError: 0,
+        weightedAccuracy: 0.98,
         successRate: 85,
         itemsAnalyzed: 20,
         successCount: 17,
@@ -235,6 +243,7 @@ describe("GET /api/calibration", () => {
             successRate: 85,
             avgAccuracy: 1.0,
             avgError: 0,
+            weightedAccuracy: 0.98,
           }),
         })
       );
@@ -279,6 +288,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
         avgAccuracy: null,
         avgError: null,
+        weightedAccuracy: null,
         successRate: null,
         itemsAnalyzed: 0,
         successCount: 0,

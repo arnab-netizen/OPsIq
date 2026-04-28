@@ -49,6 +49,7 @@ export async function GET() {
         successRate: metrics.successRate,
         avgAccuracy: metrics.avgAccuracy,
         avgError: metrics.avgError,
+        weightedAccuracy: metrics.weightedAccuracy,
       },
     });
 

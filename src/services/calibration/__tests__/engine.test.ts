@@ -320,6 +320,230 @@ describe("computeCalibration - Calibration Engine", () => {
     });
   });
 
+  describe("Weighted Accuracy Calculation", () => {
+    it("should calculate weighted accuracy for single item", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 1.0,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      expect(result.weightedAccuracy).toBe(1.0); // (1.0 * 100) / 100
+    });
+
+    it("should weight accuracy by absolute impact", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 1.0,
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 0.5,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      // (1.0 * 100 + 0.5 * 100) / (100 + 100) = 150 / 200 = 0.75
+      expect(result.weightedAccuracy).toBe(0.75);
+    });
+
+    it("should handle items with different impact magnitudes", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 1.0,
+        }),
+        createCompletedItem({
+          impactExpected: 50,
+          decisionAccuracy: 0.5,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      // (1.0 * 100 + 0.5 * 50) / (100 + 50) = 125 / 150 ≈ 0.8333
+      expect(result.weightedAccuracy).toBe(0.8333);
+    });
+
+    it("should use absolute value of negative impacts", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: -100,
+          decisionAccuracy: 1.0,
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 0.5,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      // (1.0 * 100 + 0.5 * 100) / (100 + 100) = 150 / 200 = 0.75
+      expect(result.weightedAccuracy).toBe(0.75);
+    });
+
+    it("should round weighted accuracy to 4 decimals", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 0.3333,
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 0.3334,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      // (0.3333 * 100 + 0.3334 * 100) / (100 + 100) = 66.67 / 200 = 0.3333
+      expect(result.weightedAccuracy).toBe(0.3333);
+    });
+
+    it("should return null weighted accuracy when no items have accuracy data", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: undefined,
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: null,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      expect(result.weightedAccuracy).toBeNull();
+    });
+
+    it("should return null weighted accuracy when items lack impact data", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: null,
+          decisionAccuracy: 1.0,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      expect(result.weightedAccuracy).toBeNull();
+    });
+
+    it("should exclude items without accuracy from weighted calculation", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 1.0,
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: undefined,
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 0.5,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      // (1.0 * 100 + 0.5 * 100) / (100 + 100) = 150 / 200 = 0.75
+      expect(result.weightedAccuracy).toBe(0.75);
+    });
+
+    it("should calculate weighted accuracy with three items", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 0.8,
+        }),
+        createCompletedItem({
+          impactExpected: 200,
+          decisionAccuracy: 1.0,
+        }),
+        createCompletedItem({
+          impactExpected: 300,
+          decisionAccuracy: 1.2,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      // (0.8 * 100 + 1.0 * 200 + 1.2 * 300) / (100 + 200 + 300)
+      // = (80 + 200 + 360) / 600 = 640 / 600 ≈ 1.0667
+      expect(result.weightedAccuracy).toBe(1.0667);
+    });
+
+    it("should match avgAccuracy when all items have equal impact", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 0.8,
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 1.0,
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          decisionAccuracy: 1.2,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      // Both should be (0.8 + 1.0 + 1.2) / 3 = 1.0
+      expect(result.avgAccuracy).toBe(1.0);
+      expect(result.weightedAccuracy).toBe(1.0);
+    });
+
+    it("should reflect higher weight for higher impact items", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 10,
+          decisionAccuracy: 0.5,
+        }),
+        createCompletedItem({
+          impactExpected: 1000,
+          decisionAccuracy: 1.5,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      // avgAccuracy = (0.5 + 1.5) / 2 = 1.0
+      // weightedAccuracy = (0.5 * 10 + 1.5 * 1000) / (10 + 1000)
+      //                  = (5 + 1500) / 1010 ≈ 1.4901
+      expect(result.avgAccuracy).toBe(1.0);
+      expect(result.weightedAccuracy).toBe(1.4901);
+    });
+
+    it("should handle all negative impacts with weighted accuracy", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: -100,
+          decisionAccuracy: 0.8,
+        }),
+        createCompletedItem({
+          impactExpected: -200,
+          decisionAccuracy: 1.0,
+        }),
+      ];
+
+      const result = computeCalibration(items);
+
+      // (0.8 * 100 + 1.0 * 200) / (100 + 200) = 280 / 300 ≈ 0.9333
+      expect(result.weightedAccuracy).toBe(0.9333);
+    });
+  });
+
   describe("Filtering Logic", () => {
     it("should only include items with status done", () => {
       const items = [
@@ -523,6 +747,7 @@ describe("getCalibrationHealth", () => {
     const metrics: CalibrationMetrics = {
       avgAccuracy: 1.0,
       avgError: 0,
+      weightedAccuracy: 1.0,
       successRate: 85,
       itemsAnalyzed: 10,
       successCount: 8,
@@ -536,6 +761,7 @@ describe("getCalibrationHealth", () => {
     const metrics: CalibrationMetrics = {
       avgAccuracy: 1.0,
       avgError: 0,
+      weightedAccuracy: 1.0,
       successRate: 60,
       itemsAnalyzed: 10,
       successCount: 6,
@@ -549,6 +775,7 @@ describe("getCalibrationHealth", () => {
     const metrics: CalibrationMetrics = {
       avgAccuracy: 1.5,
       avgError: 0,
+      weightedAccuracy: 1.5,
       successRate: 85,
       itemsAnalyzed: 10,
       successCount: 8,
@@ -562,6 +789,7 @@ describe("getCalibrationHealth", () => {
     const metrics: CalibrationMetrics = {
       avgAccuracy: 1.0,
       avgError: 0,
+      weightedAccuracy: 1.0,
       successRate: 40,
       itemsAnalyzed: 10,
       successCount: 4,
@@ -575,6 +803,7 @@ describe("getCalibrationHealth", () => {
     const metrics: CalibrationMetrics = {
       avgAccuracy: null,
       avgError: null,
+      weightedAccuracy: null,
       successRate: null,
       itemsAnalyzed: 0,
       successCount: 0,
@@ -588,6 +817,7 @@ describe("getCalibrationHealth", () => {
     const metrics: CalibrationMetrics = {
       avgAccuracy: 0.8,
       avgError: 0,
+      weightedAccuracy: 0.8,
       successRate: 75,
       itemsAnalyzed: 10,
       successCount: 7,
@@ -601,6 +831,7 @@ describe("getCalibrationHealth", () => {
     const metrics: CalibrationMetrics = {
       avgAccuracy: 1.21,
       avgError: 0,
+      weightedAccuracy: 1.21,
       successRate: 85,
       itemsAnalyzed: 10,
       successCount: 8,
