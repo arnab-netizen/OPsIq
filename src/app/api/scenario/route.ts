@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runScenario } from "@/services/scenario/engine";
+import { resolveServerRole } from "@/services/auth/server-role";
 
 export async function POST(request: NextRequest) {
   try {
+    // Enforce server-side auth (scenario analysis affects decisions)
+    const role = await resolveServerRole();
+    if (!role) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { baseRevenue, baseCost, deltaRevenue, deltaCost } = body;
 

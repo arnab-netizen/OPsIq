@@ -3,9 +3,27 @@ import { runSystem } from "@/services/system/run";
 import { createBaseline } from "@/services/onboarding/basic";
 import { generateOperatorItems } from "@/services/operator/generate";
 import { addItems } from "@/services/operator/store";
+import { resolveServerRole } from "@/services/auth/server-role";
+import { canEdit } from "@/services/auth/access";
 
 export async function POST(request: NextRequest) {
   try {
+    // Enforce server-side auth
+    const role = await resolveServerRole();
+    if (!role) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 403 }
+      );
+    }
+
+    if (!canEdit(role)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
+
     // 1. Parse body
     const body = await request.json();
     const { revenue, cost } = body;

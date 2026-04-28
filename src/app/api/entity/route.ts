@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createEntity, getEntities } from "@/services/entity/store";
+import { resolveServerRole } from "@/services/auth/server-role";
+import { canEdit } from "@/services/auth/access";
 import { randomUUID } from "crypto";
 
 export async function GET() {
@@ -14,6 +16,22 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Enforce server-side auth
+    const role = await resolveServerRole();
+    if (!role) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 403 }
+      );
+    }
+
+    if (!canEdit(role)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { name, type } = body;
 

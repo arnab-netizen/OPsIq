@@ -1,10 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addOverride } from "@/services/override/store";
 import { getItems, applyOverride } from "@/services/operator/store";
+import { resolveServerRole } from "@/services/auth/server-role";
+import { canEdit } from "@/services/auth/access";
 import { randomUUID } from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
+    // Enforce server-side auth
+    const role = await resolveServerRole();
+    if (!role) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 403 }
+      );
+    }
+
+    if (!canEdit(role)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { operatorItemId, overriddenAction, reason } = body;
 
