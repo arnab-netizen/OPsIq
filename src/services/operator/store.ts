@@ -143,3 +143,57 @@ export async function applyOverride(
     data: { action: newAction },
   });
 }
+
+export async function getQueuedItems(
+  statusFilter?: string,
+  limit: number = 20
+): Promise<OperatorItem[]> {
+  const statuses = statusFilter
+    ? [statusFilter]
+    : ["pending", "in_progress"];
+
+  const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany({
+    where: {
+      status: {
+        in: statuses,
+      },
+    },
+    orderBy: [
+      { priorityScore: "desc" },
+      { dueAt: "asc" },
+    ],
+    take: limit,
+  });
+
+  return records.map((r: any) => ({
+    id: r.id,
+    problem: r.problem,
+    action: r.action,
+    impactExpected: Number(r.impactExpected),
+    impactLow: Number(r.impactLow),
+    impactHigh: Number(r.impactHigh),
+    confidence: Number(r.confidence),
+    priorityScore: Number(r.priorityScore),
+    status: r.status as "pending" | "in_progress" | "done" | "failed",
+    dueAt: r.dueAt ? r.dueAt.toISOString() : null,
+    expectedOutcome: r.expectedOutcome,
+    actualOutcome: r.actualOutcome,
+    actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,
+    outcomeNotes: r.outcomeNotes || undefined,
+    startedAt: r.startedAt ? r.startedAt.toISOString() : undefined,
+    completedAt: r.completedAt ? r.completedAt.toISOString() : undefined,
+    executionStatus: r.executionStatus || undefined,
+    explanation: r.explanation ? JSON.parse(String(r.explanation)) : undefined,
+    inputsSnapshot: r.inputsSnapshot
+      ? JSON.parse(String(r.inputsSnapshot))
+      : undefined,
+    decisionHash: r.decisionHash || undefined,
+    signedHash: r.signedHash || undefined,
+    signature: r.signature || undefined,
+    signatureAlgo: r.signatureAlgo || undefined,
+    publicKeyId: r.publicKeyId || undefined,
+    engineVersion: r.engineVersion || "v1.0.0",
+    createdAt: r.createdAt.toISOString(),
+    blockingDependencies: Array.isArray(r.blockingDependencies) ? (r.blockingDependencies as string[]) : [],
+  }));
+}
