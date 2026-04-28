@@ -11,6 +11,48 @@ export function runSystem(inputMetrics: Record<string, number>): {
   decisions: DecisionOutput[];
   impact: ImpactEstimate;
 } {
+  // SAFETY: Validate required inputs (fail-closed)
+  if (!inputMetrics || typeof inputMetrics !== "object") {
+    throw new Error("Invalid input: inputMetrics must be an object");
+  }
+
+  // SAFETY: Check for required financial inputs (no defaults)
+  const baselineRevenue = inputMetrics["baselineRevenue"];
+  const baselineCost = inputMetrics["baselineCost"];
+  const deltaRevenue = inputMetrics["revenueChange"];
+  const deltaCost = inputMetrics["costChange"];
+  const confidence = inputMetrics["confidence"];
+
+  if (baselineRevenue === undefined) {
+    throw new Error("Missing required input: baselineRevenue");
+  }
+  if (baselineCost === undefined) {
+    throw new Error("Missing required input: baselineCost");
+  }
+  if (deltaRevenue === undefined) {
+    throw new Error("Missing required input: revenueChange");
+  }
+  if (deltaCost === undefined) {
+    throw new Error("Missing required input: costChange");
+  }
+  if (confidence === undefined) {
+    throw new Error("Missing required input: confidence");
+  }
+
+  // SAFETY: Validate raw confidence BEFORE any adjustment
+  if (confidence < 0.5) {
+    throw new Error("LOW_CONFIDENCE_BLOCKED");
+  }
+  if (confidence > 1.0) {
+    throw new Error("Confidence cannot exceed 1.0");
+  }
+
+  // SAFETY: Validate impact is non-zero and non-negative
+  const expectedImpact = deltaRevenue - deltaCost;
+  if (expectedImpact <= 0) {
+    throw new Error("NON_POSITIVE_IMPACT_BLOCKED");
+  }
+
   // 1. Build DecisionInput
   const decisionInput: DecisionInput = {
     metrics: inputMetrics,
@@ -41,13 +83,8 @@ export function runSystem(inputMetrics: Record<string, number>): {
   // 3. Run decision engine
   const decisions = runDecisionEngine(decisionInput, rules);
 
-  // 4. Create FinancialBaseline (hardcoded test values)
-  const baseline = createBaseline(10000, 5000);
-
-  // 5. Run calculateImpact
-  const deltaRevenue = inputMetrics["revenueChange"] || 1000;
-  const deltaCost = inputMetrics["costChange"] || 500;
-  const confidence = Math.max(0.4, Math.min(1, inputMetrics["confidence"] || 0.8));
+  // 4. Create FinancialBaseline (from input, not hardcoded)
+  const baseline = createBaseline(baselineRevenue, baselineCost);
 
   const impact = calculateImpact(baseline, deltaRevenue, deltaCost, confidence);
 

@@ -7,6 +7,8 @@ describe("Backbone System", () => {
   describe("runSystem", () => {
     it("should execute with high risk scenario", () => {
       const result = runSystem({
+        baselineRevenue: 10000,
+        baselineCost: 5000,
         risk: 8,
         revenueChange: 2000,
         costChange: 800,
@@ -17,11 +19,13 @@ describe("Backbone System", () => {
       expect(result.decisions.length).toBeGreaterThan(0);
       expect(result.impact).toBeDefined();
       expect(result.impact.impactExpected).toBe(1200); // 2000 - 800
-      expect(result.impact.confidence).toBeGreaterThan(0.4);
+      expect(result.impact.confidenceWeight).toBeGreaterThan(0.4);
     });
 
     it("should execute with context available scenario", () => {
       const result = runSystem({
+        baselineRevenue: 10000,
+        baselineCost: 5000,
         revenueChange: 1500,
         costChange: 600,
         confidence: 0.75,
@@ -34,6 +38,8 @@ describe("Backbone System", () => {
     it("should fail-closed on low confidence", () => {
       expect(() => {
         runSystem({
+          baselineRevenue: 10000,
+          baselineCost: 5000,
           risk: 5,
           revenueChange: 1000,
           costChange: 500,
@@ -45,12 +51,14 @@ describe("Backbone System", () => {
     it("should fail-closed on zero impact", () => {
       expect(() => {
         runSystem({
+          baselineRevenue: 10000,
+          baselineCost: 5000,
           risk: 5,
           revenueChange: 0,
           costChange: 0,
           confidence: 0.8,
         });
-      }).toThrow("NO_IMPACT");
+      }).toThrow("NON_POSITIVE_IMPACT_BLOCKED");
     });
   });
 

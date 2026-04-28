@@ -23,6 +23,8 @@ export async function POST(request: NextRequest) {
 
     // 3. Build inputMetrics
     const inputMetrics: Record<string, number> = {
+      baselineRevenue: revenue,
+      baselineCost: cost,
       revenueChange: revenue * 0.1,
       costChange: cost * 0.05,
       confidence: 0.75,
