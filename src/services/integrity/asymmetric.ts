@@ -52,7 +52,14 @@ function getOrCreateKeyPair(): KeyPair {
   };
 }
 
-const keyPair = getOrCreateKeyPair();
+let cachedKeyPair: KeyPair | null = null;
+
+function getCachedKeyPair(): KeyPair {
+  if (!cachedKeyPair) {
+    cachedKeyPair = getOrCreateKeyPair();
+  }
+  return cachedKeyPair;
+}
 
 function getPublicKeyId(publicKey: string): string {
   // Simple hash of public key for identification
@@ -65,16 +72,17 @@ function getPublicKeyId(publicKey: string): string {
 }
 
 export function signDecisionAsymmetric(hashPayload: string): AsymmetricSignaturePayload {
+  const kp = getCachedKeyPair();
   const signature = sign(
     "sha256",
     Buffer.from(hashPayload, "utf-8"),
-    keyPair.privateKey
+    kp.privateKey
   );
 
   return {
     signature: signature.toString("hex"),
     signatureAlgo: "ECDSA-SHA256",
-    publicKeyId: getPublicKeyId(keyPair.publicKey),
+    publicKeyId: getPublicKeyId(kp.publicKey),
   };
 }
 
@@ -96,9 +104,10 @@ export function verifyAsymmetricSignature(
 }
 
 export function getPublicKey(): string {
-  return keyPair.publicKey;
+  return getCachedKeyPair().publicKey;
 }
 
 export function getPublicKeyIdFromKey(): string {
-  return getPublicKeyId(keyPair.publicKey);
+  const kp = getCachedKeyPair();
+  return getPublicKeyId(kp.publicKey);
 }
