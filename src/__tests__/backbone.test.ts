@@ -2,6 +2,23 @@ import { describe, it, expect } from "vitest";
 import { runSystem } from "@/services/system/run";
 import { parseCSV } from "@/services/ingestion/csv";
 import { validateRows } from "@/services/ingestion/validate";
+import {
+  generateApprovedExplanation,
+  generateBlockedExplanation,
+  createDecisionResult,
+} from "@/services/explanation/generate";
+import {
+  generateDecisionHash,
+  getEngineVersion,
+  createIntegrityPayload,
+} from "@/services/integrity/hash";
+import { verifySignature, createSignaturePayload } from "@/services/integrity/sign";
+import {
+  signDecisionAsymmetric,
+  verifyAsymmetricSignature,
+  getPublicKey,
+} from "@/services/integrity/asymmetric";
+import { canonicalStringify, createCanonicalPayload, createExtendedIntegrityPayload } from "@/services/integrity/hash";
 
 describe("Backbone System", () => {
   describe("runSystem", () => {
@@ -100,6 +117,623 @@ describe("Backbone System", () => {
 
     it("should fail-closed on empty rows", () => {
       expect(() => validateRows([])).toThrow("LOW_DATA_QUALITY");
+    });
+  });
+
+  describe("Decision Explainability", () => {
+    it("should generate approved explanation with drivers", () => {
+      const explanation = generateApprovedExplanation({
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 2000,
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 1500,
+      });
+
+      expect(explanation.summary).toBeDefined();
+      expect(explanation.drivers.length).toBeGreaterThan(0);
+      expect(explanation.drivers[0]).toHaveProperty("type");
+      expect(explanation.drivers[0]).toHaveProperty("value");
+      expect(explanation.assumptions.length).toBeGreaterThan(0);
+      expect(explanation.risks.length).toBeGreaterThan(0);
+      expect(explanation.missingData).toBeDefined();
+      expect(explanation.calculationTrace).toBeDefined();
+      expect(explanation.calculationTrace.netImpact).toBe(1500);
+      expect(explanation.calculationTrace.formula).toContain("netImpact");
+    });
+
+    it("should generate blocked explanation for low confidence", () => {
+      const explanation = generateBlockedExplanation("LOW_CONFIDENCE", {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 1000,
+        deltaCost: 500,
+        confidence: 0.3,
+        expectedImpact: 500,
+      });
+
+      expect(explanation.summary).toContain("BLOCKED");
+      expect(explanation.summary).toContain("Confidence");
+      expect(explanation.missingData.length).toBeGreaterThan(0);
+    });
+
+    it("should generate blocked explanation for non-positive impact", () => {
+      const explanation = generateBlockedExplanation(
+        "NON_POSITIVE_IMPACT",
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 100,
+          deltaCost: 500,
+          confidence: 0.75,
+          expectedImpact: -400,
+        }
+      );
+
+      expect(explanation.summary).toContain("BLOCKED");
+      expect(explanation.summary).toContain("non-positive");
+      expect(explanation.missingData.length).toBeGreaterThan(0);
+    });
+
+    it("should create approved decision result", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      expect(result.decision).toBe("APPROVED");
+      expect(result.expectedImpact).toBe(1500);
+      expect(result.confidence).toBe(0.85);
+      expect(result.explanation).toBeDefined();
+      expect(result.reason).toBeUndefined();
+    });
+
+    it("should create blocked decision result with reason", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 100,
+          deltaCost: 500,
+          confidence: 0.3,
+          expectedImpact: -400,
+        },
+        false,
+        "LOW_CONFIDENCE"
+      );
+
+      expect(result.decision).toBe("BLOCKED");
+      expect(result.reason).toBe("LOW_CONFIDENCE");
+      expect(result.explanation).toBeDefined();
+      expect(result.explanation.summary).toContain("BLOCKED");
+    });
+
+    it("should include missing data in blocked explanations", () => {
+      const explanation = generateBlockedExplanation("INVALID_INPUT");
+
+      expect(explanation.missingData.length).toBeGreaterThan(0);
+      expect(explanation.missingData).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/revenue|cost|confidence/i),
+        ])
+      );
+    });
+
+    it("should generate calculation trace with correct formula", () => {
+      const explanation = generateApprovedExplanation({
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 2000,
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 1500,
+      });
+
+      expect(explanation.calculationTrace).toEqual({
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        revenueChange: 2000,
+        costChange: 500,
+        netImpact: 1500,
+        formula: "netImpact = revenueChange - costChange",
+      });
+    });
+
+    it("should create structured drivers with type and value", () => {
+      const explanation = generateApprovedExplanation({
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 2000,
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 1500,
+      });
+
+      const revenueDriver = explanation.drivers.find((d) => d.type === "REVENUE");
+      const costDriver = explanation.drivers.find((d) => d.type === "COST");
+      const netDriver = explanation.drivers.find((d) => d.type === "NET");
+
+      expect(revenueDriver).toBeDefined();
+      expect(revenueDriver?.value).toBe(2000);
+      expect(costDriver).toBeDefined();
+      expect(costDriver?.value).toBe(500);
+      expect(netDriver).toBeDefined();
+      expect(netDriver?.value).toBe(1500);
+    });
+
+    it("should include calculation trace in blocked explanations", () => {
+      const explanation = generateBlockedExplanation("LOW_CONFIDENCE", {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 1000,
+        deltaCost: 500,
+        confidence: 0.3,
+        expectedImpact: 500,
+      });
+
+      expect(explanation.calculationTrace).toBeDefined();
+      expect(explanation.calculationTrace.netImpact).toBe(500);
+      expect(explanation.calculationTrace.formula).toContain("netImpact");
+    });
+  });
+
+  describe("Decision Integrity", () => {
+    it("should generate deterministic hash for same input", () => {
+      const result1 = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const result2 = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const hash1 = generateDecisionHash(result1);
+      const hash2 = generateDecisionHash(result2);
+
+      expect(hash1).toBe(hash2);
+    });
+
+    it("should generate different hash for different input", () => {
+      const result1 = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const result2 = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 3000, // Different revenue change
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 2500,
+        },
+        true
+      );
+
+      const hash1 = generateDecisionHash(result1);
+      const hash2 = generateDecisionHash(result2);
+
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it("should include hash in integrity payload", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const payload = createIntegrityPayload(result);
+
+      expect(payload.decisionHash).toBeDefined();
+      expect(payload.decisionHash).toMatch(/^[a-f0-9]{64}$/); // SHA256 hex format
+    });
+
+    it("should return consistent engine version", () => {
+      const version = getEngineVersion();
+
+      expect(version).toBe("v1.0.0");
+    });
+
+    it("should include version in integrity payload", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const payload = createIntegrityPayload(result);
+
+      expect(payload.engineVersion).toBe("v1.0.0");
+    });
+
+    it("should include integrity fields in result", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const payload = createIntegrityPayload(result);
+      const integrityResult = {
+        ...result,
+        ...payload,
+      };
+
+      expect(integrityResult.decisionHash).toBeDefined();
+      expect(integrityResult.engineVersion).toBe("v1.0.0");
+    });
+  });
+
+  describe("Trust and Replay Verification", () => {
+    it("should replay decision and produce same hash", () => {
+      const inputs = {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 2000,
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 1500,
+      };
+
+      // First decision
+      const result1 = createDecisionResult(inputs, true);
+      const hash1 = generateDecisionHash(result1);
+
+      // Replay with same inputs
+      const result2 = createDecisionResult(inputs, true);
+      const hash2 = generateDecisionHash(result2);
+
+      expect(hash1).toBe(hash2);
+    });
+
+    it("should detect tampered input", () => {
+      const originalInputs = {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 2000,
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 1500,
+      };
+
+      const tamperedInputs = {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 3000, // Tampered value
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 2500,
+      };
+
+      const originalResult = createDecisionResult(originalInputs, true);
+      const originalHash = generateDecisionHash(originalResult);
+
+      const tamperedResult = createDecisionResult(tamperedInputs, true);
+      const tamperedHash = generateDecisionHash(tamperedResult);
+
+      expect(originalHash).not.toBe(tamperedHash);
+    });
+
+    it("should verify valid signature", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const hash = generateDecisionHash(result);
+      const signature = createSignaturePayload(hash);
+
+      const isValid = verifySignature(hash, signature.signedHash);
+
+      expect(isValid).toBe(true);
+    });
+
+    it("should detect signature mismatch", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const hash = generateDecisionHash(result);
+      const wrongSignature = "invalid_signature_" + hash;
+
+      const isValid = verifySignature(hash, wrongSignature);
+
+      expect(isValid).toBe(false);
+    });
+
+    it("should include signature in payload", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const hash = generateDecisionHash(result);
+      const signature = createSignaturePayload(hash);
+
+      expect(signature.signedHash).toBeDefined();
+      expect(signature.signedHash).toMatch(/^[a-f0-9]{64}$/); // HMAC-SHA256 hex
+    });
+
+    it("should preserve input snapshot for audit", () => {
+      const inputs = {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        revenueChange: 2000,
+        costChange: 500,
+        confidence: 0.85,
+      };
+
+      const result = createDecisionResult(
+        {
+          baselineRevenue: inputs.baselineRevenue,
+          baselineCost: inputs.baselineCost,
+          deltaRevenue: inputs.revenueChange,
+          deltaCost: inputs.costChange,
+          confidence: inputs.confidence,
+          expectedImpact: inputs.revenueChange - inputs.costChange,
+        },
+        true
+      );
+
+      const resultWithSnapshot = {
+        ...result,
+        inputsSnapshot: inputs,
+      };
+
+      expect(resultWithSnapshot.inputsSnapshot).toEqual(inputs);
+    });
+  });
+
+  describe("Asymmetric Signing and Canonical Hash", () => {
+    it("should create canonical payload structure", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const inputs = {
+        revenue: 10000,
+        cost: 5000,
+      };
+
+      const canonical = createCanonicalPayload(result, inputs);
+
+      expect(canonical.inputsSnapshot).toEqual(inputs);
+      expect(canonical.calculationTrace).toBeDefined();
+      expect(canonical.decision).toBe("APPROVED");
+      expect(canonical.engineVersion).toBe("v1.0.0");
+      expect(canonical.timestamp).toBeDefined();
+    });
+
+    it("should generate valid asymmetric signature", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const inputs = {
+        revenue: 10000,
+        cost: 5000,
+      };
+
+      const canonical = createCanonicalPayload(result, inputs);
+      const canonicalString = canonicalStringify(canonical);
+      const asymmetricSig = signDecisionAsymmetric(canonicalString);
+
+      expect(asymmetricSig.signature).toBeDefined();
+      expect(asymmetricSig.signatureAlgo).toBe("ECDSA-SHA256");
+      expect(asymmetricSig.publicKeyId).toBeDefined();
+      expect(asymmetricSig.signature).toMatch(/^[a-f0-9]+$/); // Hex string
+    });
+
+    it("should verify asymmetric signature", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const inputs = {
+        revenue: 10000,
+        cost: 5000,
+      };
+
+      const canonical = createCanonicalPayload(result, inputs);
+      const canonicalString = canonicalStringify(canonical);
+      const asymmetricSig = signDecisionAsymmetric(canonicalString);
+      const publicKey = getPublicKey();
+
+      const isValid = verifyAsymmetricSignature(
+        canonicalString,
+        asymmetricSig.signature,
+        publicKey
+      );
+
+      expect(isValid).toBe(true);
+    });
+
+    it("should detect tampered canonical payload", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const inputs = {
+        revenue: 10000,
+        cost: 5000,
+      };
+
+      const canonical = createCanonicalPayload(result, inputs);
+      const canonicalString = canonicalStringify(canonical);
+      const asymmetricSig = signDecisionAsymmetric(canonicalString);
+
+      // Tamper with the payload
+      const tamperedCanonical = {
+        ...canonical,
+        decision: "BLOCKED" as const,
+      };
+      const tamperedString = canonicalStringify(tamperedCanonical);
+      const publicKey = getPublicKey();
+
+      const isValid = verifyAsymmetricSignature(
+        tamperedString,
+        asymmetricSig.signature,
+        publicKey
+      );
+
+      expect(isValid).toBe(false);
+    });
+
+    it("should include extended integrity in payload", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const inputs = {
+        revenue: 10000,
+        cost: 5000,
+      };
+
+      const extendedPayload = createExtendedIntegrityPayload(
+        result,
+        inputs
+      );
+
+      expect(extendedPayload.decisionHash).toBeDefined();
+      expect(extendedPayload.signature).toBeDefined();
+      expect(extendedPayload.signatureAlgo).toBe("ECDSA-SHA256");
+      expect(extendedPayload.publicKeyId).toBeDefined();
+      expect(extendedPayload.engineVersion).toBe("v1.0.0");
+    });
+
+    it("should maintain backward compatibility with HMAC", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const hash = generateDecisionHash(result);
+      const hmacSig = createSignaturePayload(hash);
+
+      // Legacy HMAC should still work
+      const isValid = verifySignature(hash, hmacSig.signedHash);
+
+      expect(isValid).toBe(true);
     });
   });
 });

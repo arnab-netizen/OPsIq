@@ -30,12 +30,6 @@ model User {
   assignedActions           Action[]                  @relation("AssignedActions")
   completedActions          Action[]                  @relation("CompletedActions")
   verifiedActions           Action[]                  @relation("VerifiedActions")
-  operatorItemsCreated      OperatorItem[]            @relation("OperatorItemCreator")
-  operatorItemsCompleted    OperatorItem[]            @relation("OperatorItemCompleter")
-  operatorItemsVerified     OperatorItem[]            @relation("OperatorItemVerifier")
-  overrideRecords           OverrideRecord[]
-  entitiesCreated           Entity[]                  @relation("EntityCreator")
-  financialBaselinesCreated FinancialBaseline[]
 
   @@map("users")
 }
@@ -622,150 +616,38 @@ model Risk {
   @@map("risks")
 }
 
-// ─── Phase 1–5: Operator System ────────────────────────────────────────────
+// ─── Operator Item (Decision Output) ────────────────────────────────────────
 
 model OperatorItem {
-  id                String    @id @default(uuid()) @db.Uuid
-  problem           String
-  action            String
-  impactExpected    Decimal   @db.Decimal(15, 2)
-  impactLow         Decimal   @db.Decimal(15, 2)
-  impactHigh        Decimal   @db.Decimal(15, 2)
-  confidence        Decimal   @db.Decimal(3, 2)
-  priorityScore     Decimal   @db.Decimal(5, 2)
-  status            String    @default("pending") // pending|in_progress|done
-  dueAt             DateTime?
-  expectedOutcome   String?
-  actualOutcome     String?
-  createdBy         String    @map("created_by") @db.Uuid
-  completedBy       String?   @map("completed_by") @db.Uuid
-  verifiedBy        String?   @map("verified_by") @db.Uuid
-  assumptions       Json?
-  blockingDependencies Json?  @map("blocking_dependencies")
-  version           Int       @default(1)
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-  completedAt       DateTime? @map("completed_at")
-  verifiedAt        DateTime? @map("verified_at")
-
-  creator           User      @relation("OperatorItemCreator", fields: [createdBy], references: [id])
-  completer         User?     @relation("OperatorItemCompleter", fields: [completedBy], references: [id])
-  verifier          User?     @relation("OperatorItemVerifier", fields: [verifiedBy], references: [id])
-  calibrationRecords CalibrationRecord[]
-  overrides         OverrideRecord[]
-  links             EntityLink[]
-  webhookDeliveries WebhookDelivery[]
+  id                  String    @id @default(uuid()) @db.Uuid
+  problem             String
+  action              String
+  impactExpected      Float
+  impactLow           Float
+  impactHigh          Float
+  confidence          Float
+  priorityScore       Float
+  status              String    @default("pending") // "pending" | "in_progress" | "done"
+  dueAt               DateTime?  @map("due_at")
+  expectedOutcome     String?    @map("expected_outcome")
+  actualOutcome       String?    @map("actual_outcome")
+  explanation         Json?      // DecisionExplanation JSONB
+  inputsSnapshot      Json?      // Full input payload for replay
+  decisionHash        String?    @map("decision_hash") // SHA256 hash for integrity
+  signedHash          String?    @map("signed_hash") // HMAC-SHA256 signature (legacy)
+  signature           String?    // Asymmetric signature (ECDSA)
+  signatureAlgo       String?    @map("signature_algo") // Signature algorithm identifier
+  publicKeyId         String?    @map("public_key_id") // Public key identifier
+  engineVersion       String    @default("v1.0.0") @map("engine_version")
+  createdBy           String?    @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   @@index([status])
-  @@index([createdBy])
   @@index([createdAt])
+  @@index([decisionHash])
+  @@index([signedHash])
+  @@index([publicKeyId])
   @@map("operator_items")
 }
 
-model CalibrationRecord {
-  id                String    @id @default(uuid()) @db.Uuid
-  operatorItemId    String    @map("operator_item_id") @db.Uuid
-  predictedImpact   Decimal   @db.Decimal(15, 2) @map("predicted_impact")
-  actualImpact      Decimal   @db.Decimal(15, 2) @map("actual_impact")
-  confidence        Decimal   @db.Decimal(3, 2)
-  deviation         Decimal   @db.Decimal(5, 2)
-  createdAt         DateTime  @default(now()) @map("created_at")
-
-  operatorItem      OperatorItem @relation(fields: [operatorItemId], references: [id], onDelete: Cascade)
-
-  @@unique([operatorItemId, createdAt])
-  @@index([operatorItemId])
-  @@index([createdAt])
-  @@map("calibration_records")
-}
-
-model OverrideRecord {
-  id                String    @id @default(uuid()) @db.Uuid
-  operatorItemId    String    @map("operator_item_id") @db.Uuid
-  originalAction    String    @map("original_action")
-  overriddenAction  String    @map("overridden_action")
-  reason            String
-  overriddenBy      String    @map("overridden_by") @db.Uuid
-  createdAt         DateTime  @default(now()) @map("created_at")
-  revokedAt         DateTime? @map("revoked_at")
-
-  operatorItem      OperatorItem @relation(fields: [operatorItemId], references: [id], onDelete: Cascade)
-  actor             User      @relation(fields: [overriddenBy], references: [id])
-
-  @@index([operatorItemId])
-  @@index([overriddenBy])
-  @@map("override_records")
-}
-
-model Entity {
-  id                String    @id @default(uuid()) @db.Uuid
-  name              String
-  type              String    // business_unit|client|project
-  externalId        String?   @map("external_id")
-  createdBy         String    @map("created_by") @db.Uuid
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
-
-  creator           User      @relation("EntityCreator", fields: [createdBy], references: [id])
-  links             EntityLink[]
-
-  @@index([type])
-  @@index([externalId])
-  @@index([createdBy])
-  @@map("entities")
-}
-
-model EntityLink {
-  id                String    @id @default(uuid()) @db.Uuid
-  entityId          String    @map("entity_id") @db.Uuid
-  operatorItemId    String    @map("operator_item_id") @db.Uuid
-  linkType          String    // owner|stakeholder|beneficiary
-  createdAt         DateTime  @default(now()) @map("created_at")
-
-  entity            Entity    @relation(fields: [entityId], references: [id], onDelete: Cascade)
-  operatorItem      OperatorItem @relation(fields: [operatorItemId], references: [id], onDelete: Cascade)
-
-  @@unique([entityId, operatorItemId])
-  @@index([operatorItemId])
-  @@map("entity_links")
-}
-
-model WebhookDelivery {
-  id                String    @id @default(uuid()) @db.Uuid
-  eventName         String    @map("event_name")
-  operatorItemId    String?   @map("operator_item_id") @db.Uuid
-  url               String
-  payload           Json
-  status            String    @default("pending") // pending|success|failed|retrying|skipped
-  responseCode      Int?      @map("response_code")
-  responseBody      Json?     @map("response_body")
-  retryCount        Int       @default(0) @map("retry_count")
-  nextRetryAt       DateTime? @map("next_retry_at")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  sentAt            DateTime? @map("sent_at")
-
-  operatorItem      OperatorItem? @relation(fields: [operatorItemId], references: [id], onDelete: SetNull)
-
-  @@index([status, nextRetryAt])
-  @@index([eventName, createdAt])
-  @@map("webhook_deliveries")
-}
-
-model FinancialBaseline {
-  id                String    @id @default(uuid()) @db.Uuid
-  engagementId      String?   @map("engagement_id") @db.Uuid
-  revenue           Decimal   @db.Decimal(15, 2)
-  costs             Decimal   @db.Decimal(15, 2)
-  currency          String    @default("USD")
-  source            String    // user_provided|system_default|imported
-  assumptions       Json      // stores multipliers, confidence thresholds
-  createdBy         String    @map("created_by") @db.Uuid
-  createdAt         DateTime  @default(now()) @map("created_at")
-  validUntil        DateTime? @map("valid_until")
-
-  creator           User      @relation(fields: [createdBy], references: [id])
-
-  @@index([engagementId])
-  @@index([source])
-  @@map("financial_baselines")
-}

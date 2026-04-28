@@ -31,6 +31,8 @@ export function generateOperatorItems(
       expectedOutcome: null,
       actualOutcome: null,
 
+      engineVersion: "v1.0.0",
+
       createdAt: new Date().toISOString(),
     };
 

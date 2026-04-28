@@ -18,3 +18,42 @@ export interface DecisionOutput {
   confidence: number;
   ruleId: string;
 }
+
+export interface Driver {
+  type: "REVENUE" | "COST" | "NET";
+  value: number;
+  label?: string;
+}
+
+export interface CalculationTrace {
+  baselineRevenue: number;
+  baselineCost: number;
+  revenueChange: number;
+  costChange: number;
+  netImpact: number;
+  formula: string;
+}
+
+export interface DecisionExplanation {
+  summary: string;
+  drivers: Driver[];
+  assumptions: string[];
+  risks: string[];
+  missingData: string[];
+  calculationTrace: CalculationTrace;
+}
+
+export interface DecisionResult {
+  decision: "APPROVED" | "BLOCKED";
+  expectedImpact: number;
+  confidence: number;
+  explanation: DecisionExplanation;
+  reason?: "LOW_CONFIDENCE" | "NON_POSITIVE_IMPACT" | "INVALID_INPUT";
+  decisionHash?: string;
+  signedHash?: string;
+  signature?: string;
+  signatureAlgo?: string;
+  publicKeyId?: string;
+  engineVersion?: string;
+  inputsSnapshot?: Record<string, unknown>;
+}

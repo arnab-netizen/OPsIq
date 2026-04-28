@@ -3,12 +3,32 @@ import { runSystem } from "@/services/system/run";
 import { createBaseline } from "@/services/onboarding/basic";
 import { generateOperatorItems } from "@/services/operator/generate";
 import { addItems } from "@/services/operator/store";
-import { resolveServerRole } from "@/services/auth/server-role";
-import { getSession } from "@/services/auth";
+import { resolveServerRole, getSession } from "@/services/auth/server-role";
 import { canEdit } from "@/services/auth/access";
 import { logAuditEvent } from "@/services/audit/audit-log";
+import { createDecisionResult } from "@/services/explanation/generate";
+import { createIntegrityPayload } from "@/services/integrity/hash";
+import { createSignaturePayload } from "@/services/integrity/sign";
+import { DecisionResult } from "@/domain/decision/types";
+
+function addIntegrity(
+  result: DecisionResult,
+  inputsSnapshot?: Record<string, unknown>
+): DecisionResult {
+  const integrity = createIntegrityPayload(result);
+  const signature = createSignaturePayload(integrity.decisionHash);
+
+  return {
+    ...result,
+    ...integrity,
+    ...signature,
+    inputsSnapshot,
+  };
+}
 
 export async function POST(request: NextRequest) {
+  let decisionResult: DecisionResult | null = null;
+
   try {
     // Enforce server-side auth
     const role = await resolveServerRole();
@@ -30,12 +50,31 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { revenue, cost } = body;
 
+    // Capture inputs snapshot for replay
+    const inputsSnapshot = {
+      revenue,
+      cost,
+      timestamp: new Date().toISOString(),
+    };
+
     // Validate input types
     if (typeof revenue !== "number" || typeof cost !== "number") {
-      return NextResponse.json(
-        { error: "Invalid input: revenue and cost must be numbers" },
-        { status: 400 }
+      decisionResult = addIntegrity(
+        createDecisionResult(
+          {
+            baselineRevenue: 0,
+            baselineCost: 0,
+            deltaRevenue: 0,
+            deltaCost: 0,
+            confidence: 0,
+            expectedImpact: 0,
+          },
+          false,
+          "INVALID_INPUT"
+        ),
+        inputsSnapshot
       );
+      return NextResponse.json(decisionResult, { status: 400 });
     }
 
     // 2. Create baseline using onboarding service
@@ -51,42 +90,126 @@ export async function POST(request: NextRequest) {
       risk: 5,
     };
 
-    // 4. Call runSystem
-    const result = runSystem(inputMetrics);
+    // 4. Call runSystem with error handling for decision validation
+    let result;
+    try {
+      result = runSystem(inputMetrics);
+    } catch (systemError) {
+      const errorMsg =
+        systemError instanceof Error ? systemError.message : "Unknown error";
 
-    // 5. Generate operator items and store them
+      if (errorMsg === "LOW_CONFIDENCE_BLOCKED") {
+        decisionResult = addIntegrity(
+          createDecisionResult(
+            {
+              baselineRevenue: revenue,
+              baselineCost: cost,
+              deltaRevenue: revenue * 0.1,
+              deltaCost: cost * 0.05,
+              confidence: 0.75,
+              expectedImpact: revenue * 0.1 - cost * 0.05,
+            },
+            false,
+            "LOW_CONFIDENCE"
+          ),
+          inputsSnapshot
+        );
+      } else if (errorMsg === "NON_POSITIVE_IMPACT_BLOCKED") {
+        decisionResult = addIntegrity(
+          createDecisionResult(
+            {
+              baselineRevenue: revenue,
+              baselineCost: cost,
+              deltaRevenue: revenue * 0.1,
+              deltaCost: cost * 0.05,
+              confidence: 0.75,
+              expectedImpact: revenue * 0.1 - cost * 0.05,
+            },
+            false,
+            "NON_POSITIVE_IMPACT"
+          ),
+          inputsSnapshot
+        );
+      } else {
+        decisionResult = addIntegrity(
+          createDecisionResult(
+            {
+              baselineRevenue: revenue,
+              baselineCost: cost,
+              deltaRevenue: revenue * 0.1,
+              deltaCost: cost * 0.05,
+              confidence: 0.75,
+              expectedImpact: revenue * 0.1 - cost * 0.05,
+            },
+            false,
+            "INVALID_INPUT"
+          ),
+          inputsSnapshot
+        );
+      }
+      return NextResponse.json(decisionResult, { status: 400 });
+    }
+
+    // 5. Create approved decision result with explanation
+    decisionResult = addIntegrity(
+      createDecisionResult(
+        {
+          baselineRevenue: revenue,
+          baselineCost: cost,
+          deltaRevenue: revenue * 0.1,
+          deltaCost: cost * 0.05,
+          confidence: 0.75,
+          expectedImpact: result.impact.impactExpected,
+        },
+        true
+      ),
+      inputsSnapshot
+    );
+
+    // 6. Generate operator items and store them
     const operatorItems = generateOperatorItems(result.decisions, result.impact);
+    await addItems(operatorItems);
 
     // Get actor ID for audit
     const session = await getSession();
     const actorId = session?.user.id ?? null;
 
-    await addItems(operatorItems);
-
-    // Log audit event for each operator item created (fail-closed if audit fails)
-    for (const item of operatorItems) {
-      await logAuditEvent({
-        eventName: "CREATE",
-        entityType: "OperatorItem",
-        entityId: item.id,
-        actorId,
-        role,
-        before: null,
-        after: item,
-        metadata: {
-          source: "run_system",
-          impact: result.impact,
-        },
-      });
-    }
-
-    // 6. Return JSON
-    return NextResponse.json({
-      decisions: result.decisions,
-      impact: result.impact,
+    // Log audit event for run execution
+    await logAuditEvent({
+      eventName: "RUN",
+      entityType: "Decision",
+      entityId: "system-run",
+      actorId,
+      role,
+      before: null,
+      after: decisionResult,
+      metadata: {
+        inputRevenue: revenue,
+        inputCost: cost,
+      },
     });
+
+    // 7. Return decision result with explanation
+    return NextResponse.json(decisionResult);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 400 });
+    if (decisionResult) {
+      return NextResponse.json(decisionResult, { status: 400 });
+    }
+    const errorResult = addIntegrity(
+      createDecisionResult(
+        {
+          baselineRevenue: 0,
+          baselineCost: 0,
+          deltaRevenue: 0,
+          deltaCost: 0,
+          confidence: 0,
+          expectedImpact: 0,
+        },
+        false,
+        "INVALID_INPUT"
+      ),
+      {}
+    );
+    return NextResponse.json(errorResult, { status: 400 });
   }
 }
