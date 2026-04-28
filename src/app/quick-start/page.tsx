@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { OutputPanel } from "@/components/OutputPanel";
+import { TrustCard } from "@/components/TrustCard";
 
 interface DecisionOutput {
   problem: string;
@@ -135,16 +136,22 @@ export default function QuickStartPage() {
       )}
 
       {result && result.decisions.length > 0 && (
-        <OutputPanel
-          problem={result.decisions[0].problem}
-          action={result.decisions[0].action}
-          impact={{
-            low: result.impact.impactLow,
-            expected: result.impact.impactExpected,
-            high: result.impact.impactHigh,
-          }}
-          confidence={result.impact.confidenceWeight}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+          <OutputPanel
+            problem={result.decisions[0].problem}
+            action={result.decisions[0].action}
+            impact={{
+              low: result.impact.impactLow,
+              expected: result.impact.impactExpected,
+              high: result.impact.impactHigh,
+            }}
+            confidence={result.impact.confidenceWeight}
+          />
+          <TrustCard
+            ruleId={result.decisions[0].ruleId}
+            confidence={result.decisions[0].confidence}
+          />
+        </div>
       )}
     </div>
   );
