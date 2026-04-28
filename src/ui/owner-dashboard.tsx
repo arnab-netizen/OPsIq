@@ -381,20 +381,30 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
                 </div>
               )}
             </div>
-            {data.primaryDecision.actionId && (
+            <div className="ml-4 flex flex-col gap-2">
+              {data.primaryDecision.actionId && (
+                <button
+                  onClick={() => {
+                    if (data.primaryDecision?.actionId) {
+                      router.push(
+                        `/engagements/${data.engagementId}/actions/${data.primaryDecision.actionId}`
+                      );
+                    }
+                  }}
+                  className="whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  View Action
+                </button>
+              )}
               <button
                 onClick={() => {
-                  if (data.primaryDecision?.actionId) {
-                    router.push(
-                      `/engagements/${data.engagementId}/actions/${data.primaryDecision.actionId}`
-                    );
-                  }
+                  router.push(`/engagements/${data.engagementId}/decision-evidence`);
                 }}
-                className="ml-4 whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                className="whitespace-nowrap rounded-md border border-foreground/20 bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
               >
-                View Action
+                View Evidence
               </button>
-            )}
+            </div>
           </div>
         </div>
       )}
