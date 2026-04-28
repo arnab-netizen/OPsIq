@@ -615,3 +615,32 @@ model Risk {
   @@index([status])
   @@map("risks")
 }
+
+// ─── Operator Item (Decision Output) ────────────────────────────────────────
+
+model OperatorItem {
+  id                  String    @id @default(uuid()) @db.Uuid
+  problem             String
+  action              String
+  impactExpected      Float
+  impactLow           Float
+  impactHigh          Float
+  confidence          Float
+  priorityScore       Float
+  status              String    @default("pending") // "pending" | "in_progress" | "done"
+  dueAt               DateTime?  @map("due_at")
+  expectedOutcome     String?    @map("expected_outcome")
+  actualOutcome       String?    @map("actual_outcome")
+  explanation         Json?      // DecisionExplanation JSONB
+  decisionHash        String?    @map("decision_hash") // SHA256 hash for integrity
+  engineVersion       String    @default("v1.0.0") @map("engine_version")
+  createdBy           String?    @map("created_by") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([decisionHash])
+  @@map("operator_items")
+}
+

@@ -24,5 +24,8 @@ export type OperatorItem = {
 
   explanation?: DecisionExplanation;
 
+  decisionHash?: string;
+  engineVersion: string;
+
   createdAt: string;
 };

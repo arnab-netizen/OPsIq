@@ -7,6 +7,11 @@ import {
   generateBlockedExplanation,
   createDecisionResult,
 } from "@/services/explanation/generate";
+import {
+  generateDecisionHash,
+  getEngineVersion,
+  createIntegrityPayload,
+} from "@/services/integrity/hash";
 
 describe("Backbone System", () => {
   describe("runSystem", () => {
@@ -270,6 +275,136 @@ describe("Backbone System", () => {
       expect(explanation.calculationTrace).toBeDefined();
       expect(explanation.calculationTrace.netImpact).toBe(500);
       expect(explanation.calculationTrace.formula).toContain("netImpact");
+    });
+  });
+
+  describe("Decision Integrity", () => {
+    it("should generate deterministic hash for same input", () => {
+      const result1 = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const result2 = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const hash1 = generateDecisionHash(result1);
+      const hash2 = generateDecisionHash(result2);
+
+      expect(hash1).toBe(hash2);
+    });
+
+    it("should generate different hash for different input", () => {
+      const result1 = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const result2 = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 3000, // Different revenue change
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 2500,
+        },
+        true
+      );
+
+      const hash1 = generateDecisionHash(result1);
+      const hash2 = generateDecisionHash(result2);
+
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it("should include hash in integrity payload", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const payload = createIntegrityPayload(result);
+
+      expect(payload.decisionHash).toBeDefined();
+      expect(payload.decisionHash).toMatch(/^[a-f0-9]{64}$/); // SHA256 hex format
+    });
+
+    it("should return consistent engine version", () => {
+      const version = getEngineVersion();
+
+      expect(version).toBe("v1.0.0");
+    });
+
+    it("should include version in integrity payload", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const payload = createIntegrityPayload(result);
+
+      expect(payload.engineVersion).toBe("v1.0.0");
+    });
+
+    it("should include integrity fields in result", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const payload = createIntegrityPayload(result);
+      const integrityResult = {
+        ...result,
+        ...payload,
+      };
+
+      expect(integrityResult.decisionHash).toBeDefined();
+      expect(integrityResult.engineVersion).toBe("v1.0.0");
     });
   });
 });

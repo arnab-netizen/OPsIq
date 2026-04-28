@@ -7,7 +7,16 @@ import { resolveServerRole, getSession } from "@/services/auth/server-role";
 import { canEdit } from "@/services/auth/access";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { createDecisionResult } from "@/services/explanation/generate";
+import { createIntegrityPayload } from "@/services/integrity/hash";
 import { DecisionResult } from "@/domain/decision/types";
+
+function addIntegrity(result: DecisionResult): DecisionResult {
+  const integrity = createIntegrityPayload(result);
+  return {
+    ...result,
+    ...integrity,
+  };
+}
 
 export async function POST(request: NextRequest) {
   let decisionResult: DecisionResult | null = null;
@@ -35,17 +44,19 @@ export async function POST(request: NextRequest) {
 
     // Validate input types
     if (typeof revenue !== "number" || typeof cost !== "number") {
-      decisionResult = createDecisionResult(
-        {
-          baselineRevenue: 0,
-          baselineCost: 0,
-          deltaRevenue: 0,
-          deltaCost: 0,
-          confidence: 0,
-          expectedImpact: 0,
-        },
-        false,
-        "INVALID_INPUT"
+      decisionResult = addIntegrity(
+        createDecisionResult(
+          {
+            baselineRevenue: 0,
+            baselineCost: 0,
+            deltaRevenue: 0,
+            deltaCost: 0,
+            confidence: 0,
+            expectedImpact: 0,
+          },
+          false,
+          "INVALID_INPUT"
+        )
       );
       return NextResponse.json(decisionResult, { status: 400 });
     }
@@ -72,59 +83,67 @@ export async function POST(request: NextRequest) {
         systemError instanceof Error ? systemError.message : "Unknown error";
 
       if (errorMsg === "LOW_CONFIDENCE_BLOCKED") {
-        decisionResult = createDecisionResult(
-          {
-            baselineRevenue: revenue,
-            baselineCost: cost,
-            deltaRevenue: revenue * 0.1,
-            deltaCost: cost * 0.05,
-            confidence: 0.75,
-            expectedImpact: revenue * 0.1 - cost * 0.05,
-          },
-          false,
-          "LOW_CONFIDENCE"
+        decisionResult = addIntegrity(
+          createDecisionResult(
+            {
+              baselineRevenue: revenue,
+              baselineCost: cost,
+              deltaRevenue: revenue * 0.1,
+              deltaCost: cost * 0.05,
+              confidence: 0.75,
+              expectedImpact: revenue * 0.1 - cost * 0.05,
+            },
+            false,
+            "LOW_CONFIDENCE"
+          )
         );
       } else if (errorMsg === "NON_POSITIVE_IMPACT_BLOCKED") {
-        decisionResult = createDecisionResult(
-          {
-            baselineRevenue: revenue,
-            baselineCost: cost,
-            deltaRevenue: revenue * 0.1,
-            deltaCost: cost * 0.05,
-            confidence: 0.75,
-            expectedImpact: revenue * 0.1 - cost * 0.05,
-          },
-          false,
-          "NON_POSITIVE_IMPACT"
+        decisionResult = addIntegrity(
+          createDecisionResult(
+            {
+              baselineRevenue: revenue,
+              baselineCost: cost,
+              deltaRevenue: revenue * 0.1,
+              deltaCost: cost * 0.05,
+              confidence: 0.75,
+              expectedImpact: revenue * 0.1 - cost * 0.05,
+            },
+            false,
+            "NON_POSITIVE_IMPACT"
+          )
         );
       } else {
-        decisionResult = createDecisionResult(
-          {
-            baselineRevenue: revenue,
-            baselineCost: cost,
-            deltaRevenue: revenue * 0.1,
-            deltaCost: cost * 0.05,
-            confidence: 0.75,
-            expectedImpact: revenue * 0.1 - cost * 0.05,
-          },
-          false,
-          "INVALID_INPUT"
+        decisionResult = addIntegrity(
+          createDecisionResult(
+            {
+              baselineRevenue: revenue,
+              baselineCost: cost,
+              deltaRevenue: revenue * 0.1,
+              deltaCost: cost * 0.05,
+              confidence: 0.75,
+              expectedImpact: revenue * 0.1 - cost * 0.05,
+            },
+            false,
+            "INVALID_INPUT"
+          )
         );
       }
       return NextResponse.json(decisionResult, { status: 400 });
     }
 
     // 5. Create approved decision result with explanation
-    decisionResult = createDecisionResult(
-      {
-        baselineRevenue: revenue,
-        baselineCost: cost,
-        deltaRevenue: revenue * 0.1,
-        deltaCost: cost * 0.05,
-        confidence: 0.75,
-        expectedImpact: result.impact.impactExpected,
-      },
-      true
+    decisionResult = addIntegrity(
+      createDecisionResult(
+        {
+          baselineRevenue: revenue,
+          baselineCost: cost,
+          deltaRevenue: revenue * 0.1,
+          deltaCost: cost * 0.05,
+          confidence: 0.75,
+          expectedImpact: result.impact.impactExpected,
+        },
+        true
+      )
     );
 
     // 6. Generate operator items and store them
@@ -156,21 +175,20 @@ export async function POST(request: NextRequest) {
     if (decisionResult) {
       return NextResponse.json(decisionResult, { status: 400 });
     }
-    return NextResponse.json(
-      {
-        decision: "BLOCKED",
-        expectedImpact: 0,
-        confidence: 0,
-        explanation: {
-          summary: "Decision blocked due to internal error",
-          drivers: [],
-          assumptions: [],
-          risks: ["System error occurred"],
-          missingData: [],
+    const errorResult = addIntegrity(
+      createDecisionResult(
+        {
+          baselineRevenue: 0,
+          baselineCost: 0,
+          deltaRevenue: 0,
+          deltaCost: 0,
+          confidence: 0,
+          expectedImpact: 0,
         },
-        reason: "INVALID_INPUT",
-      },
-      { status: 400 }
+        false,
+        "INVALID_INPUT"
+      )
     );
+    return NextResponse.json(errorResult, { status: 400 });
   }
 }
