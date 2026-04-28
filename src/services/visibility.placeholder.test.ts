@@ -15,7 +15,7 @@ describe("Visibility Enforcement", () => {
   let clientVisibleEvidenceId: string;
   let internalFindingId: string;
   let clientVisibleFindingId: string;
-  let actorId = TEST_IDS.TEST_ACTOR_ID;
+  const actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeAll(async () => {
     const client = await createClient(

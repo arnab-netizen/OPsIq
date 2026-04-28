@@ -18,7 +18,7 @@ describe("KPI Service", () => {
   let clientId: string;
   let engagementId: string;
   let actionId: string;
-  let actorId = TEST_IDS.TEST_ACTOR_ID;
+  const actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeAll(async () => {
     const client = await createClient(
