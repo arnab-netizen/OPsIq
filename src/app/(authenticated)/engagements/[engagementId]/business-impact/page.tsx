@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 interface DetailData {
   impactLevel: string;
@@ -19,14 +19,25 @@ interface DetailData {
   }>;
 }
 
+interface ImpactDeltaData {
+  actionTitle: string;
+  current: { impactLevel: string; estimatedLoss: number | null };
+  ifCompleted: { impactLevel: string; estimatedLoss: number | null; estimatedLossReduction: number | null };
+  ifDelayed: { impactLevel: string; estimatedLoss: number | null; additionalLoss: number | null; delayPenaltyDays: number };
+  ifIgnored: { impactLevel: string; estimatedLoss: number | null; lossEscalation: number | null; projectedFailureDays: number | null };
+}
+
 export default function BusinessImpactPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const engagementId = params.engagementId as string;
+  const actionId = searchParams.get("action");
 
   const [data, setData] = useState<DetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deltaData, setDeltaData] = useState<ImpactDeltaData | null>(null);
 
   useEffect(() => {
     async function fetchDetail() {
@@ -51,6 +62,27 @@ export default function BusinessImpactPage() {
       fetchDetail();
     }
   }, [engagementId]);
+
+  useEffect(() => {
+    async function fetchDelta() {
+      if (!actionId) {
+        setDeltaData(null);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/actions/${actionId}/impact-delta`);
+        if (!response.ok) {
+          return; // Silently fail - delta is optional
+        }
+        const result = await response.json();
+        setDeltaData(result.data);
+      } catch (err) {
+        // Silently fail - delta is optional
+      }
+    }
+
+    fetchDelta();
+  }, [actionId]);
 
   if (isLoading) {
     return (
@@ -225,6 +257,100 @@ export default function BusinessImpactPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Decision Impact */}
+      {deltaData && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <h2 className="text-lg font-semibold">Decision Impact: {deltaData.actionTitle}</h2>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            {/* If Completed */}
+            <div className="rounded border border-success/30 bg-success/5 p-3">
+              <p className="text-sm font-semibold text-success">If Completed ✓</p>
+              <div className="mt-2 space-y-2 text-xs">
+                <div>
+                  <p className="text-muted-foreground">Impact Level</p>
+                  <p className="font-medium">
+                    {deltaData.current.impactLevel} →{" "}
+                    <span className="text-success">{deltaData.ifCompleted.impactLevel}</span>
+                  </p>
+                </div>
+                {deltaData.ifCompleted.estimatedLossReduction && (
+                  <div>
+                    <p className="text-muted-foreground">Loss Reduction</p>
+                    <p className="font-medium text-success">
+                      -${(deltaData.ifCompleted.estimatedLossReduction / 1000).toFixed(0)}K
+                    </p>
+                  </div>
+                )}
+                {deltaData.ifCompleted.estimatedLoss !== null && (
+                  <div>
+                    <p className="text-muted-foreground">Remaining Loss</p>
+                    <p className="font-medium">
+                      ${(deltaData.ifCompleted.estimatedLoss / 1000).toFixed(0)}K
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* If Delayed */}
+            <div className="rounded border border-warning/30 bg-warning/5 p-3">
+              <p className="text-sm font-semibold text-warning">If Delayed ⏳</p>
+              <div className="mt-2 space-y-2 text-xs">
+                <div>
+                  <p className="text-muted-foreground">Impact Level</p>
+                  <p className="font-medium">
+                    {deltaData.current.impactLevel} →{" "}
+                    <span className="text-warning">{deltaData.ifDelayed.impactLevel}</span>
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Delay Penalty</p>
+                  <p className="font-medium">{deltaData.ifDelayed.delayPenaltyDays} days</p>
+                </div>
+                {deltaData.ifDelayed.additionalLoss && (
+                  <div>
+                    <p className="text-muted-foreground">Additional Loss</p>
+                    <p className="font-medium text-warning">
+                      +${(deltaData.ifDelayed.additionalLoss / 1000).toFixed(0)}K
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* If Ignored */}
+            <div className="rounded border border-destructive/30 bg-destructive/5 p-3">
+              <p className="text-sm font-semibold text-destructive">If Ignored ✗</p>
+              <div className="mt-2 space-y-2 text-xs">
+                <div>
+                  <p className="text-muted-foreground">Impact Level</p>
+                  <p className="font-medium">
+                    {deltaData.current.impactLevel} →{" "}
+                    <span className="text-destructive">{deltaData.ifIgnored.impactLevel}</span>
+                  </p>
+                </div>
+                {deltaData.ifIgnored.projectedFailureDays && (
+                  <div>
+                    <p className="text-muted-foreground">Days to Failure</p>
+                    <p className="font-medium text-destructive">
+                      {deltaData.ifIgnored.projectedFailureDays} days
+                    </p>
+                  </div>
+                )}
+                {deltaData.ifIgnored.lossEscalation && (
+                  <div>
+                    <p className="text-muted-foreground">Loss Escalation</p>
+                    <p className="font-medium text-destructive">
+                      +${(deltaData.ifIgnored.lossEscalation / 1000).toFixed(0)}K
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

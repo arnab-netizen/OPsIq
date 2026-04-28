@@ -147,6 +147,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isMutating, setIsMutating] = useState(false);
+  const [actionDelta, setActionDelta] = useState<any>(null);
 
   const fetchDashboard = async () => {
     try {
@@ -176,6 +177,28 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
 
     initialFetch();
   }, [engagementId]);
+
+  useEffect(() => {
+    async function fetchImpactDelta() {
+      const actionId = data?.nextBestAction?.id;
+      if (!actionId) {
+        setActionDelta(null);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/actions/${actionId}/impact-delta`);
+        if (!response.ok) {
+          return; // Silently fail - delta is optional
+        }
+        const result = await response.json();
+        setActionDelta(result.data);
+      } catch (err) {
+        // Silently fail - delta is optional enhancement
+      }
+    }
+
+    fetchImpactDelta();
+  }, [data?.nextBestAction?.id]);
 
   const handleAcknowledge = async () => {
     if (!data) return;
@@ -521,6 +544,41 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
               </span>
             </div>
           </div>
+
+          {actionDelta && (
+            <div className="mt-4 border-t border-border pt-3">
+              <p className="text-xs font-medium text-success">What happens if you act:</p>
+              <div className="mt-2 flex items-center gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Impact Level</p>
+                  <p className="text-sm font-semibold capitalize">
+                    {actionDelta.current.impactLevel} →{" "}
+                    <span className="text-success">{actionDelta.ifCompleted.impactLevel}</span>
+                  </p>
+                </div>
+                {actionDelta.ifCompleted.estimatedLossReduction && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Loss Reduction</p>
+                    <p className="text-sm font-semibold text-success">
+                      -${(actionDelta.ifCompleted.estimatedLossReduction / 1000).toFixed(0)}K
+                    </p>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  if (data?.nextBestAction?.id) {
+                    router.push(
+                      `/engagements/${engagementId}/business-impact?action=${data.nextBestAction.id}`
+                    );
+                  }
+                }}
+                className="mt-2 text-xs text-primary underline hover:no-underline"
+              >
+                See consequences →
+              </button>
+            </div>
+          )}
         </div>
       )}
 
