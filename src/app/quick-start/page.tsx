@@ -1,14 +1,26 @@
 "use client";
 
 import { useState } from "react";
+import { OutputPanel } from "@/components/OutputPanel";
 
-interface AnalysisResult {
+interface DecisionOutput {
   problem: string;
   action: string;
+  impactMultiplier: number;
+  confidence: number;
+  ruleId: string;
+}
+
+interface ImpactEstimate {
   impactLow: number;
   impactExpected: number;
   impactHigh: number;
-  confidence: number;
+  confidenceWeight: number;
+}
+
+interface AnalysisResult {
+  decisions: DecisionOutput[];
+  impact: ImpactEstimate;
 }
 
 export default function QuickStartPage() {
@@ -122,47 +134,17 @@ export default function QuickStartPage() {
         </div>
       )}
 
-      {result && (
-        <div
-          style={{
-            border: "1px solid #e0e0e0",
-            padding: "20px",
-            borderRadius: "4px",
-            backgroundColor: "#f5f5f5",
+      {result && result.decisions.length > 0 && (
+        <OutputPanel
+          problem={result.decisions[0].problem}
+          action={result.decisions[0].action}
+          impact={{
+            low: result.impact.impactLow,
+            expected: result.impact.impactExpected,
+            high: result.impact.impactHigh,
           }}
-        >
-          <h2 style={{ marginTop: "0" }}>Analysis Result</h2>
-
-          <div style={{ marginBottom: "12px" }}>
-            <strong>Problem:</strong>
-            <p style={{ margin: "4px 0 0 0", color: "#555" }}>
-              {result.problem}
-            </p>
-          </div>
-
-          <div style={{ marginBottom: "12px" }}>
-            <strong>Action:</strong>
-            <p style={{ margin: "4px 0 0 0", color: "#555" }}>
-              {result.action}
-            </p>
-          </div>
-
-          <div style={{ marginBottom: "12px" }}>
-            <strong>Impact Estimate:</strong>
-            <ul style={{ margin: "8px 0 0 20px", color: "#555" }}>
-              <li>Low: ${result.impactLow.toFixed(2)}</li>
-              <li>Expected: ${result.impactExpected.toFixed(2)}</li>
-              <li>High: ${result.impactHigh.toFixed(2)}</li>
-            </ul>
-          </div>
-
-          <div>
-            <strong>Confidence:</strong>
-            <p style={{ margin: "4px 0 0 0", color: "#555" }}>
-              {(result.confidence * 100).toFixed(0)}%
-            </p>
-          </div>
-        </div>
+          confidence={result.impact.confidenceWeight}
+        />
       )}
     </div>
   );
