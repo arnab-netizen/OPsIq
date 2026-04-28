@@ -84,30 +84,30 @@ export function TrustVerificationPanel({
       <button
         onClick={handleVerify}
         disabled={loading || !decisionHash}
-        className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full rounded-lg bg-primary px-4 py-2.5 text-xs md:text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
       >
         {loading ? 'Verifying...' : 'Verify Decision Integrity'}
       </button>
 
       {/* Error Message */}
       {error && (
-        <div className="rounded-lg border border-destructive bg-destructive/5 p-3">
-          <p className="text-sm text-destructive">{error}</p>
+        <div className="rounded-lg border border-destructive bg-destructive/5 p-2 md:p-3">
+          <p className="text-xs md:text-sm text-destructive">{error}</p>
         </div>
       )}
 
       {/* Verification Results */}
       {result && (
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           {/* Overall Status */}
           <div
-            className={`rounded-lg border p-3 ${
+            className={`rounded-lg border p-2 md:p-3 ${
               result.valid
                 ? 'border-success bg-success/5'
                 : 'border-destructive bg-destructive/5'
             }`}
           >
-            <p className="text-sm font-medium">
+            <p className="text-xs md:text-sm font-medium">
               Verification Status:{' '}
               <span className={result.valid ? 'text-success' : 'text-destructive'}>
                 {result.valid ? '✓ Valid' : '✗ Invalid'}
@@ -122,8 +122,8 @@ export function TrustVerificationPanel({
 
           {/* Hash Match Status */}
           {result.hashMatches !== undefined && (
-            <div className="rounded-lg border border-border bg-muted p-3">
-              <p className="text-sm">
+            <div className="rounded-lg border border-border bg-muted p-2 md:p-3">
+              <p className="text-xs md:text-sm">
                 <span className="font-medium">Hash Match:</span>{' '}
                 <span className={result.hashMatches ? 'text-success' : 'text-destructive'}>
                   {result.hashMatches ? '✓ Verified' : '✗ Mismatch'}
@@ -134,8 +134,8 @@ export function TrustVerificationPanel({
 
           {/* HMAC Signature Status */}
           {result.signatureValid !== undefined && (
-            <div className="rounded-lg border border-border bg-muted p-3">
-              <p className="text-sm">
+            <div className="rounded-lg border border-border bg-muted p-2 md:p-3">
+              <p className="text-xs md:text-sm">
                 <span className="font-medium">HMAC Signature (Legacy):</span>{' '}
                 <span className={result.signatureValid ? 'text-success' : 'text-muted-foreground'}>
                   {result.signatureValid ? '✓ Valid' : '○ Not verified'}
@@ -146,8 +146,8 @@ export function TrustVerificationPanel({
 
           {/* Asymmetric Signature Status */}
           {result.asymmetricValid !== undefined && (
-            <div className="rounded-lg border border-border bg-muted p-3">
-              <p className="text-sm">
+            <div className="rounded-lg border border-border bg-muted p-2 md:p-3">
+              <p className="text-xs md:text-sm">
                 <span className="font-medium">Asymmetric Signature:</span>{' '}
                 <span className={result.asymmetricValid ? 'text-success' : 'text-muted-foreground'}>
                   {result.asymmetricValid ? '✓ Valid' : '○ Not verified'}
@@ -158,22 +158,22 @@ export function TrustVerificationPanel({
 
           {/* Recomputed Hash */}
           {result.recomputedHash && (
-            <div className="rounded-lg border border-border bg-muted p-3">
+            <div className="rounded-lg border border-border bg-muted p-2 md:p-3">
               <p className="text-xs text-muted-foreground mb-2">
                 Recomputed Hash (SHA256)
               </p>
-              <code className="block break-all rounded bg-background p-2 font-mono text-xs text-foreground">
+              <code className="block w-full break-all overflow-x-auto rounded bg-background p-2 font-mono text-xs text-foreground">
                 {result.recomputedHash}
               </code>
             </div>
           )}
 
           {/* Trust Confidence Summary */}
-          <div className="rounded-lg border border-border bg-accent p-3">
+          <div className="rounded-lg border border-border bg-accent p-2 md:p-3">
             <p className="text-xs text-muted-foreground mb-2">
               Trust Assessment
             </p>
-            <div className="space-y-1 text-xs">
+            <div className="space-y-1 text-xs leading-relaxed">
               {result.valid ? (
                 <p className="text-success">
                   ✓ This decision has passed integrity verification.
@@ -205,8 +205,8 @@ export function TrustVerificationPanel({
 
       {/* Info Note */}
       {!result && (
-        <div className="rounded-lg border border-border bg-muted p-3">
-          <p className="text-xs text-muted-foreground">
+        <div className="rounded-lg border border-border bg-muted p-2 md:p-3">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             Click "Verify Decision Integrity" to cryptographically verify that this decision
             has not been tampered with and was issued by the OpsIQ engine.
           </p>

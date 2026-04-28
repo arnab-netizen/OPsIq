@@ -19,7 +19,7 @@ export function DecisionResultComponent({ result }: DecisionResultProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* 1. Decision Status */}
       <div className={`rounded-lg border border-border ${getDecisionBgColor(result.decision)} p-6`}>
         <h2 className="text-sm font-medium text-muted-foreground mb-2">
@@ -189,7 +189,7 @@ export function DecisionResultComponent({ result }: DecisionResultProps) {
               <p className="text-xs text-muted-foreground mb-1">
                 Decision Hash (SHA256)
               </p>
-              <code className="block break-all rounded bg-background p-2 font-mono text-xs text-foreground">
+              <code className="block w-full break-all overflow-x-auto rounded bg-background p-2 font-mono text-xs text-foreground">
                 {result.decisionHash}
               </code>
             </div>
@@ -201,7 +201,7 @@ export function DecisionResultComponent({ result }: DecisionResultProps) {
               <p className="text-xs text-muted-foreground mb-1">
                 Signed Hash (HMAC-SHA256)
               </p>
-              <code className="block break-all rounded bg-background p-2 font-mono text-xs text-foreground">
+              <code className="block w-full break-all overflow-x-auto rounded bg-background p-2 font-mono text-xs text-foreground">
                 {result.signedHash}
               </code>
             </div>
@@ -213,7 +213,7 @@ export function DecisionResultComponent({ result }: DecisionResultProps) {
               <p className="text-xs text-muted-foreground mb-1">
                 Signature (Asymmetric)
               </p>
-              <code className="block break-all rounded bg-background p-2 font-mono text-xs text-foreground">
+              <code className="block w-full break-all overflow-x-auto rounded bg-background p-2 font-mono text-xs text-foreground">
                 {result.signature}
               </code>
               {result.signatureAlgo && (
@@ -230,7 +230,7 @@ export function DecisionResultComponent({ result }: DecisionResultProps) {
               <p className="text-xs text-muted-foreground mb-1">
                 Public Key ID
               </p>
-              <code className="block rounded bg-background p-2 font-mono text-xs text-foreground">
+              <code className="block w-full break-all overflow-x-auto rounded bg-background p-2 font-mono text-xs text-foreground">
                 {result.publicKeyId}
               </code>
             </div>

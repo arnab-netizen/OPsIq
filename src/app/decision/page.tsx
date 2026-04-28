@@ -134,34 +134,34 @@ export default function DecisionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="mx-auto max-w-2xl">
+    <div className="min-h-screen bg-background p-3 md:p-8 sm:p-4">
+      <div className="mx-auto w-full max-w-2xl">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground md:text-4xl">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl font-bold text-foreground md:text-4xl">
             OPSIQ Decision Check
           </h1>
-          <p className="mt-2 text-base text-muted-foreground">
+          <p className="mt-2 text-sm text-muted-foreground md:text-base">
             Enter current business numbers to generate a traceable decision.
           </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
           {/* Error Message */}
           {error && (
-            <div className="rounded-lg border border-destructive bg-destructive/5 p-4">
-              <p className="text-sm font-medium text-destructive">{error}</p>
+            <div className="sticky top-0 z-50 rounded-lg border border-destructive bg-destructive/5 p-3 md:p-4 md:relative md:z-auto">
+              <p className="text-xs md:text-sm font-medium text-destructive">{error}</p>
             </div>
           )}
 
           {/* Form Fields */}
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {/* Baseline Revenue */}
             <div>
               <label
                 htmlFor="baselineRevenue"
-                className="block text-sm font-medium text-foreground"
+                className="block text-xs md:text-sm font-medium text-foreground"
               >
                 Baseline Revenue
               </label>
@@ -172,7 +172,7 @@ export default function DecisionPage() {
                 value={formValues.baselineRevenue}
                 onChange={handleInputChange('baselineRevenue')}
                 placeholder="100000"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-3 md:px-4 py-2.5 md:py-2 text-base md:text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                 disabled={loading}
               />
             </div>
@@ -181,7 +181,7 @@ export default function DecisionPage() {
             <div>
               <label
                 htmlFor="baselineCost"
-                className="block text-sm font-medium text-foreground"
+                className="block text-xs md:text-sm font-medium text-foreground"
               >
                 Baseline Cost
               </label>
@@ -192,7 +192,7 @@ export default function DecisionPage() {
                 value={formValues.baselineCost}
                 onChange={handleInputChange('baselineCost')}
                 placeholder="50000"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-3 md:px-4 py-2.5 md:py-2 text-base md:text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                 disabled={loading}
               />
             </div>
@@ -201,7 +201,7 @@ export default function DecisionPage() {
             <div>
               <label
                 htmlFor="revenueChange"
-                className="block text-sm font-medium text-foreground"
+                className="block text-xs md:text-sm font-medium text-foreground"
               >
                 Revenue Change
               </label>
@@ -212,7 +212,7 @@ export default function DecisionPage() {
                 value={formValues.revenueChange}
                 onChange={handleInputChange('revenueChange')}
                 placeholder="10000"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-3 md:px-4 py-2.5 md:py-2 text-base md:text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                 disabled={loading}
               />
             </div>
@@ -221,7 +221,7 @@ export default function DecisionPage() {
             <div>
               <label
                 htmlFor="costChange"
-                className="block text-sm font-medium text-foreground"
+                className="block text-xs md:text-sm font-medium text-foreground"
               >
                 Cost Change
               </label>
@@ -232,7 +232,7 @@ export default function DecisionPage() {
                 value={formValues.costChange}
                 onChange={handleInputChange('costChange')}
                 placeholder="2500"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-3 md:px-4 py-2.5 md:py-2 text-base md:text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                 disabled={loading}
               />
             </div>
@@ -241,7 +241,7 @@ export default function DecisionPage() {
             <div>
               <label
                 htmlFor="confidence"
-                className="block text-sm font-medium text-foreground"
+                className="block text-xs md:text-sm font-medium text-foreground"
               >
                 Confidence (0 - 1)
               </label>
@@ -255,7 +255,7 @@ export default function DecisionPage() {
                 max="1"
                 step="0.01"
                 placeholder="0.75"
-                className="mt-1 w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="mt-1 w-full rounded-lg border border-border bg-background px-3 md:px-4 py-2.5 md:py-2 text-base md:text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                 disabled={loading}
               />
               <p className="mt-1 text-xs text-muted-foreground">
@@ -268,7 +268,7 @@ export default function DecisionPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-lg bg-primary px-4 py-3 md:py-3 py-3.5 font-medium text-sm md:text-base text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
           >
             {loading ? 'Running Decision...' : 'Run Decision'}
           </button>
@@ -276,14 +276,14 @@ export default function DecisionPage() {
 
         {/* Result Display */}
         {result && (
-          <div className="mt-8">
+          <div className="mt-6 md:mt-8">
             <DecisionResultComponent result={result} />
           </div>
         )}
 
         {/* Info Section */}
-        <div className="mt-8 rounded-lg border border-border bg-muted p-4">
-          <p className="text-xs text-muted-foreground">
+        <div className="mt-6 md:mt-8 rounded-lg border border-border bg-muted p-3 md:p-4">
+          <p className="text-xs text-muted-foreground leading-relaxed">
             <span className="font-medium">Note:</span> All decisions are logged
             and verified with cryptographic signatures for audit compliance.
           </p>
