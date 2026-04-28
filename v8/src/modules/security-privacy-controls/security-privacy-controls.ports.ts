@@ -1,0 +1,3 @@
+export interface SecurityPrivacyControlsReadinessView { readonly moduleKey: 'security-privacy-controls'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface SecurityPrivacyControlsServicePort { getReadinessView(): Promise<SecurityPrivacyControlsReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface SecurityPrivacyControlsRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'security-privacy-controls'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

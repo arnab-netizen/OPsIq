@@ -7,6 +7,9 @@ import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { z } from "zod/v4";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 const updateActionSchema = z.object({
   status: z.enum(["open", "in_progress", "completed", "blocked", "deferred"]).optional(),
   blockageReason: z.string().optional(),

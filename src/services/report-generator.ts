@@ -3,6 +3,8 @@ import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { calculateExecutionCertainty, type ExecutionCertaintyResult } from "./execution-certainty";
+import { generateBusinessImpact, type BusinessImpactResult } from "./business-impact/business-impact.service";
 
 // ─── Report Types ──────────────────────────────────────────────────────────
 
@@ -73,6 +75,17 @@ export interface ExecutiveSummary {
   riskReasoning: string;
 }
 
+export interface ExecutionRiskGovernance {
+  score: number;
+  level: "blocked" | "low" | "medium" | "high" | "certain";
+  blockers: string[];
+  risks: string[];
+  overrideApplied: boolean;
+  overrideReason?: string;
+  overriddenBy?: string;
+  reasons: string[];
+}
+
 export interface ReportMetadata {
   generatedAt: string;
   version: string;
@@ -85,6 +98,26 @@ export interface ReportMetadata {
   };
 }
 
+export interface BusinessImpactSummary {
+  impactLevel: "low" | "medium" | "high" | "critical" | "existential";
+  estimatedLoss: number | null;
+  timeImpact: {
+    timelineToFailure: number | null;
+    delayRiskDays?: number;
+    urgencyWindow: "immediate" | "days" | "weeks" | "months" | "unknown";
+  };
+  recoveryImpact: {
+    recoveryProbability: "low" | "medium" | "high";
+  };
+  ownerDecision: {
+    required: boolean;
+    decision?: string;
+    deadlineDays?: number;
+    consequenceIfIgnored?: string;
+  };
+  topImpactDrivers: string[];
+}
+
 export interface EngagementReport {
   summary: EngagementReportSummary;
   executiveSummary: ExecutiveSummary;
@@ -93,6 +126,9 @@ export interface EngagementReport {
   actions: ActionSummary[];
   kpis: KPISummary[];
   reviewStatus: ReviewStatus;
+  executionCertainty: ExecutionCertaintyResult;
+  executionRiskGovernance: ExecutionRiskGovernance;
+  businessImpact: BusinessImpactSummary;
   metadata: ReportMetadata;
 }
 
@@ -303,6 +339,77 @@ export async function generateEngagementReport(
     },
   };
 
+  // Map findings to execution-certainty format
+  const findingsForCertainty = findings.map((f: typeof findings[0]) => ({
+    id: f.id,
+    severity: f.severity as "critical" | "high" | "medium" | "low",
+    resolved: f.status === "resolved" || f.status === "closed",
+    verified: f.verified ?? false,
+  }));
+
+  // Map recommendations to execution-certainty format
+  const recommendationsForCertainty = recommendations.map(
+    (r: typeof recommendations[0]) => ({
+      id: r.id,
+      priority: r.priority as "critical" | "high" | "medium" | "low",
+      status: r.status as "blocked" | "in_progress" | "completed",
+    })
+  );
+
+  // Map actions to execution-certainty format
+  const actionsForCertainty = actions.map((a: typeof actions[0]) => ({
+    id: a.id,
+    priority: a.priority as "critical" | "high" | "medium" | "low",
+    status: a.status as "blocked" | "pending" | "in_progress" | "completed" | "verified",
+  }));
+
+  // Map engagement health to execution-certainty format
+  const healthForCertainty = {
+    overallStatus: (engagement.healthStatus as "critical" | "at_risk" | "stable" | "healthy") ?? "stable",
+    kpiTrend: currentCondition
+      ? (currentCondition.businessStatus === "deteriorating" ? "deteriorating" : "improving" as "deteriorating" | "flat" | "improving")
+      : ("flat" as "deteriorating" | "flat" | "improving"),
+  };
+
+  // Calculate execution certainty
+  const executionCertainty = calculateExecutionCertainty(
+    engagementId,
+    findingsForCertainty,
+    recommendationsForCertainty,
+    actionsForCertainty,
+    [], // evidence not yet available from DB
+    healthForCertainty
+  );
+
+  const executionRiskGovernance: ExecutionRiskGovernance = {
+    score: executionCertainty.score,
+    level: executionCertainty.level,
+    blockers: executionCertainty.blockers,
+    risks: executionCertainty.risks,
+    overrideApplied: false, // Override tracking would require DB schema extension
+    reasons: executionCertainty.reasons,
+  };
+
+  // Generate business impact assessment
+  const businessImpactResult = await generateBusinessImpact(engagementId, engagement.id);
+  const businessImpactSummary: BusinessImpactSummary = {
+    impactLevel: businessImpactResult.impactLevel,
+    estimatedLoss: businessImpactResult.estimatedLoss,
+    timeImpact: {
+      timelineToFailure: businessImpactResult.timeImpact.timelineToFailure,
+      urgencyWindow: businessImpactResult.timeImpact.urgencyWindow,
+    },
+    recoveryImpact: {
+      recoveryProbability: businessImpactResult.recoveryImpact.recoveryProbability,
+    },
+    ownerDecision: {
+      required: businessImpactResult.ownerDecision.required,
+      decision: businessImpactResult.ownerDecision.decision,
+      consequenceIfIgnored: businessImpactResult.ownerDecision.reason,
+    },
+    topImpactDrivers: businessImpactResult.topImpactDrivers.slice(0, 3),
+  };
+
   const report: EngagementReport = {
     summary,
     executiveSummary,
@@ -311,6 +418,9 @@ export async function generateEngagementReport(
     actions: actionsSummary,
     kpis: kpisSummary,
     reviewStatus,
+    executionCertainty,
+    executionRiskGovernance,
+    businessImpact: businessImpactSummary,
     metadata,
   };
 

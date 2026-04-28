@@ -1,0 +1,3 @@
+export interface TestingPackReadinessView { readonly moduleKey: 'testing-pack'; readonly status: 'partial'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface TestingPackServicePort { getReadinessView(): Promise<TestingPackReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface TestingPackRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'testing-pack'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

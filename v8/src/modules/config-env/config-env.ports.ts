@@ -1,0 +1,3 @@
+export interface ConfigEnvReadinessView { readonly moduleKey: 'config-env'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface ConfigEnvServicePort { getReadinessView(): Promise<ConfigEnvReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface ConfigEnvRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'config-env'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

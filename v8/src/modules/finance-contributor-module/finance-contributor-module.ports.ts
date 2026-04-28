@@ -1,0 +1,3 @@
+export interface FinanceContributorModuleReadinessView { readonly moduleKey: 'finance-contributor-module'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface FinanceContributorModuleServicePort { getReadinessView(): Promise<FinanceContributorModuleReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface FinanceContributorModuleRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'finance-contributor-module'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

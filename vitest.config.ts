@@ -12,6 +12,7 @@ export default defineConfig({
       "**/.next/**",
       "**/*.integration.test.ts",
       "**/*.placeholder.test.ts",
+      "**/__ignored_tests__/**",
     ],
   },
   resolve: {

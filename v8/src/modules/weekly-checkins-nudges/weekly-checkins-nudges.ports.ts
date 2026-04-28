@@ -1,0 +1,3 @@
+export interface WeeklyCheckinsNudgesReadinessView { readonly moduleKey: 'weekly-checkins-nudges'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface WeeklyCheckinsNudgesServicePort { getReadinessView(): Promise<WeeklyCheckinsNudgesReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface WeeklyCheckinsNudgesRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'weekly-checkins-nudges'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

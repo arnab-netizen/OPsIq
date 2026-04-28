@@ -394,6 +394,7 @@ model Action {
   verifiedAt          DateTime? @map("verified_at")
   notes               String?
   blockerReason       String?   @map("blocker_reason")
+  outcomeSnapshot     Json?     @map("outcome_snapshot") // stores predicted vs actual impact
   version             Int       @default(1)
   visibility          String    @default("internal") // "internal" | "client_visible"
   createdAt           DateTime  @default(now()) @map("created_at")

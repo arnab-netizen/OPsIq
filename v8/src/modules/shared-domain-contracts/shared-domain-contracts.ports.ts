@@ -1,0 +1,3 @@
+export interface SharedDomainContractsReadinessView { readonly moduleKey: 'shared-domain-contracts'; readonly status: 'partial'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface SharedDomainContractsServicePort { getReadinessView(): Promise<SharedDomainContractsReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface SharedDomainContractsRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'shared-domain-contracts'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

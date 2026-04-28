@@ -19,11 +19,13 @@
     "test:merge": "vitest run",
     "test:integration": "vitest run --include='**/*.integration.test.ts' --exclude='**/*.placeholder.test.ts'",
     "test:mvp": "vitest run src/__tests__/mvp-operational-flow.test.ts",
-    "test:db": "vitest run src/__tests__/mvp-db-execution.test.ts"
+    "test:db": "vitest run src/__tests__/mvp-db-execution.test.ts",
+    "dev:backbone": "vitest run src/__tests__/backbone.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
     "@prisma/client": "^7.7.0",
+    "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "next": "16.2.3",
     "pg": "^8.20.0",

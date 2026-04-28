@@ -1,0 +1,3 @@
+export interface CiCdReleaseOperationsReadinessView { readonly moduleKey: 'ci-cd-release-operations'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface CiCdReleaseOperationsServicePort { getReadinessView(): Promise<CiCdReleaseOperationsReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface CiCdReleaseOperationsRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'ci-cd-release-operations'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

@@ -7,6 +7,7 @@ import { FindingsManager } from "@/ui/findings-manager";
 import { RecommendationsManager } from "@/ui/recommendations-manager";
 import { ActionCenter } from "@/ui/action-center";
 import { KPITrend } from "@/ui/kpi-trend";
+import { ExecutionCertaintyCard } from "@/ui/execution-certainty-card";
 
 interface EngagementWorkspaceProps {
   engagement: any;
@@ -148,7 +149,7 @@ export function EngagementWorkspace({
       {/* Overview Tab */}
       {tab === "overview" && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
             <div className="rounded-lg border border-border bg-muted/10 p-4">
               <p className="text-xs font-medium uppercase text-muted-foreground">Findings</p>
               <p className="mt-2 text-2xl font-bold">{findings.length}</p>
@@ -171,6 +172,7 @@ export function EngagementWorkspace({
               <p className="text-xs font-medium uppercase text-muted-foreground">Evidence</p>
               <p className="mt-2 text-2xl font-bold">{evidence.length}</p>
             </div>
+            <ExecutionCertaintyCard engagementId={engagement.id} />
           </div>
 
           <div className="rounded-lg border border-border p-6">

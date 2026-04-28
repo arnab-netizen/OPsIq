@@ -1,0 +1,3 @@
+export interface EmailIngestionCsvImportReadinessView { readonly moduleKey: 'email-ingestion-csv-import'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface EmailIngestionCsvImportServicePort { getReadinessView(): Promise<EmailIngestionCsvImportReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface EmailIngestionCsvImportRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'email-ingestion-csv-import'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

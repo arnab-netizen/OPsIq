@@ -1,0 +1,5 @@
+import type { OpsiqModuleSpec } from '../module-readiness/types';
+import { getOpsiqModule } from '../module-readiness/module-gate';
+export const EXPORT_PORTABILITY_MODULE_KEY = 'export-portability' as const;
+export function getExportPortabilityModuleContract(): OpsiqModuleSpec { return getOpsiqModule(EXPORT_PORTABILITY_MODULE_KEY); }
+export interface ExportPortabilityImplementationRecord { readonly moduleKey: typeof EXPORT_PORTABILITY_MODULE_KEY; readonly implementationStage: 'contract' | 'service' | 'repository' | 'route' | 'ui' | 'tested' | 'released'; readonly version: string; readonly changedBy: string; readonly changedAt: string; readonly evidenceRefs: readonly string[]; readonly riskNotes: readonly string[]; }

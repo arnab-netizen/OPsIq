@@ -1,0 +1,3 @@
+export interface HrContributorModuleReadinessView { readonly moduleKey: 'hr-contributor-module'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface HrContributorModuleServicePort { getReadinessView(): Promise<HrContributorModuleReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface HrContributorModuleRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'hr-contributor-module'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

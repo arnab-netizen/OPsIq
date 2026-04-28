@@ -1,0 +1,3 @@
+export interface RbacPolicyEnforcementReadinessView { readonly moduleKey: 'rbac-policy-enforcement'; readonly status: 'planned'; readonly purpose: string; readonly dependencyKeys: readonly string[]; readonly acceptanceCriteria: readonly string[]; }
+export interface RbacPolicyEnforcementServicePort { getReadinessView(): Promise<RbacPolicyEnforcementReadinessView>; validateImplementationReadiness(): Promise<readonly string[]>; }
+export interface RbacPolicyEnforcementRepositoryPort { recordImplementationEvidence(record: { readonly moduleKey: 'rbac-policy-enforcement'; readonly evidenceType: 'test' | 'migration' | 'route' | 'service' | 'security-review' | 'manual-review'; readonly evidenceRef: string; readonly createdAt: string; }): Promise<void>; }

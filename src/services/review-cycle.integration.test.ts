@@ -19,7 +19,7 @@ describe("Review Cycle Service", () => {
   let actionId: string;
   let kpiId: string;
   let findingId: string;
-  let actorId = TEST_IDS.TEST_ACTOR_ID;
+  const actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeAll(async () => {
     const client = await createClient(

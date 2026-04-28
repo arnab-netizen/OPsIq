@@ -47,3 +47,6 @@ next-env.d.ts
 # uploads (local storage dev)
 /uploads
 test.db
+
+# v8 reference architecture (not for production)
+/v8

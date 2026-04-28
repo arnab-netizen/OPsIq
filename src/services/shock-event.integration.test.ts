@@ -14,7 +14,7 @@ import type { CreateShockEventInput } from "./shock-event";
 describe("ShockEvent Service", () => {
   let clientId: string;
   let engagementId: string;
-  let actorId = TEST_IDS.TEST_ACTOR_ID;
+  const actorId = TEST_IDS.TEST_ACTOR_ID;
 
   beforeAll(async () => {
     // Create test client
