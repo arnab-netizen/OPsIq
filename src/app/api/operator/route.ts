@@ -7,9 +7,9 @@ import {
 import { sortByPriority } from "@/services/operator/sort";
 import { evaluatePolicy } from "@/services/policy/engine";
 import { canEdit } from "@/services/auth/access";
+import { resolveServerRole } from "@/services/auth/server-role";
 import { sendWebhook } from "@/services/integration/webhook";
 import type { PolicyRule } from "@/domain/policy/types";
-import type { UserRole } from "@/domain/auth/types";
 
 export async function GET() {
   try {
@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { id, status, actualOutcome } = body;
 
-    // Server-side role resolution (TODO: integrate with session/auth)
-    const role: UserRole = "admin";
+    // Resolve role from server-side session/database (never from request body)
+    const role = await resolveServerRole();
 
     if (!role) {
       return NextResponse.json(
