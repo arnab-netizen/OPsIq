@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { DecisionResultComponent } from '@/components/decision/DecisionResult';
+import { DecisionResult } from '@/domain/decision/types';
 
 interface FormValues {
   baselineRevenue: string;
@@ -8,40 +10,6 @@ interface FormValues {
   revenueChange: string;
   costChange: string;
   confidence: string;
-}
-
-interface DecisionResult {
-  decision: 'APPROVED' | 'BLOCKED';
-  expectedImpact: number;
-  confidence: number;
-  explanation: {
-    summary: string;
-    drivers: Array<{
-      type: 'REVENUE' | 'COST' | 'NET';
-      value: number;
-      label?: string;
-    }>;
-    assumptions: string[];
-    risks: string[];
-    missingData: string[];
-    calculationTrace: {
-      baselineRevenue: number;
-      baselineCost: number;
-      revenueChange: number;
-      costChange: number;
-      netImpact: number;
-      formula: string;
-    };
-  };
-  reason?: 'LOW_CONFIDENCE' | 'NON_POSITIVE_IMPACT' | 'INVALID_INPUT';
-  decisionHash: string;
-  signedHash: string;
-  engineVersion: string;
-  inputsSnapshot: {
-    revenue: number;
-    cost: number;
-    timestamp: string;
-  };
 }
 
 export default function DecisionPage() {
@@ -308,56 +276,8 @@ export default function DecisionPage() {
 
         {/* Result Display */}
         {result && (
-          <div className="mt-8 space-y-6">
-            {/* Decision Summary */}
-            <div className="rounded-lg border border-border bg-accent p-6">
-              <h2 className="text-lg font-semibold text-foreground mb-4">
-                Decision Result
-              </h2>
-              <div className="space-y-2">
-                <p>
-                  <span className="font-medium">Decision:</span>{' '}
-                  <span
-                    className={
-                      result.decision === 'APPROVED'
-                        ? 'text-success font-semibold'
-                        : 'text-destructive font-semibold'
-                    }
-                  >
-                    {result.decision}
-                  </span>
-                </p>
-                {result.reason && (
-                  <p>
-                    <span className="font-medium">Reason:</span> {result.reason}
-                  </p>
-                )}
-                <p>
-                  <span className="font-medium">Expected Impact:</span> $
-                  {result.expectedImpact.toFixed(2)}
-                </p>
-                <p>
-                  <span className="font-medium">Confidence:</span>{' '}
-                  {(result.confidence * 100).toFixed(0)}%
-                </p>
-                <p>
-                  <span className="font-medium">Summary:</span>{' '}
-                  <span className="text-sm text-muted-foreground">
-                    {result.explanation.summary}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            {/* Debug Result - Raw JSON */}
-            <div className="rounded-lg border border-border bg-muted p-4">
-              <h3 className="text-sm font-medium text-foreground mb-2">
-                Debug Result (Raw JSON)
-              </h3>
-              <pre className="overflow-x-auto rounded bg-background p-3 text-xs text-foreground">
-                <code>{JSON.stringify(result, null, 2)}</code>
-              </pre>
-            </div>
+          <div className="mt-8">
+            <DecisionResultComponent result={result} />
           </div>
         )}
 
