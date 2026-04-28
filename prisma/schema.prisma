@@ -641,6 +641,7 @@ model OperatorItem {
   completedBy       String?   @map("completed_by") @db.Uuid
   verifiedBy        String?   @map("verified_by") @db.Uuid
   assumptions       Json?
+  blockingDependencies Json?  @map("blocking_dependencies")
   version           Int       @default(1)
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")

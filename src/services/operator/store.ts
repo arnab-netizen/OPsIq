@@ -24,6 +24,7 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
         dueAt: item.dueAt ? new Date(item.dueAt) : null,
         expectedOutcome: item.expectedOutcome,
         actualOutcome: item.actualOutcome,
+        blockingDependencies: item.blockingDependencies && item.blockingDependencies.length > 0 ? item.blockingDependencies : null,
         createdBy: SYSTEM_USER_ID,
       },
     });
@@ -46,7 +47,7 @@ export async function getItems(): Promise<OperatorItem[]> {
     expectedOutcome: r.expectedOutcome,
     actualOutcome: r.actualOutcome,
     createdAt: r.createdAt.toISOString(),
-    blockingDependencies: [],
+    blockingDependencies: Array.isArray(r.blockingDependencies) ? (r.blockingDependencies as string[]) : [],
   }));
 }
 
@@ -54,21 +55,24 @@ export async function updateItem(
   id: string,
   updates: Partial<OperatorItem>
 ): Promise<void> {
+  const updateData: Record<string, any> = {};
+
+  if (updates.problem !== undefined) updateData.problem = updates.problem;
+  if (updates.action !== undefined) updateData.action = updates.action;
+  if (updates.impactExpected !== undefined) updateData.impactExpected = updates.impactExpected;
+  if (updates.impactLow !== undefined) updateData.impactLow = updates.impactLow;
+  if (updates.impactHigh !== undefined) updateData.impactHigh = updates.impactHigh;
+  if (updates.confidence !== undefined) updateData.confidence = updates.confidence;
+  if (updates.priorityScore !== undefined) updateData.priorityScore = updates.priorityScore;
+  if (updates.status !== undefined) updateData.status = updates.status;
+  if (updates.dueAt !== undefined) updateData.dueAt = updates.dueAt ? new Date(updates.dueAt) : null;
+  if (updates.expectedOutcome !== undefined) updateData.expectedOutcome = updates.expectedOutcome;
+  if (updates.actualOutcome !== undefined) updateData.actualOutcome = updates.actualOutcome;
+  if (updates.blockingDependencies !== undefined) updateData.blockingDependencies = updates.blockingDependencies && updates.blockingDependencies.length > 0 ? updates.blockingDependencies : null;
+
   await db.operatorItem.update({
     where: { id },
-    data: {
-      problem: updates.problem,
-      action: updates.action,
-      impactExpected: updates.impactExpected,
-      impactLow: updates.impactLow,
-      impactHigh: updates.impactHigh,
-      confidence: updates.confidence,
-      priorityScore: updates.priorityScore,
-      status: updates.status,
-      dueAt: updates.dueAt ? new Date(updates.dueAt) : undefined,
-      expectedOutcome: updates.expectedOutcome,
-      actualOutcome: updates.actualOutcome,
-    },
+    data: updateData,
   });
 }
 
