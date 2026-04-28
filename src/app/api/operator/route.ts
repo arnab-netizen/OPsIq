@@ -7,6 +7,7 @@ import {
 import { sortByPriority } from "@/services/operator/sort";
 import { evaluatePolicy } from "@/services/policy/engine";
 import { canEdit } from "@/services/auth/access";
+import { sendWebhook } from "@/services/integration/webhook";
 import type { PolicyRule } from "@/domain/policy/types";
 import type { UserRole } from "@/domain/auth/types";
 
@@ -86,6 +87,17 @@ export async function POST(request: NextRequest) {
     }
 
     updateItem(id, { status, actualOutcome });
+
+    if (status === "done") {
+      const updatedItems = getItems();
+      const completedItem = updatedItems.find((i) => i.id === id);
+      if (completedItem) {
+        sendWebhook({
+          event: "action_completed",
+          payload: completedItem,
+        });
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
