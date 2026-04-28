@@ -2,6 +2,11 @@ import { describe, it, expect } from "vitest";
 import { runSystem } from "@/services/system/run";
 import { parseCSV } from "@/services/ingestion/csv";
 import { validateRows } from "@/services/ingestion/validate";
+import {
+  generateApprovedExplanation,
+  generateBlockedExplanation,
+  createDecisionResult,
+} from "@/services/explanation/generate";
 
 describe("Backbone System", () => {
   describe("runSystem", () => {
@@ -100,6 +105,109 @@ describe("Backbone System", () => {
 
     it("should fail-closed on empty rows", () => {
       expect(() => validateRows([])).toThrow("LOW_DATA_QUALITY");
+    });
+  });
+
+  describe("Decision Explainability", () => {
+    it("should generate approved explanation with drivers", () => {
+      const explanation = generateApprovedExplanation({
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 2000,
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 1500,
+      });
+
+      expect(explanation.summary).toBeDefined();
+      expect(explanation.drivers.length).toBeGreaterThan(0);
+      expect(explanation.assumptions.length).toBeGreaterThan(0);
+      expect(explanation.risks.length).toBeGreaterThan(0);
+      expect(explanation.missingData).toBeDefined();
+    });
+
+    it("should generate blocked explanation for low confidence", () => {
+      const explanation = generateBlockedExplanation("LOW_CONFIDENCE", {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 1000,
+        deltaCost: 500,
+        confidence: 0.3,
+        expectedImpact: 500,
+      });
+
+      expect(explanation.summary).toContain("BLOCKED");
+      expect(explanation.summary).toContain("Confidence");
+      expect(explanation.missingData.length).toBeGreaterThan(0);
+    });
+
+    it("should generate blocked explanation for non-positive impact", () => {
+      const explanation = generateBlockedExplanation(
+        "NON_POSITIVE_IMPACT",
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 100,
+          deltaCost: 500,
+          confidence: 0.75,
+          expectedImpact: -400,
+        }
+      );
+
+      expect(explanation.summary).toContain("BLOCKED");
+      expect(explanation.summary).toContain("non-positive");
+      expect(explanation.missingData.length).toBeGreaterThan(0);
+    });
+
+    it("should create approved decision result", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      expect(result.decision).toBe("APPROVED");
+      expect(result.expectedImpact).toBe(1500);
+      expect(result.confidence).toBe(0.85);
+      expect(result.explanation).toBeDefined();
+      expect(result.reason).toBeUndefined();
+    });
+
+    it("should create blocked decision result with reason", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 100,
+          deltaCost: 500,
+          confidence: 0.3,
+          expectedImpact: -400,
+        },
+        false,
+        "LOW_CONFIDENCE"
+      );
+
+      expect(result.decision).toBe("BLOCKED");
+      expect(result.reason).toBe("LOW_CONFIDENCE");
+      expect(result.explanation).toBeDefined();
+      expect(result.explanation.summary).toContain("BLOCKED");
+    });
+
+    it("should include missing data in blocked explanations", () => {
+      const explanation = generateBlockedExplanation("INVALID_INPUT");
+
+      expect(explanation.missingData.length).toBeGreaterThan(0);
+      expect(explanation.missingData).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/revenue|cost|confidence/i),
+        ])
+      );
     });
   });
 });

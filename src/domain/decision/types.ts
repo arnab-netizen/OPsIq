@@ -18,3 +18,19 @@ export interface DecisionOutput {
   confidence: number;
   ruleId: string;
 }
+
+export interface DecisionExplanation {
+  summary: string;
+  drivers: string[];
+  assumptions: string[];
+  risks: string[];
+  missingData: string[];
+}
+
+export interface DecisionResult {
+  decision: "APPROVED" | "BLOCKED";
+  expectedImpact: number;
+  confidence: number;
+  explanation: DecisionExplanation;
+  reason?: "LOW_CONFIDENCE" | "NON_POSITIVE_IMPACT" | "INVALID_INPUT";
+}
