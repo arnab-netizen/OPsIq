@@ -1,3 +1,5 @@
+import type { DecisionExplanation } from "@/domain/decision/types";
+
 export type OperatorItem = {
   id: string;
   problem: string;
@@ -19,6 +21,8 @@ export type OperatorItem = {
 
   expectedOutcome: string | null;
   actualOutcome: string | null;
+
+  explanation?: DecisionExplanation;
 
   createdAt: string;
 };

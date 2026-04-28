@@ -121,9 +121,14 @@ describe("Backbone System", () => {
 
       expect(explanation.summary).toBeDefined();
       expect(explanation.drivers.length).toBeGreaterThan(0);
+      expect(explanation.drivers[0]).toHaveProperty("type");
+      expect(explanation.drivers[0]).toHaveProperty("value");
       expect(explanation.assumptions.length).toBeGreaterThan(0);
       expect(explanation.risks.length).toBeGreaterThan(0);
       expect(explanation.missingData).toBeDefined();
+      expect(explanation.calculationTrace).toBeDefined();
+      expect(explanation.calculationTrace.netImpact).toBe(1500);
+      expect(explanation.calculationTrace.formula).toContain("netImpact");
     });
 
     it("should generate blocked explanation for low confidence", () => {
@@ -208,6 +213,63 @@ describe("Backbone System", () => {
           expect.stringMatching(/revenue|cost|confidence/i),
         ])
       );
+    });
+
+    it("should generate calculation trace with correct formula", () => {
+      const explanation = generateApprovedExplanation({
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 2000,
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 1500,
+      });
+
+      expect(explanation.calculationTrace).toEqual({
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        revenueChange: 2000,
+        costChange: 500,
+        netImpact: 1500,
+        formula: "netImpact = revenueChange - costChange",
+      });
+    });
+
+    it("should create structured drivers with type and value", () => {
+      const explanation = generateApprovedExplanation({
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 2000,
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 1500,
+      });
+
+      const revenueDriver = explanation.drivers.find((d) => d.type === "REVENUE");
+      const costDriver = explanation.drivers.find((d) => d.type === "COST");
+      const netDriver = explanation.drivers.find((d) => d.type === "NET");
+
+      expect(revenueDriver).toBeDefined();
+      expect(revenueDriver?.value).toBe(2000);
+      expect(costDriver).toBeDefined();
+      expect(costDriver?.value).toBe(500);
+      expect(netDriver).toBeDefined();
+      expect(netDriver?.value).toBe(1500);
+    });
+
+    it("should include calculation trace in blocked explanations", () => {
+      const explanation = generateBlockedExplanation("LOW_CONFIDENCE", {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 1000,
+        deltaCost: 500,
+        confidence: 0.3,
+        expectedImpact: 500,
+      });
+
+      expect(explanation.calculationTrace).toBeDefined();
+      expect(explanation.calculationTrace.netImpact).toBe(500);
+      expect(explanation.calculationTrace.formula).toContain("netImpact");
     });
   });
 });

@@ -1,4 +1,4 @@
-import { DecisionExplanation, DecisionResult } from "@/domain/decision/types";
+import { DecisionExplanation, DecisionResult, Driver, CalculationTrace } from "@/domain/decision/types";
 
 export interface ExplanationInput {
   baselineRevenue: number;
@@ -10,27 +10,58 @@ export interface ExplanationInput {
   rules?: Array<{ description: string }>;
 }
 
+export function generateCalculationTrace(
+  input: ExplanationInput
+): CalculationTrace {
+  return {
+    baselineRevenue: input.baselineRevenue,
+    baselineCost: input.baselineCost,
+    revenueChange: input.deltaRevenue,
+    costChange: input.deltaCost,
+    netImpact: input.expectedImpact,
+    formula: "netImpact = revenueChange - costChange",
+  };
+}
+
 export function generateApprovedExplanation(
   input: ExplanationInput
 ): DecisionExplanation {
-  const drivers: string[] = [];
+  const drivers: Driver[] = [];
   const assumptions: string[] = [];
   const risks: string[] = [];
   const missingData: string[] = [];
 
-  // Drivers
+  // Structured drivers
   if (input.deltaRevenue > 0) {
-    drivers.push(`Revenue increase of $${input.deltaRevenue.toFixed(0)}`);
+    drivers.push({
+      type: "REVENUE",
+      value: input.deltaRevenue,
+      label: `Revenue increase of $${input.deltaRevenue.toFixed(0)}`,
+    });
   }
-  if (input.deltaCost < 0) {
-    drivers.push(`Cost reduction of $${Math.abs(input.deltaCost).toFixed(0)}`);
-  } else if (input.deltaCost === 0) {
-    drivers.push("No additional costs");
+  if (input.deltaRevenue < 0) {
+    drivers.push({
+      type: "REVENUE",
+      value: input.deltaRevenue,
+      label: `Revenue decrease of $${Math.abs(input.deltaRevenue).toFixed(0)}`,
+    });
+  }
+  if (input.deltaCost !== 0) {
+    drivers.push({
+      type: "COST",
+      value: input.deltaCost,
+      label:
+        input.deltaCost < 0
+          ? `Cost reduction of $${Math.abs(input.deltaCost).toFixed(0)}`
+          : `Cost increase of $${input.deltaCost.toFixed(0)}`,
+    });
   }
   if (input.expectedImpact > 0) {
-    drivers.push(
-      `Net positive impact of $${input.expectedImpact.toFixed(0)}`
-    );
+    drivers.push({
+      type: "NET",
+      value: input.expectedImpact,
+      label: `Net positive impact of $${input.expectedImpact.toFixed(0)}`,
+    });
   }
 
   // Assumptions
@@ -68,6 +99,7 @@ export function generateApprovedExplanation(
     assumptions,
     risks,
     missingData,
+    calculationTrace: generateCalculationTrace(input),
   };
 }
 
@@ -122,6 +154,16 @@ export function generateBlockedExplanation(
     assumptions: [],
     risks,
     missingData,
+    calculationTrace: input
+      ? generateCalculationTrace(input)
+      : {
+          baselineRevenue: 0,
+          baselineCost: 0,
+          revenueChange: 0,
+          costChange: 0,
+          netImpact: 0,
+          formula: "netImpact = revenueChange - costChange",
+        },
   };
 }
 
