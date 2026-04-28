@@ -25,16 +25,19 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, status, actualOutcome, role } = body;
+    const { id, status, actualOutcome } = body;
+
+    // Server-side role resolution (TODO: integrate with session/auth)
+    const role: UserRole = "admin";
 
     if (!role) {
       return NextResponse.json(
-        { error: "Missing required field: role" },
-        { status: 400 }
+        { error: "Unauthorized" },
+        { status: 403 }
       );
     }
 
-    if (!canEdit(role as UserRole)) {
+    if (!canEdit(role)) {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
