@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { OperatorItem as OperatorItemComponent } from "@/components/OperatorItem";
 
 interface OperatorItem {
   id: string;
@@ -36,30 +37,10 @@ export default function MyDayPage() {
     fetchItems();
   }, []);
 
-  const handleStart = async (id: string) => {
-    try {
-      const response = await fetch("/api/operator", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id,
-          status: "in_progress",
-          actualOutcome: null,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to update item");
-      }
-
-      setItems(
-        items.map((item) =>
-          item.id === id ? { ...item, status: "in_progress" } : item
-        )
-      );
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Unknown error");
-    }
+  const handleItemUpdate = (updatedItem: OperatorItem) => {
+    setItems(
+      items.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+    );
   };
 
   return (
@@ -84,80 +65,11 @@ export default function MyDayPage() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
         {items.map((item) => (
-          <div
+          <OperatorItemComponent
             key={item.id}
-            style={{
-              border: "1px solid #ccc",
-              padding: "15px",
-              borderRadius: "4px",
-              backgroundColor: "#fafafa",
-            }}
-          >
-            <h3 style={{ margin: "0 0 10px 0" }}>{item.problem}</h3>
-
-            <p style={{ margin: "8px 0", color: "#555" }}>
-              <strong>Action:</strong> {item.action}
-            </p>
-
-            <p style={{ margin: "8px 0", color: "#555" }}>
-              <strong>Expected Impact:</strong> ${item.impactExpected.toFixed(2)}
-            </p>
-
-            <p style={{ margin: "8px 0", color: "#555" }}>
-              <strong>Confidence:</strong> {(item.confidence * 100).toFixed(0)}%
-            </p>
-
-            <p style={{ margin: "8px 0 15px 0", color: "#555" }}>
-              <strong>Priority Score:</strong> {item.priorityScore.toFixed(2)}
-            </p>
-
-            {item.status === "pending" && (
-              <button
-                onClick={() => handleStart(item.id)}
-                style={{
-                  padding: "8px 16px",
-                  backgroundColor: "#28a745",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                }}
-              >
-                Start
-              </button>
-            )}
-
-            {item.status === "in_progress" && (
-              <span
-                style={{
-                  display: "inline-block",
-                  padding: "8px 16px",
-                  backgroundColor: "#ffc107",
-                  color: "#333",
-                  borderRadius: "4px",
-                  fontWeight: "bold",
-                }}
-              >
-                In Progress
-              </span>
-            )}
-
-            {item.status === "done" && (
-              <span
-                style={{
-                  display: "inline-block",
-                  padding: "8px 16px",
-                  backgroundColor: "#28a745",
-                  color: "white",
-                  borderRadius: "4px",
-                  fontWeight: "bold",
-                }}
-              >
-                Done
-              </span>
-            )}
-          </div>
+            item={item}
+            onUpdate={handleItemUpdate}
+          />
         ))}
       </div>
 
