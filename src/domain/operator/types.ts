@@ -23,6 +23,8 @@ export type OperatorItem = {
   actualOutcome: string | null;
   actualOutcomeValue?: number | null;
   outcomeDelta?: number | null;
+  decisionAccuracy?: number | null;
+  decisionError?: number | null;
   outcomeNotes?: string | null;
 
   startedAt?: string | null;

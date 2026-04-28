@@ -6,6 +6,7 @@ import {
 } from "@/services/operator/store";
 import { sortByPriority } from "@/services/operator/sort";
 import { calculateOutcomeDelta } from "@/services/operator/outcome";
+import { calculateDecisionAccuracy } from "@/services/operator/accuracy";
 import { evaluatePolicy } from "@/services/policy/engine";
 import { canEdit } from "@/services/auth/access";
 import { resolveServerRole } from "@/services/auth/server-role";
@@ -128,6 +129,17 @@ export async function POST(request: NextRequest) {
       const deltaResult = calculateOutcomeDelta(expectedImpact, actualOutcome);
       if (deltaResult.valid && deltaResult.delta !== null) {
         updatePayload.outcomeDelta = deltaResult.delta;
+      }
+
+      // Calculate decision accuracy metrics
+      const accuracyResult = calculateDecisionAccuracy(expectedImpact, actualOutcome);
+      if (accuracyResult.valid) {
+        if (accuracyResult.accuracy !== null) {
+          updatePayload.decisionAccuracy = accuracyResult.accuracy;
+        }
+        if (accuracyResult.error !== null) {
+          updatePayload.decisionError = accuracyResult.error;
+        }
       }
     } else if (status === 'in_progress') {
       updatePayload.startedAt = new Date().toISOString();

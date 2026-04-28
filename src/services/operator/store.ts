@@ -73,6 +73,8 @@ export async function getItems(): Promise<OperatorItem[]> {
     actualOutcome: r.actualOutcome,
     actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,
     outcomeDelta: r.outcomeDelta ? Number(r.outcomeDelta) : undefined,
+    decisionAccuracy: r.decisionAccuracy ? Number(r.decisionAccuracy) : undefined,
+    decisionError: r.decisionError ? Number(r.decisionError) : undefined,
     explanation: r.explanation ? JSON.parse(String(r.explanation)) : undefined,
     inputsSnapshot: r.inputsSnapshot
       ? JSON.parse(String(r.inputsSnapshot))
@@ -107,6 +109,8 @@ export async function updateItem(
   if (updates.actualOutcome !== undefined) updateData.actualOutcome = updates.actualOutcome;
   if (updates.actualOutcomeValue !== undefined) updateData.actualOutcomeValue = updates.actualOutcomeValue;
   if (updates.outcomeDelta !== undefined) updateData.outcomeDelta = updates.outcomeDelta;
+  if (updates.decisionAccuracy !== undefined) updateData.decisionAccuracy = updates.decisionAccuracy;
+  if (updates.decisionError !== undefined) updateData.decisionError = updates.decisionError;
   if (updates.outcomeNotes !== undefined) updateData.outcomeNotes = updates.outcomeNotes;
   if (updates.startedAt !== undefined) updateData.startedAt = updates.startedAt ? new Date(updates.startedAt) : null;
   if (updates.completedAt !== undefined) updateData.completedAt = updates.completedAt ? new Date(updates.completedAt) : null;
@@ -188,6 +192,8 @@ export async function getQueuedItems(
     actualOutcome: r.actualOutcome,
     actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,
     outcomeDelta: r.outcomeDelta ? Number(r.outcomeDelta) : undefined,
+    decisionAccuracy: r.decisionAccuracy ? Number(r.decisionAccuracy) : undefined,
+    decisionError: r.decisionError ? Number(r.decisionError) : undefined,
     outcomeNotes: r.outcomeNotes || undefined,
     startedAt: r.startedAt ? r.startedAt.toISOString() : undefined,
     completedAt: r.completedAt ? r.completedAt.toISOString() : undefined,
