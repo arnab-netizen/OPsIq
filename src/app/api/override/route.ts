@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addOverride } from "@/services/override/store";
-import { getItems } from "@/services/operator/store";
+import { getItems, applyOverride } from "@/services/operator/store";
 import { randomUUID } from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -41,6 +41,7 @@ export async function POST(request: NextRequest) {
     };
 
     addOverride(overrideRecord);
+    applyOverride(operatorItemId, overriddenAction);
 
     return NextResponse.json({ success: true });
   } catch (error) {
