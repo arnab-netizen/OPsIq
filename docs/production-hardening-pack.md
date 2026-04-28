@@ -132,7 +132,134 @@
 ---
 
 ## 3. Prisma Persistence Plan
-**Placeholder** — Will detail 8 models, fields, relationships, indexes, migration path.
+
+Add 8 new models to `prisma/schema.prisma`. Reuse existing patterns from Action model (createdAt, updatedAt, version, visibility, actor fields).
+
+### Model: OperatorItem
+**Purpose:** Persist decisions/actions queued for execution.  
+**Fields:**
+- `id` (UUID, PK)
+- `problem`, `action` (String)
+- `impactExpected`, `impactLow`, `impactHigh` (Decimal)
+- `confidence`, `priorityScore` (Decimal)
+- `status` (String: pending|in_progress|done)
+- `dueAt`, `expectedOutcome`, `actualOutcome` (nullable)
+- `createdBy`, `completedBy`, `verifiedBy` (UUID, FK to User)
+- `createdAt`, `updatedAt`, `verifiedAt`, `completedAt` (DateTime)
+- `version` (Int)
+
+**Relationships:** belongsTo User (creator, completer, verifier)  
+**Indexes:** `[engagementId, status]`, `[createdBy]`, `[status]`  
+**Migration:** Initial load from in-memory store via seed script.  
+**Acceptance:** All existing in-memory items insertable; queries return correct subsets by status.
+
+### Model: CalibrationRecord
+**Purpose:** Track predicted vs. actual impact for feedback loops.  
+**Fields:**
+- `id` (UUID, PK)
+- `operatorItemId` (UUID, FK, unique with timestamp)
+- `predictedImpact`, `actualImpact`, `confidence` (Decimal)
+- `deviation` (Decimal, calculated)
+- `createdAt` (DateTime)
+
+**Relationships:** belongsTo OperatorItem  
+**Indexes:** `[operatorItemId]`, `[createdAt]`  
+**Migration:** Seed existing calibration records.  
+**Acceptance:** Queries correctly filter by operator item; deviation calculation matches in-memory.
+
+### Model: OverrideRecord
+**Purpose:** Audit trail for action overrides.  
+**Fields:**
+- `id` (UUID, PK)
+- `operatorItemId` (UUID, FK)
+- `originalAction`, `overriddenAction` (String)
+- `reason` (String)
+- `overriddenBy` (UUID, FK to User)
+- `createdAt`, `revokedAt` (DateTime)
+
+**Relationships:** belongsTo OperatorItem, User  
+**Indexes:** `[operatorItemId]`, `[overriddenBy]`  
+**Migration:** Seed existing overrides.  
+**Acceptance:** Overrides queryable by operator item; "revoked" overrides handled correctly.
+
+### Model: Entity
+**Purpose:** Business units, clients, projects linked to operator items.  
+**Fields:**
+- `id` (UUID, PK)
+- `name` (String)
+- `type` (String: business_unit|client|project)
+- `externalId` (String, nullable, for third-party sync)
+- `createdBy` (UUID, FK)
+- `createdAt`, `updatedAt` (DateTime)
+
+**Relationships:** belongsTo User (creator)  
+**Indexes:** `[type, externalId]`, `[createdBy]`  
+**Migration:** None (Phase 1–5 entities lightweight).  
+**Acceptance:** Entities creatable and queryable; type filtering works.
+
+### Model: EntityLink
+**Purpose:** Many-to-many: Entities ↔ OperatorItems.  
+**Fields:**
+- `id` (UUID, PK)
+- `entityId`, `operatorItemId` (UUID, FK)
+- `linkType` (String: "owner"|"stakeholder"|"beneficiary")
+- `createdAt` (DateTime)
+
+**Relationships:** belongsTo Entity, OperatorItem  
+**Indexes:** `[entityId, operatorItemId]` (unique), `[operatorItemId]`  
+**Migration:** None (new).  
+**Acceptance:** Links creatable; reverse queries return correct items per entity.
+
+### Model: WebhookDelivery
+**Purpose:** Audit external integrations; enable retry.  
+**Fields:**
+- `id` (UUID, PK)
+- `eventName` (String)
+- `operatorItemId` (UUID, FK, nullable)
+- `url` (String)
+- `payload` (Json)
+- `status` (String: pending|success|failed|retrying)
+- `responseCode`, `responseBody` (Int, Json, nullable)
+- `retryCount`, `nextRetryAt` (Int, DateTime, nullable)
+- `createdAt`, `sentAt` (DateTime)
+
+**Relationships:** belongsTo OperatorItem  
+**Indexes:** `[status, nextRetryAt]`, `[eventName, createdAt]`  
+**Migration:** None (replaces console.log).  
+**Acceptance:** Deliveries logged; status transitions correct; retry backoff calculable.
+
+### Model: FinancialBaseline
+**Purpose:** Store assumptions for impact calculations.  
+**Fields:**
+- `id` (UUID, PK)
+- `engagementId` (UUID, FK, nullable)
+- `revenue`, `costs` (Decimal)
+- `currency` (String, default USD)
+- `source` (String: user_provided|system_default|imported)
+- `assumptions` (Json, stores multipliers, confidence thresholds)
+- `createdBy` (UUID, FK)
+- `createdAt` (DateTime)
+- `validUntil` (DateTime, nullable)
+
+**Relationships:** belongsTo User  
+**Indexes:** `[engagementId]`, `[source]`  
+**Migration:** Create default baseline (10000/5000) for seed.  
+**Acceptance:** Baselines queryable; calculations reference baselines; audit trail captured.
+
+### Migration Notes
+1. Create migration: `npx prisma migrate dev --name add_phase_1_5_persistence`
+2. Seed script: Migrate in-memory OperatorItem, CalibrationRecord, OverrideRecord to DB
+3. Zero downtime: Dual-write pattern during transition (in-memory → DB → read from DB)
+4. Verify: All Phase 1–5 APIs pass with database-backed data
+
+### Acceptance Criteria (Global)
+- ✅ All 8 models generate without errors
+- ✅ Relationships and indexes created correctly
+- ✅ Foreign keys enforced (cascading deletes or on-delete: restrict)
+- ✅ Seed script runs without data loss
+- ✅ Existing in-memory data survives migration
+- ✅ Phase 1–5 APIs query/write correctly post-migration
+- ✅ No breaking changes to API contracts
 
 ---
 
