@@ -13,6 +13,12 @@ import {
   createIntegrityPayload,
 } from "@/services/integrity/hash";
 import { verifySignature, createSignaturePayload } from "@/services/integrity/sign";
+import {
+  signDecisionAsymmetric,
+  verifyAsymmetricSignature,
+  getPublicKey,
+} from "@/services/integrity/asymmetric";
+import { canonicalStringify, createCanonicalPayload, createExtendedIntegrityPayload } from "@/services/integrity/hash";
 
 describe("Backbone System", () => {
   describe("runSystem", () => {
@@ -548,6 +554,186 @@ describe("Backbone System", () => {
       };
 
       expect(resultWithSnapshot.inputsSnapshot).toEqual(inputs);
+    });
+  });
+
+  describe("Asymmetric Signing and Canonical Hash", () => {
+    it("should create canonical payload structure", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const inputs = {
+        revenue: 10000,
+        cost: 5000,
+      };
+
+      const canonical = createCanonicalPayload(result, inputs);
+
+      expect(canonical.inputsSnapshot).toEqual(inputs);
+      expect(canonical.calculationTrace).toBeDefined();
+      expect(canonical.decision).toBe("APPROVED");
+      expect(canonical.engineVersion).toBe("v1.0.0");
+      expect(canonical.timestamp).toBeDefined();
+    });
+
+    it("should generate valid asymmetric signature", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const inputs = {
+        revenue: 10000,
+        cost: 5000,
+      };
+
+      const canonical = createCanonicalPayload(result, inputs);
+      const canonicalString = canonicalStringify(canonical);
+      const asymmetricSig = signDecisionAsymmetric(canonicalString);
+
+      expect(asymmetricSig.signature).toBeDefined();
+      expect(asymmetricSig.signatureAlgo).toBe("ECDSA-SHA256");
+      expect(asymmetricSig.publicKeyId).toBeDefined();
+      expect(asymmetricSig.signature).toMatch(/^[a-f0-9]+$/); // Hex string
+    });
+
+    it("should verify asymmetric signature", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const inputs = {
+        revenue: 10000,
+        cost: 5000,
+      };
+
+      const canonical = createCanonicalPayload(result, inputs);
+      const canonicalString = canonicalStringify(canonical);
+      const asymmetricSig = signDecisionAsymmetric(canonicalString);
+      const publicKey = getPublicKey();
+
+      const isValid = verifyAsymmetricSignature(
+        canonicalString,
+        asymmetricSig.signature,
+        publicKey
+      );
+
+      expect(isValid).toBe(true);
+    });
+
+    it("should detect tampered canonical payload", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const inputs = {
+        revenue: 10000,
+        cost: 5000,
+      };
+
+      const canonical = createCanonicalPayload(result, inputs);
+      const canonicalString = canonicalStringify(canonical);
+      const asymmetricSig = signDecisionAsymmetric(canonicalString);
+
+      // Tamper with the payload
+      const tamperedCanonical = {
+        ...canonical,
+        decision: "BLOCKED" as const,
+      };
+      const tamperedString = canonicalStringify(tamperedCanonical);
+      const publicKey = getPublicKey();
+
+      const isValid = verifyAsymmetricSignature(
+        tamperedString,
+        asymmetricSig.signature,
+        publicKey
+      );
+
+      expect(isValid).toBe(false);
+    });
+
+    it("should include extended integrity in payload", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const inputs = {
+        revenue: 10000,
+        cost: 5000,
+      };
+
+      const extendedPayload = createExtendedIntegrityPayload(
+        result,
+        inputs
+      );
+
+      expect(extendedPayload.decisionHash).toBeDefined();
+      expect(extendedPayload.signature).toBeDefined();
+      expect(extendedPayload.signatureAlgo).toBe("ECDSA-SHA256");
+      expect(extendedPayload.publicKeyId).toBeDefined();
+      expect(extendedPayload.engineVersion).toBe("v1.0.0");
+    });
+
+    it("should maintain backward compatibility with HMAC", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const hash = generateDecisionHash(result);
+      const hmacSig = createSignaturePayload(hash);
+
+      // Legacy HMAC should still work
+      const isValid = verifySignature(hash, hmacSig.signedHash);
+
+      expect(isValid).toBe(true);
     });
   });
 });

@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySignature } from "@/services/integrity/sign";
-import { generateDecisionHash } from "@/services/integrity/hash";
+import {
+  generateDecisionHash,
+  canonicalStringify,
+  createCanonicalPayload,
+} from "@/services/integrity/hash";
+import { verifyAsymmetricSignature, getPublicKey } from "@/services/integrity/asymmetric";
 import { createDecisionResult } from "@/services/explanation/generate";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { inputs, decisionHash, signedHash } = body;
+    const { inputs, decisionHash, signedHash, signature, timestamp } = body;
 
     // Validate inputs
     if (!inputs || typeof inputs !== "object") {
@@ -22,16 +27,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    if (!signedHash || typeof signedHash !== "string") {
-      return NextResponse.json(
-        { error: "Invalid signedHash: must be a string" },
-        { status: 400 }
-      );
-    }
-
-    // Verify signature
-    const signatureValid = verifySignature(decisionHash, signedHash);
 
     // Recompute hash from inputs
     const inputMetrics: Record<string, number> = {
@@ -61,10 +56,30 @@ export async function POST(request: NextRequest) {
     const recomputedHash = generateDecisionHash(tempResult);
     const hashMatches = recomputedHash === decisionHash;
 
+    // Legacy HMAC verification (backward compatibility)
+    let legacySignatureValid = false;
+    if (signedHash && typeof signedHash === "string") {
+      legacySignatureValid = verifySignature(decisionHash, signedHash);
+    }
+
+    // New asymmetric signature verification
+    let asymmetricValid = false;
+    if (signature && typeof signature === "string") {
+      const canonicalPayload = createCanonicalPayload(tempResult, inputs, timestamp);
+      const canonicalString = canonicalStringify(canonicalPayload);
+      const publicKey = getPublicKey();
+      asymmetricValid = verifyAsymmetricSignature(
+        canonicalString,
+        signature,
+        publicKey
+      );
+    }
+
     return NextResponse.json({
-      valid: hashMatches && signatureValid,
+      valid: hashMatches && (legacySignatureValid || asymmetricValid),
       recomputedHash,
-      signatureValid,
+      signatureValid: legacySignatureValid,
+      asymmetricValid,
       hashMatches,
       originalHash: decisionHash,
     });

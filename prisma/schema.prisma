@@ -634,7 +634,10 @@ model OperatorItem {
   explanation         Json?      // DecisionExplanation JSONB
   inputsSnapshot      Json?      // Full input payload for replay
   decisionHash        String?    @map("decision_hash") // SHA256 hash for integrity
-  signedHash          String?    @map("signed_hash") // HMAC-SHA256 signature
+  signedHash          String?    @map("signed_hash") // HMAC-SHA256 signature (legacy)
+  signature           String?    // Asymmetric signature (ECDSA)
+  signatureAlgo       String?    @map("signature_algo") // Signature algorithm identifier
+  publicKeyId         String?    @map("public_key_id") // Public key identifier
   engineVersion       String    @default("v1.0.0") @map("engine_version")
   createdBy           String?    @map("created_by") @db.Uuid
   createdAt           DateTime  @default(now()) @map("created_at")
@@ -644,6 +647,7 @@ model OperatorItem {
   @@index([createdAt])
   @@index([decisionHash])
   @@index([signedHash])
+  @@index([publicKeyId])
   @@map("operator_items")
 }
 

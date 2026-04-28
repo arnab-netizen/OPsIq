@@ -51,6 +51,9 @@ export interface DecisionResult {
   reason?: "LOW_CONFIDENCE" | "NON_POSITIVE_IMPACT" | "INVALID_INPUT";
   decisionHash?: string;
   signedHash?: string;
+  signature?: string;
+  signatureAlgo?: string;
+  publicKeyId?: string;
   engineVersion?: string;
   inputsSnapshot?: Record<string, unknown>;
 }

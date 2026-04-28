@@ -26,6 +26,9 @@ export type OperatorItem = {
 
   decisionHash?: string;
   signedHash?: string;
+  signature?: string;
+  signatureAlgo?: string;
+  publicKeyId?: string;
   inputsSnapshot?: Record<string, unknown>;
   engineVersion: string;
 
