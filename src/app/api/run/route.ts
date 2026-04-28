@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runSystem } from "@/services/system/run";
 import { createBaseline } from "@/services/onboarding/basic";
+import { generateOperatorItems } from "@/services/operator/generate";
+import { addItems } from "@/services/operator/store";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +32,11 @@ export async function POST(request: NextRequest) {
     // 4. Call runSystem
     const result = runSystem(inputMetrics);
 
-    // 5. Return JSON
+    // 5. Generate operator items and store them
+    const operatorItems = generateOperatorItems(result.decisions, result.impact);
+    addItems(operatorItems);
+
+    // 6. Return JSON
     return NextResponse.json({
       decisions: result.decisions,
       impact: result.impact,
