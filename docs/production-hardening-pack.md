@@ -264,7 +264,49 @@ Add 8 new models to `prisma/schema.prisma`. Reuse existing patterns from Action 
 ---
 
 ## 4. Auth Hardening Plan
-**Placeholder** — Will detail session integration, role mapping, capability checks, endpoint protection.
+
+**Strategy:** Reuse `src/services/auth.ts` (getSession, requireSession, requirePolicyContext).  
+Remove role from request body. All mutations require server-side session.
+
+### Implementation Pattern
+
+Every Phase 1–5 mutation route must:
+
+```typescript
+import { requireSession } from "@/services/auth";
+
+export async function POST(request: NextRequest) {
+  const session = await requireSession(); // Throws UnauthorizedError if no session
+  // session.user.id is authenticated actor
+  // Proceed with DB mutation, emit audit event with session.user.id
+}
+```
+
+### Auth Rules
+
+1. **No role in request body.** Roles fetched from `db.userRoleAssignment` via session.
+2. **Capability checks:** Use `requireCapability(session, capabilityName)` before mutations.
+3. **Unauthorized returns 403 Forbidden** (fail-closed).
+4. **Session validation:** Token from cookie, check expiry, revocation, user active status.
+5. **Audit context:** All mutations log `actorId: session.user.id` to AuditEvent.
+
+### Files to Modify
+
+- `src/app/api/operator/route.ts` — Add requireSession (POST), replace role param
+- `src/app/api/override/route.ts` — Add requireSession, check override capability
+- `src/app/api/entity/route.ts` — Add requireSession (POST)
+- `src/app/api/scenario/route.ts` — Add requireSession (POST)
+- `src/app/api/run/route.ts` — Add requireSession (POST)
+- `src/app/api/opsiq/consulting-engine/run/route.ts` — Add requireSession
+
+### Acceptance Criteria
+
+- ✅ No Phase 1–5 mutation accepts role parameter
+- ✅ All mutations call requireSession() or error thrown
+- ✅ Unauthorized requests return 403 with error message
+- ✅ Session timeout/revocation blocks requests
+- ✅ Actor ID logged in all audit events
+- ✅ Existing auth.ts service functions cover all Phase 1–5 needs
 
 ---
 
@@ -289,7 +331,30 @@ Add 8 new models to `prisma/schema.prisma`. Reuse existing patterns from Action 
 ---
 
 ## 9. API Contract Table
-**Placeholder** — Will detail 10+ Phase 1–5 endpoints: method, input, validation, auth, DB writes, audit events, responses.
+
+All Phase 1–5 endpoints. Auth column = "session" (requireSession) or "none" (read-only, public for now).
+
+| Endpoint | Method | Input | Validation | Auth | DB Writes | Audit Event | Success (200) | Failure (400/403) |
+|----------|--------|-------|-----------|------|-----------|-------------|---|---|
+| `/api/run` | POST | `{revenue, cost}` | Both numbers, > 0 | session | OperatorItem, FinancialBaseline | decision_run | `{decisions[], impact{}}` | Invalid input, low confidence, NO_IMPACT |
+| `/api/operator` | GET | none | — | session | none | — | `[OperatorItem[]]` sorted by priority | — |
+| `/api/operator` | POST | `{id, status, actualOutcome}` | id exists, status valid, actualOutcome valid | session | OperatorItem, CalibrationRecord | operator_updated | `{success: true}` | Missing fields, item not found, high-impact blocked |
+| `/api/override` | POST | `{operatorItemId, overriddenAction, reason}` | All required, action non-empty | session | OverrideRecord, OperatorItem | action_overridden | `{success: true}` | Missing fields, item not found, no capability |
+| `/api/calibration` | GET | none | — | session | none | — | `{records[], summary{}}` | — |
+| `/api/report` | GET | none | — | session | none | — | `{totalImpact, totalActions, completedActions, accuracyScore}` | — |
+| `/api/entity` | GET | `?type=business_unit\|client\|project` | Optional type filter | session | none | — | `[Entity[]]` | Invalid type |
+| `/api/entity` | POST | `{name, type}` | Both required, type valid | session | Entity | entity_created | `{id, name, type}` | Missing fields, invalid type |
+| `/api/scenario` | POST | `{baseRevenue, baseCost, deltaRevenue, deltaCost}` | All numbers, base > 0 | session | FinancialBaseline (if new) | scenario_run | `{impactExpected, impactLow, impactHigh}` | Invalid input, low confidence, NO_IMPACT |
+| `/api/opsiq/consulting-engine/run` | POST | engagement/consulting params | As defined by consulting engine | session | Recommendation, Action (via consulting logic) | consulting_run | Engine output | Invalid request, engine error |
+
+**Notes:**
+- All POST/PUT/DELETE mutations require `session` auth (will be updated from "none" where currently missing)
+- GET endpoints inherit "session" auth (read access per engagement or global per role)
+- Failures with auth return 403; input validation failures return 400
+- Every mutation logs `auditEvent` with `actorId: session.user.id`
+- OperatorItem creation/update persists to database (not in-memory)
+- CalibrationRecord created on completion (actualOutcome provided, status=done)
+- Policy check: impact > $100k requires approval (blocking POST until approved)
 
 ---
 
