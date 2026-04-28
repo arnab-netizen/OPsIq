@@ -1,4 +1,5 @@
 import { DecisionResult } from '@/domain/decision/types';
+import { TrustVerificationPanel } from './TrustVerificationPanel';
 
 interface DecisionResultProps {
   result: DecisionResult;
@@ -252,6 +253,17 @@ export function DecisionResultComponent({ result }: DecisionResultProps) {
               </p>
             </div>
           ) : null}
+
+          {/* Verification Panel */}
+          <div className="pt-4 border-t border-border">
+            <TrustVerificationPanel
+              inputsSnapshot={result.inputsSnapshot}
+              decisionHash={result.decisionHash}
+              signedHash={result.signedHash}
+              signature={result.signature}
+              engineVersion={result.engineVersion}
+            />
+          </div>
         </div>
       </div>
 
