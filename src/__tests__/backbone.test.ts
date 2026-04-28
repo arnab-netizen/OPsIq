@@ -12,6 +12,7 @@ import {
   getEngineVersion,
   createIntegrityPayload,
 } from "@/services/integrity/hash";
+import { verifySignature, createSignaturePayload } from "@/services/integrity/sign";
 
 describe("Backbone System", () => {
   describe("runSystem", () => {
@@ -405,6 +406,148 @@ describe("Backbone System", () => {
 
       expect(integrityResult.decisionHash).toBeDefined();
       expect(integrityResult.engineVersion).toBe("v1.0.0");
+    });
+  });
+
+  describe("Trust and Replay Verification", () => {
+    it("should replay decision and produce same hash", () => {
+      const inputs = {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 2000,
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 1500,
+      };
+
+      // First decision
+      const result1 = createDecisionResult(inputs, true);
+      const hash1 = generateDecisionHash(result1);
+
+      // Replay with same inputs
+      const result2 = createDecisionResult(inputs, true);
+      const hash2 = generateDecisionHash(result2);
+
+      expect(hash1).toBe(hash2);
+    });
+
+    it("should detect tampered input", () => {
+      const originalInputs = {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 2000,
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 1500,
+      };
+
+      const tamperedInputs = {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        deltaRevenue: 3000, // Tampered value
+        deltaCost: 500,
+        confidence: 0.85,
+        expectedImpact: 2500,
+      };
+
+      const originalResult = createDecisionResult(originalInputs, true);
+      const originalHash = generateDecisionHash(originalResult);
+
+      const tamperedResult = createDecisionResult(tamperedInputs, true);
+      const tamperedHash = generateDecisionHash(tamperedResult);
+
+      expect(originalHash).not.toBe(tamperedHash);
+    });
+
+    it("should verify valid signature", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const hash = generateDecisionHash(result);
+      const signature = createSignaturePayload(hash);
+
+      const isValid = verifySignature(hash, signature.signedHash);
+
+      expect(isValid).toBe(true);
+    });
+
+    it("should detect signature mismatch", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const hash = generateDecisionHash(result);
+      const wrongSignature = "invalid_signature_" + hash;
+
+      const isValid = verifySignature(hash, wrongSignature);
+
+      expect(isValid).toBe(false);
+    });
+
+    it("should include signature in payload", () => {
+      const result = createDecisionResult(
+        {
+          baselineRevenue: 10000,
+          baselineCost: 5000,
+          deltaRevenue: 2000,
+          deltaCost: 500,
+          confidence: 0.85,
+          expectedImpact: 1500,
+        },
+        true
+      );
+
+      const hash = generateDecisionHash(result);
+      const signature = createSignaturePayload(hash);
+
+      expect(signature.signedHash).toBeDefined();
+      expect(signature.signedHash).toMatch(/^[a-f0-9]{64}$/); // HMAC-SHA256 hex
+    });
+
+    it("should preserve input snapshot for audit", () => {
+      const inputs = {
+        baselineRevenue: 10000,
+        baselineCost: 5000,
+        revenueChange: 2000,
+        costChange: 500,
+        confidence: 0.85,
+      };
+
+      const result = createDecisionResult(
+        {
+          baselineRevenue: inputs.baselineRevenue,
+          baselineCost: inputs.baselineCost,
+          deltaRevenue: inputs.revenueChange,
+          deltaCost: inputs.costChange,
+          confidence: inputs.confidence,
+          expectedImpact: inputs.revenueChange - inputs.costChange,
+        },
+        true
+      );
+
+      const resultWithSnapshot = {
+        ...result,
+        inputsSnapshot: inputs,
+      };
+
+      expect(resultWithSnapshot.inputsSnapshot).toEqual(inputs);
     });
   });
 });

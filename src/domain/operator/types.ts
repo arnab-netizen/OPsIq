@@ -25,6 +25,8 @@ export type OperatorItem = {
   explanation?: DecisionExplanation;
 
   decisionHash?: string;
+  signedHash?: string;
+  inputsSnapshot?: Record<string, unknown>;
   engineVersion: string;
 
   createdAt: string;

@@ -8,13 +8,21 @@ import { canEdit } from "@/services/auth/access";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { createDecisionResult } from "@/services/explanation/generate";
 import { createIntegrityPayload } from "@/services/integrity/hash";
+import { createSignaturePayload } from "@/services/integrity/sign";
 import { DecisionResult } from "@/domain/decision/types";
 
-function addIntegrity(result: DecisionResult): DecisionResult {
+function addIntegrity(
+  result: DecisionResult,
+  inputsSnapshot?: Record<string, unknown>
+): DecisionResult {
   const integrity = createIntegrityPayload(result);
+  const signature = createSignaturePayload(integrity.decisionHash);
+
   return {
     ...result,
     ...integrity,
+    ...signature,
+    inputsSnapshot,
   };
 }
 
@@ -42,6 +50,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { revenue, cost } = body;
 
+    // Capture inputs snapshot for replay
+    const inputsSnapshot = {
+      revenue,
+      cost,
+      timestamp: new Date().toISOString(),
+    };
+
     // Validate input types
     if (typeof revenue !== "number" || typeof cost !== "number") {
       decisionResult = addIntegrity(
@@ -56,7 +71,8 @@ export async function POST(request: NextRequest) {
           },
           false,
           "INVALID_INPUT"
-        )
+        ),
+        inputsSnapshot
       );
       return NextResponse.json(decisionResult, { status: 400 });
     }
@@ -95,7 +111,8 @@ export async function POST(request: NextRequest) {
             },
             false,
             "LOW_CONFIDENCE"
-          )
+          ),
+          inputsSnapshot
         );
       } else if (errorMsg === "NON_POSITIVE_IMPACT_BLOCKED") {
         decisionResult = addIntegrity(
@@ -110,7 +127,8 @@ export async function POST(request: NextRequest) {
             },
             false,
             "NON_POSITIVE_IMPACT"
-          )
+          ),
+          inputsSnapshot
         );
       } else {
         decisionResult = addIntegrity(
@@ -125,7 +143,8 @@ export async function POST(request: NextRequest) {
             },
             false,
             "INVALID_INPUT"
-          )
+          ),
+          inputsSnapshot
         );
       }
       return NextResponse.json(decisionResult, { status: 400 });
@@ -143,7 +162,8 @@ export async function POST(request: NextRequest) {
           expectedImpact: result.impact.impactExpected,
         },
         true
-      )
+      ),
+      inputsSnapshot
     );
 
     // 6. Generate operator items and store them
@@ -187,7 +207,8 @@ export async function POST(request: NextRequest) {
         },
         false,
         "INVALID_INPUT"
-      )
+      ),
+      {}
     );
     return NextResponse.json(errorResult, { status: 400 });
   }

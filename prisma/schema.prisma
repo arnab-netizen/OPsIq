@@ -632,7 +632,9 @@ model OperatorItem {
   expectedOutcome     String?    @map("expected_outcome")
   actualOutcome       String?    @map("actual_outcome")
   explanation         Json?      // DecisionExplanation JSONB
+  inputsSnapshot      Json?      // Full input payload for replay
   decisionHash        String?    @map("decision_hash") // SHA256 hash for integrity
+  signedHash          String?    @map("signed_hash") // HMAC-SHA256 signature
   engineVersion       String    @default("v1.0.0") @map("engine_version")
   createdBy           String?    @map("created_by") @db.Uuid
   createdAt           DateTime  @default(now()) @map("created_at")
@@ -641,6 +643,7 @@ model OperatorItem {
   @@index([status])
   @@index([createdAt])
   @@index([decisionHash])
+  @@index([signedHash])
   @@map("operator_items")
 }
 

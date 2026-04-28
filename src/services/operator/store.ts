@@ -29,8 +29,14 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
     if (item.explanation) {
       data.explanation = JSON.stringify(item.explanation);
     }
+    if (item.inputsSnapshot) {
+      data.inputsSnapshot = JSON.stringify(item.inputsSnapshot);
+    }
     if (item.decisionHash) {
       data.decisionHash = item.decisionHash;
+    }
+    if (item.signedHash) {
+      data.signedHash = item.signedHash;
     }
     if (item.engineVersion) {
       data.engineVersion = item.engineVersion;
@@ -56,7 +62,11 @@ export async function getItems(): Promise<OperatorItem[]> {
     expectedOutcome: r.expectedOutcome,
     actualOutcome: r.actualOutcome,
     explanation: r.explanation ? JSON.parse(String(r.explanation)) : undefined,
+    inputsSnapshot: r.inputsSnapshot
+      ? JSON.parse(String(r.inputsSnapshot))
+      : undefined,
     decisionHash: r.decisionHash || undefined,
+    signedHash: r.signedHash || undefined,
     engineVersion: r.engineVersion || "v1.0.0",
     createdAt: r.createdAt.toISOString(),
     blockingDependencies: [],

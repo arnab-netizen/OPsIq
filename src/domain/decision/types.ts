@@ -50,5 +50,7 @@ export interface DecisionResult {
   explanation: DecisionExplanation;
   reason?: "LOW_CONFIDENCE" | "NON_POSITIVE_IMPACT" | "INVALID_INPUT";
   decisionHash?: string;
+  signedHash?: string;
   engineVersion?: string;
+  inputsSnapshot?: Record<string, unknown>;
 }
