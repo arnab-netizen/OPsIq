@@ -178,6 +178,7 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
   const [error, setError] = useState<string | null>(null);
   const [isMutating, setIsMutating] = useState(false);
   const [actionDelta, setActionDelta] = useState<any>(null);
+  const [outcomes, setOutcomes] = useState<any>(null);
 
   const fetchDashboard = async () => {
     try {
@@ -229,6 +230,27 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
 
     fetchImpactDelta();
   }, [data?.nextBestAction?.id]);
+
+  useEffect(() => {
+    async function fetchOutcomesData() {
+      if (!data?.engagementId) {
+        setOutcomes(null);
+        return;
+      }
+      try {
+        const response = await fetch(`/api/engagements/${data.engagementId}/outcomes`);
+        if (!response.ok) {
+          return; // Silently fail - outcomes are optional
+        }
+        const result = await response.json();
+        setOutcomes(result.data);
+      } catch (err) {
+        // Silently fail - outcomes are optional enhancement
+      }
+    }
+
+    fetchOutcomesData();
+  }, [data?.engagementId]);
 
   const isImmediateDecision = data?.primaryDecision?.type === "immediate";
   const primaryActionId = data?.primaryDecision?.actionId;
@@ -994,6 +1016,57 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Decision Performance */}
+      {outcomes && (
+        <div className="rounded-lg border border-border bg-card p-4">
+          <p className="text-sm font-medium">📊 Decision Performance</p>
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded bg-muted p-3">
+              <p className="text-xs font-medium text-muted-foreground">Avg Prediction Accuracy</p>
+              <p className="mt-2 text-2xl font-bold">{outcomes.averageAccuracy}%</p>
+            </div>
+            <div className="rounded bg-muted p-3">
+              <p className="text-xs font-medium text-muted-foreground">Actions Completed</p>
+              <p className="mt-2 text-2xl font-bold">{outcomes.totalActionsCompleted}</p>
+            </div>
+            <div className="rounded bg-muted p-3">
+              <p className="text-xs font-medium text-muted-foreground">Total Value Recovered</p>
+              <p className="mt-2 text-sm font-semibold">{outcomes.totalValueRecovered} pts</p>
+            </div>
+          </div>
+          {outcomes.outcomes.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-medium text-muted-foreground">Last 3 Outcomes</p>
+              <div className="mt-2 space-y-2">
+                {outcomes.outcomes.slice(0, 3).map((outcome: any) => (
+                  <div key={outcome.actionId} className="rounded bg-muted/50 p-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs font-medium">
+                          {outcome.predictedImpact} → {outcome.actualImpact}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{outcome.delta}</p>
+                      </div>
+                      <Badge
+                        variant={
+                          outcome.accuracyScore >= 85
+                            ? "success"
+                            : outcome.accuracyScore >= 70
+                              ? "default"
+                              : "warning"
+                        }
+                      >
+                        {outcome.accuracyScore}%
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import { recordOutcome } from "@/services/outcome/outcome.service";
 
 export const PATCH = withRequestContext(async (_request, context) => {
   const { actionId } = await context.params;
@@ -51,6 +52,14 @@ export const PATCH = withRequestContext(async (_request, context) => {
     },
     visibility: "internal",
   });
+
+  // Record outcome for decision tracking
+  try {
+    await recordOutcome(actionId);
+  } catch (err) {
+    // Log but don't fail the action completion
+    console.error("Failed to record outcome:", err);
+  }
 
   const result = await getActionById(actionId);
   return Response.json(result);
