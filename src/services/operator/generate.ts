@@ -1,5 +1,6 @@
-import { DecisionOutput, ImpactEstimate } from "@/domain/decision/types";
+import { DecisionOutput } from "@/domain/decision/types";
 import { OperatorItem } from "@/domain/operator/types";
+import type { ImpactEstimate } from "@/domain/finance/types";
 import { calculatePriority } from "./priority";
 import { randomUUID } from "crypto";
 
