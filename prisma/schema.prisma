@@ -632,6 +632,7 @@ model OperatorItem {
   expectedOutcome     String?    @map("expected_outcome")
   actualOutcome       String?    @map("actual_outcome")
   actualOutcomeValue  Float?    @map("actual_outcome_value") // numeric measured result
+  outcomeDelta        Float?    @map("outcome_delta") // actual - expected, rounded to 2 decimals
   outcomeNotes        String?    @map("outcome_notes")
   startedAt           DateTime?  @map("started_at")
   completedAt         DateTime?  @map("completed_at")

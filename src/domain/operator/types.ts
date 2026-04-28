@@ -22,6 +22,7 @@ export type OperatorItem = {
   expectedOutcome: string | null;
   actualOutcome: string | null;
   actualOutcomeValue?: number | null;
+  outcomeDelta?: number | null;
   outcomeNotes?: string | null;
 
   startedAt?: string | null;

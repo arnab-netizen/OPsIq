@@ -5,6 +5,7 @@ import {
   addCalibrationRecord,
 } from "@/services/operator/store";
 import { sortByPriority } from "@/services/operator/sort";
+import { calculateOutcomeDelta } from "@/services/operator/outcome";
 import { evaluatePolicy } from "@/services/policy/engine";
 import { canEdit } from "@/services/auth/access";
 import { resolveServerRole } from "@/services/auth/server-role";
@@ -113,13 +114,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    await updateItem(id, {
+    const updatePayload: any = {
       status,
-      actualOutcomeValue: status === 'done' ? actualOutcome : undefined,
-      completedAt: status === 'done' ? new Date().toISOString() : undefined,
-      startedAt: status === 'in_progress' ? new Date().toISOString() : undefined,
-      executionStatus: status === 'done' ? 'completed' : status === 'in_progress' ? 'started' : undefined,
-    });
+    };
+
+    if (status === 'done') {
+      updatePayload.actualOutcomeValue = actualOutcome;
+      updatePayload.completedAt = new Date().toISOString();
+      updatePayload.executionStatus = 'completed';
+
+      // Calculate outcome delta
+      const expectedImpact = beforeItem?.impactExpected ?? null;
+      const deltaResult = calculateOutcomeDelta(expectedImpact, actualOutcome);
+      if (deltaResult.valid && deltaResult.delta !== null) {
+        updatePayload.outcomeDelta = deltaResult.delta;
+      }
+    } else if (status === 'in_progress') {
+      updatePayload.startedAt = new Date().toISOString();
+      updatePayload.executionStatus = 'started';
+    }
+
+    await updateItem(id, updatePayload);
 
     // Capture after state and log audit event
     const allItemsAfter = await getItems();
