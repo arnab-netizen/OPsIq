@@ -1023,18 +1023,30 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
       {outcomes && (
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-sm font-medium">📊 Decision Performance</p>
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="rounded bg-muted p-3">
               <p className="text-xs font-medium text-muted-foreground">Avg Prediction Accuracy</p>
               <p className="mt-2 text-2xl font-bold">{outcomes.averageAccuracy}%</p>
             </div>
             <div className="rounded bg-muted p-3">
-              <p className="text-xs font-medium text-muted-foreground">Actions Completed</p>
-              <p className="mt-2 text-2xl font-bold">{outcomes.totalActionsCompleted}</p>
+              <p className="text-xs font-medium text-muted-foreground">₹ Value Recovered</p>
+              <p className="mt-2 text-sm font-semibold">
+                ₹{(outcomes.totalValueRecoveredINR / 100000).toFixed(1)}L
+              </p>
             </div>
             <div className="rounded bg-muted p-3">
-              <p className="text-xs font-medium text-muted-foreground">Total Value Recovered</p>
-              <p className="mt-2 text-sm font-semibold">{outcomes.totalValueRecovered} pts</p>
+              <p className="text-xs font-medium text-muted-foreground">₹ At Risk Now</p>
+              <p className="mt-2 text-sm font-semibold">
+                {outcomes.financialMetrics.currentRiskINR !== null
+                  ? `₹${(outcomes.financialMetrics.currentRiskINR / 100000).toFixed(1)}L`
+                  : "—"}
+              </p>
+            </div>
+            <div className="rounded bg-muted p-3">
+              <p className="text-xs font-medium text-muted-foreground">Avg Per Action</p>
+              <p className="mt-2 text-sm font-semibold">
+                ₹{(outcomes.financialMetrics.avgPerActionINR / 1000).toFixed(0)}K
+              </p>
             </div>
           </div>
           {outcomes.outcomes.length > 0 && (
@@ -1048,7 +1060,14 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
                         <p className="text-xs font-medium">
                           {outcome.predictedImpact} → {outcome.actualImpact}
                         </p>
-                        <p className="text-xs text-muted-foreground">{outcome.delta}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {outcome.delta}
+                          {outcome.valueRecoveredINR !== null && outcome.valueRecoveredINR > 0 && (
+                            <span className="ml-1 font-semibold text-success">
+                              +₹{(outcome.valueRecoveredINR / 1000).toFixed(0)}K
+                            </span>
+                          )}
+                        </p>
                       </div>
                       <Badge
                         variant={

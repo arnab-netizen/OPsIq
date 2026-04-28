@@ -2,12 +2,16 @@ import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { computeDecisionConfidence } from "../decision-confidence/decision-confidence.service";
 import { generateBusinessImpact } from "../business-impact/business-impact.service";
+import { getFinancialDelta } from "../financial/financial-mapping.service";
 
 export interface OutcomeSnapshot {
   predictedImpactLevel: string;
   predictedConfidence: number;
   actualImpactLevel: string;
   actualConfidence: number;
+  predictedLossINR: number | null;
+  actualLossINR: number | null;
+  valueRecoveredINR: number | null;
   delta: {
     impactImprovement: string;
     confidenceGain: number;
@@ -21,9 +25,24 @@ export interface ActionOutcome {
   engagementId: string;
   predictedImpact: string;
   actualImpact: string;
+  predictedLossINR: number | null;
+  actualLossINR: number | null;
+  valueRecoveredINR: number | null;
   delta: string;
   accuracyScore: number;
   timestamp: string;
+}
+
+export interface EngagementOutcomes {
+  outcomes: ActionOutcome[];
+  averageAccuracy: number;
+  totalActionsCompleted: number;
+  totalValueRecoveredINR: number;
+  financialMetrics: {
+    totalRecoveredINR: number;
+    currentRiskINR: number | null;
+    avgPerActionINR: number;
+  };
 }
 
 export async function recordOutcome(actionId: string): Promise<ActionOutcome> {
@@ -42,15 +61,21 @@ export async function recordOutcome(actionId: string): Promise<ActionOutcome> {
 
   const engagementId = action.engagementId;
 
-  // Get current state (actual impact)
-  const [currentConfidence, currentImpact] = await Promise.all([
+  // Get current state (actual impact) and engagement context
+  const [currentConfidence, currentImpact, engagement, condition] = await Promise.all([
     computeDecisionConfidence({ engagementId }),
     generateBusinessImpact(engagementId, engagementId),
+    db.engagement.findUnique({ where: { id: engagementId } }),
+    db.businessConditionProfile.findFirst({
+      where: { engagementId, isCurrent: true },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   // Get previous snapshot if exists
   let predictedImpactLevel = "unknown";
   let predictedConfidence = 50;
+  let predictedLossINR: number | null = null;
 
   if (action.outcomeSnapshot && typeof action.outcomeSnapshot === "object") {
     const snapshot = action.outcomeSnapshot as Record<string, unknown>;
@@ -60,7 +85,21 @@ export async function recordOutcome(actionId: string): Promise<ActionOutcome> {
     if (typeof snapshot.predictedConfidence === "number") {
       predictedConfidence = snapshot.predictedConfidence;
     }
+    if (typeof snapshot.predictedLossINR === "number") {
+      predictedLossINR = snapshot.predictedLossINR;
+    }
   }
+
+  // Calculate financial impact
+  const monthlyRevenue = condition?.estimatedMonthlyRevenue ?? null;
+  const financialDelta = getFinancialDelta(
+    predictedImpactLevel,
+    currentImpact?.impactLevel || "unknown",
+    monthlyRevenue
+  );
+
+  const actualLossINR = financialDelta.actualLoss;
+  const valueRecoveredINR = financialDelta.valueRecovered || 0;
 
   // Calculate accuracy score
   const actualConfidence = currentConfidence.score;
@@ -87,6 +126,9 @@ export async function recordOutcome(actionId: string): Promise<ActionOutcome> {
     predictedConfidence,
     actualImpactLevel: currentImpact?.impactLevel || "unknown",
     actualConfidence,
+    predictedLossINR: financialDelta.predictedLoss,
+    actualLossINR,
+    valueRecoveredINR,
     delta: {
       impactImprovement: deltaDescription,
       confidenceGain: confidenceImprovement,
@@ -108,18 +150,16 @@ export async function recordOutcome(actionId: string): Promise<ActionOutcome> {
     engagementId,
     predictedImpact: predictedImpactLevel,
     actualImpact: currentImpact?.impactLevel || "unknown",
+    predictedLossINR: financialDelta.predictedLoss,
+    actualLossINR,
+    valueRecoveredINR,
     delta: deltaDescription,
     accuracyScore,
     timestamp,
   };
 }
 
-export async function getEngagementOutcomes(engagementId: string): Promise<{
-  outcomes: ActionOutcome[];
-  averageAccuracy: number;
-  totalActionsCompleted: number;
-  totalValueRecovered: number;
-}> {
+export async function getEngagementOutcomes(engagementId: string): Promise<EngagementOutcomes> {
   // Fetch all completed actions with outcome snapshots
   const completedActions = await db.action.findMany({
     where: {
@@ -130,6 +170,17 @@ export async function getEngagementOutcomes(engagementId: string): Promise<{
     take: 10,
   });
 
+  // Get engagement context for financial calculations
+  const [engagement, condition] = await Promise.all([
+    db.engagement.findUnique({ where: { id: engagementId } }),
+    db.businessConditionProfile.findFirst({
+      where: { engagementId, isCurrent: true },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  const monthlyRevenue = condition?.estimatedMonthlyRevenue ?? null;
+
   const outcomes: ActionOutcome[] = completedActions
     .filter((a: typeof completedActions[0]) => a.outcomeSnapshot && typeof a.outcomeSnapshot === "object")
     .map((a: typeof completedActions[0]) => {
@@ -139,6 +190,9 @@ export async function getEngagementOutcomes(engagementId: string): Promise<{
         engagementId: a.engagementId,
         predictedImpact: (typeof snapshot.predictedImpactLevel === "string" ? snapshot.predictedImpactLevel : "unknown"),
         actualImpact: (typeof snapshot.actualImpactLevel === "string" ? snapshot.actualImpactLevel : "unknown"),
+        predictedLossINR: typeof snapshot.predictedLossINR === "number" ? snapshot.predictedLossINR : null,
+        actualLossINR: typeof snapshot.actualLossINR === "number" ? snapshot.actualLossINR : null,
+        valueRecoveredINR: typeof snapshot.valueRecoveredINR === "number" ? snapshot.valueRecoveredINR : 0,
         delta:
           typeof snapshot.delta === "object" && snapshot.delta !== null && "impactImprovement" in snapshot.delta
             ? (snapshot.delta as Record<string, unknown>).impactImprovement || "unknown"
@@ -153,26 +207,26 @@ export async function getEngagementOutcomes(engagementId: string): Promise<{
 
   const totalActionsCompleted = completedActions.filter((a: typeof completedActions[0]) => a.status === "completed" || a.status === "verified").length;
 
-  // Calculate total value recovered (improved impacts)
-  const severityScores = {
-    low: 10,
-    medium: 25,
-    high: 50,
-    critical: 100,
-    existential: 200,
-    unknown: 0,
-  };
+  const totalValueRecoveredINR = outcomes.reduce((sum, outcome) => sum + (outcome.valueRecoveredINR || 0), 0);
 
-  const totalValueRecovered = outcomes.reduce((sum, outcome) => {
-    const predictedScore = severityScores[(outcome.predictedImpact.toLowerCase() as keyof typeof severityScores)] || 0;
-    const actualScore = severityScores[(outcome.actualImpact.toLowerCase() as keyof typeof severityScores)] || 0;
-    return sum + Math.max(0, predictedScore - actualScore);
-  }, 0);
+  // Current risk calculation (sum of all action actual losses)
+  let currentRiskINR: number | null = null;
+  if (monthlyRevenue && outcomes.length > 0) {
+    currentRiskINR = outcomes.reduce((sum, o) => sum + (o.actualLossINR || 0), 0);
+  }
+
+  // Average recovery per action
+  const avgPerActionINR = outcomes.length > 0 ? Math.round(totalValueRecoveredINR / outcomes.length) : 0;
 
   return {
     outcomes,
     averageAccuracy,
     totalActionsCompleted,
-    totalValueRecovered,
+    totalValueRecoveredINR,
+    financialMetrics: {
+      totalRecoveredINR: totalValueRecoveredINR,
+      currentRiskINR,
+      avgPerActionINR,
+    },
   };
 }

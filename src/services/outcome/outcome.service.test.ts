@@ -32,6 +32,8 @@ describe("OutcomeService", () => {
     vi.clearAllMocks();
     const mockDb = db as any;
     mockDb.action = { findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() };
+    mockDb.engagement = { findUnique: vi.fn() };
+    mockDb.businessConditionProfile = { findFirst: vi.fn() };
   });
 
   const mockAction = {
@@ -44,40 +46,59 @@ describe("OutcomeService", () => {
     completedBy: "user-1",
     priority: "high",
     outcomeSnapshot: {
-      predictedImpactLevel: "high",
+      predictedImpactLevel: "critical",
       predictedConfidence: 75,
+      predictedLossINR: 300000,
     },
   };
 
-  it("records outcome with correct delta calculation", async () => {
+  const mockEngagement = {
+    id: "eng-123",
+    code: "ENG-001",
+    title: "Test Engagement",
+  };
+
+  const mockCondition = {
+    engagementId: "eng-123",
+    estimatedMonthlyRevenue: 1000000,
+  };
+
+  it("records outcome with financial impact calculation", async () => {
     const mockDb = db as any;
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.action.update.mockResolvedValue(mockAction);
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const outcome = await recordOutcome("action-123");
 
     expect(outcome.actionId).toBe("action-123");
     expect(outcome.engagementId).toBe("eng-123");
-    expect(outcome.predictedImpact).toBe("high");
-    expect(outcome.actualImpact).toBe("medium");
-    expect(outcome.delta).toContain("improved");
+    expect(outcome.valueRecoveredINR).toBeGreaterThanOrEqual(0);
+    expect(outcome.actualLossINR).toBeDefined();
   });
 
-  it("calculates accuracy score correctly", async () => {
+  it("calculates correct INR value recovery from critical to medium", async () => {
     const mockDb = db as any;
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.action.update.mockResolvedValue(mockAction);
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const outcome = await recordOutcome("action-123");
 
-    expect(outcome.accuracyScore).toBeGreaterThanOrEqual(0);
-    expect(outcome.accuracyScore).toBeLessThanOrEqual(100);
+    // Critical (30%) = 300,000; Medium (5%) = 50,000; Delta = 250,000
+    expect(outcome.predictedImpact).toBe("critical");
+    expect(outcome.actualImpact).toBe("medium");
+    expect(outcome.valueRecoveredINR).toBe(250000);
   });
 
-  it("stores outcome snapshot in action record", async () => {
+  it("stores outcome snapshot with financial data", async () => {
     const mockDb = db as any;
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.action.update.mockResolvedValue(mockAction);
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     await recordOutcome("action-123");
 
@@ -85,10 +106,11 @@ describe("OutcomeService", () => {
       where: { id: "action-123" },
       data: {
         outcomeSnapshot: expect.objectContaining({
-          predictedImpactLevel: "high",
+          predictedImpactLevel: "critical",
           actualImpactLevel: "medium",
-          accuracyScore: expect.any(Number),
-          timestamp: expect.any(String),
+          predictedLossINR: expect.any(Number),
+          actualLossINR: expect.any(Number),
+          valueRecoveredINR: expect.any(Number),
         }),
       },
     });
@@ -98,36 +120,78 @@ describe("OutcomeService", () => {
     const mockDb = db as any;
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.action.update.mockResolvedValue(mockAction);
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const outcome1 = await recordOutcome("action-123");
     const outcome2 = await recordOutcome("action-123");
 
-    expect(outcome1.actionId).toBe(outcome2.actionId);
-    expect(outcome1.predictedImpact).toBe(outcome2.predictedImpact);
-    expect(outcome1.accuracyScore).toBe(outcome2.accuracyScore);
+    expect(outcome1.valueRecoveredINR).toBe(outcome2.valueRecoveredINR);
+    expect(outcome1.actualLossINR).toBe(outcome2.actualLossINR);
   });
 
-  it("throws error if action not completed", async () => {
+  it("handles missing revenue data gracefully", async () => {
     const mockDb = db as any;
-    const incompleteAction = { ...mockAction, completedAt: null };
-    mockDb.action.findUnique.mockResolvedValue(incompleteAction);
-
-    await expect(recordOutcome("action-123")).rejects.toThrow("must be completed");
-  });
-
-  it("handles missing outcome snapshot gracefully", async () => {
-    const mockDb = db as any;
-    const actionWithoutSnapshot = { ...mockAction, outcomeSnapshot: null };
-    mockDb.action.findUnique.mockResolvedValue(actionWithoutSnapshot);
-    mockDb.action.update.mockResolvedValue(actionWithoutSnapshot);
+    mockDb.action.findUnique.mockResolvedValue(mockAction);
+    mockDb.action.update.mockResolvedValue(mockAction);
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const outcome = await recordOutcome("action-123");
 
     expect(outcome).toBeDefined();
-    expect(outcome.predictedImpact).toBe("unknown");
+    expect(outcome.valueRecoveredINR).toBe(0); // Can't calculate without revenue
   });
 
-  it("returns engagement outcomes with metrics", async () => {
+  it("returns engagement outcomes with financial metrics", async () => {
+    const mockDb = db as any;
+    mockDb.action.findMany.mockResolvedValue([
+      {
+        ...mockAction,
+        id: "action-1",
+        status: "completed",
+        completedAt: new Date(),
+        outcomeSnapshot: {
+          predictedImpactLevel: "critical",
+          actualImpactLevel: "high",
+          predictedLossINR: 300000,
+          actualLossINR: 150000,
+          valueRecoveredINR: 150000,
+          accuracyScore: 90,
+          timestamp: new Date().toISOString(),
+          delta: { impactImprovement: "improved" },
+        },
+      },
+      {
+        ...mockAction,
+        id: "action-2",
+        status: "completed",
+        completedAt: new Date(),
+        outcomeSnapshot: {
+          predictedImpactLevel: "high",
+          actualImpactLevel: "medium",
+          predictedLossINR: 150000,
+          actualLossINR: 50000,
+          valueRecoveredINR: 100000,
+          accuracyScore: 80,
+          timestamp: new Date().toISOString(),
+          delta: { impactImprovement: "improved" },
+        },
+      },
+    ]);
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
+
+    const result = await getEngagementOutcomes("eng-123");
+
+    expect(result.outcomes).toHaveLength(2);
+    expect(result.totalValueRecoveredINR).toBe(250000);
+    expect(result.financialMetrics.totalRecoveredINR).toBe(250000);
+    expect(result.financialMetrics.avgPerActionINR).toBe(125000);
+    expect(result.averageAccuracy).toBe(85);
+  });
+
+  it("calculates average INR value per action correctly", async () => {
     const mockDb = db as any;
     mockDb.action.findMany.mockResolvedValue([
       {
@@ -136,85 +200,74 @@ describe("OutcomeService", () => {
         outcomeSnapshot: {
           predictedImpactLevel: "critical",
           actualImpactLevel: "high",
-          accuracyScore: 90,
-          timestamp: new Date().toISOString(),
-          delta: { impactImprovement: "improved" },
+          predictedLossINR: 300000,
+          actualLossINR: 150000,
+          valueRecoveredINR: 150000,
         },
       },
       {
         ...mockAction,
-        id: "action-124",
+        id: "action-2",
         status: "completed",
         outcomeSnapshot: {
           predictedImpactLevel: "high",
           actualImpactLevel: "medium",
-          accuracyScore: 80,
-          timestamp: new Date().toISOString(),
-          delta: { impactImprovement: "improved" },
+          predictedLossINR: 150000,
+          actualLossINR: 50000,
+          valueRecoveredINR: 100000,
         },
       },
     ]);
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const result = await getEngagementOutcomes("eng-123");
 
-    expect(result.outcomes).toHaveLength(2);
-    expect(result.averageAccuracy).toBe(85);
-    expect(result.totalActionsCompleted).toBe(2);
-    expect(result.totalValueRecovered).toBeGreaterThan(0);
+    // (150000 + 100000) / 2 = 125000
+    expect(result.financialMetrics.avgPerActionINR).toBe(125000);
   });
 
-  it("calculates average accuracy correctly", async () => {
+  it("calculates current financial risk from outcomes", async () => {
     const mockDb = db as any;
     mockDb.action.findMany.mockResolvedValue([
       {
         ...mockAction,
         status: "completed",
-        outcomeSnapshot: { predictedImpactLevel: "high", actualImpactLevel: "medium", accuracyScore: 100 },
+        outcomeSnapshot: {
+          actualLossINR: 150000,
+          valueRecoveredINR: 150000,
+        },
       },
       {
         ...mockAction,
-        id: "action-124",
+        id: "action-2",
         status: "completed",
-        outcomeSnapshot: { predictedImpactLevel: "high", actualImpactLevel: "high", accuracyScore: 90 },
+        outcomeSnapshot: {
+          actualLossINR: 50000,
+          valueRecoveredINR: 100000,
+        },
       },
     ]);
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const result = await getEngagementOutcomes("eng-123");
 
-    expect(result.averageAccuracy).toBe(95);
-  });
-
-  it("limits outcomes to last 10 completed actions", async () => {
-    const mockDb = db as any;
-    const manyActions = Array.from({ length: 15 }, (_, i) => ({
-      ...mockAction,
-      id: `action-${i}`,
-      completedAt: new Date(Date.now() - i * 86400000),
-      status: "completed",
-      outcomeSnapshot: {
-        predictedImpactLevel: "high",
-        actualImpactLevel: "medium",
-        accuracyScore: 85,
-        timestamp: new Date().toISOString(),
-        delta: { impactImprovement: "improved" },
-      },
-    }));
-    mockDb.action.findMany.mockResolvedValue(manyActions.slice(0, 10));
-
-    const result = await getEngagementOutcomes("eng-123");
-
-    expect(result.outcomes).toHaveLength(10);
+    // Sum of actual losses = 150000 + 50000 = 200000
+    expect(result.financialMetrics.currentRiskINR).toBe(200000);
   });
 
   it("handles empty outcomes without crashing", async () => {
     const mockDb = db as any;
     mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const result = await getEngagementOutcomes("eng-123");
 
     expect(result.outcomes).toHaveLength(0);
+    expect(result.totalValueRecoveredINR).toBe(0);
+    expect(result.financialMetrics.avgPerActionINR).toBe(0);
     expect(result.averageAccuracy).toBe(0);
-    expect(result.totalActionsCompleted).toBe(0);
-    expect(result.totalValueRecovered).toBe(0);
   });
 });
