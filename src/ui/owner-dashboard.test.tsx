@@ -6,6 +6,13 @@ vi.mock("next/link", () => ({
   default: ({ children, href }: any) => <a href={href}>{children}</a>,
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    pathname: "/",
+  }),
+}));
+
 const createMockDashboardData = (overrides?: any) => ({
   engagementId: "eng-123",
   engagementCode: "ENG-001",

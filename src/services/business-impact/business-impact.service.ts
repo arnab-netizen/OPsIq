@@ -40,7 +40,7 @@ export async function generateBusinessImpact(
   }
 
   // Fetch all required data in parallel
-  const [findings, recommendations, actions, condition, businessImpactRecord] =
+  const [findings, recommendations, actions, condition] =
     await Promise.all([
       db.finding.findMany({
         where: { engagementId },
@@ -53,10 +53,6 @@ export async function generateBusinessImpact(
       }),
       db.businessConditionProfile.findFirst({
         where: { engagementId, isCurrent: true },
-        orderBy: { createdAt: "desc" },
-      }),
-      db.businessImpact.findFirst({
-        where: { engagementId },
         orderBy: { createdAt: "desc" },
       }),
     ]);
@@ -286,8 +282,8 @@ export async function generateBusinessImpact(
     ownerDecision: {
       required: decisionRequired,
       reason: decisionRequired ? decisionReason : undefined,
-      decision: businessImpactRecord?.ownerDecision || undefined,
-      decidedAt: businessImpactRecord?.decidedAt?.toISOString() || undefined,
+      decision: undefined,
+      decidedAt: undefined,
     },
     topImpactDrivers: drivers.slice(0, 5),
   };
