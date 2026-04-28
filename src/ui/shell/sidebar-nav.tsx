@@ -74,6 +74,15 @@ const NAV_ITEMS: NavItem[] = [
       </svg>
     ),
   },
+  {
+    label: "Report",
+    href: "/report",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.148.42-.237.63a2.025 2.025 0 01-.5-.882m0 0H3.75m0 0V6.108c0-1.135.845-2.098 1.976-2.192a48.374 48.374 0 011.123-.08m-5.801 0c.065.21.148.42.237.63a2.025 2.025 0 01-.5-.882m0 0H3.75m0 0V15m0 0h15m0 0h2.25a2.25 2.25 0 002.25-2.25v-5.25a2.25 2.25 0 00-2.25-2.25h-2.25" />
+      </svg>
+    ),
+  },
 ];
 
 export function SidebarNav() {
