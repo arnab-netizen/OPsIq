@@ -13,7 +13,7 @@ import type { UserRole } from "@/domain/auth/types";
 
 export async function GET() {
   try {
-    const items = getItems();
+    const items = await getItems();
     const sorted = sortByPriority(items);
     return NextResponse.json(sorted);
   } catch (error) {
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const items = getItems();
+      const items = await getItems();
       const item = items.find((i) => i.id === id);
 
       if (item) {
@@ -86,10 +86,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    updateItem(id, { status, actualOutcome });
+    await updateItem(id, { status, actualOutcome });
 
     if (status === "done") {
-      const updatedItems = getItems();
+      const updatedItems = await getItems();
       const completedItem = updatedItems.find((i) => i.id === id);
       if (completedItem) {
         sendWebhook({

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch operator item to get original action
-    const items = getItems();
+    const items = await getItems();
     const item = items.find((i) => i.id === operatorItemId);
 
     if (!item) {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     };
 
     addOverride(overrideRecord);
-    applyOverride(operatorItemId, overriddenAction);
+    await applyOverride(operatorItemId, overriddenAction);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     // 5. Generate operator items and store them
     const operatorItems = generateOperatorItems(result.decisions, result.impact);
-    addItems(operatorItems);
+    await addItems(operatorItems);
 
     // 6. Return JSON
     return NextResponse.json({
