@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import * as bcrypt from "bcryptjs";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
 
@@ -11,11 +12,12 @@ async function seedDemoData() {
   });
 
   if (!user) {
+    const hashedPassword = await bcrypt.hash("demo-password-123", 10);
     user = await db.user.create({
       data: {
         email: DEMO_USER_EMAIL,
         name: "Demo Operator",
-        hashedPassword: "hashed_password_demo",
+        hashedPassword,
       },
     });
     console.log("✓ Created demo user");

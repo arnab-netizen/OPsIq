@@ -81,8 +81,12 @@ export const AUDIT_EVENTS = {
   // Action Item
   ACTION_CREATED: "action.created",
   ACTION_UPDATED: "action.updated",
+  ACTION_STARTED: "action.started",
   ACTION_COMPLETED: "action.completed",
   ACTION_OVERDUE: "action.overdue",
+
+  // Execution Commitment
+  EXECUTION_ACKNOWLEDGED: "execution.acknowledged",
 
   // KPI
   KPI_DEFINED: "kpi.defined",
@@ -153,6 +157,10 @@ export const AUDIT_EVENTS = {
   // Escalation
   ESCALATION_ALERT_HIGH_PRIORITY_OVERDUE: "escalation.high_priority_overdue",
   ESCALATION_ALERT_KPI_DETERIORATION_PATTERN: "escalation.kpi_deterioration_pattern",
+
+  // Execution Certainty
+  EXECUTION_CERTAINTY_WARNING: "execution_certainty.warning",
+  EXECUTION_CERTAINTY_OVERRIDE: "execution_certainty.override",
 
   // Human Factors
   HUMAN_FACTORS_ASSESSED: "human_factors.assessed",

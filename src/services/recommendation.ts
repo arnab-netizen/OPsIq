@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError, ConflictError } from "@/infra/errors";
+import { NotFoundError, ConflictError, ValidationError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { withIdempotency } from "@/infra/idempotency";
+import { calculateExecutionCertainty } from "@/services/execution-certainty";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -23,6 +24,10 @@ export interface UpdateRecommendationInput {
   status?: string;
   priority?: string;
   version: number;
+  overrideExecutionCertainty?: {
+    reason: string;
+    approvedBy: string;
+  };
 }
 
 export interface RecommendationScoringInput {
@@ -334,6 +339,7 @@ export async function updateRecommendationStatus(
 ) {
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId },
+    include: { engagement: true },
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);
 
@@ -343,6 +349,145 @@ export async function updateRecommendationStatus(
       "Recommendation has been modified by another process. Current version: " + rec.version,
       { code: "STALE_VERSION" }
     );
+  }
+
+  // Enforce execution certainty gate for approval
+  if (input.status === "approved") {
+    try {
+      const [findings, recommendations, actions] = await Promise.all([
+        db.finding.findMany({
+          where: { engagementId: rec.engagementId },
+        }),
+        db.recommendation.findMany({
+          where: { engagementId: rec.engagementId },
+        }),
+        db.action.findMany({
+          where: { engagementId: rec.engagementId },
+        }),
+      ]);
+
+      const engagement = await db.engagement.findUnique({
+        where: { id: rec.engagementId },
+      });
+
+      if (engagement) {
+        const findingsForCertainty = findings.map((f: typeof findings[0]) => ({
+          id: f.id,
+          severity: (f.severity as "critical" | "high" | "medium" | "low") || "low",
+          resolved: f.status === "resolved" || f.status === "closed",
+          verified: f.verified ?? false,
+        }));
+
+        const recommendationsForCertainty = recommendations.map((r: typeof recommendations[0]) => ({
+          id: r.id,
+          priority: (r.priority as "critical" | "high" | "medium" | "low") || "medium",
+          status: (r.status as "blocked" | "in_progress" | "completed") || "in_progress",
+        }));
+
+        const actionsForCertainty = actions.map((a: typeof actions[0]) => ({
+          id: a.id,
+          priority: (a.priority as "critical" | "high" | "medium" | "low") || "medium",
+          status: (a.status as "blocked" | "pending" | "in_progress" | "completed" | "verified") || "pending",
+        }));
+
+        const certaintyResult = calculateExecutionCertainty(
+          rec.engagementId,
+          findingsForCertainty,
+          recommendationsForCertainty,
+          actionsForCertainty,
+          [],
+          {
+            overallStatus: (engagement.healthStatus as "critical" | "at_risk" | "stable" | "healthy") || "stable",
+            kpiTrend: "flat" as const,
+          }
+        );
+
+        // Check if execution certainty gate is failing
+        if (certaintyResult.level === "blocked" || certaintyResult.score < 40) {
+          // If override is provided, allow approval with override audit event
+          if (input.overrideExecutionCertainty) {
+            logger.warn("Execution certainty gate overridden for recommendation approval", {
+              recommendationId,
+              engagementId: rec.engagementId,
+              score: certaintyResult.score,
+              level: certaintyResult.level,
+              overrideReason: input.overrideExecutionCertainty.reason,
+              overriddenBy: input.overrideExecutionCertainty.approvedBy,
+            });
+
+            await emitAuditEvent({
+              eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_OVERRIDE,
+              actorId,
+              entityType: "recommendation",
+              entityId: recommendationId,
+              payload: {
+                engagementId: rec.engagementId,
+                score: certaintyResult.score,
+                level: certaintyResult.level,
+                blockers: certaintyResult.blockers,
+                risks: certaintyResult.risks,
+                reason: input.overrideExecutionCertainty.reason,
+                approvedBy: input.overrideExecutionCertainty.approvedBy,
+              },
+              visibility: "internal",
+            });
+          } else {
+            // No override provided, enforce gate by throwing error
+            logger.warn("Execution certainty gate blocking recommendation approval", {
+              recommendationId,
+              engagementId: rec.engagementId,
+              score: certaintyResult.score,
+              level: certaintyResult.level,
+              blockers: certaintyResult.blockers,
+              risks: certaintyResult.risks,
+            });
+
+            await emitAuditEvent({
+              eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_WARNING,
+              actorId,
+              entityType: "recommendation",
+              entityId: recommendationId,
+              payload: {
+                engagementId: rec.engagementId,
+                score: certaintyResult.score,
+                level: certaintyResult.level,
+                blockers: certaintyResult.blockers,
+                risks: certaintyResult.risks,
+                reason: "Recommendation cannot be approved because execution certainty is too low",
+              },
+              visibility: "internal",
+            });
+
+            throw new ValidationError(
+              "Recommendation cannot be approved because execution certainty is too low",
+              {
+                score: certaintyResult.score,
+                level: certaintyResult.level,
+                blockers: certaintyResult.blockers,
+                risks: certaintyResult.risks,
+              }
+            );
+          }
+        }
+      }
+    } catch (error) {
+      // Re-throw ValidationError (gate enforcement)
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      // For other errors, fail closed on approval attempts
+      logger.error("Error checking execution certainty before approval", {
+        recommendationId,
+        engagementId: rec.engagementId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw new ValidationError(
+        "Unable to validate execution certainty before approval. Please try again.",
+        {
+          originalError: error instanceof Error ? error.message : "Unknown error",
+        }
+      );
+    }
   }
 
   // Optimistic locking: update only if version matches

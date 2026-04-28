@@ -9,6 +9,7 @@ import { getSessionCookieName, getSessionDurationMs } from "@/services/auth";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
 import { cookies } from "next/headers";
+import * as bcrypt from "bcryptjs";
 
 const loginSchema = z.object({
   email: z.email(),
@@ -34,12 +35,10 @@ export const POST = withRequestContext(async (request) => {
     throw new UnauthorizedError("Invalid email or password");
   }
 
-  // Password verification: In production, upgrade to bcrypt/argon2.
-  // SHA-256 is used as a transitional placeholder for the foundation scaffold.
-  const { createHash } = await import("crypto");
-  const hash = createHash("sha256").update(password).digest("hex");
+  // Password verification using bcrypt
+  const passwordValid = await bcrypt.compare(password, user.hashedPassword);
 
-  if (hash !== user.hashedPassword) {
+  if (!passwordValid) {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
       actorId: user.id,
