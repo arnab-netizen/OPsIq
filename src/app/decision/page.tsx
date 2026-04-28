@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DecisionResultComponent } from '@/components/decision/DecisionResult';
+import { TrustCard } from '@/components/decision/TrustCard';
 import { DecisionResult } from '@/domain/decision/types';
+import type { CalibrationMetrics } from '@/services/calibration/engine';
 
 interface FormValues {
   baselineRevenue: string;
@@ -26,6 +28,35 @@ export default function DecisionPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DecisionResult | null>(null);
   const [isApproved, setIsApproved] = useState(false);
+
+  const [calibrationMetrics, setCalibrationMetrics] = useState<CalibrationMetrics | null>(null);
+  const [calibrationLoading, setCalibrationLoading] = useState(true);
+  const [calibrationError, setCalibrationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCalibration = async () => {
+      try {
+        setCalibrationLoading(true);
+        const response = await fetch('/api/calibration');
+
+        if (!response.ok) {
+          setCalibrationError('Unable to load trust metrics');
+          return;
+        }
+
+        const data = await response.json() as CalibrationMetrics;
+        setCalibrationMetrics(data);
+        setCalibrationError(null);
+      } catch (err) {
+        console.error('Failed to fetch calibration metrics:', err);
+        setCalibrationError('Failed to load trust metrics');
+      } finally {
+        setCalibrationLoading(false);
+      }
+    };
+
+    fetchCalibration();
+  }, []);
 
   const handleInputChange = (field: keyof FormValues) => (
     e: React.ChangeEvent<HTMLInputElement>
@@ -310,6 +341,13 @@ export default function DecisionPage() {
             <DecisionResultComponent result={result} />
           </div>
         )}
+
+        {/* Trust Card - System Calibration Metrics */}
+        <TrustCard
+          metrics={calibrationMetrics}
+          loading={calibrationLoading}
+          error={calibrationError}
+        />
 
         {/* Info Section */}
         <div className="mt-6 md:mt-8 rounded-lg border border-border bg-muted p-3 md:p-4">
