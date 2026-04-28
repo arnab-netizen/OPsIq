@@ -6,7 +6,9 @@ import {
 } from "@/services/operator/store";
 import { sortByPriority } from "@/services/operator/sort";
 import { evaluatePolicy } from "@/services/policy/engine";
+import { canEdit } from "@/services/auth/access";
 import type { PolicyRule } from "@/domain/policy/types";
+import type { UserRole } from "@/domain/auth/types";
 
 export async function GET() {
   try {
@@ -22,7 +24,21 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, status, actualOutcome } = body;
+    const { id, status, actualOutcome, role } = body;
+
+    if (!role) {
+      return NextResponse.json(
+        { error: "Missing required field: role" },
+        { status: 400 }
+      );
+    }
+
+    if (!canEdit(role as UserRole)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     if (!id) {
       return NextResponse.json(
