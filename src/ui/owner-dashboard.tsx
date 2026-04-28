@@ -97,6 +97,22 @@ interface BusinessImpactLevel {
   topImpactDrivers: string[];
 }
 
+interface DecisionConfidenceResult {
+  score: number;
+  level: "low" | "medium" | "high" | "very_high";
+  factors: string[];
+  deductions: { reason: string; points: number }[];
+}
+
+interface FinancialImpactNormalized {
+  revenueAtRiskPct: number | null;
+  monthlyImpact: number | null;
+  marginImpactPct: number | null;
+  burnRateImpact: number | null;
+  normalizedLevel: "unknown" | "low" | "medium" | "high" | "critical";
+  reasons: string[];
+}
+
 interface OwnerDashboardData {
   engagementId: string;
   engagementCode: string;
@@ -112,6 +128,8 @@ interface OwnerDashboardData {
   openRecommendations: DashboardRecommendation[];
   nextBestAction: NextBestAction | null;
   businessImpact: BusinessImpact | BusinessImpactLevel;
+  decisionConfidence?: DecisionConfidenceResult;
+  financialImpactNormalized?: FinancialImpactNormalized;
   generatedAt: string;
 }
 
@@ -301,8 +319,8 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
         </div>
       </div>
 
-      {/* Top Row: Engagement Health & Execution Certainty */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/* Top Row: Engagement Health, Execution Certainty, Decision Confidence, Financial Impact */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {/* Health Card */}
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-xs font-medium uppercase text-muted-foreground">
@@ -346,6 +364,77 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
             </p>
           )}
         </div>
+
+        {/* Decision Confidence Card */}
+        {data.decisionConfidence && (
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs font-medium uppercase text-muted-foreground">
+              Decision Confidence
+            </p>
+            <div className="mt-3 flex items-baseline gap-2">
+              <p className="text-2xl font-bold">{data.decisionConfidence.score}</p>
+              <Badge
+                variant={
+                  data.decisionConfidence.level === "very_high"
+                    ? "success"
+                    : data.decisionConfidence.level === "high"
+                      ? "default"
+                      : data.decisionConfidence.level === "medium"
+                        ? "warning"
+                        : "destructive"
+                }
+                className="text-xs"
+              >
+                {data.decisionConfidence.level}
+              </Badge>
+            </div>
+            {data.decisionConfidence.factors.length > 0 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {data.decisionConfidence.factors[0]}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Financial Impact Card */}
+        {data.financialImpactNormalized && (
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs font-medium uppercase text-muted-foreground">
+              Financial Exposure
+            </p>
+            <div className="mt-3 space-y-2">
+              {data.financialImpactNormalized.revenueAtRiskPct !== null ? (
+                <div>
+                  <p className="text-xs text-muted-foreground">Revenue at Risk</p>
+                  <p className="text-lg font-bold">
+                    {data.financialImpactNormalized.revenueAtRiskPct}%
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Revenue unavailable</p>
+              )}
+              {data.financialImpactNormalized.monthlyImpact !== null && (
+                <p className="text-xs text-muted-foreground">
+                  Monthly: <span className="font-medium">${data.financialImpactNormalized.monthlyImpact.toLocaleString()}</span>
+                </p>
+              )}
+              <Badge
+                variant={
+                  data.financialImpactNormalized.normalizedLevel === "critical"
+                    ? "destructive"
+                    : data.financialImpactNormalized.normalizedLevel === "high"
+                      ? "warning"
+                      : data.financialImpactNormalized.normalizedLevel === "medium"
+                        ? "default"
+                        : "muted"
+                }
+                className="mt-2 text-xs"
+              >
+                {data.financialImpactNormalized.normalizedLevel}
+              </Badge>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Required Next Action (if drift detected) */}

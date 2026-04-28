@@ -3,6 +3,9 @@ import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { calculateExecutionCertainty, type ExecutionCertaintyResult } from "./execution-certainty";
 import { detectExecutionDrift, type DriftDetectionResult } from "./execution-drift/execution-drift.service";
+import { computeDecisionConfidence, type DecisionConfidenceResult } from "./decision-confidence/decision-confidence.service";
+import { normalizeFinancialImpact, type FinancialImpactNormalized } from "./financial-normalization/financial-normalization.service";
+import { generateBusinessImpact } from "./business-impact/business-impact.service";
 
 export interface DashboardAction {
   id: string;
@@ -49,6 +52,8 @@ export interface OwnerDashboardData {
   openRecommendations: DashboardRecommendation[];
   nextBestAction: NextBestAction | null;
   businessImpact: BusinessImpact;
+  decisionConfidence?: DecisionConfidenceResult;
+  financialImpactNormalized?: FinancialImpactNormalized;
   generatedAt: string;
 }
 
@@ -248,6 +253,17 @@ export async function getOwnerDashboard(engagementId: string): Promise<OwnerDash
   // Detect execution drift
   const drift = await detectExecutionDrift(engagementId);
 
+  // Compute decision confidence and financial normalization in parallel
+  const [decisionConfidence, businessImpactResult] = await Promise.all([
+    computeDecisionConfidence({ engagementId }),
+    generateBusinessImpact(engagementId, engagement.id),
+  ]);
+
+  const financialImpactNormalized = normalizeFinancialImpact({
+    estimatedLoss: businessImpactResult?.estimatedLoss ?? null,
+    revenue: condition?.estimatedMonthlyRevenue ?? null,
+  });
+
   const dashboard: OwnerDashboardData = {
     engagementId: engagement.id,
     engagementCode: engagement.code,
@@ -263,6 +279,8 @@ export async function getOwnerDashboard(engagementId: string): Promise<OwnerDash
     openRecommendations,
     nextBestAction,
     businessImpact,
+    decisionConfidence,
+    financialImpactNormalized,
     generatedAt: new Date().toISOString(),
   };
 
