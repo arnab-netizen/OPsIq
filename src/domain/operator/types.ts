@@ -42,6 +42,9 @@ export type OperatorItem = {
   completedAt?: string | null;
   executionStatus?: "not_started" | "started" | "completed";
 
+  firstCompletedAt?: string | null;
+  firstPositiveOutcomeAt?: string | null;
+
   explanation?: DecisionExplanation;
 
   decisionHash?: string;

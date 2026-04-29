@@ -651,6 +651,8 @@ model OperatorItem {
   startedAt           DateTime?  @map("started_at")
   completedAt         DateTime?  @map("completed_at")
   executionStatus     String    @default("not_started") @map("execution_status") // "not_started" | "started" | "completed"
+  firstCompletedAt       DateTime?  @map("first_completed_at") // First time action was completed
+  firstPositiveOutcomeAt DateTime?  @map("first_positive_outcome_at") // First time positive outcome detected
   explanation         Json?      // DecisionExplanation JSONB
   inputsSnapshot      Json?      // Full input payload for replay
   decisionHash        String?    @map("decision_hash") // SHA256 hash for integrity

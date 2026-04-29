@@ -163,6 +163,22 @@ export async function updateItem(
   if (updates.executionStatus !== undefined) updateData.executionStatus = updates.executionStatus;
   if (updates.blockingDependencies !== undefined) updateData.blockingDependencies = updates.blockingDependencies && updates.blockingDependencies.length > 0 ? updates.blockingDependencies : null;
 
+  // Auto-capture firstCompletedAt on first completion
+  if (updates.status === "done" && updates.completedAt) {
+    const item = await db.operatorItem.findUnique({ where: { id } });
+    if (item && !item.firstCompletedAt) {
+      updateData.firstCompletedAt = new Date(updates.completedAt);
+    }
+  }
+
+  // Auto-capture firstPositiveOutcomeAt when positive outcome first detected
+  if (updates.actualOutcomeValue !== undefined && updates.actualOutcomeValue !== null && updates.actualOutcomeValue > 0) {
+    const item = await db.operatorItem.findUnique({ where: { id } });
+    if (item && !item.firstPositiveOutcomeAt) {
+      updateData.firstPositiveOutcomeAt = new Date();
+    }
+  }
+
   await db.operatorItem.update({
     where: { id },
     data: updateData,
@@ -257,6 +273,8 @@ export async function getQueuedItems(
     startedAt: r.startedAt ? r.startedAt.toISOString() : undefined,
     completedAt: r.completedAt ? r.completedAt.toISOString() : undefined,
     executionStatus: r.executionStatus || undefined,
+    firstCompletedAt: r.firstCompletedAt ? r.firstCompletedAt.toISOString() : undefined,
+    firstPositiveOutcomeAt: r.firstPositiveOutcomeAt ? r.firstPositiveOutcomeAt.toISOString() : undefined,
     explanation: r.explanation ? JSON.parse(String(r.explanation)) : undefined,
     inputsSnapshot: r.inputsSnapshot
       ? JSON.parse(String(r.inputsSnapshot))

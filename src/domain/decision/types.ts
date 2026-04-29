@@ -57,6 +57,8 @@ export interface DecisionResult {
   problemType?: ProblemType;
   baselineValue?: number;
   projectedWithoutAction?: number;
+  firstCompletedAt?: string | null;
+  firstPositiveOutcomeAt?: string | null;
   reason?: "LOW_CONFIDENCE" | "NON_POSITIVE_IMPACT" | "INVALID_INPUT";
   decisionHash?: string;
   signedHash?: string;
