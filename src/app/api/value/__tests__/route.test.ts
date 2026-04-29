@@ -42,6 +42,8 @@ describe("GET /api/value", () => {
         totalExpected: 100000,
         totalActual: 120000,
         totalDelta: 20000,
+        roi: 1.2,
+        lossFromWrongDecisions: 0,
         itemsAnalyzed: 5,
         valid: true,
       });
@@ -72,6 +74,8 @@ describe("GET /api/value", () => {
         totalExpected: 500000,
         totalActual: 650000,
         totalDelta: 150000,
+        roi: 1.3,
+        lossFromWrongDecisions: 0,
         itemsAnalyzed: 10,
         valid: true,
       });
@@ -84,6 +88,8 @@ describe("GET /api/value", () => {
       expect(data.totalExpected).toBe(500000);
       expect(data.totalActual).toBe(650000);
       expect(data.totalDelta).toBe(150000);
+      expect(data.roi).toBe(1.3);
+      expect(data.lossFromWrongDecisions).toBe(0);
       expect(data.itemsAnalyzed).toBe(10);
       expect(data.valid).toBe(true);
     });
@@ -94,6 +100,8 @@ describe("GET /api/value", () => {
         totalExpected: 0,
         totalActual: 0,
         totalDelta: 0,
+        roi: null,
+        lossFromWrongDecisions: 0,
         itemsAnalyzed: 0,
         valid: false,
         reason: "No completed items with outcome data",
@@ -138,6 +146,8 @@ describe("GET /api/value", () => {
         totalExpected: 100000,
         totalActual: 120000,
         totalDelta: 20000,
+        roi: 1.2,
+        lossFromWrongDecisions: 0,
         itemsAnalyzed: 1,
         valid: true,
       });
@@ -155,6 +165,8 @@ describe("GET /api/value", () => {
         totalExpected: 100000,
         totalActual: 80000,
         totalDelta: -20000,
+        roi: 0.8,
+        lossFromWrongDecisions: 20000,
         itemsAnalyzed: 1,
         valid: true,
       });
@@ -164,6 +176,8 @@ describe("GET /api/value", () => {
       const data = await response.json();
 
       expect(data.totalDelta).toBe(-20000);
+      expect(data.roi).toBe(0.8);
+      expect(data.lossFromWrongDecisions).toBe(20000);
       expect(data.valid).toBe(true);
     });
   });
@@ -179,6 +193,8 @@ describe("GET /api/value", () => {
         totalExpected: 100000,
         totalActual: 120000,
         totalDelta: 20000,
+        roi: 1.2,
+        lossFromWrongDecisions: 0,
         itemsAnalyzed: 5,
         valid: true,
       });
@@ -213,6 +229,8 @@ describe("GET /api/value", () => {
             totalExpected: 100000,
             totalActual: 120000,
             totalDelta: 20000,
+            roi: 1.2,
+            lossFromWrongDecisions: 0,
             itemsAnalyzed: 5,
           }),
         })
@@ -259,6 +277,8 @@ describe("GET /api/value", () => {
         totalExpected: 0,
         totalActual: 0,
         totalDelta: 0,
+        roi: null,
+        lossFromWrongDecisions: 0,
         itemsAnalyzed: 0,
         valid: false,
       });
