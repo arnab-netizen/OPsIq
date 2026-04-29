@@ -366,3 +366,72 @@ export async function getQueuedItems(
     blockingDependencies: Array.isArray(r.blockingDependencies) ? (r.blockingDependencies as string[]) : [],
   }));
 }
+
+/**
+ * Add a blocked decision to the database for audit and analytics.
+ * Called when /api/run decision is blocked by control layer.
+ *
+ * FAIL-CLOSED: Requires all mandatory fields for proper auditing.
+ */
+export async function addBlockedDecision(params: {
+  workspaceId: string;
+  createdBy: string;
+  ownerUserId: string;
+  problem: string;
+  action: string;
+  blockStage: "dependency_validation" | "decision_gate" | "guardrails";
+  blockReason: string;
+  expectedImpact: number;
+  confidence: number;
+  inputsSnapshot?: Record<string, unknown>;
+  controlLayerViolations?: Record<string, unknown>;
+  gateResult?: Record<string, unknown>;
+  guardrailResult?: Record<string, unknown>;
+  problemType?: string;
+}): Promise<string> {
+  const workspace = await requireWorkspaceContext();
+  await validateWorkspaceAccess(params.workspaceId);
+
+  // FAIL-CLOSED: Verify all required blocking information is present
+  if (!params.blockStage || !params.blockReason) {
+    throw new Error("blockStage and blockReason are required for blocked decision records");
+  }
+
+  const data: any = {
+    id: require("crypto").randomUUID(),
+    workspaceId: params.workspaceId,
+    ownerUserId: params.ownerUserId,
+    createdBy: params.createdBy,
+    problem: params.problem,
+    action: params.action,
+    impactExpected: params.expectedImpact,
+    impactLow: params.expectedImpact * 0.8, // Conservative estimate
+    impactHigh: params.expectedImpact * 1.2, // Optimistic estimate
+    confidence: params.confidence,
+    priorityScore: 0, // Blocked decisions have no priority
+    status: "blocked",
+    blockStage: params.blockStage,
+    blockReason: params.blockReason,
+    decisionType: "general",
+  };
+
+  // Add optional blocking details
+  if (params.inputsSnapshot) {
+    data.inputsSnapshot = JSON.stringify(params.inputsSnapshot);
+  }
+  if (params.controlLayerViolations) {
+    data.controlLayerViolations = JSON.stringify(params.controlLayerViolations);
+  }
+  if (params.gateResult) {
+    data.gateResult = JSON.stringify(params.gateResult);
+  }
+  if (params.guardrailResult) {
+    data.guardrailResult = JSON.stringify(params.guardrailResult);
+  }
+  if (params.problemType) {
+    data.problemType = params.problemType;
+  }
+
+  const created = await db.operatorItem.create({ data });
+  return created.id;
+}

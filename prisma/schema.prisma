@@ -635,7 +635,12 @@ model OperatorItem {
   impactHigh          Float
   confidence          Float
   priorityScore       Float
-  status              String    @default("pending") // "pending" | "in_progress" | "done" | "failed"
+  status              String    @default("pending") // "pending" | "in_progress" | "done" | "failed" | "blocked"
+  blockStage          String?   @map("block_stage") // "dependency_validation" | "decision_gate" | "guardrails"
+  blockReason         String?   @map("block_reason") // Human-readable reason for block
+  controlLayerViolations Json?   @map("control_layer_violations") // Array of violations from control layer
+  gateResult          Json?     @map("gate_result") // Decision gate evaluation result
+  guardrailResult     Json?     @map("guardrail_result") // Guardrails evaluation result
   dueAt               DateTime?  @map("due_at")
   decisionType        String    @default("general") @map("decision_type") // extensible: "general", "strategic", "operational", etc.
   problemType         String?   @map("problem_type") // "revenue_leak" | "cost_overrun" | "growth_block" | "inefficiency"
@@ -668,10 +673,12 @@ model OperatorItem {
   @@index([workspaceId])
   @@index([workspaceId, ownerUserId])
   @@index([workspaceId, status])
+  @@index([workspaceId, blockStage])
   @@index([workspaceId, priorityScore])
   @@index([workspaceId, executionStatus])
   @@index([ownerUserId])
   @@index([status])
+  @@index([blockStage])
   @@index([priorityScore])
   @@index([executionStatus])
   @@index([createdAt])

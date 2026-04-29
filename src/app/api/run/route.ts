@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runSystem } from "@/services/system/run";
 import { createBaseline } from "@/services/onboarding/basic";
 import { generateOperatorItems } from "@/services/operator/generate";
-import { addItems } from "@/services/operator/store";
+import { addItems, addBlockedDecision } from "@/services/operator/store";
 import { resolveServerRole, getSession } from "@/services/auth/server-role";
 import { canEdit } from "@/services/auth/access";
 import { requireWorkspaceContext } from "@/services/workspace/context";
@@ -276,7 +276,32 @@ export async function POST(request: NextRequest) {
     // 4a. CONTROL LAYER: Validate variable dependencies (fail-closed)
     const depValidation = validateDependencies(inputMetrics);
     if (!depValidation.valid && depValidation.error) {
-      // Return early - validation failed, don't track as executed
+      const expectedImpact = normalizedMetrics.revenueChange - normalizedMetrics.costChange;
+
+      // PERSISTENCE: Record blocked decision in database
+      try {
+        await addBlockedDecision({
+          workspaceId: workspace.workspaceId,
+          createdBy: userId || "system",
+          ownerUserId: userId || "system",
+          problem: "Decision blocked by dependency validation",
+          action: "None - decision rejected",
+          blockStage: "dependency_validation",
+          blockReason: depValidation.error.details,
+          expectedImpact,
+          confidence: normalizedMetrics.confidence,
+          inputsSnapshot: inputsSnapshot as Record<string, unknown>,
+          controlLayerViolations: {
+            variable: depValidation.error.variable,
+            missingDependencies: depValidation.error.missingDependencies,
+          },
+        });
+      } catch (persistError) {
+        if (logger) {
+          logger.error(`Failed to persist blocked decision: ${persistError}`);
+        }
+      }
+
       const depErrResult = createDecisionResult(
         {
           baselineRevenue: normalizedMetrics.baselineRevenue,
@@ -284,7 +309,7 @@ export async function POST(request: NextRequest) {
           deltaRevenue: normalizedMetrics.revenueChange,
           deltaCost: normalizedMetrics.costChange,
           confidence: normalizedMetrics.confidence,
-          expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
+          expectedImpact,
         },
         false,
         "INVALID_INPUT"
@@ -326,6 +351,34 @@ export async function POST(request: NextRequest) {
     });
 
     if (!gateResult.allowed) {
+      const expectedImpact = normalizedMetrics.revenueChange - normalizedMetrics.costChange;
+
+      // PERSISTENCE: Record blocked decision in database
+      try {
+        await addBlockedDecision({
+          workspaceId: workspace.workspaceId,
+          createdBy: userId || "system",
+          ownerUserId: userId || "system",
+          problem: "Decision blocked by decision gate",
+          action: "None - decision rejected",
+          blockStage: "decision_gate",
+          blockReason: gateResult.reason || "Decision gate validation failed",
+          expectedImpact,
+          confidence: normalizedMetrics.confidence,
+          inputsSnapshot: inputsSnapshot as Record<string, unknown>,
+          gateResult: {
+            reason: gateResult.reason,
+            missingVariables: gateResult.missingVariables,
+            lowConfidenceVariables: gateResult.lowConfidenceVariables,
+            staleVariables: gateResult.staleVariables,
+          },
+        });
+      } catch (persistError) {
+        if (logger) {
+          logger.error(`Failed to persist blocked decision: ${persistError}`);
+        }
+      }
+
       // Return 422 Unprocessable Entity - decision blocked by gate
       const gateBlockResult = createDecisionResult(
         {
@@ -334,7 +387,7 @@ export async function POST(request: NextRequest) {
           deltaRevenue: normalizedMetrics.revenueChange,
           deltaCost: normalizedMetrics.costChange,
           confidence: normalizedMetrics.confidence,
-          expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
+          expectedImpact,
         },
         false,
         "INVALID_INPUT"
@@ -528,16 +581,44 @@ export async function POST(request: NextRequest) {
     });
 
     if (guardrailsResult.blocked) {
+      // PERSISTENCE: Record blocked decision in database
+      try {
+        const blockReason = guardrailsResult.violations
+          .map((v) => v.message)
+          .join("; ");
+
+        await addBlockedDecision({
+          workspaceId: workspace.workspaceId,
+          createdBy: userId || "system",
+          ownerUserId: userId || "system",
+          problem: "Decision blocked by guardrails",
+          action: "None - decision rejected",
+          blockStage: "guardrails",
+          blockReason,
+          expectedImpact: result.impact.impactExpected,
+          confidence: normalizedMetrics.confidence,
+          inputsSnapshot: inputsSnapshot as Record<string, unknown>,
+          guardrailResult: {
+            violations: guardrailsResult.violations,
+            warnings: guardrailsResult.warnings,
+          },
+        });
+      } catch (persistError) {
+        if (logger) {
+          logger.error(`Failed to persist blocked decision: ${persistError}`);
+        }
+      }
+
       // Decision blocked by guardrails - return with explanation
       decisionResult = addIntegrity(
         {
           ...createDecisionResult(
             {
-              baselineRevenue: revenue,
-              baselineCost: cost,
-              deltaRevenue: revenue * 0.1,
-              deltaCost: cost * 0.05,
-              confidence: 0.75,
+              baselineRevenue: normalizedMetrics.baselineRevenue,
+              baselineCost: normalizedMetrics.baselineCost,
+              deltaRevenue: normalizedMetrics.revenueChange,
+              deltaCost: normalizedMetrics.costChange,
+              confidence: normalizedMetrics.confidence,
               expectedImpact: result.impact.impactExpected,
             },
             false,
