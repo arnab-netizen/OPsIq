@@ -7,12 +7,17 @@ import { randomUUID } from "crypto";
 export function generateOperatorItems(
   decisions: DecisionOutput[],
   impact: ImpactEstimate,
-  workspaceId: string
+  workspaceId: string,
+  ownerUserId: string,
+  createdBy: string
 ): OperatorItem[] {
   return decisions.map((decision) => {
     const item: OperatorItem = {
       id: randomUUID(),
       workspaceId,
+      ownerUserId,
+      createdBy,
+      lastUpdatedBy: null,
       problem: decision.problem,
       action: decision.action,
 

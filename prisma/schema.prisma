@@ -625,6 +625,9 @@ model Risk {
 model OperatorItem {
   id                  String    @id @default(uuid()) @db.Uuid
   workspaceId         String    @map("workspace_id") @db.Uuid // Multi-workspace isolation
+  ownerUserId         String    @map("owner_user_id") @db.Uuid // Decision owner
+  createdBy           String    @map("created_by_user_id") @db.Uuid // Creator for audit
+  lastUpdatedBy       String?   @map("last_updated_by_user_id") @db.Uuid // Last editor for audit
   problem             String
   action              String
   impactExpected      Float
@@ -658,9 +661,11 @@ model OperatorItem {
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
   @@index([workspaceId])
+  @@index([workspaceId, ownerUserId])
   @@index([workspaceId, status])
   @@index([workspaceId, priorityScore])
   @@index([workspaceId, executionStatus])
+  @@index([ownerUserId])
   @@index([status])
   @@index([priorityScore])
   @@index([executionStatus])

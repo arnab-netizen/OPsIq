@@ -3,6 +3,9 @@ import type { DecisionExplanation } from "@/domain/decision/types";
 export type OperatorItem = {
   id: string;
   workspaceId: string;
+  ownerUserId: string;
+  createdBy: string;
+  lastUpdatedBy: string | null;
   problem: string;
   action: string;
 

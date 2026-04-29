@@ -20,9 +20,20 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
     }
     await validateWorkspaceAccess(item.workspaceId);
 
+    // Fail closed: require ownership fields
+    if (!item.ownerUserId) {
+      throw new Error("OperatorItem ownerUserId is required for decision ownership");
+    }
+    if (!item.createdBy) {
+      throw new Error("OperatorItem createdBy is required for audit trail");
+    }
+
     const data: any = {
       id: item.id,
       workspaceId: item.workspaceId,
+      ownerUserId: item.ownerUserId,
+      createdBy: item.createdBy,
+      lastUpdatedBy: item.lastUpdatedBy || null,
       problem: item.problem,
       action: item.action,
       impactExpected: item.impactExpected,
@@ -36,7 +47,6 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
       expectedOutcome: item.expectedOutcome,
       actualOutcome: item.actualOutcome,
       blockingDependencies: item.blockingDependencies && item.blockingDependencies.length > 0 ? item.blockingDependencies : null,
-      createdBy: SYSTEM_USER_ID,
     };
 
     if (item.explanation) {
@@ -79,6 +89,9 @@ export async function getItems(): Promise<OperatorItem[]> {
   return records.map((r: any) => ({
     id: r.id,
     workspaceId: r.workspaceId,
+    ownerUserId: r.ownerUserId,
+    createdBy: r.createdBy,
+    lastUpdatedBy: r.lastUpdatedBy,
     problem: r.problem,
     action: r.action,
     impactExpected: Number(r.impactExpected),
@@ -206,6 +219,9 @@ export async function getQueuedItems(
   return records.map((r: any) => ({
     id: r.id,
     workspaceId: r.workspaceId,
+    ownerUserId: r.ownerUserId,
+    createdBy: r.createdBy,
+    lastUpdatedBy: r.lastUpdatedBy,
     problem: r.problem,
     action: r.action,
     impactExpected: Number(r.impactExpected),

@@ -31,10 +31,15 @@ function addIntegrity(
 export async function POST(request: NextRequest) {
   let decisionResult: DecisionResult | null = null;
   let workspace;
+  let userId: string | null = null;
 
   try {
     // Get workspace context early (fail closed if missing)
     workspace = await requireWorkspaceContext();
+
+    // Get session for user identity
+    const session = await getSession();
+    userId = session?.user.id ?? null;
 
     // Enforce server-side auth
     const role = await resolveServerRole();
@@ -78,7 +83,12 @@ export async function POST(request: NextRequest) {
         "INVALID_INPUT"
       );
       decisionResult = addIntegrity(
-        { ...baseResult, workspaceId: workspace.workspaceId },
+        {
+          ...baseResult,
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
         inputsSnapshot
       );
       return NextResponse.json(decisionResult, { status: 400 });
@@ -119,7 +129,12 @@ export async function POST(request: NextRequest) {
           "LOW_CONFIDENCE"
         );
         decisionResult = addIntegrity(
-          { ...lowConfResult, workspaceId: workspace.workspaceId },
+          {
+            ...lowConfResult,
+            workspaceId: workspace.workspaceId,
+            ownerUserId: userId || undefined,
+            createdBy: userId || undefined,
+          },
           inputsSnapshot
         );
       } else if (errorMsg === "NON_POSITIVE_IMPACT_BLOCKED") {
@@ -136,7 +151,12 @@ export async function POST(request: NextRequest) {
           "NON_POSITIVE_IMPACT"
         );
         decisionResult = addIntegrity(
-          { ...nonPosResult, workspaceId: workspace.workspaceId },
+          {
+            ...nonPosResult,
+            workspaceId: workspace.workspaceId,
+            ownerUserId: userId || undefined,
+            createdBy: userId || undefined,
+          },
           inputsSnapshot
         );
       } else {
@@ -153,7 +173,12 @@ export async function POST(request: NextRequest) {
           "INVALID_INPUT"
         );
         decisionResult = addIntegrity(
-          { ...unknownErrResult, workspaceId: workspace.workspaceId },
+          {
+            ...unknownErrResult,
+            workspaceId: workspace.workspaceId,
+            ownerUserId: userId || undefined,
+            createdBy: userId || undefined,
+          },
           inputsSnapshot
         );
       }
@@ -173,17 +198,34 @@ export async function POST(request: NextRequest) {
       true
     );
     decisionResult = addIntegrity(
-      { ...approvedResult, workspaceId: workspace.workspaceId },
+      {
+        ...approvedResult,
+        workspaceId: workspace.workspaceId,
+        ownerUserId: userId || undefined,
+        createdBy: userId || undefined,
+      },
       inputsSnapshot
     );
 
+    if (!userId) {
+      return NextResponse.json(
+        { error: "User identity required" },
+        { status: 403 }
+      );
+    }
+
     // 6. Generate operator items and store them
-    const operatorItems = generateOperatorItems(result.decisions, result.impact, workspace.workspaceId);
+    const operatorItems = generateOperatorItems(
+      result.decisions,
+      result.impact,
+      workspace.workspaceId,
+      userId,
+      userId
+    );
     await addItems(operatorItems);
 
     // Get actor ID for audit
-    const session = await getSession();
-    const actorId = session?.user.id ?? null;
+    const actorId = userId;
 
     // Log audit event for run execution
     await logAuditEvent({
@@ -222,6 +264,8 @@ export async function POST(request: NextRequest) {
       {
         ...finalErrResult,
         workspaceId: workspace?.workspaceId || "unknown",
+        ownerUserId: userId || undefined,
+        createdBy: userId || undefined,
       },
       {}
     );
