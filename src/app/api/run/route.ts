@@ -18,6 +18,7 @@ import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import { normalizeDecisionInput, validateNormalizedMetrics } from "@/lib/decision/run";
 import { evaluateDecisionGate, gateResultToPayload } from "@/services/control/decision-gate";
 import { evaluateGuardrails, formatGuardrailViolations } from "@/services/control/guardrails";
+import { validateDependencies } from "@/services/control/variable-registry";
 
 function addIntegrity(
   result: DecisionResult,
@@ -176,6 +177,48 @@ export async function POST(request: NextRequest) {
       confidence: normalizedMetrics.confidence,
       risk: normalizedMetrics.risk || 5,
     };
+
+    // 4a. CONTROL LAYER: Validate variable dependencies (fail-closed)
+    const depValidation = validateDependencies(inputMetrics);
+    if (!depValidation.valid && depValidation.error) {
+      const depErrResult = createDecisionResult(
+        {
+          baselineRevenue: normalizedMetrics.baselineRevenue,
+          baselineCost: normalizedMetrics.baselineCost,
+          deltaRevenue: normalizedMetrics.revenueChange,
+          deltaCost: normalizedMetrics.costChange,
+          confidence: normalizedMetrics.confidence,
+          expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
+        },
+        false,
+        "INVALID_INPUT"
+      );
+      decisionResult = addIntegrity(
+        {
+          ...depErrResult,
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
+        inputsSnapshot
+      );
+
+      if (logger) {
+        logger.success({
+          dependencyStatus: "blocked",
+          variable: depValidation.error.variable,
+          missingDependencies: depValidation.error.missingDependencies,
+        });
+      }
+
+      return NextResponse.json(
+        {
+          error: depValidation.error.details,
+          decision: decisionResult,
+        },
+        { status: 422 }
+      );
+    }
 
     // 5. CONTROL LAYER: Decision Gate - Block unsafe decisions before execution
     const gateResult = evaluateDecisionGate({
