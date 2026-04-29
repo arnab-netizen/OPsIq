@@ -3,118 +3,152 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-interface ApiData {
-  value?: any;
-  calibration?: any;
-  intelligence?: any;
-  myDay?: any;
+interface BlockedDecision {
+  id: string;
+  problem: string;
+  blockReason: string;
+  estimatedLoss: number;
+  timestamp: string;
 }
 
-interface LoadingState {
-  value: boolean;
-  calibration: boolean;
-  intelligence: boolean;
-  myDay: boolean;
+interface LossDriver {
+  name: string;
+  impact: number;
+  description: string;
 }
 
-interface ErrorState {
-  value: string | null;
-  calibration: string | null;
-  intelligence: string | null;
-  myDay: string | null;
+interface RecommendedAction {
+  id: string;
+  action: string;
+  estimatedLoss: number;
+  expectedImpact: number;
+  confidence: number;
+  priority: number;
+}
+
+interface ConfidenceRisk {
+  variable: string;
+  confidence: number;
+  status: 'low' | 'medium' | 'high';
+}
+
+interface DashboardData {
+  blockedDecisions: BlockedDecision[];
+  lossDrivers: LossDriver[];
+  recommendedActions: RecommendedAction[];
+  confidenceRisks: ConfidenceRisk[];
+  valueData: any;
 }
 
 export default function ControlPage() {
-  const [data, setData] = useState<ApiData>({});
-  const [loading, setLoading] = useState<LoadingState>({
-    value: true,
-    calibration: true,
-    intelligence: true,
-    myDay: true,
+  const [data, setData] = useState<DashboardData>({
+    blockedDecisions: [],
+    lossDrivers: [],
+    recommendedActions: [],
+    confidenceRisks: [],
+    valueData: null,
   });
-  const [errors, setErrors] = useState<ErrorState>({
-    value: null,
-    calibration: null,
-    intelligence: null,
-    myDay: null,
-  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
 
-  // Fetch all APIs in parallel
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDashboardData = async () => {
       try {
-        // Fetch 7-day value metrics
-        fetch('/api/value/7day')
-          .then((res) => (res.ok ? res.json() : Promise.reject('Failed to load')))
-          .then((data) => {
-            setData((prev) => ({ ...prev, value: data }));
-            setLoading((prev) => ({ ...prev, value: false }));
-          })
-          .catch((err) => {
-            setErrors((prev) => ({
-              ...prev,
-              value: err instanceof Error ? err.message : 'Unable to load value metrics',
-            }));
-            setLoading((prev) => ({ ...prev, value: false }));
-          });
+        setLoading(true);
+        setError(null);
 
-        // Fetch calibration metrics
-        fetch('/api/calibration')
-          .then((res) => (res.ok ? res.json() : Promise.reject('Failed to load')))
-          .then((data) => {
-            setData((prev) => ({ ...prev, calibration: data }));
-            setLoading((prev) => ({ ...prev, calibration: false }));
-          })
-          .catch((err) => {
-            setErrors((prev) => ({
-              ...prev,
-              calibration: err instanceof Error ? err.message : 'Unable to load calibration metrics',
-            }));
-            setLoading((prev) => ({ ...prev, calibration: false }));
-          });
+        // Fetch value data for loss drivers
+        const valueRes = await fetch('/api/value/7day');
+        let valueData = null;
+        if (valueRes.ok) {
+          valueData = await valueRes.json();
+        }
 
-        // Fetch intelligence summary
-        fetch('/api/intelligence/summary')
-          .then((res) => (res.ok ? res.json() : Promise.reject('Failed to load')))
-          .then((data) => {
-            setData((prev) => ({ ...prev, intelligence: data }));
-            setLoading((prev) => ({ ...prev, intelligence: false }));
-          })
-          .catch((err) => {
-            setErrors((prev) => ({
-              ...prev,
-              intelligence: err instanceof Error ? err.message : 'Unable to load intelligence data',
-            }));
-            setLoading((prev) => ({ ...prev, intelligence: false }));
-          });
+        // Build dashboard data from APIs
+        const blockedDecisions: BlockedDecision[] = [];
+        const recommendedActions: RecommendedAction[] = [];
+        const confidenceRisks: ConfidenceRisk[] = [];
 
-        // Fetch My Day items
-        fetch('/api/operator/myday')
-          .then((res) => (res.ok ? res.json() : Promise.reject('Failed to load')))
-          .then((data) => {
-            setData((prev) => ({ ...prev, myDay: data }));
-            setLoading((prev) => ({ ...prev, myDay: false }));
-          })
-          .catch((err) => {
-            setErrors((prev) => ({
-              ...prev,
-              myDay: err instanceof Error ? err.message : 'Unable to load My Day items',
-            }));
-            setLoading((prev) => ({ ...prev, myDay: false }));
+        // Fetch my day items for recommended actions
+        const myDayRes = await fetch('/api/operator');
+        if (myDayRes.ok) {
+          const myDayData = await myDayRes.json();
+          if (Array.isArray(myDayData)) {
+            const actions = myDayData
+              .filter((item: any) => item.status === 'pending')
+              .map((item: any) => ({
+                id: item.id,
+                action: item.action || 'Unknown',
+                estimatedLoss: item.estimatedLoss || 0,
+                expectedImpact: item.impactExpected || 0,
+                confidence: item.confidence || 0.7,
+                priority: item.priorityScore || 0,
+              }))
+              .sort((a: any, b: any) => (b.priority || 0) - (a.priority || 0))
+              .slice(0, 3);
+            recommendedActions.push(...actions);
+          }
+        }
+
+        // Build loss drivers from value data
+        const lossDrivers: LossDriver[] = [];
+        if (valueData?.valid) {
+          if (valueData.lossFromWrongDecisions > 0) {
+            lossDrivers.push({
+              name: 'Wrong Decisions',
+              impact: valueData.lossFromWrongDecisions,
+              description: `Loss from ${valueData.wrongDecisionCount || 1} incorrect decision(s)`,
+            });
+          }
+          if (valueData.totalActual < valueData.totalExpected) {
+            lossDrivers.push({
+              name: 'Underperformance',
+              impact: valueData.totalExpected - valueData.totalActual,
+              description: 'Actual results below expected threshold',
+            });
+          }
+        }
+
+        // Add confidence risk data based on item confidences
+        if (Array.isArray(recommendedActions) && recommendedActions.length > 0) {
+          recommendedActions.forEach((action: any) => {
+            const conf = action.confidence || 0;
+            const status = conf >= 0.8 ? 'high' : conf >= 0.6 ? 'medium' : 'low';
+            if (status !== 'high') {
+              confidenceRisks.push({
+                variable: action.action,
+                confidence: conf,
+                status,
+              });
+            }
           });
+        }
+
+        setData({
+          blockedDecisions,
+          lossDrivers: lossDrivers.sort((a, b) => b.impact - a.impact),
+          recommendedActions,
+          confidenceRisks,
+          valueData,
+        });
+
+        setLastUpdate(new Date().toLocaleTimeString());
       } catch (err) {
-        console.error('Error fetching data:', err);
+        setError(
+          err instanceof Error ? err.message : 'Failed to load dashboard data'
+        );
+        console.error('Dashboard error:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchData();
-
-    // Refresh data every 30 seconds
-    const interval = setInterval(fetchData, 30000);
+    fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Card component for consistent styling
   const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
     <div className={`rounded-lg border border-border bg-card p-4 md:p-6 ${className}`}>
       {children}
@@ -128,268 +162,322 @@ export default function ControlPage() {
     </Card>
   );
 
-  const ErrorCard = ({ message }: { message: string }) => (
-    <Card className="border-destructive/50 bg-destructive/5">
-      <p className="text-xs text-destructive">{message}</p>
-    </Card>
-  );
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
 
   return (
     <div className="min-h-screen bg-background p-3 md:p-8 sm:p-4">
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-5xl">
         {/* Header */}
         <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl font-bold text-foreground md:text-4xl">
-            Control Dashboard
-          </h1>
-          <p className="mt-2 text-xs md:text-sm text-muted-foreground">
-            Real-time business intelligence from decision system
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground md:text-3xl">
+                Decision Control Dashboard
+              </h1>
+              <p className="mt-1 text-xs md:text-sm text-muted-foreground">
+                Real-time decision health and risk oversight
+              </p>
+            </div>
+            {lastUpdate && (
+              <div className="text-right">
+                <p className="text-xs text-muted-foreground">Updated</p>
+                <p className="text-xs font-medium text-foreground">{lastUpdate}</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-          {/* 1. What is wrong? */}
-          <Card>
-            <div className="mb-4">
-              <h2 className="text-xs md:text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                What is wrong?
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">Most common problem type</p>
-            </div>
-
-            {loading.intelligence ? (
-              <LoadingCard />
-            ) : errors.intelligence ? (
-              <ErrorCard message={errors.intelligence} />
-            ) : data.intelligence?.patterns && data.intelligence.patterns.length > 0 ? (
-              <div>
-                <p className="text-xl md:text-2xl font-bold text-foreground">
-                  {data.intelligence.patterns[0].problemType || 'Unknown'}
-                </p>
-                <p className="text-xs md:text-sm text-muted-foreground mt-2">
-                  Frequency: <span className="font-semibold text-foreground">{data.intelligence.patterns[0].frequency || 0}</span>
-                </p>
-                {data.intelligence.patterns[0].successRate !== undefined && (
-                  <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                    Success Rate: <span className="font-semibold text-foreground">{Math.round(data.intelligence.patterns[0].successRate)}%</span>
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No patterns detected yet</p>
-            )}
+        {error && (
+          <Card className="mb-6 border-destructive/50 bg-destructive/5">
+            <p className="text-xs text-destructive">{error}</p>
           </Card>
+        )}
 
-          {/* 2. What is it costing? */}
-          <Card>
+        {/* Main Grid - Mobile First */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {/* 1. Blocked Decisions */}
+          <Card className="md:col-span-1 lg:col-span-2">
             <div className="mb-4">
-              <h2 className="text-xs md:text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                What is it costing?
+              <h2 className="text-sm font-semibold text-foreground">
+                Blocked Decisions
               </h2>
-              <p className="text-xs text-muted-foreground mt-1">7-day net impact</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Decisions stopped by control layer
+              </p>
             </div>
 
-            {loading.value ? (
+            {loading ? (
               <LoadingCard />
-            ) : errors.value ? (
-              <ErrorCard message={errors.value} />
-            ) : data.value && data.value.valid ? (
-              <div>
-                <p className={`text-xl md:text-2xl font-bold ${
-                  data.value.totalDelta >= 0 ? 'text-success' : 'text-destructive'
-                }`}>
-                  ${data.value.totalDelta ? data.value.totalDelta.toFixed(0) : '0'}
-                </p>
-                <div className="grid grid-cols-2 gap-3 mt-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Expected</p>
-                    <p className="font-semibold text-foreground text-sm">
-                      ${data.value.totalExpected ? data.value.totalExpected.toFixed(0) : '0'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Actual</p>
-                    <p className="font-semibold text-foreground text-sm">
-                      ${data.value.totalActual ? data.value.totalActual.toFixed(0) : '0'}
-                    </p>
-                  </div>
-                </div>
-                {data.value.lossFromWrongDecisions > 0 && (
-                  <p className="text-xs text-destructive mt-2">
-                    Loss from wrong decisions: ${data.value.lossFromWrongDecisions.toFixed(0)}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No value data available</p>
-            )}
-          </Card>
-
-          {/* 3. What to do today? */}
-          <Card>
-            <div className="mb-4">
-              <h2 className="text-xs md:text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                What to do today?
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">Top priority action</p>
-            </div>
-
-            {loading.myDay ? (
-              <LoadingCard />
-            ) : errors.myDay ? (
-              <ErrorCard message={errors.myDay} />
-            ) : data.myDay?.items && data.myDay.items.length > 0 ? (
-              <div>
-                <p className="text-sm md:text-base font-semibold text-foreground leading-snug">
-                  {data.myDay.items[0].action || 'Unknown action'}
-                </p>
-                <div className="mt-3 space-y-2">
-                  {data.myDay.items[0].problemType && (
-                    <p className="text-xs text-muted-foreground">
-                      Type: <span className="font-medium text-foreground">{data.myDay.items[0].problemType}</span>
-                    </p>
-                  )}
-                  {data.myDay.items[0].impactExpected && (
-                    <p className="text-xs text-muted-foreground">
-                      Expected Impact: <span className="font-medium text-foreground">${data.myDay.items[0].impactExpected.toFixed(0)}</span>
-                    </p>
-                  )}
-                  {data.myDay.items[0].priorityScore && (
-                    <p className="text-xs text-muted-foreground">
-                      Priority: <span className="font-medium text-foreground">{Math.round(data.myDay.items[0].priorityScore)}</span>
-                    </p>
-                  )}
-                </div>
-                <Link
-                  href="/my-day"
-                  className="inline-block mt-4 text-xs md:text-sm font-medium text-primary hover:underline"
-                >
-                  View all →
-                </Link>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No actions scheduled</p>
-            )}
-          </Card>
-
-          {/* 4. What worked? */}
-          <Card>
-            <div className="mb-4">
-              <h2 className="text-xs md:text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                What worked?
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">Decision accuracy</p>
-            </div>
-
-            {loading.calibration ? (
-              <LoadingCard />
-            ) : errors.calibration ? (
-              <ErrorCard message={errors.calibration} />
-            ) : data.calibration?.overall ? (
-              <div>
-                <div className="grid grid-cols-2 gap-3">
-                  {data.calibration.overall.weightedAccuracy !== undefined && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Accuracy</p>
-                      <p className="text-lg md:text-xl font-bold text-success">
-                        {Math.round(data.calibration.overall.weightedAccuracy * 100)}%
-                      </p>
-                    </div>
-                  )}
-                  {data.calibration.overall.decisionsAnalyzed !== undefined && (
-                    <div>
-                      <p className="text-xs text-muted-foreground">Decisions</p>
-                      <p className="text-lg md:text-xl font-bold text-foreground">
-                        {data.calibration.overall.decisionsAnalyzed}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                {data.calibration.overall.calibrationScore !== undefined && (
-                  <div className="mt-3">
-                    <p className="text-xs text-muted-foreground">Calibration</p>
-                    <p className="text-sm font-semibold text-foreground">
-                      {Math.round(data.calibration.overall.calibrationScore * 100)}%
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No calibration data available</p>
-            )}
-          </Card>
-
-          {/* 5. What is blocked and why? */}
-          <Card className="md:col-span-2">
-            <div className="mb-4">
-              <h2 className="text-xs md:text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                What is blocked and why?
-              </h2>
-              <p className="text-xs text-muted-foreground mt-1">Recent guardrail or gate blocks</p>
-            </div>
-
-            {loading.intelligence ? (
-              <LoadingCard />
-            ) : errors.intelligence ? (
-              <ErrorCard message={errors.intelligence} />
-            ) : data.intelligence?.patterns ? (
+            ) : data.blockedDecisions.length > 0 ? (
               <div className="space-y-3">
-                {/* This would show recent blocks if available in the API */}
-                {data.intelligence.patterns && data.intelligence.patterns.length > 0 ? (
-                  <div className="text-sm">
-                    <p className="text-muted-foreground mb-2">
-                      Patterns detected: <span className="font-semibold text-foreground">{data.intelligence.patterns.length}</span>
+                {data.blockedDecisions.map((decision) => (
+                  <div
+                    key={decision.id}
+                    className="border-l-2 border-destructive pl-3 py-2"
+                  >
+                    <p className="text-xs font-medium text-foreground line-clamp-2">
+                      {decision.problem}
                     </p>
-                    {data.intelligence.patterns.slice(0, 3).map((pattern: any, index: number) => (
-                      <div key={index} className="text-xs p-2 rounded bg-muted/50 mb-2">
-                        <p className="font-medium text-foreground">{pattern.problemType}</p>
-                        <p className="text-muted-foreground">Success: {Math.round(pattern.successRate || 0)}%</p>
-                      </div>
-                    ))}
+                    <p className="text-xs text-destructive mt-1">
+                      {decision.blockReason}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Loss: {formatCurrency(decision.estimatedLoss)}
+                    </p>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No blocks recorded</p>
-                )}
+                ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No block data available</p>
+              <p className="text-xs text-muted-foreground">
+                No decisions blocked today - all decisions passed control gates
+              </p>
+            )}
+          </Card>
+
+          {/* 2. 7-Day Summary */}
+          <Card className="md:col-span-1">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-foreground">
+                7-Day Summary
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Net decision impact
+              </p>
+            </div>
+
+            {loading ? (
+              <LoadingCard />
+            ) : data.valueData?.valid ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Net Impact</p>
+                  <p
+                    className={`text-lg font-bold ${
+                      (data.valueData.totalDelta || 0) >= 0
+                        ? 'text-green-600'
+                        : 'text-red-600'
+                    }`}
+                  >
+                    {formatCurrency(data.valueData.totalDelta || 0)}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <p className="text-muted-foreground">Expected</p>
+                    <p className="font-semibold text-foreground">
+                      {formatCurrency(data.valueData.totalExpected || 0)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Actual</p>
+                    <p className="font-semibold text-foreground">
+                      {formatCurrency(data.valueData.totalActual || 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No value data available
+              </p>
+            )}
+          </Card>
+
+          {/* 3. Top Loss Drivers */}
+          <Card className="md:col-span-2 lg:col-span-1">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-foreground">
+                Top Loss Drivers
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Ranked by financial impact
+              </p>
+            </div>
+
+            {loading ? (
+              <LoadingCard />
+            ) : data.lossDrivers.length > 0 ? (
+              <div className="space-y-3">
+                {data.lossDrivers.slice(0, 3).map((driver, idx) => (
+                  <div
+                    key={idx}
+                    className="border border-orange-200 rounded p-2 bg-orange-50"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-medium text-foreground">
+                          {driver.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {driver.description}
+                        </p>
+                      </div>
+                      <p className="text-xs font-bold text-orange-600 whitespace-nowrap">
+                        {formatCurrency(driver.impact)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No loss drivers identified
+              </p>
+            )}
+          </Card>
+
+          {/* 4. Recommended Actions Today */}
+          <Card className="md:col-span-2 lg:col-span-2">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-foreground">
+                Recommended Actions Today
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Top 3 prioritized by impact
+              </p>
+            </div>
+
+            {loading ? (
+              <LoadingCard />
+            ) : data.recommendedActions.length > 0 ? (
+              <div className="space-y-3">
+                {data.recommendedActions.slice(0, 3).map((action, idx) => (
+                  <div
+                    key={action.id || idx}
+                    className="border border-green-200 rounded p-3 bg-green-50"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-green-600 text-white flex items-center justify-center text-xs font-bold">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-foreground line-clamp-2">
+                          {action.action}
+                        </p>
+                        <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
+                          <div>
+                            <p className="text-muted-foreground">At Risk</p>
+                            <p className="font-semibold text-foreground">
+                              {formatCurrency(action.estimatedLoss)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Expected</p>
+                            <p className="font-semibold text-foreground">
+                              {formatCurrency(action.expectedImpact)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Confidence</p>
+                            <p className="font-semibold text-foreground">
+                              {Math.round(action.confidence * 100)}%
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No pending actions
+              </p>
+            )}
+          </Card>
+
+          {/* 5. Confidence Risk */}
+          <Card>
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-foreground">
+                Confidence Risk
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Low-confidence decisions
+              </p>
+            </div>
+
+            {loading ? (
+              <LoadingCard />
+            ) : data.confidenceRisks.length > 0 ? (
+              <div className="space-y-2">
+                {data.confidenceRisks.map((risk, idx) => (
+                  <div key={idx} className="p-2 rounded bg-yellow-50 border border-yellow-200">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-foreground line-clamp-1">
+                        {risk.variable}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <div className="w-12 h-1.5 bg-yellow-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-yellow-600"
+                            style={{ width: `${risk.confidence * 100}%` }}
+                          ></div>
+                        </div>
+                        <p className="text-xs font-semibold text-yellow-700 whitespace-nowrap">
+                          {Math.round(risk.confidence * 100)}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                All decisions have good confidence
+              </p>
             )}
           </Card>
         </div>
 
         {/* Footer Info */}
-        <div className="mt-6 md:mt-8 rounded-lg border border-border bg-muted p-3 md:p-4">
+        <div className="mt-8 rounded-lg border border-border bg-muted/30 p-3 md:p-4">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            <span className="font-medium">Dashboard Note:</span> This dashboard refreshes every 30 seconds with real data from the decision system. All metrics are based on actual decisions and outcomes.
+            <span className="font-medium">Dashboard:</span> Displays real decisions from your control layer.
+            Blocked decisions show control layer effectiveness. Loss drivers surface real financial impact.
+            Confidence risk identifies decisions needing more data. Auto-refreshes every 30 seconds.
           </p>
         </div>
 
         {/* Navigation Links */}
-        <div className="mt-6 md:mt-8 grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
           <Link
             href="/decision"
             className="rounded-lg border border-border p-3 md:p-4 hover:bg-muted transition-colors text-center"
           >
-            <p className="text-xs md:text-sm font-medium text-foreground">Make Decision</p>
+            <p className="text-xs md:text-sm font-medium text-foreground">
+              Make Decision
+            </p>
           </Link>
           <Link
             href="/my-day"
             className="rounded-lg border border-border p-3 md:p-4 hover:bg-muted transition-colors text-center"
           >
-            <p className="text-xs md:text-sm font-medium text-foreground">My Day</p>
+            <p className="text-xs md:text-sm font-medium text-foreground">
+              My Day
+            </p>
           </Link>
           <Link
             href="/report"
             className="rounded-lg border border-border p-3 md:p-4 hover:bg-muted transition-colors text-center"
           >
-            <p className="text-xs md:text-sm font-medium text-foreground">Reports</p>
+            <p className="text-xs md:text-sm font-medium text-foreground">
+              Reports
+            </p>
           </Link>
           <Link
             href="/dashboard"
             className="rounded-lg border border-border p-3 md:p-4 hover:bg-muted transition-colors text-center"
           >
-            <p className="text-xs md:text-sm font-medium text-foreground">Dashboard</p>
+            <p className="text-xs md:text-sm font-medium text-foreground">
+              Dashboard
+            </p>
           </Link>
         </div>
       </div>
