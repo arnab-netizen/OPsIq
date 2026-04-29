@@ -135,11 +135,26 @@ export async function GET(request: NextRequest) {
       engineVersion: decision.engineVersion || "v1.0.0",
     };
 
+    // Extract input variables from inputsSnapshot
+    const inputVariables = decision.inputsSnapshot
+      ? JSON.parse(String(decision.inputsSnapshot))
+      : undefined;
+
     // Generate primary recommendation
-    const recommendation = generateRecommendation(decisionResult, patterns, operatorItems);
+    const recommendation = generateRecommendation(
+      decisionResult,
+      patterns,
+      operatorItems,
+      inputVariables
+    );
 
     // Also generate alternative recommendations
-    const alternatives = generateMultipleRecommendations(decisionResult, patterns, operatorItems)
+    const alternatives = generateMultipleRecommendations(
+      decisionResult,
+      patterns,
+      operatorItems,
+      inputVariables
+    )
       .filter((alt) => !recommendation || alt.basedOnPatternId !== recommendation.basedOnPatternId)
       .slice(0, 2);
 

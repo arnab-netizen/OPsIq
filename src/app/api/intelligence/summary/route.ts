@@ -136,10 +136,16 @@ export async function GET(request: NextRequest) {
           engineVersion: decision.engineVersion || "v1.0.0",
         };
 
+        // Extract input variables from inputsSnapshot
+        const inputVariables = decision.inputsSnapshot
+          ? JSON.parse(String(decision.inputsSnapshot))
+          : undefined;
+
         recommendation = generateRecommendation(
           decisionResult,
           allPatterns,
-          operatorItems
+          operatorItems,
+          inputVariables
         );
         if (recommendation) {
           recommendationCount = 1;
