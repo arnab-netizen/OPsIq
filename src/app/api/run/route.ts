@@ -16,6 +16,7 @@ import { DecisionResult } from "@/domain/decision/types";
 import { createEventLogger } from "@/lib/observability/log";
 import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import { normalizeDecisionInput, validateNormalizedMetrics } from "@/lib/decision/run";
+import { evaluateDecisionGate, gateResultToPayload } from "@/services/control/decision-gate";
 
 function addIntegrity(
   result: DecisionResult,
@@ -175,7 +176,58 @@ export async function POST(request: NextRequest) {
       risk: normalizedMetrics.risk || 5,
     };
 
-    // 4. Call runSystem with error handling for decision validation
+    // 5. CONTROL LAYER: Decision Gate - Block unsafe decisions before execution
+    const gateResult = evaluateDecisionGate({
+      variables: inputMetrics,
+      confidence: normalizedMetrics.confidence,
+    });
+
+    if (!gateResult.allowed) {
+      // Return 422 Unprocessable Entity - decision blocked by gate
+      const gateBlockResult = createDecisionResult(
+        {
+          baselineRevenue: normalizedMetrics.baselineRevenue,
+          baselineCost: normalizedMetrics.baselineCost,
+          deltaRevenue: normalizedMetrics.revenueChange,
+          deltaCost: normalizedMetrics.costChange,
+          confidence: normalizedMetrics.confidence,
+          expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
+        },
+        false,
+        "INVALID_INPUT"
+      );
+
+      decisionResult = addIntegrity(
+        {
+          ...gateBlockResult,
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
+        inputsSnapshot
+      );
+
+      // Log gate rejection
+      if (logger) {
+        logger.success({
+          gateStatus: "blocked",
+          reason: gateResult.reason,
+          missingVariables: gateResult.missingVariables,
+          lowConfidenceVariables: gateResult.lowConfidenceVariables,
+        });
+      }
+
+      // Return gate result in response body with 422 status
+      return NextResponse.json(
+        {
+          ...gateResultToPayload(gateResult),
+          decision: decisionResult,
+        },
+        { status: 422 }
+      );
+    }
+
+    // 6. Call runSystem with error handling for decision validation
     let result;
     try {
       result = runSystem(inputMetrics);
@@ -253,7 +305,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(decisionResult, { status: 400 });
     }
 
-    // 5. Classify problem type based on financial impact
+    // 7. Classify problem type based on financial impact
     const problemType = classifyProblem({
       baselineRevenue: revenue,
       baselineCost: cost,
@@ -262,7 +314,7 @@ export async function POST(request: NextRequest) {
       expectedImpact: result.impact.impactExpected,
     });
 
-    // 6. Calculate baseline impact metrics
+    // 8. Calculate baseline impact metrics
     const baselineMetrics = calculateBaselineMetrics({
       baselineRevenue: revenue,
       baselineCost: cost,
@@ -271,7 +323,7 @@ export async function POST(request: NextRequest) {
       expectedImpact: result.impact.impactExpected,
     });
 
-    // 8. Create approved decision result with explanation
+    // 9. Create approved decision result with explanation
     const approvedResult = createDecisionResult(
       {
         baselineRevenue: revenue,
@@ -303,7 +355,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 9. Generate operator items and store them
+    // 10. Generate operator items and store them
     const operatorItems = generateOperatorItems(
       result.decisions,
       result.impact,
@@ -318,7 +370,7 @@ export async function POST(request: NextRequest) {
     // Get actor ID for audit
     const actorId = userId;
 
-    // Log audit event for run execution
+    // 11. Log audit event for run execution
     await logAuditEvent({
       eventName: "RUN",
       entityType: "Decision",
@@ -333,7 +385,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Emit webhook for decision creation (non-blocking)
+    // 12. Emit webhook for decision creation (non-blocking)
     emitWebhookAsync(`${process.env.WEBHOOK_URL || ""}`, {
       event: "decision_created",
       timestamp: new Date().toISOString(),
@@ -348,7 +400,7 @@ export async function POST(request: NextRequest) {
       // Intentionally swallow errors - webhook failures should not block the request
     });
 
-    // 7. Return decision result with explanation
+    // 13. Return decision result with explanation
     if (logger) {
       logger.success({ decision: decisionResult?.decision, problemType: decisionResult?.problemType });
     }
