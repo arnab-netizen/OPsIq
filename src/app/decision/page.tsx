@@ -47,8 +47,10 @@ export default function DecisionPage() {
         let hasError = false;
 
         if (calibRes.ok) {
-          const calibData = await calibRes.json() as CalibrationMetrics;
-          setCalibrationMetrics(calibData);
+          const calibData = await calibRes.json();
+          // Extract overall metrics from new segmented response format
+          const metrics = calibData.overall || calibData;
+          setCalibrationMetrics(metrics);
         } else {
           hasError = true;
         }

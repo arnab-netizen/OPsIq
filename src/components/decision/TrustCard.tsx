@@ -43,7 +43,9 @@ export function TrustCard({
         const calibData = await calibRes.json();
         const valueData = await valueRes.json();
 
-        setCalibration(calibData);
+        // Handle new segmented response format: extract overall metrics
+        const calibMetrics = calibData.overall || calibData;
+        setCalibration(calibMetrics);
         setValue(valueData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load metrics');

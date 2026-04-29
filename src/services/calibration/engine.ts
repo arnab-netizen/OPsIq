@@ -28,6 +28,23 @@ export interface CalibrationMetrics {
 }
 
 /**
+ * Calibration metrics segmented by impact magnitude.
+ */
+export interface SegmentedCalibrationMetrics {
+  low: CalibrationMetrics;
+  medium: CalibrationMetrics;
+  high: CalibrationMetrics;
+}
+
+/**
+ * Complete calibration response with overall and segmented metrics.
+ */
+export interface SegmentedCalibrationResponse {
+  overall: CalibrationMetrics;
+  byImpactSegment: SegmentedCalibrationMetrics;
+}
+
+/**
  * Compute calibration metrics from completed items.
  *
  * Success is defined as: actualOutcome >= expectedImpact
@@ -167,6 +184,44 @@ export function computeCalibration(
     itemsAnalyzed: completedItems.length,
     successCount,
     valid: true,
+  };
+}
+
+/**
+ * Compute calibration metrics segmented by impact magnitude.
+ *
+ * @param items - Array of OperatorItems with completion data
+ * @returns SegmentedCalibrationMetrics with metrics for each impact segment
+ *
+ * Deterministic: Same inputs always produce same output
+ */
+export function computeCalibrationBySegment(
+  items: OperatorItem[]
+): SegmentedCalibrationMetrics {
+  type ImpactSegment = "low" | "medium" | "high";
+
+  const segments: Record<ImpactSegment, OperatorItem[]> = {
+    low: [],
+    medium: [],
+    high: [],
+  };
+
+  // Categorize items by impact magnitude
+  for (const item of items) {
+    if (item.impactExpected < 1000) {
+      segments.low.push(item);
+    } else if (item.impactExpected <= 10000) {
+      segments.medium.push(item);
+    } else {
+      segments.high.push(item);
+    }
+  }
+
+  // Compute calibration metrics for each segment
+  return {
+    low: computeCalibration(segments.low),
+    medium: computeCalibration(segments.medium),
+    high: computeCalibration(segments.high),
   };
 }
 
