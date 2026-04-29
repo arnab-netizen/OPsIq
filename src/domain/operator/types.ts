@@ -25,6 +25,9 @@ export type OperatorItem = {
 
   problemType?: ProblemType;
 
+  baselineValue?: number | null;
+  projectedWithoutAction?: number | null;
+
   blockingDependencies: string[];
 
   expectedOutcome: string | null;

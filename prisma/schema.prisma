@@ -639,6 +639,8 @@ model OperatorItem {
   dueAt               DateTime?  @map("due_at")
   decisionType        String    @default("general") @map("decision_type") // extensible: "general", "strategic", "operational", etc.
   problemType         String?   @map("problem_type") // "revenue_leak" | "cost_overrun" | "growth_block" | "inefficiency"
+  baselineValue          Float?    @map("baseline_value") // Net of baseline revenue and cost
+  projectedWithoutAction Float?    @map("projected_without_action") // Projected value if no action taken
   expectedOutcome     String?    @map("expected_outcome")
   actualOutcome       String?    @map("actual_outcome")
   actualOutcomeValue  Float?    @map("actual_outcome_value") // numeric measured result

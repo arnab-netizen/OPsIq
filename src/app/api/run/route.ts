@@ -11,6 +11,7 @@ import { createDecisionResult } from "@/services/explanation/generate";
 import { createIntegrityPayload } from "@/services/integrity/hash";
 import { createSignaturePayload } from "@/services/integrity/sign";
 import { classifyProblem } from "@/services/problem/classifier";
+import { calculateBaselineMetrics } from "@/services/baseline/calculator";
 import { DecisionResult } from "@/domain/decision/types";
 
 function addIntegrity(
@@ -195,7 +196,16 @@ export async function POST(request: NextRequest) {
       expectedImpact: result.impact.impactExpected,
     });
 
-    // 6. Create approved decision result with explanation
+    // 6. Calculate baseline impact metrics
+    const baselineMetrics = calculateBaselineMetrics({
+      baselineRevenue: revenue,
+      baselineCost: cost,
+      revenueChange: revenue * 0.1,
+      costChange: cost * 0.05,
+      expectedImpact: result.impact.impactExpected,
+    });
+
+    // 8. Create approved decision result with explanation
     const approvedResult = createDecisionResult(
       {
         baselineRevenue: revenue,
@@ -214,6 +224,8 @@ export async function POST(request: NextRequest) {
         ownerUserId: userId || undefined,
         createdBy: userId || undefined,
         problemType,
+        baselineValue: baselineMetrics.baselineValue,
+        projectedWithoutAction: baselineMetrics.projectedWithoutAction,
       },
       inputsSnapshot
     );
@@ -225,14 +237,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 7. Generate operator items and store them
+    // 9. Generate operator items and store them
     const operatorItems = generateOperatorItems(
       result.decisions,
       result.impact,
       workspace.workspaceId,
       userId,
       userId,
-      problemType
+      problemType,
+      baselineMetrics
     );
     await addItems(operatorItems);
 

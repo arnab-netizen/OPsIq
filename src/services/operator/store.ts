@@ -76,6 +76,12 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
     if (item.problemType) {
       data.problemType = item.problemType;
     }
+    if (item.baselineValue !== null && item.baselineValue !== undefined) {
+      data.baselineValue = item.baselineValue;
+    }
+    if (item.projectedWithoutAction !== null && item.projectedWithoutAction !== undefined) {
+      data.projectedWithoutAction = item.projectedWithoutAction;
+    }
 
     await db.operatorItem.create({ data });
   }
@@ -106,6 +112,8 @@ export async function getItems(): Promise<OperatorItem[]> {
     dueAt: r.dueAt ? r.dueAt.toISOString() : null,
     decisionType: r.decisionType || "general",
     problemType: r.problemType || undefined,
+    baselineValue: r.baselineValue ? Number(r.baselineValue) : undefined,
+    projectedWithoutAction: r.projectedWithoutAction ? Number(r.projectedWithoutAction) : undefined,
     expectedOutcome: r.expectedOutcome,
     actualOutcome: r.actualOutcome,
     actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,
@@ -237,6 +245,8 @@ export async function getQueuedItems(
     dueAt: r.dueAt ? r.dueAt.toISOString() : null,
     decisionType: r.decisionType || "general",
     problemType: r.problemType || undefined,
+    baselineValue: r.baselineValue ? Number(r.baselineValue) : undefined,
+    projectedWithoutAction: r.projectedWithoutAction ? Number(r.projectedWithoutAction) : undefined,
     expectedOutcome: r.expectedOutcome,
     actualOutcome: r.actualOutcome,
     actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,

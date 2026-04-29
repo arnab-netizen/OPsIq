@@ -4,13 +4,19 @@ import type { ImpactEstimate } from "@/domain/finance/types";
 import { calculatePriority } from "./priority";
 import { randomUUID } from "crypto";
 
+export interface BaselineMetrics {
+  baselineValue: number;
+  projectedWithoutAction: number;
+}
+
 export function generateOperatorItems(
   decisions: DecisionOutput[],
   impact: ImpactEstimate,
   workspaceId: string,
   ownerUserId: string,
   createdBy: string,
-  problemType?: ProblemType
+  problemType?: ProblemType,
+  baselineMetrics?: BaselineMetrics
 ): OperatorItem[] {
   return decisions.map((decision) => {
     const item: OperatorItem = {
@@ -37,6 +43,9 @@ export function generateOperatorItems(
       decisionType: "general",
 
       problemType,
+
+      baselineValue: baselineMetrics?.baselineValue,
+      projectedWithoutAction: baselineMetrics?.projectedWithoutAction,
 
       blockingDependencies: [],
 
