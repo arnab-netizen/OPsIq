@@ -1,11 +1,54 @@
 import { DecisionResult } from '@/domain/decision/types';
 import { TrustVerificationPanel } from './TrustVerificationPanel';
 
-interface DecisionResultProps {
-  result: DecisionResult;
+interface GuardrailViolation {
+  ruleId: string;
+  severity: 'block' | 'warn';
+  message: string;
+  threshold: number | string;
+  actual: number | string;
+  overrideAllowed: boolean;
 }
 
-export function DecisionResultComponent({ result }: DecisionResultProps) {
+interface GateResult {
+  allowed: boolean;
+  reason?: string;
+  missingVariables: string[];
+  lowConfidenceVariables: string[];
+  warnings: string[];
+  overallConfidence?: number;
+}
+
+interface DecisionResultResponse {
+  decision: DecisionResult;
+  gate?: GateResult;
+  guardrails?: {
+    blocked: boolean;
+    violations: GuardrailViolation[];
+    warnings: string[];
+  };
+}
+
+interface DecisionResultProps {
+  result: DecisionResult | DecisionResultResponse | any;
+}
+
+// Type guard to check if result is a DecisionResultResponse
+function isDecisionResultResponse(result: any): result is DecisionResultResponse {
+  return result && typeof result === 'object' && 'decision' in result;
+}
+
+// Extract DecisionResult from response
+function getDecisionResult(result: DecisionResult | DecisionResultResponse): DecisionResult {
+  if (isDecisionResultResponse(result)) {
+    return result.decision;
+  }
+  return result;
+}
+
+export function DecisionResultComponent({ result: initialResult }: DecisionResultProps) {
+  const result = getDecisionResult(initialResult);
+  const responseData = isDecisionResultResponse(initialResult) ? initialResult : null;
   const getDecisionColor = (decision: string): string => {
     return decision === 'APPROVED'
       ? 'text-success'
@@ -34,6 +77,153 @@ export function DecisionResultComponent({ result }: DecisionResultProps) {
           </p>
         )}
       </div>
+
+      {/* 1a. Decision Gate Block */}
+      {responseData?.gate && !responseData.gate.allowed && (
+        <div className="rounded-lg border border-destructive bg-destructive/5 p-6">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-destructive flex items-center justify-center mt-0.5">
+              <span className="text-white text-xs font-bold">✕</span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-destructive">
+                Decision Blocked by Safety Gate
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                This decision was blocked before execution due to safety checks.
+              </p>
+            </div>
+          </div>
+
+          {responseData.gate.reason && (
+            <div className="bg-background/50 rounded p-3 mb-4">
+              <p className="text-xs text-foreground font-medium">
+                {responseData.gate.reason}
+              </p>
+            </div>
+          )}
+
+          {responseData.gate.missingVariables && responseData.gate.missingVariables.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs font-medium text-foreground mb-2">Missing Variables:</p>
+              <ul className="space-y-1">
+                {responseData.gate.missingVariables.map((variable, index) => (
+                  <li key={index} className="text-xs text-foreground flex items-center gap-2">
+                    <span className="w-1 h-1 rounded-full bg-destructive"></span>
+                    {variable}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {responseData.gate.lowConfidenceVariables && responseData.gate.lowConfidenceVariables.length > 0 && (
+            <div className="mb-3">
+              <p className="text-xs font-medium text-foreground mb-2">Low Confidence Variables:</p>
+              <ul className="space-y-1">
+                {responseData.gate.lowConfidenceVariables.map((variable, index) => (
+                  <li key={index} className="text-xs text-foreground flex items-center gap-2">
+                    <span className="w-1 h-1 rounded-full bg-warning"></span>
+                    {variable}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {responseData.gate.warnings && responseData.gate.warnings.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-foreground mb-2">Warnings:</p>
+              <ul className="space-y-1">
+                {responseData.gate.warnings.map((warning, index) => (
+                  <li key={index} className="text-xs text-foreground flex items-center gap-2">
+                    <span className="w-1 h-1 rounded-full bg-warning"></span>
+                    {warning}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {responseData.gate.overallConfidence !== undefined && (
+            <div className="mt-4 pt-3 border-t border-destructive/20">
+              <p className="text-xs text-muted-foreground">
+                Overall Confidence: <span className="font-semibold text-foreground">{(responseData.gate.overallConfidence * 100).toFixed(0)}%</span>
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 1b. Guardrail Violations */}
+      {responseData?.guardrails && responseData.guardrails.violations && responseData.guardrails.violations.length > 0 && (
+        <div className="rounded-lg border border-destructive bg-destructive/5 p-6">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-destructive flex items-center justify-center mt-0.5">
+              <span className="text-white text-xs font-bold">!</span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-destructive">
+                Policy Guardrail Violations
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                This decision violates one or more policy constraints.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {responseData.guardrails.violations.map((violation, index) => (
+              <div key={index} className="bg-background/50 rounded p-3">
+                <div className="flex items-start justify-between mb-2">
+                  <span className="text-xs font-semibold text-foreground">
+                    {violation.ruleId}
+                  </span>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                    violation.severity === 'block'
+                      ? 'bg-destructive/20 text-destructive'
+                      : 'bg-warning/20 text-warning'
+                  }`}>
+                    {violation.severity.toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-xs text-foreground mb-2">
+                  {violation.message}
+                </p>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div className="flex justify-between">
+                    <span>Threshold:</span>
+                    <span className="font-mono">{violation.threshold}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Actual:</span>
+                    <span className="font-mono">{violation.actual}</span>
+                  </div>
+                  {violation.overrideAllowed && (
+                    <div className="text-xs text-warning pt-1 border-t border-destructive/20">
+                      Override allowed with approval
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {responseData.guardrails.warnings && responseData.guardrails.warnings.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-destructive/20">
+              <p className="text-xs font-medium text-foreground mb-2">Warnings:</p>
+              <ul className="space-y-1">
+                {responseData.guardrails.warnings.map((warning, index) => (
+                  <li key={index} className="text-xs text-foreground flex items-center gap-2">
+                    <span className="w-1 h-1 rounded-full bg-warning"></span>
+                    {warning}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 2. Expected Impact */}
       <div className="rounded-lg border border-border bg-accent p-6">

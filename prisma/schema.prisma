@@ -439,6 +439,7 @@ model ShockEvent {
 
 model AuditEvent {
   id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid // Multi-workspace audit isolation
   eventName     String   @map("event_name")
   actorId       String?  @map("actor_id") @db.Uuid
   actorType     String   @default("user") @map("actor_type")
@@ -451,6 +452,9 @@ model AuditEvent {
 
   actor User? @relation(fields: [actorId], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, eventName])
+  @@index([workspaceId, occurredAt])
   @@index([eventName])
   @@index([entityType, entityId])
   @@index([actorId])
@@ -620,6 +624,10 @@ model Risk {
 
 model OperatorItem {
   id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid // Multi-workspace isolation
+  ownerUserId         String    @map("owner_user_id") @db.Uuid // Decision owner
+  createdBy           String    @map("created_by_user_id") @db.Uuid // Creator for audit
+  lastUpdatedBy       String?   @map("last_updated_by_user_id") @db.Uuid // Last editor for audit
   problem             String
   action              String
   impactExpected      Float
@@ -629,6 +637,10 @@ model OperatorItem {
   priorityScore       Float
   status              String    @default("pending") // "pending" | "in_progress" | "done" | "failed"
   dueAt               DateTime?  @map("due_at")
+  decisionType        String    @default("general") @map("decision_type") // extensible: "general", "strategic", "operational", etc.
+  problemType         String?   @map("problem_type") // "revenue_leak" | "cost_overrun" | "growth_block" | "inefficiency"
+  baselineValue          Float?    @map("baseline_value") // Net of baseline revenue and cost
+  projectedWithoutAction Float?    @map("projected_without_action") // Projected value if no action taken
   expectedOutcome     String?    @map("expected_outcome")
   actualOutcome       String?    @map("actual_outcome")
   actualOutcomeValue  Float?    @map("actual_outcome_value") // numeric measured result
@@ -639,6 +651,9 @@ model OperatorItem {
   startedAt           DateTime?  @map("started_at")
   completedAt         DateTime?  @map("completed_at")
   executionStatus     String    @default("not_started") @map("execution_status") // "not_started" | "started" | "completed"
+  firstCompletedAt       DateTime?  @map("first_completed_at") // First time action was completed
+  firstPositiveOutcomeAt DateTime?  @map("first_positive_outcome_at") // First time positive outcome detected
+  firstWinAchieved        Boolean?  @map("first_win_achieved") // First win: actual > expected AND impact > 50k
   explanation         Json?      // DecisionExplanation JSONB
   inputsSnapshot      Json?      // Full input payload for replay
   decisionHash        String?    @map("decision_hash") // SHA256 hash for integrity
@@ -647,10 +662,15 @@ model OperatorItem {
   signatureAlgo       String?    @map("signature_algo") // Signature algorithm identifier
   publicKeyId         String?    @map("public_key_id") // Public key identifier
   engineVersion       String    @default("v1.0.0") @map("engine_version")
-  createdBy           String?    @map("created_by") @db.Uuid
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
+  @@index([workspaceId])
+  @@index([workspaceId, ownerUserId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, priorityScore])
+  @@index([workspaceId, executionStatus])
+  @@index([ownerUserId])
   @@index([status])
   @@index([priorityScore])
   @@index([executionStatus])
@@ -660,4 +680,41 @@ model OperatorItem {
   @@index([publicKeyId])
   @@map("operator_items")
 }
+
+// ─── Learning Store: Decision Outcomes for Pattern Analysis ───────────────
+
+model LearningRecord {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid // Multi-workspace isolation
+  problemType String    @map("problem_type") // "revenue_leak" | "cost_overrun" | "growth_block" | "inefficiency"
+  actionTaken String    @map("action_taken") // The action that was executed
+  success     Boolean   // Whether the decision/action succeeded
+  impact      Float     // The measured impact (positive or negative)
+  timestamp   DateTime  @default(now()) // When this learning record was created
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, problemType])
+  @@index([workspaceId, success])
+  @@index([timestamp])
+  @@index([createdAt])
+  @@map("learning_records")
+}
+
+// ─── Business Profile: Workspace Context & Metadata ─────────────────────────
+
+model BusinessProfile {
+  id            String    @id @default(cuid())
+  workspaceId   String    @unique @map("workspace_id") @db.Uuid // Multi-tenant isolation, unique per workspace
+  industry      String    // e.g., "SaaS", "Manufacturing", "Retail"
+  revenueBand   String    @map("revenue_band") // e.g., "<1M", "1M-10M", "10M-100M", ">100M"
+  geography     String    // e.g., "NA", "EU", "APAC"
+  costStructure Json      @map("cost_structure") // Flexible cost breakdown by category
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@map("business_profiles")
+}
+
 

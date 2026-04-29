@@ -430,6 +430,191 @@ describe("calculateValue - Value Tracker", () => {
     });
   });
 
+  describe("ROI Calculation", () => {
+    it("should calculate ROI when actual equals expected", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 100,
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      expect(result.roi).toBe(1.0); // 100 / 100
+    });
+
+    it("should calculate ROI when actual exceeds expected", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 150,
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      expect(result.roi).toBe(1.5); // 150 / 100
+    });
+
+    it("should calculate ROI when actual is less than expected", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 50,
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      expect(result.roi).toBe(0.5); // 50 / 100
+    });
+
+    it("should return null ROI when totalExpected is zero", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 0,
+          actualOutcomeValue: 100,
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      expect(result.roi).toBeNull();
+    });
+
+    it("should calculate ROI across multiple items", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 120,
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 80,
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      expect(result.totalExpected).toBe(200);
+      expect(result.totalActual).toBe(200);
+      expect(result.roi).toBe(1.0); // 200 / 200
+    });
+
+    it("should round ROI to 4 decimals", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 3,
+          actualOutcomeValue: 1,
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      // 1 / 3 = 0.3333...
+      expect(result.roi).toBe(0.3333);
+    });
+  });
+
+  describe("Loss from Wrong Decisions", () => {
+    it("should calculate zero loss when actual equals expected", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 100,
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      expect(result.lossFromWrongDecisions).toBe(0);
+    });
+
+    it("should calculate zero loss when actual exceeds expected", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 150,
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      expect(result.lossFromWrongDecisions).toBe(0);
+    });
+
+    it("should calculate loss when actual is less than expected", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 50,
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      expect(result.lossFromWrongDecisions).toBe(50); // 100 - 50
+    });
+
+    it("should sum losses across multiple items", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 60, // loss of 40
+        }),
+        createCompletedItem({
+          impactExpected: 200,
+          actualOutcomeValue: 250, // no loss
+        }),
+        createCompletedItem({
+          impactExpected: 150,
+          actualOutcomeValue: 100, // loss of 50
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      // 40 + 0 + 50 = 90
+      expect(result.lossFromWrongDecisions).toBe(90);
+    });
+
+    it("should round loss to 2 decimal places", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100.445,
+          actualOutcomeValue: 50.223,
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      // 100.445 - 50.223 = 50.222 -> 50.22
+      expect(result.lossFromWrongDecisions).toBe(50.22);
+    });
+
+    it("should handle mix of gains and losses", () => {
+      const items = [
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 150, // gain: no loss
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 50, // loss: 50
+        }),
+        createCompletedItem({
+          impactExpected: 100,
+          actualOutcomeValue: 100, // break-even: no loss
+        }),
+      ];
+
+      const result = calculateValue(items);
+
+      expect(result.lossFromWrongDecisions).toBe(50);
+    });
+  });
+
   describe("Real-World Scenarios", () => {
     it("should calculate ROI impact across portfolio", () => {
       const items = [
@@ -456,6 +641,8 @@ describe("calculateValue - Value Tracker", () => {
       expect(result.totalActual).toBe(128000);
       expect(result.totalDelta).toBe(28000);
       expect(result.itemsAnalyzed).toBe(3);
+      expect(result.roi).toBe(1.28); // 128000 / 100000
+      expect(result.lossFromWrongDecisions).toBe(2000); // cost-reduction: 20000 - 18000
     });
 
     it("should handle loss scenario", () => {
@@ -472,6 +659,8 @@ describe("calculateValue - Value Tracker", () => {
       expect(result.totalExpected).toBe(100000);
       expect(result.totalActual).toBe(40000);
       expect(result.totalDelta).toBe(-60000);
+      expect(result.roi).toBe(0.4); // 40000 / 100000
+      expect(result.lossFromWrongDecisions).toBe(60000); // 100000 - 40000
     });
 
     it("should calculate break-even scenario", () => {
@@ -493,6 +682,8 @@ describe("calculateValue - Value Tracker", () => {
       expect(result.totalExpected).toBe(100000);
       expect(result.totalActual).toBe(100000);
       expect(result.totalDelta).toBe(0);
+      expect(result.roi).toBe(1.0); // 100000 / 100000
+      expect(result.lossFromWrongDecisions).toBe(10000); // initiative-2: 50000 - 40000
     });
   });
 });

@@ -48,6 +48,8 @@ export async function GET() {
         totalExpected: metrics.totalExpected,
         totalActual: metrics.totalActual,
         totalDelta: metrics.totalDelta,
+        roi: metrics.roi,
+        lossFromWrongDecisions: metrics.lossFromWrongDecisions,
         itemsAnalyzed: metrics.itemsAnalyzed,
       },
     });

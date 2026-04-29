@@ -2,14 +2,65 @@
 
 import { useEffect, useState } from 'react';
 import type { CalibrationMetrics } from '@/services/calibration/engine';
+import type { ValueMetrics } from '@/services/value/tracker';
 
 interface TrustCardProps {
-  metrics?: CalibrationMetrics | null;
+  calibrationMetrics?: CalibrationMetrics | null;
+  valueMetrics?: ValueMetrics | null;
   loading?: boolean;
   error?: string | null;
 }
 
-export function TrustCard({ metrics, loading = false, error = null }: TrustCardProps) {
+export function TrustCard({
+  calibrationMetrics,
+  valueMetrics,
+  loading: initialLoading = false,
+  error: initialError = null
+}: TrustCardProps) {
+  const [loading, setLoading] = useState(initialLoading);
+  const [error, setError] = useState(initialError);
+  const [calibration, setCalibration] = useState<CalibrationMetrics | null>(calibrationMetrics || null);
+  const [value, setValue] = useState<ValueMetrics | null>(valueMetrics || null);
+
+  useEffect(() => {
+    if (calibrationMetrics && valueMetrics) {
+      return; // Data provided as props
+    }
+
+    const fetchMetrics = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [calibRes, valueRes] = await Promise.all([
+          fetch('/api/calibration'),
+          fetch('/api/value'),
+        ]);
+
+        if (!calibRes.ok || !valueRes.ok) {
+          throw new Error('Failed to fetch metrics');
+        }
+
+        const calibData = await calibRes.json();
+        const valueData = await valueRes.json();
+
+        // Handle new segmented response format: extract overall metrics
+        const calibMetrics = calibData.overall || calibData;
+        setCalibration(calibMetrics);
+        setValue(valueData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load metrics');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMetrics();
+  }, [calibrationMetrics, valueMetrics]);
+
+  // Use provided data or fetched data
+  const metrics = calibrationMetrics || calibration;
+  const valueInfo = valueMetrics || value;
+
   const getAccuracyColor = (accuracy: number | null) => {
     if (accuracy === null) return 'text-muted-foreground';
     if (accuracy >= 0.9 && accuracy <= 1.1) return 'text-success';
@@ -22,6 +73,15 @@ export function TrustCard({ metrics, loading = false, error = null }: TrustCardP
     if (accuracy >= 0.9 && accuracy <= 1.1) return 'On Track';
     if (accuracy < 0.9) return 'Underperforming';
     return 'Overperforming';
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
   return (
@@ -47,9 +107,59 @@ export function TrustCard({ metrics, loading = false, error = null }: TrustCardP
         <div className="space-y-3">
           <div className="h-16 rounded bg-muted animate-pulse" />
           <div className="h-12 rounded bg-muted animate-pulse" />
+          <div className="h-12 rounded bg-muted animate-pulse" />
         </div>
       ) : metrics && metrics.valid ? (
         <div className="space-y-4">
+          {/* Business Value Metrics */}
+          {valueInfo && valueInfo.valid && (
+            <div className="border-b border-border pb-4 space-y-3">
+              {valueInfo.totalDelta > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Financial Gain</span>
+                  <span className="text-lg font-bold text-success">
+                    {formatCurrency(valueInfo.totalDelta)}
+                  </span>
+                </div>
+              )}
+              {valueInfo.lossFromWrongDecisions > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Loss from Wrong Decisions</span>
+                  <span className="text-lg font-bold text-destructive">
+                    -{formatCurrency(valueInfo.lossFromWrongDecisions)}
+                  </span>
+                </div>
+              )}
+              {valueInfo.roi !== null && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">ROI</span>
+                  <span className={`text-lg font-bold ${valueInfo.roi >= 1 ? 'text-success' : 'text-destructive'}`}>
+                    {(valueInfo.roi * 100).toFixed(0)}%
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* System Reliability (Weighted Accuracy) */}
+          {metrics.weightedAccuracy !== null && (
+            <div className="border-b border-border pb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-foreground">System Reliability</span>
+                <span className={`text-lg font-bold ${
+                  metrics.weightedAccuracy * 100 >= 80 ? 'text-success' :
+                  metrics.weightedAccuracy * 100 >= 60 ? 'text-warning' :
+                  'text-destructive'
+                }`}>
+                  {(metrics.weightedAccuracy * 100).toFixed(0)}%
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Weighted by decision impact
+              </p>
+            </div>
+          )}
+
           {/* Success Rate */}
           <div className="border-b border-border pb-4">
             <div className="flex items-center justify-between mb-2">

@@ -1,3 +1,5 @@
+export type ProblemType = "revenue_leak" | "cost_overrun" | "growth_block" | "inefficiency";
+
 export interface DecisionInput {
   metrics: Record<string, number>;
   flags: Record<string, boolean>;
@@ -45,9 +47,19 @@ export interface DecisionExplanation {
 
 export interface DecisionResult {
   decision: "APPROVED" | "BLOCKED";
+  workspaceId?: string;
+  ownerUserId?: string;
+  createdBy?: string;
+  lastUpdatedBy?: string | null;
   expectedImpact: number;
   confidence: number;
   explanation: DecisionExplanation;
+  problemType?: ProblemType;
+  baselineValue?: number;
+  projectedWithoutAction?: number;
+  firstCompletedAt?: string | null;
+  firstPositiveOutcomeAt?: string | null;
+  firstWinAchieved?: boolean;
   reason?: "LOW_CONFIDENCE" | "NON_POSITIVE_IMPACT" | "INVALID_INPUT";
   decisionHash?: string;
   signedHash?: string;

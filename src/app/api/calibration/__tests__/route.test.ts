@@ -43,6 +43,7 @@ describe("GET /api/calibration", () => {
           priorityScore: 10,
           status: "done",
           dueAt: null,
+          decisionType: "general",
           blockingDependencies: [],
           expectedOutcome: null,
           actualOutcome: null,
@@ -55,18 +56,35 @@ describe("GET /api/calibration", () => {
         },
       ];
 
+      const calibMetrics = {
+        avgAccuracy: 1.0,
+        avgError: 0,
+        weightedAccuracy: 1.0,
+        successRate: 100,
+        itemsAnalyzed: 1,
+        successCount: 1,
+        valid: true,
+      };
+      const emptyMetrics = {
+        avgAccuracy: null,
+        avgError: null,
+        weightedAccuracy: null,
+        successRate: null,
+        itemsAnalyzed: 0,
+        successCount: 0,
+        valid: false,
+      };
+
       vi.mocked(authServerRole.resolveServerRole).mockResolvedValue("viewer");
       vi.mocked(auth.getSession).mockResolvedValue({
         user: { id: "user-123" },
       } as any);
       vi.mocked(operatorStore.getItems).mockResolvedValue(mockItems);
-      vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
-        avgAccuracy: 1.0,
-        avgError: 0,
-        successRate: 100,
-        itemsAnalyzed: 1,
-        successCount: 1,
-        valid: true,
+      vi.mocked(calibrationEngine.computeCalibration).mockReturnValue(calibMetrics);
+      vi.mocked(calibrationEngine.computeCalibrationBySegment).mockReturnValue({
+        low: emptyMetrics,
+        medium: emptyMetrics,
+        high: calibMetrics,
       });
       vi.mocked(auditLog.logAuditEvent).mockResolvedValue(undefined);
 
@@ -74,8 +92,9 @@ describe("GET /api/calibration", () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.avgAccuracy).toBe(1.0);
-      expect(data.successRate).toBe(100);
+      expect(data.overall.avgAccuracy).toBe(1.0);
+      expect(data.overall.successRate).toBe(100);
+      expect(data.byImpactSegment).toBeDefined();
     });
   });
 
@@ -94,35 +113,40 @@ describe("GET /api/calibration", () => {
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
         avgAccuracy: 1.05,
         avgError: 5,
+        weightedAccuracy: 1.02,
         successRate: 75,
         itemsAnalyzed: 20,
         successCount: 15,
         valid: true,
       });
-      vi.mocked(auditLog.logAuditEvent).mockResolvedValue(undefined);
-
-      const response = await GET();
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data.avgAccuracy).toBe(1.05);
-      expect(data.avgError).toBe(5);
-      expect(data.successRate).toBe(75);
-      expect(data.itemsAnalyzed).toBe(20);
-      expect(data.successCount).toBe(15);
-      expect(data.valid).toBe(true);
-    });
-
-    it("should return null metrics when no items are available", async () => {
-      vi.mocked(operatorStore.getItems).mockResolvedValue([]);
-      vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
-        avgAccuracy: null,
-        avgError: null,
-        successRate: null,
-        itemsAnalyzed: 0,
-        successCount: 0,
-        valid: false,
-        reason: "No completed items with outcome data",
+      vi.mocked(calibrationEngine.computeCalibrationBySegment).mockReturnValue({
+        low: {
+          avgAccuracy: 1.0,
+          avgError: 0,
+          weightedAccuracy: 1.0,
+          successRate: 100,
+          itemsAnalyzed: 5,
+          successCount: 5,
+          valid: true,
+        },
+        medium: {
+          avgAccuracy: 1.1,
+          avgError: 5,
+          weightedAccuracy: 1.05,
+          successRate: 80,
+          itemsAnalyzed: 10,
+          successCount: 8,
+          valid: true,
+        },
+        high: {
+          avgAccuracy: 1.05,
+          avgError: 10,
+          weightedAccuracy: 1.02,
+          successRate: 60,
+          itemsAnalyzed: 5,
+          successCount: 3,
+          valid: true,
+        },
       });
       vi.mocked(auditLog.logAuditEvent).mockResolvedValue(undefined);
 
@@ -130,9 +154,47 @@ describe("GET /api/calibration", () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.valid).toBe(false);
-      expect(data.avgAccuracy).toBeNull();
-      expect(data.successRate).toBeNull();
+      expect(data.overall.avgAccuracy).toBe(1.05);
+      expect(data.overall.avgError).toBe(5);
+      expect(data.overall.weightedAccuracy).toBe(1.02);
+      expect(data.overall.successRate).toBe(75);
+      expect(data.overall.itemsAnalyzed).toBe(20);
+      expect(data.overall.successCount).toBe(15);
+      expect(data.overall.valid).toBe(true);
+      expect(data.byImpactSegment.low.itemsAnalyzed).toBe(5);
+      expect(data.byImpactSegment.medium.itemsAnalyzed).toBe(10);
+      expect(data.byImpactSegment.high.itemsAnalyzed).toBe(5);
+    });
+
+    it("should return null metrics when no items are available", async () => {
+      vi.mocked(operatorStore.getItems).mockResolvedValue([]);
+      const emptyMetrics = {
+        avgAccuracy: null,
+        avgError: null,
+        weightedAccuracy: null,
+        successRate: null,
+        itemsAnalyzed: 0,
+        successCount: 0,
+        valid: false,
+        reason: "No completed items with outcome data",
+      };
+      vi.mocked(calibrationEngine.computeCalibration).mockReturnValue(emptyMetrics);
+      vi.mocked(calibrationEngine.computeCalibrationBySegment).mockReturnValue({
+        low: emptyMetrics,
+        medium: emptyMetrics,
+        high: emptyMetrics,
+      });
+      vi.mocked(auditLog.logAuditEvent).mockResolvedValue(undefined);
+
+      const response = await GET();
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.overall.valid).toBe(false);
+      expect(data.overall.avgAccuracy).toBeNull();
+      expect(data.overall.successRate).toBeNull();
+      expect(data.overall.weightedAccuracy).toBeNull();
+      expect(data.byImpactSegment).toBeDefined();
     });
 
     it("should fetch all items and pass to calibration", async () => {
@@ -148,6 +210,7 @@ describe("GET /api/calibration", () => {
           priorityScore: 10,
           status: "done",
           dueAt: null,
+          decisionType: "general",
           blockingDependencies: [],
           expectedOutcome: null,
           actualOutcome: null,
@@ -164,10 +227,40 @@ describe("GET /api/calibration", () => {
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
         avgAccuracy: 1.5,
         avgError: 50,
+        weightedAccuracy: 1.5,
         successRate: 100,
         itemsAnalyzed: 1,
         successCount: 1,
         valid: true,
+      });
+      vi.mocked(calibrationEngine.computeCalibrationBySegment).mockReturnValue({
+        low: {
+          avgAccuracy: null,
+          avgError: null,
+          weightedAccuracy: null,
+          successRate: null,
+          itemsAnalyzed: 0,
+          successCount: 0,
+          valid: false,
+        },
+        medium: {
+          avgAccuracy: 1.5,
+          avgError: 50,
+          weightedAccuracy: 1.5,
+          successRate: 100,
+          itemsAnalyzed: 1,
+          successCount: 1,
+          valid: true,
+        },
+        high: {
+          avgAccuracy: null,
+          avgError: null,
+          weightedAccuracy: null,
+          successRate: null,
+          itemsAnalyzed: 0,
+          successCount: 0,
+          valid: false,
+        },
       });
       vi.mocked(auditLog.logAuditEvent).mockResolvedValue(undefined);
 
@@ -175,6 +268,9 @@ describe("GET /api/calibration", () => {
 
       expect(operatorStore.getItems).toHaveBeenCalled();
       expect(calibrationEngine.computeCalibration).toHaveBeenCalledWith(
+        mockItems
+      );
+      expect(calibrationEngine.computeCalibrationBySegment).toHaveBeenCalledWith(
         mockItems
       );
     });
@@ -187,13 +283,20 @@ describe("GET /api/calibration", () => {
         user: { id: "user-123" },
       } as any);
       vi.mocked(operatorStore.getItems).mockResolvedValue([]);
-      vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
+      const emptyMetrics = {
         avgAccuracy: null,
         avgError: null,
+        weightedAccuracy: null,
         successRate: null,
         itemsAnalyzed: 0,
         successCount: 0,
         valid: false,
+      };
+      vi.mocked(calibrationEngine.computeCalibration).mockReturnValue(emptyMetrics);
+      vi.mocked(calibrationEngine.computeCalibrationBySegment).mockReturnValue({
+        low: emptyMetrics,
+        medium: emptyMetrics,
+        high: emptyMetrics,
       });
     });
 
@@ -219,10 +322,40 @@ describe("GET /api/calibration", () => {
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
         avgAccuracy: 1.0,
         avgError: 0,
+        weightedAccuracy: 0.98,
         successRate: 85,
         itemsAnalyzed: 20,
         successCount: 17,
         valid: true,
+      });
+      vi.mocked(calibrationEngine.computeCalibrationBySegment).mockReturnValue({
+        low: {
+          avgAccuracy: 1.0,
+          avgError: 0,
+          weightedAccuracy: 1.0,
+          successRate: 100,
+          itemsAnalyzed: 5,
+          successCount: 5,
+          valid: true,
+        },
+        medium: {
+          avgAccuracy: 1.0,
+          avgError: 0,
+          weightedAccuracy: 1.0,
+          successRate: 80,
+          itemsAnalyzed: 10,
+          successCount: 8,
+          valid: true,
+        },
+        high: {
+          avgAccuracy: 0.95,
+          avgError: 0,
+          weightedAccuracy: 0.96,
+          successRate: 80,
+          itemsAnalyzed: 5,
+          successCount: 4,
+          valid: true,
+        },
       });
       vi.mocked(auditLog.logAuditEvent).mockResolvedValue(undefined);
 
@@ -235,6 +368,10 @@ describe("GET /api/calibration", () => {
             successRate: 85,
             avgAccuracy: 1.0,
             avgError: 0,
+            weightedAccuracy: 0.98,
+            segmentLow: 5,
+            segmentMedium: 10,
+            segmentHigh: 5,
           }),
         })
       );
@@ -276,13 +413,20 @@ describe("GET /api/calibration", () => {
     it("should handle errors from logAuditEvent", async () => {
       const error = new Error("Audit logging failed");
       vi.mocked(operatorStore.getItems).mockResolvedValue([]);
-      vi.mocked(calibrationEngine.computeCalibration).mockReturnValue({
+      const emptyMetrics = {
         avgAccuracy: null,
         avgError: null,
+        weightedAccuracy: null,
         successRate: null,
         itemsAnalyzed: 0,
         successCount: 0,
         valid: false,
+      };
+      vi.mocked(calibrationEngine.computeCalibration).mockReturnValue(emptyMetrics);
+      vi.mocked(calibrationEngine.computeCalibrationBySegment).mockReturnValue({
+        low: emptyMetrics,
+        medium: emptyMetrics,
+        high: emptyMetrics,
       });
       vi.mocked(auditLog.logAuditEvent).mockRejectedValue(error);
 

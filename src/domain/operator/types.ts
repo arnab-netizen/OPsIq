@@ -1,7 +1,11 @@
-import type { DecisionExplanation } from "@/domain/decision/types";
+import type { DecisionExplanation, ProblemType } from "@/domain/decision/types";
 
 export type OperatorItem = {
   id: string;
+  workspaceId: string;
+  ownerUserId: string;
+  createdBy: string;
+  lastUpdatedBy: string | null;
   problem: string;
   action: string;
 
@@ -17,6 +21,13 @@ export type OperatorItem = {
 
   dueAt: string | null;
 
+  decisionType: string;
+
+  problemType?: ProblemType;
+
+  baselineValue?: number | null;
+  projectedWithoutAction?: number | null;
+
   blockingDependencies: string[];
 
   expectedOutcome: string | null;
@@ -30,6 +41,11 @@ export type OperatorItem = {
   startedAt?: string | null;
   completedAt?: string | null;
   executionStatus?: "not_started" | "started" | "completed";
+
+  firstCompletedAt?: string | null;
+  firstPositiveOutcomeAt?: string | null;
+
+  firstWinAchieved?: boolean;
 
   explanation?: DecisionExplanation;
 

@@ -5,6 +5,27 @@ interface PriorityScoreInput {
   confidence: number;
   dueAt?: Date | null;
   historicalAccuracy?: number | null;
+  ageInDays?: number;
+}
+
+/**
+ * Calculate recency weight factor.
+ *
+ * Reduces priority as items age:
+ * - Day 0 (new): weight = 1.0
+ * - Day 1: weight = 0.5
+ * - Day 7: weight ≈ 0.125
+ * - Day 30: weight ≈ 0.032
+ *
+ * Formula: recencyWeight = 1 / (1 + ageInDays)
+ * Deterministic: same age always produces same weight
+ */
+export function getRecencyWeight(ageInDays: number = 0): number {
+  if (ageInDays < 0) {
+    ageInDays = 0;
+  }
+  const weight = 1 / (1 + ageInDays);
+  return Math.round(weight * 10000) / 10000;
 }
 
 /**
@@ -50,51 +71,33 @@ export function getCalibrationMultiplier(accuracy: number | null | undefined): n
 }
 
 /**
- * Deterministic priority scoring engine with calibration feedback.
+ * Deterministic priority scoring engine v2.
  *
- * Calculates priority score based on impact, confidence, urgency, and historical accuracy.
- * Formula: base * urgency_multiplier * calibration_multiplier
- * Where base = impactExpected * confidence
- * And urgency multiplier depends on hours remaining until dueAt
- * And calibration multiplier depends on historical prediction accuracy
+ * Smart priority calculation based on impact, confidence, and recency.
+ * Formula: expectedImpact * confidenceScore * recencyWeight
+ * Where:
+ * - expectedImpact: decision's expected impact
+ * - confidenceScore: decision's confidence (0-1)
+ * - recencyWeight: 1 / (1 + ageInDays)
+ *
+ * At creation (ageInDays=0): priority = expectedImpact * confidence
+ * As items age, priority decays: older items have lower priority
  *
  * Always produces the same score for the same input (deterministic).
  * Result is clamped to 10000 and rounded to 2 decimals.
  */
 export function calculatePriorityScore(input: PriorityScoreInput): number {
-  // 1. Calculate base score
-  const base = input.impactExpected * input.confidence;
+  // 1. Get recency weight (defaults to 0 days for new items)
+  const ageInDays = input.ageInDays ?? 0;
+  const recencyWeight = getRecencyWeight(ageInDays);
 
-  // 2. Calculate urgency multiplier based on hours remaining
-  let urgencyMultiplier = 1;
+  // 2. Calculate priority: impact * confidence * recency
+  const priorityScore = input.impactExpected * input.confidence * recencyWeight;
 
-  if (input.dueAt) {
-    const now = new Date();
-    const dueDate = new Date(input.dueAt);
-    const timeRemaining = dueDate.getTime() - now.getTime();
-    const hoursRemaining = timeRemaining / (1000 * 60 * 60);
-
-    if (hoursRemaining < 6) {
-      urgencyMultiplier = 3;
-    } else if (hoursRemaining < 12) {
-      urgencyMultiplier = 2;
-    } else if (hoursRemaining < 24) {
-      urgencyMultiplier = 1.5;
-    }
-  }
-
-  // 3. Calculate calibration multiplier based on historical accuracy
-  const calibrationMultiplier = getCalibrationMultiplier(
-    input.historicalAccuracy
-  );
-
-  // 4. Calculate final score
-  const priorityScore = base * urgencyMultiplier * calibrationMultiplier;
-
-  // 5. Clamp to max 10000
+  // 3. Clamp to max 10000
   const clampedScore = Math.min(priorityScore, 10000);
 
-  // 6. Round to 2 decimals for stability
+  // 4. Round to 2 decimals for stability
   return Math.round(clampedScore * 100) / 100;
 }
 

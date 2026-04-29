@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getItems } from "@/services/operator/store";
-import { computeCalibration } from "@/services/calibration/engine";
+import { computeCalibration, computeCalibrationBySegment } from "@/services/calibration/engine";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { canView } from "@/services/auth/access";
 import { getSession } from "@/services/auth";
@@ -32,8 +32,16 @@ export async function GET() {
     // Fetch all items
     const items = await getItems();
 
-    // Compute calibration metrics
-    const metrics = computeCalibration(items);
+    // Compute overall calibration metrics
+    const overall = computeCalibration(items);
+
+    // Compute calibration metrics by impact segment
+    const byImpactSegment = computeCalibrationBySegment(items);
+
+    const response = {
+      overall,
+      byImpactSegment,
+    };
 
     // Log audit event for viewing calibration
     await logAuditEvent({
@@ -45,14 +53,18 @@ export async function GET() {
       before: null,
       after: null,
       metadata: {
-        itemsAnalyzed: metrics.itemsAnalyzed,
-        successRate: metrics.successRate,
-        avgAccuracy: metrics.avgAccuracy,
-        avgError: metrics.avgError,
+        itemsAnalyzed: overall.itemsAnalyzed,
+        successRate: overall.successRate,
+        avgAccuracy: overall.avgAccuracy,
+        avgError: overall.avgError,
+        weightedAccuracy: overall.weightedAccuracy,
+        segmentLow: byImpactSegment.low.itemsAnalyzed,
+        segmentMedium: byImpactSegment.medium.itemsAnalyzed,
+        segmentHigh: byImpactSegment.high.itemsAnalyzed,
       },
     });
 
-    return NextResponse.json(metrics);
+    return NextResponse.json(response);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 400 });

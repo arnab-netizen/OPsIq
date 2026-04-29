@@ -19,6 +19,7 @@ export function calculateDeviation(
 export interface CalibrationMetrics {
   avgAccuracy: number | null;
   avgError: number | null;
+  weightedAccuracy: number | null;
   successRate: number | null;
   itemsAnalyzed: number;
   successCount: number;
@@ -27,15 +28,33 @@ export interface CalibrationMetrics {
 }
 
 /**
+ * Calibration metrics segmented by impact magnitude.
+ */
+export interface SegmentedCalibrationMetrics {
+  low: CalibrationMetrics;
+  medium: CalibrationMetrics;
+  high: CalibrationMetrics;
+}
+
+/**
+ * Complete calibration response with overall and segmented metrics.
+ */
+export interface SegmentedCalibrationResponse {
+  overall: CalibrationMetrics;
+  byImpactSegment: SegmentedCalibrationMetrics;
+}
+
+/**
  * Compute calibration metrics from completed items.
  *
  * Success is defined as: actualOutcome >= expectedImpact
  * Accuracy is computed only when decisionAccuracy is available.
  * Error is computed only when decisionError is available.
+ * Weighted accuracy weights each accuracy by the absolute expected impact value.
  * Success rate is a percentage of successful items relative to total completed.
  *
  * @param items - Array of OperatorItems with completion data
- * @returns CalibrationMetrics with averages and success rate
+ * @returns CalibrationMetrics with averages, weighted accuracy, and success rate
  *
  * Deterministic: Same inputs always produce same output
  */
@@ -47,6 +66,7 @@ export function computeCalibration(
     return {
       avgAccuracy: null,
       avgError: null,
+      weightedAccuracy: null,
       successRate: null,
       itemsAnalyzed: 0,
       successCount: 0,
@@ -69,6 +89,7 @@ export function computeCalibration(
     return {
       avgAccuracy: null,
       avgError: null,
+      weightedAccuracy: null,
       successRate: null,
       itemsAnalyzed: 0,
       successCount: 0,
@@ -111,6 +132,35 @@ export function computeCalibration(
       Math.round((sumAccuracy / itemsWithAccuracy.length) * 10000) / 10000; // 4 decimal places
   }
 
+  // Calculate weighted accuracy
+  // weight = abs(expectedImpact)
+  // weightedAccuracy = sum(accuracy * weight) / sum(weight)
+  let weightedAccuracy: number | null = null;
+  const itemsWithWeightedAccuracy = completedItems.filter(
+    (item) =>
+      item.decisionAccuracy !== undefined &&
+      item.decisionAccuracy !== null &&
+      item.impactExpected !== undefined &&
+      item.impactExpected !== null
+  );
+
+  if (itemsWithWeightedAccuracy.length > 0) {
+    let sumWeightedAccuracy = 0;
+    let sumWeights = 0;
+
+    for (const item of itemsWithWeightedAccuracy) {
+      const weight = Math.abs(item.impactExpected);
+      const accuracy = item.decisionAccuracy ?? 0;
+      sumWeightedAccuracy += accuracy * weight;
+      sumWeights += weight;
+    }
+
+    if (sumWeights > 0) {
+      weightedAccuracy =
+        Math.round((sumWeightedAccuracy / sumWeights) * 10000) / 10000; // 4 decimal places
+    }
+  }
+
   // Calculate average error (only from items with decisionError)
   const itemsWithError = completedItems.filter(
     (item) => item.decisionError !== undefined && item.decisionError !== null
@@ -129,10 +179,49 @@ export function computeCalibration(
   return {
     avgAccuracy,
     avgError,
+    weightedAccuracy,
     successRate,
     itemsAnalyzed: completedItems.length,
     successCount,
     valid: true,
+  };
+}
+
+/**
+ * Compute calibration metrics segmented by impact magnitude.
+ *
+ * @param items - Array of OperatorItems with completion data
+ * @returns SegmentedCalibrationMetrics with metrics for each impact segment
+ *
+ * Deterministic: Same inputs always produce same output
+ */
+export function computeCalibrationBySegment(
+  items: OperatorItem[]
+): SegmentedCalibrationMetrics {
+  type ImpactSegment = "low" | "medium" | "high";
+
+  const segments: Record<ImpactSegment, OperatorItem[]> = {
+    low: [],
+    medium: [],
+    high: [],
+  };
+
+  // Categorize items by impact magnitude
+  for (const item of items) {
+    if (item.impactExpected < 1000) {
+      segments.low.push(item);
+    } else if (item.impactExpected <= 10000) {
+      segments.medium.push(item);
+    } else {
+      segments.high.push(item);
+    }
+  }
+
+  // Compute calibration metrics for each segment
+  return {
+    low: computeCalibration(segments.low),
+    medium: computeCalibration(segments.medium),
+    high: computeCalibration(segments.high),
   };
 }
 

@@ -43,6 +43,7 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
 }
 
 export async function queryAuditEvents(filter: {
+  workspaceId: string;
   entityType?: string;
   entityId?: string;
   eventName?: string;
@@ -55,6 +56,7 @@ export async function queryAuditEvents(filter: {
 }) {
   return db.auditEvent.findMany({
     where: {
+      workspaceId: filter.workspaceId,
       ...(filter.entityType && { entityType: filter.entityType }),
       ...(filter.entityId && { entityId: filter.entityId }),
       ...(filter.eventName && { eventName: filter.eventName }),
@@ -70,7 +72,7 @@ export async function queryAuditEvents(filter: {
         : {}),
     },
     orderBy: { occurredAt: "desc" },
-    take: filter.limit ?? 50,
+    take: Math.min(filter.limit ?? 50, 100),
     skip: filter.offset ?? 0,
   });
 }

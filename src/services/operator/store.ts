@@ -1,6 +1,9 @@
 import { OperatorItem } from "@/domain/operator/types";
 import { CalibrationRecord } from "@/domain/calibration/types";
 import { calculateDeviation } from "@/services/calibration/engine";
+import { isFirstWinConditionMet } from "@/services/firstwin/detector";
+import { requireWorkspaceContext, validateWorkspaceAccess } from "@/services/workspace/context";
+import { recordOperatorItemLearning } from "@/services/learning/store";
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -9,9 +12,30 @@ const SYSTEM_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 let calibrationStore: CalibrationRecord[] = [];
 
 export async function addItems(items: OperatorItem[]): Promise<void> {
+  // Workspace isolation: fail closed if no workspace context
+  const workspace = await requireWorkspaceContext();
+
   for (const item of items) {
+    // Fail closed: require workspaceId on item and verify it matches current workspace
+    if (!item.workspaceId) {
+      throw new Error("OperatorItem workspaceId is required for workspace isolation");
+    }
+    await validateWorkspaceAccess(item.workspaceId);
+
+    // Fail closed: require ownership fields
+    if (!item.ownerUserId) {
+      throw new Error("OperatorItem ownerUserId is required for decision ownership");
+    }
+    if (!item.createdBy) {
+      throw new Error("OperatorItem createdBy is required for audit trail");
+    }
+
     const data: any = {
       id: item.id,
+      workspaceId: item.workspaceId,
+      ownerUserId: item.ownerUserId,
+      createdBy: item.createdBy,
+      lastUpdatedBy: item.lastUpdatedBy || null,
       problem: item.problem,
       action: item.action,
       impactExpected: item.impactExpected,
@@ -21,10 +45,10 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
       priorityScore: item.priorityScore,
       status: item.status,
       dueAt: item.dueAt ? new Date(item.dueAt) : null,
+      decisionType: item.decisionType || "general",
       expectedOutcome: item.expectedOutcome,
       actualOutcome: item.actualOutcome,
       blockingDependencies: item.blockingDependencies && item.blockingDependencies.length > 0 ? item.blockingDependencies : null,
-      createdBy: SYSTEM_USER_ID,
     };
 
     if (item.explanation) {
@@ -51,15 +75,34 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
     if (item.engineVersion) {
       data.engineVersion = item.engineVersion;
     }
+    if (item.problemType) {
+      data.problemType = item.problemType;
+    }
+    if (item.baselineValue !== null && item.baselineValue !== undefined) {
+      data.baselineValue = item.baselineValue;
+    }
+    if (item.projectedWithoutAction !== null && item.projectedWithoutAction !== undefined) {
+      data.projectedWithoutAction = item.projectedWithoutAction;
+    }
 
     await db.operatorItem.create({ data });
   }
 }
 
 export async function getItems(): Promise<OperatorItem[]> {
-  const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany();
+  // Workspace isolation: fail closed if no workspace context
+  const workspace = await requireWorkspaceContext();
+
+  // Filter by workspaceId to prevent cross-workspace access
+  const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany({
+    where: { workspaceId: workspace.workspaceId },
+  });
   return records.map((r: any) => ({
     id: r.id,
+    workspaceId: r.workspaceId,
+    ownerUserId: r.ownerUserId,
+    createdBy: r.createdBy,
+    lastUpdatedBy: r.lastUpdatedBy,
     problem: r.problem,
     action: r.action,
     impactExpected: Number(r.impactExpected),
@@ -69,6 +112,10 @@ export async function getItems(): Promise<OperatorItem[]> {
     priorityScore: Number(r.priorityScore),
     status: r.status as "pending" | "in_progress" | "done",
     dueAt: r.dueAt ? r.dueAt.toISOString() : null,
+    decisionType: r.decisionType || "general",
+    problemType: r.problemType || undefined,
+    baselineValue: r.baselineValue ? Number(r.baselineValue) : undefined,
+    projectedWithoutAction: r.projectedWithoutAction ? Number(r.projectedWithoutAction) : undefined,
     expectedOutcome: r.expectedOutcome,
     actualOutcome: r.actualOutcome,
     actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,
@@ -105,6 +152,7 @@ export async function updateItem(
   if (updates.priorityScore !== undefined) updateData.priorityScore = updates.priorityScore;
   if (updates.status !== undefined) updateData.status = updates.status;
   if (updates.dueAt !== undefined) updateData.dueAt = updates.dueAt ? new Date(updates.dueAt) : null;
+  if (updates.decisionType !== undefined) updateData.decisionType = updates.decisionType;
   if (updates.expectedOutcome !== undefined) updateData.expectedOutcome = updates.expectedOutcome;
   if (updates.actualOutcome !== undefined) updateData.actualOutcome = updates.actualOutcome;
   if (updates.actualOutcomeValue !== undefined) updateData.actualOutcomeValue = updates.actualOutcomeValue;
@@ -117,10 +165,100 @@ export async function updateItem(
   if (updates.executionStatus !== undefined) updateData.executionStatus = updates.executionStatus;
   if (updates.blockingDependencies !== undefined) updateData.blockingDependencies = updates.blockingDependencies && updates.blockingDependencies.length > 0 ? updates.blockingDependencies : null;
 
+  // Auto-capture firstCompletedAt on first completion
+  if (updates.status === "done" && updates.completedAt) {
+    const item = await db.operatorItem.findUnique({ where: { id } });
+    if (item && !item.firstCompletedAt) {
+      updateData.firstCompletedAt = new Date(updates.completedAt);
+    }
+  }
+
+  // Auto-capture firstPositiveOutcomeAt when positive outcome first detected
+  if (updates.actualOutcomeValue !== undefined && updates.actualOutcomeValue !== null && updates.actualOutcomeValue > 0) {
+    const item = await db.operatorItem.findUnique({ where: { id } });
+    if (item && !item.firstPositiveOutcomeAt) {
+      updateData.firstPositiveOutcomeAt = new Date();
+    }
+  }
+
+  // Auto-detect first win achievement
+  if ((updates.actualOutcomeValue !== undefined || updates.outcomeDelta !== undefined) && !updateData.firstWinAchieved) {
+    const item = await db.operatorItem.findUnique({ where: { id } });
+    if (item && !item.firstWinAchieved) {
+      const isFirstWin = isFirstWinConditionMet({
+        expectedImpact: updates.actualOutcomeValue ?? updates.outcomeDelta ?? item.actualOutcomeValue ?? 0,
+        actualOutcomeValue: updates.actualOutcomeValue ?? item.actualOutcomeValue,
+        outcomeDelta: updates.outcomeDelta ?? item.outcomeDelta,
+        impactExpected: item.impactExpected,
+      });
+      if (isFirstWin) {
+        updateData.firstWinAchieved = true;
+      }
+    }
+  }
+
   await db.operatorItem.update({
     where: { id },
     data: updateData,
   });
+
+  // Record learning when decision is completed with outcome data
+  if ((updates.status === "done" || updates.actualOutcomeValue !== undefined) && updates.problemType) {
+    const item = await db.operatorItem.findUnique({ where: { id } });
+    if (item && item.status === "done") {
+      // Silently record learning if conditions are met
+      // Don't throw if learning recording fails
+      try {
+        await recordOperatorItemLearning({
+          id: item.id,
+          workspaceId: item.workspaceId,
+          ownerUserId: item.ownerUserId,
+          createdBy: item.createdBy,
+          lastUpdatedBy: item.lastUpdatedBy,
+          problem: item.problem,
+          action: item.action,
+          impactExpected: Number(item.impactExpected),
+          impactLow: Number(item.impactLow),
+          impactHigh: Number(item.impactHigh),
+          confidence: Number(item.confidence),
+          priorityScore: Number(item.priorityScore),
+          status: item.status as "pending" | "in_progress" | "done" | "failed",
+          dueAt: item.dueAt ? item.dueAt.toISOString() : null,
+          decisionType: item.decisionType || "general",
+          problemType: item.problemType || undefined,
+          baselineValue: item.baselineValue ? Number(item.baselineValue) : undefined,
+          projectedWithoutAction: item.projectedWithoutAction ? Number(item.projectedWithoutAction) : undefined,
+          expectedOutcome: item.expectedOutcome,
+          actualOutcome: item.actualOutcome,
+          actualOutcomeValue: item.actualOutcomeValue ? Number(item.actualOutcomeValue) : undefined,
+          outcomeDelta: item.outcomeDelta ? Number(item.outcomeDelta) : undefined,
+          decisionAccuracy: item.decisionAccuracy ? Number(item.decisionAccuracy) : undefined,
+          decisionError: item.decisionError ? Number(item.decisionError) : undefined,
+          outcomeNotes: item.outcomeNotes || undefined,
+          startedAt: item.startedAt ? item.startedAt.toISOString() : undefined,
+          completedAt: item.completedAt ? item.completedAt.toISOString() : undefined,
+          executionStatus: item.executionStatus || undefined,
+          firstCompletedAt: item.firstCompletedAt ? item.firstCompletedAt.toISOString() : undefined,
+          firstPositiveOutcomeAt: item.firstPositiveOutcomeAt ? item.firstPositiveOutcomeAt.toISOString() : undefined,
+          firstWinAchieved: item.firstWinAchieved || undefined,
+          explanation: item.explanation ? JSON.parse(String(item.explanation)) : undefined,
+          inputsSnapshot: item.inputsSnapshot ? JSON.parse(String(item.inputsSnapshot)) : undefined,
+          decisionHash: item.decisionHash || undefined,
+          signedHash: item.signedHash || undefined,
+          signature: item.signature || undefined,
+          signatureAlgo: item.signatureAlgo || undefined,
+          publicKeyId: item.publicKeyId || undefined,
+          engineVersion: item.engineVersion || "v1.0.0",
+          createdAt: item.createdAt.toISOString(),
+          blockingDependencies: Array.isArray(item.blockingDependencies)
+            ? (item.blockingDependencies as string[])
+            : [],
+        });
+      } catch {
+        // Silently fail learning recording to not block decision updates
+      }
+    }
+  }
 }
 
 export function addCalibrationRecord(
@@ -160,12 +298,17 @@ export async function getQueuedItems(
   statusFilter?: string,
   limit: number = 20
 ): Promise<OperatorItem[]> {
+  // Workspace isolation: fail closed if no workspace context
+  const workspace = await requireWorkspaceContext();
+
   const statuses = statusFilter
     ? [statusFilter]
     : ["pending", "in_progress"];
 
+  // Filter by workspaceId to prevent cross-workspace access
   const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany({
     where: {
+      workspaceId: workspace.workspaceId,
       status: {
         in: statuses,
       },
@@ -179,6 +322,10 @@ export async function getQueuedItems(
 
   return records.map((r: any) => ({
     id: r.id,
+    workspaceId: r.workspaceId,
+    ownerUserId: r.ownerUserId,
+    createdBy: r.createdBy,
+    lastUpdatedBy: r.lastUpdatedBy,
     problem: r.problem,
     action: r.action,
     impactExpected: Number(r.impactExpected),
@@ -188,6 +335,10 @@ export async function getQueuedItems(
     priorityScore: Number(r.priorityScore),
     status: r.status as "pending" | "in_progress" | "done" | "failed",
     dueAt: r.dueAt ? r.dueAt.toISOString() : null,
+    decisionType: r.decisionType || "general",
+    problemType: r.problemType || undefined,
+    baselineValue: r.baselineValue ? Number(r.baselineValue) : undefined,
+    projectedWithoutAction: r.projectedWithoutAction ? Number(r.projectedWithoutAction) : undefined,
     expectedOutcome: r.expectedOutcome,
     actualOutcome: r.actualOutcome,
     actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,
@@ -198,6 +349,9 @@ export async function getQueuedItems(
     startedAt: r.startedAt ? r.startedAt.toISOString() : undefined,
     completedAt: r.completedAt ? r.completedAt.toISOString() : undefined,
     executionStatus: r.executionStatus || undefined,
+    firstCompletedAt: r.firstCompletedAt ? r.firstCompletedAt.toISOString() : undefined,
+    firstPositiveOutcomeAt: r.firstPositiveOutcomeAt ? r.firstPositiveOutcomeAt.toISOString() : undefined,
+    firstWinAchieved: r.firstWinAchieved || undefined,
     explanation: r.explanation ? JSON.parse(String(r.explanation)) : undefined,
     inputsSnapshot: r.inputsSnapshot
       ? JSON.parse(String(r.inputsSnapshot))
