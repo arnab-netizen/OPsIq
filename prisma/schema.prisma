@@ -701,3 +701,20 @@ model LearningRecord {
   @@map("learning_records")
 }
 
+// ─── Business Profile: Workspace Context & Metadata ─────────────────────────
+
+model BusinessProfile {
+  id            String    @id @default(cuid())
+  workspaceId   String    @unique @map("workspace_id") @db.Uuid // Multi-tenant isolation, unique per workspace
+  industry      String    // e.g., "SaaS", "Manufacturing", "Retail"
+  revenueBand   String    @map("revenue_band") // e.g., "<1M", "1M-10M", "10M-100M", ">100M"
+  geography     String    // e.g., "NA", "EU", "APAC"
+  costStructure Json      @map("cost_structure") // Flexible cost breakdown by category
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@map("business_profiles")
+}
+
+
