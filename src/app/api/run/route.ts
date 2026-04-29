@@ -14,6 +14,7 @@ import { classifyProblem } from "@/services/problem/classifier";
 import { calculateBaselineMetrics } from "@/services/baseline/calculator";
 import { DecisionResult } from "@/domain/decision/types";
 import { createEventLogger } from "@/lib/observability/log";
+import { emitWebhookAsync } from "@/lib/integrations/webhook";
 
 function addIntegrity(
   result: DecisionResult,
@@ -270,6 +271,21 @@ export async function POST(request: NextRequest) {
         inputRevenue: revenue,
         inputCost: cost,
       },
+    });
+
+    // Emit webhook for decision creation (non-blocking)
+    emitWebhookAsync(`${process.env.WEBHOOK_URL || ""}`, {
+      event: "decision_created",
+      timestamp: new Date().toISOString(),
+      workspaceId: workspace.workspaceId,
+      data: {
+        decision: decisionResult.decision,
+        expectedImpact: decisionResult.expectedImpact,
+        confidence: decisionResult.confidence,
+        problemType: decisionResult.problemType,
+      },
+    }).catch(() => {
+      // Intentionally swallow errors - webhook failures should not block the request
     });
 
     // 7. Return decision result with explanation

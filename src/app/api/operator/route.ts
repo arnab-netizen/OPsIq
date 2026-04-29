@@ -16,6 +16,7 @@ import { logAuditEvent } from "@/services/audit/audit-log";
 import { validateStatusTransition, getStatusTransitionError } from "@/services/operator/validate";
 import { createEventLogger } from "@/lib/observability/log";
 import { requireWorkspaceContext } from "@/services/workspace/context";
+import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import type { PolicyRule } from "@/domain/policy/types";
 
 export async function GET() {
@@ -190,6 +191,24 @@ export async function POST(request: NextRequest) {
         sendWebhook({
           event: "action_completed",
           payload: completedItem,
+        });
+
+        // Emit structured webhook for completion (non-blocking)
+        emitWebhookAsync(`${process.env.WEBHOOK_URL || ""}`, {
+          event: "action_completed",
+          timestamp: new Date().toISOString(),
+          workspaceId: completedItem.workspaceId,
+          data: {
+            itemId: completedItem.id,
+            problem: completedItem.problem,
+            action: completedItem.action,
+            expectedImpact: Number(completedItem.impactExpected),
+            actualOutcome: completedItem.actualOutcomeValue,
+            outcomeDelta: completedItem.outcomeDelta,
+            decisionAccuracy: completedItem.decisionAccuracy,
+          },
+        }).catch(() => {
+          // Intentionally swallow errors - webhook failures should not block the request
         });
       }
     }
