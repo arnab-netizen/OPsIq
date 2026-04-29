@@ -17,6 +17,7 @@ import { createEventLogger } from "@/lib/observability/log";
 import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import { normalizeDecisionInput, validateNormalizedMetrics } from "@/lib/decision/run";
 import { evaluateDecisionGate, gateResultToPayload } from "@/services/control/decision-gate";
+import { evaluateGuardrails, formatGuardrailViolations } from "@/services/control/guardrails";
 
 function addIntegrity(
   result: DecisionResult,
@@ -348,6 +349,57 @@ export async function POST(request: NextRequest) {
       inputsSnapshot
     );
 
+    // 9a. CONTROL LAYER: Evaluate Guardrails - Check visible policy constraints
+    const guardrailsResult = evaluateGuardrails({
+      expectedImpact: result.impact.impactExpected,
+      confidence: 0.75,
+      approvalFlag: body.approvalFlag || false,
+    });
+
+    if (guardrailsResult.blocked) {
+      // Decision blocked by guardrails - return with explanation
+      decisionResult = addIntegrity(
+        {
+          ...createDecisionResult(
+            {
+              baselineRevenue: revenue,
+              baselineCost: cost,
+              deltaRevenue: revenue * 0.1,
+              deltaCost: cost * 0.05,
+              confidence: 0.75,
+              expectedImpact: result.impact.impactExpected,
+            },
+            false,
+            "INVALID_INPUT"
+          ),
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
+        inputsSnapshot
+      );
+
+      if (logger) {
+        logger.success({
+          guardrailStatus: "blocked",
+          violations: guardrailsResult.violations.length,
+          warnings: guardrailsResult.warnings.length,
+        });
+      }
+
+      return NextResponse.json(
+        {
+          decision: decisionResult,
+          guardrails: {
+            blocked: guardrailsResult.blocked,
+            violations: guardrailsResult.violations,
+            warnings: guardrailsResult.warnings,
+          },
+        },
+        { status: 400 }
+      );
+    }
+
     if (!userId) {
       return NextResponse.json(
         { error: "User identity required" },
@@ -400,11 +452,29 @@ export async function POST(request: NextRequest) {
       // Intentionally swallow errors - webhook failures should not block the request
     });
 
-    // 13. Return decision result with explanation
+    // 13. Return decision result with explanation (including guardrails status)
     if (logger) {
-      logger.success({ decision: decisionResult?.decision, problemType: decisionResult?.problemType });
+      logger.success({
+        decision: decisionResult?.decision,
+        problemType: decisionResult?.problemType,
+        guardrailWarnings: guardrailsResult.warnings.length,
+      });
     }
-    return NextResponse.json(decisionResult);
+
+    const responsePayload: Record<string, unknown> = {
+      decision: decisionResult,
+    };
+
+    // Include guardrails warnings if any
+    if (guardrailsResult.warnings.length > 0) {
+      responsePayload.guardrails = {
+        blocked: false,
+        violations: guardrailsResult.violations.filter((v) => v.severity === "warn"),
+        warnings: guardrailsResult.warnings,
+      };
+    }
+
+    return NextResponse.json(responsePayload);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     if (logger) {
