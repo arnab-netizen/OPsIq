@@ -32,12 +32,49 @@ interface ConfidenceRisk {
   status: 'low' | 'medium' | 'high';
 }
 
+interface BlockedMetrics {
+  workspace: {
+    workspaceId: string;
+  };
+  period: {
+    startDate: string;
+    endDate: string;
+  };
+  metrics: {
+    blockedCount: number;
+    rejectedImpact: number;
+    avgBlockedConfidence: number;
+    lowConfidenceBlockCount: number;
+    blocksByStage: Record<
+      string,
+      {
+        count: number;
+        rejectedImpact: number;
+        avgConfidence: number;
+      }
+    >;
+    topGuardrailViolations: Array<{
+      ruleId: string;
+      count: number;
+      totalExpectedImpact: number;
+    }>;
+    blockReasonsByStage: Array<{
+      stage: string;
+      reasonExamples: string[];
+      count: number;
+      totalExpectedImpact: number;
+      avgConfidence: number;
+    }>;
+  };
+}
+
 interface DashboardData {
   blockedDecisions: BlockedDecision[];
   lossDrivers: LossDriver[];
   recommendedActions: RecommendedAction[];
   confidenceRisks: ConfidenceRisk[];
   valueData: any;
+  blockedMetrics: BlockedMetrics | null;
 }
 
 export default function ControlPage() {
@@ -47,6 +84,7 @@ export default function ControlPage() {
     recommendedActions: [],
     confidenceRisks: [],
     valueData: null,
+    blockedMetrics: null,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,11 +96,18 @@ export default function ControlPage() {
         setLoading(true);
         setError(null);
 
-        // Fetch value data for loss drivers
+        // Fetch value data for loss drivers and approved metrics
         const valueRes = await fetch('/api/value/7day');
         let valueData = null;
         if (valueRes.ok) {
           valueData = await valueRes.json();
+        }
+
+        // Fetch blocked decisions metrics
+        const blockedMetricsRes = await fetch('/api/control/blocked-metrics?days=7');
+        let blockedMetrics: BlockedMetrics | null = null;
+        if (blockedMetricsRes.ok) {
+          blockedMetrics = await blockedMetricsRes.json();
         }
 
         // Build dashboard data from APIs
@@ -125,12 +170,26 @@ export default function ControlPage() {
           });
         }
 
+        // Build blocked decisions from metrics
+        if (blockedMetrics && blockedMetrics.metrics.blockReasonsByStage.length > 0) {
+          blockedMetrics.metrics.blockReasonsByStage.forEach((reason, idx) => {
+            blockedDecisions.push({
+              id: `blocked-${idx}`,
+              problem: reason.reasonExamples[0] || `${reason.stage} block`,
+              blockReason: `[${reason.stage}] ${reason.count} decision(s) blocked`,
+              estimatedLoss: reason.totalExpectedImpact,
+              timestamp: new Date().toISOString(),
+            });
+          });
+        }
+
         setData({
           blockedDecisions,
           lossDrivers: lossDrivers.sort((a, b) => b.impact - a.impact),
           recommendedActions,
           confidenceRisks,
           valueData,
+          blockedMetrics,
         });
 
         setLastUpdate(new Date().toLocaleTimeString());
@@ -244,47 +303,47 @@ export default function ControlPage() {
           <Card className="md:col-span-1">
             <div className="mb-4">
               <h2 className="text-sm font-semibold text-foreground">
-                7-Day Summary
+                7-Day Decision Health
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Net decision impact
+                Approved vs blocked outcomes
               </p>
             </div>
 
             {loading ? (
               <LoadingCard />
-            ) : data.valueData?.valid ? (
+            ) : data.valueData ? (
               <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2 rounded bg-green-50 border border-green-200">
+                    <p className="text-muted-foreground">Approved</p>
+                    <p className="font-bold text-green-600">
+                      {data.valueData.metrics?.approvedCount || 0}
+                    </p>
+                  </div>
+                  <div className="p-2 rounded bg-red-50 border border-red-200">
+                    <p className="text-muted-foreground">Blocked</p>
+                    <p className="font-bold text-red-600">
+                      {data.valueData.metrics?.blockedCount || 0}
+                    </p>
+                  </div>
+                </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Net Impact</p>
-                  <p
-                    className={`text-lg font-bold ${
-                      (data.valueData.totalDelta || 0) >= 0
-                        ? 'text-green-600'
-                        : 'text-red-600'
-                    }`}
-                  >
-                    {formatCurrency(data.valueData.totalDelta || 0)}
+                  <p className="text-xs text-muted-foreground">Rejected Impact</p>
+                  <p className="font-semibold text-red-600">
+                    {formatCurrency(data.valueData.metrics?.rejectedImpact || 0)}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <p className="text-muted-foreground">Expected</p>
-                    <p className="font-semibold text-foreground">
-                      {formatCurrency(data.valueData.totalExpected || 0)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Actual</p>
-                    <p className="font-semibold text-foreground">
-                      {formatCurrency(data.valueData.totalActual || 0)}
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Approved Actual Impact</p>
+                  <p className="font-semibold text-green-600">
+                    {formatCurrency(data.valueData.metrics?.actualImpactApproved || 0)}
+                  </p>
                 </div>
               </div>
             ) : (
               <p className="text-xs text-muted-foreground">
-                No value data available
+                No decision data available
               </p>
             )}
           </Card>
@@ -431,6 +490,53 @@ export default function ControlPage() {
             ) : (
               <p className="text-xs text-muted-foreground">
                 All decisions have good confidence
+              </p>
+            )}
+          </Card>
+
+          {/* 6. Top Guardrail Violations */}
+          <Card className="md:col-span-2 lg:col-span-1">
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-foreground">
+                Top Guardrail Blocks
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Most common violations
+              </p>
+            </div>
+
+            {loading ? (
+              <LoadingCard />
+            ) : data.blockedMetrics?.metrics.topGuardrailViolations.length ? (
+              <div className="space-y-2">
+                {data.blockedMetrics.metrics.topGuardrailViolations.slice(0, 3).map(
+                  (violation, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2 rounded bg-red-50 border border-red-200 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">
+                            {violation.ruleId}
+                          </p>
+                          <p className="text-muted-foreground">
+                            {violation.count} block{violation.count !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-red-600">
+                            {formatCurrency(violation.totalExpectedImpact)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No guardrail violations
               </p>
             )}
           </Card>
