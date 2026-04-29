@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { calculateSystemicInsights } from "@/services/intelligence/insights-engine";
+import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
+  let logger: ReturnType<typeof createEventLogger> | null = null;
+
   try {
     // Get workspace context (fail closed if missing)
     const workspace = await requireWorkspaceContext();
+
+    // Initialize logger
+    logger = createEventLogger("api_intelligence_insights", workspace.workspaceId);
 
     // Calculate date range: last 30 days
     const endDate = new Date();
@@ -77,14 +83,27 @@ export async function GET(request: NextRequest) {
     // Calculate systemic insights
     const insights = calculateSystemicInsights(operatorItems);
 
-    return NextResponse.json({
+    const response = {
       workspace: {
         workspaceId: workspace.workspaceId,
       },
       insights,
-    });
+    };
+
+    if (logger) {
+      logger.success({
+        itemsAnalyzed: operatorItems.length,
+        worstPerforming: insights.worstPerformingType,
+        bestPerforming: insights.bestPerformingType,
+      });
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    if (logger) {
+      logger.error(message);
+    }
     if (message.includes("Unauthorized")) {
       return NextResponse.json(
         { error: "Unauthorized" },

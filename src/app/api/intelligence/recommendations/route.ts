@@ -2,12 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { generateRecommendation, generateMultipleRecommendations } from "@/services/intelligence/recommendation";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
+import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
+  let logger: ReturnType<typeof createEventLogger> | null = null;
+
   try {
     // Get workspace context (fail closed if missing)
     const workspace = await requireWorkspaceContext();
+
+    // Initialize logger
+    logger = createEventLogger("api_intelligence_recommendations", workspace.workspaceId);
 
     // Extract decisionId from query
     const decisionId = request.nextUrl.searchParams.get("decisionId");
@@ -137,7 +143,7 @@ export async function GET(request: NextRequest) {
       .filter((alt) => !recommendation || alt.basedOnPatternId !== recommendation.basedOnPatternId)
       .slice(0, 2);
 
-    return NextResponse.json({
+    const response = {
       decision: {
         id: decision.id,
         problemType: decision.problemType,
@@ -150,9 +156,22 @@ export async function GET(request: NextRequest) {
         itemsAnalyzed: operatorItems.length,
         hasRecommendation: !!recommendation,
       },
-    });
+    };
+
+    if (logger) {
+      logger.success({
+        decisionId: decision.id,
+        hasRecommendation: !!recommendation,
+        alternativesCount: alternatives.length,
+      });
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    if (logger) {
+      logger.error(message, { decisionId: request.nextUrl.searchParams.get("decisionId") });
+    }
     if (message.includes("Unauthorized")) {
       return NextResponse.json(
         { error: "Unauthorized" },

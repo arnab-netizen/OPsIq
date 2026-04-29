@@ -3,12 +3,18 @@ import { requireWorkspaceContext } from "@/services/workspace/context";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
 import { generateRecommendation } from "@/services/intelligence/recommendation";
 import { calculateSystemicInsights } from "@/services/intelligence/insights-engine";
+import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
+  let logger: ReturnType<typeof createEventLogger> | null = null;
+
   try {
     // Get workspace context (fail closed if missing)
     const workspace = await requireWorkspaceContext();
+
+    // Initialize logger
+    logger = createEventLogger("api_intelligence_summary", workspace.workspaceId);
 
     // Extract query parameters
     const decisionId = request.nextUrl.searchParams.get("decisionId");
@@ -145,7 +151,7 @@ export async function GET(request: NextRequest) {
     const itemCount =
       patterns.length + recommendationCount + 1; // +1 for insights summary
 
-    return NextResponse.json({
+    const response = {
       workspace: {
         workspaceId: workspace.workspaceId,
       },
@@ -164,9 +170,22 @@ export async function GET(request: NextRequest) {
         payloadSize: itemCount,
         payloadLimit: limit,
       },
-    });
+    };
+
+    if (logger) {
+      logger.success({
+        patternsDetected: allPatterns.length,
+        itemsAnalyzed: operatorItems.length,
+        payloadSize: itemCount,
+      });
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    if (logger) {
+      logger.error(message);
+    }
     if (message.includes("Unauthorized")) {
       return NextResponse.json(
         { error: "Unauthorized" },

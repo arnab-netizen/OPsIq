@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
+import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
+  let logger: ReturnType<typeof createEventLogger> | null = null;
+
   try {
     // Get workspace context (fail closed if missing)
     const workspace = await requireWorkspaceContext();
+
+    // Initialize logger
+    logger = createEventLogger("api_intelligence_patterns", workspace.workspaceId);
 
     // Fetch last 100 completed items from workspace
     const items = await db.operatorItem.findMany({
@@ -69,7 +75,7 @@ export async function GET(request: NextRequest) {
     // Detect patterns
     const patterns = detectPatterns(operatorItems);
 
-    return NextResponse.json({
+    const response = {
       workspace: {
         workspaceId: workspace.workspaceId,
       },
@@ -80,9 +86,21 @@ export async function GET(request: NextRequest) {
         minPatternFrequency: 3,
         maxPatterns: 20,
       },
-    });
+    };
+
+    if (logger) {
+      logger.success({
+        patternsDetected: patterns.length,
+        itemsAnalyzed: operatorItems.length,
+      });
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    if (logger) {
+      logger.error(message);
+    }
     if (message.includes("Unauthorized")) {
       return NextResponse.json(
         { error: "Unauthorized" },

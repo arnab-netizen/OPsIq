@@ -14,23 +14,42 @@ import { getSession } from "@/services/auth";
 import { sendWebhook } from "@/services/integration/webhook";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { validateStatusTransition, getStatusTransitionError } from "@/services/operator/validate";
+import { createEventLogger } from "@/lib/observability/log";
+import { requireWorkspaceContext } from "@/services/workspace/context";
 import type { PolicyRule } from "@/domain/policy/types";
 
 export async function GET() {
+  let logger: ReturnType<typeof createEventLogger> | null = null;
+
   try {
+    const workspace = await requireWorkspaceContext();
+    logger = createEventLogger("api_operator_get", workspace.workspaceId);
+
     const items = await getItems();
     const sorted = sortByPriority(items);
+
+    if (logger) {
+      logger.success({ itemCount: sorted.length });
+    }
     return NextResponse.json(sorted);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    if (logger) {
+      logger.error(message);
+    }
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
 
 export async function POST(request: NextRequest) {
+  let logger: ReturnType<typeof createEventLogger> | null = null;
+  let workspaceId: string | null = null;
+  let id: string | null = null;
+
   try {
     const body = await request.json();
-    const { id, status, actualOutcome, approvalRequired } = body;
+    id = body.id;
+    const { status, actualOutcome, approvalRequired } = body;
 
     // Resolve role from server-side session/database (never from request body)
     const role = await resolveServerRole();
@@ -63,6 +82,12 @@ export async function POST(request: NextRequest) {
     // Capture before state for audit
     const allItemsBefore = await getItems();
     const beforeItem = allItemsBefore.find((i) => i.id === id);
+
+    // Initialize logger with workspace context from item
+    if (beforeItem && beforeItem.workspaceId) {
+      workspaceId = beforeItem.workspaceId;
+      logger = createEventLogger("api_operator_post", workspaceId);
+    }
 
     // Validate status transition
     if (beforeItem && status) {
@@ -169,9 +194,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (logger) {
+      logger.success({ itemId: id, newStatus: status });
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    if (logger) {
+      logger.error(message, { itemId: id });
+    }
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

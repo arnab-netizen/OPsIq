@@ -13,6 +13,7 @@ import { createSignaturePayload } from "@/services/integrity/sign";
 import { classifyProblem } from "@/services/problem/classifier";
 import { calculateBaselineMetrics } from "@/services/baseline/calculator";
 import { DecisionResult } from "@/domain/decision/types";
+import { createEventLogger } from "@/lib/observability/log";
 
 function addIntegrity(
   result: DecisionResult,
@@ -34,10 +35,14 @@ export async function POST(request: NextRequest) {
   let decisionResult: DecisionResult | null = null;
   let workspace;
   let userId: string | null = null;
+  let logger: ReturnType<typeof createEventLogger> | null = null;
 
   try {
     // Get workspace context early (fail closed if missing)
     workspace = await requireWorkspaceContext();
+
+    // Initialize logger once workspace is available
+    logger = createEventLogger("api_run", workspace.workspaceId);
 
     // Get session for user identity
     const session = await getSession();
@@ -268,8 +273,15 @@ export async function POST(request: NextRequest) {
     });
 
     // 7. Return decision result with explanation
+    if (logger) {
+      logger.success({ decision: decisionResult?.decision, problemType: decisionResult?.problemType });
+    }
     return NextResponse.json(decisionResult);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    if (logger) {
+      logger.error(errorMessage);
+    }
     if (decisionResult) {
       return NextResponse.json(decisionResult, { status: 400 });
     }
