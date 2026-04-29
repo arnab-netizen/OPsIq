@@ -3,6 +3,10 @@ import { requireWorkspaceContext } from "@/services/workspace/context";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
 import { generateRecommendation } from "@/services/intelligence/recommendation";
 import { calculateSystemicInsights } from "@/services/intelligence/insights-engine";
+import { validateDependencies } from "@/services/control/variable-registry";
+import { evaluateDecisionGate } from "@/services/control/decision-gate";
+import { evaluateGuardrails } from "@/services/control/guardrails";
+import { enforceControlLayer } from "@/services/control/enforcement";
 import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
@@ -141,15 +145,74 @@ export async function GET(request: NextRequest) {
           ? JSON.parse(String(decision.inputsSnapshot))
           : undefined;
 
+        // Track executed validations for enforcement
+        const executedValidations: string[] = ["variable_registry"];
+
+        // CONTROL LAYER: Step 1 - Validate dependencies
+        const depValidation = validateDependencies(inputVariables || {});
+        if (!depValidation.valid) {
+          executedValidations.push("dependency_validation");
+          return NextResponse.json(
+            {
+              error: "Dependency validation failed",
+              details: depValidation.error,
+              recommendation: null,
+            },
+            { status: 422 }
+          );
+        }
+        executedValidations.push("dependency_validation");
+
+        // CONTROL LAYER: Step 2 - Evaluate decision gate
+        const gateResult = evaluateDecisionGate({
+          variables: inputVariables || {},
+          confidence: Number(decision.confidence),
+        });
+        if (!gateResult.allowed) {
+          executedValidations.push("decision_gate");
+          return NextResponse.json(
+            {
+              error: "Decision gate rejected",
+              reason: gateResult.reason,
+              recommendation: { blocked: true, blockReason: gateResult.reason },
+            },
+            { status: 422 }
+          );
+        }
+        executedValidations.push("decision_gate");
+
         recommendation = generateRecommendation(
           decisionResult,
           allPatterns,
           operatorItems,
           inputVariables
         );
+
+        // CONTROL LAYER: Step 3 - Evaluate guardrails
         if (recommendation) {
+          const guardrailsResult = evaluateGuardrails({
+            expectedImpact: recommendation.expectedImpact || Number(decision.impactExpected) || 0,
+            confidence: Number(decision.confidence),
+            approvalFlag: false,
+          });
+          if (guardrailsResult.blocked) {
+            executedValidations.push("guardrails");
+            return NextResponse.json(
+              {
+                error: "Guardrails violation",
+                recommendation: { blocked: true, blockReason: "Guardrails violation" },
+              },
+              { status: 422 }
+            );
+          }
+          executedValidations.push("guardrails");
           recommendationCount = 1;
+        } else {
+          executedValidations.push("guardrails");
         }
+
+        // CONTROL LAYER: Verify complete enforcement
+        enforceControlLayer("/api/intelligence/summary", executedValidations);
       }
     }
 
