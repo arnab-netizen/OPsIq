@@ -7,7 +7,7 @@ import {
 import { sortByPriority } from "@/services/operator/sort";
 import { calculateOutcomeDelta } from "@/services/operator/outcome";
 import { calculateDecisionAccuracy } from "@/services/operator/accuracy";
-import { evaluatePolicy } from "@/services/policy/engine";
+import { evaluatePolicy, validateCompletion } from "@/services/policy/engine";
 import { canEdit } from "@/services/auth/access";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { getSession } from "@/services/auth";
@@ -30,7 +30,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, status, actualOutcome } = body;
+    const { id, status, actualOutcome, approvalRequired } = body;
 
     // Resolve role from server-side session/database (never from request body)
     const role = await resolveServerRole();
@@ -77,31 +77,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Capture calibration when task is completed
+    // Validate completion policy when task is completed
     if (status === "done") {
-      if (typeof actualOutcome !== "number") {
-        return NextResponse.json(
-          { error: "Missing or invalid field: actualOutcome must be a number" },
-          { status: 400 }
-        );
-      }
-
       const items = await getItems();
       const item = items.find((i) => i.id === id);
 
       if (item) {
-        const rules: PolicyRule[] = [
-          {
-            id: "high-impact",
-            condition: (impact: number) => impact > 100000,
-            requiresApproval: true,
-          },
-        ];
-
-        const policy = evaluatePolicy(item.impactExpected, rules);
-        if (policy.requiresApproval) {
+        // Validate completion policy
+        const completionPolicy = validateCompletion(item, approvalRequired);
+        if (!completionPolicy.allowed) {
           return NextResponse.json(
-            { error: "High-impact action requires approval before completion" },
+            { error: completionPolicy.reason },
+            { status: 400 }
+          );
+        }
+
+        if (typeof actualOutcome !== "number") {
+          return NextResponse.json(
+            { error: "Missing or invalid field: actualOutcome must be a number" },
             { status: 400 }
           );
         }
