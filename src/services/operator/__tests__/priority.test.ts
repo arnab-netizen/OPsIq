@@ -42,8 +42,8 @@ describe("calculatePriorityScore - Deterministic Priority Scoring Engine", () =>
     });
   });
 
-  describe("Urgency Multiplier - Hours Remaining", () => {
-    it("should apply 1x multiplier for dueAt >= 24 hours (no urgent deadline)", () => {
+  describe("Age-based Priority Decay (v2 Formula)", () => {
+    it("should ignore dueAt in v2 formula (only uses impact, confidence, age)", () => {
       const now = new Date();
       const dueAt = new Date(now.getTime() + 48 * 60 * 60 * 1000); // 48 hours from now
 
@@ -54,52 +54,32 @@ describe("calculatePriorityScore - Deterministic Priority Scoring Engine", () =>
       };
 
       const score = calculatePriorityScore(input);
-      expect(score).toBe(50); // 100 * 0.5 * 1 (default, no urgency)
+      expect(score).toBe(50); // 100 * 0.5 * 1.0 (dueAt ignored, age=0)
     });
 
-    it("should apply 1.5x multiplier for dueAt < 24 hours and >= 12 hours", () => {
+    it("should calculate priority independent of due date", () => {
       const now = new Date();
-      const dueAt = new Date(now.getTime() + 18 * 60 * 60 * 1000); // 18 hours from now
+      const dueAtVeryUrgent = new Date(now.getTime() + 3 * 60 * 60 * 1000); // 3 hours
+      const dueAtNotUrgent = new Date(now.getTime() + 48 * 60 * 60 * 1000); // 48 hours
 
-      const input = {
+      const urgentScore = calculatePriorityScore({
         impactExpected: 100,
         confidence: 0.5,
-        dueAt,
-      };
+        dueAt: dueAtVeryUrgent,
+      });
 
-      const score = calculatePriorityScore(input);
-      expect(score).toBe(75); // 100 * 0.5 * 1.5
-    });
-
-    it("should apply 2x multiplier for dueAt < 12 hours and >= 6 hours", () => {
-      const now = new Date();
-      const dueAt = new Date(now.getTime() + 9 * 60 * 60 * 1000); // 9 hours from now
-
-      const input = {
+      const notUrgentScore = calculatePriorityScore({
         impactExpected: 100,
         confidence: 0.5,
-        dueAt,
-      };
+        dueAt: dueAtNotUrgent,
+      });
 
-      const score = calculatePriorityScore(input);
-      expect(score).toBe(100); // 100 * 0.5 * 2
+      // Both should be equal with v2 formula (no urgency multiplier)
+      expect(urgentScore).toBe(notUrgentScore);
+      expect(urgentScore).toBe(50); // 100 * 0.5 * 1.0
     });
 
-    it("should apply 3x multiplier for dueAt < 6 hours", () => {
-      const now = new Date();
-      const dueAt = new Date(now.getTime() + 3 * 60 * 60 * 1000); // 3 hours from now
-
-      const input = {
-        impactExpected: 100,
-        confidence: 0.5,
-        dueAt,
-      };
-
-      const score = calculatePriorityScore(input);
-      expect(score).toBe(150); // 100 * 0.5 * 3
-    });
-
-    it("should apply 1x multiplier (no urgency) when dueAt is null", () => {
+    it("should ignore dueAt when null", () => {
       const input = {
         impactExpected: 100,
         confidence: 0.8,
@@ -107,7 +87,7 @@ describe("calculatePriorityScore - Deterministic Priority Scoring Engine", () =>
       };
 
       const score = calculatePriorityScore(input);
-      expect(score).toBe(80); // 100 * 0.8 * 1
+      expect(score).toBe(80); // 100 * 0.8 * 1.0
     });
   });
 
@@ -199,47 +179,45 @@ describe("calculatePriorityScore - Deterministic Priority Scoring Engine", () =>
     });
   });
 
-  describe("Urgency Ordering", () => {
-    it("should order by urgency: high urgency > low urgency", () => {
+  describe("Due Date Irrelevance in v2 Formula", () => {
+    it("should produce same priority regardless of due date (v2 formula)", () => {
       const now = new Date();
       const baseInput = {
         impactExpected: 100,
         confidence: 0.5,
       };
 
-      // No urgency (>= 24 hours)
+      // Various due dates - all should produce same priority
       const noUrgency = calculatePriorityScore({
         ...baseInput,
-        dueAt: new Date(now.getTime() + 48 * 60 * 60 * 1000),
+        dueAt: new Date(now.getTime() + 48 * 60 * 60 * 1000), // 48 hours away
       });
 
-      // Low urgency (18 hours, < 24)
       const lowUrgency = calculatePriorityScore({
         ...baseInput,
-        dueAt: new Date(now.getTime() + 18 * 60 * 60 * 1000),
+        dueAt: new Date(now.getTime() + 18 * 60 * 60 * 1000), // 18 hours away
       });
 
-      // Medium urgency (9 hours, < 12)
       const mediumUrgency = calculatePriorityScore({
         ...baseInput,
-        dueAt: new Date(now.getTime() + 9 * 60 * 60 * 1000),
+        dueAt: new Date(now.getTime() + 9 * 60 * 60 * 1000), // 9 hours away
       });
 
-      // High urgency (3 hours, < 6)
       const highUrgency = calculatePriorityScore({
         ...baseInput,
-        dueAt: new Date(now.getTime() + 3 * 60 * 60 * 1000),
+        dueAt: new Date(now.getTime() + 3 * 60 * 60 * 1000), // 3 hours away
       });
 
-      expect(noUrgency).toBe(50); // 100 * 0.5 * 1
-      expect(lowUrgency).toBe(75); // 100 * 0.5 * 1.5
-      expect(mediumUrgency).toBe(100); // 100 * 0.5 * 2
-      expect(highUrgency).toBe(150); // 100 * 0.5 * 3
+      // All should be equal with v2 formula (no urgency multiplier)
+      expect(noUrgency).toBe(50); // 100 * 0.5 * 1.0
+      expect(lowUrgency).toBe(50); // 100 * 0.5 * 1.0
+      expect(mediumUrgency).toBe(50); // 100 * 0.5 * 1.0
+      expect(highUrgency).toBe(50); // 100 * 0.5 * 1.0
 
-      // Verify ordering
-      expect(noUrgency).toBeLessThan(lowUrgency);
-      expect(lowUrgency).toBeLessThan(mediumUrgency);
-      expect(mediumUrgency).toBeLessThan(highUrgency);
+      // Verify all are equal
+      expect(noUrgency).toEqual(lowUrgency);
+      expect(lowUrgency).toEqual(mediumUrgency);
+      expect(mediumUrgency).toEqual(highUrgency);
     });
   });
 });
@@ -370,9 +348,9 @@ describe("getCalibrationMultiplier - Adaptive Priority Based on Accuracy", () =>
   });
 });
 
-describe("calculatePriorityScore with Calibration", () => {
-  describe("Accuracy Adjustment Impact", () => {
-    it("should reduce priority when accuracy < 0.5", () => {
+describe("calculatePriorityScore with v2 Formula", () => {
+  describe("Impact and Confidence Calculation", () => {
+    it("should ignore historical accuracy in v2 formula", () => {
       const baseInput = {
         impactExpected: 100,
         confidence: 0.8,
@@ -380,107 +358,129 @@ describe("calculatePriorityScore with Calibration", () => {
       };
 
       const noAccuracy = calculatePriorityScore(baseInput);
-      const lowAccuracy = calculatePriorityScore({
+      const anyAccuracy = calculatePriorityScore({
         ...baseInput,
         historicalAccuracy: 0.25,
       });
 
       expect(noAccuracy).toBe(80); // 100 * 0.8 * 1.0
-      expect(lowAccuracy).toBe(60); // 100 * 0.8 * 0.75
-      expect(lowAccuracy).toBeLessThan(noAccuracy);
+      expect(anyAccuracy).toBe(80); // 100 * 0.8 * 1.0 (accuracy ignored)
+      expect(anyAccuracy).toEqual(noAccuracy);
     });
 
-    it("should keep priority when accuracy is 0.5-0.8", () => {
+    it("should produce same priority regardless of historical accuracy", () => {
       const baseInput = {
         impactExpected: 100,
         confidence: 0.8,
         dueAt: undefined,
       };
 
-      const normalAccuracy = calculatePriorityScore({
+      const lowAcc = calculatePriorityScore({
+        ...baseInput,
+        historicalAccuracy: 0.25,
+      });
+
+      const normalAcc = calculatePriorityScore({
         ...baseInput,
         historicalAccuracy: 0.65,
       });
 
-      expect(normalAccuracy).toBe(80); // 100 * 0.8 * 1.0
+      const highAcc = calculatePriorityScore({
+        ...baseInput,
+        historicalAccuracy: 1.15,
+      });
+
+      // All should be equal with v2 formula
+      expect(lowAcc).toBe(80);
+      expect(normalAcc).toBe(80);
+      expect(highAcc).toBe(80);
     });
 
-    it("should increase priority when accuracy > 0.8", () => {
+    it("should calculate priority with new v2 formula", () => {
       const baseInput = {
         impactExpected: 100,
         confidence: 0.8,
         dueAt: undefined,
       };
 
-      const noAccuracy = calculatePriorityScore(baseInput);
-      const highAccuracy = calculatePriorityScore({
+      const noAge = calculatePriorityScore(baseInput);
+      const withAge = calculatePriorityScore({
         ...baseInput,
-        historicalAccuracy: 1.15,
+        ageInDays: 1,
       });
 
-      expect(noAccuracy).toBe(80); // 100 * 0.8 * 1.0
-      expect(highAccuracy).toBe(100); // 100 * 0.8 * 1.25
-      expect(highAccuracy).toBeGreaterThan(noAccuracy);
+      expect(noAge).toBe(80); // 100 * 0.8 * 1.0 (age 0)
+      expect(withAge).toBe(40); // 100 * 0.8 * 0.5 (age 1)
+      expect(noAge).toBeGreaterThan(withAge);
     });
   });
 
-  describe("Combined Urgency and Calibration", () => {
-    it("should apply both urgency and calibration multipliers", () => {
-      const now = new Date();
-      const dueAt = new Date(now.getTime() + 9 * 60 * 60 * 1000); // 9 hours (2x urgency)
-
-      const score = calculatePriorityScore({
+  describe("Recency Weight Application", () => {
+    it("should apply recency weight decay as items age", () => {
+      const baseScore = calculatePriorityScore({
         impactExpected: 100,
         confidence: 0.5,
-        dueAt,
-        historicalAccuracy: 1.15, // 1.25x calibration
       });
 
-      // 100 * 0.5 * 2 * 1.25 = 125
-      expect(score).toBe(125);
+      const ageScore = calculatePriorityScore({
+        impactExpected: 100,
+        confidence: 0.5,
+        ageInDays: 7,
+      });
+
+      // 100 * 0.5 * 1/(1+0) = 50
+      expect(baseScore).toBe(50);
+      // 100 * 0.5 * 1/(1+7) = 6.25
+      expect(ageScore).toBe(6.25);
+      expect(baseScore).toBeGreaterThan(ageScore);
     });
 
-    it("should reduce priority when urgency is high but accuracy is low", () => {
-      const now = new Date();
-      const dueAt = new Date(now.getTime() + 3 * 60 * 60 * 1000); // 3 hours (3x urgency)
-
-      const score = calculatePriorityScore({
+    it("should reduce priority significantly as items age", () => {
+      const day0 = calculatePriorityScore({
         impactExpected: 100,
         confidence: 0.5,
-        dueAt,
-        historicalAccuracy: 0.25, // 0.75x calibration
+        ageInDays: 0,
       });
 
-      // 100 * 0.5 * 3 * 0.75 = 112.5
-      expect(score).toBe(112.5);
+      const day1 = calculatePriorityScore({
+        impactExpected: 100,
+        confidence: 0.5,
+        ageInDays: 1,
+      });
+
+      const day30 = calculatePriorityScore({
+        impactExpected: 100,
+        confidence: 0.5,
+        ageInDays: 30,
+      });
+
+      // 100 * 0.5 * 1/(1+0) = 50
+      expect(day0).toBe(50);
+      // 100 * 0.5 * 1/(1+1) = 25
+      expect(day1).toBe(25);
+      // 100 * 0.5 * 1/(1+30) ≈ 1.61
+      expect(day30).toBeCloseTo(1.61, 1);
     });
   });
 
   describe("Bounded Behavior (No Priority Explosion)", () => {
-    it("should still clamp to 10000 with calibration multiplier", () => {
+    it("should clamp to 10000 for very high impact", () => {
       const score = calculatePriorityScore({
         impactExpected: 100000,
         confidence: 0.2,
-        dueAt: undefined,
-        historicalAccuracy: 1.0, // 1.25x multiplier
       });
 
-      // Would be 100000 * 0.2 * 1.25 = 25000, clamped to 10000
+      // Would be 100000 * 0.2 * 1.0 = 20000, clamped to 10000
       expect(score).toBe(10000);
     });
 
-    it("should maintain bounds with all multipliers combined", () => {
-      const now = new Date();
-      const dueAt = new Date(now.getTime() + 3 * 60 * 60 * 1000); // 3x urgency
-
+    it("should maintain bounds with high impact and confidence", () => {
       const score = calculatePriorityScore({
         impactExpected: 50000,
         confidence: 0.5,
-        dueAt,
-        historicalAccuracy: 1.5, // Over-calibrated (capped at 1.5)
       });
 
-      // Would be 50000 * 0.5 * 3 * 1.5 = 112500, clamped to 10000
+      // Would be 50000 * 0.5 * 1.0 = 25000, clamped to 10000
       expect(score).toBe(10000);
     });
   });
@@ -533,8 +533,8 @@ describe("calculatePriority - Legacy Function", () => {
     expect(score).toBe(0);
   });
 
-  it("should use decisionAccuracy from OperatorItem as historicalAccuracy", () => {
-    const itemWithLowAccuracy: OperatorItem = {
+  it("should calculate priority with v2 formula (impact * confidence * recency)", () => {
+    const itemWithAnyAccuracy: OperatorItem = {
       id: "test-1",
       problem: "Test problem",
       action: "Test action",
@@ -548,16 +548,16 @@ describe("calculatePriority - Legacy Function", () => {
       blockingDependencies: [],
       expectedOutcome: null,
       actualOutcome: null,
-      decisionAccuracy: 0.25, // Low accuracy
+      decisionAccuracy: 0.25,
       engineVersion: "v1.0.0",
       createdAt: new Date().toISOString(),
     };
 
-    const score = calculatePriority(itemWithLowAccuracy);
-    expect(score).toBe(60); // 100 * 0.8 * 0.75 (reduced by low accuracy)
+    const score = calculatePriority(itemWithAnyAccuracy);
+    expect(score).toBe(80); // 100 * 0.8 * 1.0 (no calibration multiplier, age=0)
   });
 
-  it("should increase priority for items with high decisionAccuracy", () => {
+  it("should ignore decisionAccuracy in priority calculation (v2 formula)", () => {
     const itemWithHighAccuracy: OperatorItem = {
       id: "test-2",
       problem: "Test problem",
@@ -572,12 +572,12 @@ describe("calculatePriority - Legacy Function", () => {
       blockingDependencies: [],
       expectedOutcome: null,
       actualOutcome: null,
-      decisionAccuracy: 1.15, // High accuracy
+      decisionAccuracy: 1.15,
       engineVersion: "v1.0.0",
       createdAt: new Date().toISOString(),
     };
 
     const score = calculatePriority(itemWithHighAccuracy);
-    expect(score).toBe(100); // 100 * 0.8 * 1.25 (increased by high accuracy)
+    expect(score).toBe(80); // 100 * 0.8 * 1.0 (accuracy not used in v2 formula)
   });
 });
