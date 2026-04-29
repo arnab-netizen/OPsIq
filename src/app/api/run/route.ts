@@ -229,6 +229,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Call runSystem with error handling for decision validation
+    // runSystem enforces scenario-first execution (fail-closed if scenarios fail)
     let result;
     try {
       result = runSystem(inputMetrics);
@@ -274,6 +275,28 @@ export async function POST(request: NextRequest) {
         decisionResult = addIntegrity(
           {
             ...nonPosResult,
+            workspaceId: workspace.workspaceId,
+            ownerUserId: userId || undefined,
+            createdBy: userId || undefined,
+          },
+          inputsSnapshot
+        );
+      } else if (errorMsg.startsWith("SCENARIO_GENERATION_FAILED")) {
+        const scenarioErrResult = createDecisionResult(
+          {
+            baselineRevenue: revenue,
+            baselineCost: cost,
+            deltaRevenue: revenue * 0.1,
+            deltaCost: cost * 0.05,
+            confidence: 0.75,
+            expectedImpact: revenue * 0.1 - cost * 0.05,
+          },
+          false,
+          "INVALID_INPUT"
+        );
+        decisionResult = addIntegrity(
+          {
+            ...scenarioErrResult,
             workspaceId: workspace.workspaceId,
             ownerUserId: userId || undefined,
             createdBy: userId || undefined,
@@ -463,6 +486,11 @@ export async function POST(request: NextRequest) {
 
     const responsePayload: Record<string, unknown> = {
       decision: decisionResult,
+      scenarios: {
+        baseline: result.scenarios.baseline,
+        recommended: result.scenarios.recommended,
+        alternatives: result.scenarios.alternatives,
+      },
     };
 
     // Include guardrails warnings if any
