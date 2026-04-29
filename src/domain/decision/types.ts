@@ -1,3 +1,5 @@
+export type ProblemType = "revenue_leak" | "cost_overrun" | "growth_block" | "inefficiency";
+
 export interface DecisionInput {
   metrics: Record<string, number>;
   flags: Record<string, boolean>;
@@ -52,6 +54,7 @@ export interface DecisionResult {
   expectedImpact: number;
   confidence: number;
   explanation: DecisionExplanation;
+  problemType?: ProblemType;
   reason?: "LOW_CONFIDENCE" | "NON_POSITIVE_IMPACT" | "INVALID_INPUT";
   decisionHash?: string;
   signedHash?: string;

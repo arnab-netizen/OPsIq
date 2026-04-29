@@ -638,6 +638,7 @@ model OperatorItem {
   status              String    @default("pending") // "pending" | "in_progress" | "done" | "failed"
   dueAt               DateTime?  @map("due_at")
   decisionType        String    @default("general") @map("decision_type") // extensible: "general", "strategic", "operational", etc.
+  problemType         String?   @map("problem_type") // "revenue_leak" | "cost_overrun" | "growth_block" | "inefficiency"
   expectedOutcome     String?    @map("expected_outcome")
   actualOutcome       String?    @map("actual_outcome")
   actualOutcomeValue  Float?    @map("actual_outcome_value") // numeric measured result

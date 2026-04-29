@@ -1,4 +1,4 @@
-import type { DecisionExplanation } from "@/domain/decision/types";
+import type { DecisionExplanation, ProblemType } from "@/domain/decision/types";
 
 export type OperatorItem = {
   id: string;
@@ -22,6 +22,8 @@ export type OperatorItem = {
   dueAt: string | null;
 
   decisionType: string;
+
+  problemType?: ProblemType;
 
   blockingDependencies: string[];
 

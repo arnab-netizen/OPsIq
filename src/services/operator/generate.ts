@@ -1,4 +1,4 @@
-import { DecisionOutput } from "@/domain/decision/types";
+import { DecisionOutput, type ProblemType } from "@/domain/decision/types";
 import { OperatorItem } from "@/domain/operator/types";
 import type { ImpactEstimate } from "@/domain/finance/types";
 import { calculatePriority } from "./priority";
@@ -9,7 +9,8 @@ export function generateOperatorItems(
   impact: ImpactEstimate,
   workspaceId: string,
   ownerUserId: string,
-  createdBy: string
+  createdBy: string,
+  problemType?: ProblemType
 ): OperatorItem[] {
   return decisions.map((decision) => {
     const item: OperatorItem = {
@@ -34,6 +35,8 @@ export function generateOperatorItems(
       dueAt: null,
 
       decisionType: "general",
+
+      problemType,
 
       blockingDependencies: [],
 

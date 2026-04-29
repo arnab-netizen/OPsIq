@@ -73,6 +73,9 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
     if (item.engineVersion) {
       data.engineVersion = item.engineVersion;
     }
+    if (item.problemType) {
+      data.problemType = item.problemType;
+    }
 
     await db.operatorItem.create({ data });
   }
@@ -102,6 +105,7 @@ export async function getItems(): Promise<OperatorItem[]> {
     status: r.status as "pending" | "in_progress" | "done",
     dueAt: r.dueAt ? r.dueAt.toISOString() : null,
     decisionType: r.decisionType || "general",
+    problemType: r.problemType || undefined,
     expectedOutcome: r.expectedOutcome,
     actualOutcome: r.actualOutcome,
     actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,
@@ -232,6 +236,7 @@ export async function getQueuedItems(
     status: r.status as "pending" | "in_progress" | "done" | "failed",
     dueAt: r.dueAt ? r.dueAt.toISOString() : null,
     decisionType: r.decisionType || "general",
+    problemType: r.problemType || undefined,
     expectedOutcome: r.expectedOutcome,
     actualOutcome: r.actualOutcome,
     actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,
