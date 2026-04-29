@@ -16,6 +16,31 @@ interface FormValues {
   confidence: string;
 }
 
+interface ApiResponse {
+  decision?: DecisionResult;
+  gate?: {
+    allowed: boolean;
+    reason?: string;
+    missingVariables: string[];
+    lowConfidenceVariables: string[];
+    warnings: string[];
+    overallConfidence?: number;
+  };
+  guardrails?: {
+    blocked: boolean;
+    violations: Array<{
+      ruleId: string;
+      severity: 'block' | 'warn';
+      message: string;
+      threshold: number | string;
+      actual: number | string;
+      overrideAllowed: boolean;
+    }>;
+    warnings: string[];
+  };
+  error?: string;
+}
+
 export default function DecisionPage() {
   const [formValues, setFormValues] = useState<FormValues>({
     baselineRevenue: '',
@@ -27,7 +52,7 @@ export default function DecisionPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<DecisionResult | null>(null);
+  const [result, setResult] = useState<ApiResponse | null>(null);
   const [isApproved, setIsApproved] = useState(false);
 
   const [calibrationMetrics, setCalibrationMetrics] = useState<CalibrationMetrics | null>(null);
@@ -83,7 +108,7 @@ export default function DecisionPage() {
 
   // Fetch smart insights when result is available
   useEffect(() => {
-    if (!result || !result.problemType) {
+    if (!result || !result.decision || !result.decision.problemType) {
       setSmartInsights(null);
       return;
     }
@@ -181,23 +206,42 @@ export default function DecisionPage() {
         body: JSON.stringify(requestPayload),
       });
 
-      const data = await response.json() as DecisionResult;
+      const data = await response.json() as ApiResponse;
 
-      if (!response.ok) {
-        // API returned error (HTTP 400 or 403)
-        // data still contains DecisionResult with reason explaining the block
-        const errorMessage =
-          data.reason === 'LOW_CONFIDENCE'
-            ? 'Decision blocked: Confidence level is too low'
-            : data.reason === 'NON_POSITIVE_IMPACT'
-              ? 'Decision blocked: Expected impact is not positive'
-              : data.reason === 'INVALID_INPUT'
-                ? 'Decision blocked: Invalid input parameters'
-                : `Decision blocked: ${data.explanation?.summary || 'Unknown error'}`;
-
-        setError(errorMessage);
-        // Still store result for transparency (user can see why it was blocked)
+      // Handle gate block (422)
+      if (response.status === 422) {
+        const errorMessage = data.gate?.reason || 'Decision blocked by safety gate';
+        setError(`⚠️ ${errorMessage}`);
         setResult(data);
+        setIsApproved(false);
+        setLoading(false);
+        return;
+      }
+
+      // Handle guardrail block (400)
+      if (response.status === 400) {
+        const errorMessage = data.guardrails?.blocked
+          ? 'Decision blocked by policy guardrails'
+          : data.decision?.reason === 'LOW_CONFIDENCE'
+            ? 'Decision blocked: Confidence level is too low'
+            : data.decision?.reason === 'NON_POSITIVE_IMPACT'
+              ? 'Decision blocked: Expected impact is not positive'
+              : data.decision?.reason === 'INVALID_INPUT'
+                ? 'Decision blocked: Invalid input parameters'
+                : 'Decision blocked by system';
+
+        setError(`⚠️ ${errorMessage}`);
+        setResult(data);
+        setIsApproved(false);
+        setLoading(false);
+        return;
+      }
+
+      // Handle other errors (403, 500, etc)
+      if (!response.ok) {
+        const errorMessage = data.error || `Request failed (${response.status})`;
+        setError(`Error: ${errorMessage}`);
+        setResult(null);
         setIsApproved(false);
         setLoading(false);
         return;
@@ -207,8 +251,11 @@ export default function DecisionPage() {
       console.log('Decision API response:', data);
       setResult(data);
       setError(null);
-      // Set approved if decision was APPROVED
-      setIsApproved(data.decision === 'APPROVED');
+      // Set approved if decision was APPROVED and no violations
+      const isApprovedDecision = data.decision?.decision === 'APPROVED' &&
+                                 !data.guardrails?.blocked &&
+                                 (!data.gate || data.gate.allowed);
+      setIsApproved(isApprovedDecision);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Failed to get decision';
@@ -363,7 +410,7 @@ export default function DecisionPage() {
         </form>
 
         {/* Success Banner */}
-        {isApproved && result && (
+        {isApproved && result && result.decision && (
           <div className="rounded-lg border border-success bg-success/5 p-4 md:p-6 mb-6 md:mb-8">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
@@ -386,14 +433,14 @@ export default function DecisionPage() {
         )}
 
         {/* Result Display */}
-        {result && (
+        {result && result.decision && (
           <div className={isApproved ? 'mt-4 md:mt-6' : 'mt-6 md:mt-8'}>
             <DecisionResultComponent result={result} />
           </div>
         )}
 
         {/* Smart Insights */}
-        {result && smartInsights && !insightsLoading && (
+        {result && result.decision && smartInsights && !insightsLoading && (
           <div className="mt-4 md:mt-6 rounded-lg border border-blue-200 bg-blue-50 p-3 md:p-4">
             <h3 className="text-xs md:text-sm font-semibold text-blue-900 mb-2 md:mb-3 uppercase tracking-tight">
               💡 Smart Insights
@@ -434,7 +481,7 @@ export default function DecisionPage() {
                   <div className="text-right">
                     <p className="text-xs text-blue-700">Confidence</p>
                     <p className="text-sm md:text-base font-bold text-blue-900">
-                      {Math.round(smartInsights.recommendation.confidenceScore)}%
+                      {Math.round(smartInsights.recommendation.confidenceScore * 100)}%
                     </p>
                   </div>
                 </div>
