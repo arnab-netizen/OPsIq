@@ -19,6 +19,7 @@ import { normalizeDecisionInput, validateNormalizedMetrics } from "@/lib/decisio
 import { evaluateDecisionGate, gateResultToPayload } from "@/services/control/decision-gate";
 import { evaluateGuardrails, formatGuardrailViolations } from "@/services/control/guardrails";
 import { validateDependencies } from "@/services/control/variable-registry";
+import { enforceControlLayer } from "@/services/control/enforcement";
 
 function addIntegrity(
   result: DecisionResult,
@@ -41,6 +42,9 @@ export async function POST(request: NextRequest) {
   let workspace;
   let userId: string | null = null;
   let logger: ReturnType<typeof createEventLogger> | null = null;
+
+  // Track execution of control layer validations for bypass prevention
+  const executedValidations: string[] = ["variable_registry"];
 
   try {
     // Get workspace context early (fail closed if missing)
@@ -181,6 +185,7 @@ export async function POST(request: NextRequest) {
     // 4a. CONTROL LAYER: Validate variable dependencies (fail-closed)
     const depValidation = validateDependencies(inputMetrics);
     if (!depValidation.valid && depValidation.error) {
+      // Return early - validation failed, don't track as executed
       const depErrResult = createDecisionResult(
         {
           baselineRevenue: normalizedMetrics.baselineRevenue,
@@ -219,6 +224,9 @@ export async function POST(request: NextRequest) {
         { status: 422 }
       );
     }
+
+    // Dependency validation passed
+    executedValidations.push("dependency_validation");
 
     // 5. CONTROL LAYER: Decision Gate - Block unsafe decisions before execution
     const gateResult = evaluateDecisionGate({
@@ -271,11 +279,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Decision gate passed
+    executedValidations.push("decision_gate");
+
     // 6. Call runSystem with error handling for decision validation
     // runSystem enforces scenario-first execution (fail-closed if scenarios fail)
+    // It includes data_sufficiency validation internally
     let result;
     try {
       result = runSystem(inputMetrics);
+      // System executed successfully - data sufficiency was validated
+      executedValidations.push("data_sufficiency");
     } catch (systemError) {
       const errorMsg =
         systemError instanceof Error ? systemError.message : "Unknown error";
@@ -466,6 +480,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Guardrails validation passed
+    executedValidations.push("guardrails");
+
     if (!userId) {
       return NextResponse.json(
         { error: "User identity required" },
@@ -518,7 +535,31 @@ export async function POST(request: NextRequest) {
       // Intentionally swallow errors - webhook failures should not block the request
     });
 
-    // 13. Return decision result with explanation (including guardrails status)
+    // 13. CONTROL LAYER: Verify all validations were executed (bypass prevention)
+    try {
+      enforceControlLayer("/api/run", executedValidations);
+    } catch (enforceError: any) {
+      // Control layer bypass detected - log and return error
+      if (logger) {
+        logger.error({
+          status: "CONTROL_LAYER_BYPASS",
+          skippedValidations: enforceError.skippedValidations,
+          requiredValidations: enforceError.requiredValidations,
+        });
+      }
+      return NextResponse.json(
+        {
+          error: "Control layer validation incomplete - decision blocked",
+          enforceError: {
+            reason: enforceError.reason,
+            skippedValidations: enforceError.skippedValidations,
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    // Return decision result with explanation (including guardrails status)
     if (logger) {
       logger.success({
         decision: decisionResult?.decision,
