@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
         // CONTROL LAYER: Step 3 - Evaluate guardrails
         if (recommendation) {
           const guardrailsResult = evaluateGuardrails({
-            expectedImpact: recommendation.expectedImpact || Number(decision.impactExpected) || 0,
+            expectedImpact: recommendation.scenarioContext?.recommendedImpact || Number(decision.impactExpected) || 0,
             confidence: Number(decision.confidence),
             approvalFlag: false,
           });

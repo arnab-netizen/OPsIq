@@ -75,17 +75,20 @@ export async function POST(request: NextRequest) {
 
     // 1. Parse body
     const body = await request.json();
-    const { revenue, cost, currency } = body;
+    const { revenue, cost, currency, confidence, revenueChange, costChange, fxRates } = body;
 
     // Capture inputs snapshot for replay
     const inputsSnapshot = {
       revenue,
       cost,
       currency: currency || "INR",
+      confidence,
+      revenueChange,
+      costChange,
       timestamp: new Date().toISOString(),
     };
 
-    // Validate input types
+    // 1a. FAIL-CLOSED: Validate all required financial inputs
     if (typeof revenue !== "number" || typeof cost !== "number") {
       const baseResult = createDecisionResult(
         {
@@ -108,17 +111,102 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
-      return NextResponse.json(decisionResult, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing or invalid required fields: revenue and cost must be numbers" },
+        { status: 400 }
+      );
+    }
+
+    // 1b. FAIL-CLOSED: Require confidence to be explicitly provided
+    if (typeof confidence !== "number") {
+      const baseResult = createDecisionResult(
+        {
+          baselineRevenue: 0,
+          baselineCost: 0,
+          deltaRevenue: 0,
+          deltaCost: 0,
+          confidence: 0,
+          expectedImpact: 0,
+        },
+        false,
+        "INVALID_INPUT"
+      );
+      decisionResult = addIntegrity(
+        {
+          ...baseResult,
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
+        inputsSnapshot
+      );
+      return NextResponse.json(
+        { error: "Missing required field: confidence must be a number between 0 and 1" },
+        { status: 400 }
+      );
+    }
+
+    // 1c. FAIL-CLOSED: Require revenue/cost changes to be explicitly provided
+    if (typeof revenueChange !== "number" || typeof costChange !== "number") {
+      const baseResult = createDecisionResult(
+        {
+          baselineRevenue: 0,
+          baselineCost: 0,
+          deltaRevenue: 0,
+          deltaCost: 0,
+          confidence: 0,
+          expectedImpact: 0,
+        },
+        false,
+        "INVALID_INPUT"
+      );
+      decisionResult = addIntegrity(
+        {
+          ...baseResult,
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
+        inputsSnapshot
+      );
+      return NextResponse.json(
+        { error: "Missing required fields: revenueChange and costChange must be numbers" },
+        { status: 400 }
+      );
     }
 
     // 2. Normalize financial inputs before any calculations
-    // Default FX rates for common currencies (can be extended or loaded from business profile)
-    const defaultFxRates: Record<string, number> = {
-      INR: 1.0,
-      USD: 83.0, // 1 USD = 83 INR (approximate)
-      EUR: 90.0, // 1 EUR = 90 INR (approximate)
-      GBP: 105.0, // 1 GBP = 105 INR (approximate)
-    };
+    const inputCurrency = currency || "INR";
+
+    // 2a. FAIL-CLOSED: Require FX rates for non-base currencies
+    let fxRatesInput = fxRates || {};
+    if (inputCurrency !== "INR" && !fxRatesInput[inputCurrency]) {
+      const baseResult = createDecisionResult(
+        {
+          baselineRevenue: 0,
+          baselineCost: 0,
+          deltaRevenue: 0,
+          deltaCost: 0,
+          confidence: 0,
+          expectedImpact: 0,
+        },
+        false,
+        "INVALID_INPUT"
+      );
+      decisionResult = addIntegrity(
+        {
+          ...baseResult,
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
+        inputsSnapshot
+      );
+      return NextResponse.json(
+        { error: `Missing FX rate for currency ${inputCurrency}. Provide fxRates: { "${inputCurrency}": rate }` },
+        { status: 400 }
+      );
+    }
 
     let normalizedMetrics;
     try {
@@ -126,12 +214,13 @@ export async function POST(request: NextRequest) {
         {
           revenue,
           cost,
-          currency: currency || "INR",
+          revenueChange,
+          costChange,
+          currency: inputCurrency,
           baseCurrency: "INR",
-          confidence: 0.75,
-          risk: 5,
+          confidence,
         },
-        defaultFxRates
+        fxRatesInput
       );
 
       // Validate normalized metrics
@@ -163,7 +252,10 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
-      return NextResponse.json(decisionResult, { status: 400 });
+      return NextResponse.json(
+        { error: errorMsg },
+        { status: 400 }
+      );
     }
 
     // 3. Create baseline using normalized values (all in INR/base currency)
@@ -179,7 +271,6 @@ export async function POST(request: NextRequest) {
       revenueChange: normalizedMetrics.revenueChange,
       costChange: normalizedMetrics.costChange,
       confidence: normalizedMetrics.confidence,
-      risk: normalizedMetrics.risk || 5,
     };
 
     // 4a. CONTROL LAYER: Validate variable dependencies (fail-closed)
@@ -540,9 +631,9 @@ export async function POST(request: NextRequest) {
       enforceControlLayer("/api/run", executedValidations);
     } catch (enforceError: any) {
       // Control layer bypass detected - log and return error
+      const bypasMsg = `CONTROL_LAYER_BYPASS: ${enforceError.reason}`;
       if (logger) {
-        logger.error({
-          status: "CONTROL_LAYER_BYPASS",
+        logger.error(bypasMsg, {
           skippedValidations: enforceError.skippedValidations,
           requiredValidations: enforceError.requiredValidations,
         });

@@ -61,9 +61,13 @@ export async function executeDecisionThroughControlLayer(
   // LAYER 2: Data sufficiency validation
   const sufficiencyResult = isDataSufficient(patterns, variables);
   if (!sufficiencyResult.sufficient) {
+    const detailMsg =
+      sufficiencyResult.details.lowConfidenceVariables?.length > 0
+        ? `Low confidence variables: ${sufficiencyResult.details.lowConfidenceVariables.join(", ")}`
+        : `Insufficient patterns: ${sufficiencyResult.details.patternCount}/${sufficiencyResult.details.minPatternsRequired}`;
     violations.push({
       layer: "data_sufficiency",
-      reason: sufficiencyResult.details.missingDependencies?.join(", ") || "Insufficient patterns",
+      reason: detailMsg,
     });
   }
 
