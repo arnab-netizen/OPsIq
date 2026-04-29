@@ -662,7 +662,6 @@ model OperatorItem {
   signatureAlgo       String?    @map("signature_algo") // Signature algorithm identifier
   publicKeyId         String?    @map("public_key_id") // Public key identifier
   engineVersion       String    @default("v1.0.0") @map("engine_version")
-  createdBy           String?    @map("created_by") @db.Uuid
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
@@ -680,5 +679,25 @@ model OperatorItem {
   @@index([signedHash])
   @@index([publicKeyId])
   @@map("operator_items")
+}
+
+// ─── Learning Store: Decision Outcomes for Pattern Analysis ───────────────
+
+model LearningRecord {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid // Multi-workspace isolation
+  problemType String    @map("problem_type") // "revenue_leak" | "cost_overrun" | "growth_block" | "inefficiency"
+  actionTaken String    @map("action_taken") // The action that was executed
+  success     Boolean   // Whether the decision/action succeeded
+  impact      Float     // The measured impact (positive or negative)
+  timestamp   DateTime  @default(now()) // When this learning record was created
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, problemType])
+  @@index([workspaceId, success])
+  @@index([timestamp])
+  @@index([createdAt])
+  @@map("learning_records")
 }
 
