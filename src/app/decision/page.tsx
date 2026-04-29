@@ -6,6 +6,7 @@ import { DecisionResultComponent } from '@/components/decision/DecisionResult';
 import { TrustCard } from '@/components/decision/TrustCard';
 import { DecisionResult } from '@/domain/decision/types';
 import type { CalibrationMetrics } from '@/services/calibration/engine';
+import type { ValueMetrics } from '@/services/value/tracker';
 
 interface FormValues {
   baselineRevenue: string;
@@ -30,32 +31,49 @@ export default function DecisionPage() {
   const [isApproved, setIsApproved] = useState(false);
 
   const [calibrationMetrics, setCalibrationMetrics] = useState<CalibrationMetrics | null>(null);
-  const [calibrationLoading, setCalibrationLoading] = useState(true);
-  const [calibrationError, setCalibrationError] = useState<string | null>(null);
+  const [valueMetrics, setValueMetrics] = useState<ValueMetrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(true);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCalibration = async () => {
+    const fetchMetrics = async () => {
       try {
-        setCalibrationLoading(true);
-        const response = await fetch('/api/calibration');
+        setMetricsLoading(true);
+        const [calibRes, valueRes] = await Promise.all([
+          fetch('/api/calibration'),
+          fetch('/api/value'),
+        ]);
 
-        if (!response.ok) {
-          setCalibrationError('Unable to load trust metrics');
-          return;
+        let hasError = false;
+
+        if (calibRes.ok) {
+          const calibData = await calibRes.json() as CalibrationMetrics;
+          setCalibrationMetrics(calibData);
+        } else {
+          hasError = true;
         }
 
-        const data = await response.json() as CalibrationMetrics;
-        setCalibrationMetrics(data);
-        setCalibrationError(null);
+        if (valueRes.ok) {
+          const valueData = await valueRes.json() as ValueMetrics;
+          setValueMetrics(valueData);
+        } else {
+          hasError = true;
+        }
+
+        if (hasError) {
+          setMetricsError('Unable to load trust metrics');
+        } else {
+          setMetricsError(null);
+        }
       } catch (err) {
-        console.error('Failed to fetch calibration metrics:', err);
-        setCalibrationError('Failed to load trust metrics');
+        console.error('Failed to fetch metrics:', err);
+        setMetricsError('Failed to load trust metrics');
       } finally {
-        setCalibrationLoading(false);
+        setMetricsLoading(false);
       }
     };
 
-    fetchCalibration();
+    fetchMetrics();
   }, []);
 
   const handleInputChange = (field: keyof FormValues) => (
@@ -344,9 +362,10 @@ export default function DecisionPage() {
 
         {/* Trust Card - System Calibration Metrics */}
         <TrustCard
-          metrics={calibrationMetrics}
-          loading={calibrationLoading}
-          error={calibrationError}
+          calibrationMetrics={calibrationMetrics}
+          valueMetrics={valueMetrics}
+          loading={metricsLoading}
+          error={metricsError}
         />
 
         {/* Info Section */}
