@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { OperatorItem } from '@/domain/operator/types';
+import { calculateBadges, getBadgeVariant } from '@/services/badges/engine';
+import { Badge } from '@/ui/primitives';
 
 interface QueueResponse {
   items: OperatorItem[];
@@ -124,6 +126,25 @@ export default function OperatorQueuePage() {
                     {item.status}
                   </span>
                 </div>
+
+                {/* Trust Badges */}
+                {(() => {
+                  const badges = calculateBadges(item);
+                  return badges.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {badges.map((badge) => (
+                        <div key={badge.type} title={badge.description}>
+                          <Badge
+                            variant={getBadgeVariant(badge.type)}
+                            className="text-xs"
+                          >
+                            {badge.label}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
 
                 {/* Action */}
                 <p className="text-xs md:text-sm text-muted-foreground mb-3 break-words leading-relaxed">
