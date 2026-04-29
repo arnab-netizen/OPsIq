@@ -637,12 +637,12 @@ export async function POST(request: NextRequest) {
       if (errorMsg === "LOW_CONFIDENCE_BLOCKED") {
         const lowConfResult = createDecisionResult(
           {
-            baselineRevenue: revenue,
-            baselineCost: cost,
-            deltaRevenue: revenue * 0.1,
-            deltaCost: cost * 0.05,
-            confidence: 0.75,
-            expectedImpact: revenue * 0.1 - cost * 0.05,
+            baselineRevenue: normalizedMetrics.baselineRevenue,
+            baselineCost: normalizedMetrics.baselineCost,
+            deltaRevenue: normalizedMetrics.revenueChange,
+            deltaCost: normalizedMetrics.costChange,
+            confidence: normalizedMetrics.confidence,
+            expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
           },
           false,
           "LOW_CONFIDENCE"
@@ -659,12 +659,12 @@ export async function POST(request: NextRequest) {
       } else if (errorMsg === "NON_POSITIVE_IMPACT_BLOCKED") {
         const nonPosResult = createDecisionResult(
           {
-            baselineRevenue: revenue,
-            baselineCost: cost,
-            deltaRevenue: revenue * 0.1,
-            deltaCost: cost * 0.05,
-            confidence: 0.75,
-            expectedImpact: revenue * 0.1 - cost * 0.05,
+            baselineRevenue: normalizedMetrics.baselineRevenue,
+            baselineCost: normalizedMetrics.baselineCost,
+            deltaRevenue: normalizedMetrics.revenueChange,
+            deltaCost: normalizedMetrics.costChange,
+            confidence: normalizedMetrics.confidence,
+            expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
           },
           false,
           "NON_POSITIVE_IMPACT"
@@ -681,12 +681,12 @@ export async function POST(request: NextRequest) {
       } else if (errorMsg.startsWith("SCENARIO_GENERATION_FAILED")) {
         const scenarioErrResult = createDecisionResult(
           {
-            baselineRevenue: revenue,
-            baselineCost: cost,
-            deltaRevenue: revenue * 0.1,
-            deltaCost: cost * 0.05,
-            confidence: 0.75,
-            expectedImpact: revenue * 0.1 - cost * 0.05,
+            baselineRevenue: normalizedMetrics.baselineRevenue,
+            baselineCost: normalizedMetrics.baselineCost,
+            deltaRevenue: normalizedMetrics.revenueChange,
+            deltaCost: normalizedMetrics.costChange,
+            confidence: normalizedMetrics.confidence,
+            expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
           },
           false,
           "INVALID_INPUT"
@@ -703,12 +703,12 @@ export async function POST(request: NextRequest) {
       } else {
         const unknownErrResult = createDecisionResult(
           {
-            baselineRevenue: revenue,
-            baselineCost: cost,
-            deltaRevenue: revenue * 0.1,
-            deltaCost: cost * 0.05,
-            confidence: 0.75,
-            expectedImpact: revenue * 0.1 - cost * 0.05,
+            baselineRevenue: normalizedMetrics.baselineRevenue,
+            baselineCost: normalizedMetrics.baselineCost,
+            deltaRevenue: normalizedMetrics.revenueChange,
+            deltaCost: normalizedMetrics.costChange,
+            confidence: normalizedMetrics.confidence,
+            expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
           },
           false,
           "INVALID_INPUT"
@@ -726,32 +726,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(decisionResult, { status: 400 });
     }
 
-    // 7. Classify problem type based on financial impact
+    // 7. Classify problem type based on normalized financial impact
     const problemType = classifyProblem({
-      baselineRevenue: revenue,
-      baselineCost: cost,
-      revenueChange: revenue * 0.1,
-      costChange: cost * 0.05,
+      baselineRevenue: normalizedMetrics.baselineRevenue,
+      baselineCost: normalizedMetrics.baselineCost,
+      revenueChange: normalizedMetrics.revenueChange,
+      costChange: normalizedMetrics.costChange,
       expectedImpact: result.impact.impactExpected,
     });
 
-    // 8. Calculate baseline impact metrics
+    // 8. Calculate baseline impact metrics using normalized values
     const baselineMetrics = calculateBaselineMetrics({
-      baselineRevenue: revenue,
-      baselineCost: cost,
-      revenueChange: revenue * 0.1,
-      costChange: cost * 0.05,
+      baselineRevenue: normalizedMetrics.baselineRevenue,
+      baselineCost: normalizedMetrics.baselineCost,
+      revenueChange: normalizedMetrics.revenueChange,
+      costChange: normalizedMetrics.costChange,
       expectedImpact: result.impact.impactExpected,
     });
 
-    // 9. Create approved decision result with explanation
+    // 9. Create approved decision result with user-provided values (not defaults)
     const approvedResult = createDecisionResult(
       {
-        baselineRevenue: revenue,
-        baselineCost: cost,
-        deltaRevenue: revenue * 0.1,
-        deltaCost: cost * 0.05,
-        confidence: 0.75,
+        baselineRevenue: normalizedMetrics.baselineRevenue,
+        baselineCost: normalizedMetrics.baselineCost,
+        deltaRevenue: normalizedMetrics.revenueChange,
+        deltaCost: normalizedMetrics.costChange,
+        confidence: normalizedMetrics.confidence,
         expectedImpact: result.impact.impactExpected,
       },
       true
@@ -772,7 +772,7 @@ export async function POST(request: NextRequest) {
     // 9a. CONTROL LAYER: Evaluate Guardrails - Check visible policy constraints
     const guardrailsResult = evaluateGuardrails({
       expectedImpact: result.impact.impactExpected,
-      confidence: 0.75,
+      confidence: normalizedMetrics.confidence,
       approvalFlag: body.approvalFlag || false,
     });
 
