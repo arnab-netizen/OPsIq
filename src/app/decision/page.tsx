@@ -35,6 +35,9 @@ export default function DecisionPage() {
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [metricsError, setMetricsError] = useState<string | null>(null);
 
+  const [smartInsights, setSmartInsights] = useState<any>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
@@ -77,6 +80,33 @@ export default function DecisionPage() {
 
     fetchMetrics();
   }, []);
+
+  // Fetch smart insights when result is available
+  useEffect(() => {
+    if (!result || !result.problemType) {
+      setSmartInsights(null);
+      return;
+    }
+
+    const fetchInsights = async () => {
+      try {
+        setInsightsLoading(true);
+        const response = await fetch('/api/intelligence/summary');
+
+        if (response.ok) {
+          const data = await response.json();
+          setSmartInsights(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch smart insights:', err);
+        // Silently fail - insights are optional
+      } finally {
+        setInsightsLoading(false);
+      }
+    };
+
+    fetchInsights();
+  }, [result]);
 
   const handleInputChange = (field: keyof FormValues) => (
     e: React.ChangeEvent<HTMLInputElement>
@@ -359,6 +389,57 @@ export default function DecisionPage() {
         {result && (
           <div className={isApproved ? 'mt-4 md:mt-6' : 'mt-6 md:mt-8'}>
             <DecisionResultComponent result={result} />
+          </div>
+        )}
+
+        {/* Smart Insights */}
+        {result && smartInsights && !insightsLoading && (
+          <div className="mt-4 md:mt-6 rounded-lg border border-blue-200 bg-blue-50 p-3 md:p-4">
+            <h3 className="text-xs md:text-sm font-semibold text-blue-900 mb-2 md:mb-3 uppercase tracking-tight">
+              💡 Smart Insights
+            </h3>
+
+            <div className="space-y-2 md:space-y-3">
+              {/* Top Pattern */}
+              {smartInsights.patterns && smartInsights.patterns.length > 0 && (
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="text-xs text-blue-700 font-medium">
+                      Similar Pattern
+                    </p>
+                    <p className="text-xs md:text-sm text-blue-900 font-semibold mt-0.5">
+                      {smartInsights.patterns[0].problemType}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-blue-700">Frequency</p>
+                    <p className="text-sm md:text-base font-bold text-blue-900">
+                      {smartInsights.patterns[0].frequency}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Recommended Action */}
+              {smartInsights.recommendation && (
+                <div className="flex items-start justify-between gap-2 pt-1 md:pt-2 border-t border-blue-200">
+                  <div className="flex-1">
+                    <p className="text-xs text-blue-700 font-medium">
+                      Recommended Action
+                    </p>
+                    <p className="text-xs md:text-sm text-blue-900 font-semibold mt-0.5">
+                      {smartInsights.recommendation.recommendedAction}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-blue-700">Confidence</p>
+                    <p className="text-sm md:text-base font-bold text-blue-900">
+                      {Math.round(smartInsights.recommendation.confidenceScore)}%
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
