@@ -3,6 +3,11 @@ import { OperatorItem } from "@/domain/operator/types";
 import { DetectedPattern } from "./pattern-engine";
 import { getVariableRegistry } from "@/services/control/variable-registry";
 import { ScenarioComparison } from "@/services/control/scenario-comparison";
+import {
+  isDataSufficient,
+  getPatternsByProblemType,
+  VariableWithConfidence,
+} from "@/services/control/recommendation";
 
 export interface ActionRecommendation {
   recommendedAction?: string;
@@ -16,6 +21,14 @@ export interface ActionRecommendation {
     baselineImpact: number;
     recommendedImpact: number;
     impactRange: { min: number; max: number; spread: number };
+  };
+  blocked?: boolean;
+  blockReason?: string;
+  blockDetails?: {
+    patternCount?: number;
+    minPatternsRequired?: number;
+    lowConfidenceVariables?: string[];
+    minConfidenceRequired?: number;
   };
 }
 
@@ -52,7 +65,8 @@ export function generateRecommendation(
   patterns: DetectedPattern[],
   items: OperatorItem[],
   inputVariables?: Record<string, unknown>,
-  scenarios?: ScenarioComparison
+  scenarios?: ScenarioComparison,
+  variableConfidences?: Record<string, number>
 ): ActionRecommendation {
   const registry = getVariableRegistry();
   const allVariableKeys = Object.keys(registry).sort();
@@ -68,6 +82,29 @@ export function generateRecommendation(
   const ignoredVariables = allVariableKeys.filter(
     (key) => !usedVariables.includes(key)
   );
+
+  // CONTROL GATE: Validate data sufficiency before recommendation (fail-closed)
+  const variablesForValidation: VariableWithConfidence[] = usedVariables.map(
+    (varName) => ({
+      name: varName,
+      confidence: variableConfidences?.[varName] ?? 0.75,
+    })
+  );
+
+  const sufficiencyResult = isDataSufficient(patterns, variablesForValidation);
+  if (!sufficiencyResult.sufficient) {
+    return {
+      confidenceScore: 0,
+      variablesUsed: usedVariables,
+      variablesIgnored: ignoredVariables,
+      dataSufficiency: "insufficient",
+      explanation: `Recommendation blocked: ${sufficiencyResult.reason}`,
+      blocked: true,
+      blockReason: sufficiencyResult.reason,
+      blockDetails: sufficiencyResult.details,
+      scenarioContext: undefined,
+    };
+  }
 
   // Build scenario context if available
   const scenarioContext = scenarios
@@ -194,7 +231,8 @@ export function generateMultipleRecommendations(
   patterns: DetectedPattern[],
   items: OperatorItem[],
   inputVariables?: Record<string, unknown>,
-  scenarios?: ScenarioComparison
+  scenarios?: ScenarioComparison,
+  variableConfidences?: Record<string, number>
 ): ActionRecommendation[] {
   const registry = getVariableRegistry();
   const allVariableKeys = Object.keys(registry).sort();
@@ -210,6 +248,31 @@ export function generateMultipleRecommendations(
   const ignoredVariables = allVariableKeys.filter(
     (key) => !usedVariables.includes(key)
   );
+
+  // CONTROL GATE: Validate data sufficiency before recommendation (fail-closed)
+  const variablesForValidation: VariableWithConfidence[] = usedVariables.map(
+    (varName) => ({
+      name: varName,
+      confidence: variableConfidences?.[varName] ?? 0.75,
+    })
+  );
+
+  const sufficiencyResult = isDataSufficient(patterns, variablesForValidation);
+  if (!sufficiencyResult.sufficient) {
+    return [
+      {
+        confidenceScore: 0,
+        variablesUsed: usedVariables,
+        variablesIgnored: ignoredVariables,
+        dataSufficiency: "insufficient",
+        explanation: `Recommendations blocked: ${sufficiencyResult.reason}`,
+        blocked: true,
+        blockReason: sufficiencyResult.reason,
+        blockDetails: sufficiencyResult.details,
+        scenarioContext: undefined,
+      },
+    ];
+  }
 
   // Build scenario context if available
   const scenarioContext = scenarios
