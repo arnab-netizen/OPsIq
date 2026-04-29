@@ -28,6 +28,7 @@ export interface DecisionGateResult {
   reason?: string; // Reason for block (if allowed=false)
   missingVariables: string[]; // Missing required variables
   lowConfidenceVariables: string[]; // Variables with low confidence
+  staleVariables: string[]; // Variables older than 30 days
   warnings: string[]; // Non-blocking warnings
   overallConfidence: number; // Overall confidence score (0-1)
 }
@@ -52,6 +53,7 @@ export function evaluateDecisionGate(input: DecisionGateInput): DecisionGateResu
   const warnings: string[] = [];
   const missingVariables: string[] = [];
   const lowConfidenceVariables: string[] = [];
+  const staleVariables: string[] = [];
   let overallConfidence = 1.0;
   let allowed = true;
   let blockReason: string | undefined = undefined;
@@ -63,6 +65,7 @@ export function evaluateDecisionGate(input: DecisionGateInput): DecisionGateResu
       reason: "Invalid input: must be an object",
       missingVariables: [],
       lowConfidenceVariables: [],
+      staleVariables: [],
       warnings: [],
       overallConfidence: 0,
     };
@@ -74,6 +77,7 @@ export function evaluateDecisionGate(input: DecisionGateInput): DecisionGateResu
       reason: "Invalid input: variables must be an object",
       missingVariables: [],
       lowConfidenceVariables: [],
+      staleVariables: [],
       warnings: [],
       overallConfidence: 0,
     };
@@ -166,9 +170,15 @@ export function evaluateDecisionGate(input: DecisionGateInput): DecisionGateResu
       `User confidence ${userConfidence} is below threshold ${CONFIDENCE_THRESHOLD}`;
   }
 
-  // 5. Add staleness warnings
+  // 5. BLOCK on stale variables (fail-closed principle)
   for (const staleVar of confidenceResult.staleVariables) {
-    warnings.push(`Variable ${staleVar.key} is stale (${staleVar.daysOld} days old)`);
+    staleVariables.push(staleVar.key);
+  }
+
+  if (staleVariables.length > 0) {
+    allowed = false;
+    blockReason = blockReason ||
+      `Stale variables detected (>30 days old): ${staleVariables.join(", ")}`;
   }
 
   // 6. Add missing required variables as errors
@@ -181,6 +191,7 @@ export function evaluateDecisionGate(input: DecisionGateInput): DecisionGateResu
   // Sort output for determinism
   missingVariables.sort();
   lowConfidenceVariables.sort();
+  staleVariables.sort();
   warnings.sort();
 
   return {
@@ -188,6 +199,7 @@ export function evaluateDecisionGate(input: DecisionGateInput): DecisionGateResu
     reason: blockReason,
     missingVariables,
     lowConfidenceVariables,
+    staleVariables,
     warnings,
     overallConfidence,
   };
