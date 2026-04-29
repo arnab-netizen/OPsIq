@@ -60,6 +60,24 @@ export async function POST(request: NextRequest) {
     // Enforce server-side auth
     const role = await resolveServerRole();
     if (!role) {
+      // Log AUTH_FAILED audit event
+      await logAuditEvent({
+        eventName: "AUTH_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: null,
+        role: null,
+        before: null,
+        after: null,
+        metadata: {
+          reason: "Session not found or invalid",
+        },
+        workspaceId: workspace?.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 403 }
@@ -67,6 +85,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (!canEdit(role)) {
+      // Log PERMISSION_DENIED audit event
+      await logAuditEvent({
+        eventName: "PERMISSION_DENIED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: null,
+        metadata: {
+          reason: "User role lacks edit permission",
+          role: role,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -111,6 +148,30 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
+
+      // Log INPUT_VALIDATION_FAILED audit event
+      await logAuditEvent({
+        eventName: "INPUT_VALIDATION_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          reason: "Missing or invalid financial inputs",
+          expectedFields: ["revenue", "cost"],
+          providedFields: {
+            revenue: typeof revenue,
+            cost: typeof cost,
+          },
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: "Missing or invalid required fields: revenue and cost must be numbers" },
         { status: 400 }
@@ -140,6 +201,27 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
+
+      // Log INPUT_VALIDATION_FAILED audit event
+      await logAuditEvent({
+        eventName: "INPUT_VALIDATION_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          reason: "Missing or invalid confidence value",
+          expectedFields: ["confidence"],
+          providedType: typeof confidence,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: "Missing required field: confidence must be a number between 0 and 1" },
         { status: 400 }
@@ -169,6 +251,30 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
+
+      // Log INPUT_VALIDATION_FAILED audit event
+      await logAuditEvent({
+        eventName: "INPUT_VALIDATION_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          reason: "Missing or invalid revenue/cost change values",
+          expectedFields: ["revenueChange", "costChange"],
+          providedFields: {
+            revenueChange: typeof revenueChange,
+            costChange: typeof costChange,
+          },
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: "Missing required fields: revenueChange and costChange must be numbers" },
         { status: 400 }
@@ -202,6 +308,28 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
+
+      // Log INPUT_VALIDATION_FAILED audit event
+      await logAuditEvent({
+        eventName: "INPUT_VALIDATION_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          reason: "Missing FX rate for non-base currency",
+          currency: inputCurrency,
+          baseCurrency: "INR",
+          providedFxRates: Object.keys(fxRatesInput),
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: `Missing FX rate for currency ${inputCurrency}. Provide fxRates: { "${inputCurrency}": rate }` },
         { status: 400 }
@@ -252,6 +380,27 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
+
+      // Log INPUT_VALIDATION_FAILED audit event
+      await logAuditEvent({
+        eventName: "INPUT_VALIDATION_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          reason: "Input normalization/validation failed",
+          errorMessage: errorMsg,
+          inputCurrency,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: errorMsg },
         { status: 400 }
@@ -323,6 +472,29 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
+
+      // Log DEPENDENCY_VALIDATION_BLOCKED audit event (fail-closed)
+      await logAuditEvent({
+        eventName: "DEPENDENCY_VALIDATION_BLOCKED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          blockStage: "dependency_validation",
+          blockReason: depValidation.error.details,
+          variable: depValidation.error.variable,
+          missingDependencies: depValidation.error.missingDependencies,
+          expectedImpact,
+          confidence: normalizedMetrics.confidence,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
 
       if (logger) {
         logger.success({
@@ -402,6 +574,30 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
+
+      // Log DECISION_GATE_BLOCKED audit event (fail-closed)
+      await logAuditEvent({
+        eventName: "DECISION_GATE_BLOCKED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          blockStage: "decision_gate",
+          blockReason: gateResult.reason || "Decision gate validation failed",
+          missingVariables: gateResult.missingVariables,
+          lowConfidenceVariables: gateResult.lowConfidenceVariables,
+          staleVariables: gateResult.staleVariables,
+          expectedImpact,
+          confidence: normalizedMetrics.confidence,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
 
       // Log gate rejection
       if (logger) {
@@ -631,6 +827,36 @@ export async function POST(request: NextRequest) {
         inputsSnapshot
       );
 
+      // Log GUARDRAILS_BLOCKED audit event (fail-closed)
+      await logAuditEvent({
+        eventName: "GUARDRAILS_BLOCKED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          blockStage: "guardrails",
+          blockReason: guardrailsResult.violations.map((v) => v.message).join("; "),
+          violations: guardrailsResult.violations.map((v) => ({
+            ruleId: v.ruleId,
+            severity: v.severity,
+            message: v.message,
+            threshold: v.threshold,
+            actual: v.actual,
+            overrideAllowed: v.overrideAllowed,
+          })),
+          warnings: guardrailsResult.warnings,
+          expectedImpact: result.impact.impactExpected,
+          confidence: normalizedMetrics.confidence,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       if (logger) {
         logger.success({
           guardrailStatus: "blocked",
@@ -677,9 +903,9 @@ export async function POST(request: NextRequest) {
     // Get actor ID for audit
     const actorId = userId;
 
-    // 11. Log audit event for run execution
+    // 11. Log audit event for run execution (fail-closed)
     await logAuditEvent({
-      eventName: "RUN",
+      eventName: "RUN_APPROVED",
       entityType: "Decision",
       entityId: "system-run",
       actorId,
@@ -689,7 +915,15 @@ export async function POST(request: NextRequest) {
       metadata: {
         inputRevenue: revenue,
         inputCost: cost,
+        inputCurrency: inputCurrency,
+        expectedImpact: result.impact.impactExpected,
+        confidence: normalizedMetrics.confidence,
+        problemType,
       },
+      workspaceId: workspace.workspaceId,
+    }).catch((auditError) => {
+      if (logger) logger.error(`Audit logging failed: ${auditError}`);
+      throw auditError;
     });
 
     // 12. Emit webhook for decision creation (non-blocking)
