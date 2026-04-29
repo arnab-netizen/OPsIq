@@ -52,6 +52,21 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
   const mockItems: OperatorItem[] = [mockItem1, mockItem2];
 
+  // Create 3 patterns to meet data sufficiency requirement (>= 3 patterns)
+  const mockPatterns: DetectedPattern[] = [
+    mockPattern,
+    {
+      ...mockPattern,
+      patternId: "pattern-002",
+      successRate: 80,
+    },
+    {
+      ...mockPattern,
+      patternId: "pattern-003",
+      successRate: 70,
+    },
+  ];
+
   describe("generateRecommendation - Variable Disclosure", () => {
     it("should include variablesUsed from input", () => {
       const inputVariables = {
@@ -64,7 +79,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -88,7 +103,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -109,7 +124,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -129,7 +144,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -150,7 +165,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -171,7 +186,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -196,7 +211,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         decision,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -222,7 +237,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         decision,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -233,9 +248,22 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
     });
 
     it("should return insufficient when no patterns match > 60% threshold", () => {
-      const lowSuccessPattern: DetectedPattern = {
+      const lowSuccessPattern1: DetectedPattern = {
         ...mockPattern,
+        patternId: "low-1",
         successRate: 55,
+      };
+
+      const lowSuccessPattern2: DetectedPattern = {
+        ...mockPattern,
+        patternId: "low-2",
+        successRate: 50,
+      };
+
+      const lowSuccessPattern3: DetectedPattern = {
+        ...mockPattern,
+        patternId: "low-3",
+        successRate: 45,
       };
 
       const inputVariables = {
@@ -248,7 +276,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [lowSuccessPattern],
+        [lowSuccessPattern1, lowSuccessPattern2, lowSuccessPattern3],
         mockItems,
         inputVariables
       );
@@ -269,7 +297,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         [],
         inputVariables
       );
@@ -292,7 +320,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -311,12 +339,13 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
 
-      expect(result.basedOnPatternId).toBe("pattern-001");
+      // mockPatterns[1] (pattern-002) has highest success rate (80)
+      expect(result.basedOnPatternId).toBe("pattern-002");
     });
 
     it("should return confidenceScore as decimal", () => {
@@ -330,12 +359,13 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
 
-      expect(result.confidenceScore).toBe(0.75);
+      // mockPatterns highest success rate is 80 (0.8)
+      expect(result.confidenceScore).toBe(0.8);
       expect(result.confidenceScore).toBeLessThanOrEqual(1);
       expect(result.confidenceScore).toBeGreaterThanOrEqual(0);
     });
@@ -351,7 +381,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -365,7 +395,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
     it("should handle undefined inputVariables", () => {
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems
       );
 
@@ -377,7 +407,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
     it("should have all variables as ignored when no input", () => {
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems
       );
 
@@ -455,6 +485,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
     it("should filter out patterns with low success rate before evaluation", () => {
       const pattern1 = { ...mockPattern, patternId: "pattern-1", successRate: 75 };
       const pattern2 = { ...mockPattern, patternId: "pattern-2", successRate: 50 };
+      const pattern3 = { ...mockPattern, patternId: "pattern-3", successRate: 80 };
 
       const inputVariables = {
         baselineRevenue: 1000000,
@@ -466,14 +497,15 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const results = generateMultipleRecommendations(
         mockDecisionResult,
-        [pattern1, pattern2],
+        [pattern1, pattern2, pattern3],
         mockItems,
         inputVariables
       );
 
-      // Only pattern1 should be in results (pattern2 with 50% success rate is filtered out)
+      // Only pattern1 and pattern3 should be in results (pattern2 with 50% success rate is filtered out)
       expect(results.some((r) => r.basedOnPatternId === "pattern-1")).toBe(true);
       expect(results.some((r) => r.basedOnPatternId === "pattern-2")).toBe(false);
+      expect(results.some((r) => r.basedOnPatternId === "pattern-3")).toBe(true);
     });
 
     it("should return insufficient fallback when no valid recommendations", () => {
@@ -481,6 +513,10 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
         ...mockDecisionResult,
         problemType: "unknown_type",
       };
+
+      const pattern1 = { ...mockPattern, patternId: "p1" };
+      const pattern2 = { ...mockPattern, patternId: "p2" };
+      const pattern3 = { ...mockPattern, patternId: "p3" };
 
       const inputVariables = {
         baselineRevenue: 1000000,
@@ -492,7 +528,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const results = generateMultipleRecommendations(
         decision,
-        [mockPattern],
+        [pattern1, pattern2, pattern3],
         mockItems,
         inputVariables
       );
@@ -508,7 +544,18 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
     it("should handle empty itemIds in pattern", () => {
       const emptyPattern: DetectedPattern = {
         ...mockPattern,
+        patternId: "empty",
         itemIds: [],
+      };
+
+      const pattern2: DetectedPattern = {
+        ...mockPattern,
+        patternId: "p2",
+      };
+
+      const pattern3: DetectedPattern = {
+        ...mockPattern,
+        patternId: "p3",
       };
 
       const inputVariables = {
@@ -521,7 +568,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [emptyPattern],
+        [emptyPattern, pattern2, pattern3],
         mockItems,
         inputVariables
       );
@@ -533,7 +580,18 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
     it("should handle pattern with no matching items", () => {
       const nonMatchingPattern: DetectedPattern = {
         ...mockPattern,
+        patternId: "non-match",
         itemIds: ["non-existent-id"],
+      };
+
+      const pattern2: DetectedPattern = {
+        ...mockPattern,
+        patternId: "p2",
+      };
+
+      const pattern3: DetectedPattern = {
+        ...mockPattern,
+        patternId: "p3",
       };
 
       const inputVariables = {
@@ -546,7 +604,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [nonMatchingPattern],
+        [nonMatchingPattern, pattern2, pattern3],
         mockItems,
         inputVariables
       );
@@ -556,9 +614,22 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
     });
 
     it("should calculate confidenceScore as percentage / 100", () => {
-      const highSuccessPattern: DetectedPattern = {
+      const pattern1: DetectedPattern = {
         ...mockPattern,
+        patternId: "pattern-1",
         successRate: 95,
+      };
+
+      const pattern2: DetectedPattern = {
+        ...mockPattern,
+        patternId: "pattern-2",
+        successRate: 85,
+      };
+
+      const pattern3: DetectedPattern = {
+        ...mockPattern,
+        patternId: "pattern-3",
+        successRate: 75,
       };
 
       const inputVariables = {
@@ -571,7 +642,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [highSuccessPattern],
+        [pattern1, pattern2, pattern3],
         mockItems,
         inputVariables
       );
@@ -587,7 +658,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         partialInput
       );
@@ -611,14 +682,14 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result1 = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
 
       const result2 = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -641,7 +712,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result1 = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables
       );
@@ -656,7 +727,7 @@ describe("Recommendation Engine - Phase 4 Control 6", () => {
 
       const result2 = generateRecommendation(
         mockDecisionResult,
-        [mockPattern],
+        mockPatterns,
         mockItems,
         inputVariables2
       );
