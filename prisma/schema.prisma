@@ -439,6 +439,7 @@ model ShockEvent {
 
 model AuditEvent {
   id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid // Multi-workspace audit isolation
   eventName     String   @map("event_name")
   actorId       String?  @map("actor_id") @db.Uuid
   actorType     String   @default("user") @map("actor_type")
@@ -451,6 +452,9 @@ model AuditEvent {
 
   actor User? @relation(fields: [actorId], references: [id])
 
+  @@index([workspaceId])
+  @@index([workspaceId, eventName])
+  @@index([workspaceId, occurredAt])
   @@index([eventName])
   @@index([entityType, entityId])
   @@index([actorId])
@@ -620,6 +624,7 @@ model Risk {
 
 model OperatorItem {
   id                  String    @id @default(uuid()) @db.Uuid
+  workspaceId         String    @map("workspace_id") @db.Uuid // Multi-workspace isolation
   problem             String
   action              String
   impactExpected      Float
@@ -652,6 +657,10 @@ model OperatorItem {
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, priorityScore])
+  @@index([workspaceId, executionStatus])
   @@index([status])
   @@index([priorityScore])
   @@index([executionStatus])

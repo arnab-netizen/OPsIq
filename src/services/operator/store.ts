@@ -1,6 +1,7 @@
 import { OperatorItem } from "@/domain/operator/types";
 import { CalibrationRecord } from "@/domain/calibration/types";
 import { calculateDeviation } from "@/services/calibration/engine";
+import { requireWorkspaceContext, validateWorkspaceAccess } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -9,9 +10,19 @@ const SYSTEM_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 let calibrationStore: CalibrationRecord[] = [];
 
 export async function addItems(items: OperatorItem[]): Promise<void> {
+  // Workspace isolation: fail closed if no workspace context
+  const workspace = await requireWorkspaceContext();
+
   for (const item of items) {
+    // Fail closed: require workspaceId on item and verify it matches current workspace
+    if (!item.workspaceId) {
+      throw new Error("OperatorItem workspaceId is required for workspace isolation");
+    }
+    await validateWorkspaceAccess(item.workspaceId);
+
     const data: any = {
       id: item.id,
+      workspaceId: item.workspaceId,
       problem: item.problem,
       action: item.action,
       impactExpected: item.impactExpected,
@@ -58,9 +69,16 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
 }
 
 export async function getItems(): Promise<OperatorItem[]> {
-  const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany();
+  // Workspace isolation: fail closed if no workspace context
+  const workspace = await requireWorkspaceContext();
+
+  // Filter by workspaceId to prevent cross-workspace access
+  const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany({
+    where: { workspaceId: workspace.workspaceId },
+  });
   return records.map((r: any) => ({
     id: r.id,
+    workspaceId: r.workspaceId,
     problem: r.problem,
     action: r.action,
     impactExpected: Number(r.impactExpected),
@@ -163,12 +181,17 @@ export async function getQueuedItems(
   statusFilter?: string,
   limit: number = 20
 ): Promise<OperatorItem[]> {
+  // Workspace isolation: fail closed if no workspace context
+  const workspace = await requireWorkspaceContext();
+
   const statuses = statusFilter
     ? [statusFilter]
     : ["pending", "in_progress"];
 
+  // Filter by workspaceId to prevent cross-workspace access
   const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany({
     where: {
+      workspaceId: workspace.workspaceId,
       status: {
         in: statuses,
       },
@@ -182,6 +205,7 @@ export async function getQueuedItems(
 
   return records.map((r: any) => ({
     id: r.id,
+    workspaceId: r.workspaceId,
     problem: r.problem,
     action: r.action,
     impactExpected: Number(r.impactExpected),

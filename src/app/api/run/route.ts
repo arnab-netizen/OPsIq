@@ -5,6 +5,7 @@ import { generateOperatorItems } from "@/services/operator/generate";
 import { addItems } from "@/services/operator/store";
 import { resolveServerRole, getSession } from "@/services/auth/server-role";
 import { canEdit } from "@/services/auth/access";
+import { requireWorkspaceContext } from "@/services/workspace/context";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { createDecisionResult } from "@/services/explanation/generate";
 import { createIntegrityPayload } from "@/services/integrity/hash";
@@ -20,6 +21,7 @@ function addIntegrity(
 
   return {
     ...result,
+    workspaceId: result.workspaceId,
     ...integrity,
     ...signature,
     inputsSnapshot,
@@ -28,8 +30,12 @@ function addIntegrity(
 
 export async function POST(request: NextRequest) {
   let decisionResult: DecisionResult | null = null;
+  let workspace;
 
   try {
+    // Get workspace context early (fail closed if missing)
+    workspace = await requireWorkspaceContext();
+
     // Enforce server-side auth
     const role = await resolveServerRole();
     if (!role) {
@@ -59,19 +65,20 @@ export async function POST(request: NextRequest) {
 
     // Validate input types
     if (typeof revenue !== "number" || typeof cost !== "number") {
+      const baseResult = createDecisionResult(
+        {
+          baselineRevenue: 0,
+          baselineCost: 0,
+          deltaRevenue: 0,
+          deltaCost: 0,
+          confidence: 0,
+          expectedImpact: 0,
+        },
+        false,
+        "INVALID_INPUT"
+      );
       decisionResult = addIntegrity(
-        createDecisionResult(
-          {
-            baselineRevenue: 0,
-            baselineCost: 0,
-            deltaRevenue: 0,
-            deltaCost: 0,
-            confidence: 0,
-            expectedImpact: 0,
-          },
-          false,
-          "INVALID_INPUT"
-        ),
+        { ...baseResult, workspaceId: workspace.workspaceId },
         inputsSnapshot
       );
       return NextResponse.json(decisionResult, { status: 400 });
@@ -99,51 +106,54 @@ export async function POST(request: NextRequest) {
         systemError instanceof Error ? systemError.message : "Unknown error";
 
       if (errorMsg === "LOW_CONFIDENCE_BLOCKED") {
+        const lowConfResult = createDecisionResult(
+          {
+            baselineRevenue: revenue,
+            baselineCost: cost,
+            deltaRevenue: revenue * 0.1,
+            deltaCost: cost * 0.05,
+            confidence: 0.75,
+            expectedImpact: revenue * 0.1 - cost * 0.05,
+          },
+          false,
+          "LOW_CONFIDENCE"
+        );
         decisionResult = addIntegrity(
-          createDecisionResult(
-            {
-              baselineRevenue: revenue,
-              baselineCost: cost,
-              deltaRevenue: revenue * 0.1,
-              deltaCost: cost * 0.05,
-              confidence: 0.75,
-              expectedImpact: revenue * 0.1 - cost * 0.05,
-            },
-            false,
-            "LOW_CONFIDENCE"
-          ),
+          { ...lowConfResult, workspaceId: workspace.workspaceId },
           inputsSnapshot
         );
       } else if (errorMsg === "NON_POSITIVE_IMPACT_BLOCKED") {
+        const nonPosResult = createDecisionResult(
+          {
+            baselineRevenue: revenue,
+            baselineCost: cost,
+            deltaRevenue: revenue * 0.1,
+            deltaCost: cost * 0.05,
+            confidence: 0.75,
+            expectedImpact: revenue * 0.1 - cost * 0.05,
+          },
+          false,
+          "NON_POSITIVE_IMPACT"
+        );
         decisionResult = addIntegrity(
-          createDecisionResult(
-            {
-              baselineRevenue: revenue,
-              baselineCost: cost,
-              deltaRevenue: revenue * 0.1,
-              deltaCost: cost * 0.05,
-              confidence: 0.75,
-              expectedImpact: revenue * 0.1 - cost * 0.05,
-            },
-            false,
-            "NON_POSITIVE_IMPACT"
-          ),
+          { ...nonPosResult, workspaceId: workspace.workspaceId },
           inputsSnapshot
         );
       } else {
+        const unknownErrResult = createDecisionResult(
+          {
+            baselineRevenue: revenue,
+            baselineCost: cost,
+            deltaRevenue: revenue * 0.1,
+            deltaCost: cost * 0.05,
+            confidence: 0.75,
+            expectedImpact: revenue * 0.1 - cost * 0.05,
+          },
+          false,
+          "INVALID_INPUT"
+        );
         decisionResult = addIntegrity(
-          createDecisionResult(
-            {
-              baselineRevenue: revenue,
-              baselineCost: cost,
-              deltaRevenue: revenue * 0.1,
-              deltaCost: cost * 0.05,
-              confidence: 0.75,
-              expectedImpact: revenue * 0.1 - cost * 0.05,
-            },
-            false,
-            "INVALID_INPUT"
-          ),
+          { ...unknownErrResult, workspaceId: workspace.workspaceId },
           inputsSnapshot
         );
       }
@@ -151,23 +161,24 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Create approved decision result with explanation
+    const approvedResult = createDecisionResult(
+      {
+        baselineRevenue: revenue,
+        baselineCost: cost,
+        deltaRevenue: revenue * 0.1,
+        deltaCost: cost * 0.05,
+        confidence: 0.75,
+        expectedImpact: result.impact.impactExpected,
+      },
+      true
+    );
     decisionResult = addIntegrity(
-      createDecisionResult(
-        {
-          baselineRevenue: revenue,
-          baselineCost: cost,
-          deltaRevenue: revenue * 0.1,
-          deltaCost: cost * 0.05,
-          confidence: 0.75,
-          expectedImpact: result.impact.impactExpected,
-        },
-        true
-      ),
+      { ...approvedResult, workspaceId: workspace.workspaceId },
       inputsSnapshot
     );
 
     // 6. Generate operator items and store them
-    const operatorItems = generateOperatorItems(result.decisions, result.impact);
+    const operatorItems = generateOperatorItems(result.decisions, result.impact, workspace.workspaceId);
     await addItems(operatorItems);
 
     // Get actor ID for audit
@@ -195,19 +206,23 @@ export async function POST(request: NextRequest) {
     if (decisionResult) {
       return NextResponse.json(decisionResult, { status: 400 });
     }
+    const finalErrResult = createDecisionResult(
+      {
+        baselineRevenue: 0,
+        baselineCost: 0,
+        deltaRevenue: 0,
+        deltaCost: 0,
+        confidence: 0,
+        expectedImpact: 0,
+      },
+      false,
+      "INVALID_INPUT"
+    );
     const errorResult = addIntegrity(
-      createDecisionResult(
-        {
-          baselineRevenue: 0,
-          baselineCost: 0,
-          deltaRevenue: 0,
-          deltaCost: 0,
-          confidence: 0,
-          expectedImpact: 0,
-        },
-        false,
-        "INVALID_INPUT"
-      ),
+      {
+        ...finalErrResult,
+        workspaceId: workspace?.workspaceId || "unknown",
+      },
       {}
     );
     return NextResponse.json(errorResult, { status: 400 });

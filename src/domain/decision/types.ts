@@ -45,6 +45,7 @@ export interface DecisionExplanation {
 
 export interface DecisionResult {
   decision: "APPROVED" | "BLOCKED";
+  workspaceId?: string;
   expectedImpact: number;
   confidence: number;
   explanation: DecisionExplanation;
