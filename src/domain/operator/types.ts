@@ -45,6 +45,8 @@ export type OperatorItem = {
   firstCompletedAt?: string | null;
   firstPositiveOutcomeAt?: string | null;
 
+  firstWinAchieved?: boolean;
+
   explanation?: DecisionExplanation;
 
   decisionHash?: string;

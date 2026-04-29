@@ -1,6 +1,7 @@
 import { OperatorItem } from "@/domain/operator/types";
 import { CalibrationRecord } from "@/domain/calibration/types";
 import { calculateDeviation } from "@/services/calibration/engine";
+import { isFirstWinConditionMet } from "@/services/firstwin/detector";
 import { requireWorkspaceContext, validateWorkspaceAccess } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
@@ -179,6 +180,22 @@ export async function updateItem(
     }
   }
 
+  // Auto-detect first win achievement
+  if ((updates.actualOutcomeValue !== undefined || updates.outcomeDelta !== undefined) && !updateData.firstWinAchieved) {
+    const item = await db.operatorItem.findUnique({ where: { id } });
+    if (item && !item.firstWinAchieved) {
+      const isFirstWin = isFirstWinConditionMet({
+        expectedImpact: updates.actualOutcomeValue ?? updates.outcomeDelta ?? item.actualOutcomeValue ?? 0,
+        actualOutcomeValue: updates.actualOutcomeValue ?? item.actualOutcomeValue,
+        outcomeDelta: updates.outcomeDelta ?? item.outcomeDelta,
+        impactExpected: item.impactExpected,
+      });
+      if (isFirstWin) {
+        updateData.firstWinAchieved = true;
+      }
+    }
+  }
+
   await db.operatorItem.update({
     where: { id },
     data: updateData,
@@ -275,6 +292,7 @@ export async function getQueuedItems(
     executionStatus: r.executionStatus || undefined,
     firstCompletedAt: r.firstCompletedAt ? r.firstCompletedAt.toISOString() : undefined,
     firstPositiveOutcomeAt: r.firstPositiveOutcomeAt ? r.firstPositiveOutcomeAt.toISOString() : undefined,
+    firstWinAchieved: r.firstWinAchieved || undefined,
     explanation: r.explanation ? JSON.parse(String(r.explanation)) : undefined,
     inputsSnapshot: r.inputsSnapshot
       ? JSON.parse(String(r.inputsSnapshot))

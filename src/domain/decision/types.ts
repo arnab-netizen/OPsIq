@@ -59,6 +59,7 @@ export interface DecisionResult {
   projectedWithoutAction?: number;
   firstCompletedAt?: string | null;
   firstPositiveOutcomeAt?: string | null;
+  firstWinAchieved?: boolean;
   reason?: "LOW_CONFIDENCE" | "NON_POSITIVE_IMPACT" | "INVALID_INPUT";
   decisionHash?: string;
   signedHash?: string;
