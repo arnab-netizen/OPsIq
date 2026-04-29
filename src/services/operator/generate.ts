@@ -26,6 +26,8 @@ export function generateOperatorItems(
 
       dueAt: null,
 
+      decisionType: "general",
+
       blockingDependencies: [],
 
       expectedOutcome: null,

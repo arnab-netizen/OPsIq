@@ -21,6 +21,7 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
       priorityScore: item.priorityScore,
       status: item.status,
       dueAt: item.dueAt ? new Date(item.dueAt) : null,
+      decisionType: item.decisionType || "general",
       expectedOutcome: item.expectedOutcome,
       actualOutcome: item.actualOutcome,
       blockingDependencies: item.blockingDependencies && item.blockingDependencies.length > 0 ? item.blockingDependencies : null,
@@ -69,6 +70,7 @@ export async function getItems(): Promise<OperatorItem[]> {
     priorityScore: Number(r.priorityScore),
     status: r.status as "pending" | "in_progress" | "done",
     dueAt: r.dueAt ? r.dueAt.toISOString() : null,
+    decisionType: r.decisionType || "general",
     expectedOutcome: r.expectedOutcome,
     actualOutcome: r.actualOutcome,
     actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,
@@ -105,6 +107,7 @@ export async function updateItem(
   if (updates.priorityScore !== undefined) updateData.priorityScore = updates.priorityScore;
   if (updates.status !== undefined) updateData.status = updates.status;
   if (updates.dueAt !== undefined) updateData.dueAt = updates.dueAt ? new Date(updates.dueAt) : null;
+  if (updates.decisionType !== undefined) updateData.decisionType = updates.decisionType;
   if (updates.expectedOutcome !== undefined) updateData.expectedOutcome = updates.expectedOutcome;
   if (updates.actualOutcome !== undefined) updateData.actualOutcome = updates.actualOutcome;
   if (updates.actualOutcomeValue !== undefined) updateData.actualOutcomeValue = updates.actualOutcomeValue;
@@ -188,6 +191,7 @@ export async function getQueuedItems(
     priorityScore: Number(r.priorityScore),
     status: r.status as "pending" | "in_progress" | "done" | "failed",
     dueAt: r.dueAt ? r.dueAt.toISOString() : null,
+    decisionType: r.decisionType || "general",
     expectedOutcome: r.expectedOutcome,
     actualOutcome: r.actualOutcome,
     actualOutcomeValue: r.actualOutcomeValue ? Number(r.actualOutcomeValue) : undefined,

@@ -17,6 +17,8 @@ export type OperatorItem = {
 
   dueAt: string | null;
 
+  decisionType: string;
+
   blockingDependencies: string[];
 
   expectedOutcome: string | null;
