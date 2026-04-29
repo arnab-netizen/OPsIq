@@ -3,11 +3,12 @@ import { normalizeMoney } from "@/lib/finance/normalize";
 export interface NormalizedDecisionInput {
   revenue: number;
   cost: number;
+  revenueChange: number;
+  costChange: number;
   currency?: string;
   baseCurrency?: string;
   fxRates?: Record<string, number>;
   confidence: number;
-  risk?: number;
 }
 
 export interface NormalizedDecisionMetrics {
@@ -16,7 +17,6 @@ export interface NormalizedDecisionMetrics {
   revenueChange: number;
   costChange: number;
   confidence: number;
-  risk?: number;
   originalCurrency: string;
   baseCurrency: string;
 }
@@ -37,6 +37,19 @@ export function normalizeDecisionInput(
   input: NormalizedDecisionInput,
   fxRates: Record<string, number> = {}
 ): NormalizedDecisionMetrics {
+  // FAIL-CLOSED: Require all decision inputs explicitly
+  if (!Number.isFinite(input.confidence)) {
+    throw new Error("Missing required field: confidence must be a number");
+  }
+
+  if (!Number.isFinite(input.revenueChange)) {
+    throw new Error("Missing required field: revenueChange must be a number");
+  }
+
+  if (!Number.isFinite(input.costChange)) {
+    throw new Error("Missing required field: costChange must be a number");
+  }
+
   const currency = input.currency || "INR";
   const baseCurrency = input.baseCurrency || "INR";
 
@@ -45,7 +58,14 @@ export function normalizeDecisionInput(
     throw new Error("Base currency must be INR");
   }
 
-  // Normalize revenue
+  // FAIL-CLOSED: Require FX rates for non-base currencies
+  if (currency !== "INR" && (!fxRates || !fxRates[currency])) {
+    throw new Error(
+      `Missing FX rate for currency ${currency}. Provide fxRates: { "${currency}": rate }`
+    );
+  }
+
+  // Normalize revenue (baseline)
   const normalizedRevenue = normalizeMoney({
     amount: input.revenue,
     currency,
@@ -53,7 +73,7 @@ export function normalizeDecisionInput(
     fxRates,
   });
 
-  // Normalize cost
+  // Normalize cost (baseline)
   const normalizedCost = normalizeMoney({
     amount: input.cost,
     currency,
@@ -61,18 +81,28 @@ export function normalizeDecisionInput(
     fxRates,
   });
 
-  // Calculate deltas (assuming 10% revenue change, 5% cost change)
-  // These are also normalized to base currency
-  const revenueChange = normalizedRevenue.baseAmount * 0.1;
-  const costChange = normalizedCost.baseAmount * 0.05;
+  // Normalize revenue change (user-provided, must not be defaulted)
+  const normalizedRevenueChange = normalizeMoney({
+    amount: input.revenueChange,
+    currency,
+    baseCurrency,
+    fxRates,
+  });
+
+  // Normalize cost change (user-provided, must not be defaulted)
+  const normalizedCostChange = normalizeMoney({
+    amount: input.costChange,
+    currency,
+    baseCurrency,
+    fxRates,
+  });
 
   return {
     baselineRevenue: normalizedRevenue.baseAmount,
     baselineCost: normalizedCost.baseAmount,
-    revenueChange,
-    costChange,
+    revenueChange: normalizedRevenueChange.baseAmount,
+    costChange: normalizedCostChange.baseAmount,
     confidence: input.confidence,
-    risk: input.risk,
     originalCurrency: currency,
     baseCurrency,
   };

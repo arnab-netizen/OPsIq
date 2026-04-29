@@ -23,6 +23,14 @@ export interface RegistryValidationError {
   error: string;
 }
 
+export interface DependencyValidationError {
+  status: "blocked";
+  reason: "DEPENDENCY_MISSING";
+  variable: string;
+  missingDependencies: string[];
+  details: string;
+}
+
 // Governed variable registry - immutable, deterministic
 const VARIABLE_REGISTRY: Record<string, VariableDefinition> = {
   baselineRevenue: {
@@ -86,6 +94,55 @@ const VARIABLE_REGISTRY: Record<string, VariableDefinition> = {
     dependencies: [],
   },
 };
+
+/**
+ * Validate variable dependencies - fail-closed enforcement.
+ *
+ * For each variable in input:
+ * - If it has declared dependencies, ALL must exist in input
+ * - Missing dependencies cause immediate block with detailed error
+ * - Sorted dependency list for deterministic errors
+ */
+export function validateDependencies(
+  input: Record<string, unknown>
+): { valid: boolean; error?: DependencyValidationError } {
+  if (!input || typeof input !== "object") {
+    return { valid: true }; // Object validation happens elsewhere
+  }
+
+  // Check each variable in input for its dependencies
+  for (const [key, _value] of Object.entries(input)) {
+    const varDef = VARIABLE_REGISTRY[key];
+
+    // Skip unknown variables (handled by registry validation)
+    if (!varDef) {
+      continue;
+    }
+
+    // Check if this variable has dependencies
+    if (varDef.dependencies && varDef.dependencies.length > 0) {
+      const missingDeps = varDef.dependencies.filter((dep) => !(dep in input));
+
+      if (missingDeps.length > 0) {
+        // Fail-closed: block immediately with explicit error
+        return {
+          valid: false,
+          error: {
+            status: "blocked",
+            reason: "DEPENDENCY_MISSING",
+            variable: key,
+            missingDependencies: missingDeps.sort(),
+            details: `Variable '${key}' requires ${missingDeps.length} missing dependency(ies): ${missingDeps
+              .sort()
+              .join(", ")}`,
+          },
+        };
+      }
+    }
+  }
+
+  return { valid: true };
+}
 
 /**
  * Get the complete variable registry.

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runSystem } from "@/services/system/run";
 import { createBaseline } from "@/services/onboarding/basic";
 import { generateOperatorItems } from "@/services/operator/generate";
-import { addItems } from "@/services/operator/store";
+import { addItems, addBlockedDecision } from "@/services/operator/store";
 import { resolveServerRole, getSession } from "@/services/auth/server-role";
 import { canEdit } from "@/services/auth/access";
 import { requireWorkspaceContext } from "@/services/workspace/context";
@@ -18,6 +18,8 @@ import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import { normalizeDecisionInput, validateNormalizedMetrics } from "@/lib/decision/run";
 import { evaluateDecisionGate, gateResultToPayload } from "@/services/control/decision-gate";
 import { evaluateGuardrails, formatGuardrailViolations } from "@/services/control/guardrails";
+import { validateDependencies } from "@/services/control/variable-registry";
+import { enforceControlLayer } from "@/services/control/enforcement";
 
 function addIntegrity(
   result: DecisionResult,
@@ -41,6 +43,9 @@ export async function POST(request: NextRequest) {
   let userId: string | null = null;
   let logger: ReturnType<typeof createEventLogger> | null = null;
 
+  // Track execution of control layer validations for bypass prevention
+  const executedValidations: string[] = ["variable_registry"];
+
   try {
     // Get workspace context early (fail closed if missing)
     workspace = await requireWorkspaceContext();
@@ -55,6 +60,24 @@ export async function POST(request: NextRequest) {
     // Enforce server-side auth
     const role = await resolveServerRole();
     if (!role) {
+      // Log AUTH_FAILED audit event
+      await logAuditEvent({
+        eventName: "AUTH_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: null,
+        role: null,
+        before: null,
+        after: null,
+        metadata: {
+          reason: "Session not found or invalid",
+        },
+        workspaceId: workspace?.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 403 }
@@ -62,6 +85,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (!canEdit(role)) {
+      // Log PERMISSION_DENIED audit event
+      await logAuditEvent({
+        eventName: "PERMISSION_DENIED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: null,
+        metadata: {
+          reason: "User role lacks edit permission",
+          role: role,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -70,17 +112,20 @@ export async function POST(request: NextRequest) {
 
     // 1. Parse body
     const body = await request.json();
-    const { revenue, cost, currency } = body;
+    const { revenue, cost, currency, confidence, revenueChange, costChange, fxRates } = body;
 
     // Capture inputs snapshot for replay
     const inputsSnapshot = {
       revenue,
       cost,
       currency: currency || "INR",
+      confidence,
+      revenueChange,
+      costChange,
       timestamp: new Date().toISOString(),
     };
 
-    // Validate input types
+    // 1a. FAIL-CLOSED: Validate all required financial inputs
     if (typeof revenue !== "number" || typeof cost !== "number") {
       const baseResult = createDecisionResult(
         {
@@ -103,17 +148,193 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
-      return NextResponse.json(decisionResult, { status: 400 });
+
+      // Log INPUT_VALIDATION_FAILED audit event
+      await logAuditEvent({
+        eventName: "INPUT_VALIDATION_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          reason: "Missing or invalid financial inputs",
+          expectedFields: ["revenue", "cost"],
+          providedFields: {
+            revenue: typeof revenue,
+            cost: typeof cost,
+          },
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
+      return NextResponse.json(
+        { error: "Missing or invalid required fields: revenue and cost must be numbers" },
+        { status: 400 }
+      );
+    }
+
+    // 1b. FAIL-CLOSED: Require confidence to be explicitly provided
+    if (typeof confidence !== "number") {
+      const baseResult = createDecisionResult(
+        {
+          baselineRevenue: 0,
+          baselineCost: 0,
+          deltaRevenue: 0,
+          deltaCost: 0,
+          confidence: 0,
+          expectedImpact: 0,
+        },
+        false,
+        "INVALID_INPUT"
+      );
+      decisionResult = addIntegrity(
+        {
+          ...baseResult,
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
+        inputsSnapshot
+      );
+
+      // Log INPUT_VALIDATION_FAILED audit event
+      await logAuditEvent({
+        eventName: "INPUT_VALIDATION_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          reason: "Missing or invalid confidence value",
+          expectedFields: ["confidence"],
+          providedType: typeof confidence,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
+      return NextResponse.json(
+        { error: "Missing required field: confidence must be a number between 0 and 1" },
+        { status: 400 }
+      );
+    }
+
+    // 1c. FAIL-CLOSED: Require revenue/cost changes to be explicitly provided
+    if (typeof revenueChange !== "number" || typeof costChange !== "number") {
+      const baseResult = createDecisionResult(
+        {
+          baselineRevenue: 0,
+          baselineCost: 0,
+          deltaRevenue: 0,
+          deltaCost: 0,
+          confidence: 0,
+          expectedImpact: 0,
+        },
+        false,
+        "INVALID_INPUT"
+      );
+      decisionResult = addIntegrity(
+        {
+          ...baseResult,
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
+        inputsSnapshot
+      );
+
+      // Log INPUT_VALIDATION_FAILED audit event
+      await logAuditEvent({
+        eventName: "INPUT_VALIDATION_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          reason: "Missing or invalid revenue/cost change values",
+          expectedFields: ["revenueChange", "costChange"],
+          providedFields: {
+            revenueChange: typeof revenueChange,
+            costChange: typeof costChange,
+          },
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
+      return NextResponse.json(
+        { error: "Missing required fields: revenueChange and costChange must be numbers" },
+        { status: 400 }
+      );
     }
 
     // 2. Normalize financial inputs before any calculations
-    // Default FX rates for common currencies (can be extended or loaded from business profile)
-    const defaultFxRates: Record<string, number> = {
-      INR: 1.0,
-      USD: 83.0, // 1 USD = 83 INR (approximate)
-      EUR: 90.0, // 1 EUR = 90 INR (approximate)
-      GBP: 105.0, // 1 GBP = 105 INR (approximate)
-    };
+    const inputCurrency = currency || "INR";
+
+    // 2a. FAIL-CLOSED: Require FX rates for non-base currencies
+    let fxRatesInput = fxRates || {};
+    if (inputCurrency !== "INR" && !fxRatesInput[inputCurrency]) {
+      const baseResult = createDecisionResult(
+        {
+          baselineRevenue: 0,
+          baselineCost: 0,
+          deltaRevenue: 0,
+          deltaCost: 0,
+          confidence: 0,
+          expectedImpact: 0,
+        },
+        false,
+        "INVALID_INPUT"
+      );
+      decisionResult = addIntegrity(
+        {
+          ...baseResult,
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
+        inputsSnapshot
+      );
+
+      // Log INPUT_VALIDATION_FAILED audit event
+      await logAuditEvent({
+        eventName: "INPUT_VALIDATION_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          reason: "Missing FX rate for non-base currency",
+          currency: inputCurrency,
+          baseCurrency: "INR",
+          providedFxRates: Object.keys(fxRatesInput),
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
+      return NextResponse.json(
+        { error: `Missing FX rate for currency ${inputCurrency}. Provide fxRates: { "${inputCurrency}": rate }` },
+        { status: 400 }
+      );
+    }
 
     let normalizedMetrics;
     try {
@@ -121,12 +342,13 @@ export async function POST(request: NextRequest) {
         {
           revenue,
           cost,
-          currency: currency || "INR",
+          revenueChange,
+          costChange,
+          currency: inputCurrency,
           baseCurrency: "INR",
-          confidence: 0.75,
-          risk: 5,
+          confidence,
         },
-        defaultFxRates
+        fxRatesInput
       );
 
       // Validate normalized metrics
@@ -158,7 +380,31 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
-      return NextResponse.json(decisionResult, { status: 400 });
+
+      // Log INPUT_VALIDATION_FAILED audit event
+      await logAuditEvent({
+        eventName: "INPUT_VALIDATION_FAILED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          reason: "Input normalization/validation failed",
+          errorMessage: errorMsg,
+          inputCurrency,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
+      return NextResponse.json(
+        { error: errorMsg },
+        { status: 400 }
+      );
     }
 
     // 3. Create baseline using normalized values (all in INR/base currency)
@@ -174,8 +420,101 @@ export async function POST(request: NextRequest) {
       revenueChange: normalizedMetrics.revenueChange,
       costChange: normalizedMetrics.costChange,
       confidence: normalizedMetrics.confidence,
-      risk: normalizedMetrics.risk || 5,
     };
+
+    // 4a. CONTROL LAYER: Validate variable dependencies (fail-closed)
+    const depValidation = validateDependencies(inputMetrics);
+    if (!depValidation.valid && depValidation.error) {
+      const expectedImpact = normalizedMetrics.revenueChange - normalizedMetrics.costChange;
+
+      // PERSISTENCE: Record blocked decision in database
+      try {
+        await addBlockedDecision({
+          workspaceId: workspace.workspaceId,
+          createdBy: userId || "system",
+          ownerUserId: userId || "system",
+          problem: "Decision blocked by dependency validation",
+          action: "None - decision rejected",
+          blockStage: "dependency_validation",
+          blockReason: depValidation.error.details,
+          expectedImpact,
+          confidence: normalizedMetrics.confidence,
+          inputsSnapshot: inputsSnapshot as Record<string, unknown>,
+          controlLayerViolations: {
+            variable: depValidation.error.variable,
+            missingDependencies: depValidation.error.missingDependencies,
+          },
+        });
+      } catch (persistError) {
+        if (logger) {
+          logger.error(`Failed to persist blocked decision: ${persistError}`);
+        }
+      }
+
+      const depErrResult = createDecisionResult(
+        {
+          baselineRevenue: normalizedMetrics.baselineRevenue,
+          baselineCost: normalizedMetrics.baselineCost,
+          deltaRevenue: normalizedMetrics.revenueChange,
+          deltaCost: normalizedMetrics.costChange,
+          confidence: normalizedMetrics.confidence,
+          expectedImpact,
+        },
+        false,
+        "INVALID_INPUT"
+      );
+      decisionResult = addIntegrity(
+        {
+          ...depErrResult,
+          workspaceId: workspace.workspaceId,
+          ownerUserId: userId || undefined,
+          createdBy: userId || undefined,
+        },
+        inputsSnapshot
+      );
+
+      // Log DEPENDENCY_VALIDATION_BLOCKED audit event (fail-closed)
+      await logAuditEvent({
+        eventName: "DEPENDENCY_VALIDATION_BLOCKED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          blockStage: "dependency_validation",
+          blockReason: depValidation.error.details,
+          variable: depValidation.error.variable,
+          missingDependencies: depValidation.error.missingDependencies,
+          expectedImpact,
+          confidence: normalizedMetrics.confidence,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
+      if (logger) {
+        logger.success({
+          dependencyStatus: "blocked",
+          variable: depValidation.error.variable,
+          missingDependencies: depValidation.error.missingDependencies,
+        });
+      }
+
+      return NextResponse.json(
+        {
+          error: depValidation.error.details,
+          decision: decisionResult,
+        },
+        { status: 422 }
+      );
+    }
+
+    // Dependency validation passed
+    executedValidations.push("dependency_validation");
 
     // 5. CONTROL LAYER: Decision Gate - Block unsafe decisions before execution
     const gateResult = evaluateDecisionGate({
@@ -184,6 +523,34 @@ export async function POST(request: NextRequest) {
     });
 
     if (!gateResult.allowed) {
+      const expectedImpact = normalizedMetrics.revenueChange - normalizedMetrics.costChange;
+
+      // PERSISTENCE: Record blocked decision in database
+      try {
+        await addBlockedDecision({
+          workspaceId: workspace.workspaceId,
+          createdBy: userId || "system",
+          ownerUserId: userId || "system",
+          problem: "Decision blocked by decision gate",
+          action: "None - decision rejected",
+          blockStage: "decision_gate",
+          blockReason: gateResult.reason || "Decision gate validation failed",
+          expectedImpact,
+          confidence: normalizedMetrics.confidence,
+          inputsSnapshot: inputsSnapshot as Record<string, unknown>,
+          gateResult: {
+            reason: gateResult.reason,
+            missingVariables: gateResult.missingVariables,
+            lowConfidenceVariables: gateResult.lowConfidenceVariables,
+            staleVariables: gateResult.staleVariables,
+          },
+        });
+      } catch (persistError) {
+        if (logger) {
+          logger.error(`Failed to persist blocked decision: ${persistError}`);
+        }
+      }
+
       // Return 422 Unprocessable Entity - decision blocked by gate
       const gateBlockResult = createDecisionResult(
         {
@@ -192,7 +559,7 @@ export async function POST(request: NextRequest) {
           deltaRevenue: normalizedMetrics.revenueChange,
           deltaCost: normalizedMetrics.costChange,
           confidence: normalizedMetrics.confidence,
-          expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
+          expectedImpact,
         },
         false,
         "INVALID_INPUT"
@@ -207,6 +574,30 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
+
+      // Log DECISION_GATE_BLOCKED audit event (fail-closed)
+      await logAuditEvent({
+        eventName: "DECISION_GATE_BLOCKED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          blockStage: "decision_gate",
+          blockReason: gateResult.reason || "Decision gate validation failed",
+          missingVariables: gateResult.missingVariables,
+          lowConfidenceVariables: gateResult.lowConfidenceVariables,
+          staleVariables: gateResult.staleVariables,
+          expectedImpact,
+          confidence: normalizedMetrics.confidence,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
 
       // Log gate rejection
       if (logger) {
@@ -228,10 +619,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Decision gate passed
+    executedValidations.push("decision_gate");
+
     // 6. Call runSystem with error handling for decision validation
+    // runSystem enforces scenario-first execution (fail-closed if scenarios fail)
+    // It includes data_sufficiency validation internally
     let result;
     try {
       result = runSystem(inputMetrics);
+      // System executed successfully - data sufficiency was validated
+      executedValidations.push("data_sufficiency");
     } catch (systemError) {
       const errorMsg =
         systemError instanceof Error ? systemError.message : "Unknown error";
@@ -239,12 +637,12 @@ export async function POST(request: NextRequest) {
       if (errorMsg === "LOW_CONFIDENCE_BLOCKED") {
         const lowConfResult = createDecisionResult(
           {
-            baselineRevenue: revenue,
-            baselineCost: cost,
-            deltaRevenue: revenue * 0.1,
-            deltaCost: cost * 0.05,
-            confidence: 0.75,
-            expectedImpact: revenue * 0.1 - cost * 0.05,
+            baselineRevenue: normalizedMetrics.baselineRevenue,
+            baselineCost: normalizedMetrics.baselineCost,
+            deltaRevenue: normalizedMetrics.revenueChange,
+            deltaCost: normalizedMetrics.costChange,
+            confidence: normalizedMetrics.confidence,
+            expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
           },
           false,
           "LOW_CONFIDENCE"
@@ -261,12 +659,12 @@ export async function POST(request: NextRequest) {
       } else if (errorMsg === "NON_POSITIVE_IMPACT_BLOCKED") {
         const nonPosResult = createDecisionResult(
           {
-            baselineRevenue: revenue,
-            baselineCost: cost,
-            deltaRevenue: revenue * 0.1,
-            deltaCost: cost * 0.05,
-            confidence: 0.75,
-            expectedImpact: revenue * 0.1 - cost * 0.05,
+            baselineRevenue: normalizedMetrics.baselineRevenue,
+            baselineCost: normalizedMetrics.baselineCost,
+            deltaRevenue: normalizedMetrics.revenueChange,
+            deltaCost: normalizedMetrics.costChange,
+            confidence: normalizedMetrics.confidence,
+            expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
           },
           false,
           "NON_POSITIVE_IMPACT"
@@ -280,15 +678,37 @@ export async function POST(request: NextRequest) {
           },
           inputsSnapshot
         );
+      } else if (errorMsg.startsWith("SCENARIO_GENERATION_FAILED")) {
+        const scenarioErrResult = createDecisionResult(
+          {
+            baselineRevenue: normalizedMetrics.baselineRevenue,
+            baselineCost: normalizedMetrics.baselineCost,
+            deltaRevenue: normalizedMetrics.revenueChange,
+            deltaCost: normalizedMetrics.costChange,
+            confidence: normalizedMetrics.confidence,
+            expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
+          },
+          false,
+          "INVALID_INPUT"
+        );
+        decisionResult = addIntegrity(
+          {
+            ...scenarioErrResult,
+            workspaceId: workspace.workspaceId,
+            ownerUserId: userId || undefined,
+            createdBy: userId || undefined,
+          },
+          inputsSnapshot
+        );
       } else {
         const unknownErrResult = createDecisionResult(
           {
-            baselineRevenue: revenue,
-            baselineCost: cost,
-            deltaRevenue: revenue * 0.1,
-            deltaCost: cost * 0.05,
-            confidence: 0.75,
-            expectedImpact: revenue * 0.1 - cost * 0.05,
+            baselineRevenue: normalizedMetrics.baselineRevenue,
+            baselineCost: normalizedMetrics.baselineCost,
+            deltaRevenue: normalizedMetrics.revenueChange,
+            deltaCost: normalizedMetrics.costChange,
+            confidence: normalizedMetrics.confidence,
+            expectedImpact: normalizedMetrics.revenueChange - normalizedMetrics.costChange,
           },
           false,
           "INVALID_INPUT"
@@ -306,32 +726,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(decisionResult, { status: 400 });
     }
 
-    // 7. Classify problem type based on financial impact
+    // 7. Classify problem type based on normalized financial impact
     const problemType = classifyProblem({
-      baselineRevenue: revenue,
-      baselineCost: cost,
-      revenueChange: revenue * 0.1,
-      costChange: cost * 0.05,
+      baselineRevenue: normalizedMetrics.baselineRevenue,
+      baselineCost: normalizedMetrics.baselineCost,
+      revenueChange: normalizedMetrics.revenueChange,
+      costChange: normalizedMetrics.costChange,
       expectedImpact: result.impact.impactExpected,
     });
 
-    // 8. Calculate baseline impact metrics
+    // 8. Calculate baseline impact metrics using normalized values
     const baselineMetrics = calculateBaselineMetrics({
-      baselineRevenue: revenue,
-      baselineCost: cost,
-      revenueChange: revenue * 0.1,
-      costChange: cost * 0.05,
+      baselineRevenue: normalizedMetrics.baselineRevenue,
+      baselineCost: normalizedMetrics.baselineCost,
+      revenueChange: normalizedMetrics.revenueChange,
+      costChange: normalizedMetrics.costChange,
       expectedImpact: result.impact.impactExpected,
     });
 
-    // 9. Create approved decision result with explanation
+    // 9. Create approved decision result with user-provided values (not defaults)
     const approvedResult = createDecisionResult(
       {
-        baselineRevenue: revenue,
-        baselineCost: cost,
-        deltaRevenue: revenue * 0.1,
-        deltaCost: cost * 0.05,
-        confidence: 0.75,
+        baselineRevenue: normalizedMetrics.baselineRevenue,
+        baselineCost: normalizedMetrics.baselineCost,
+        deltaRevenue: normalizedMetrics.revenueChange,
+        deltaCost: normalizedMetrics.costChange,
+        confidence: normalizedMetrics.confidence,
         expectedImpact: result.impact.impactExpected,
       },
       true
@@ -352,21 +772,49 @@ export async function POST(request: NextRequest) {
     // 9a. CONTROL LAYER: Evaluate Guardrails - Check visible policy constraints
     const guardrailsResult = evaluateGuardrails({
       expectedImpact: result.impact.impactExpected,
-      confidence: 0.75,
+      confidence: normalizedMetrics.confidence,
       approvalFlag: body.approvalFlag || false,
     });
 
     if (guardrailsResult.blocked) {
+      // PERSISTENCE: Record blocked decision in database
+      try {
+        const blockReason = guardrailsResult.violations
+          .map((v) => v.message)
+          .join("; ");
+
+        await addBlockedDecision({
+          workspaceId: workspace.workspaceId,
+          createdBy: userId || "system",
+          ownerUserId: userId || "system",
+          problem: "Decision blocked by guardrails",
+          action: "None - decision rejected",
+          blockStage: "guardrails",
+          blockReason,
+          expectedImpact: result.impact.impactExpected,
+          confidence: normalizedMetrics.confidence,
+          inputsSnapshot: inputsSnapshot as Record<string, unknown>,
+          guardrailResult: {
+            violations: guardrailsResult.violations,
+            warnings: guardrailsResult.warnings,
+          },
+        });
+      } catch (persistError) {
+        if (logger) {
+          logger.error(`Failed to persist blocked decision: ${persistError}`);
+        }
+      }
+
       // Decision blocked by guardrails - return with explanation
       decisionResult = addIntegrity(
         {
           ...createDecisionResult(
             {
-              baselineRevenue: revenue,
-              baselineCost: cost,
-              deltaRevenue: revenue * 0.1,
-              deltaCost: cost * 0.05,
-              confidence: 0.75,
+              baselineRevenue: normalizedMetrics.baselineRevenue,
+              baselineCost: normalizedMetrics.baselineCost,
+              deltaRevenue: normalizedMetrics.revenueChange,
+              deltaCost: normalizedMetrics.costChange,
+              confidence: normalizedMetrics.confidence,
               expectedImpact: result.impact.impactExpected,
             },
             false,
@@ -378,6 +826,36 @@ export async function POST(request: NextRequest) {
         },
         inputsSnapshot
       );
+
+      // Log GUARDRAILS_BLOCKED audit event (fail-closed)
+      await logAuditEvent({
+        eventName: "GUARDRAILS_BLOCKED",
+        entityType: "Decision",
+        entityId: "system-run",
+        actorId: userId || null,
+        role,
+        before: null,
+        after: decisionResult,
+        metadata: {
+          blockStage: "guardrails",
+          blockReason: guardrailsResult.violations.map((v) => v.message).join("; "),
+          violations: guardrailsResult.violations.map((v) => ({
+            ruleId: v.ruleId,
+            severity: v.severity,
+            message: v.message,
+            threshold: v.threshold,
+            actual: v.actual,
+            overrideAllowed: v.overrideAllowed,
+          })),
+          warnings: guardrailsResult.warnings,
+          expectedImpact: result.impact.impactExpected,
+          confidence: normalizedMetrics.confidence,
+        },
+        workspaceId: workspace.workspaceId,
+      }).catch((auditError) => {
+        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
 
       if (logger) {
         logger.success({
@@ -399,6 +877,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Guardrails validation passed
+    executedValidations.push("guardrails");
 
     if (!userId) {
       return NextResponse.json(
@@ -422,9 +903,9 @@ export async function POST(request: NextRequest) {
     // Get actor ID for audit
     const actorId = userId;
 
-    // 11. Log audit event for run execution
+    // 11. Log audit event for run execution (fail-closed)
     await logAuditEvent({
-      eventName: "RUN",
+      eventName: "RUN_APPROVED",
       entityType: "Decision",
       entityId: "system-run",
       actorId,
@@ -434,7 +915,15 @@ export async function POST(request: NextRequest) {
       metadata: {
         inputRevenue: revenue,
         inputCost: cost,
+        inputCurrency: inputCurrency,
+        expectedImpact: result.impact.impactExpected,
+        confidence: normalizedMetrics.confidence,
+        problemType,
       },
+      workspaceId: workspace.workspaceId,
+    }).catch((auditError) => {
+      if (logger) logger.error(`Audit logging failed: ${auditError}`);
+      throw auditError;
     });
 
     // 12. Emit webhook for decision creation (non-blocking)
@@ -452,7 +941,31 @@ export async function POST(request: NextRequest) {
       // Intentionally swallow errors - webhook failures should not block the request
     });
 
-    // 13. Return decision result with explanation (including guardrails status)
+    // 13. CONTROL LAYER: Verify all validations were executed (bypass prevention)
+    try {
+      enforceControlLayer("/api/run", executedValidations);
+    } catch (enforceError: any) {
+      // Control layer bypass detected - log and return error
+      const bypasMsg = `CONTROL_LAYER_BYPASS: ${enforceError.reason}`;
+      if (logger) {
+        logger.error(bypasMsg, {
+          skippedValidations: enforceError.skippedValidations,
+          requiredValidations: enforceError.requiredValidations,
+        });
+      }
+      return NextResponse.json(
+        {
+          error: "Control layer validation incomplete - decision blocked",
+          enforceError: {
+            reason: enforceError.reason,
+            skippedValidations: enforceError.skippedValidations,
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    // Return decision result with explanation (including guardrails status)
     if (logger) {
       logger.success({
         decision: decisionResult?.decision,
@@ -463,6 +976,11 @@ export async function POST(request: NextRequest) {
 
     const responsePayload: Record<string, unknown> = {
       decision: decisionResult,
+      scenarios: {
+        baseline: result.scenarios.baseline,
+        recommended: result.scenarios.recommended,
+        alternatives: result.scenarios.alternatives,
+      },
     };
 
     // Include guardrails warnings if any

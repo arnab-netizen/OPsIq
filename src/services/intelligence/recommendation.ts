@@ -2,6 +2,12 @@ import { DecisionResult } from "@/domain/decision/types";
 import { OperatorItem } from "@/domain/operator/types";
 import { DetectedPattern } from "./pattern-engine";
 import { getVariableRegistry } from "@/services/control/variable-registry";
+import { ScenarioComparison } from "@/services/control/scenario-comparison";
+import {
+  isDataSufficient,
+  getPatternsByProblemType,
+  VariableWithConfidence,
+} from "@/services/control/recommendation";
 
 export interface ActionRecommendation {
   recommendedAction?: string;
@@ -11,6 +17,19 @@ export interface ActionRecommendation {
   variablesIgnored: string[];
   dataSufficiency: "sufficient" | "insufficient";
   explanation: string;
+  scenarioContext?: {
+    baselineImpact: number;
+    recommendedImpact: number;
+    impactRange: { min: number; max: number; spread: number };
+  };
+  blocked?: boolean;
+  blockReason?: string;
+  blockDetails?: {
+    patternCount?: number;
+    minPatternsRequired?: number;
+    lowConfidenceVariables?: string[];
+    minConfidenceRequired?: number;
+  };
 }
 
 interface ActionFrequency {
@@ -45,7 +64,9 @@ export function generateRecommendation(
   decision: DecisionResult,
   patterns: DetectedPattern[],
   items: OperatorItem[],
-  inputVariables?: Record<string, unknown>
+  inputVariables?: Record<string, unknown>,
+  scenarios?: ScenarioComparison,
+  variableConfidences?: Record<string, number>
 ): ActionRecommendation {
   const registry = getVariableRegistry();
   const allVariableKeys = Object.keys(registry).sort();
@@ -62,6 +83,58 @@ export function generateRecommendation(
     (key) => !usedVariables.includes(key)
   );
 
+  // CONTROL GATE: Validate data sufficiency before recommendation (fail-closed)
+  const variablesForValidation: VariableWithConfidence[] = usedVariables.map(
+    (varName) => ({
+      name: varName,
+      confidence: variableConfidences?.[varName] ?? 0.75,
+    })
+  );
+
+  const sufficiencyResult = isDataSufficient(patterns, variablesForValidation);
+  if (!sufficiencyResult.sufficient) {
+    return {
+      confidenceScore: 0,
+      variablesUsed: usedVariables,
+      variablesIgnored: ignoredVariables,
+      dataSufficiency: "insufficient",
+      explanation: `Recommendation blocked: ${sufficiencyResult.reason}`,
+      blocked: true,
+      blockReason: sufficiencyResult.reason,
+      blockDetails: sufficiencyResult.details,
+      scenarioContext: undefined,
+    };
+  }
+
+  // Build scenario context if available
+  const scenarioContext = scenarios
+    ? {
+        baselineImpact: scenarios.baseline.impact,
+        recommendedImpact: scenarios.recommended.impact,
+        impactRange: {
+          min: Math.min(
+            scenarios.baseline.impact,
+            scenarios.recommended.impact,
+            ...scenarios.alternatives.map((a) => a.impact)
+          ),
+          max: Math.max(
+            scenarios.baseline.impact,
+            scenarios.recommended.impact,
+            ...scenarios.alternatives.map((a) => a.impact)
+          ),
+          spread: Math.max(
+            scenarios.baseline.impact,
+            scenarios.recommended.impact,
+            ...scenarios.alternatives.map((a) => a.impact)
+          ) - Math.min(
+            scenarios.baseline.impact,
+            scenarios.recommended.impact,
+            ...scenarios.alternatives.map((a) => a.impact)
+          ),
+        },
+      }
+    : undefined;
+
   // Rule: if no matching pattern or successRate <= 0.6 -> dataSufficiency="insufficient"
   if (!decision.problemType) {
     return {
@@ -70,6 +143,7 @@ export function generateRecommendation(
       variablesIgnored: ignoredVariables,
       dataSufficiency: "insufficient",
       explanation: "No problem type available for recommendations",
+      scenarioContext,
     };
   }
 
@@ -86,6 +160,7 @@ export function generateRecommendation(
       variablesIgnored: ignoredVariables,
       dataSufficiency: "insufficient",
       explanation: `No matching patterns found for problem type: ${decision.problemType}`,
+      scenarioContext,
     };
   }
 
@@ -103,6 +178,7 @@ export function generateRecommendation(
       dataSufficiency: "insufficient",
       explanation: `Pattern success rate (${bestPattern.successRate}%) does not meet minimum threshold for recommendation`,
       basedOnPatternId: bestPattern.patternId,
+      scenarioContext,
     };
   }
 
@@ -119,6 +195,7 @@ export function generateRecommendation(
       dataSufficiency: "insufficient",
       explanation: "No items found matching the best pattern",
       basedOnPatternId: bestPattern.patternId,
+      scenarioContext,
     };
   }
 
@@ -133,6 +210,7 @@ export function generateRecommendation(
       dataSufficiency: "insufficient",
       explanation: "Unable to determine recommended action from pattern items",
       basedOnPatternId: bestPattern.patternId,
+      scenarioContext,
     };
   }
 
@@ -144,6 +222,7 @@ export function generateRecommendation(
     variablesIgnored: ignoredVariables,
     dataSufficiency: "sufficient",
     explanation: `Recommendation based on ${bestPattern.patternId} pattern with ${bestPattern.successRate}% success rate`,
+    scenarioContext,
   };
 }
 
@@ -151,7 +230,9 @@ export function generateMultipleRecommendations(
   decision: DecisionResult,
   patterns: DetectedPattern[],
   items: OperatorItem[],
-  inputVariables?: Record<string, unknown>
+  inputVariables?: Record<string, unknown>,
+  scenarios?: ScenarioComparison,
+  variableConfidences?: Record<string, number>
 ): ActionRecommendation[] {
   const registry = getVariableRegistry();
   const allVariableKeys = Object.keys(registry).sort();
@@ -168,6 +249,60 @@ export function generateMultipleRecommendations(
     (key) => !usedVariables.includes(key)
   );
 
+  // CONTROL GATE: Validate data sufficiency before recommendation (fail-closed)
+  const variablesForValidation: VariableWithConfidence[] = usedVariables.map(
+    (varName) => ({
+      name: varName,
+      confidence: variableConfidences?.[varName] ?? 0.75,
+    })
+  );
+
+  const sufficiencyResult = isDataSufficient(patterns, variablesForValidation);
+  if (!sufficiencyResult.sufficient) {
+    return [
+      {
+        confidenceScore: 0,
+        variablesUsed: usedVariables,
+        variablesIgnored: ignoredVariables,
+        dataSufficiency: "insufficient",
+        explanation: `Recommendations blocked: ${sufficiencyResult.reason}`,
+        blocked: true,
+        blockReason: sufficiencyResult.reason,
+        blockDetails: sufficiencyResult.details,
+        scenarioContext: undefined,
+      },
+    ];
+  }
+
+  // Build scenario context if available
+  const scenarioContext = scenarios
+    ? {
+        baselineImpact: scenarios.baseline.impact,
+        recommendedImpact: scenarios.recommended.impact,
+        impactRange: {
+          min: Math.min(
+            scenarios.baseline.impact,
+            scenarios.recommended.impact,
+            ...scenarios.alternatives.map((a) => a.impact)
+          ),
+          max: Math.max(
+            scenarios.baseline.impact,
+            scenarios.recommended.impact,
+            ...scenarios.alternatives.map((a) => a.impact)
+          ),
+          spread: Math.max(
+            scenarios.baseline.impact,
+            scenarios.recommended.impact,
+            ...scenarios.alternatives.map((a) => a.impact)
+          ) - Math.min(
+            scenarios.baseline.impact,
+            scenarios.recommended.impact,
+            ...scenarios.alternatives.map((a) => a.impact)
+          ),
+        },
+      }
+    : undefined;
+
   // Must have a problem type to make recommendations
   if (!decision.problemType) {
     return [
@@ -177,6 +312,7 @@ export function generateMultipleRecommendations(
         variablesIgnored: ignoredVariables,
         dataSufficiency: "insufficient",
         explanation: "No problem type available for recommendations",
+        scenarioContext,
       },
     ];
   }
@@ -195,6 +331,7 @@ export function generateMultipleRecommendations(
         variablesIgnored: ignoredVariables,
         dataSufficiency: "insufficient",
         explanation: `No matching patterns found for problem type: ${decision.problemType}`,
+        scenarioContext,
       },
     ];
   }
@@ -216,6 +353,7 @@ export function generateMultipleRecommendations(
         dataSufficiency: "insufficient",
         explanation: `Pattern success rate (${pattern.successRate}%) does not meet minimum threshold for recommendation`,
         basedOnPatternId: pattern.patternId,
+        scenarioContext,
       });
       continue;
     }
@@ -233,6 +371,7 @@ export function generateMultipleRecommendations(
         dataSufficiency: "insufficient",
         explanation: "No items found matching the pattern",
         basedOnPatternId: pattern.patternId,
+        scenarioContext,
       });
       continue;
     }
@@ -249,6 +388,7 @@ export function generateMultipleRecommendations(
         variablesIgnored: ignoredVariables,
         dataSufficiency: "sufficient",
         explanation: `Recommendation based on ${pattern.patternId} pattern with ${pattern.successRate}% success rate`,
+        scenarioContext,
       });
     }
   }
@@ -262,6 +402,7 @@ export function generateMultipleRecommendations(
           variablesIgnored: ignoredVariables,
           dataSufficiency: "insufficient",
           explanation: "Unable to generate recommendations from available patterns",
+          scenarioContext,
         },
       ];
 }

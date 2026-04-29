@@ -12,6 +12,24 @@ export async function POST(request: NextRequest) {
     // Enforce server-side auth
     const role = await resolveServerRole();
     if (!role) {
+      // Log AUTH_FAILED audit event
+      await logAuditEvent({
+        eventName: "AUTH_FAILED",
+        entityType: "OperatorItem",
+        entityId: "unknown",
+        actorId: null,
+        role: null,
+        before: null,
+        after: null,
+        metadata: {
+          reason: "Session not found or invalid",
+          action: "override_attempt",
+        },
+      }).catch((auditError) => {
+        console.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 403 }
@@ -19,6 +37,24 @@ export async function POST(request: NextRequest) {
     }
 
     if (!canEdit(role)) {
+      // Log PERMISSION_DENIED audit event
+      await logAuditEvent({
+        eventName: "PERMISSION_DENIED",
+        entityType: "OperatorItem",
+        entityId: "unknown",
+        actorId: (await getSession())?.user.id ?? null,
+        role,
+        before: null,
+        after: null,
+        metadata: {
+          reason: "User role lacks edit permission",
+          action: "override_attempt",
+        },
+      }).catch((auditError) => {
+        console.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }
@@ -26,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { operatorItemId, overriddenAction, reason } = body;
+    const { operatorItemId, overriddenAction, reason, overrideAllowed } = body;
 
     // Validate required fields
     if (!operatorItemId || !overriddenAction || !reason) {
@@ -50,6 +86,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get actor ID for audit
+    const session = await getSession();
+    const actorId = session?.user.id ?? null;
+
+    // Check if override is allowed
+    if (overrideAllowed === false) {
+      // Log OVERRIDE_DENIED audit event (fail-closed)
+      await logAuditEvent({
+        eventName: "OVERRIDE_DENIED",
+        entityType: "OperatorItem",
+        entityId: operatorItemId,
+        actorId,
+        role,
+        before: item,
+        after: null,
+        metadata: {
+          originalAction: item.action,
+          attemptedOverride: overriddenAction,
+          reason,
+          denialReason: "Override not allowed for this violation",
+        },
+      }).catch((auditError) => {
+        console.error(`Audit logging failed: ${auditError}`);
+        throw auditError;
+      });
+
+      return NextResponse.json(
+        { error: "Override not allowed for this guardrail violation" },
+        { status: 403 }
+      );
+    }
+
     // Create and store override record
     const overrideRecord = {
       id: randomUUID(),
@@ -60,10 +128,6 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
     };
 
-    // Get actor ID for audit
-    const session = await getSession();
-    const actorId = session?.user.id ?? null;
-
     addOverride(overrideRecord);
     const beforeItem = item;
     await applyOverride(operatorItemId, overriddenAction);
@@ -72,9 +136,9 @@ export async function POST(request: NextRequest) {
     const itemsAfter = await getItems();
     const afterItem = itemsAfter.find((i) => i.id === operatorItemId);
 
-    // Log audit event (fail-closed if audit fails)
+    // Log OVERRIDE_APPROVED audit event (fail-closed)
     await logAuditEvent({
-      eventName: "OVERRIDE",
+      eventName: "OVERRIDE_APPROVED",
       entityType: "OperatorItem",
       entityId: operatorItemId,
       actorId,
@@ -86,6 +150,9 @@ export async function POST(request: NextRequest) {
         overriddenAction,
         reason,
       },
+    }).catch((auditError) => {
+      console.error(`Audit logging failed: ${auditError}`);
+      throw auditError;
     });
 
     return NextResponse.json({ success: true });

@@ -5,11 +5,13 @@ import { calculateImpact } from "@/services/finance/normalize";
 import { AuditRecord } from "@/domain/audit/types";
 import { logDecision } from "@/services/audit/log";
 import { createBaseline } from "@/services/onboarding/basic";
+import { compareScenarios, ScenarioComparison } from "@/services/control/scenario-comparison";
 import { randomUUID } from "crypto";
 
 export function runSystem(inputMetrics: Record<string, number>): {
   decisions: DecisionOutput[];
   impact: ImpactEstimate;
+  scenarios: ScenarioComparison;
 } {
   // SAFETY: Validate required inputs (fail-closed)
   if (!inputMetrics || typeof inputMetrics !== "object") {
@@ -53,6 +55,21 @@ export function runSystem(inputMetrics: Record<string, number>): {
     throw new Error("NON_POSITIVE_IMPACT_BLOCKED");
   }
 
+  // CONTROL PHASE: Generate scenarios BEFORE decisions (fail-closed)
+  let scenarios: ScenarioComparison;
+  try {
+    scenarios = compareScenarios({
+      baselineRevenue,
+      baselineCost,
+      revenueChange: deltaRevenue,
+      costChange: deltaCost,
+      confidence,
+    });
+  } catch (scenarioError) {
+    const errorMsg = scenarioError instanceof Error ? scenarioError.message : "Unknown scenario error";
+    throw new Error(`SCENARIO_GENERATION_FAILED: ${errorMsg}`);
+  }
+
   // 1. Build DecisionInput
   const decisionInput: DecisionInput = {
     metrics: inputMetrics,
@@ -93,7 +110,7 @@ export function runSystem(inputMetrics: Record<string, number>): {
     id: randomUUID(),
     timestamp: new Date().toISOString(),
     inputSnapshot: JSON.stringify(decisionInput),
-    outputSnapshot: JSON.stringify({ decisions, impact }),
+    outputSnapshot: JSON.stringify({ decisions, impact, scenarios }),
     ruleId: decisions.length > 0 ? decisions[0].ruleId : "none",
   };
 
@@ -102,5 +119,6 @@ export function runSystem(inputMetrics: Record<string, number>): {
   return {
     decisions,
     impact,
+    scenarios,
   };
 }

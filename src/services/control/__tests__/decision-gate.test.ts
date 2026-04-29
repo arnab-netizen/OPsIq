@@ -291,8 +291,8 @@ describe("Decision Gate - Phase 4 Control 3", () => {
     });
   });
 
-  describe("evaluateDecisionGate - Warnings", () => {
-    it("should warn on stale variables", () => {
+  describe("evaluateDecisionGate - Staleness Enforcement", () => {
+    it("should BLOCK on stale variables (fail-closed)", () => {
       const thirtyOneDaysAgo = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
 
       const states: VariableState[] = [
@@ -348,7 +348,11 @@ describe("Decision Gate - Phase 4 Control 3", () => {
 
       const result = evaluateDecisionGate(input);
 
-      expect(result.warnings.some((w) => w.includes("stale"))).toBe(true);
+      // Stale variables should cause blocking, not just warnings
+      expect(result.allowed).toBe(false);
+      expect(result.staleVariables.length).toBeGreaterThan(0);
+      expect(result.staleVariables).toContain("baselineRevenue");
+      expect(result.reason).toContain("Stale variables");
     });
   });
 
