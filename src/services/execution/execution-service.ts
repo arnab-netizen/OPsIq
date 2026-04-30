@@ -17,35 +17,59 @@ export async function executeDecision(
     throw new Error("Decision not found or access denied");
   }
 
-  if (decision.executionStatus !== "pending" && decision.executionStatus !== "not_started") {
+  if (decision.executionStatus !== "pending") {
     throw new Error(
-      `Cannot execute decision with status: ${decision.executionStatus}`
+      `Cannot execute decision: execution status must be 'pending', got '${decision.executionStatus}'`
     );
   }
 
-  const updated = await db.operatorItem.update({
-    where: { id: decisionId },
-    data: {
-      executionStatus: "running",
-      startedAt: new Date(),
-      lastUpdatedBy: userId,
-      updatedAt: new Date(),
-    },
-  });
+  const now = new Date();
 
-  await emitAuditEvent({
-    workspaceId,
-    eventName: AUDIT_EVENTS.DECISION_EXECUTION_STARTED,
-    actorId: userId,
-    entityType: "OperatorItem",
-    entityId: decisionId,
-    payload: {
-      status: "running",
-      startedAt: new Date().toISOString(),
-    },
-  });
+  try {
+    const updated = await db.$transaction(async (tx: any) => {
+      const result = await tx.operatorItem.updateMany({
+        where: {
+          id: decisionId,
+          workspaceId,
+          executionStatus: "pending",
+        },
+        data: {
+          executionStatus: "running",
+          startedAt: now,
+          lastUpdatedBy: userId,
+          updatedAt: now,
+        },
+      });
 
-  return updated;
+      if (result.count === 0) {
+        throw new Error("Execution lock acquired by another request: decision already transitioning");
+      }
+
+      return tx.operatorItem.findFirst({
+        where: { id: decisionId, workspaceId },
+      });
+    });
+
+    if (!updated) {
+      throw new Error("Decision not found after update");
+    }
+
+    await emitAuditEvent({
+      workspaceId,
+      eventName: AUDIT_EVENTS.DECISION_EXECUTION_STARTED,
+      actorId: userId,
+      entityType: "OperatorItem",
+      entityId: decisionId,
+      payload: {
+        status: "running",
+        startedAt: now.toISOString(),
+      },
+    });
+
+    return updated;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export async function markSuccess(
@@ -64,7 +88,7 @@ export async function markSuccess(
 
   if (decision.executionStatus !== "running") {
     throw new Error(
-      `Cannot mark success: execution status is ${decision.executionStatus}`
+      `Cannot mark success: execution status must be 'running', got '${decision.executionStatus}'`
     );
   }
 
@@ -73,19 +97,39 @@ export async function markSuccess(
       ? outcomeValue / decision.impactExpected
       : undefined;
 
-  const updated = await db.operatorItem.update({
-    where: { id: decisionId },
-    data: {
-      executionStatus: "success",
-      executedAt: new Date(),
-      executedBy: userId,
-      actualOutcomeValue: outcomeValue,
-      decisionAccuracy: calculatedAccuracy,
-      completedAt: new Date(),
-      lastUpdatedBy: userId,
-      updatedAt: new Date(),
-    },
+  const now = new Date();
+
+  const updated = await db.$transaction(async (tx: any) => {
+    const result = await tx.operatorItem.updateMany({
+      where: {
+        id: decisionId,
+        workspaceId,
+        executionStatus: "running",
+      },
+      data: {
+        executionStatus: "success",
+        executedAt: now,
+        executedBy: userId,
+        actualOutcomeValue: outcomeValue,
+        decisionAccuracy: calculatedAccuracy,
+        completedAt: now,
+        lastUpdatedBy: userId,
+        updatedAt: now,
+      },
+    });
+
+    if (result.count === 0) {
+      throw new Error("Execution already completed: state has changed since read");
+    }
+
+    return tx.operatorItem.findFirst({
+      where: { id: decisionId, workspaceId },
+    });
   });
+
+  if (!updated) {
+    throw new Error("Decision not found after update");
+  }
 
   await emitAuditEvent({
     workspaceId,
@@ -98,7 +142,7 @@ export async function markSuccess(
       actualOutcomeValue: outcomeValue,
       expectedOutcome: decision.impactExpected,
       accuracy: calculatedAccuracy,
-      executedAt: new Date().toISOString(),
+      executedAt: now.toISOString(),
     },
   });
 
@@ -139,22 +183,42 @@ export async function markFailure(
 
   if (decision.executionStatus !== "running") {
     throw new Error(
-      `Cannot mark failure: execution status is ${decision.executionStatus}`
+      `Cannot mark failure: execution status must be 'running', got '${decision.executionStatus}'`
     );
   }
 
-  const updated = await db.operatorItem.update({
-    where: { id: decisionId },
-    data: {
-      executionStatus: "failed",
-      executedAt: new Date(),
-      executedBy: userId,
-      blockReason: reason,
-      completedAt: new Date(),
-      lastUpdatedBy: userId,
-      updatedAt: new Date(),
-    },
+  const now = new Date();
+
+  const updated = await db.$transaction(async (tx: any) => {
+    const result = await tx.operatorItem.updateMany({
+      where: {
+        id: decisionId,
+        workspaceId,
+        executionStatus: "running",
+      },
+      data: {
+        executionStatus: "failed",
+        executedAt: now,
+        executedBy: userId,
+        blockReason: reason,
+        completedAt: now,
+        lastUpdatedBy: userId,
+        updatedAt: now,
+      },
+    });
+
+    if (result.count === 0) {
+      throw new Error("Execution already completed: state has changed since read");
+    }
+
+    return tx.operatorItem.findFirst({
+      where: { id: decisionId, workspaceId },
+    });
   });
+
+  if (!updated) {
+    throw new Error("Decision not found after update");
+  }
 
   await emitAuditEvent({
     workspaceId,
@@ -165,7 +229,7 @@ export async function markFailure(
     payload: {
       status: "failed",
       reason,
-      failedAt: new Date().toISOString(),
+      failedAt: now.toISOString(),
     },
   });
 
