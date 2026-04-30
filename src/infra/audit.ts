@@ -7,6 +7,7 @@ export type Visibility = "internal" | "client_visible";
 
 export interface AuditEventInput {
   eventName: AuditEventName;
+  workspaceId?: string;
   actorId?: string;
   actorType?: string;
   entityType?: string;
@@ -17,8 +18,13 @@ export interface AuditEventInput {
 }
 
 export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
+  if (!input.workspaceId) {
+    throw new Error("workspaceId is required for audit events");
+  }
+
   const event = await db.auditEvent.create({
     data: {
+      workspaceId: input.workspaceId,
       eventName: input.eventName,
       actorId: input.actorId ?? null,
       actorType: input.actorType ?? "user",

@@ -33,6 +33,10 @@ interface DecisionData {
   expectedOutcome?: string;
   actualOutcome?: string;
   decisionAccuracy?: number;
+  executionStatus?: string;
+  executedAt?: Date | string | null;
+  executedBy?: string | null;
+  actualOutcomeValue?: number | null;
 }
 
 interface DecisionDetailViewProps {
@@ -46,6 +50,10 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
   const [error, setError] = useState<string | null>(null);
   const [overrideReason, setOverrideReason] = useState("");
   const [showOverride, setShowOverride] = useState(false);
+  const [showExecuteConfirm, setShowExecuteConfirm] = useState(false);
+  const [showMarkSuccess, setShowMarkSuccess] = useState(false);
+  const [outcomeValue, setOutcomeValue] = useState("");
+  const [failureReason, setFailureReason] = useState("");
 
   const getWorkspaceId = () => {
     if (workspaceId) return workspaceId;
@@ -155,6 +163,122 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Error overriding decision"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExecute = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const wsId = getWorkspaceId();
+      const res = await fetch(
+        `/api/decisions/${decision.id}/execute?workspaceId=${wsId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }
+      );
+
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Failed to execute decision");
+      }
+
+      setShowExecuteConfirm(false);
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error executing decision"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkSuccess = async () => {
+    if (!outcomeValue.trim()) {
+      setError("Outcome value is required");
+      return;
+    }
+
+    const value = parseFloat(outcomeValue);
+    if (isNaN(value)) {
+      setError("Outcome value must be a valid number");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const wsId = getWorkspaceId();
+      const res = await fetch(
+        `/api/decisions/${decision.id}/success?workspaceId=${wsId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ outcomeValue: value }),
+        }
+      );
+
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Failed to mark decision successful");
+      }
+
+      setShowMarkSuccess(false);
+      setOutcomeValue("");
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error marking decision successful"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkFailure = async () => {
+    if (!failureReason.trim()) {
+      setError("Failure reason is required");
+      return;
+    }
+
+    if (failureReason.length < 10) {
+      setError("Please provide a detailed reason (at least 10 characters)");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const wsId = getWorkspaceId();
+      const res = await fetch(
+        `/api/decisions/${decision.id}/failure?workspaceId=${wsId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: failureReason }),
+        }
+      );
+
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Failed to mark decision failed");
+      }
+
+      setShowMarkSuccess(false);
+      setFailureReason("");
+      router.refresh();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Error marking decision failed"
       );
     } finally {
       setLoading(false);
@@ -348,6 +472,49 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
             </div>
           )}
 
+          {/* Execution Timeline */}
+          {(decision.executionStatus && decision.executionStatus !== "not_started" && decision.executionStatus !== "pending") && (
+            <div className="bg-white border rounded-lg p-4">
+              <h2 className="font-bold text-gray-900 mb-4">📊 Execution Timeline</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase">Status</label>
+                  <p className={`text-lg font-bold mt-1 ${
+                    decision.executionStatus === "success" ? "text-green-600" :
+                    decision.executionStatus === "failed" ? "text-red-600" :
+                    "text-blue-600"
+                  }`}>
+                    {decision.executionStatus?.toUpperCase()}
+                  </p>
+                </div>
+                {decision.actualOutcomeValue !== null && decision.actualOutcomeValue !== undefined && (
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Actual Outcome</label>
+                    <p className="text-gray-900 mt-1">₹{(decision.actualOutcomeValue / 1000000).toFixed(2)}M</p>
+                  </div>
+                )}
+                {decision.decisionAccuracy && (
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Decision Accuracy</label>
+                    <p className="text-gray-900 mt-1">{(decision.decisionAccuracy * 100).toFixed(1)}%</p>
+                  </div>
+                )}
+                {decision.executedAt && (
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Executed At</label>
+                    <p className="text-gray-900 mt-1">{new Date(decision.executedAt).toLocaleString()}</p>
+                  </div>
+                )}
+                {decision.executedBy && (
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase">Executed By</label>
+                    <p className="text-gray-900 mt-1">{decision.executedBy.slice(0, 8)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Guardrails */}
           {guardrails && (
             <div className="bg-white border rounded-lg p-4">
@@ -506,9 +673,141 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
               </div>
             )}
 
-            {(decision.status === "approved" || decision.status === "done") && (
+            {decision.status === "approved" && decision.executionStatus !== "running" && decision.executionStatus !== "success" && decision.executionStatus !== "failed" && (
+              <div className="space-y-2">
+                <div className="text-xs text-gray-600 mb-3 italic">
+                  This decision is approved and ready for execution
+                </div>
+                {!showExecuteConfirm ? (
+                  <button
+                    onClick={() => setShowExecuteConfirm(true)}
+                    disabled={loading}
+                    className="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 transition"
+                    title="Start executing this decision"
+                  >
+                    ▶️ EXECUTE
+                  </button>
+                ) : (
+                  <>
+                    <div className="text-xs text-gray-700 mb-2 font-semibold">
+                      Confirm execution of this decision?
+                    </div>
+                    <button
+                      onClick={handleExecute}
+                      disabled={loading}
+                      className="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 transition"
+                    >
+                      {loading ? "Starting..." : "Confirm Execution"}
+                    </button>
+                    <button
+                      onClick={() => setShowExecuteConfirm(false)}
+                      disabled={loading}
+                      className="w-full bg-gray-300 text-gray-900 py-2 px-3 rounded text-sm font-medium hover:bg-gray-400 transition"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {decision.executionStatus === "running" && (
+              <div className="space-y-2">
+                {!showMarkSuccess ? (
+                  <>
+                    <div className="text-xs text-gray-600 mb-3 italic">
+                      Decision is executing. Record outcome when complete.
+                    </div>
+                    <button
+                      onClick={() => setShowMarkSuccess(true)}
+                      disabled={loading}
+                      className="w-full bg-green-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-green-700 disabled:bg-gray-400 transition"
+                      title="Mark execution successful"
+                    >
+                      ✓ SUCCESS
+                    </button>
+                    <button
+                      onClick={() => setShowMarkSuccess(true)}
+                      disabled={loading}
+                      className="w-full bg-red-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-red-700 disabled:bg-gray-400 transition"
+                      title="Mark execution failed"
+                    >
+                      ✗ FAILURE
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-xs text-gray-700 mb-2 font-semibold">
+                      Record execution outcome:
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-xs font-semibold text-gray-600">
+                          Actual Outcome Value
+                        </label>
+                        <input
+                          type="number"
+                          value={outcomeValue}
+                          onChange={(e) => setOutcomeValue(e.target.value)}
+                          placeholder="0"
+                          className="w-full border rounded p-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                      </div>
+                      <button
+                        onClick={handleMarkSuccess}
+                        disabled={loading || !outcomeValue.trim()}
+                        className="w-full bg-green-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-green-700 disabled:bg-gray-400 transition"
+                      >
+                        {loading ? "Recording..." : "Record Success"}
+                      </button>
+                    </div>
+                    <div className="text-xs text-gray-700 mb-2 font-semibold">
+                      Or record failure reason:
+                    </div>
+                    <div className="space-y-2">
+                      <textarea
+                        value={failureReason}
+                        onChange={(e) => setFailureReason(e.target.value)}
+                        placeholder="Explain why execution failed..."
+                        className="w-full border rounded p-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-500"
+                        rows={3}
+                      />
+                      <div className="text-xs text-gray-500">
+                        {failureReason.length} / 10+ characters required
+                      </div>
+                      <button
+                        onClick={handleMarkFailure}
+                        disabled={loading || failureReason.length < 10}
+                        className="w-full bg-red-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-red-700 disabled:bg-gray-400 transition"
+                      >
+                        {loading ? "Recording..." : "Record Failure"}
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowMarkSuccess(false);
+                        setOutcomeValue("");
+                        setFailureReason("");
+                      }}
+                      disabled={loading}
+                      className="w-full bg-gray-300 text-gray-900 py-2 px-3 rounded text-sm font-medium hover:bg-gray-400 transition"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {(decision.executionStatus === "success" || decision.executionStatus === "failed") && (
               <div className="text-center py-4 text-gray-600 text-sm">
-                Decision {decision.status}
+                Execution {decision.executionStatus}
+              </div>
+            )}
+
+            {decision.status === "done" && (
+              <div className="text-center py-4 text-gray-600 text-sm">
+                Decision completed
               </div>
             )}
 

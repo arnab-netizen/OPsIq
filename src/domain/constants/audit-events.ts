@@ -87,6 +87,9 @@ export const AUDIT_EVENTS = {
 
   // Execution Commitment
   EXECUTION_ACKNOWLEDGED: "execution.acknowledged",
+  DECISION_EXECUTION_STARTED: "decision.execution_started",
+  DECISION_EXECUTION_SUCCESS: "decision.execution_success",
+  DECISION_EXECUTION_FAILED: "decision.execution_failed",
 
   // KPI
   KPI_DEFINED: "kpi.defined",

@@ -692,7 +692,9 @@ model OperatorItem {
   outcomeNotes        String?    @map("outcome_notes")
   startedAt           DateTime?  @map("started_at")
   completedAt         DateTime?  @map("completed_at")
-  executionStatus     String    @default("not_started") @map("execution_status") // "not_started" | "started" | "completed"
+  executionStatus     String    @default("pending") @map("execution_status") // "pending" | "running" | "success" | "failed"
+  executedAt          DateTime?  @map("executed_at") // When execution was finalized (success or failed)
+  executedBy          String?    @map("executed_by_user_id") @db.Uuid // User who completed/failed execution
   firstCompletedAt       DateTime?  @map("first_completed_at") // First time action was completed
   firstPositiveOutcomeAt DateTime?  @map("first_positive_outcome_at") // First time positive outcome detected
   firstWinAchieved        Boolean?  @map("first_win_achieved") // First win: actual > expected AND impact > 50k
