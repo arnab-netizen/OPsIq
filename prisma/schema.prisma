@@ -704,6 +704,8 @@ model OperatorItem {
   signatureAlgo       String?    @map("signature_algo") // Signature algorithm identifier
   publicKeyId         String?    @map("public_key_id") // Public key identifier
   engineVersion       String    @default("v1.0.0") @map("engine_version")
+  actionType          String?   @map("action_type") // "email" | "webhook" | "task" | null
+  actionPayload       Json?     @map("action_payload") // Configuration for the action (email address, webhook URL, task details)
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
