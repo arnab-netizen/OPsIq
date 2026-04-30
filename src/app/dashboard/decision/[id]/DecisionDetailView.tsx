@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 interface DecisionData {
   id: string;
+  workspaceId: string;
   problem: string;
   action: string;
   confidence: number;
@@ -30,30 +31,51 @@ interface DecisionData {
 
 interface DecisionDetailViewProps {
   decision: DecisionData;
+  workspaceId?: string;
 }
 
-export default function DecisionDetailView({ decision }: DecisionDetailViewProps) {
+export default function DecisionDetailView({ decision, workspaceId = "" }: DecisionDetailViewProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [overrideReason, setOverrideReason] = useState("");
   const [showOverride, setShowOverride] = useState(false);
 
+  const getWorkspaceId = () => {
+    if (workspaceId) return workspaceId;
+    // Fallback: try to get from URL params
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("workspaceId") || decision.workspaceId;
+    }
+    return decision.workspaceId;
+  };
+
   const handleApprove = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(`/api/decisions/${decision.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "approved" }),
-      });
+      const wsId = getWorkspaceId();
+      const res = await fetch(
+        `/api/decisions/${decision.id}?workspaceId=${wsId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "approved" }),
+        }
+      );
 
-      if (!res.ok) throw new Error("Failed to approve");
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Failed to approve decision");
+      }
+
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error approving decision");
+      setError(
+        err instanceof Error ? err.message : "Error approving decision"
+      );
     } finally {
       setLoading(false);
     }
@@ -64,16 +86,26 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
     setError(null);
 
     try {
-      const res = await fetch(`/api/decisions/${decision.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "rejected" }),
-      });
+      const wsId = getWorkspaceId();
+      const res = await fetch(
+        `/api/decisions/${decision.id}?workspaceId=${wsId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "rejected" }),
+        }
+      );
 
-      if (!res.ok) throw new Error("Failed to reject");
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Failed to reject decision");
+      }
+
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error rejecting decision");
+      setError(
+        err instanceof Error ? err.message : "Error rejecting decision"
+      );
     } finally {
       setLoading(false);
     }
@@ -81,7 +113,12 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
 
   const handleOverride = async () => {
     if (!overrideReason.trim()) {
-      setError("Override reason required");
+      setError("Override reason is required");
+      return;
+    }
+
+    if (overrideReason.length < 10) {
+      setError("Please provide a detailed reason (at least 10 characters)");
       return;
     }
 
@@ -89,20 +126,30 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
     setError(null);
 
     try {
-      const res = await fetch(`/api/decisions/${decision.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: "approved",
-          override_reason: overrideReason,
-          override_approved_at: new Date().toISOString(),
-        }),
-      });
+      const wsId = getWorkspaceId();
+      const res = await fetch(
+        `/api/decisions/${decision.id}?workspaceId=${wsId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "approved",
+            override_reason: overrideReason,
+            override_approved_at: new Date().toISOString(),
+          }),
+        }
+      );
 
-      if (!res.ok) throw new Error("Failed to override");
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Failed to override decision");
+      }
+
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error overriding decision");
+      setError(
+        err instanceof Error ? err.message : "Error overriding decision"
+      );
     } finally {
       setLoading(false);
     }
@@ -344,17 +391,22 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
 
             {decision.status === "pending" && (
               <div className="space-y-2">
+                <div className="text-xs text-gray-600 mb-3 italic">
+                  Review and approve or reject this decision
+                </div>
                 <button
                   onClick={handleApprove}
                   disabled={loading}
-                  className="w-full bg-green-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-green-700 disabled:bg-gray-400"
+                  className="w-full bg-green-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-green-700 disabled:bg-gray-400 transition"
+                  title="Approve this decision"
                 >
                   {loading ? "Processing..." : "✓ APPROVE"}
                 </button>
                 <button
                   onClick={handleReject}
                   disabled={loading}
-                  className="w-full bg-red-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-red-700 disabled:bg-gray-400"
+                  className="w-full bg-red-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-red-700 disabled:bg-gray-400 transition"
+                  title="Reject this decision"
                 >
                   {loading ? "Processing..." : "✗ REJECT"}
                 </button>
@@ -364,28 +416,40 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
             {decision.status === "blocked" && (
               <div className="space-y-2">
                 {!showOverride ? (
-                  <button
-                    onClick={() => setShowOverride(true)}
-                    disabled={loading}
-                    className="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400"
-                  >
-                    ⚠️ OVERRIDE
-                  </button>
+                  <>
+                    <div className="text-xs text-gray-600 mb-3 italic">
+                      This decision is blocked by governance rules. Admin override is available.
+                    </div>
+                    <button
+                      onClick={() => setShowOverride(true)}
+                      disabled={loading}
+                      className="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 transition"
+                      title="Override the block and approve this decision"
+                    >
+                      ⚠️ OVERRIDE
+                    </button>
+                  </>
                 ) : (
                   <>
+                    <div className="text-xs text-gray-700 mb-2 font-semibold">
+                      Override requires detailed reason:
+                    </div>
                     <textarea
                       value={overrideReason}
                       onChange={(e) => setOverrideReason(e.target.value)}
-                      placeholder="Reason for override"
-                      className="w-full border rounded p-2 text-xs"
-                      rows={3}
+                      placeholder="Explain why you are overriding the governance block..."
+                      className="w-full border rounded p-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={4}
                     />
+                    <div className="text-xs text-gray-500">
+                      {overrideReason.length} / 10+ characters required
+                    </div>
                     <button
                       onClick={handleOverride}
-                      disabled={loading}
-                      className="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400"
+                      disabled={loading || overrideReason.length < 10}
+                      className="w-full bg-blue-600 text-white py-2 px-3 rounded text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 transition"
                     >
-                      {loading ? "Processing..." : "Confirm"}
+                      {loading ? "Processing..." : "Confirm Override"}
                     </button>
                     <button
                       onClick={() => {
@@ -393,7 +457,7 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
                         setOverrideReason("");
                       }}
                       disabled={loading}
-                      className="w-full bg-gray-300 text-gray-900 py-2 px-3 rounded text-sm font-medium hover:bg-gray-400"
+                      className="w-full bg-gray-300 text-gray-900 py-2 px-3 rounded text-sm font-medium hover:bg-gray-400 transition"
                     >
                       Cancel
                     </button>

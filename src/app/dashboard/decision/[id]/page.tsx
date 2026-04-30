@@ -81,5 +81,5 @@ export default async function DecisionDetailPage({
 
   const decision = await getDecision(id, workspaceId);
 
-  return <DecisionDetailView decision={decision} />;
+  return <DecisionDetailView decision={decision} workspaceId={workspaceId} />;
 }
