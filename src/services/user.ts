@@ -13,6 +13,7 @@ import {
   withVersionIncrement,
 } from "@/lib/optimistic-lock";
 import { logger } from "@/infra/logger";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -39,16 +40,19 @@ export interface ListUsersParams {
 
 export async function createUser(
   input: CreateUserInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<{ id: string }> {
-  const idempotencyKey = `user-create:${input.email}`;
+  enforceWorkspaceId(workspaceId, "createUser", "user");
+
+  const idempotencyKey = `user-create:${input.email}:${workspaceId}`;
 
   const result = await withIdempotency(
     idempotencyKey,
     "user.create",
     async () => {
       const existing = await db.user.findUnique({
-        where: { email: input.email },
+        where: { email_workspaceId: { email: input.email, workspaceId } },
       });
 
       if (existing) {
@@ -60,6 +64,7 @@ export async function createUser(
           email: input.email,
           name: input.name ?? null,
           hashedPassword: input.hashedPassword ?? null,
+          workspaceId,
         },
       });
 
@@ -87,9 +92,12 @@ export async function createUser(
 export async function updateUser(
   userId: string,
   input: UpdateUserInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<void> {
-  const user = await db.user.findUnique({ where: { id: userId } });
+  enforceWorkspaceId(workspaceId, "updateUser", "user");
+
+  const user = await db.user.findUnique({ where: { id: userId, workspaceId } });
 
   if (!user) {
     throw new NotFoundError("User", userId);
@@ -101,7 +109,7 @@ export async function updateUser(
 
   if (input.email && input.email !== user.email) {
     const emailTaken = await db.user.findUnique({
-      where: { email: input.email },
+      where: { email_workspaceId: { email: input.email, workspaceId } },
     });
     if (emailTaken) {
       throw new ConflictError(`Email ${input.email} is already in use`);
@@ -110,7 +118,7 @@ export async function updateUser(
 
   await optimisticUpdate("user", userId, input.version, () =>
     db.user.update({
-      where: withVersionCheck({ id: userId }, input.version),
+      where: withVersionCheck({ id: userId, workspaceId }, input.version),
       data: withVersionIncrement({
         ...(input.name !== undefined && { name: input.name }),
         ...(input.email !== undefined && { email: input.email }),
@@ -136,9 +144,12 @@ export async function updateUser(
 export async function deactivateUser(
   userId: string,
   actorId: string,
-  version: number
+  version: number,
+  workspaceId: string
 ): Promise<void> {
-  const user = await db.user.findUnique({ where: { id: userId } });
+  enforceWorkspaceId(workspaceId, "deactivateUser", "user");
+
+  const user = await db.user.findUnique({ where: { id: userId, workspaceId } });
 
   if (!user) {
     throw new NotFoundError("User", userId);
@@ -154,7 +165,7 @@ export async function deactivateUser(
 
   await optimisticUpdate("user", userId, version, () =>
     db.user.update({
-      where: withVersionCheck({ id: userId }, version),
+      where: withVersionCheck({ id: userId, workspaceId }, version),
       data: withVersionIncrement({
         isActive: false,
         deactivatedAt: new Date(),
@@ -164,19 +175,19 @@ export async function deactivateUser(
 
   // Revoke all active sessions
   const sessionResult = await db.session.updateMany({
-    where: { userId, revokedAt: null },
+    where: { userId, workspaceId, revokedAt: null },
     data: { revokedAt: new Date() },
   });
 
   // Revoke all active role assignments
   const roleResult = await db.userRoleAssignment.updateMany({
-    where: { userId, isActive: true },
+    where: { userId, workspaceId, isActive: true },
     data: { isActive: false, revokedAt: new Date() },
   });
 
   // Remove from active engagement memberships
   const membershipResult = await db.engagementMembership.updateMany({
-    where: { userId, isActive: true },
+    where: { userId, workspaceId, isActive: true },
     data: { isActive: false, removedAt: new Date() },
   });
 
@@ -206,9 +217,12 @@ export async function deactivateUser(
 export async function reactivateUser(
   userId: string,
   actorId: string,
-  version: number
+  version: number,
+  workspaceId: string
 ): Promise<void> {
-  const user = await db.user.findUnique({ where: { id: userId } });
+  enforceWorkspaceId(workspaceId, "reactivateUser", "user");
+
+  const user = await db.user.findUnique({ where: { id: userId, workspaceId } });
 
   if (!user) {
     throw new NotFoundError("User", userId);
@@ -220,7 +234,7 @@ export async function reactivateUser(
 
   await optimisticUpdate("user", userId, version, () =>
     db.user.update({
-      where: withVersionCheck({ id: userId }, version),
+      where: withVersionCheck({ id: userId, workspaceId }, version),
       data: withVersionIncrement({
         isActive: true,
         deactivatedAt: null,
@@ -240,9 +254,11 @@ export async function reactivateUser(
   logger.info("User reactivated", { userId, reactivatedBy: actorId });
 }
 
-export async function getUserById(userId: string) {
+export async function getUserById(userId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "getUserById", "user");
+
   const user = await db.user.findUnique({
-    where: { id: userId },
+    where: { id: userId, workspaceId },
     select: {
       id: true,
       email: true,
@@ -262,10 +278,13 @@ export async function getUserById(userId: string) {
   return user;
 }
 
-export async function listUsers(params: ListUsersParams = {}) {
+export async function listUsers(workspaceId: string, params: ListUsersParams = {}) {
+  enforceWorkspaceId(workspaceId, "listUsers", "user");
+
   const { limit = 25, offset = 0, isActive, search } = params;
 
   const where = {
+    workspaceId,
     ...(isActive !== undefined && { isActive }),
     ...(search && {
       OR: [

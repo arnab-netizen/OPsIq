@@ -90,7 +90,7 @@ describe("engagement service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      const result = await engagementService.createEngagement(input, mockUserId);
+      const result = await engagementService.createEngagement(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(result.id).toBe(mockEngagementId);
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -114,7 +114,7 @@ describe("engagement service", () => {
       };
 
       await expect(
-        engagementService.createEngagement(input, mockUserId)
+        engagementService.createEngagement(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000')
       ).rejects.toThrow(ValidationError);
     });
 
@@ -133,7 +133,7 @@ describe("engagement service", () => {
       };
 
       await expect(
-        engagementService.createEngagement(input, mockUserId)
+        engagementService.createEngagement(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000')
       ).rejects.toThrow(ValidationError);
     });
   });

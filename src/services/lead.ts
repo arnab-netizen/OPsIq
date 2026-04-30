@@ -12,6 +12,7 @@ import {
   withVersionCheck,
   withVersionIncrement,
 } from "@/lib/optimistic-lock";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -62,9 +63,12 @@ function validateLeadTransition(from: LeadStatus, to: LeadStatus): void {
 
 export async function createLead(
   input: CreateLeadInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<{ id: string }> {
-  const idempotencyKey = `lead-create:${input.companyName}:${actorId}`;
+  enforceWorkspaceId(workspaceId, "createLead", "lead_record");
+
+  const idempotencyKey = `lead-create:${input.companyName}:${actorId}:${workspaceId}`;
 
   const result = await withIdempotency(
     idempotencyKey,
@@ -82,6 +86,7 @@ export async function createLead(
           assignedTo: input.assignedTo ?? null,
           createdBy: actorId,
           status: "new",
+          workspaceId,
         },
       });
       return { id: lead.id, companyName: lead.companyName };
@@ -108,9 +113,12 @@ export async function createLead(
 export async function updateLead(
   leadId: string,
   input: UpdateLeadInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<void> {
-  const lead = await db.leadRecord.findUnique({ where: { id: leadId } });
+  enforceWorkspaceId(workspaceId, "updateLead", "lead_record");
+
+  const lead = await db.leadRecord.findUnique({ where: { id: leadId, workspaceId } });
   if (!lead) throw new NotFoundError("LeadRecord", leadId);
 
   if (lead.status === "converted") {
@@ -129,7 +137,7 @@ export async function updateLead(
 
   await optimisticUpdate("lead_record", leadId, version, () =>
     db.leadRecord.update({
-      where: withVersionCheck({ id: leadId }, version),
+      where: withVersionCheck({ id: leadId, workspaceId }, version),
       data: withVersionIncrement(data),
     })
   );
@@ -150,9 +158,12 @@ export async function linkLeadToEngagement(
   leadId: string,
   engagementId: string,
   clientId: string,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<void> {
-  const lead = await db.leadRecord.findUnique({ where: { id: leadId } });
+  enforceWorkspaceId(workspaceId, "linkLeadToEngagement", "lead_record");
+
+  const lead = await db.leadRecord.findUnique({ where: { id: leadId, workspaceId } });
   if (!lead) throw new NotFoundError("LeadRecord", leadId);
 
   if (lead.status !== "qualified") {
@@ -174,7 +185,7 @@ export async function linkLeadToEngagement(
 
   // Validate that the engagement belongs to the specified client
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     select: { clientId: true },
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
@@ -184,14 +195,14 @@ export async function linkLeadToEngagement(
     );
   }
 
-  const idempotencyKey = `lead-link:${leadId}:${engagementId}:${clientId}`;
+  const idempotencyKey = `lead-link:${leadId}:${engagementId}:${clientId}:${workspaceId}`;
 
   await withIdempotency(
     idempotencyKey,
     "lead.link_to_engagement",
     async () => {
       await db.leadRecord.update({
-        where: { id: leadId },
+        where: { id: leadId, workspaceId },
         data: {
           status: "converted",
           convertedToClientId: clientId,
@@ -225,9 +236,11 @@ export async function linkLeadToEngagement(
   logger.info("Lead linked to engagement", { leadId, engagementId, clientId });
 }
 
-export async function getLeadById(leadId: string) {
+export async function getLeadById(leadId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "getLeadById", "lead_record");
+
   const lead = await db.leadRecord.findUnique({
-    where: { id: leadId },
+    where: { id: leadId, workspaceId },
     include: {
       client: { select: { id: true, name: true } },
       engagement: { select: { id: true, code: true, title: true } },
@@ -237,15 +250,18 @@ export async function getLeadById(leadId: string) {
   return lead;
 }
 
-export async function listLeads(params: {
+export async function listLeads(workspaceId: string, params: {
   limit?: number;
   offset?: number;
   status?: string;
   search?: string;
 } = {}) {
+  enforceWorkspaceId(workspaceId, "listLeads", "lead_record");
+
   const { limit = 25, offset = 0, status, search } = params;
 
   const where = {
+    workspaceId,
     ...(status && { status }),
     ...(search && {
       companyName: { contains: search, mode: "insensitive" as const },

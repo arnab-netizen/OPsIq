@@ -13,6 +13,7 @@ import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import type { EvidenceStatus } from "@/domain/constants/statuses";
 import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -52,8 +53,11 @@ export interface UpdateEvidenceInput {
 
 export async function createEvidence(
   input: CreateEvidenceInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<{ id: string; engagementId?: string }> {
+  enforceWorkspaceId(workspaceId, "createEvidence", "evidence");
+
   // Map old field names to new ones for backward compatibility
   const title = input.title || input.sourceLabel || "";
 
@@ -90,7 +94,7 @@ export async function createEvidence(
 
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
+    where: { id: input.engagementId, workspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -122,6 +126,7 @@ export async function createEvidence(
           submittedBy: actorId,
           status: "submitted",
           visibility,
+          workspaceId,
         },
       });
       return { id: evidence.id };
@@ -163,10 +168,13 @@ export async function createEvidence(
 export async function updateEvidence(
   evidenceId: string,
   input: UpdateEvidenceInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<{ id: string }> {
+  enforceWorkspaceId(workspaceId, "updateEvidence", "evidence");
+
   const evidence = await db.evidence.findUnique({
-    where: { id: evidenceId },
+    where: { id: evidenceId, workspaceId },
   });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
@@ -204,7 +212,7 @@ export async function updateEvidence(
 
   await optimisticUpdate("evidence", evidenceId, version, () =>
     db.evidence.update({
-      where: withVersionCheck({ id: evidenceId }, version),
+      where: withVersionCheck({ id: evidenceId, workspaceId }, version),
       data: withVersionIncrement(data),
     })
   );
@@ -244,8 +252,11 @@ export async function updateEvidence(
 
 export async function getEvidenceById(
   evidenceId: string,
+  workspaceId: string,
   userIdOrVisibility?: string
 ) {
+  enforceWorkspaceId(workspaceId, "getEvidenceById", "evidence");
+
   // Detect if param is visibility or userId
   let userId: string | undefined;
   let visibility: "internal" | "client_visible" | "all" | undefined;
@@ -257,7 +268,7 @@ export async function getEvidenceById(
   }
 
   const evidence = await db.evidence.findUnique({
-    where: { id: evidenceId },
+    where: { id: evidenceId, workspaceId },
   });
 
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
@@ -273,7 +284,7 @@ export async function getEvidenceById(
   }
 
   const fullEvidence = await db.evidence.findUnique({
-    where: { id: evidenceId },
+    where: { id: evidenceId, workspaceId },
     include: {
       engagement: { select: { id: true, code: true, title: true } },
       submitter: { select: { id: true, name: true, email: true } },
@@ -296,6 +307,7 @@ export async function getEvidenceById(
 }
 
 export async function listEvidence(
+  workspaceId: string,
   engagementIdOrParams?: string | {
     engagementId?: string;
     status?: string;
@@ -306,6 +318,8 @@ export async function listEvidence(
   userIdOrUndefined?: string,
   visibilityFilter?: "internal" | "client_visible" | "all"
 ) {
+  enforceWorkspaceId(workspaceId, "listEvidence", "evidence");
+
   // Handle both calling conventions
   let engagementId: string | undefined;
   let userId: string | undefined;
@@ -331,7 +345,7 @@ export async function listEvidence(
   // Check engagement exists if provided
   if (engagementId) {
     const engagement = await db.engagement.findUnique({
-      where: { id: engagementId },
+      where: { id: engagementId, workspaceId },
       select: { id: true },
     });
     if (!engagement) throw new NotFoundError("Engagement", engagementId);
@@ -343,6 +357,7 @@ export async function listEvidence(
   }
 
   const where = {
+    workspaceId,
     ...(engagementId && { engagementId }),
     ...(status && { status }),
     ...(visibility === "internal" && { visibility: "internal" }),
@@ -377,8 +392,12 @@ export async function listEvidence(
 
 export async function validateEvidence(
   input: { evidenceItemId: string; isValid: boolean; version: number } | string,
-  actorId?: string
+  actorId?: string,
+  workspaceId?: string
 ) {
+  if (!workspaceId) throw new Error("workspaceId is required");
+  enforceWorkspaceId(workspaceId, "validateEvidence", "evidence");
+
   // Handle both function signatures for backward compatibility
   const evidenceId = typeof input === "string" ? input : input.evidenceItemId;
   const actor = typeof input === "string" ? actorId : actorId;
@@ -386,7 +405,7 @@ export async function validateEvidence(
   if (!actor) throw new Error("actorId is required");
 
   const evidence = await db.evidence.findUnique({
-    where: { id: evidenceId },
+    where: { id: evidenceId, workspaceId },
   });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
@@ -395,7 +414,7 @@ export async function validateEvidence(
   }
 
   const updated = await db.evidence.update({
-    where: { id: evidenceId },
+    where: { id: evidenceId, workspaceId },
     data: {
       status: "validated" as EvidenceStatus,
       version: { increment: 1 },
@@ -441,10 +460,13 @@ export interface RemoveEvidenceFromBundleInput {
 
 export async function createEvidenceBundle(
   input: CreateEvidenceBundleInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "createEvidenceBundle", "evidence_bundle");
+
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
+    where: { id: input.engagementId, workspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -454,6 +476,7 @@ export async function createEvidenceBundle(
       title: input.title,
       description: input.description ?? null,
       createdBy: actorId,
+      workspaceId,
     },
   });
 
@@ -472,9 +495,11 @@ export async function createEvidenceBundle(
   return bundle;
 }
 
-export async function getEvidenceBundleById(bundleId: string) {
+export async function getEvidenceBundleById(bundleId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "getEvidenceBundleById", "evidence_bundle");
+
   const bundle = await db.evidenceBundle.findUnique({
-    where: { id: bundleId },
+    where: { id: bundleId, workspaceId },
     include: {
       items: {
         where: { removedAt: null },
@@ -486,16 +511,18 @@ export async function getEvidenceBundleById(bundleId: string) {
   return bundle;
 }
 
-export async function listEvidenceBundles(engagementId: string) {
+export async function listEvidenceBundles(engagementId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "listEvidenceBundles", "evidence_bundle");
+
   // Check engagement exists
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     select: { id: true },
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
   return db.evidenceBundle.findMany({
-    where: { engagementId, status: "active" },
+    where: { engagementId, workspaceId, status: "active" },
     include: {
       items: {
         where: { removedAt: null },
@@ -508,15 +535,18 @@ export async function listEvidenceBundles(engagementId: string) {
 
 export async function addEvidenceToBundle(
   input: AddEvidenceToBundleInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "addEvidenceToBundle", "evidence_bundle");
+
   const bundle = await db.evidenceBundle.findUnique({
-    where: { id: input.bundleId },
+    where: { id: input.bundleId, workspaceId },
   });
   if (!bundle) throw new NotFoundError("EvidenceBundle", input.bundleId);
 
   const evidence = await db.evidence.findUnique({
-    where: { id: input.evidenceItemId },
+    where: { id: input.evidenceItemId, workspaceId },
   });
   if (!evidence) throw new NotFoundError("Evidence", input.evidenceItemId);
 
@@ -525,6 +555,7 @@ export async function addEvidenceToBundle(
       bundleId: input.bundleId,
       evidenceId: input.evidenceItemId,
       removedAt: null,
+      workspaceId,
     },
   });
   if (existing) {
@@ -536,6 +567,7 @@ export async function addEvidenceToBundle(
       bundleId: input.bundleId,
       evidenceId: input.evidenceItemId,
       addedBy: actorId,
+      workspaceId,
     },
   });
 
@@ -556,12 +588,16 @@ export async function addEvidenceToBundle(
 
 export async function removeEvidenceFromBundle(
   input: RemoveEvidenceFromBundleInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "removeEvidenceFromBundle", "evidence_bundle");
+
   const item = await db.evidenceBundleItem.findFirst({
     where: {
       bundleId: input.bundleId,
       evidenceId: input.evidenceItemId,
+      workspaceId,
     },
   });
   if (!item) throw new NotFoundError("EvidenceBundleItem", "notfound");
@@ -571,7 +607,7 @@ export async function removeEvidenceFromBundle(
   }
 
   const updated = await db.evidenceBundleItem.update({
-    where: { id: item.id },
+    where: { id: item.id, workspaceId },
     data: { removedAt: new Date() },
   });
 
@@ -593,10 +629,13 @@ export async function removeEvidenceFromBundle(
 export async function updateEvidenceBundle(
   bundleId: string,
   input: UpdateEvidenceBundleInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "updateEvidenceBundle", "evidence_bundle");
+
   const bundle = await db.evidenceBundle.findUnique({
-    where: { id: bundleId },
+    where: { id: bundleId, workspaceId },
   });
   if (!bundle) throw new NotFoundError("EvidenceBundle", bundleId);
 
@@ -610,7 +649,7 @@ export async function updateEvidenceBundle(
   if (input.status) updates.status = input.status;
 
   const updated = await db.evidenceBundle.update({
-    where: { id: bundleId },
+    where: { id: bundleId, workspaceId },
     data: updates,
   });
 

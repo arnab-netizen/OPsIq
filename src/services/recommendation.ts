@@ -7,6 +7,7 @@ import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -212,10 +213,13 @@ export function mapScoreToPriority(score: number): string {
 export async function createRecommendation(
   input: CreateRecommendationInput,
   actorId: string,
+  workspaceId: string,
   idempotencyKey?: string
 ) {
+  enforceWorkspaceId(workspaceId, "createRecommendation", "recommendation");
+
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
+    where: { id: input.engagementId, workspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -243,6 +247,7 @@ export async function createRecommendation(
               title: input.title,
               description: input.description,
               estimatedImpact: input.expectedImpact,
+              workspaceId,
             },
           });
 
@@ -298,6 +303,7 @@ export async function createRecommendation(
       title: input.title,
       description: input.description,
       estimatedImpact: input.expectedImpact,
+      workspaceId,
     },
   });
 
@@ -321,12 +327,14 @@ export async function createRecommendation(
   return recommendation;
 }
 
-export async function getRecommendationsForEngagement(engagementId: string, userId: string) {
+export async function getRecommendationsForEngagement(engagementId: string, userId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "getRecommendationsForEngagement", "recommendation");
+
   // Check engagement access
   await assertEngagementAccess(userId, engagementId);
 
   return db.recommendation.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
     include: { actions: true },
     orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
   });
@@ -335,10 +343,13 @@ export async function getRecommendationsForEngagement(engagementId: string, user
 export async function updateRecommendationStatus(
   recommendationId: string,
   input: UpdateRecommendationInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "updateRecommendationStatus", "recommendation");
+
   const rec = await db.recommendation.findUnique({
-    where: { id: recommendationId },
+    where: { id: recommendationId, workspaceId },
     include: { engagement: true },
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);
@@ -356,18 +367,18 @@ export async function updateRecommendationStatus(
     try {
       const [findings, recommendations, actions] = await Promise.all([
         db.finding.findMany({
-          where: { engagementId: rec.engagementId },
+          where: { engagementId: rec.engagementId, workspaceId },
         }),
         db.recommendation.findMany({
-          where: { engagementId: rec.engagementId },
+          where: { engagementId: rec.engagementId, workspaceId },
         }),
         db.action.findMany({
-          where: { engagementId: rec.engagementId },
+          where: { engagementId: rec.engagementId, workspaceId },
         }),
       ]);
 
       const engagement = await db.engagement.findUnique({
-        where: { id: rec.engagementId },
+        where: { id: rec.engagementId, workspaceId },
       });
 
       if (engagement) {
@@ -494,6 +505,7 @@ export async function updateRecommendationStatus(
   const updateResult = await db.recommendation.updateMany({
     where: {
       id: recommendationId,
+      workspaceId,
       version: input.version,
     },
     data: {
@@ -510,7 +522,7 @@ export async function updateRecommendationStatus(
   }
 
   const updated = await db.recommendation.findUnique({
-    where: { id: recommendationId },
+    where: { id: recommendationId, workspaceId },
   });
   if (!updated) throw new NotFoundError("Recommendation", recommendationId);
 
@@ -532,10 +544,13 @@ export async function updateRecommendationPriorityFromScore(
   recommendationId: string,
   scoringInput: RecommendationScoringInput,
   actorId: string,
+  workspaceId: string,
   recommendationClass?: RecommendationClass
 ): Promise<{ id: string; score: number; priority: string }> {
+  enforceWorkspaceId(workspaceId, "updateRecommendationPriorityFromScore", "recommendation");
+
   const rec = await db.recommendation.findUnique({
-    where: { id: recommendationId },
+    where: { id: recommendationId, workspaceId },
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);
 
@@ -543,7 +558,7 @@ export async function updateRecommendationPriorityFromScore(
   const newPriority = mapScoreToPriority(score);
 
   const updated = await db.recommendation.update({
-    where: { id: recommendationId },
+    where: { id: recommendationId, workspaceId },
     data: {
       priority: newPriority,
       version: { increment: 1 },
@@ -578,10 +593,13 @@ export async function updateRecommendationPriorityFromScore(
 
 export async function reRankRecommendationsInEngagement(
   engagementId: string,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<{ updated: number; recommendations: Array<{ id: string; oldPriority: string; newPriority: string; score: number }> }> {
+  enforceWorkspaceId(workspaceId, "reRankRecommendationsInEngagement", "recommendation");
+
   const recommendations = await db.recommendation.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
   });
 
   const updated: Array<{ id: string; oldPriority: string; newPriority: string; score: number }> = [];
@@ -603,7 +621,7 @@ export async function reRankRecommendationsInEngagement(
       if (newPriority !== oldPriority) {
         // Update the recommendation
         await db.recommendation.update({
-          where: { id: rec.id },
+          where: { id: rec.id, workspaceId },
           data: {
             priority: newPriority,
             version: { increment: 1 },
@@ -641,9 +659,11 @@ export async function reRankRecommendationsInEngagement(
   return { updated: updateCount, recommendations: updated };
 }
 
-export async function getRecommendation(recommendationId: string) {
+export async function getRecommendation(recommendationId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "getRecommendation", "recommendation");
+
   const rec = await db.recommendation.findUnique({
-    where: { id: recommendationId },
+    where: { id: recommendationId, workspaceId },
     include: {
       engagement: true,
       finding: true,
@@ -656,10 +676,13 @@ export async function getRecommendation(recommendationId: string) {
 export async function updateRecommendation(
   recommendationId: string,
   input: UpdateRecommendationInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "updateRecommendation", "recommendation");
+
   const rec = await db.recommendation.findUnique({
-    where: { id: recommendationId },
+    where: { id: recommendationId, workspaceId },
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);
 
@@ -672,7 +695,7 @@ export async function updateRecommendation(
   if (input.priority) updates.priority = input.priority;
 
   const updated = await db.recommendation.update({
-    where: { id: recommendationId },
+    where: { id: recommendationId, workspaceId },
     data: updates,
   });
 
@@ -691,8 +714,11 @@ export async function updateRecommendation(
 export async function createRecommendationsFromInterventions(
   engagementId: string,
   interventions: any[], // PrioritizedIntervention[] from consulting-engine
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "createRecommendationsFromInterventions", "recommendation");
+
   if (!interventions || interventions.length === 0) {
     return [];
   }
@@ -722,7 +748,7 @@ export async function createRecommendationsFromInterventions(
       class: mapClassToRecommendationClass(intervention.class),
     };
 
-    const rec = await createRecommendation(input, actorId);
+    const rec = await createRecommendation(input, actorId, workspaceId);
     recommendations.push(rec);
   }
 

@@ -12,6 +12,7 @@ import { DataValidationEngine } from "@/engines/DataValidationEngine";
 import { FinancialEngine } from "@/engines/FinancialEngine";
 import { DiagnosisOrchestrator } from "@/engines/DiagnosisOrchestrator";
 import type { BusinessAssessment, OrchestratedDiagnosis } from "@/engines/contracts";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -602,7 +603,9 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
 
 // ─── Main Diagnosis Function ───────────────────────────────────────────────
 
-export async function diagnoseBusiness(input: BusinessProblemInput, actorId: string): Promise<DiagnosisResult> {
+export async function diagnoseBusiness(input: BusinessProblemInput, actorId: string, workspaceId: string): Promise<DiagnosisResult> {
+  enforceWorkspaceId(workspaceId, "diagnoseBusiness", "diagnosis");
+
   validateBusinessProblem(input);
 
   // Engine layer: orchestrate diagnosis from multiple engines

@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 export interface ReviewCycle {
   id: string;
@@ -34,18 +35,21 @@ export interface ReviewCycleStats {
 
 export async function generateReviewCycle(
   engagementId: string,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<ReviewCycle> {
+  enforceWorkspaceId(workspaceId, "generateReviewCycle", "review_cycle");
+
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     select: { id: true },
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
   // Get all KPIs and evaluate progress
   const kpis = await db.kPI.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
     select: {
       id: true,
       currentValue: true,
@@ -71,7 +75,7 @@ export async function generateReviewCycle(
 
   // Count action statuses
   const actions = await db.action.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
     select: { status: true },
   });
 
@@ -87,7 +91,7 @@ export async function generateReviewCycle(
 
   // Count findings (all considered unresolved since status is not tracked)
   const findings = await db.finding.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
     select: { id: true },
   });
 
@@ -180,11 +184,14 @@ export async function generateReviewCycle(
 
 export async function listReviewCyclesForEngagement(
   engagementId: string,
+  workspaceId: string,
   visibility?: "internal" | "all"
 ): Promise<Omit<ReviewCycle, 'visibilityStatus'>[]> {
+  enforceWorkspaceId(workspaceId, "listReviewCyclesForEngagement", "review_cycle");
+
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     select: { id: true },
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
@@ -202,11 +209,14 @@ export async function getLatestReviewCycle(
 }
 
 export async function getReviewCycleStats(
-  engagementId: string
+  engagementId: string,
+  workspaceId: string
 ): Promise<ReviewCycleStats> {
+  enforceWorkspaceId(workspaceId, "getReviewCycleStats", "review_cycle");
+
   // Get KPI stats
   const kpis = await db.kPI.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
     select: {
       currentValue: true,
       target: true,
@@ -222,7 +232,7 @@ export async function getReviewCycleStats(
 
   // Get action stats
   const actions = await db.action.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
     select: { status: true },
   });
 
@@ -235,7 +245,7 @@ export async function getReviewCycleStats(
 
   // Get finding stats (status not tracked in schema, so count all as unresolved)
   const findings = await db.finding.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
     select: { id: true },
   });
 

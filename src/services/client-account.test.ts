@@ -35,7 +35,7 @@ describe("client-account service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      const result = await clientService.createClient(input, mockUserId);
+      const result = await clientService.createClient(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(result.id).toBe(mockClientId);
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -61,6 +61,7 @@ describe("client-account service", () => {
 
       await clientService.updateClient(
         mockClientId,
+        "550e8400-e29b-41d4-a716-446655440000",
         { name: "New Name", version: 1 },
         mockUserId
       );
@@ -80,6 +81,7 @@ describe("client-account service", () => {
       await expect(
         clientService.updateClient(
           mockClientId,
+          "550e8400-e29b-41d4-a716-446655440000",
           { name: "New Name", version: 1 },
           mockUserId
         )
