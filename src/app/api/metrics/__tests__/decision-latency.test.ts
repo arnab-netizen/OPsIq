@@ -33,7 +33,7 @@ describe("PHASE 5: Decision Latency Metrics", () => {
       new Error("Unauthorized")
     );
 
-    const request = new NextRequest("http://localhost/api/metrics/decision-latency");
+    const request = new NextRequest("http://localhost/api/metrics/decision-latency?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(403);
@@ -48,7 +48,7 @@ describe("PHASE 5: Decision Latency Metrics", () => {
 
     vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([]);
 
-    const request = new NextRequest("http://localhost/api/metrics/decision-latency");
+    const request = new NextRequest("http://localhost/api/metrics/decision-latency?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -76,7 +76,7 @@ describe("PHASE 5: Decision Latency Metrics", () => {
       },
     ] as any);
 
-    const request = new NextRequest("http://localhost/api/metrics/decision-latency");
+    const request = new NextRequest("http://localhost/api/metrics/decision-latency?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -112,7 +112,7 @@ describe("PHASE 5: Decision Latency Metrics", () => {
       },
     ] as any);
 
-    const request = new NextRequest("http://localhost/api/metrics/decision-latency");
+    const request = new NextRequest("http://localhost/api/metrics/decision-latency?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -145,7 +145,7 @@ describe("PHASE 5: Decision Latency Metrics", () => {
 
     vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce(decisions as any);
 
-    const request = new NextRequest("http://localhost/api/metrics/decision-latency");
+    const request = new NextRequest("http://localhost/api/metrics/decision-latency?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -164,7 +164,7 @@ describe("PHASE 5: Decision Latency Metrics", () => {
     vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([]);
 
     const request = new NextRequest(
-      "http://localhost/api/metrics/decision-latency?days=120"
+      "http://localhost/api/metrics/decision-latency?workspaceId=ws-123&days=120"
     );
     const response = await GET(request);
 
@@ -188,7 +188,7 @@ describe("PHASE 5: Decision Latency Metrics", () => {
       { id: "b1", status: "blocked", createdAt: now, completedAt: null, startedAt: null },
     ] as any);
 
-    const request = new NextRequest("http://localhost/api/metrics/decision-latency");
+    const request = new NextRequest("http://localhost/api/metrics/decision-latency?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -207,7 +207,7 @@ describe("PHASE 5: Decision Latency Metrics", () => {
 
     vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([]);
 
-    const request = new NextRequest("http://localhost/api/metrics/decision-latency");
+    const request = new NextRequest("http://localhost/api/metrics/decision-latency?workspaceId=ws-123");
     await GET(request);
 
     expect(vi.mocked(db.operatorItem.findMany)).toHaveBeenCalledWith(

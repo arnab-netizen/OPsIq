@@ -33,7 +33,7 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
       new Error("Unauthorized")
     );
 
-    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness");
+    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(403);
@@ -48,7 +48,7 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
 
     vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([]);
 
-    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness");
+    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -85,7 +85,7 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
       },
     ] as any);
 
-    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness");
+    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -131,7 +131,7 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
       },
     ] as any);
 
-    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness");
+    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -184,7 +184,7 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
       },
     ] as any);
 
-    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness");
+    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -222,7 +222,7 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
       },
     ] as any);
 
-    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness");
+    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -255,7 +255,7 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
       },
     ] as any);
 
-    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness");
+    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123");
     const response = await GET(request);
 
     expect(response.status).toBe(200);
@@ -272,7 +272,7 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
     vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([]);
 
     const request = new NextRequest(
-      "http://localhost/api/metrics/control-effectiveness?days=120"
+      "http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123&days=120"
     );
     const response = await GET(request);
 
@@ -288,7 +288,7 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
 
     vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([]);
 
-    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness");
+    const request = new NextRequest("http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123");
     await GET(request);
 
     expect(vi.mocked(db.operatorItem.findMany)).toHaveBeenCalledWith(
