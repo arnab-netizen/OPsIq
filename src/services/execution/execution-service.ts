@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { recordDecisionMetrics } from "@/services/metrics/decision-metrics-service";
+import { logger } from "@/infra/logger";
 
 export async function executeDecision(
   decisionId: string,
@@ -100,6 +102,20 @@ export async function markSuccess(
     },
   });
 
+  await recordDecisionMetrics(workspaceId, {
+    problemType: decision.problemType || "general",
+    actionTaken: decision.action,
+    success: true,
+    actualOutcome: outcomeValue,
+    expectedOutcome: decision.impactExpected,
+  }).catch((metricsError) => {
+    logger.warn("Failed to record success metrics", {
+      decisionId,
+      workspaceId,
+      error: metricsError instanceof Error ? metricsError.message : String(metricsError),
+    });
+  });
+
   return updated;
 }
 
@@ -151,6 +167,20 @@ export async function markFailure(
       reason,
       failedAt: new Date().toISOString(),
     },
+  });
+
+  await recordDecisionMetrics(workspaceId, {
+    problemType: decision.problemType || "general",
+    actionTaken: decision.action,
+    success: false,
+    actualOutcome: 0,
+    expectedOutcome: decision.impactExpected,
+  }).catch((metricsError) => {
+    logger.warn("Failed to record failure metrics", {
+      decisionId,
+      workspaceId,
+      error: metricsError instanceof Error ? metricsError.message : String(metricsError),
+    });
   });
 
   return updated;

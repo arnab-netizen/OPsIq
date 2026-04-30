@@ -14,6 +14,18 @@ vi.mock("@/infra", () => ({
   emitAuditEvent: vi.fn(),
 }));
 
+vi.mock("@/services/metrics/decision-metrics-service", () => ({
+  recordDecisionMetrics: vi.fn(),
+}));
+
+vi.mock("@/infra/logger", () => ({
+  logger: {
+    warn: vi.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 import {
   executeDecision,
   markSuccess,
@@ -21,6 +33,8 @@ import {
 } from "../execution-service";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra";
+import { recordDecisionMetrics } from "@/services/metrics/decision-metrics-service";
+import { logger } from "@/infra/logger";
 
 describe("Execution Service", () => {
   const mockDecision = {
@@ -105,6 +119,10 @@ describe("Execution Service", () => {
   });
 
   describe("markSuccess", () => {
+    beforeEach(() => {
+      vi.mocked(recordDecisionMetrics).mockResolvedValue({} as any);
+    });
+
     it("should transition from running to success", async () => {
       vi.mocked(db.operatorItem.findFirst).mockResolvedValue({
         ...mockDecision,
@@ -176,6 +194,10 @@ describe("Execution Service", () => {
   });
 
   describe("markFailure", () => {
+    beforeEach(() => {
+      vi.mocked(recordDecisionMetrics).mockResolvedValue({} as any);
+    });
+
     it("should transition from running to failed", async () => {
       vi.mocked(db.operatorItem.findFirst).mockResolvedValue({
         ...mockDecision,
@@ -262,6 +284,10 @@ describe("Execution Service", () => {
   });
 
   describe("Execution Lifecycle", () => {
+    beforeEach(() => {
+      vi.mocked(recordDecisionMetrics).mockResolvedValue({} as any);
+    });
+
     it("should flow: pending -> running -> success", async () => {
       // Start execution
       vi.mocked(db.operatorItem.findFirst).mockResolvedValue(
@@ -349,6 +375,7 @@ describe("Execution Service", () => {
         executionStatus: "success",
         actualOutcomeValue: 600000,
       } as any);
+      vi.mocked(recordDecisionMetrics).mockResolvedValue({} as any);
 
       await markSuccess("d1", "ws-123", "user-001", 600000);
 
@@ -357,6 +384,141 @@ describe("Execution Service", () => {
         expect.objectContaining({
           status: "success",
           actualOutcomeValue: 600000,
+        })
+      );
+    });
+  });
+
+  describe("Metrics Recording", () => {
+    beforeEach(() => {
+      vi.mocked(recordDecisionMetrics).mockResolvedValue({} as any);
+    });
+
+    it("should record metrics on successful execution", async () => {
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "running",
+        problemType: "revenue_leak",
+      } as any);
+      vi.mocked(db.operatorItem.update).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "success",
+      } as any);
+
+      await markSuccess("d1", "ws-123", "user-001", 600000);
+
+      expect(vi.mocked(recordDecisionMetrics)).toHaveBeenCalledWith(
+        "ws-123",
+        expect.objectContaining({
+          success: true,
+          actualOutcome: 600000,
+          expectedOutcome: 500000,
+        })
+      );
+    });
+
+    it("should record metrics on failed execution", async () => {
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "running",
+        problemType: "cost_overrun",
+      } as any);
+      vi.mocked(db.operatorItem.update).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "failed",
+      } as any);
+      vi.mocked(recordDecisionMetrics).mockResolvedValue({} as any);
+
+      await markFailure("d1", "ws-123", "user-001", "Execution blocked");
+
+      expect(vi.mocked(recordDecisionMetrics)).toHaveBeenCalledWith(
+        "ws-123",
+        expect.objectContaining({
+          success: false,
+          actualOutcome: 0,
+        })
+      );
+    });
+
+    it("should include problem type in metrics", async () => {
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "running",
+        problemType: "growth_block",
+      } as any);
+      vi.mocked(db.operatorItem.update).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "success",
+      } as any);
+
+      await markSuccess("d1", "ws-123", "user-001", 600000);
+
+      expect(vi.mocked(recordDecisionMetrics)).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          problemType: "growth_block",
+        })
+      );
+    });
+
+    it("should include action taken in metrics", async () => {
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "running",
+        action: "Reduce pricing",
+      } as any);
+      vi.mocked(db.operatorItem.update).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "success",
+      } as any);
+
+      await markSuccess("d1", "ws-123", "user-001", 600000);
+
+      expect(vi.mocked(recordDecisionMetrics)).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          actionTaken: "Reduce pricing",
+        })
+      );
+    });
+
+    it("should not block execution if metrics recording fails", async () => {
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "running",
+      } as any);
+      vi.mocked(db.operatorItem.update).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "success",
+      } as any);
+      vi.mocked(recordDecisionMetrics).mockRejectedValue(
+        new Error("Metrics error")
+      );
+
+      await expect(
+        markSuccess("d1", "ws-123", "user-001", 600000)
+      ).resolves.not.toThrow();
+
+      expect(vi.mocked(logger.warn)).toHaveBeenCalled();
+    });
+
+    it("should use default problem type if missing", async () => {
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "running",
+        problemType: null,
+      } as any);
+      vi.mocked(db.operatorItem.update).mockResolvedValue({
+        ...mockDecision,
+        executionStatus: "success",
+      } as any);
+
+      await markSuccess("d1", "ws-123", "user-001", 600000);
+
+      expect(vi.mocked(recordDecisionMetrics)).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          problemType: "general",
         })
       );
     });
