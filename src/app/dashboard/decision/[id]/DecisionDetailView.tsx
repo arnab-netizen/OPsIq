@@ -174,12 +174,12 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
                 </label>
                 <p className="text-gray-900 mt-1">{decision.action}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="text-xs font-semibold text-gray-500 uppercase">
                     Confidence
                   </label>
-                  <p className="text-gray-900 mt-1">
+                  <p className="text-xl font-bold text-gray-900 mt-1">
                     {(decision.confidence * 100).toFixed(0)}%
                   </p>
                 </div>
@@ -187,8 +187,16 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
                   <label className="text-xs font-semibold text-gray-500 uppercase">
                     Expected Impact
                   </label>
-                  <p className="text-gray-900 mt-1">
+                  <p className="text-xl font-bold text-blue-600 mt-1">
                     ₹{(decision.impactExpected / 1000000).toFixed(2)}M
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase">
+                    Impact Range
+                  </label>
+                  <p className="text-sm text-gray-700 mt-1">
+                    ₹{(decision.impactLow / 1000000).toFixed(2)}M - ₹{(decision.impactHigh / 1000000).toFixed(2)}M
                   </p>
                 </div>
               </div>
@@ -280,20 +288,39 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
           {/* Audit Trail */}
           <div className="bg-white border rounded-lg p-4">
             <h2 className="font-bold text-gray-900 mb-4">Audit Trail</h2>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
+            <div className="space-y-3">
               {decision.auditLog && decision.auditLog.length > 0 ? (
                 decision.auditLog.map((event: any, idx: number) => (
-                  <div key={idx} className="text-xs border-b pb-2 last:border-b-0">
-                    <div className="flex justify-between">
-                      <span className="font-semibold text-gray-900">{event.eventName}</span>
-                      <span className="text-gray-500">
+                  <div key={idx} className="border-l-2 border-gray-200 pl-3 py-2">
+                    <div className="flex justify-between items-start">
+                      <span className="font-semibold text-sm text-gray-900">{event.eventName}</span>
+                      <span className="text-xs text-gray-500">
                         {new Date(event.createdAt).toLocaleString()}
                       </span>
                     </div>
                     {event.metadata && (
-                      <pre className="text-gray-600 mt-1 text-xs bg-gray-50 p-1 rounded overflow-auto">
-                        {JSON.stringify(event.metadata, null, 2).substring(0, 200)}...
-                      </pre>
+                      <div className="mt-2 text-xs">
+                        {event.metadata.action && (
+                          <p className="text-gray-700">
+                            <span className="font-semibold">Action:</span> {event.metadata.action}
+                          </p>
+                        )}
+                        {event.metadata.status && (
+                          <p className="text-gray-700">
+                            <span className="font-semibold">Status:</span> {event.metadata.status}
+                          </p>
+                        )}
+                        {event.metadata.reason && (
+                          <p className="text-gray-700">
+                            <span className="font-semibold">Reason:</span> {event.metadata.reason}
+                          </p>
+                        )}
+                        {event.metadata.override_reason && (
+                          <p className="text-gray-700">
+                            <span className="font-semibold">Override:</span> {event.metadata.override_reason}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 ))

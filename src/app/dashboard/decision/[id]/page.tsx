@@ -1,23 +1,16 @@
 import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { getSession } from "@/services/auth";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import DecisionDetailView from "./DecisionDetailView";
 
-async function getDecision(decisionId: string) {
-  const workspace = await requireWorkspaceContext();
-  const session = await getSession();
-
-  if (!session?.user.id) {
-    redirect("/login");
-  }
-
+async function getDecision(decisionId: string, workspaceId: string) {
   const decision = await db.operatorItem.findUnique({
     where: { id: decisionId },
     include: {
       auditLog: {
         orderBy: { createdAt: "desc" },
-        take: 50,
+        take: 100,
       },
     },
   });
@@ -26,25 +19,67 @@ async function getDecision(decisionId: string) {
     notFound();
   }
 
-  if (decision.workspaceId !== workspace.workspaceId) {
+  if (decision.workspaceId !== workspaceId) {
     notFound();
   }
 
   return decision;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<Record<string, string>> }) {
   const { id } = await params;
-  const decision = await getDecision(id);
-  return {
-    title: `Decision: ${decision.problem} | OPsIQ`,
-    description: decision.action,
-  };
+  const sp = await searchParams;
+  const workspaceId = sp?.workspaceId || "";
+
+  try {
+    const decision = await getDecision(id, workspaceId);
+    return {
+      title: `Decision: ${decision.problem} | OPsIQ`,
+      description: decision.action,
+    };
+  } catch {
+    return {
+      title: "Decision | OPsIQ",
+    };
+  }
 }
 
-export default async function DecisionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DecisionDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string>>;
+}) {
+  const session = await getSession();
+
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+
   const { id } = await params;
-  const decision = await getDecision(id);
+  const sp = await searchParams;
+  const workspaceId = sp?.workspaceId || "";
+
+  if (!workspaceId) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-red-600">Workspace ID required</p>
+      </div>
+    );
+  }
+
+  // Verify user has access to workspace
+  const membership = await enforceWorkspaceScoping(
+    { nextUrl: { searchParams: new URLSearchParams({ workspaceId }) } } as any,
+    workspaceId
+  );
+
+  if (!membership) {
+    redirect("/login");
+  }
+
+  const decision = await getDecision(id, workspaceId);
 
   return <DecisionDetailView decision={decision} />;
 }
