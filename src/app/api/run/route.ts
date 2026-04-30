@@ -21,6 +21,7 @@ import { evaluateGuardrails, formatGuardrailViolations } from "@/services/contro
 import { validateDependencies } from "@/services/control/variable-registry";
 import { enforceControlLayer } from "@/services/control/enforcement";
 import { recordLifecycleStage } from "@/services/lifecycle/decision-lifecycle";
+import { checkRateLimit, isDuplicateRequest, getRequestHash } from "@/services/production/safety-config";
 
 function addIntegrity(
   result: DecisionResult,
@@ -54,6 +55,14 @@ export async function POST(request: NextRequest) {
 
     // Initialize logger once workspace is available
     logger = createEventLogger("api_run", workspace.workspaceId);
+
+    // Check rate limit per workspace
+    if (!checkRateLimit(workspace.workspaceId)) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429 }
+      );
+    }
 
     // Record RECEIVED stage
     await recordLifecycleStage({

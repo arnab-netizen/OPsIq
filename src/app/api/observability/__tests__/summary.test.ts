@@ -22,11 +22,21 @@ vi.mock("@/lib/observability/log", () => ({
   createEventLogger: vi.fn(),
 }));
 
+vi.mock("@/infra/errors", () => ({
+  UnauthorizedError: class UnauthorizedError extends Error {
+    constructor(message = "Authentication required") {
+      super(message);
+      this.name = "UnauthorizedError";
+    }
+  },
+}));
+
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { createEventLogger } from "@/lib/observability/log";
+import { UnauthorizedError } from "@/infra/errors";
 
 describe("Observability Summary API", () => {
   const testWorkspaceId = "ws-test-123";
@@ -55,7 +65,7 @@ describe("Observability Summary API", () => {
   describe("Authentication & Authorization", () => {
     it("should fail closed when workspace context is missing", async () => {
       vi.mocked(requireWorkspaceContext).mockRejectedValueOnce(
-        new Error("Unauthorized")
+        new UnauthorizedError("Workspace context required")
       );
 
       const request = new NextRequest("http://localhost/api/observability/summary", {
