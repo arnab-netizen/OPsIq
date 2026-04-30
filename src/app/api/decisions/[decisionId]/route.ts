@@ -9,6 +9,7 @@ import {
   canOverride,
 } from "@/middleware/workspace-enforcement";
 import { isValidTransition } from "@/services/decision/status-management";
+import { executeDecisionStub } from "@/services/decision/execution-stub";
 import { z } from "zod";
 
 const UpdateDecisionSchema = z.object({
@@ -167,11 +168,35 @@ export async function PATCH(
       );
     });
 
+    // Auto-execute stub when approved
+    let finalStatus: string = input.status;
+    let executionResult = null;
+
+    if (input.status === "approved") {
+      try {
+        executionResult = await executeDecisionStub(
+          decisionId,
+          workspaceId,
+          userId
+        );
+        finalStatus = "executed";
+      } catch (execErr) {
+        console.error(
+          `Execution stub failed: ${execErr instanceof Error ? execErr.message : String(execErr)}`
+        );
+        // Continue with approved status if execution fails
+      }
+    }
+
     return NextResponse.json(
       {
         decisionId,
-        status: updated.status,
-        message: `Decision ${input.status} successfully.`,
+        status: finalStatus,
+        message:
+          finalStatus === "executed"
+            ? "Decision approved and executed successfully."
+            : `Decision ${input.status} successfully.`,
+        ...(executionResult && { execution: executionResult }),
       },
       { status: 200 }
     );
