@@ -19,16 +19,18 @@ const updateEvidenceSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { evidenceId } = await context.params;
   parseOrThrow(uuidSchema, evidenceId);
   await withAuth({ capability: CAPABILITIES.EVIDENCE_VIEW });
 
-  const evidence = await getEvidenceById(evidenceId);
+  const evidence = await getEvidenceById(evidenceId, workspaceId);
   return Response.json(evidence);
 });
 
 export const PATCH = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { evidenceId } = await context.params;
   parseOrThrow(uuidSchema, evidenceId);
   const { session } = await withAuth({
@@ -37,8 +39,8 @@ export const PATCH = withRequestContext(async (request, context) => {
   });
 
   const body = await parseRequestBody(request, updateEvidenceSchema);
-  await updateEvidence(evidenceId, body, session.user.id);
+  await updateEvidence(evidenceId, body, session.user.id, workspaceId);
 
-  const updated = await getEvidenceById(evidenceId);
+  const updated = await getEvidenceById(evidenceId, workspaceId);
   return Response.json(updated);
 });

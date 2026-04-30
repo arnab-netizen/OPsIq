@@ -18,8 +18,9 @@ export const POST = withRequestContext(async (request) => {
     internalOnly: true,
   });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const body = await parseRequestBody(request, executeSchema);
-  const result = await executeWorkflow(body, session.user.id);
+  const result = await executeWorkflow(body, session.user.id, workspaceId);
 
   return Response.json(result, { status: 200 });
 });

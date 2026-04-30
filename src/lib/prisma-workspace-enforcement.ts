@@ -112,8 +112,14 @@ export function createWorkspaceEnforcementMiddleware() {
                   `WORKSPACE ISOLATION VIOLATION: ${operation} on ${model} WHERE must include workspaceId`
                 );
               }
-              // Validate no conflicting workspaceId in data
-              if (args.data && args.data.workspaceId) {
+              // Validate no conflicting workspaceId in data (only for update operations)
+              if (
+                (operation === "update" || operation === "updateMany") &&
+                args.data &&
+                typeof args.data === "object" &&
+                "workspaceId" in args.data &&
+                args.data.workspaceId
+              ) {
                 const whereWorkspaceId = extractWorkspaceId(where);
                 if (
                   whereWorkspaceId &&
@@ -130,7 +136,12 @@ export function createWorkspaceEnforcementMiddleware() {
             if (operation === "create" || operation === "createMany") {
               const data = Array.isArray(args.data) ? args.data : [args.data];
               for (const item of data) {
-                if (!item || !item.workspaceId) {
+                if (
+                  !item ||
+                  typeof item !== "object" ||
+                  !("workspaceId" in item) ||
+                  !item.workspaceId
+                ) {
                   throw new Error(
                     `WORKSPACE ISOLATION VIOLATION: create ${model} requires workspaceId in data`
                   );

@@ -9,6 +9,7 @@ import {
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { withIdempotency } from "@/infra/idempotency";
 import { logger } from "@/infra/logger";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import type {
   FindingStatus,
 } from "@/domain/constants/statuses";
@@ -51,15 +52,18 @@ export interface LinkEvidenceToFindingInput {
 
 export async function createFinding(
   input: CreateFindingInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<{ id: string; engagementId: string }> {
+  enforceWorkspaceId(workspaceId, "createFinding", "finding");
+
   // Map backward compatibility fields
   const summary = input.summary || input.description || input.statement || "";
   const primaryEvidenceId = input.primaryEvidenceId || (input.linkedEvidenceIds?.[0]) || null;
 
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
+    where: { id: input.engagementId, workspaceId },
     select: { id: true },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
@@ -108,6 +112,7 @@ export async function createFinding(
       rootCause: input.rootCause || null,
       linkedEvidence: primaryEvidenceId ? [primaryEvidenceId] : [],
       createdBy: actorId,
+      workspaceId,
     },
     select: { id: true, engagementId: true },
   });
@@ -142,11 +147,14 @@ export async function createFinding(
 export async function updateFinding(
   findingId: string,
   input: UpdateFindingInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<{ id: string }> {
+  enforceWorkspaceId(workspaceId, "updateFinding", "finding");
+
   // Validate finding exists and check version
   const existing = await db.finding.findUnique({
-    where: { id: findingId },
+    where: { id: findingId, workspaceId },
     select: { id: true, engagementId: true, version: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
@@ -188,7 +196,7 @@ export async function updateFinding(
   data.version = existing.version + 1;
 
   const updated = await db.finding.update({
-    where: { id: findingId },
+    where: { id: findingId, workspaceId },
     data,
     select: { id: true, engagementId: true },
   });

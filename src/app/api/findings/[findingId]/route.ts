@@ -43,8 +43,9 @@ export const PATCH = withRequestContext(async (request, context) => {
     internalOnly: true,
   });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const body = await parseRequestBody(request, updateFindingSchema);
-  await updateFinding(findingId, body, session.user.id);
+  await updateFinding(findingId, body, session.user.id, workspaceId);
 
   const updated = await getFindingDetail(findingId);
   return Response.json(updated);

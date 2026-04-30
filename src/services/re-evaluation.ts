@@ -640,18 +640,27 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
 
     // 5. Dynamic re-ranking based on scoring metrics
     if (targets.recommendationPriority && event.triggeredBy && event.engagementId) {
-      const reRankResult = await reRankRecommendationsInEngagement(event.engagementId, event.triggeredBy);
+      // Fetch workspaceId for this engagement
+      const engagementForWs = await db.engagement.findUnique({
+        where: { id: event.engagementId },
+        select: { workspaceId: true },
+      });
+      if (!engagementForWs) {
+        logger.warn("Engagement not found for re-ranking", { engagementId: event.engagementId });
+      } else {
+        const reRankResult = await reRankRecommendationsInEngagement(event.engagementId, event.triggeredBy, engagementForWs.workspaceId);
 
-      if (reRankResult.updated > 0) {
-        auditPayload.recommendationReRankingResult = {
-          count: reRankResult.updated,
-          recommendations: reRankResult.recommendations.map((r: any) => ({
-            id: r.id,
-            oldPriority: r.oldPriority,
-            newPriority: r.newPriority,
-            score: r.score,
-          })),
-        };
+        if (reRankResult.updated > 0) {
+          auditPayload.recommendationReRankingResult = {
+            count: reRankResult.updated,
+            recommendations: reRankResult.recommendations.map((r: any) => ({
+              id: r.id,
+              oldPriority: r.oldPriority,
+              newPriority: r.newPriority,
+              score: r.score,
+            })),
+          };
+        }
       }
     }
 
@@ -683,8 +692,15 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
 
     // Phase 7: Post-re-evaluation escalation and review checks
     try {
-      await checkEngagementEscalations(event.engagementId, event.triggeredBy);
-      await computeNextReviewDate(event.engagementId, event.triggeredBy);
+      // Fetch workspaceId for escalation/review checks
+      const engagementForPhase7 = await db.engagement.findUnique({
+        where: { id: event.engagementId },
+        select: { workspaceId: true },
+      });
+      if (engagementForPhase7) {
+        await checkEngagementEscalations(event.engagementId, event.triggeredBy, engagementForPhase7.workspaceId);
+        await computeNextReviewDate(event.engagementId, event.triggeredBy, engagementForPhase7.workspaceId);
+      }
     } catch (escalationError) {
       logger.warn("Escalation/review check failed (non-blocking)", {
         engagementId: event.engagementId,

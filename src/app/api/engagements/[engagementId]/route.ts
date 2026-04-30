@@ -30,18 +30,20 @@ const updateEngagementSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
   const { session, policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
   await assertEngagementAccess(session.user.id, engagementId);
 
-  const engagement = await getEngagementById(engagementId, hasInternalAccess(policy));
+  const engagement = await getEngagementById(engagementId, workspaceId, hasInternalAccess(policy));
   return Response.json(engagement);
 });
 
 export const PATCH = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
   const { session, policy } = await withAuth({
@@ -87,8 +89,8 @@ export const PATCH = withRequestContext(async (request, context) => {
   }
 
   try {
-    await updateEngagement(engagementId, body, session.user.id);
-    const updated = await getEngagementById(engagementId, hasInternalAccess(policy));
+    await updateEngagement(engagementId, body, session.user.id, workspaceId);
+    const updated = await getEngagementById(engagementId, workspaceId, hasInternalAccess(policy));
     await recordIdempotencyResponse(idempotencyKey, 200, updated);
     return Response.json(updated);
   } catch (error) {

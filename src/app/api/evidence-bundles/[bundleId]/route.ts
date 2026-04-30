@@ -10,8 +10,9 @@ import { updateEvidenceBundleSchema } from "@/domain/validation/evidence";
 import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
   try {
+    const workspaceId = request.headers.get("x-workspace-id") || "";
     const { bundleId } = await context.params;
     parseOrThrow(uuidSchema, bundleId);
 
@@ -19,7 +20,7 @@ export const GET = withRequestContext(async (_request, context) => {
       capability: CAPABILITIES.EVIDENCE_VIEW,
     });
 
-    const result = await getEvidenceBundleById(bundleId);
+    const result = await getEvidenceBundleById(bundleId, workspaceId);
 
     return Response.json(result);
   } catch (error) {
@@ -30,6 +31,7 @@ export const GET = withRequestContext(async (_request, context) => {
 
 export const PUT = withRequestContext(async (request, context) => {
   try {
+    const workspaceId = request.headers.get("x-workspace-id") || "";
     const { bundleId } = await context.params;
     parseOrThrow(uuidSchema, bundleId);
 
@@ -39,7 +41,7 @@ export const PUT = withRequestContext(async (request, context) => {
 
     const body = await parseRequestBody(request, updateEvidenceBundleSchema);
 
-    await updateEvidenceBundle(bundleId, body, session.user.id);
+    await updateEvidenceBundle(bundleId, body, session.user.id, workspaceId);
 
     return Response.json({ success: true });
   } catch (error) {

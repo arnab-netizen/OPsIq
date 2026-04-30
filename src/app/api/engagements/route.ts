@@ -30,15 +30,17 @@ const listEngagementsSchema = paginationSchema.extend({
 });
 
 export const GET = withRequestContext(async (request) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
   const params = parseSearchParams(request.url, listEngagementsSchema);
-  const result = await listEngagements(params, hasInternalAccess(policy));
+  const result = await listEngagements(workspaceId, params, hasInternalAccess(policy));
 
   return Response.json(result);
 });
 
 export const POST = withRequestContext(async (request) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_CREATE,
     internalOnly: true,
@@ -69,7 +71,7 @@ export const POST = withRequestContext(async (request) => {
   }
 
   try {
-    const result = await createEngagement(body, session.user.id);
+    const result = await createEngagement(body, session.user.id, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
     return Response.json(result, { status: 201 });
   } catch (error) {

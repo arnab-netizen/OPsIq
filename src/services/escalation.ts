@@ -143,13 +143,27 @@ export async function detectKPIDeteriorationPattern(
 
 export async function checkEngagementEscalations(
   engagementId: string,
-  actorId: string
+  actorId: string,
+  workspaceId?: string
 ): Promise<EscalationAlert[]> {
+  // Fetch workspaceId from engagement if not provided
+  const wsId = workspaceId || (await (async () => {
+    const engagement = await db.engagement.findUnique({
+      where: { id: engagementId },
+      select: { workspaceId: true },
+    });
+    if (!engagement) {
+      throw new Error(`Engagement ${engagementId} not found`);
+    }
+    return engagement.workspaceId;
+  })());
+
   const alerts: EscalationAlert[] = [];
 
   const highPriorityAlert = await detectHighPriorityOverdueActions(
     engagementId,
-    actorId
+    actorId,
+    wsId
   );
   if (highPriorityAlert) {
     alerts.push(highPriorityAlert);

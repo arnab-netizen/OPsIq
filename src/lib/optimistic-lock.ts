@@ -57,10 +57,10 @@ export function withVersionIncrement<T extends Record<string, unknown>>(
 /**
  * Helper to build the standard versioned where clause.
  */
-export function withVersionCheck(
-  where: { id: string },
+export function withVersionCheck<T extends { id: string }>(
+  where: T,
   expectedVersion: number
-): { id: string; version: number } {
+): T & { version: number } {
   return {
     ...where,
     version: expectedVersion,

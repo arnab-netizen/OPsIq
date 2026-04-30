@@ -340,7 +340,6 @@ export async function updateEngagement(
       severity: "high",
       description: `Intervention mode changed from ${engagement.interventionMode} to ${input.interventionMode}`,
       triggeredBy: actorId,
-      workspaceId,
     });
   }
 

@@ -9,6 +9,7 @@ import { logger } from "@/infra/logger";
 
 export const POST = withRequestContext(async (request, context) => {
   try {
+    const workspaceId = request.headers.get("x-workspace-id") || "";
     const { evidenceId } = await context.params;
     parseOrThrow(uuidSchema, evidenceId);
 
@@ -31,7 +32,7 @@ export const POST = withRequestContext(async (request, context) => {
       );
     }
 
-    await validateEvidence(bodyData, session.user.id);
+    await validateEvidence(bodyData, session.user.id, workspaceId);
 
     return Response.json({ success: true });
   } catch (error) {

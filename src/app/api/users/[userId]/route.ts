@@ -33,16 +33,18 @@ const actionSchema = z.discriminatedUnion("action", [
   reactivateSchema,
 ]);
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { userId } = await context.params;
   parseOrThrow(uuidSchema, userId);
   await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true });
 
-  const user = await getUserById(userId);
+  const user = await getUserById(userId, workspaceId);
   return Response.json(user);
 });
 
 export const PATCH = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { userId } = await context.params;
   parseOrThrow(uuidSchema, userId);
   const { session } = await withAuth({
@@ -51,13 +53,14 @@ export const PATCH = withRequestContext(async (request, context) => {
   });
 
   const body = await parseRequestBody(request, updateUserSchema);
-  await updateUser(userId, body, session.user.id);
+  await updateUser(userId, body, session.user.id, workspaceId);
 
-  const updated = await getUserById(userId);
+  const updated = await getUserById(userId, workspaceId);
   return Response.json(updated);
 });
 
 export const POST = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { userId } = await context.params;
   parseOrThrow(uuidSchema, userId);
 
@@ -70,11 +73,11 @@ export const POST = withRequestContext(async (request, context) => {
   const body = await parseRequestBody(request, actionSchema);
 
   if (body.action === "deactivate") {
-    await deactivateUser(userId, session.user.id, body.version);
+    await deactivateUser(userId, session.user.id, body.version, workspaceId);
     return Response.json({ status: "deactivated" });
   }
 
   // reactivate
-  await reactivateUser(userId, session.user.id, body.version);
+  await reactivateUser(userId, session.user.id, body.version, workspaceId);
   return Response.json({ status: "reactivated" });
 });

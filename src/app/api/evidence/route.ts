@@ -21,22 +21,24 @@ const listEvidenceSchema = paginationSchema.extend({
 });
 
 export const GET = withRequestContext(async (request) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   await withAuth({ capability: CAPABILITIES.EVIDENCE_VIEW });
 
   const params = parseSearchParams(request.url, listEvidenceSchema);
-  const result = await listEvidence(params);
+  const result = await listEvidence(workspaceId, params);
 
   return Response.json(result);
 });
 
 export const POST = withRequestContext(async (request) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { session } = await withAuth({
     capability: CAPABILITIES.EVIDENCE_SUBMIT,
     internalOnly: true,
   });
 
   const body = await parseRequestBody(request, createEvidenceSchema);
-  const result = await createEvidence(body, session.user.id);
+  const result = await createEvidence(body, session.user.id, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

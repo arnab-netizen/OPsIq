@@ -26,13 +26,14 @@ const createRecommendationSchema = z.object({
 });
 
 export const POST = withRequestContext(async (request) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { session } = await withAuth({
     capability: CAPABILITIES.RECOMMENDATION_CREATE,
     internalOnly: true,
   });
 
   const body = await parseRequestBody(request, createRecommendationSchema);
-  const result = await createRecommendation(body, session.user.id);
+  const result = await createRecommendation(body, session.user.id, workspaceId);
 
   return Response.json(result, { status: 201 });
 });
