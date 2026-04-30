@@ -22,10 +22,21 @@ vi.mock("@/services/audit/audit-log", () => ({
   logAuditEvent: vi.fn(),
 }));
 
+// Mock error class
+vi.mock("@/infra/errors", () => ({
+  UnauthorizedError: class UnauthorizedError extends Error {
+    constructor(message = "Authentication required") {
+      super(message);
+      this.name = "UnauthorizedError";
+    }
+  },
+}));
+
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
 import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
+import { UnauthorizedError } from "@/infra/errors";
 
 describe("PHASE 5.3: Governance Metrics API", () => {
   beforeEach(() => {
@@ -35,7 +46,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
   describe("Authentication & Authorization", () => {
     it("should fail closed with 403 when workspace context missing", async () => {
       vi.mocked(requireWorkspaceContext).mockRejectedValueOnce(
-        new Error("Unauthorized")
+        new UnauthorizedError("Workspace context required")
       );
 
       const request = new NextRequest("http://localhost/api/governance/metrics");
@@ -48,7 +59,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
 
     it("should fail closed before calculating metrics on auth failure", async () => {
       vi.mocked(requireWorkspaceContext).mockRejectedValueOnce(
-        new Error("Session expired")
+        new UnauthorizedError("Session expired")
       );
 
       const request = new NextRequest("http://localhost/api/governance/metrics");

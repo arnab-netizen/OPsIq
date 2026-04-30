@@ -4,6 +4,7 @@ import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { createEventLogger } from "@/lib/observability/log";
+import { UnauthorizedError } from "@/infra/errors";
 
 export async function GET(request: NextRequest) {
   let workspace;
@@ -52,15 +53,18 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(summary);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    if (logger) {
-      logger.error(message);
-    }
-    if (message.includes("Unauthorized")) {
+    if (error instanceof UnauthorizedError) {
+      if (logger) {
+        logger.error("Unauthorized access");
+      }
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 403 }
       );
+    }
+    const message = error instanceof Error ? error.message : "Unknown error";
+    if (logger) {
+      logger.error(message);
     }
     return NextResponse.json(
       { error: "Internal server error" },
