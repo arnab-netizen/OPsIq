@@ -9,9 +9,30 @@ interface DecisionActionPanelProps {
   blockReason?: string;
 }
 
+interface EvaluationResult {
+  recommendation: "approved" | "blocked";
+  blockStage?: string;
+  blockReason?: string;
+  controlLayerViolations?: unknown;
+}
+
+async function evaluateDecision(decisionId: string): Promise<{ success: boolean; data?: EvaluationResult; error?: string }> {
+  try {
+    const res = await fetch(`/api/decisions/${decisionId}/evaluate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (!res.ok) throw new Error("Failed to evaluate decision");
+    const data = await res.json();
+    return { success: true, data: data as EvaluationResult };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Error evaluating decision" };
+  }
+}
+
 async function approveDecision(decisionId: string) {
   try {
-    // Update decision status via API
     const res = await fetch(`/api/decisions/${decisionId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -65,6 +86,22 @@ export function DecisionActionPanel({ decisionId, status, blockReason }: Decisio
   const [error, setError] = useState<string | null>(null);
   const [overrideReason, setOverrideReason] = useState("");
   const [showOverrideForm, setShowOverrideForm] = useState(false);
+  const [evaluated, setEvaluated] = useState(false);
+  const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
+
+  const handleEvaluate = async () => {
+    setLoading(true);
+    setError(null);
+
+    const result = await evaluateDecision(decisionId);
+    if (result.success && result.data) {
+      setEvaluation(result.data);
+      setEvaluated(true);
+    } else {
+      setError(result.error || "Error evaluating decision");
+    }
+    setLoading(false);
+  };
 
   const handleApprove = async () => {
     setLoading(true);
@@ -120,8 +157,43 @@ export function DecisionActionPanel({ decisionId, status, blockReason }: Decisio
         </div>
       )}
 
-      {status === "pending" && (
+      {status === "pending" && !evaluated && (
         <div className="space-y-3">
+          <button
+            onClick={handleEvaluate}
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400 font-medium"
+          >
+            {loading ? "Evaluating..." : "🔍 EVALUATE WITH SYSTEM"}
+          </button>
+          <p className="text-xs text-gray-600 text-center">
+            Get system recommendation before approving
+          </p>
+        </div>
+      )}
+
+      {status === "pending" && evaluated && evaluation && (
+        <div className="space-y-3">
+          <div className={`p-3 rounded border ${
+            evaluation.recommendation === "approved"
+              ? "bg-green-50 border-green-200"
+              : "bg-yellow-50 border-yellow-200"
+          }`}>
+            <p className="text-sm font-semibold text-gray-900">
+              System Recommendation: {evaluation.recommendation === "approved" ? "✓ APPROVE" : "⚠️ BLOCK"}
+            </p>
+            {evaluation.blockStage && (
+              <p className="text-xs text-gray-700 mt-2">
+                Blocked at: <span className="font-medium">{evaluation.blockStage}</span>
+              </p>
+            )}
+            {evaluation.blockReason && (
+              <p className="text-xs text-gray-700">
+                Reason: <span className="font-medium">{evaluation.blockReason}</span>
+              </p>
+            )}
+          </div>
+
           <button
             onClick={handleApprove}
             disabled={loading}
@@ -129,6 +201,17 @@ export function DecisionActionPanel({ decisionId, status, blockReason }: Decisio
           >
             {loading ? "Processing..." : "✓ APPROVE"}
           </button>
+
+          {evaluation.recommendation === "blocked" && (
+            <button
+              onClick={() => setShowOverrideForm(true)}
+              disabled={loading}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400 font-medium"
+            >
+              ⚠️ OVERRIDE BLOCK
+            </button>
+          )}
+
           <button
             onClick={handleReject}
             disabled={loading}
@@ -136,6 +219,37 @@ export function DecisionActionPanel({ decisionId, status, blockReason }: Decisio
           >
             {loading ? "Processing..." : "✗ REJECT"}
           </button>
+
+          {showOverrideForm && (
+            <div className="space-y-3 mt-3 pt-3 border-t">
+              <textarea
+                value={overrideReason}
+                onChange={(e) => setOverrideReason(e.target.value)}
+                placeholder="Why are you overriding the system block? (required)"
+                className="w-full border rounded p-2 text-sm"
+                rows={3}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleOverride}
+                  disabled={loading}
+                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-gray-400 font-medium text-sm"
+                >
+                  {loading ? "Processing..." : "Confirm Override"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowOverrideForm(false);
+                    setOverrideReason("");
+                  }}
+                  disabled={loading}
+                  className="flex-1 bg-gray-400 text-white py-2 px-4 rounded hover:bg-gray-500 font-medium text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

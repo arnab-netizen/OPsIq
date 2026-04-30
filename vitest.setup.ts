@@ -5,9 +5,6 @@ import path from "path";
 // Load test environment first
 dotenv.config({ path: path.resolve(process.cwd(), ".env.test") });
 
-// Set test environment
-process.env.NODE_ENV = "test";
-
 // Fallback: ensure test database is configured
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = "file:./test.db";

@@ -23,7 +23,7 @@ export async function cleanupOldRecords(): Promise<void> {
     }).catch(() => ({ count: 0 }));
 
     if (deletedOperatorItems.count > 0) {
-      logger.info(`Deleted ${deletedOperatorItems.count} expired operator items`);
+      logger.success({ message: `Deleted ${deletedOperatorItems.count} expired operator items` });
     }
 
     // Delete audit events older than TTL
@@ -37,7 +37,7 @@ export async function cleanupOldRecords(): Promise<void> {
     }).catch(() => ({ count: 0 }));
 
     if (deletedAuditEvents.count > 0) {
-      logger.info(`Deleted ${deletedAuditEvents.count} expired audit events`);
+      logger.success({ message: `Deleted ${deletedAuditEvents.count} expired audit events` });
     }
 
     // Delete decision lifecycle events older than TTL
@@ -51,7 +51,7 @@ export async function cleanupOldRecords(): Promise<void> {
     }).catch(() => ({ count: 0 }));
 
     if (deletedLifecycleEvents.count > 0) {
-      logger.info(`Deleted ${deletedLifecycleEvents.count} expired lifecycle events`);
+      logger.success({ message: `Deleted ${deletedLifecycleEvents.count} expired lifecycle events` });
     }
   } catch (error) {
     logger.error(`Retention cleanup failed: ${error instanceof Error ? error.message : String(error)}`);
