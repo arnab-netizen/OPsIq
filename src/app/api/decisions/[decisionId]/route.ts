@@ -69,12 +69,27 @@ export async function PATCH(
       );
     }
 
-    // Check permission to approve/reject
-    if (!hasPermission(membership.role, "approve")) {
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
+    // Parse input first to check what action is being requested
+    const body = await request.json();
+    const input = UpdateDecisionSchema.parse(body);
+
+    // Check permission based on action
+    if (input.override_reason) {
+      // Override attempt - only admin can override
+      if (!hasPermission(membership.role, "override")) {
+        return NextResponse.json(
+          { error: "Only administrators can override blocked decisions" },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Approve/reject attempt - reviewer can do this
+      if (!hasPermission(membership.role, input.status === "approved" ? "approve" : "reject")) {
+        return NextResponse.json(
+          { error: `Insufficient permissions to ${input.status} decision` },
+          { status: 403 }
+        );
+      }
     }
 
     // Check if user can act on this decision (must be assigned or admin)
@@ -93,23 +108,6 @@ export async function PATCH(
         { error: `Cannot update ${decision.status} decision. Only pending or blocked decisions can be updated.` },
         { status: 400 }
       );
-    }
-
-    // Parse and validate input
-    const body = await request.json();
-    const input = UpdateDecisionSchema.parse(body);
-
-    // Check if this is an override attempt
-    if (input.override_reason) {
-      // Only reviewer/admin can override
-      if (!canOverride(membership.role, decision.reviewedBy)) {
-        return NextResponse.json(
-          {
-            error: "Only reviewers can override blocked decisions",
-          },
-          { status: 403 }
-        );
-      }
     }
 
     // Update decision status

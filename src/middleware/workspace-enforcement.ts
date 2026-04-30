@@ -51,12 +51,17 @@ export async function enforceWorkspaceScoping(
 
 /**
  * Check if user has permission for an action in workspace
+ *
+ * Permissions:
+ * - operator: create, read (view decisions only)
+ * - reviewer: read, approve, reject (cannot override)
+ * - admin: all actions including override
  */
 export function hasPermission(role: string, action: string): boolean {
   const permissions: Record<string, string[]> = {
-    admin: ["create", "read", "update", "delete", "approve", "reject", "override"],
-    operator: ["create", "read", "update"],
-    reviewer: ["read", "approve", "reject", "override"],
+    admin: ["create", "read", "update", "delete", "approve", "reject", "override", "evaluate"],
+    operator: ["create", "read", "evaluate"],
+    reviewer: ["read", "approve", "reject", "evaluate"],
   };
 
   return permissions[role]?.includes(action) ?? false;
@@ -82,15 +87,10 @@ export function canActOnDecision(
 }
 
 /**
- * Check if user can override (reviewer required)
- * Only reviewers and admins can override
+ * Check if user can override
+ * Only admin can override blocked decisions
  */
 export function canOverride(role: string, reviewedBy?: string | null): boolean {
-  // Admin can always override
-  if (role === "admin") return true;
-
-  // Reviewer can override
-  if (role === "reviewer") return true;
-
-  return false;
+  // Only admin can override
+  return role === "admin";
 }

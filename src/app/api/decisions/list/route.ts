@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/services/auth";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,6 +25,14 @@ export async function GET(request: NextRequest) {
     if (!membership) {
       return NextResponse.json(
         { error: "Unauthorized or invalid workspace" },
+        { status: 403 }
+      );
+    }
+
+    // Check permission to read/view decisions
+    if (!hasPermission(membership.role, "read")) {
+      return NextResponse.json(
+        { error: "Insufficient permissions to view decisions" },
         { status: 403 }
       );
     }

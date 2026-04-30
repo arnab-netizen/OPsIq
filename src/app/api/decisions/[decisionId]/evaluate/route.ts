@@ -40,6 +40,14 @@ export async function POST(
       );
     }
 
+    // Check permission to evaluate decisions
+    if (!hasPermission(membership.role, "evaluate")) {
+      return NextResponse.json(
+        { error: "Insufficient permissions to evaluate decisions" },
+        { status: 403 }
+      );
+    }
+
     // Fetch stored decision
     const decision = await db.operatorItem.findUnique({
       where: { id: decisionId },
