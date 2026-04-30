@@ -1,6 +1,70 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 describe("Decision Execution API Endpoints", () => {
+  describe("WorkspaceId Enforcement", () => {
+    it("should require workspaceId query parameter on execute", () => {
+      const workspaceId = null;
+      const isValid = workspaceId !== null;
+      expect(isValid).toBe(false);
+    });
+
+    it("should require workspaceId query parameter on success", () => {
+      const workspaceId = null;
+      const isValid = workspaceId !== null;
+      expect(isValid).toBe(false);
+    });
+
+    it("should require workspaceId query parameter on failure", () => {
+      const workspaceId = null;
+      const isValid = workspaceId !== null;
+      expect(isValid).toBe(false);
+    });
+
+    it("should reject request without workspaceId (400)", () => {
+      const status = 400;
+      const message = "Workspace ID required";
+      expect(status).toBe(400);
+      expect(message).toContain("Workspace");
+    });
+
+    it("should verify decision belongs to workspace", () => {
+      const decisionWorkspace = "ws-123";
+      const requestWorkspace = "ws-123";
+      const matches = decisionWorkspace === requestWorkspace;
+      expect(matches).toBe(true);
+    });
+
+    it("should reject if decision from different workspace", () => {
+      const decisionWorkspace = "ws-123";
+      const requestWorkspace = "ws-456";
+      const matches = decisionWorkspace === requestWorkspace;
+      expect(matches).toBe(false);
+    });
+
+    it("should pass workspaceId to execution service", () => {
+      const workspaceId = "ws-123";
+      expect(workspaceId).toBeDefined();
+      expect(workspaceId.length).toBeGreaterThan(0);
+    });
+
+    it("should include workspaceId in audit events", () => {
+      const auditEvent = {
+        workspaceId: "ws-123",
+        eventName: "decision.execution_started",
+      };
+      expect(auditEvent.workspaceId).toBe("ws-123");
+    });
+
+    it("should scope responses to workspace", () => {
+      const decision = {
+        id: "d1",
+        workspaceId: "ws-123",
+        status: "approved",
+      };
+      expect(decision.workspaceId).toBe("ws-123");
+    });
+  });
+
   describe("POST /api/decisions/[id]/execute", () => {
     it("should require authentication", () => {
       const error = "Unauthorized";

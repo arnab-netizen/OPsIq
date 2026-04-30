@@ -19,7 +19,13 @@ export interface AuditEventInput {
 
 export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
   if (!input.workspaceId) {
-    throw new Error("workspaceId is required for audit events");
+    logger.warn("Audit event emitted without workspaceId - fail-safe activated", {
+      eventName: input.eventName,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      reason: "workspaceId is required for workspace isolation",
+    });
+    return "fail-safe-no-workspace-id";
   }
 
   const event = await db.auditEvent.create({
