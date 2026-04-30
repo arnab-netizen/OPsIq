@@ -58,9 +58,10 @@ export async function GET(request: NextRequest) {
           blockedCount: metrics.summary.blockedCount,
         },
       },
+      workspaceId,
     }).catch((auditError) => {
       // Log but don't fail on audit error - observability only
-      console.error(`Audit logging failed: ${auditError}`);
+      console.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
     });
 
     return NextResponse.json(metrics);

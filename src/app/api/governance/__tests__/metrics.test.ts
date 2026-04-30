@@ -346,6 +346,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
           entityType: "GovernanceMetrics",
           entityId: "ws-123",
           actorId: "user-456",
+          workspaceId: "ws-123",
           metadata: expect.objectContaining({
             action: "view_governance_metrics",
             days: 30,
@@ -391,6 +392,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
 
       expect(response.status).toBe(200);
       const auditCall = vi.mocked(logAuditEvent).mock.calls[0][0] as any;
+      expect(auditCall.workspaceId).toBe("ws-789");
       expect(auditCall.metadata.summary.totalDecisions).toBe(20);
       expect(auditCall.metadata.summary.approvedCount).toBe(14);
       expect(auditCall.metadata.summary.blockedCount).toBe(6);

@@ -39,9 +39,10 @@ export async function GET(request: NextRequest) {
         last24h_events: summary.period.last24h.lifecycleCounts.reduce((sum, c) => sum + c.count, 0),
         last7d_events: summary.period.last7d.lifecycleCounts.reduce((sum, c) => sum + c.count, 0),
       },
+      workspaceId: workspace.workspaceId,
     }).catch((auditError) => {
       // Log but don't fail on audit error - observability only
-      if (logger) logger.error(`Audit logging failed: ${auditError}`);
+      if (logger) logger.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
     });
 
     if (logger) {

@@ -313,6 +313,7 @@ describe("Observability Summary API", () => {
           entityType: "ObservabilitySummary",
           entityId: testWorkspaceId,
           actorId: testUserId,
+          workspaceId: testWorkspaceId,
           metadata: expect.objectContaining({
             action: "view_observability_summary",
           }),
@@ -361,7 +362,8 @@ describe("Observability Summary API", () => {
 
       await GET(request);
 
-      const auditCall = vi.mocked(logAuditEvent).mock.calls[0][0];
+      const auditCall = vi.mocked(logAuditEvent).mock.calls[0][0] as any;
+      expect(auditCall.workspaceId).toBe(testWorkspaceId);
       expect(auditCall.metadata.last24h_events).toBe(110); // 100 + 10
       expect(auditCall.metadata.last7d_events).toBe(800); // 700 + 100
     });
