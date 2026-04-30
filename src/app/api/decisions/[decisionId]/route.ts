@@ -8,6 +8,7 @@ import {
   canActOnDecision,
   canOverride,
 } from "@/middleware/workspace-enforcement";
+import { isValidTransition } from "@/services/decision/status-management";
 import { z } from "zod";
 
 const UpdateDecisionSchema = z.object({
@@ -73,6 +74,17 @@ export async function PATCH(
     const body = await request.json();
     const input = UpdateDecisionSchema.parse(body);
 
+    // Validate status transition
+    if (!isValidTransition(decision.status, input.status)) {
+      return NextResponse.json(
+        {
+          error: `Cannot transition from ${decision.status} to ${input.status}`,
+          code: "INVALID_TRANSITION",
+        },
+        { status: 400 }
+      );
+    }
+
     // Check permission based on action
     if (input.override_reason) {
       // Override attempt - only admin can override
@@ -102,31 +114,34 @@ export async function PATCH(
       );
     }
 
-    // Only allow status updates on pending decisions
-    if (decision.status !== "pending" && decision.status !== "blocked") {
-      return NextResponse.json(
-        { error: `Cannot update ${decision.status} decision. Only pending or blocked decisions can be updated.` },
-        { status: 400 }
-      );
-    }
-
-    // Update decision status
+    // Update decision status with timestamp
+    const timestamp = new Date();
     const updated = await db.operatorItem.update({
       where: { id: decisionId },
       data: {
         status: input.status,
         ...(input.override_reason && {
           override_reason: input.override_reason,
-          override_approved_at: input.override_approved_at,
+          override_approved_at: input.override_approved_at || timestamp.toISOString(),
           reviewedBy: userId, // Track who reviewed/approved the override
         }),
-        updatedAt: new Date(),
+        updatedAt: timestamp,
       },
     });
 
-    // Log audit event
+    // Determine event name based on transition
+    let eventName = "DECISION_STATUS_CHANGED";
+    if (input.override_reason) {
+      eventName = "DECISION_OVERRIDDEN";
+    } else if (input.status === "approved") {
+      eventName = "DECISION_APPROVED";
+    } else if (input.status === "rejected") {
+      eventName = "DECISION_REJECTED";
+    }
+
+    // Log audit event with complete details
     await logAuditEvent({
-      eventName: decision.status === "blocked" && input.override_reason ? "DECISION_OVERRIDDEN" : "DECISION_UPDATED",
+      eventName,
       entityType: "Decision",
       entityId: decisionId,
       actorId: userId,
@@ -140,12 +155,16 @@ export async function PATCH(
       },
       metadata: {
         action: input.status === "approved" ? "approve_decision" : "reject_decision",
+        from: decision.status,
+        to: input.status,
         ...(input.override_reason && { override_reason: input.override_reason }),
-        timestamp: new Date().toISOString(),
+        timestamp: timestamp.toISOString(),
       },
       workspaceId,
-    }).catch((auditError) => {
-      console.error(`Audit logging failed: ${auditError}`);
+    }).catch((auditError: unknown) => {
+      console.error(
+        `Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`
+      );
     });
 
     return NextResponse.json(
