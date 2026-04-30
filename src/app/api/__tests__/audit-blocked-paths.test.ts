@@ -36,7 +36,7 @@ vi.mock("@/services/auth", () => ({
   }),
 }));
 
-describe("PHASE 4 CRITICAL 3: Audit Compliance", () => {
+describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
   const testWorkspaceId = "test-workspace-id";
   const testUserId = "test-user-id";
   const testRole = "editor";

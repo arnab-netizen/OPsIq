@@ -1,11 +1,20 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { cleanupOldRecords } from "@/services/production/retention-cleanup";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+let lastCleanupTime = 0;
+
 export const GET = withRequestContext(async () => {
+  // Trigger retention cleanup periodically (every 6 hours)
+  const now = Date.now();
+  if (now - lastCleanupTime > 6 * 60 * 60 * 1000) {
+    lastCleanupTime = now;
+    cleanupOldRecords().catch((err) => logger.error("Retention cleanup failed", { error: err }));
+  }
   const checks: Record<string, { status: string; latencyMs?: number; error?: string }> = {};
 
   // Database check

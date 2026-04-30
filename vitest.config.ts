@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
 
+const testWithDb = process.env.TEST_WITH_DB === "true";
+
 export default defineConfig({
   test: {
     globals: true,
@@ -17,6 +19,10 @@ export default defineConfig({
     ],
     testTimeout: 30000,
     hookTimeout: 30000,
+    // Filter tests: exclude DB-dependent tests unless TEST_WITH_DB=true
+    ...(testWithDb ? {} : {
+      testNamePattern: /^(?!.*\[db\]).*$/
+    }),
   },
   resolve: {
     alias: {

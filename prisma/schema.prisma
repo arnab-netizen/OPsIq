@@ -69,6 +69,41 @@ model UserRoleAssignment {
   @@map("user_role_assignments")
 }
 
+// ─── Workspace Management ──────────────────────────────────────────────────
+
+model Workspace {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String    @unique
+  description String?
+  createdBy   String    @map("created_by") @db.Uuid
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  memberships WorkspaceMembership[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMembership {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  role        String    // "admin" | "approver" | "submitter" | "viewer"
+  addedBy     String?   @map("added_by") @db.Uuid
+  addedAt     DateTime  @default(now()) @map("added_at")
+  removedAt   DateTime? @map("removed_at")
+  isActive    Boolean   @default(true) @map("is_active")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId, isActive])
+  @@index([userId, isActive])
+  @@map("workspace_memberships")
+}
+
 // ─── Identity: Engagement Membership ────────────────────────────────────────
 
 model EngagementMembership {
@@ -628,6 +663,8 @@ model OperatorItem {
   ownerUserId         String    @map("owner_user_id") @db.Uuid // Decision owner
   createdBy           String    @map("created_by_user_id") @db.Uuid // Creator for audit
   lastUpdatedBy       String?   @map("last_updated_by_user_id") @db.Uuid // Last editor for audit
+  assignedTo          String?   @map("assigned_to_user_id") @db.Uuid // User assigned to act on decision
+  reviewedBy          String?   @map("reviewed_by_user_id") @db.Uuid // User who reviewed/approved (for overrides)
   problem             String
   action              String
   impactExpected      Float
@@ -672,11 +709,14 @@ model OperatorItem {
 
   @@index([workspaceId])
   @@index([workspaceId, ownerUserId])
+  @@index([workspaceId, assignedTo])
   @@index([workspaceId, status])
   @@index([workspaceId, blockStage])
   @@index([workspaceId, priorityScore])
   @@index([workspaceId, executionStatus])
   @@index([ownerUserId])
+  @@index([assignedTo])
+  @@index([reviewedBy])
   @@index([status])
   @@index([blockStage])
   @@index([priorityScore])
@@ -722,6 +762,29 @@ model BusinessProfile {
 
   @@index([workspaceId])
   @@map("business_profiles")
+}
+
+// ─── Observability: Decision Lifecycle Tracking ────────────────────────────
+
+model DecisionLifecycle {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid // Multi-workspace isolation
+  decisionId  String?   @map("decision_id") @db.Uuid // OperatorItem id (null if not yet created)
+  actorId     String?   @map("actor_id") @db.Uuid // User who triggered this stage
+  stage       String    // RECEIVED, VALIDATED, NORMALIZED, GATED, GUARDRAIL_CHECKED, APPROVED, BLOCKED, ERRORED
+  status      String    // success, blocked, error
+  reason      String?   // Explanation for block or error
+  durationMs  Int?      @map("duration_ms") // Duration of this stage in milliseconds
+  occurredAt  DateTime  @map("occurred_at") // When this stage occurred
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, decisionId])
+  @@index([workspaceId, stage])
+  @@index([workspaceId, status])
+  @@index([actorId])
+  @@index([occurredAt])
+  @@map("decision_lifecycle")
 }
 
 
