@@ -16,12 +16,28 @@ vi.mock("@/services/workspace/context", () => ({
   requireWorkspaceContext: vi.fn(),
 }));
 
+// Mock auth
+vi.mock("@/services/auth", () => ({
+  getSession: vi.fn(),
+}));
+
+// Mock audit
+vi.mock("@/services/audit/audit-log", () => ({
+  logAuditEvent: vi.fn(),
+}));
+
 import { db } from "@/lib/db";
 import { requireWorkspaceContext } from "@/services/workspace/context";
+import { getSession } from "@/services/auth";
+import { logAuditEvent } from "@/services/audit/audit-log";
 
 describe("PHASE 5: Decision Latency Metrics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getSession).mockResolvedValue({
+      user: { id: "user-123" },
+    } as any);
+    vi.mocked(logAuditEvent).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -217,5 +233,76 @@ describe("PHASE 5: Decision Latency Metrics", () => {
         }),
       })
     );
+  });
+
+  describe("Audit & Observability", () => {
+    it("should emit audit event on successful metrics access", async () => {
+      const now = new Date();
+
+      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
+        workspaceId: "ws-123",
+      } as any);
+
+      vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([
+        {
+          id: "d1",
+          status: "done",
+          createdAt: new Date(now.getTime() - 3600000),
+          completedAt: now,
+          startedAt: null,
+        },
+      ] as any);
+
+      const request = new NextRequest("http://localhost/api/metrics/decision-latency?workspaceId=ws-123");
+      const response = await GET(request);
+
+      expect(response.status).toBe(200);
+      expect(vi.mocked(logAuditEvent)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: "DECISION_LATENCY_ACCESSED",
+          entityType: "LatencyMetrics",
+          entityId: "ws-123",
+          actorId: "user-123",
+          workspaceId: "ws-123",
+          metadata: expect.objectContaining({
+            action: "view_decision_latency",
+            summary: expect.objectContaining({
+              completedCount: 1,
+              pendingCount: 0,
+            }),
+          }),
+        })
+      );
+    });
+
+    it("should not fail request if audit logging fails", async () => {
+      const now = new Date();
+
+      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
+        workspaceId: "ws-123",
+      } as any);
+
+      vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([
+        {
+          id: "d1",
+          status: "done",
+          createdAt: new Date(now.getTime() - 3600000),
+          completedAt: now,
+          startedAt: null,
+        },
+      ] as any);
+
+      vi.mocked(logAuditEvent).mockRejectedValueOnce(
+        new Error("Audit service unavailable")
+      );
+
+      const request = new NextRequest("http://localhost/api/metrics/decision-latency?workspaceId=ws-123");
+      const response = await GET(request);
+
+      // Request should succeed even if audit logging fails
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.latency.completedCount).toBe(1);
+    });
   });
 });

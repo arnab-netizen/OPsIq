@@ -16,12 +16,28 @@ vi.mock("@/services/workspace/context", () => ({
   requireWorkspaceContext: vi.fn(),
 }));
 
+// Mock auth
+vi.mock("@/services/auth", () => ({
+  getSession: vi.fn(),
+}));
+
+// Mock audit
+vi.mock("@/services/audit/audit-log", () => ({
+  logAuditEvent: vi.fn(),
+}));
+
 import { db } from "@/lib/db";
 import { requireWorkspaceContext } from "@/services/workspace/context";
+import { getSession } from "@/services/auth";
+import { logAuditEvent } from "@/services/audit/audit-log";
 
 describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getSession).mockResolvedValue({
+      user: { id: "user-123" },
+    } as any);
+    vi.mocked(logAuditEvent).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -298,5 +314,89 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
         }),
       })
     );
+  });
+
+  describe("Audit & Observability", () => {
+    it("should emit audit event on successful metrics access", async () => {
+      const mockMetrics = [
+        {
+          id: "d1",
+          status: "done",
+          blockStage: null,
+          blockReason: null,
+          confidence: 0.9,
+          guardrailResult: null,
+        },
+        {
+          id: "d2",
+          status: "blocked",
+          blockStage: "guardrails",
+          blockReason: "high_impact",
+          confidence: 0.3,
+          guardrailResult: JSON.stringify({
+            violations: [{ ruleId: "rule-1" }],
+          }),
+        },
+      ];
+
+      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
+        workspaceId: "ws-123",
+      } as any);
+
+      vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce(mockMetrics as any);
+
+      const request = new NextRequest("http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123");
+      const response = await GET(request);
+
+      expect(response.status).toBe(200);
+      expect(vi.mocked(logAuditEvent)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: "CONTROL_EFFECTIVENESS_ACCESSED",
+          entityType: "ControlMetrics",
+          entityId: "ws-123",
+          actorId: "user-123",
+          workspaceId: "ws-123",
+          metadata: expect.objectContaining({
+            action: "view_control_effectiveness",
+            summary: {
+              totalDecisions: 2,
+              totalBlocked: 1,
+              overallBlockRate: 50,
+            },
+          }),
+        })
+      );
+    });
+
+    it("should not fail request if audit logging fails", async () => {
+      const mockMetrics = [
+        {
+          id: "d1",
+          status: "done",
+          blockStage: null,
+          blockReason: null,
+          confidence: 0.9,
+          guardrailResult: null,
+        },
+      ];
+
+      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
+        workspaceId: "ws-123",
+      } as any);
+
+      vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce(mockMetrics as any);
+
+      vi.mocked(logAuditEvent).mockRejectedValueOnce(
+        new Error("Audit service unavailable")
+      );
+
+      const request = new NextRequest("http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123");
+      const response = await GET(request);
+
+      // Request should succeed even if audit logging fails
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.summary.totalDecisions).toBe(1);
+    });
   });
 });

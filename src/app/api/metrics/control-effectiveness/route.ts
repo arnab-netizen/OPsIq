@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspaceContext } from "@/services/workspace/context";
+import { getSession } from "@/services/auth";
+import { logAuditEvent } from "@/services/audit/audit-log";
 import { db } from "@/lib/db";
 
 interface RuleEffectiveness {
@@ -45,6 +47,10 @@ export async function GET(request: NextRequest) {
   try {
     // Get workspace context (fail closed if missing)
     const workspace = await requireWorkspaceContext();
+
+    // Get session for audit logging
+    const session = await getSession();
+    const userId = session?.user?.id ?? null;
 
     // Calculate date range
     const daysParam = request.nextUrl.searchParams.get("days");
@@ -230,6 +236,30 @@ export async function GET(request: NextRequest) {
       stageBreakdown,
       topGuardrailRules,
     };
+
+    // Log audit event for metrics access
+    await logAuditEvent({
+      eventName: "CONTROL_EFFECTIVENESS_ACCESSED",
+      entityType: "ControlMetrics",
+      entityId: workspace.workspaceId,
+      actorId: userId,
+      role: null,
+      before: null,
+      after: null,
+      metadata: {
+        action: "view_control_effectiveness",
+        days,
+        summary: {
+          totalDecisions,
+          totalBlocked,
+          overallBlockRate: metrics.summary.overallBlockRate,
+        },
+      },
+      workspaceId: workspace.workspaceId,
+    }).catch((auditError) => {
+      // Log but don't fail on audit error - observability only
+      console.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
+    });
 
     return NextResponse.json(metrics);
   } catch (error) {

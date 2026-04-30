@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireWorkspaceContext } from "@/services/workspace/context";
+import { getSession } from "@/services/auth";
+import { logAuditEvent } from "@/services/audit/audit-log";
 import { db } from "@/lib/db";
 
 interface DecisionLatencyMetrics {
@@ -36,6 +38,10 @@ export async function GET(request: NextRequest) {
   try {
     // Get workspace context (fail closed if missing)
     const workspace = await requireWorkspaceContext();
+
+    // Get session for audit logging
+    const session = await getSession();
+    const userId = session?.user?.id ?? null;
 
     // Calculate date range: last N days
     const daysParam = request.nextUrl.searchParams.get("days");
@@ -141,6 +147,30 @@ export async function GET(request: NextRequest) {
       },
       statusBreakdown: statusCounts,
     };
+
+    // Log audit event for metrics access
+    await logAuditEvent({
+      eventName: "DECISION_LATENCY_ACCESSED",
+      entityType: "LatencyMetrics",
+      entityId: workspace.workspaceId,
+      actorId: userId,
+      role: null,
+      before: null,
+      after: null,
+      metadata: {
+        action: "view_decision_latency",
+        days,
+        summary: {
+          completedCount: completedDecisions.length,
+          avgLatencyMs: metrics.latency.avgLatencyMs,
+          pendingCount: pendingDecisions.length,
+        },
+      },
+      workspaceId: workspace.workspaceId,
+    }).catch((auditError) => {
+      // Log but don't fail on audit error - observability only
+      console.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
+    });
 
     return NextResponse.json(metrics);
   } catch (error) {
