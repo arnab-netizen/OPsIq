@@ -69,6 +69,41 @@ model UserRoleAssignment {
   @@map("user_role_assignments")
 }
 
+// ─── Workspace Management ──────────────────────────────────────────────────
+
+model Workspace {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String    @unique
+  description String?
+  createdBy   String    @map("created_by") @db.Uuid
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  memberships WorkspaceMembership[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMembership {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  role        String    // "admin" | "approver" | "submitter" | "viewer"
+  addedBy     String?   @map("added_by") @db.Uuid
+  addedAt     DateTime  @default(now()) @map("added_at")
+  removedAt   DateTime? @map("removed_at")
+  isActive    Boolean   @default(true) @map("is_active")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId, isActive])
+  @@index([userId, isActive])
+  @@map("workspace_memberships")
+}
+
 // ─── Identity: Engagement Membership ────────────────────────────────────────
 
 model EngagementMembership {
