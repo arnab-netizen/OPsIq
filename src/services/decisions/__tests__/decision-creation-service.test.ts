@@ -13,6 +13,7 @@ vi.mock("@/infra/logger", () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
@@ -27,7 +28,7 @@ import { logger } from "@/infra/logger";
 describe("Decision Creation Service", () => {
   const mockDecision = {
     id: "d-001",
-    workspaceId: "ws-123",
+    workspaceId: "550e8400-e29b-41d4-a716-446655440000",
     problem: "Test Decision",
     action: "strategic",
     decisionType: "strategic",
@@ -58,7 +59,7 @@ describe("Decision Creation Service", () => {
         type: "strategic",
         impact: 100000,
         confidence: 0.85,
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
       });
 
@@ -67,7 +68,7 @@ describe("Decision Creation Service", () => {
       expect(result.decisionType).toBe("strategic");
       expect(vi.mocked(db.operatorItem.create)).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           problem: "Test Decision",
           action: "strategic",
           impactExpected: 100000,
@@ -83,7 +84,7 @@ describe("Decision Creation Service", () => {
           type: "strategic",
           impact: 100000,
           confidence: 0.85,
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
         })
       ).rejects.toThrow("Decision title is required");
@@ -96,7 +97,7 @@ describe("Decision Creation Service", () => {
           type: "",
           impact: 100000,
           confidence: 0.85,
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
         })
       ).rejects.toThrow("Decision type is required");
@@ -109,7 +110,7 @@ describe("Decision Creation Service", () => {
           type: "strategic",
           impact: -1000,
           confidence: 0.85,
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
         })
       ).rejects.toThrow("Impact must be a positive number");
@@ -120,7 +121,7 @@ describe("Decision Creation Service", () => {
           type: "strategic",
           impact: 0,
           confidence: 0.85,
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
         })
       ).rejects.toThrow("Impact must be a positive number");
@@ -133,7 +134,7 @@ describe("Decision Creation Service", () => {
           type: "strategic",
           impact: 100000,
           confidence: -0.1,
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
         })
       ).rejects.toThrow("Confidence must be between 0 and 1");
@@ -144,7 +145,7 @@ describe("Decision Creation Service", () => {
           type: "strategic",
           impact: 100000,
           confidence: 1.5,
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
         })
       ).rejects.toThrow("Confidence must be between 0 and 1");
@@ -162,7 +163,7 @@ describe("Decision Creation Service", () => {
         type: "strategic",
         impact: 100000,
         confidence: 0.85,
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
         problemType: "revenue_leak",
         expectedOutcome: "Increase revenue by 20%",
@@ -186,7 +187,7 @@ describe("Decision Creation Service", () => {
         type: "strategic",
         impact: 100000,
         confidence: 0.85,
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
       });
 
@@ -208,7 +209,7 @@ describe("Decision Creation Service", () => {
         type: "strategic",
         impact: 100000,
         confidence: 0.85,
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
       });
 
@@ -216,7 +217,7 @@ describe("Decision Creation Service", () => {
         "Decision created",
         expect.objectContaining({
           title: "Test Decision",
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         })
       );
     });
@@ -239,7 +240,7 @@ describe("Decision Creation Service", () => {
             type: "strategic",
             impact: 100000,
             confidence: 0.85,
-            workspaceId: "ws-123",
+            workspaceId: "550e8400-e29b-41d4-a716-446655440000",
             userId: "user-001",
           },
           {
@@ -247,7 +248,7 @@ describe("Decision Creation Service", () => {
             type: "operational",
             impact: 50000,
             confidence: 0.75,
-            workspaceId: "ws-123",
+            workspaceId: "550e8400-e29b-41d4-a716-446655440000",
             userId: "user-001",
           },
         ],
@@ -276,7 +277,7 @@ describe("Decision Creation Service", () => {
             type: "strategic",
             impact: 100000,
             confidence: 0.85,
-            workspaceId: "ws-123",
+            workspaceId: "550e8400-e29b-41d4-a716-446655440000",
             userId: "user-001",
           },
           {
@@ -284,7 +285,7 @@ describe("Decision Creation Service", () => {
             type: "strategic",
             impact: 100000,
             confidence: 0.85,
-            workspaceId: "ws-123",
+            workspaceId: "550e8400-e29b-41d4-a716-446655440000",
             userId: "user-001",
           },
           {
@@ -292,7 +293,7 @@ describe("Decision Creation Service", () => {
             type: "operational",
             impact: 50000,
             confidence: 0.75,
-            workspaceId: "ws-123",
+            workspaceId: "550e8400-e29b-41d4-a716-446655440000",
             userId: "user-001",
           },
         ],
@@ -310,7 +311,7 @@ describe("Decision Creation Service", () => {
         type: "strategic",
         impact: 100000,
         confidence: 0.85,
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
       });
 
@@ -340,7 +341,7 @@ describe("Decision Creation Service", () => {
             type: "strategic",
             impact: 100000,
             confidence: 0.85,
-            workspaceId: "ws-123",
+            workspaceId: "550e8400-e29b-41d4-a716-446655440000",
             userId: "user-001",
           },
           {
@@ -348,7 +349,7 @@ describe("Decision Creation Service", () => {
             type: "operational",
             impact: 50000,
             confidence: 0.75,
-            workspaceId: "ws-123",
+            workspaceId: "550e8400-e29b-41d4-a716-446655440000",
             userId: "user-001",
           },
         ],
@@ -371,7 +372,7 @@ describe("Decision Creation Service", () => {
 Test Decision 1,strategic,100000,0.85
 Test Decision 2,operational,50000,0.75`;
 
-      const result = parseCSV(csv, "ws-123", "user-001");
+      const result = parseCSV(csv, "550e8400-e29b-41d4-a716-446655440000", "user-001");
 
       expect(result).toHaveLength(2);
       expect(result[0]).toMatchObject({
@@ -379,7 +380,7 @@ Test Decision 2,operational,50000,0.75`;
         type: "strategic",
         impact: 100000,
         confidence: 0.85,
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
       });
     });
@@ -388,7 +389,7 @@ Test Decision 2,operational,50000,0.75`;
       const csv = `title,type,impact,confidence,problemType,expectedOutcome
 Test Decision,strategic,100000,0.85,revenue_leak,Increase revenue`;
 
-      const result = parseCSV(csv, "ws-123", "user-001");
+      const result = parseCSV(csv, "550e8400-e29b-41d4-a716-446655440000", "user-001");
 
       expect(result[0]).toMatchObject({
         problemType: "revenue_leak",
@@ -402,7 +403,7 @@ Test Decision 1,strategic,100000,0.85
 
 Test Decision 2,operational,50000,0.75`;
 
-      const result = parseCSV(csv, "ws-123", "user-001");
+      const result = parseCSV(csv, "550e8400-e29b-41d4-a716-446655440000", "user-001");
 
       expect(result).toHaveLength(2);
     });
@@ -410,7 +411,7 @@ Test Decision 2,operational,50000,0.75`;
     it("should require header row", () => {
       const csv = `Test Decision,strategic,100000,0.85`;
 
-      expect(() => parseCSV(csv, "ws-123", "user-001")).toThrow(
+      expect(() => parseCSV(csv, "550e8400-e29b-41d4-a716-446655440000", "user-001")).toThrow(
         "CSV must have header and at least one data row"
       );
     });
@@ -419,13 +420,13 @@ Test Decision 2,operational,50000,0.75`;
       const csv = `title,type
 Test Decision,strategic`;
 
-      expect(() => parseCSV(csv, "ws-123", "user-001")).toThrow(
+      expect(() => parseCSV(csv, "550e8400-e29b-41d4-a716-446655440000", "user-001")).toThrow(
         "Missing required columns: impact, confidence"
       );
     });
 
     it("should reject empty CSV", () => {
-      expect(() => parseCSV("", "ws-123", "user-001")).toThrow(
+      expect(() => parseCSV("", "550e8400-e29b-41d4-a716-446655440000", "user-001")).toThrow(
         "CSV must have header and at least one data row"
       );
     });
@@ -434,7 +435,7 @@ Test Decision,strategic`;
       const csv = `title , type , impact , confidence
  Test Decision , strategic , 100000 , 0.85 `;
 
-      const result = parseCSV(csv, "ws-123", "user-001");
+      const result = parseCSV(csv, "550e8400-e29b-41d4-a716-446655440000", "user-001");
 
       expect(result[0]).toMatchObject({
         title: "Test Decision",
@@ -456,13 +457,13 @@ Test Decision,strategic`;
         type: "strategic",
         impact: 100000,
         confidence: 0.85,
-        workspaceId: "ws-different",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440001",
         userId: "user-001",
       });
 
       expect(vi.mocked(db.operatorItem.create)).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          workspaceId: "ws-different",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440001",
         }),
       });
     });
@@ -479,7 +480,7 @@ Test Decision,strategic`;
             type: "strategic",
             impact: 100000,
             confidence: 0.85,
-            workspaceId: "ws-123",
+            workspaceId: "550e8400-e29b-41d4-a716-446655440000",
             userId: "user-different",
           },
         ],
@@ -505,7 +506,7 @@ Test Decision,strategic`;
           type: "strategic",
           impact: 100000,
           confidence: 0.85,
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
         })
       ).rejects.toThrow("Database connection failed");
@@ -528,7 +529,7 @@ Test Decision,strategic`;
             type: "strategic",
             impact: 100000,
             confidence: 0.85,
-            workspaceId: "ws-123",
+            workspaceId: "550e8400-e29b-41d4-a716-446655440000",
             userId: "user-001",
           },
         ],

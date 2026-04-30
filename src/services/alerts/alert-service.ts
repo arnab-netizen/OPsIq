@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 export type AlertType = "blocked" | "threshold_breach" | "execution_failure";
 export type AlertChannel = "in_app" | "email";
@@ -32,6 +33,9 @@ export interface Alert {
 export async function createAlert(input: CreateAlertInput): Promise<Alert> {
   const { workspaceId, userId, type, channel, message, entityType, entityId } =
     input;
+
+  // Enforce workspace isolation
+  enforceWorkspaceId(workspaceId, "createAlert", "Alert");
 
   try {
     const alert = await db.alert.create({

@@ -28,7 +28,7 @@ describe("Threshold Service", () => {
     it("should return defaults when no config exists", async () => {
       vi.mocked(db.thresholdConfig.findUnique).mockResolvedValueOnce(null);
 
-      const thresholds = await getWorkspaceThresholds("ws-123");
+      const thresholds = await getWorkspaceThresholds("550e8400-e29b-41d4-a716-446655440000");
 
       expect(thresholds).toMatchObject({
         confidenceMinThreshold: 0.65,
@@ -40,7 +40,7 @@ describe("Threshold Service", () => {
     it("should return stored config when it exists", async () => {
       const storedConfig = {
         id: "config-1",
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         confidenceMinThreshold: 0.75,
         lowConfidenceValueThreshold: 4000000,
         lowConfidenceFailureRateThreshold: 0.40,
@@ -69,7 +69,7 @@ describe("Threshold Service", () => {
         storedConfig as any
       );
 
-      const thresholds = await getWorkspaceThresholds("ws-123");
+      const thresholds = await getWorkspaceThresholds("550e8400-e29b-41d4-a716-446655440000");
 
       expect(thresholds.confidenceMinThreshold).toBe(0.75);
       expect(thresholds.lowConfidenceValueThreshold).toBe(4000000);
@@ -81,7 +81,7 @@ describe("Threshold Service", () => {
         new Error("Database error")
       );
 
-      const thresholds = await getWorkspaceThresholds("ws-123");
+      const thresholds = await getWorkspaceThresholds("550e8400-e29b-41d4-a716-446655440000");
 
       expect(thresholds.confidenceMinThreshold).toBe(0.65);
     });
@@ -94,7 +94,7 @@ describe("Threshold Service", () => {
       };
 
       await expect(
-        updateWorkspaceThresholds("ws-123", updates, "user-1")
+        updateWorkspaceThresholds("550e8400-e29b-41d4-a716-446655440000", updates, "user-1")
       ).rejects.toThrow("must be between 0 and 1");
     });
 
@@ -106,14 +106,14 @@ describe("Threshold Service", () => {
       };
 
       await expect(
-        updateWorkspaceThresholds("ws-123", updates, "user-1")
+        updateWorkspaceThresholds("550e8400-e29b-41d4-a716-446655440000", updates, "user-1")
       ).rejects.toThrow("must be ordered: low < medium < high");
     });
 
     it("should update existing config", async () => {
       const existingConfig = {
         id: "config-1",
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         confidenceMinThreshold: 0.65,
         lowConfidenceValueThreshold: 3000000,
         lowConfidenceFailureRateThreshold: 0.40,
@@ -147,12 +147,12 @@ describe("Threshold Service", () => {
         confidenceMinThreshold: 0.75,
       };
 
-      const result = await updateWorkspaceThresholds("ws-123", updates, "user-1");
+      const result = await updateWorkspaceThresholds("550e8400-e29b-41d4-a716-446655440000", updates, "user-1");
 
       expect(result.confidenceMinThreshold).toBe(0.75);
       expect(vi.mocked(db.thresholdConfig.upsert)).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { workspaceId: "ws-123" },
+          where: { workspaceId: "550e8400-e29b-41d4-a716-446655440000" },
           update: expect.objectContaining({
             confidenceMinThreshold: 0.75,
           }),
@@ -163,7 +163,7 @@ describe("Threshold Service", () => {
     it("should create config if it doesn't exist", async () => {
       const newConfig = {
         id: "config-new",
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         confidenceMinThreshold: 0.65,
         lowConfidenceValueThreshold: 3000000,
         lowConfidenceFailureRateThreshold: 0.40,
@@ -194,7 +194,7 @@ describe("Threshold Service", () => {
         confidenceMinThreshold: 0.65,
       };
 
-      const result = await updateWorkspaceThresholds("ws-123", updates, "user-1");
+      const result = await updateWorkspaceThresholds("550e8400-e29b-41d4-a716-446655440000", updates, "user-1");
 
       expect(result).toBeDefined();
       expect(vi.mocked(db.thresholdConfig.upsert)).toHaveBeenCalled();
@@ -237,10 +237,10 @@ describe("Threshold Service", () => {
     it("should delete workspace config", async () => {
       vi.mocked(db.thresholdConfig.delete).mockResolvedValueOnce({} as any);
 
-      await resetWorkspaceThresholds("ws-123");
+      await resetWorkspaceThresholds("550e8400-e29b-41d4-a716-446655440000");
 
       expect(vi.mocked(db.thresholdConfig.delete)).toHaveBeenCalledWith({
-        where: { workspaceId: "ws-123" },
+        where: { workspaceId: "550e8400-e29b-41d4-a716-446655440000" },
       });
     });
 
@@ -249,7 +249,7 @@ describe("Threshold Service", () => {
         new Error("Not found")
       );
 
-      await expect(resetWorkspaceThresholds("ws-123")).resolves.toBeUndefined();
+      await expect(resetWorkspaceThresholds("550e8400-e29b-41d4-a716-446655440000")).resolves.toBeUndefined();
     });
   });
 
