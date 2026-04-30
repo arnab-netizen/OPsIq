@@ -836,4 +836,27 @@ model ThresholdConfig {
   @@map("threshold_configs")
 }
 
+// ─── Alerts: User Notifications ────────────────────────────────────────────
+
+model Alert {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  type          String   // "blocked" | "threshold_breach" | "execution_failure"
+  channel       String   // "in_app" | "email"
+  message       String
+  entityType    String?  @map("entity_type") // "OperatorItem" | "Stage" | etc
+  entityId      String?  @map("entity_id") @db.Uuid
+  isRead        Boolean  @default(false) @map("is_read")
+  readAt        DateTime? @map("read_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, userId])
+  @@index([workspaceId, userId, isRead])
+  @@index([createdAt])
+  @@map("alerts")
+}
+
 

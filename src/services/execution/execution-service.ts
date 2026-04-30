@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { triggerAction } from "@/services/execution/action-handlers";
 import { logger } from "@/infra/logger";
+import { triggerExecutionFailureAlert } from "@/services/alerts/alert-service";
 
 export async function executeDecision(
   decisionId: string,
@@ -191,6 +192,17 @@ export async function markFailure(
   if (!updated) {
     throw new Error("Decision not found after update");
   }
+
+  // Trigger execution failure alert (non-blocking, fail-safe)
+  triggerExecutionFailureAlert(workspaceId, userId, decisionId, reason).catch(
+    (error) => {
+      logger.warn("Failed to trigger execution failure alert", {
+        decisionId,
+        workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  );
 
   return updated;
 }
