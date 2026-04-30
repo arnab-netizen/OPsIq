@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = session.user.id;
-    const workspaceId = request.nextUrl.searchParams.get("workspaceId");
+    const workspaceIdParam = request.nextUrl.searchParams.get("workspaceId");
 
-    if (!workspaceId) {
+    if (!workspaceIdParam) {
       return NextResponse.json(
         { error: "Workspace ID required" },
         { status: 400 }
@@ -22,13 +22,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Enforce workspace scoping
-    const membership = await enforceWorkspaceScoping(request, workspaceId);
+    const membership = await enforceWorkspaceScoping(request, workspaceIdParam);
     if (!membership) {
       return NextResponse.json(
         { error: "Unauthorized or invalid workspace" },
         { status: 403 }
       );
     }
+
+    const workspaceId = workspaceIdParam;
 
     // Get days parameter from query
     const daysParam = request.nextUrl.searchParams.get("days");

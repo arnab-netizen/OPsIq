@@ -42,7 +42,7 @@ describe("lead service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      const result = await leadService.createLead(input, mockUserId);
+      const result = await leadService.createLead(input, mockUserId, "550e8400-e29b-41d4-a716-446655440000");
 
       expect(result.id).toBe(mockLeadId);
       expect(emitAuditEvent).toHaveBeenCalledWith(
@@ -73,7 +73,8 @@ describe("lead service", () => {
       await leadService.updateLead(
         mockLeadId,
         { status: "qualifying" },
-        mockUserId
+        mockUserId,
+        "550e8400-e29b-41d4-a716-446655440000"
       );
 
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -92,7 +93,8 @@ describe("lead service", () => {
         leadService.updateLead(
           mockLeadId,
           { contactName: "New Name" },
-          mockUserId
+          mockUserId,
+          "550e8400-e29b-41d4-a716-446655440000"
         )
       ).rejects.toThrow(ValidationError);
     });
@@ -133,7 +135,8 @@ describe("lead service", () => {
         mockLeadId,
         mockEngagementId,
         mockClientId,
-        mockUserId
+        mockUserId,
+        '550e8400-e29b-41d4-a716-446655440000'
       );
 
       expect(triggerReEvaluation).toHaveBeenCalledWith(
@@ -164,7 +167,8 @@ describe("lead service", () => {
           mockLeadId,
           mockEngagementId,
           mockClientId,
-          mockUserId
+          mockUserId,
+          '550e8400-e29b-41d4-a716-446655440000'
         )
       ).rejects.toThrow(ValidationError);
     });
@@ -183,7 +187,8 @@ describe("lead service", () => {
           mockLeadId,
           mockEngagementId,
           mockClientId,
-          mockUserId
+          mockUserId,
+          '550e8400-e29b-41d4-a716-446655440000'
         )
       ).rejects.toThrow(ValidationError);
     });
@@ -201,7 +206,7 @@ describe("lead service", () => {
         }),
       };
 
-      const result = await leadService.getLeadById(mockLeadId);
+      const result = await leadService.getLeadById(mockLeadId, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(result.id).toBe(mockLeadId);
       expect(result.client).toBeDefined();
@@ -221,7 +226,7 @@ describe("lead service", () => {
         count: vi.fn().mockResolvedValue(1),
       };
 
-      const result = await leadService.listLeads({ limit: 25, offset: 0 });
+      const result = await leadService.listLeads('550e8400-e29b-41d4-a716-446655440000', { limit: 25, offset: 0 });
 
       expect(result.leads).toHaveLength(1);
       expect(result.total).toBe(1);

@@ -85,7 +85,8 @@ describe("Intervention State Service", () => {
       const result = await initializeInterventionState(
         "eng-1",
         "recovery",
-        "user-1"
+        "user-1",
+        "550e8400-e29b-41d4-a716-446655440000"
       );
 
       expect(result.id).toBe("eng-1");
@@ -103,7 +104,7 @@ describe("Intervention State Service", () => {
       const { initializeInterventionState } = await import("./intervention-state");
 
       try {
-        await initializeInterventionState("eng-1", "recovery", "user-1");
+        await initializeInterventionState("eng-1", "recovery", "user-1", "550e8400-e29b-41d4-a716-446655440000");
         expect.fail("Should throw validation error");
       } catch (error) {
         expect((error as any).message).toContain("already initialized");
@@ -118,7 +119,7 @@ describe("Intervention State Service", () => {
       const { initializeInterventionState } = await import("./intervention-state");
 
       try {
-        await initializeInterventionState("nonexistent", "recovery", "user-1");
+        await initializeInterventionState("nonexistent", "recovery", "user-1", "550e8400-e29b-41d4-a716-446655440000");
         expect.fail("Should throw not found error");
       } catch (error) {
         expect((error as any).message).toContain("not found");

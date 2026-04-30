@@ -15,7 +15,7 @@ describe("Recommendation Re-ranking", () => {
     it("should return empty result when no recommendations in engagement", async () => {
       vi.spyOn(db.recommendation, "findMany").mockResolvedValueOnce([]);
 
-      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1");
+      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(result.updated).toBe(0);
       expect(result.recommendations).toHaveLength(0);
@@ -31,7 +31,7 @@ describe("Recommendation Re-ranking", () => {
         },
       ] as any);
 
-      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1");
+      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(result.updated).toBe(0);
     });
@@ -67,7 +67,7 @@ describe("Recommendation Re-ranking", () => {
 
       vi.spyOn(await import("@/infra/audit"), "emitAuditEvent").mockResolvedValue(undefined);
 
-      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1");
+      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(result.updated).toBe(1);
       expect(result.recommendations[0].newPriority).toBe("high");
@@ -104,7 +104,7 @@ describe("Recommendation Re-ranking", () => {
 
       vi.spyOn(await import("@/infra/audit"), "emitAuditEvent").mockResolvedValue(undefined);
 
-      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1");
+      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(result.updated).toBe(1);
       expect(result.recommendations[0].newPriority).toBe("medium");
@@ -141,7 +141,7 @@ describe("Recommendation Re-ranking", () => {
 
       vi.spyOn(await import("@/infra/audit"), "emitAuditEvent").mockResolvedValue(undefined);
 
-      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1");
+      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(result.updated).toBe(1);
       expect(result.recommendations[0].newPriority).toBe("low");
@@ -170,7 +170,7 @@ describe("Recommendation Re-ranking", () => {
         },
       ] as any);
 
-      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1");
+      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(result.updated).toBe(0);
     });
@@ -231,7 +231,7 @@ describe("Recommendation Re-ranking", () => {
 
       vi.spyOn(await import("@/infra/audit"), "emitAuditEvent").mockResolvedValue(undefined);
 
-      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1");
+      const result = await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(result.updated).toBe(2);
       expect(result.recommendations).toHaveLength(2);
@@ -267,7 +267,7 @@ describe("Recommendation Re-ranking", () => {
 
       const emitAuditEvent = vi.spyOn(await import("@/infra/audit"), "emitAuditEvent");
 
-      await reRankRecommendationsInEngagement("eng-1", "actor-1");
+      await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(emitAuditEvent).toHaveBeenCalled();
       const call = emitAuditEvent.mock.calls[0][0];
@@ -308,7 +308,7 @@ describe("Recommendation Re-ranking", () => {
 
       vi.spyOn(await import("@/infra/audit"), "emitAuditEvent").mockResolvedValue(undefined);
 
-      await reRankRecommendationsInEngagement("eng-1", "actor-1");
+      await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(updateSpy).toHaveBeenCalledWith(
         expect.objectContaining({

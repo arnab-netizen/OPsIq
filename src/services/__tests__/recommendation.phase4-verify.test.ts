@@ -202,7 +202,7 @@ describe("PHASE 4 VERIFICATION", () => {
         priority: "high",
       } as any);
 
-      await reRankRecommendationsInEngagement("eng-1", "actor-1");
+      await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
 
       // Verify that reprioritization would trigger audit event
       const newScore = calculateRecommendationScore(metrics);

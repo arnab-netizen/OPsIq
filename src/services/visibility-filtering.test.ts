@@ -10,6 +10,7 @@ vi.mock("@/infra/logger");
 
 const mockClientId = "client-123";
 const mockEngagementId = "eng-123";
+const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
 
 describe("visibility filtering", () => {
   beforeEach(() => {
@@ -26,7 +27,7 @@ describe("visibility filtering", () => {
         count: vi.fn().mockResolvedValue(1),
       };
 
-      const result = await clientService.listClients({}, true);
+      const result = await clientService.listClients(mockWorkspaceId, {}, true);
 
       expect(mockDb.clientAccount.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -45,7 +46,7 @@ describe("visibility filtering", () => {
         count: vi.fn().mockResolvedValue(0),
       };
 
-      await clientService.listClients({}, false);
+      await clientService.listClients(mockWorkspaceId, {}, false);
 
       expect(mockDb.clientAccount.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -67,7 +68,7 @@ describe("visibility filtering", () => {
         }),
       };
 
-      const result = await clientService.getClientById(mockClientId, true);
+      const result = await clientService.getClientById(mockClientId, mockWorkspaceId, true);
 
       expect(result.id).toBe(mockClientId);
     });
@@ -84,7 +85,7 @@ describe("visibility filtering", () => {
       };
 
       await expect(
-        clientService.getClientById(mockClientId, false)
+        clientService.getClientById(mockClientId, mockWorkspaceId, false)
       ).rejects.toThrow(NotFoundError);
     });
 
@@ -99,7 +100,7 @@ describe("visibility filtering", () => {
         }),
       };
 
-      const result = await clientService.getClientById(mockClientId, false);
+      const result = await clientService.getClientById(mockClientId, mockWorkspaceId, false);
 
       expect(result.id).toBe(mockClientId);
     });
@@ -115,7 +116,7 @@ describe("visibility filtering", () => {
         count: vi.fn().mockResolvedValue(1),
       };
 
-      const result = await engagementService.listEngagements({}, true);
+      const result = await engagementService.listEngagements(mockWorkspaceId, {}, true);
 
       expect(mockDb.engagement.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -134,7 +135,7 @@ describe("visibility filtering", () => {
         count: vi.fn().mockResolvedValue(0),
       };
 
-      await engagementService.listEngagements({}, false);
+      await engagementService.listEngagements(mockWorkspaceId, {}, false);
 
       expect(mockDb.engagement.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -162,6 +163,7 @@ describe("visibility filtering", () => {
 
       const result = await engagementService.getEngagementById(
         mockEngagementId,
+        mockWorkspaceId,
         true
       );
 
@@ -184,7 +186,7 @@ describe("visibility filtering", () => {
       };
 
       await expect(
-        engagementService.getEngagementById(mockEngagementId, false)
+        engagementService.getEngagementById(mockEngagementId, mockWorkspaceId, false)
       ).rejects.toThrow(NotFoundError);
     });
 
@@ -205,6 +207,7 @@ describe("visibility filtering", () => {
 
       const result = await engagementService.getEngagementById(
         mockEngagementId,
+        mockWorkspaceId,
         false
       );
 
