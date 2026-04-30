@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getSession } from "@/services/auth";
-import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
+import {
+  enforceWorkspaceScoping,
+  hasPermission,
+  canActOnDecision,
+  canOverride,
+} from "@/middleware/workspace-enforcement";
 import { z } from "zod";
 
 const UpdateDecisionSchema = z.object({
@@ -44,14 +49,6 @@ export async function PATCH(
       );
     }
 
-    // Check permission to approve/reject
-    if (!hasPermission(membership.role, "approve")) {
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
-    }
-
     // Fetch decision
     const decision = await db.operatorItem.findUnique({
       where: { id: decisionId },
@@ -72,6 +69,24 @@ export async function PATCH(
       );
     }
 
+    // Check permission to approve/reject
+    if (!hasPermission(membership.role, "approve")) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
+
+    // Check if user can act on this decision (must be assigned or admin)
+    if (!canActOnDecision(userId, membership.role, decision)) {
+      return NextResponse.json(
+        {
+          error: "Only assigned user can act on this decision",
+        },
+        { status: 403 }
+      );
+    }
+
     // Only allow status updates on pending decisions
     if (decision.status !== "pending" && decision.status !== "blocked") {
       return NextResponse.json(
@@ -84,14 +99,28 @@ export async function PATCH(
     const body = await request.json();
     const input = UpdateDecisionSchema.parse(body);
 
+    // Check if this is an override attempt
+    if (input.override_reason) {
+      // Only reviewer/admin can override
+      if (!canOverride(membership.role, decision.reviewedBy)) {
+        return NextResponse.json(
+          {
+            error: "Only reviewers can override blocked decisions",
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     // Update decision status
     const updated = await db.operatorItem.update({
       where: { id: decisionId },
       data: {
         status: input.status,
-        ...(input.status === "approved" && {
-          override_reason: input.override_reason || null,
-          override_approved_at: input.override_approved_at || null,
+        ...(input.override_reason && {
+          override_reason: input.override_reason,
+          override_approved_at: input.override_approved_at,
+          reviewedBy: userId, // Track who reviewed/approved the override
         }),
         updatedAt: new Date(),
       },

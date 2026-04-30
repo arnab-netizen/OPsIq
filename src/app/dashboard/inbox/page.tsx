@@ -12,6 +12,7 @@ interface Decision {
   blockStage?: string | null;
   blockReason?: string | null;
   createdAt: string;
+  assignedTo?: string | null;
 }
 
 export default function DashboardInboxPage() {
@@ -115,6 +116,7 @@ export default function DashboardInboxPage() {
             <thead className="bg-gray-100 border-b">
               <tr>
                 <th className="px-4 py-3 text-left font-semibold text-gray-900">Title</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-900">Assigned To</th>
                 <th className="px-4 py-3 text-right font-semibold text-gray-900">Impact (₹)</th>
                 <th className="px-4 py-3 text-center font-semibold text-gray-900">Confidence</th>
                 <th className="px-4 py-3 text-center font-semibold text-gray-900">Status</th>
@@ -127,8 +129,15 @@ export default function DashboardInboxPage() {
                   className="border-b hover:bg-gray-50 cursor-pointer"
                   onClick={() => (window.location.href = `/decisions/${decision.id}`)}
                 >
-                  <td className="px-4 py-3 text-gray-900 max-w-md truncate font-medium">
+                  <td className="px-4 py-3 text-gray-900 max-w-xs truncate font-medium">
                     {decision.title}
+                  </td>
+                  <td className="px-4 py-3 text-gray-700 text-xs">
+                    {decision.assignedTo ? (
+                      <span className="font-mono">{decision.assignedTo.slice(0, 8)}</span>
+                    ) : (
+                      <span className="text-gray-400 italic">Unassigned</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right font-mono text-gray-700">
                     {(decision.impact / 1000000).toFixed(2)}M

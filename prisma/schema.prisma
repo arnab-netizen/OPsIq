@@ -663,6 +663,8 @@ model OperatorItem {
   ownerUserId         String    @map("owner_user_id") @db.Uuid // Decision owner
   createdBy           String    @map("created_by_user_id") @db.Uuid // Creator for audit
   lastUpdatedBy       String?   @map("last_updated_by_user_id") @db.Uuid // Last editor for audit
+  assignedTo          String?   @map("assigned_to_user_id") @db.Uuid // User assigned to act on decision
+  reviewedBy          String?   @map("reviewed_by_user_id") @db.Uuid // User who reviewed/approved (for overrides)
   problem             String
   action              String
   impactExpected      Float
@@ -707,11 +709,14 @@ model OperatorItem {
 
   @@index([workspaceId])
   @@index([workspaceId, ownerUserId])
+  @@index([workspaceId, assignedTo])
   @@index([workspaceId, status])
   @@index([workspaceId, blockStage])
   @@index([workspaceId, priorityScore])
   @@index([workspaceId, executionStatus])
   @@index([ownerUserId])
+  @@index([assignedTo])
+  @@index([reviewedBy])
   @@index([status])
   @@index([blockStage])
   @@index([priorityScore])

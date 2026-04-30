@@ -61,3 +61,36 @@ export function hasPermission(role: string, action: string): boolean {
 
   return permissions[role]?.includes(action) ?? false;
 }
+
+/**
+ * Check if user can act on a specific decision
+ * - User must be assigned to the decision, OR
+ * - User must be admin (can act on any decision)
+ */
+export function canActOnDecision(
+  userId: string,
+  role: string,
+  decision: any
+): boolean {
+  // Admin can act on any decision
+  if (role === "admin") return true;
+
+  // Other users must be assigned to the decision
+  if (decision.assignedTo === userId) return true;
+
+  return false;
+}
+
+/**
+ * Check if user can override (reviewer required)
+ * Only reviewers and admins can override
+ */
+export function canOverride(role: string, reviewedBy?: string | null): boolean {
+  // Admin can always override
+  if (role === "admin") return true;
+
+  // Reviewer can override
+  if (role === "reviewer") return true;
+
+  return false;
+}

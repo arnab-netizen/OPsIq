@@ -22,6 +22,10 @@ interface DecisionData {
   createdAt: Date;
   updatedAt: Date;
   auditLog: Array<any>;
+  ownerUserId?: string;
+  createdBy?: string;
+  assignedTo?: string | null;
+  reviewedBy?: string | null;
 }
 
 interface DecisionDetailViewProps {
@@ -112,7 +116,7 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
       {/* Header */}
       <div className="mb-6 pb-4 border-b">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{decision.problem}</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mb-3">
           <span
             className={`px-3 py-1 rounded text-sm font-medium ${
               decision.status === "pending"
@@ -129,6 +133,31 @@ export default function DecisionDetailView({ decision }: DecisionDetailViewProps
           <span className="text-gray-500">
             Created {new Date(decision.createdAt).toLocaleDateString()}
           </span>
+        </div>
+        <div className="flex gap-6 text-sm">
+          {decision.ownerUserId && (
+            <div>
+              <span className="text-gray-600">Owner:</span>
+              <span className="ml-2 font-medium text-gray-900">{decision.ownerUserId.slice(0, 8)}</span>
+            </div>
+          )}
+          {decision.assignedTo ? (
+            <div>
+              <span className="text-gray-600">Assigned to:</span>
+              <span className="ml-2 font-medium text-blue-600">{decision.assignedTo.slice(0, 8)}</span>
+            </div>
+          ) : (
+            <div>
+              <span className="text-gray-600">Assigned to:</span>
+              <span className="ml-2 text-gray-500 italic">Unassigned</span>
+            </div>
+          )}
+          {decision.reviewedBy && (
+            <div>
+              <span className="text-gray-600">Reviewed by:</span>
+              <span className="ml-2 font-medium text-green-600">{decision.reviewedBy.slice(0, 8)}</span>
+            </div>
+          )}
         </div>
       </div>
 
