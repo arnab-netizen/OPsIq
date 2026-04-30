@@ -176,7 +176,6 @@ describe("PHASE 5.3: Governance Metrics API", () => {
 
   describe("Workspace Isolation", () => {
     beforeEach(() => {
-      vi.mocked(getSession).mockResolvedValue(null);
       vi.mocked(logAuditEvent).mockResolvedValue(undefined);
     });
 
@@ -190,15 +189,16 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         impact: { approvedExpectedImpact: 100000, blockedExpectedImpact: 50000, realizedImpact: 95000, lossFromMisses: 10000 },
       };
 
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-isolated-789",
+      vi.mocked(enforceWorkspaceScoping).mockResolvedValueOnce({
+        userId: "user-isolated",
+        role: "admin",
       } as any);
 
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce(
         mockMetrics as any
       );
 
-      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-isolated-789");
       await GET(request);
 
       // Verify workspace isolation is passed to metrics calculation
@@ -219,15 +219,16 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         impact: { approvedExpectedImpact: 50000, blockedExpectedImpact: 25000, realizedImpact: 48000, lossFromMisses: 5000 },
       };
 
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-456",
+      vi.mocked(enforceWorkspaceScoping).mockResolvedValueOnce({
+        userId: "user-other",
+        role: "admin",
       } as any);
 
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce(
         mockMetrics as any
       );
 
-      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-456");
       const response = await GET(request);
 
       const body = await response.json();
@@ -238,8 +239,11 @@ describe("PHASE 5.3: Governance Metrics API", () => {
 
   describe("Query Parameters & Bounds", () => {
     beforeEach(() => {
-      vi.mocked(getSession).mockResolvedValue(null);
       vi.mocked(logAuditEvent).mockResolvedValue(undefined);
+      vi.mocked(enforceWorkspaceScoping).mockResolvedValue({
+        userId: "user-123",
+        role: "admin",
+      });
     });
 
     it("should respect days query parameter", async () => {
@@ -255,7 +259,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
       } as any);
 
       const request = new NextRequest(
-        "http://localhost/api/governance/metrics?days=7"
+        "http://localhost/api/governance/metrics?workspaceId=ws-123&days=7"
       );
       await GET(request);
 
@@ -272,7 +276,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce({} as any);
 
       const request = new NextRequest(
-        "http://localhost/api/governance/metrics?days=365"
+        "http://localhost/api/governance/metrics?workspaceId=ws-123&days=365"
       );
       await GET(request);
 
@@ -289,7 +293,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce({} as any);
 
       const request = new NextRequest(
-        "http://localhost/api/governance/metrics?days=0"
+        "http://localhost/api/governance/metrics?workspaceId=ws-123&days=0"
       );
       await GET(request);
 
@@ -302,6 +306,14 @@ describe("PHASE 5.3: Governance Metrics API", () => {
   });
 
   describe("Audit & Observability", () => {
+    beforeEach(() => {
+      vi.mocked(enforceWorkspaceScoping).mockResolvedValue({
+        userId: "user-123",
+        role: "admin",
+      });
+      vi.mocked(logAuditEvent).mockResolvedValue(undefined);
+    });
+
     it("should emit audit event on successful metrics access", async () => {
       const mockMetrics = {
         workspace: { workspaceId: "ws-123" },
@@ -357,11 +369,14 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         impact: { approvedExpectedImpact: 120000, blockedExpectedImpact: 75000, realizedImpact: 118000, lossFromMisses: 8000 },
       };
 
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-789",
+      vi.mocked(getSession).mockResolvedValueOnce({
+        user: { id: "user-789" },
       } as any);
 
-      vi.mocked(getSession).mockResolvedValueOnce(null);
+      vi.mocked(enforceWorkspaceScoping).mockResolvedValueOnce({
+        userId: "user-789",
+        role: "admin",
+      } as any);
 
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce(
         mockMetrics as any
@@ -370,10 +385,11 @@ describe("PHASE 5.3: Governance Metrics API", () => {
       vi.mocked(logAuditEvent).mockResolvedValueOnce(undefined);
 
       const request = new NextRequest(
-        "http://localhost/api/governance/metrics?days=7"
+        "http://localhost/api/governance/metrics?workspaceId=ws-789&days=7"
       );
-      await GET(request);
+      const response = await GET(request);
 
+      expect(response.status).toBe(200);
       const auditCall = vi.mocked(logAuditEvent).mock.calls[0][0] as any;
       expect(auditCall.metadata.summary.totalDecisions).toBe(20);
       expect(auditCall.metadata.summary.approvedCount).toBe(14);
@@ -391,8 +407,6 @@ describe("PHASE 5.3: Governance Metrics API", () => {
       };
 
       // enforceWorkspaceScoping already mocked in beforeEach
-
-      vi.mocked(getSession).mockResolvedValueOnce(null);
 
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce(
         mockMetrics as any
@@ -413,6 +427,14 @@ describe("PHASE 5.3: Governance Metrics API", () => {
   });
 
   describe("Error Handling", () => {
+    beforeEach(() => {
+      vi.mocked(enforceWorkspaceScoping).mockResolvedValue({
+        userId: "user-123",
+        role: "admin",
+      });
+      vi.mocked(logAuditEvent).mockResolvedValue(undefined);
+    });
+
     it("should handle internal server errors gracefully", async () => {
       // enforceWorkspaceScoping already mocked in beforeEach
 
