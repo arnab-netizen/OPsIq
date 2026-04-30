@@ -787,4 +787,51 @@ model DecisionLifecycle {
   @@map("decision_lifecycle")
 }
 
+// ─── Enterprise: Threshold Configuration ───────────────────────────────────
+
+model ThresholdConfig {
+  id                                String    @id @default(uuid()) @db.Uuid
+  workspaceId                       String    @unique @map("workspace_id") @db.Uuid // One config per workspace
+
+  // Low Confidence Risk
+  confidenceMinThreshold            Float     @default(0.65) @map("confidence_min_threshold")
+  lowConfidenceValueThreshold       Float     @default(3000000) @map("low_confidence_value_threshold")
+  lowConfidenceFailureRateThreshold Float     @default(0.40) @map("low_confidence_failure_rate_threshold")
+
+  // Rule Block Risk
+  ruleBlockValueThreshold           Float     @default(5000000) @map("rule_block_value_threshold")
+  falsePositiveRateThreshold        Float     @default(0.25) @map("false_positive_rate_threshold")
+  blockCountThreshold               Int       @default(50) @map("block_count_threshold")
+
+  // Override Failure Risk
+  overrideFailureRateThreshold      Float     @default(0.30) @map("override_failure_rate_threshold")
+  overrideFailureValueThreshold     Float     @default(2000000) @map("override_failure_value_threshold")
+  failureCountThreshold             Int       @default(10) @map("failure_count_threshold")
+
+  // Missing Data Risk
+  missingDataValueThreshold         Float     @default(4000000) @map("missing_data_value_threshold")
+  pendingAgeThreshold               Int       @default(604800000) @map("pending_age_threshold") // milliseconds (7 days default)
+  fieldMissingRateThreshold         Float     @default(0.30) @map("field_missing_rate_threshold")
+
+  // Time-Series Monitoring
+  confidenceChangeThreshold         Float     @default(0.05) @map("confidence_change_threshold")
+  approvalRateChangeThreshold       Float     @default(0.10) @map("approval_rate_change_threshold")
+  blockRateChangeThreshold          Float     @default(0.10) @map("block_rate_change_threshold")
+
+  // Drift Detection Severity Levels
+  driftSeverityLow                  Float     @default(0.02) @map("drift_severity_low")
+  driftSeverityMedium               Float     @default(0.05) @map("drift_severity_medium")
+  driftSeverityHigh                 Float     @default(0.10) @map("drift_severity_high")
+
+  // Stalled Pipeline
+  stalledPipelineThreshold          Float     @default(10000000) @map("stalled_pipeline_threshold")
+
+  createdBy                         String?   @map("created_by") @db.Uuid
+  createdAt                         DateTime  @default(now()) @map("created_at")
+  updatedAt                         DateTime  @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@map("threshold_configs")
+}
+
 

@@ -271,7 +271,7 @@ export async function getDecisionTimeline(
   });
 
   // Build timeline
-  const timeline = statusEvents.map((event) => ({
+  const timeline = statusEvents.map((event: typeof statusEvents[number]) => ({
     status: event.metadata?.to || event.metadata?.status,
     previousStatus: event.metadata?.from,
     timestamp: event.createdAt,

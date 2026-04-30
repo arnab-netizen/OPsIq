@@ -106,15 +106,15 @@ export async function getExecutionSummary(
     decisionId,
     status: decision.status,
     executionStatus: decision.executionStatus,
-    approvedAt: executionEvents.find((e) => e.eventName === "DECISION_APPROVED")
+    approvedAt: executionEvents.find((e: typeof executionEvents[number]) => e.eventName === "DECISION_APPROVED")
       ?.createdAt,
     startedAt: executionEvents.find(
-      (e) =>
+      (e: typeof executionEvents[number]) =>
         e.eventName === "DECISION_EXECUTION_STATUS_CHANGED" &&
         e.metadata?.status === "in_progress"
     )?.createdAt,
     completedAt: executionEvents.find(
-      (e) =>
+      (e: typeof executionEvents[number]) =>
         e.eventName === "DECISION_EXECUTION_STATUS_CHANGED" &&
         (e.metadata?.status === "completed" || e.metadata?.status === "failed")
     )?.createdAt,
