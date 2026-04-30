@@ -10,13 +10,13 @@ vi.mock("@/middleware/workspace-enforcement", () => ({
   enforceWorkspaceScoping: vi.fn(),
 }));
 
-vi.mock("@/services/decision-control/enforcement.service", () => ({
-  getDailyControl: vi.fn(),
+vi.mock("@/services/control/control-surface.service", () => ({
+  getControlSurface: vi.fn(),
 }));
 
 import { getSession } from "@/services/auth";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
-import { getDailyControl } from "@/services/decision-control/enforcement.service";
+import { getControlSurface } from "@/services/control/control-surface.service";
 
 const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
 const mockUserId = "user-123";
@@ -34,16 +34,18 @@ describe("Daily Control API", () => {
   });
 
   describe("GET /api/control/today", () => {
-    it("should return daily control view", async () => {
-      const mockControl = {
+    it("should return control surface", async () => {
+      const mockSurface = {
         workspaceId: mockWorkspaceId,
         date: "2026-04-30",
-        topPriorities: [
+        topActions: [
           {
             decisionId: "d1",
             problem: "High priority",
-            priorityScore: 85,
             expectedImpact: 100000,
+            confidence: 0.9,
+            priorityScore: 85,
+            reason: "Critical priority - immediate execution required",
           },
         ],
         risks: [
@@ -51,22 +53,16 @@ describe("Daily Control API", () => {
             decisionId: "d2",
             problem: "Blocked decision",
             atRisk: 50000,
-            reason: "Decision blocked with $50000 at risk",
+            blockedAtRisk: 50000,
+            reason: "Blocked decision with $50000 at risk - requires unblocking",
           },
         ],
-        totalBlockedValue: 50000,
-        requiredActions: [
-          {
-            decisionId: "d2",
-            problem: "Blocked decision",
-            action: "Increase priority (current: 65)",
-          },
-        ],
-        totalDecisions: 10,
-        blockedCount: 1,
+        blockedValue: 50000,
+        totalImpactToday: 100000,
+        missedIfIgnored: 100000,
       };
 
-      vi.mocked(getDailyControl).mockResolvedValueOnce(mockControl as any);
+      vi.mocked(getControlSurface).mockResolvedValueOnce(mockSurface as any);
 
       const request = new NextRequest(
         `http://localhost/api/control/today?workspaceId=${mockWorkspaceId}`
@@ -76,9 +72,10 @@ describe("Daily Control API", () => {
       expect(response.status).toBe(200);
       const body = await response.json();
       expect(body.workspaceId).toBe(mockWorkspaceId);
-      expect(body.totalDecisions).toBe(10);
-      expect(body.blockedCount).toBe(1);
-      expect(body.topPriorities.length).toBe(1);
+      expect(body.blockedValue).toBe(50000);
+      expect(body.totalImpactToday).toBe(100000);
+      expect(body.missedIfIgnored).toBe(100000);
+      expect(body.topActions.length).toBe(1);
       expect(body.risks.length).toBe(1);
     });
 
@@ -113,33 +110,36 @@ describe("Daily Control API", () => {
       const response = await GET(request);
 
       expect(response.status).toBe(403);
-      expect(vi.mocked(getDailyControl)).not.toHaveBeenCalled();
+      expect(vi.mocked(getControlSurface)).not.toHaveBeenCalled();
     });
 
-    it("should include required actions for blocked decisions", async () => {
-      const mockControl = {
+    it("should include risks for blocked decisions", async () => {
+      const mockSurface = {
         workspaceId: mockWorkspaceId,
         date: "2026-04-30",
-        topPriorities: [],
-        risks: [],
-        totalBlockedValue: 30000,
-        requiredActions: [
+        topActions: [],
+        risks: [
           {
             decisionId: "d1",
             problem: "Low priority decision",
-            action: "Increase priority (current: 60)",
+            atRisk: 30000,
+            blockedAtRisk: 0,
+            reason: "Moderate at-risk value ($30k) - monitor closely",
           },
           {
             decisionId: "d2",
             problem: "Low ROI decision",
-            action: "Approve override (ROI: 0.75)",
+            atRisk: 0,
+            blockedAtRisk: 20000,
+            reason: "Blocked decision with $20000 at risk - requires unblocking",
           },
         ],
-        totalDecisions: 5,
-        blockedCount: 2,
+        blockedValue: 20000,
+        totalImpactToday: 0,
+        missedIfIgnored: 50000,
       };
 
-      vi.mocked(getDailyControl).mockResolvedValueOnce(mockControl as any);
+      vi.mocked(getControlSurface).mockResolvedValueOnce(mockSurface as any);
 
       const request = new NextRequest(
         `http://localhost/api/control/today?workspaceId=${mockWorkspaceId}`
@@ -148,8 +148,9 @@ describe("Daily Control API", () => {
 
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(body.requiredActions.length).toBe(2);
-      expect(body.blockedCount).toBe(2);
+      expect(body.risks.length).toBe(2);
+      expect(body.blockedValue).toBe(20000);
+      expect(body.missedIfIgnored).toBe(50000);
     });
   });
 });

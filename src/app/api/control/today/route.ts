@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/services/auth";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
-import { getDailyControl } from "@/services/decision-control/enforcement.service";
+import { getControlSurface } from "@/services/control/control-surface.service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,9 +27,9 @@ export async function GET(request: NextRequest) {
     }
 
     const workspaceId = workspaceIdParam;
-    const control = await getDailyControl(workspaceId);
+    const surface = await getControlSurface(workspaceId);
 
-    return NextResponse.json(control);
+    return NextResponse.json(surface);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error(`Failed to fetch daily control: ${message}`);
