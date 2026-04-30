@@ -172,6 +172,23 @@ describe("PHASE 5: Decision Latency Metrics", () => {
     expect(body.latency.maxLatencyMs).toBeGreaterThanOrEqual(body.latency.p99LatencyMs);
   });
 
+  it("should enforce minimum of 1 day", async () => {
+    vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
+      workspaceId: "ws-123",
+    } as any);
+
+    vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([]);
+
+    const request = new NextRequest(
+      "http://localhost/api/metrics/decision-latency?workspaceId=ws-123&days=0"
+    );
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.period.days).toBe(1); // Normalized to minimum of 1
+  });
+
   it("should respect days parameter with min/max bounds", async () => {
     vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
       workspaceId: "ws-123",

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate date range: last N days
     const daysParam = request.nextUrl.searchParams.get("days");
-    const days = daysParam ? Math.min(parseInt(daysParam), 90) : 7;
+    const days = daysParam ? Math.min(Math.max(parseInt(daysParam), 1), 90) : 7;
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);

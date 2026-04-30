@@ -280,6 +280,23 @@ describe("PHASE 5: Control Layer Effectiveness Metrics", () => {
     expect(gateStage.avgConfidenceWhenBlocked).toBe(0.7);
   });
 
+  it("should enforce minimum of 1 day", async () => {
+    vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
+      workspaceId: "ws-123",
+    } as any);
+
+    vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([]);
+
+    const request = new NextRequest(
+      "http://localhost/api/metrics/control-effectiveness?workspaceId=ws-123&days=0"
+    );
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.period.days).toBe(1); // Normalized to minimum of 1
+  });
+
   it("should respect days parameter with max bounds", async () => {
     vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
       workspaceId: "ws-123",
