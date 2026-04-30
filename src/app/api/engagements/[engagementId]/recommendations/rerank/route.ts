@@ -4,7 +4,8 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { reRankRecommendationsInEngagement } from "@/services/recommendation";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 
-export const POST = withRequestContext(async (_request, context) => {
+export const POST = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
   const { session } = await withAuth({
@@ -12,7 +13,7 @@ export const POST = withRequestContext(async (_request, context) => {
     internalOnly: true,
   });
 
-  const result = await reRankRecommendationsInEngagement(engagementId, session.user.id);
+  const result = await reRankRecommendationsInEngagement(engagementId, session.user.id, workspaceId);
 
   return Response.json(result);
 });

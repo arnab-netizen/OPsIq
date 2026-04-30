@@ -15,6 +15,7 @@ import { logger } from "@/infra/logger";
 
 export const POST = withRequestContext(async (request, context) => {
   try {
+    const workspaceId = request.headers.get("x-workspace-id") || "";
     const { bundleId } = await context.params;
     parseOrThrow(uuidSchema, bundleId);
 
@@ -39,7 +40,7 @@ export const POST = withRequestContext(async (request, context) => {
       );
     }
 
-    await addEvidenceToBundle(bodyData, session.user.id);
+    await addEvidenceToBundle(bodyData, session.user.id, workspaceId);
 
     return Response.json({ success: true }, { status: 201 });
   } catch (error) {
@@ -50,6 +51,7 @@ export const POST = withRequestContext(async (request, context) => {
 
 export const DELETE = withRequestContext(async (request, context) => {
   try {
+    const workspaceId = request.headers.get("x-workspace-id") || "";
     const { bundleId } = await context.params;
     parseOrThrow(uuidSchema, bundleId);
 
@@ -74,7 +76,7 @@ export const DELETE = withRequestContext(async (request, context) => {
       );
     }
 
-    await removeEvidenceFromBundle(bodyData, session.user.id);
+    await removeEvidenceFromBundle(bodyData, session.user.id, workspaceId);
 
     return Response.json({ success: true });
   } catch (error) {

@@ -25,7 +25,7 @@ describe("Action Handlers", () => {
     it("should return null if no actionType provided", async () => {
       const result = await triggerAction(
         "d1",
-        "ws-123",
+        "550e8400-e29b-41d4-a716-446655440000",
         null,
         { email: "test@example.com" },
         "user-001"
@@ -35,7 +35,7 @@ describe("Action Handlers", () => {
     });
 
     it("should return null if no actionPayload provided", async () => {
-      const result = await triggerAction("d1", "ws-123", "email", null, "user-001");
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "email", null, "user-001");
 
       expect(result).toBeNull();
     });
@@ -43,7 +43,7 @@ describe("Action Handlers", () => {
     it("should handle unknown action type gracefully", async () => {
       const result = await triggerAction(
         "d1",
-        "ws-123",
+        "550e8400-e29b-41d4-a716-446655440000",
         "unknown" as any,
         { email: "test@example.com" },
         "user-001"
@@ -55,7 +55,7 @@ describe("Action Handlers", () => {
 
   describe("Email Action Handler", () => {
     it("should trigger email action successfully", async () => {
-      const result = await triggerAction("d1", "ws-123", "email", {
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "email", {
         email: "user@example.com",
         subject: "Decision Executed",
         body: "Your decision has been executed",
@@ -73,7 +73,7 @@ describe("Action Handlers", () => {
     });
 
     it("should fail if email address is missing", async () => {
-      const result = await triggerAction("d1", "ws-123", "email", {
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "email", {
         subject: "Test",
       }, "user-001");
 
@@ -82,7 +82,7 @@ describe("Action Handlers", () => {
     });
 
     it("should use default subject and body if not provided", async () => {
-      await triggerAction("d1", "ws-123", "email", {
+      await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "email", {
         email: "user@example.com",
       }, "user-001");
 
@@ -96,7 +96,7 @@ describe("Action Handlers", () => {
     });
 
     it("should log action success in audit", async () => {
-      await triggerAction("d1", "ws-123", "email", {
+      await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "email", {
         email: "user@example.com",
       }, "user-001");
 
@@ -123,7 +123,7 @@ describe("Action Handlers", () => {
         json: async () => ({}),
       } as any);
 
-      const result = await triggerAction("d1", "ws-123", "webhook", {
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "webhook", {
         url: "https://example.com/hook",
         method: "POST",
       }, "user-001");
@@ -142,7 +142,7 @@ describe("Action Handlers", () => {
     });
 
     it("should fail if webhook URL is missing", async () => {
-      const result = await triggerAction("d1", "ws-123", "webhook", {
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "webhook", {
         method: "POST",
       }, "user-001");
 
@@ -157,7 +157,7 @@ describe("Action Handlers", () => {
         status: 200,
       } as any);
 
-      await triggerAction("d1", "ws-123", "webhook", {
+      await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "webhook", {
         url: "https://example.com/hook",
       }, "user-001");
 
@@ -176,7 +176,7 @@ describe("Action Handlers", () => {
       });
       vi.stubGlobal("fetch", mockFetch);
 
-      await triggerAction("d1", "ws-123", "webhook", {
+      await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "webhook", {
         url: "https://example.com/hook",
       }, "user-001");
 
@@ -185,7 +185,7 @@ describe("Action Handlers", () => {
       expect(body).toEqual(
         expect.objectContaining({
           decisionId: "d1",
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         })
       );
     });
@@ -197,7 +197,7 @@ describe("Action Handlers", () => {
       });
       vi.stubGlobal("fetch", mockFetch);
 
-      await triggerAction("d1", "ws-123", "webhook", {
+      await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "webhook", {
         url: "https://example.com/hook",
         body: { custom: "data" },
       }, "user-001");
@@ -211,7 +211,7 @@ describe("Action Handlers", () => {
       const mockFetch = vi.fn().mockRejectedValueOnce(new Error("Network error"));
       vi.stubGlobal("fetch", mockFetch);
 
-      const result = await triggerAction("d1", "ws-123", "webhook", {
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "webhook", {
         url: "https://example.com/hook",
       }, "user-001");
 
@@ -226,7 +226,7 @@ describe("Action Handlers", () => {
         status: 500,
       } as any);
 
-      const result = await triggerAction("d1", "ws-123", "webhook", {
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "webhook", {
         url: "https://example.com/hook",
       }, "user-001");
 
@@ -241,7 +241,7 @@ describe("Action Handlers", () => {
         status: 200,
       } as any);
 
-      await triggerAction("d1", "ws-123", "webhook", {
+      await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "webhook", {
         url: "https://example.com/hook",
         headers: { Authorization: "Bearer token123" },
       }, "user-001");
@@ -259,7 +259,7 @@ describe("Action Handlers", () => {
 
   describe("Task Action Handler", () => {
     it("should trigger task action successfully", async () => {
-      const result = await triggerAction("d1", "ws-123", "task", {
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "task", {
         title: "Follow up on decision",
         description: "Check execution results",
         assignedTo: "user-002",
@@ -277,7 +277,7 @@ describe("Action Handlers", () => {
     });
 
     it("should fail if task title is missing", async () => {
-      const result = await triggerAction("d1", "ws-123", "task", {
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "task", {
         description: "Test",
       }, "user-001");
 
@@ -286,7 +286,7 @@ describe("Action Handlers", () => {
     });
 
     it("should include decision reference in task", async () => {
-      await triggerAction("d1", "ws-123", "task", {
+      await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "task", {
         title: "Follow up",
       }, "user-001");
 
@@ -294,7 +294,7 @@ describe("Action Handlers", () => {
         "Task action triggered",
         expect.objectContaining({
           relatedDecision: "d1",
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           createdBy: "user-001",
         })
       );
@@ -304,7 +304,7 @@ describe("Action Handlers", () => {
   describe("Action Failure Handling (Fail-Safe)", () => {
     it("should catch unexpected errors and return failure result", async () => {
       // Force an error by passing invalid payload (missing email)
-      const result = await triggerAction("d1", "ws-123", "email", {
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "email", {
         email: null as any,
       }, "user-001");
 
@@ -313,7 +313,7 @@ describe("Action Handlers", () => {
     });
 
     it("should log warning when action fails", async () => {
-      const result = await triggerAction("d1", "ws-123", "email", {
+      const result = await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "email", {
         // Missing required email field
       }, "user-001");
 
@@ -326,7 +326,7 @@ describe("Action Handlers", () => {
     });
 
     it("should include error details in audit logs", async () => {
-      await triggerAction("d1", "ws-123", "email", {}, "user-001");
+      await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "email", {}, "user-001");
 
       expect(vi.mocked(logger.warn)).toHaveBeenCalledWith(
         "Action trigger failed",
@@ -347,7 +347,7 @@ describe("Action Handlers", () => {
     });
 
     it("should log successful action trigger", async () => {
-      await triggerAction("d1", "ws-123", "email", {
+      await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "email", {
         email: "test@example.com",
       }, "user-001");
 
@@ -355,19 +355,19 @@ describe("Action Handlers", () => {
         "Action triggered successfully",
         expect.objectContaining({
           actionType: "email",
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         })
       );
     });
 
     it("should include workspace in all action logs", async () => {
-      await triggerAction("d1", "ws-123", "webhook", {
+      await triggerAction("d1", "550e8400-e29b-41d4-a716-446655440000", "webhook", {
         url: "https://example.com/hook",
       }, "user-001");
 
       const calls = vi.mocked(logger.info).mock.calls;
       expect(calls.some((call) =>
-        JSON.stringify(call).includes("ws-123")
+        JSON.stringify(call).includes("550e8400-e29b-41d4-a716-446655440000")
       )).toBe(true);
     });
   });

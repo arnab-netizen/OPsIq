@@ -32,8 +32,9 @@ export const POST = withRequestContext(async (request) => {
     internalOnly: true,
   });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const body = await parseRequestBody(request, createFindingSchema);
-  const result = await createFinding(body, session.user.id);
+  const result = await createFinding(body, session.user.id, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

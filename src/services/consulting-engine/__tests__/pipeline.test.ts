@@ -49,6 +49,7 @@ describe("Consulting Engine Pipeline", () => {
   const engagementId = uuidv4();
   const clientId = uuidv4();
   const actorId = uuidv4();
+  const workspaceId = "550e8400-e29b-41d4-a716-446655440000";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -177,6 +178,7 @@ describe("Consulting Engine Pipeline", () => {
         title: "Engagement",
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
+        workspaceId,
       } as any);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
@@ -257,12 +259,14 @@ describe("Consulting Engine Pipeline", () => {
       expect(createRecommendationsFromInterventions).toHaveBeenCalledWith(
         engagementId,
         [mockIntervention],
-        actorId
+        actorId,
+        workspaceId
       );
       expect(createActionsFromInterventions).toHaveBeenCalledWith(
         engagementId,
         [mockIntervention],
-        actorId
+        actorId,
+        workspaceId
       );
 
       expect(result.status).toBe("SUCCESS");
@@ -277,6 +281,7 @@ describe("Consulting Engine Pipeline", () => {
         title: "Engagement",
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
+        workspaceId,
       } as any);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
@@ -346,6 +351,7 @@ describe("Consulting Engine Pipeline", () => {
         title: "Engagement",
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
+        workspaceId,
       } as any);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
@@ -408,6 +414,7 @@ describe("Consulting Engine Pipeline", () => {
         title: "Engagement",
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
+        workspaceId,
       } as any);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
@@ -442,6 +449,7 @@ describe("Consulting Engine Pipeline", () => {
         title: "Engagement",
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
+        workspaceId,
       } as any);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
@@ -493,7 +501,8 @@ describe("Consulting Engine Pipeline", () => {
       expect(createRecommendationsFromInterventions).toHaveBeenCalledWith(
         engagementId,
         [],
-        "consulting-engine"
+        "consulting-engine",
+        workspaceId
       );
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({

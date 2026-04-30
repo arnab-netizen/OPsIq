@@ -15,6 +15,7 @@ import { computeEngagementHealth, enforceEngagementHealth } from "@/services/eng
 import { logger } from "@/infra/logger";
 import type { EngagementStatus, InterventionMode } from "@/domain/constants/statuses";
 import { ENGAGEMENT_STATUSES, INTERVENTION_MODES } from "@/domain/constants/statuses";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -49,9 +50,11 @@ export interface UpdateEngagementInput {
 
 // ─── Code Generation ──────────────────────────────────────────────────────
 
-async function generateEngagementCode(clientId: string): Promise<string> {
+async function generateEngagementCode(workspaceId: string, clientId: string): Promise<string> {
+  enforceWorkspaceId(workspaceId, "generateEngagementCode", "engagement");
+
   const client = await db.clientAccount.findUnique({
-    where: { id: clientId },
+    where: { id: clientId, workspaceId },
     select: { name: true },
   });
 
@@ -62,12 +65,12 @@ async function generateEngagementCode(clientId: string): Promise<string> {
         .toUpperCase()
     : "ENG";
 
-  const count = await db.engagement.count({ where: { clientId } });
+  const count = await db.engagement.count({ where: { clientId, workspaceId } });
   const seq = String(count + 1).padStart(3, "0");
   const code = `${prefix}-${seq}`;
 
   // Ensure uniqueness
-  const existing = await db.engagement.findUnique({ where: { code } });
+  const existing = await db.engagement.findUnique({ where: { code, workspaceId } });
   if (existing) {
     const ts = Date.now().toString(36).toUpperCase().slice(-4);
     return `${prefix}-${seq}-${ts}`;
@@ -80,11 +83,14 @@ async function generateEngagementCode(clientId: string): Promise<string> {
 
 export async function createEngagement(
   input: CreateEngagementInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<{ id: string; code: string }> {
+  enforceWorkspaceId(workspaceId, "createEngagement", "engagement");
+
   // Validate client exists
   const client = await db.clientAccount.findUnique({
-    where: { id: input.clientId },
+    where: { id: input.clientId, workspaceId },
   });
   if (!client) throw new NotFoundError("ClientAccount", input.clientId);
   if (client.status === "archived") {
@@ -101,12 +107,12 @@ export async function createEngagement(
   // Validate parent engagement if provided
   if (input.parentEngagementId) {
     const parent = await db.engagement.findUnique({
-      where: { id: input.parentEngagementId },
+      where: { id: input.parentEngagementId, workspaceId },
     });
     if (!parent) throw new NotFoundError("Engagement", input.parentEngagementId);
   }
 
-  const code = await generateEngagementCode(input.clientId);
+  const code = await generateEngagementCode(workspaceId, input.clientId);
   const idempotencyKey = `engagement-create:${input.clientId}:${input.title}:${actorId}`;
 
   const result = await withIdempotency(
@@ -118,6 +124,7 @@ export async function createEngagement(
           code,
           title: input.title,
           clientId: input.clientId,
+          workspaceId,
           serviceTier: input.serviceTier,
           engagementMode: input.engagementMode,
           description: input.description ?? null,
@@ -136,7 +143,8 @@ export async function createEngagement(
       await initializeInterventionState(
         engagement.id,
         input.interventionMode,
-        actorId
+        actorId,
+        workspaceId
       );
 
       return { id: engagement.id, code: engagement.code, title: engagement.title };
@@ -180,10 +188,13 @@ export async function createEngagement(
 export async function updateEngagement(
   engagementId: string,
   input: UpdateEngagementInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<void> {
+  enforceWorkspaceId(workspaceId, "updateEngagement", "engagement");
+
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
@@ -270,7 +281,7 @@ export async function updateEngagement(
   // Duplicate requests with old version fail fast with 409 Conflict
   await optimisticUpdate("engagement", engagementId, version, () =>
     db.engagement.update({
-      where: withVersionCheck({ id: engagementId }, version),
+      where: withVersionCheck({ id: engagementId, workspaceId }, version),
       data: withVersionIncrement(data),
     })
   );
@@ -335,20 +346,22 @@ export async function updateEngagement(
   logger.info("Engagement updated", { engagementId });
 }
 
-export async function getEngagementById(engagementId: string, hasInternalAccess: boolean = false) {
+export async function getEngagementById(engagementId: string, workspaceId: string, hasInternalAccess: boolean = false) {
+  enforceWorkspaceId(workspaceId, "getEngagementById", "engagement");
+
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     include: {
       client: { select: { id: true, name: true, industry: true } },
       parent: { select: { id: true, code: true, title: true } },
       children: { select: { id: true, code: true, title: true, status: true } },
       conditionProfiles: {
-        where: { isCurrent: true },
+        where: { isCurrent: true, workspaceId },
         take: 1,
         orderBy: { createdAt: "desc" },
       },
       memberships: {
-        where: { isActive: true },
+        where: { isActive: true, workspaceId },
         include: {
           user: { select: { id: true, name: true, email: true } },
         },
@@ -366,6 +379,7 @@ export async function getEngagementById(engagementId: string, hasInternalAccess:
 }
 
 export async function listEngagements(
+  workspaceId: string,
   params: {
     limit?: number;
     offset?: number;
@@ -375,11 +389,14 @@ export async function listEngagements(
   } = {},
   hasInternalAccess: boolean = false
 ) {
+  enforceWorkspaceId(workspaceId, "listEngagements", "engagement");
+
   const { limit = 25, offset = 0, status, clientId, search } = params;
 
   const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
 
   const where = {
+    workspaceId,
     ...visibilityFilter,
     ...(status && { status }),
     ...(clientId && { clientId }),
@@ -417,13 +434,16 @@ export async function listEngagements(
 
 export async function computeNextReviewDate(
   engagementId: string,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<{ nextReviewDate: Date; isDueSoon: boolean; daysUntilDue: number }> {
+  enforceWorkspaceId(workspaceId, "computeNextReviewDate", "engagement");
+
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     include: {
       conditionProfiles: {
-        where: { isCurrent: true },
+        where: { isCurrent: true, workspaceId },
         select: { urgencyLevel: true },
       },
     },

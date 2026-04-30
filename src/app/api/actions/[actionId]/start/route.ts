@@ -11,7 +11,7 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export const PATCH = withRequestContext(async (_request, context) => {
+export const PATCH = withRequestContext(async (request, context) => {
   const { actionId } = await context.params;
   parseOrThrow(uuidSchema, actionId);
 
@@ -19,7 +19,8 @@ export const PATCH = withRequestContext(async (_request, context) => {
     capability: CAPABILITIES.ACTION_UPDATE,
   });
 
-  const action = await getActionById(actionId);
+  const workspaceId = request.headers.get("x-workspace-id") || "";
+  const action = await getActionById(actionId, workspaceId);
   if (!action) throw new NotFoundError("Action", actionId);
 
   if (action.status === "completed" || action.status === "verified") {
@@ -30,6 +31,7 @@ export const PATCH = withRequestContext(async (_request, context) => {
   const updated = await db.action.updateMany({
     where: {
       id: actionId,
+      workspaceId,
       version: action.version,
     },
     data: {
@@ -55,6 +57,6 @@ export const PATCH = withRequestContext(async (_request, context) => {
     visibility: "internal",
   });
 
-  const result = await getActionById(actionId);
+  const result = await getActionById(actionId, workspaceId);
   return Response.json(result);
 });

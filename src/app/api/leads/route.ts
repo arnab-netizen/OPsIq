@@ -23,22 +23,24 @@ const listLeadsSchema = paginationSchema.extend({
 });
 
 export const GET = withRequestContext(async (request) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   await withAuth({ capability: CAPABILITIES.LEAD_VIEW, internalOnly: true });
 
   const params = parseSearchParams(request.url, listLeadsSchema);
-  const result = await listLeads(params);
+  const result = await listLeads(workspaceId, params);
 
   return Response.json(result);
 });
 
 export const POST = withRequestContext(async (request) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { session } = await withAuth({
     capability: CAPABILITIES.LEAD_CREATE,
     internalOnly: true,
   });
 
   const body = await parseRequestBody(request, createLeadSchema);
-  const result = await createLead(body, session.user.id);
+  const result = await createLead(body, session.user.id, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

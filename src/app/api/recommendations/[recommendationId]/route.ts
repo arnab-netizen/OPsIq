@@ -25,16 +25,18 @@ const updateRecommendationSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { recommendationId } = await context.params;
   parseOrThrow(uuidSchema, recommendationId);
   await withAuth({ capability: CAPABILITIES.RECOMMENDATION_VIEW });
 
-  const recommendation = await getRecommendation(recommendationId);
+  const recommendation = await getRecommendation(recommendationId, workspaceId);
   return Response.json(recommendation);
 });
 
 export const PATCH = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { recommendationId } = await context.params;
   parseOrThrow(uuidSchema, recommendationId);
   const { session } = await withAuth({
@@ -43,8 +45,8 @@ export const PATCH = withRequestContext(async (request, context) => {
   });
 
   const body = await parseRequestBody(request, updateRecommendationSchema);
-  await updateRecommendation(recommendationId, body, session.user.id);
+  await updateRecommendation(recommendationId, body, session.user.id, workspaceId);
 
-  const updated = await getRecommendation(recommendationId);
+  const updated = await getRecommendation(recommendationId, workspaceId);
   return Response.json(updated);
 });

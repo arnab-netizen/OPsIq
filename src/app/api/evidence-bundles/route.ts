@@ -17,12 +17,13 @@ const listBundlesSchema = z.object({
 
 export const POST = withRequestContext(async (request) => {
   try {
+    const workspaceId = request.headers.get("x-workspace-id") || "";
     const { session } = await withAuth({
       capability: CAPABILITIES.EVIDENCE_SUBMIT,
     });
 
     const body = await parseRequestBody(request, createEvidenceBundleSchema);
-    const result = await createEvidenceBundle(body, session.user.id);
+    const result = await createEvidenceBundle(body, session.user.id, workspaceId);
 
     return Response.json(result, { status: 201 });
   } catch (error) {
@@ -33,12 +34,13 @@ export const POST = withRequestContext(async (request) => {
 
 export const GET = withRequestContext(async (request) => {
   try {
+    const workspaceId = request.headers.get("x-workspace-id") || "";
     await withAuth({
       capability: CAPABILITIES.EVIDENCE_VIEW,
     });
 
     const params = parseSearchParams(request.url, listBundlesSchema);
-    const result = await listEvidenceBundles(params.engagementId);
+    const result = await listEvidenceBundles(params.engagementId, workspaceId);
 
     return Response.json({ bundles: result });
   } catch (error) {

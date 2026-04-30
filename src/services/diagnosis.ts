@@ -12,6 +12,7 @@ import { DataValidationEngine } from "@/engines/DataValidationEngine";
 import { FinancialEngine } from "@/engines/FinancialEngine";
 import { DiagnosisOrchestrator } from "@/engines/DiagnosisOrchestrator";
 import type { BusinessAssessment, OrchestratedDiagnosis } from "@/engines/contracts";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -602,7 +603,9 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
 
 // ─── Main Diagnosis Function ───────────────────────────────────────────────
 
-export async function diagnoseBusiness(input: BusinessProblemInput, actorId: string): Promise<DiagnosisResult> {
+export async function diagnoseBusiness(input: BusinessProblemInput, actorId: string, workspaceId: string): Promise<DiagnosisResult> {
+  enforceWorkspaceId(workspaceId, "diagnoseBusiness", "diagnosis");
+
   validateBusinessProblem(input);
 
   // Engine layer: orchestrate diagnosis from multiple engines
@@ -653,7 +656,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
 
   // Get or create client
   let client = await db.clientAccount.findFirst({
-    where: { name: input.businessName },
+    where: { name: input.businessName, workspaceId },
   });
 
   if (!client) {
@@ -663,6 +666,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
         industry: input.businessType,
         visibility: "internal",
         createdBy: actorId,
+        workspaceId,
       },
     });
   }
@@ -680,6 +684,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
       interventionPhase: phase,
       description: input.problemStatement,
       createdBy: actorId,
+      workspaceId,
     },
   });
 
@@ -723,7 +728,8 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
                 : "execution",
           findingType: "operational",
         },
-        actorId
+        actorId,
+        workspaceId
       )
     )
   );
@@ -739,7 +745,8 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
           priority: r.priority,
           findingId: createdFindings[0]?.id,
         },
-        actorId
+        actorId,
+        workspaceId
       )
     )
   );
@@ -755,7 +762,8 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
           description: a.description,
           priority: a.priority,
         },
-        actorId
+        actorId,
+        workspaceId
       )
     )
   );

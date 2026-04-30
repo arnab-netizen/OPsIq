@@ -8,6 +8,7 @@ import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses"
 import { assertEngagementAccess } from "@/lib/visibility";
 import { withIdempotency } from "@/infra/idempotency";
 import { validateStateTransition, enforceActionRules } from "@/services/action-lifecycle";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -66,10 +67,13 @@ function validateActionTransition(fromStatus: ActionStatus, toStatus: ActionStat
 export async function createAction(
   input: CreateActionInput,
   actorId: string,
+  workspaceId: string,
   idempotencyKey?: string
 ) {
+  enforceWorkspaceId(workspaceId, "createAction", "action");
+
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
+    where: { id: input.engagementId, workspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -88,6 +92,7 @@ export async function createAction(
               assignedTo: input.assignedTo || null,
               dueDate: input.dueDate ? new Date(input.dueDate) : null,
               priority: input.priority || "medium",
+              workspaceId,
             },
           });
 
@@ -147,6 +152,7 @@ export async function createAction(
       assignedTo: input.assignedTo || null,
       dueDate: input.dueDate ? new Date(input.dueDate) : null,
       priority: input.priority || "medium",
+      workspaceId,
     },
   });
 
@@ -183,12 +189,14 @@ export async function createAction(
   return action;
 }
 
-export async function getActionsForEngagement(engagementId: string, userId: string) {
+export async function getActionsForEngagement(engagementId: string, userId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "getActionsForEngagement", "action");
+
   // Check engagement access
   await assertEngagementAccess(userId, engagementId);
 
   return db.action.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
     orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
   });
 }
@@ -196,10 +204,13 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
 export async function updateActionStatus(
   actionId: string,
   input: UpdateActionInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "updateActionStatus", "action");
+
   const action = await db.action.findUnique({
-    where: { id: actionId },
+    where: { id: actionId, workspaceId },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -241,6 +252,7 @@ export async function updateActionStatus(
   const updateResult = await db.action.updateMany({
     where: {
       id: actionId,
+      workspaceId,
       version: input.version,
     },
     data: {
@@ -258,7 +270,7 @@ export async function updateActionStatus(
   }
 
   const updated = await db.action.findUnique({
-    where: { id: actionId },
+    where: { id: actionId, workspaceId },
   });
   if (!updated) throw new NotFoundError("Action", actionId);
 
@@ -298,12 +310,15 @@ export async function updateActionStatus(
   return updated;
 }
 
-export async function detectOverdueActions(engagementId: string, actorId: string) {
+export async function detectOverdueActions(engagementId: string, actorId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "detectOverdueActions", "action");
+
   const now = new Date();
 
   const overdueActions = await db.action.findMany({
     where: {
       engagementId,
+      workspaceId,
       dueDate: { lt: now },
       status: { notIn: ["completed", "verified", "cancelled"] },
     },
@@ -330,7 +345,7 @@ export async function detectOverdueActions(engagementId: string, actorId: string
     if (action.priority !== "critical") {
       const newPriority = action.priority === "high" ? "critical" : "high";
       await db.action.update({
-        where: { id: action.id },
+        where: { id: action.id, workspaceId },
         data: {
           priority: newPriority,
           version: { increment: 1 },
@@ -363,9 +378,11 @@ export async function detectOverdueActions(engagementId: string, actorId: string
   return results;
 }
 
-export async function getActionById(actionId: string) {
+export async function getActionById(actionId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "getActionById", "action");
+
   const action = await db.action.findUnique({
-    where: { id: actionId },
+    where: { id: actionId, workspaceId },
   });
   if (!action) throw new NotFoundError("Action", actionId);
   return action;
@@ -374,10 +391,13 @@ export async function getActionById(actionId: string) {
 export async function updateAction(
   actionId: string,
   input: UpdateActionInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "updateAction", "action");
+
   const action = await db.action.findUnique({
-    where: { id: actionId },
+    where: { id: actionId, workspaceId },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -403,7 +423,7 @@ export async function updateAction(
   if (input.notes !== undefined) updates.notes = input.notes;
 
   const updated = await db.action.update({
-    where: { id: actionId },
+    where: { id: actionId, workspaceId },
     data: updates,
   });
 
@@ -424,8 +444,10 @@ export async function updateAction(
   return updated;
 }
 
-export async function listActions(params: any) {
-  const where: any = {};
+export async function listActions(workspaceId: string, params: any) {
+  enforceWorkspaceId(workspaceId, "listActions", "action");
+
+  const where: any = { workspaceId };
   if (params.engagementId) where.engagementId = params.engagementId;
   if (params.status) where.status = params.status;
   if (params.assignedTo) where.owner = params.assignedTo;
@@ -452,8 +474,11 @@ export async function listActions(params: any) {
 export async function createActionsFromInterventions(
   engagementId: string,
   interventions: any[], // PrioritizedIntervention[] from consulting-engine
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "createActionsFromInterventions", "action");
+
   if (!interventions || interventions.length === 0) {
     return [];
   }
@@ -462,7 +487,7 @@ export async function createActionsFromInterventions(
 
   // Find or create a placeholder recommendation for consulting engine results
   const existingRec = await db.recommendation.findFirst({
-    where: { engagementId, title: { contains: "Consulting Engine" } },
+    where: { engagementId, workspaceId, title: { contains: "Consulting Engine" } },
   });
 
   let recommendationId: string;
@@ -476,6 +501,7 @@ export async function createActionsFromInterventions(
         title: "Consulting Engine Recommendations",
         description: "Actions generated from consulting engine analysis",
         priority: "high",
+        workspaceId,
       },
     });
     recommendationId = synthRec.id;
@@ -501,7 +527,7 @@ export async function createActionsFromInterventions(
       priority: mapPriorityScore(priIntervention.priorityScore),
     };
 
-    const action = await createAction(input, actorId);
+    const action = await createAction(input, actorId, workspaceId);
     actions.push(action);
   }
 

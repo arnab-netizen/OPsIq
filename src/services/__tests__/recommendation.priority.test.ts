@@ -11,6 +11,8 @@ vi.mock("@/services/re-evaluation", () => ({
   triggerReEvaluation: vi.fn().mockResolvedValue(undefined),
 }));
 
+const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
+
 describe("Recommendation Priority Mapping", () => {
   describe("mapScoreToPriority", () => {
     it("should map score >= 0.75 to HIGH", () => {
@@ -61,7 +63,8 @@ describe("Recommendation Priority Mapping", () => {
           priority: "critical",
           title: "Test Recommendation",
         },
-        "actor-1"
+        "actor-1",
+        mockWorkspaceId
       );
 
       expect(result.priority).toBe("critical");
@@ -100,7 +103,8 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 5,
           },
         },
-        "actor-1"
+        "actor-1",
+        mockWorkspaceId
       );
 
       expect(createdData.priority).toBe("high");
@@ -138,7 +142,8 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 5,
           },
         },
-        "actor-1"
+        "actor-1",
+        mockWorkspaceId
       );
 
       expect(priority).toBe("high");
@@ -176,7 +181,8 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 3,
           },
         },
-        "actor-1"
+        "actor-1",
+        mockWorkspaceId
       );
 
       expect(priority).toBe("medium");
@@ -214,7 +220,8 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 1,
           },
         },
-        "actor-1"
+        "actor-1",
+        mockWorkspaceId
       );
 
       expect(priority).toBe("low");
@@ -253,7 +260,8 @@ describe("Recommendation Priority Mapping", () => {
           dependency: 0,
           strategicAlignment: 5,
         },
-        "actor-1"
+        "actor-1",
+        "550e8400-e29b-41d4-a716-446655440000"
       );
 
       expect(result.priority).toBe("high");
@@ -278,7 +286,8 @@ describe("Recommendation Priority Mapping", () => {
             dependency: 5,
             strategicAlignment: 3,
           },
-          "actor-1"
+          "actor-1",
+          "550e8400-e29b-41d4-a716-446655440000"
         )
       ).rejects.toThrow(NotFoundError);
     });
@@ -308,7 +317,8 @@ describe("Recommendation Priority Mapping", () => {
           dependency: 1,
           strategicAlignment: 4,
         },
-        "actor-1"
+        "actor-1",
+        "550e8400-e29b-41d4-a716-446655440000"
       );
 
       expect(result.id).toBe("rec-1");

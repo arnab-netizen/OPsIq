@@ -35,7 +35,7 @@ describe("client-account service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      const result = await clientService.createClient(input, mockUserId);
+      const result = await clientService.createClient(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(result.id).toBe(mockClientId);
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -62,7 +62,8 @@ describe("client-account service", () => {
       await clientService.updateClient(
         mockClientId,
         { name: "New Name", version: 1 },
-        mockUserId
+        mockUserId,
+        "550e8400-e29b-41d4-a716-446655440000"
       );
 
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -81,7 +82,8 @@ describe("client-account service", () => {
         clientService.updateClient(
           mockClientId,
           { name: "New Name", version: 1 },
-          mockUserId
+          mockUserId,
+          "550e8400-e29b-41d4-a716-446655440000"
         )
       ).rejects.toThrow(ValidationError);
     });
@@ -103,7 +105,7 @@ describe("client-account service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      await clientService.archiveClient(mockClientId, mockUserId, 1);
+      await clientService.archiveClient(mockClientId, mockUserId, 1, "550e8400-e29b-41d4-a716-446655440000");
 
       expect(emitAuditEvent).toHaveBeenCalled();
     });
@@ -122,7 +124,7 @@ describe("client-account service", () => {
         }),
       };
 
-      const result = await clientService.getClientById(mockClientId, true);
+      const result = await clientService.getClientById(mockClientId, '550e8400-e29b-41d4-a716-446655440000', true);
 
       expect(result.id).toBe(mockClientId);
     });
@@ -138,7 +140,7 @@ describe("client-account service", () => {
         count: vi.fn().mockResolvedValue(1),
       };
 
-      const result = await clientService.listClients();
+      const result = await clientService.listClients('550e8400-e29b-41d4-a716-446655440000', {});
 
       expect(result.clients).toHaveLength(1);
       expect(result.total).toBe(1);

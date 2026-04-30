@@ -9,6 +9,7 @@ import {
   withVersionIncrement,
 } from "@/lib/optimistic-lock";
 import { logger } from "@/infra/logger";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -37,9 +38,12 @@ export interface UpdateClientInput {
 
 export async function createClient(
   input: CreateClientInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<{ id: string }> {
-  const idempotencyKey = `client-create:${input.name}:${actorId}`;
+  enforceWorkspaceId(workspaceId, "createClient", "client_account");
+
+  const idempotencyKey = `client-create:${input.name}:${actorId}:${workspaceId}`;
 
   const result = await withIdempotency(
     idempotencyKey,
@@ -55,6 +59,7 @@ export async function createClient(
           address: input.address ?? null,
           notes: input.notes ?? null,
           createdBy: actorId,
+          workspaceId,
         },
       });
       return { id: client.id, name: client.name };
@@ -81,10 +86,13 @@ export async function createClient(
 export async function updateClient(
   clientId: string,
   input: UpdateClientInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<void> {
+  enforceWorkspaceId(workspaceId, "updateClient", "client_account");
+
   const client = await db.clientAccount.findUnique({
-    where: { id: clientId },
+    where: { id: clientId, workspaceId },
   });
 
   if (!client) throw new NotFoundError("ClientAccount", clientId);
@@ -102,7 +110,7 @@ export async function updateClient(
   // Duplicate requests with old version fail fast with 409 Conflict
   await optimisticUpdate("client_account", clientId, version, () =>
     db.clientAccount.update({
-      where: withVersionCheck({ id: clientId }, version),
+      where: withVersionCheck({ id: clientId, workspaceId }, version),
       data: withVersionIncrement(data),
     })
   );
@@ -122,10 +130,13 @@ export async function updateClient(
 export async function archiveClient(
   clientId: string,
   actorId: string,
-  version: number
+  version: number,
+  workspaceId: string
 ): Promise<void> {
+  enforceWorkspaceId(workspaceId, "archiveClient", "client_account");
+
   const client = await db.clientAccount.findUnique({
-    where: { id: clientId },
+    where: { id: clientId, workspaceId },
   });
 
   if (!client) throw new NotFoundError("ClientAccount", clientId);
@@ -138,7 +149,7 @@ export async function archiveClient(
 
   await optimisticUpdate("client_account", clientId, version, () =>
     db.clientAccount.update({
-      where: withVersionCheck({ id: clientId }, version),
+      where: withVersionCheck({ id: clientId, workspaceId }, version),
       data: withVersionIncrement({
         status: "archived",
         archivedAt: new Date(),
@@ -157,13 +168,15 @@ export async function archiveClient(
   logger.info("Client account archived", { clientId });
 }
 
-export async function getClientById(clientId: string, hasInternalAccess: boolean = false) {
+export async function getClientById(clientId: string, workspaceId: string, hasInternalAccess: boolean = false) {
+  enforceWorkspaceId(workspaceId, "getClientById", "client_account");
+
   const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
 
   const client = await db.clientAccount.findUnique({
-    where: { id: clientId },
+    where: { id: clientId, workspaceId },
     include: {
-      contacts: { where: { isActive: true }, orderBy: { isPrimary: "desc" } },
+      contacts: { where: { isActive: true, workspaceId }, orderBy: { isPrimary: "desc" } },
       _count: { select: { engagements: true } },
     },
   });
@@ -177,6 +190,7 @@ export async function getClientById(clientId: string, hasInternalAccess: boolean
 }
 
 export async function listClients(
+  workspaceId: string,
   params: {
     limit?: number;
     offset?: number;
@@ -185,11 +199,14 @@ export async function listClients(
   } = {},
   hasInternalAccess: boolean = false
 ) {
+  enforceWorkspaceId(workspaceId, "listClients", "client_account");
+
   const { limit = 25, offset = 0, status, search } = params;
 
   const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
 
   const where = {
+    workspaceId,
     ...visibilityFilter,
     ...(status && { status }),
     ...(search && {

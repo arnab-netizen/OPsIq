@@ -74,7 +74,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
         priority: "critical",
       });
 
-      const results = await detectOverdueActions(engagementId, actorId);
+      const results = await detectOverdueActions(engagementId, actorId, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(results).toHaveLength(1);
       expect(results[0]).toEqual({
@@ -99,7 +99,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
 
       vi.mocked(db.action.findMany).mockResolvedValueOnce([overdueAction]);
 
-      const results = await detectOverdueActions(engagementId, actorId);
+      const results = await detectOverdueActions(engagementId, actorId, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(results).toHaveLength(1);
       expect(results[0].priorityIncreased).toBe(false);
@@ -108,7 +108,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
     it("should skip completed, verified, or cancelled actions", async () => {
       vi.mocked(db.action.findMany).mockResolvedValueOnce([]);
 
-      const results = await detectOverdueActions(engagementId, actorId);
+      const results = await detectOverdueActions(engagementId, actorId, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(results).toHaveLength(0);
       expect(db.action.findMany).toHaveBeenCalledWith(
@@ -265,7 +265,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
       vi.mocked(db.engagement.findUnique).mockResolvedValueOnce(engagement);
       vi.mocked(db.reviewCycle.findFirst).mockResolvedValueOnce(null);
 
-      const result = await computeNextReviewDate(engagementId, actorId);
+      const result = await computeNextReviewDate(engagementId, actorId, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(result).toHaveProperty("nextReviewDate");
       expect(result).toHaveProperty("isDueSoon");
@@ -288,7 +288,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
         status: "improving",
       });
 
-      const result = await computeNextReviewDate(engagementId, actorId);
+      const result = await computeNextReviewDate(engagementId, actorId, '550e8400-e29b-41d4-a716-446655440000');
 
       // Review due if daysUntilDue <= 0 or <= 2
       expect(result.daysUntilDue).toBeLessThanOrEqual(2);
@@ -306,7 +306,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
       vi.mocked(db.engagement.findUnique).mockResolvedValueOnce(engagement);
       vi.mocked(db.reviewCycle.findFirst).mockResolvedValueOnce(null);
 
-      await computeNextReviewDate(engagementId, actorId);
+      await computeNextReviewDate(engagementId, actorId, '550e8400-e29b-41d4-a716-446655440000');
 
       // Event emission verified through mock
       expect(emitAuditEvent).toBeDefined();
@@ -329,7 +329,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
       vi.mocked(db.action.findMany).mockResolvedValueOnce([criticalOverdueAction]);
       vi.mocked(db.kPI.findMany).mockResolvedValueOnce([]);
 
-      const alert = await checkEngagementEscalations(engagementId, actorId);
+      const alert = await checkEngagementEscalations(engagementId, actorId, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(alert).toContainEqual(
         expect.objectContaining({

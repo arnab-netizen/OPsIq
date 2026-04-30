@@ -16,6 +16,7 @@ vi.mock("@/infra/logger", () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
 }));
 
@@ -34,7 +35,7 @@ import { logger } from "@/infra/logger";
 describe("Alert Service", () => {
   const mockAlert = {
     id: "alert-1",
-    workspaceId: "ws-123",
+    workspaceId: "550e8400-e29b-41d4-a716-446655440000",
     userId: "user-001",
     type: "blocked",
     channel: "in_app",
@@ -56,7 +57,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.create).mockResolvedValueOnce(mockAlert as any);
 
       const result = await createAlert({
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
         type: "blocked",
         channel: "in_app",
@@ -68,7 +69,7 @@ describe("Alert Service", () => {
       expect(result).toEqual(mockAlert);
       expect(vi.mocked(db.alert.create)).toHaveBeenCalledWith({
         data: expect.objectContaining({
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
           type: "blocked",
           channel: "in_app",
@@ -82,7 +83,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.create).mockResolvedValueOnce(emailAlert as any);
 
       const result = await createAlert({
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
         type: "execution_failure",
         channel: "email",
@@ -100,7 +101,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.create).mockResolvedValueOnce(mockAlert as any);
 
       await createAlert({
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
         type: "blocked",
         channel: "in_app",
@@ -122,7 +123,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.create).mockResolvedValueOnce(alertWithoutEntity as any);
 
       const result = await createAlert({
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
         type: "threshold_breach",
         channel: "in_app",
@@ -139,7 +140,7 @@ describe("Alert Service", () => {
 
       await expect(
         createAlert({
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
           type: "blocked",
           channel: "in_app",
@@ -159,7 +160,7 @@ describe("Alert Service", () => {
       const readAlert = { ...mockAlert, isRead: true, readAt: new Date() };
       vi.mocked(db.alert.update).mockResolvedValueOnce(readAlert as any);
 
-      const result = await markAlertAsRead("alert-1", "ws-123");
+      const result = await markAlertAsRead("alert-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(result.isRead).toBe(true);
       expect(result.readAt).toBeDefined();
@@ -175,13 +176,13 @@ describe("Alert Service", () => {
       const readAlert = { ...mockAlert, isRead: true };
       vi.mocked(db.alert.update).mockResolvedValueOnce(readAlert as any);
 
-      await markAlertAsRead("alert-1", "ws-123");
+      await markAlertAsRead("alert-1", "550e8400-e29b-41d4-a716-446655440000");
 
       expect(vi.mocked(logger.info)).toHaveBeenCalledWith(
         "Alert marked as read",
         expect.objectContaining({
           alertId: "alert-1",
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         })
       );
     });
@@ -190,7 +191,7 @@ describe("Alert Service", () => {
       const error = new Error("Update failed");
       vi.mocked(db.alert.update).mockRejectedValueOnce(error);
 
-      await expect(markAlertAsRead("alert-1", "ws-123")).rejects.toThrow();
+      await expect(markAlertAsRead("alert-1", "550e8400-e29b-41d4-a716-446655440000")).rejects.toThrow();
 
       expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
         "Failed to mark alert as read",
@@ -204,12 +205,12 @@ describe("Alert Service", () => {
       const alerts = [mockAlert, { ...mockAlert, id: "alert-2" }];
       vi.mocked(db.alert.findMany).mockResolvedValueOnce(alerts as any);
 
-      const result = await getAlerts("ws-123", "user-001");
+      const result = await getAlerts("550e8400-e29b-41d4-a716-446655440000", "user-001");
 
       expect(result).toEqual(alerts);
       expect(vi.mocked(db.alert.findMany)).toHaveBeenCalledWith({
         where: {
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
         },
         orderBy: {
@@ -223,11 +224,11 @@ describe("Alert Service", () => {
       const unreadAlert = { ...mockAlert, isRead: false };
       vi.mocked(db.alert.findMany).mockResolvedValueOnce([unreadAlert] as any);
 
-      await getAlerts("ws-123", "user-001", { unreadOnly: true });
+      await getAlerts("550e8400-e29b-41d4-a716-446655440000", "user-001", { unreadOnly: true });
 
       expect(vi.mocked(db.alert.findMany)).toHaveBeenCalledWith({
         where: {
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
           isRead: false,
         },
@@ -241,11 +242,11 @@ describe("Alert Service", () => {
     it("should respect limit parameter", async () => {
       vi.mocked(db.alert.findMany).mockResolvedValueOnce([]);
 
-      await getAlerts("ws-123", "user-001", { limit: 100 });
+      await getAlerts("550e8400-e29b-41d4-a716-446655440000", "user-001", { limit: 100 });
 
       expect(vi.mocked(db.alert.findMany)).toHaveBeenCalledWith({
         where: {
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
         },
         orderBy: {
@@ -259,7 +260,7 @@ describe("Alert Service", () => {
       const error = new Error("Fetch failed");
       vi.mocked(db.alert.findMany).mockRejectedValueOnce(error);
 
-      await expect(getAlerts("ws-123", "user-001")).rejects.toThrow();
+      await expect(getAlerts("550e8400-e29b-41d4-a716-446655440000", "user-001")).rejects.toThrow();
 
       expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
         "Failed to fetch alerts",
@@ -278,7 +279,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.create).mockResolvedValueOnce(blockedAlert as any);
 
       const result = await triggerBlockedAlert(
-        "ws-123",
+        "550e8400-e29b-41d4-a716-446655440000",
         "user-001",
         "decision-1",
         "Vendor unavailable"
@@ -299,7 +300,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.create).mockResolvedValueOnce(thresholdAlert as any);
 
       const result = await triggerThresholdBreachAlert(
-        "ws-123",
+        "550e8400-e29b-41d4-a716-446655440000",
         "user-001",
         "approval_rate",
         0.25,
@@ -320,7 +321,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.create).mockResolvedValueOnce(failureAlert as any);
 
       const result = await triggerExecutionFailureAlert(
-        "ws-123",
+        "550e8400-e29b-41d4-a716-446655440000",
         "user-001",
         "decision-1",
         "Network timeout"
@@ -336,12 +337,12 @@ describe("Alert Service", () => {
     it("should return count of unread alerts", async () => {
       vi.mocked(db.alert.count).mockResolvedValueOnce(3 as any);
 
-      const count = await getUnreadAlertCount("ws-123", "user-001");
+      const count = await getUnreadAlertCount("550e8400-e29b-41d4-a716-446655440000", "user-001");
 
       expect(count).toBe(3);
       expect(vi.mocked(db.alert.count)).toHaveBeenCalledWith({
         where: {
-          workspaceId: "ws-123",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440000",
           userId: "user-001",
           isRead: false,
         },
@@ -352,7 +353,7 @@ describe("Alert Service", () => {
       const error = new Error("Count failed");
       vi.mocked(db.alert.count).mockRejectedValueOnce(error);
 
-      const count = await getUnreadAlertCount("ws-123", "user-001");
+      const count = await getUnreadAlertCount("550e8400-e29b-41d4-a716-446655440000", "user-001");
 
       expect(count).toBe(0);
       expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
@@ -366,11 +367,11 @@ describe("Alert Service", () => {
     it("should isolate alerts by workspace", async () => {
       vi.mocked(db.alert.findMany).mockResolvedValueOnce([]);
 
-      await getAlerts("ws-456", "user-001");
+      await getAlerts("550e8400-e29b-41d4-a716-446655440001", "user-001");
 
       expect(vi.mocked(db.alert.findMany)).toHaveBeenCalledWith({
         where: expect.objectContaining({
-          workspaceId: "ws-456",
+          workspaceId: "550e8400-e29b-41d4-a716-446655440001",
         }),
         orderBy: expect.any(Object),
         take: expect.any(Number),
@@ -380,7 +381,7 @@ describe("Alert Service", () => {
     it("should isolate alerts by user within workspace", async () => {
       vi.mocked(db.alert.findMany).mockResolvedValueOnce([]);
 
-      await getAlerts("ws-123", "user-002");
+      await getAlerts("550e8400-e29b-41d4-a716-446655440000", "user-002");
 
       expect(vi.mocked(db.alert.findMany)).toHaveBeenCalledWith({
         where: expect.objectContaining({
@@ -401,7 +402,7 @@ describe("Alert Service", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       await createAlert({
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
         type: "blocked",
         channel: "email",
@@ -419,7 +420,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.create).mockResolvedValueOnce(emailAlert as any);
 
       const result = await createAlert({
-        workspaceId: "ws-123",
+        workspaceId: "550e8400-e29b-41d4-a716-446655440000",
         userId: "user-001",
         type: "blocked",
         channel: "email",

@@ -90,7 +90,7 @@ describe("engagement service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      const result = await engagementService.createEngagement(input, mockUserId);
+      const result = await engagementService.createEngagement(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(result.id).toBe(mockEngagementId);
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -114,7 +114,7 @@ describe("engagement service", () => {
       };
 
       await expect(
-        engagementService.createEngagement(input, mockUserId)
+        engagementService.createEngagement(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000')
       ).rejects.toThrow(ValidationError);
     });
 
@@ -133,7 +133,7 @@ describe("engagement service", () => {
       };
 
       await expect(
-        engagementService.createEngagement(input, mockUserId)
+        engagementService.createEngagement(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000')
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -158,7 +158,8 @@ describe("engagement service", () => {
       await engagementService.updateEngagement(
         mockEngagementId,
         { status: "active", version: 1 },
-        mockUserId
+        mockUserId,
+        "550e8400-e29b-41d4-a716-446655440000"
       );
 
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -187,7 +188,8 @@ describe("engagement service", () => {
       const response = await engagementService.updateEngagement(
         mockEngagementId,
         { interventionMode: "growth", version: 1 },
-        mockUserId
+        mockUserId,
+        "550e8400-e29b-41d4-a716-446655440000"
       );
 
       expect(triggerReEvaluation).toHaveBeenCalledWith(
@@ -215,7 +217,8 @@ describe("engagement service", () => {
       await engagementService.updateEngagement(
         mockEngagementId,
         { status: "completed", version: 1 },
-        mockUserId
+        mockUserId,
+        "550e8400-e29b-41d4-a716-446655440000"
       );
 
       // Should emit both ENGAGEMENT_UPDATED and ENGAGEMENT_COMPLETED
@@ -244,7 +247,7 @@ describe("engagement service", () => {
         }),
       };
 
-      const result = await engagementService.getEngagementById(mockEngagementId, true);
+      const result = await engagementService.getEngagementById(mockEngagementId, '550e8400-e29b-41d4-a716-446655440000', true);
 
       expect(result.id).toBe(mockEngagementId);
     });
@@ -260,7 +263,7 @@ describe("engagement service", () => {
         count: vi.fn().mockResolvedValue(1),
       };
 
-      const result = await engagementService.listEngagements();
+      const result = await engagementService.listEngagements('550e8400-e29b-41d4-a716-446655440000', {});
 
       expect(result.engagements).toHaveLength(1);
       expect(result.total).toBe(1);

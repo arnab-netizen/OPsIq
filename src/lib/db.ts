@@ -16,13 +16,18 @@ async function createPrismaClient() {
   try {
     const { PrismaClient: PgClient } = await import("@/generated/prisma/client");
     const { PrismaPg } = await import("@prisma/adapter-pg");
+    const { createWorkspaceEnforcementMiddleware } = await import("@/lib/prisma-workspace-enforcement");
+
     const adapter = new PrismaPg({
       connectionString: databaseUrl,
     });
     const client = new PgClient({ adapter });
 
+    // Apply workspace isolation enforcement middleware
+    const withEnforcement = client.$extends(createWorkspaceEnforcementMiddleware());
+
     // Extend client to auto-parse audit event payloads
-    return client.$extends({
+    return withEnforcement.$extends({
       result: {
         auditEvent: {
           payload: {

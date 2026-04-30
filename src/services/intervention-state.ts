@@ -4,6 +4,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import {
   INTERVENTION_PHASES,
   INTERVENTION_MODES,
@@ -261,10 +262,13 @@ export async function updateInterventionMode(
 export async function initializeInterventionState(
   engagementId: string,
   interventionMode: string,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ) {
+  enforceWorkspaceId(workspaceId, "initializeInterventionState", "engagement");
+
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
@@ -273,7 +277,7 @@ export async function initializeInterventionState(
   }
 
   const updated = await db.engagement.update({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     data: {
       interventionMode: interventionMode as InterventionMode,
       interventionPhase: "triage" as InterventionPhase,

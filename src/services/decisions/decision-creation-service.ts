@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 export interface CreateDecisionInput {
   title: string;
@@ -35,6 +36,9 @@ export async function createDecision(
     problemType,
     expectedOutcome,
   } = input;
+
+  // Enforce workspace isolation
+  enforceWorkspaceId(workspaceId, "createDecision", "OperatorItem");
 
   // Validate input
   if (!title?.trim()) {

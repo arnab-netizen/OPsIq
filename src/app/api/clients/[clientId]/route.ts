@@ -26,12 +26,13 @@ const archiveSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
   const { clientId } = await context.params;
   parseOrThrow(uuidSchema, clientId);
   const { policy } = await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
 
-  const client = await getClientById(clientId, hasInternalAccess(policy));
+  const workspaceId = request.headers.get("x-workspace-id") || "";
+  const client = await getClientById(clientId, workspaceId);
   return Response.json(client);
 });
 
@@ -43,10 +44,11 @@ export const PATCH = withRequestContext(async (request, context) => {
     internalOnly: true,
   });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const body = await parseRequestBody(request, updateClientSchema);
-  await updateClient(clientId, body, session.user.id);
+  await updateClient(clientId, body, session.user.id, workspaceId);
 
-  const updated = await getClientById(clientId, hasInternalAccess(policy));
+  const updated = await getClientById(clientId, workspaceId);
   return Response.json(updated);
 });
 
@@ -58,8 +60,9 @@ export const POST = withRequestContext(async (request, context) => {
     internalOnly: true,
   });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const body = await parseRequestBody(request, archiveSchema);
-  await archiveClient(clientId, session.user.id, body.version);
+  await archiveClient(clientId, session.user.id, body.version, workspaceId);
 
   return Response.json({ status: "archived" });
 });

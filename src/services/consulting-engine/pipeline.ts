@@ -19,7 +19,8 @@ export interface ConsultingEnginePipelineResult {
 
 export async function runConsultingPipeline(
   engagementId: string,
-  createdByUserId?: string
+  createdByUserId?: string,
+  workspaceId?: string
 ): Promise<ConsultingEnginePipelineResult> {
   try {
     // 1. Load engagement
@@ -119,14 +120,16 @@ export async function runConsultingPipeline(
       recommendations = await createRecommendationsFromInterventions(
         engagementId,
         engineOutput.decisionMemo.recommendedInterventions,
-        actorId
+        actorId,
+        workspaceId || engagement.workspaceId
       );
 
       // 6. Generate and store actions
       actions = await createActionsFromInterventions(
         engagementId,
         engineOutput.decisionMemo.recommendedInterventions,
-        actorId
+        actorId,
+        workspaceId || engagement.workspaceId
       );
 
       // 7. Emit audit event

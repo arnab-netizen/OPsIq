@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 export interface EscalationAlert {
   type: "high_priority_overdue" | "kpi_deterioration_pattern";
@@ -13,13 +14,17 @@ export interface EscalationAlert {
 
 export async function detectHighPriorityOverdueActions(
   engagementId: string,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<EscalationAlert | null> {
+  enforceWorkspaceId(workspaceId, "detectHighPriorityOverdueActions", "escalation");
+
   const now = new Date();
 
   const criticalOverdueActions = await db.action.findMany({
     where: {
       engagementId,
+      workspaceId,
       priority: "critical",
       dueDate: { lt: now },
       status: { notIn: ["completed", "verified", "cancelled"] },
@@ -138,13 +143,27 @@ export async function detectKPIDeteriorationPattern(
 
 export async function checkEngagementEscalations(
   engagementId: string,
-  actorId: string
+  actorId: string,
+  workspaceId?: string
 ): Promise<EscalationAlert[]> {
+  // Fetch workspaceId from engagement if not provided
+  const wsId = workspaceId || (await (async () => {
+    const engagement = await db.engagement.findUnique({
+      where: { id: engagementId },
+      select: { workspaceId: true },
+    });
+    if (!engagement) {
+      throw new Error(`Engagement ${engagementId} not found`);
+    }
+    return engagement.workspaceId;
+  })());
+
   const alerts: EscalationAlert[] = [];
 
   const highPriorityAlert = await detectHighPriorityOverdueActions(
     engagementId,
-    actorId
+    actorId,
+    wsId
   );
   if (highPriorityAlert) {
     alerts.push(highPriorityAlert);

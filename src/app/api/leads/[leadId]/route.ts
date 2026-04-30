@@ -25,16 +25,18 @@ const linkLeadSchema = z.object({
   clientId: z.string().uuid(),
 });
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { leadId } = await context.params;
   parseOrThrow(uuidSchema, leadId);
   await withAuth({ capability: CAPABILITIES.LEAD_VIEW, internalOnly: true });
 
-  const lead = await getLeadById(leadId);
+  const lead = await getLeadById(leadId, workspaceId);
   return Response.json(lead);
 });
 
 export const PATCH = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { leadId } = await context.params;
   parseOrThrow(uuidSchema, leadId);
   const { session } = await withAuth({
@@ -43,13 +45,14 @@ export const PATCH = withRequestContext(async (request, context) => {
   });
 
   const body = await parseRequestBody(request, updateLeadSchema);
-  await updateLead(leadId, body, session.user.id);
+  await updateLead(leadId, body, session.user.id, workspaceId);
 
-  const updated = await getLeadById(leadId);
+  const updated = await getLeadById(leadId, workspaceId);
   return Response.json(updated);
 });
 
 export const POST = withRequestContext(async (request, context) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const { leadId } = await context.params;
   parseOrThrow(uuidSchema, leadId);
   const { session } = await withAuth({
@@ -62,9 +65,10 @@ export const POST = withRequestContext(async (request, context) => {
     leadId,
     body.engagementId,
     body.clientId,
-    session.user.id
+    session.user.id,
+    workspaceId
   );
 
-  const updated = await getLeadById(leadId);
+  const updated = await getLeadById(leadId, workspaceId);
   return Response.json(updated);
 });

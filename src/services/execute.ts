@@ -40,7 +40,8 @@ export interface ExecuteOutput {
 
 export async function executeWorkflow(
   input: ExecuteInput,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<ExecuteOutput> {
   logger.info("Executing workflow", {
     clientName: input.clientName,
@@ -66,7 +67,8 @@ export async function executeWorkflow(
       name: input.clientName,
       notes: `Problem: ${input.problem}`,
     },
-    actorId
+    actorId,
+    workspaceId
   );
 
   // 2. Create engagement
@@ -80,7 +82,8 @@ export async function executeWorkflow(
       interventionMode: "recovery",
       description: input.problem,
     },
-    actorId
+    actorId,
+    workspaceId
   );
 
   // 3. Create findings
@@ -95,7 +98,8 @@ export async function executeWorkflow(
         severity: input.priority === "critical" ? "critical" : input.priority === "high" ? "high" : "medium",
         impactArea: "execution",
       },
-      actorId
+      actorId,
+      workspaceId
     );
     createdFindings.push(finding);
   }
@@ -111,7 +115,8 @@ export async function executeWorkflow(
         title: `Action for ${finding.engagementId}`,
         priority: input.priority,
       },
-      actorId
+      actorId,
+      workspaceId
     );
 
     logger.info("Creating action", { recommendationId: recommendation.id });
@@ -123,7 +128,8 @@ export async function executeWorkflow(
         priority: input.priority,
         dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       },
-      actorId
+      actorId,
+      workspaceId
     );
 
     // 5. Transition action to in_progress
