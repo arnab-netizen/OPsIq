@@ -27,6 +27,12 @@ interface DecisionData {
   createdBy?: string;
   assignedTo?: string | null;
   reviewedBy?: string | null;
+  decisionHash?: string;
+  signature?: string;
+  engineVersion?: string;
+  expectedOutcome?: string;
+  actualOutcome?: string;
+  decisionAccuracy?: number;
 }
 
 interface DecisionDetailViewProps {
@@ -157,6 +163,16 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
 
   const inputs = decision.inputsSnapshot || {};
   const explanation = decision.explanation || {};
+  const guardrails = (() => {
+    if (!decision.guardrailResult) return null;
+    try {
+      return typeof decision.guardrailResult === "string"
+        ? JSON.parse(decision.guardrailResult)
+        : decision.guardrailResult;
+    } catch {
+      return null;
+    }
+  })();
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -328,6 +344,30 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
               <div className="space-y-2 text-sm text-red-800">
                 {decision.blockStage && <p>Stage: {decision.blockStage}</p>}
                 {decision.blockReason && <p>Reason: {decision.blockReason}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Guardrails */}
+          {guardrails && (
+            <div className="bg-white border rounded-lg p-4">
+              <h2 className="font-bold text-gray-900 mb-4">🛡️ Guardrails Evaluation</h2>
+              <div className="space-y-3 text-sm">
+                {guardrails.passed !== undefined && (
+                  <p className={guardrails.passed ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
+                    {guardrails.passed ? "✓ Passed" : "✗ Failed"}
+                  </p>
+                )}
+                {guardrails.violations && Array.isArray(guardrails.violations) && guardrails.violations.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-gray-700 mb-2">Violations ({guardrails.violations.length}):</p>
+                    <ul className="space-y-1 text-xs">
+                      {guardrails.violations.map((v: any, idx: number) => (
+                        <li key={idx} className="text-red-700">• {v.ruleId || "Unknown Rule"}: {v.message || "Violation detected"}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           )}
