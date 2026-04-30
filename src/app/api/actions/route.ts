@@ -26,8 +26,9 @@ const listActionsSchema = paginationSchema.extend({
 export const GET = withRequestContext(async (request) => {
   await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const params = parseSearchParams(request.url, listActionsSchema);
-  const result = await listActions(params);
+  const result = await listActions(workspaceId, params);
 
   return Response.json(result);
 });
@@ -38,8 +39,9 @@ export const POST = withRequestContext(async (request) => {
     internalOnly: true,
   });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const body = await parseRequestBody(request, createActionSchema);
-  const result = await createAction(body, session.user.id);
+  const result = await createAction(body, session.user.id, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

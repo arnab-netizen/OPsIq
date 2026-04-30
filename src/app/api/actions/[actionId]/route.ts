@@ -20,12 +20,13 @@ const updateActionSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
   const { actionId } = await context.params;
   parseOrThrow(uuidSchema, actionId);
   await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
 
-  const action = await getActionById(actionId);
+  const workspaceId = request.headers.get("x-workspace-id") || "";
+  const action = await getActionById(actionId, workspaceId);
   return Response.json(action);
 });
 
@@ -37,9 +38,10 @@ export const PATCH = withRequestContext(async (request, context) => {
     internalOnly: true,
   });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const body = await parseRequestBody(request, updateActionSchema);
-  await updateAction(actionId, body, session.user.id);
+  await updateAction(actionId, body, session.user.id, workspaceId);
 
-  const updated = await getActionById(actionId);
+  const updated = await getActionById(actionId, workspaceId);
   return Response.json(updated);
 });

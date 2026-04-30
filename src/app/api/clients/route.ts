@@ -25,8 +25,9 @@ const listClientsSchema = paginationSchema.extend({
 export const GET = withRequestContext(async (request) => {
   const { policy } = await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const params = parseSearchParams(request.url, listClientsSchema);
-  const result = await listClients(params, hasInternalAccess(policy));
+  const result = await listClients(workspaceId, params);
 
   return Response.json(result);
 });
@@ -37,8 +38,9 @@ export const POST = withRequestContext(async (request) => {
     internalOnly: true,
   });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const body = await parseRequestBody(request, createClientSchema);
-  const result = await createClient(body, session.user.id);
+  const result = await createClient(body, session.user.id, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

@@ -28,11 +28,12 @@ export const POST = withRequestContext(async (request) => {
     internalOnly: true,
   });
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
   const body = await parseRequestBody(request, diagnosisSchema);
 
   try {
     validateBusinessProblem(body);
-    const result = await diagnoseBusiness(body, session.user.id);
+    const result = await diagnoseBusiness(body, session.user.id, workspaceId);
     return Response.json(result, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Diagnosis failed";
