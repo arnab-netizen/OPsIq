@@ -20,6 +20,7 @@ import { evaluateDecisionGate, gateResultToPayload } from "@/services/control/de
 import { evaluateGuardrails, formatGuardrailViolations } from "@/services/control/guardrails";
 import { validateDependencies } from "@/services/control/variable-registry";
 import { enforceControlLayer } from "@/services/control/enforcement";
+import { recordLifecycleStage } from "@/services/lifecycle/decision-lifecycle";
 
 function addIntegrity(
   result: DecisionResult,
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
   let workspace;
   let userId: string | null = null;
   let logger: ReturnType<typeof createEventLogger> | null = null;
+  const startTime = Date.now();
 
   // Track execution of control layer validations for bypass prevention
   const executedValidations: string[] = ["variable_registry"];
@@ -52,6 +54,16 @@ export async function POST(request: NextRequest) {
 
     // Initialize logger once workspace is available
     logger = createEventLogger("api_run", workspace.workspaceId);
+
+    // Record RECEIVED stage
+    await recordLifecycleStage({
+      workspaceId: workspace.workspaceId,
+      stage: "RECEIVED",
+      status: "success",
+      durationMs: Date.now() - startTime,
+    }).catch(() => {
+      // Ignore lifecycle recording errors - observability only
+    });
 
     // Get session for user identity
     const session = await getSession();
@@ -109,6 +121,18 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    // Record VALIDATED stage (auth and permissions passed)
+    const validatedTime = Date.now();
+    await recordLifecycleStage({
+      workspaceId: workspace.workspaceId,
+      actorId: userId,
+      stage: "VALIDATED",
+      status: "success",
+      durationMs: validatedTime - startTime,
+    }).catch(() => {
+      // Ignore lifecycle recording errors - observability only
+    });
 
     // 1. Parse body
     const body = await request.json();
@@ -401,11 +425,35 @@ export async function POST(request: NextRequest) {
         throw auditError;
       });
 
+      // Record ERRORED stage for normalization failure
+      await recordLifecycleStage({
+        workspaceId: workspace.workspaceId,
+        actorId: userId,
+        stage: "NORMALIZED",
+        status: "error",
+        reason: errorMsg,
+        durationMs: Date.now() - validatedTime,
+      }).catch(() => {
+        // Ignore lifecycle recording errors - observability only
+      });
+
       return NextResponse.json(
         { error: errorMsg },
         { status: 400 }
       );
     }
+
+    // Record NORMALIZED stage (input normalization successful)
+    const normalizedTime = Date.now();
+    await recordLifecycleStage({
+      workspaceId: workspace.workspaceId,
+      actorId: userId,
+      stage: "NORMALIZED",
+      status: "success",
+      durationMs: normalizedTime - validatedTime,
+    }).catch(() => {
+      // Ignore lifecycle recording errors - observability only
+    });
 
     // 3. Create baseline using normalized values (all in INR/base currency)
     const baseline = createBaseline(
@@ -503,6 +551,18 @@ export async function POST(request: NextRequest) {
           missingDependencies: depValidation.error.missingDependencies,
         });
       }
+
+      // Record BLOCKED stage (dependency validation)
+      await recordLifecycleStage({
+        workspaceId: workspace.workspaceId,
+        actorId: userId,
+        stage: "BLOCKED",
+        status: "blocked",
+        reason: depValidation.error.details,
+        durationMs: Date.now() - normalizedTime,
+      }).catch(() => {
+        // Ignore lifecycle recording errors - observability only
+      });
 
       return NextResponse.json(
         {
@@ -609,6 +669,18 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Record BLOCKED stage (decision gate)
+      await recordLifecycleStage({
+        workspaceId: workspace.workspaceId,
+        actorId: userId,
+        stage: "BLOCKED",
+        status: "blocked",
+        reason: gateResult.reason || "Decision gate validation failed",
+        durationMs: Date.now() - normalizedTime,
+      }).catch(() => {
+        // Ignore lifecycle recording errors - observability only
+      });
+
       // Return gate result in response body with 422 status
       return NextResponse.json(
         {
@@ -619,7 +691,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Decision gate passed
+    // Decision gate passed - record GATED stage
+    const gatedTime = Date.now();
+    await recordLifecycleStage({
+      workspaceId: workspace.workspaceId,
+      actorId: userId,
+      stage: "GATED",
+      status: "success",
+      durationMs: gatedTime - normalizedTime,
+    }).catch(() => {
+      // Ignore lifecycle recording errors - observability only
+    });
+
     executedValidations.push("decision_gate");
 
     // 6. Call runSystem with error handling for decision validation
@@ -723,6 +806,19 @@ export async function POST(request: NextRequest) {
           inputsSnapshot
         );
       }
+
+      // Record ERRORED stage (system error during gating)
+      await recordLifecycleStage({
+        workspaceId: workspace.workspaceId,
+        actorId: userId,
+        stage: "ERRORED",
+        status: "error",
+        reason: errorMsg,
+        durationMs: Date.now() - gatedTime,
+      }).catch(() => {
+        // Ignore lifecycle recording errors - observability only
+      });
+
       return NextResponse.json(decisionResult, { status: 400 });
     }
 
@@ -865,6 +961,18 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Record BLOCKED stage (guardrails)
+      await recordLifecycleStage({
+        workspaceId: workspace.workspaceId,
+        actorId: userId,
+        stage: "BLOCKED",
+        status: "blocked",
+        reason: guardrailsResult.violations.map((v) => v.message).join("; "),
+        durationMs: Date.now() - gatedTime,
+      }).catch(() => {
+        // Ignore lifecycle recording errors - observability only
+      });
+
       return NextResponse.json(
         {
           decision: decisionResult,
@@ -877,6 +985,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Record GUARDRAIL_CHECKED stage
+    const guardrailCheckedTime = Date.now();
+    await recordLifecycleStage({
+      workspaceId: workspace.workspaceId,
+      actorId: userId,
+      stage: "GUARDRAIL_CHECKED",
+      status: "success",
+      durationMs: guardrailCheckedTime - gatedTime,
+    }).catch(() => {
+      // Ignore lifecycle recording errors - observability only
+    });
 
     // Guardrails validation passed
     executedValidations.push("guardrails");
@@ -899,6 +1019,9 @@ export async function POST(request: NextRequest) {
       baselineMetrics
     );
     await addItems(operatorItems);
+
+    // Get first operator item ID for lifecycle tracking
+    const firstOperatorItemId = operatorItems.length > 0 ? operatorItems[0].id : undefined;
 
     // Get actor ID for audit
     const actorId = userId;
@@ -924,6 +1047,18 @@ export async function POST(request: NextRequest) {
     }).catch((auditError) => {
       if (logger) logger.error(`Audit logging failed: ${auditError}`);
       throw auditError;
+    });
+
+    // Record APPROVED stage
+    await recordLifecycleStage({
+      workspaceId: workspace.workspaceId,
+      decisionId: firstOperatorItemId,
+      actorId: userId,
+      stage: "APPROVED",
+      status: "success",
+      durationMs: Date.now() - startTime,
+    }).catch(() => {
+      // Ignore lifecycle recording errors - observability only
     });
 
     // 12. Emit webhook for decision creation (non-blocking)
@@ -998,6 +1133,21 @@ export async function POST(request: NextRequest) {
     if (logger) {
       logger.error(errorMessage);
     }
+
+    // Record ERRORED stage for uncaught errors
+    if (workspace) {
+      await recordLifecycleStage({
+        workspaceId: workspace.workspaceId,
+        actorId: userId,
+        stage: "ERRORED",
+        status: "error",
+        reason: errorMessage,
+        durationMs: Date.now() - startTime,
+      }).catch(() => {
+        // Ignore lifecycle recording errors - observability only
+      });
+    }
+
     if (decisionResult) {
       return NextResponse.json(decisionResult, { status: 400 });
     }

@@ -724,4 +724,27 @@ model BusinessProfile {
   @@map("business_profiles")
 }
 
+// ─── Observability: Decision Lifecycle Tracking ────────────────────────────
+
+model DecisionLifecycle {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid // Multi-workspace isolation
+  decisionId  String?   @map("decision_id") @db.Uuid // OperatorItem id (null if not yet created)
+  actorId     String?   @map("actor_id") @db.Uuid // User who triggered this stage
+  stage       String    // RECEIVED, VALIDATED, NORMALIZED, GATED, GUARDRAIL_CHECKED, APPROVED, BLOCKED, ERRORED
+  status      String    // success, blocked, error
+  reason      String?   // Explanation for block or error
+  durationMs  Int?      @map("duration_ms") // Duration of this stage in milliseconds
+  occurredAt  DateTime  @map("occurred_at") // When this stage occurred
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([workspaceId])
+  @@index([workspaceId, decisionId])
+  @@index([workspaceId, stage])
+  @@index([workspaceId, status])
+  @@index([actorId])
+  @@index([occurredAt])
+  @@map("decision_lifecycle")
+}
+
 
