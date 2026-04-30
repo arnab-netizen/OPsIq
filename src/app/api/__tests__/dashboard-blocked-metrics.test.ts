@@ -25,7 +25,7 @@ vi.mock("@/services/workspace/context", () => ({
   validateWorkspaceAccess: vi.fn().mockResolvedValue(undefined),
 }));
 
-describe("Dashboard Blocked Metrics (PHASE 4 CRITICAL 4)", () => {
+describe("Dashboard Blocked Metrics [db] (PHASE 4 CRITICAL 4)", () => {
   const testWorkspaceId = "test-workspace-id";
 
   beforeEach(async () => {

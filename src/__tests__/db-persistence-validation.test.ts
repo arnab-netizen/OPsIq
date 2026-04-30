@@ -6,7 +6,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { v4 as uuidv4 } from "uuid";
 
-describe("Database Persistence Validation", () => {
+describe("Database Persistence Validation [db]", () => {
   let engagementId: string;
   let actionIdCritical: string;
   let actionIdNormal: string;

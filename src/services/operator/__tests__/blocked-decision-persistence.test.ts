@@ -21,7 +21,7 @@ vi.mock("@/services/workspace/context", () => ({
   validateWorkspaceAccess: vi.fn().mockResolvedValue(undefined),
 }));
 
-describe("PHASE 4 CRITICAL 2: Blocked Decision Persistence", () => {
+describe("PHASE 4 CRITICAL 2: Blocked Decision Persistence [db]", () => {
   const testWorkspaceId = "test-workspace-id";
   const testUserId = "test-user-id";
 

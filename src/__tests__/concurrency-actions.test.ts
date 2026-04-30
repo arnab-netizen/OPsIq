@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { ConflictError } from "@/infra/errors";
 import { v4 as uuidv4 } from "uuid";
 
-describe("Concurrency Control - Optimistic Locking", () => {
+describe("Concurrency Control - Optimistic Locking [db]", () => {
   let actionId: string;
   let engagementId: string;
 
