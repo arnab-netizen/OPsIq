@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getSession } from "@/services/auth";
-import { UnauthorizedError } from "@/infra/errors";
+import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
 import { z } from "zod";
 
 const UpdateDecisionSchema = z.object({
@@ -19,15 +18,39 @@ export async function PATCH(
   { params }: { params: Promise<{ decisionId: string }> }
 ) {
   try {
-    const workspace = await requireWorkspaceContext();
     const session = await getSession();
-    const userId = session?.user.id ?? null;
-
-    if (!userId) {
-      throw new UnauthorizedError("Authentication required");
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const userId = session.user.id;
     const { decisionId } = await params;
+
+    // Get workspace ID from query
+    const workspaceId = request.nextUrl.searchParams.get("workspaceId");
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "Workspace ID required" },
+        { status: 400 }
+      );
+    }
+
+    // Enforce workspace scoping
+    const membership = await enforceWorkspaceScoping(request, workspaceId);
+    if (!membership) {
+      return NextResponse.json(
+        { error: "Unauthorized or invalid workspace" },
+        { status: 403 }
+      );
+    }
+
+    // Check permission to approve/reject
+    if (!hasPermission(membership.role, "approve")) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
 
     // Fetch decision
     const decision = await db.operatorItem.findUnique({
@@ -41,9 +64,12 @@ export async function PATCH(
       );
     }
 
-    // Verify workspace access
-    if (decision.workspaceId !== workspace.workspaceId) {
-      throw new UnauthorizedError("Cross-workspace access denied");
+    // Verify decision belongs to workspace
+    if (decision.workspaceId !== workspaceId) {
+      return NextResponse.json(
+        { error: "Decision not found in this workspace" },
+        { status: 404 }
+      );
     }
 
     // Only allow status updates on pending decisions
@@ -90,7 +116,7 @@ export async function PATCH(
         ...(input.override_reason && { override_reason: input.override_reason }),
         timestamp: new Date().toISOString(),
       },
-      workspaceId: workspace.workspaceId,
+      workspaceId,
     }).catch((auditError) => {
       console.error(`Audit logging failed: ${auditError}`);
     });
@@ -104,13 +130,6 @@ export async function PATCH(
       { status: 200 }
     );
   } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
-
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {

@@ -1,18 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
 import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
-import { UnauthorizedError } from "@/infra/errors";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 
 export async function GET(request: NextRequest) {
   try {
-    // Get workspace context (fail closed if missing)
-    const workspace = await requireWorkspaceContext();
-
-    // Get authenticated user for audit
     const session = await getSession();
-    const userId = session?.user.id ?? null;
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const userId = session.user.id;
+    const workspaceId = request.nextUrl.searchParams.get("workspaceId");
+
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "Workspace ID required" },
+        { status: 400 }
+      );
+    }
+
+    // Enforce workspace scoping
+    const membership = await enforceWorkspaceScoping(request, workspaceId);
+    if (!membership) {
+      return NextResponse.json(
+        { error: "Unauthorized or invalid workspace" },
+        { status: 403 }
+      );
+    }
 
     // Get days parameter from query
     const daysParam = request.nextUrl.searchParams.get("days");
@@ -20,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate governance metrics from persisted real data only
     const metrics = await calculateGovernanceMetrics({
-      workspaceId: workspace.workspaceId,
+      workspaceId,
       days,
     });
 
@@ -28,7 +44,7 @@ export async function GET(request: NextRequest) {
     await logAuditEvent({
       eventName: "GOVERNANCE_METRICS_ACCESSED",
       entityType: "GovernanceMetrics",
-      entityId: workspace.workspaceId,
+      entityId: workspaceId,
       actorId: userId,
       role: null,
       before: null,
@@ -49,13 +65,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(metrics);
   } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
     const message = error instanceof Error ? error.message : "Unknown error";
+    console.error(`Failed to fetch governance metrics: ${message}`);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

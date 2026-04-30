@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { GET } from "../metrics/route";
 
-// Mock workspace context
-vi.mock("@/services/workspace/context", () => ({
-  requireWorkspaceContext: vi.fn(),
+// Mock workspace enforcement
+vi.mock("@/middleware/workspace-enforcement", () => ({
+  enforceWorkspaceScoping: vi.fn(),
 }));
 
 // Mock governance metrics service
@@ -22,34 +22,24 @@ vi.mock("@/services/audit/audit-log", () => ({
   logAuditEvent: vi.fn(),
 }));
 
-// Mock error class
-vi.mock("@/infra/errors", () => ({
-  UnauthorizedError: class UnauthorizedError extends Error {
-    constructor(message = "Authentication required") {
-      super(message);
-      this.name = "UnauthorizedError";
-    }
-  },
-}));
-
-import { requireWorkspaceContext } from "@/services/workspace/context";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
 import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
-import { UnauthorizedError } from "@/infra/errors";
 
 describe("PHASE 5.3: Governance Metrics API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getSession).mockResolvedValue({
+      user: { id: "user-123" },
+    } as any);
   });
 
   describe("Authentication & Authorization", () => {
-    it("should fail closed with 403 when workspace context missing", async () => {
-      vi.mocked(requireWorkspaceContext).mockRejectedValueOnce(
-        new UnauthorizedError("Workspace context required")
-      );
+    it("should fail closed with 403 when no session", async () => {
+      vi.mocked(getSession).mockResolvedValueOnce(null);
 
-      const request = new NextRequest("http://localhost/api/governance/metrics");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
       const response = await GET(request);
 
       expect(response.status).toBe(403);
@@ -57,12 +47,10 @@ describe("PHASE 5.3: Governance Metrics API", () => {
       expect(body.error).toBe("Unauthorized");
     });
 
-    it("should fail closed before calculating metrics on auth failure", async () => {
-      vi.mocked(requireWorkspaceContext).mockRejectedValueOnce(
-        new UnauthorizedError("Session expired")
-      );
+    it("should fail closed when user is not in workspace", async () => {
+      vi.mocked(enforceWorkspaceScoping).mockResolvedValueOnce(null);
 
-      const request = new NextRequest("http://localhost/api/governance/metrics");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
       const response = await GET(request);
 
       expect(response.status).toBe(403);
@@ -73,8 +61,11 @@ describe("PHASE 5.3: Governance Metrics API", () => {
 
   describe("Metrics Calculation", () => {
     beforeEach(() => {
-      vi.mocked(getSession).mockResolvedValue(null);
       vi.mocked(logAuditEvent).mockResolvedValue(undefined);
+      vi.mocked(enforceWorkspaceScoping).mockResolvedValue({
+        userId: "user-123",
+        role: "admin",
+      });
     });
 
     it("should return real governance metrics from service only", async () => {
@@ -100,15 +91,11 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         },
       };
 
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-123",
-      } as any);
-
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce(
         mockMetrics as any
       );
 
-      const request = new NextRequest("http://localhost/api/governance/metrics");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
       const response = await GET(request);
 
       expect(response.status).toBe(200);
@@ -144,15 +131,11 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         },
       };
 
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-123",
-      } as any);
-
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce(
         emptyMetrics as any
       );
 
-      const request = new NextRequest("http://localhost/api/governance/metrics");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
       const response = await GET(request);
 
       expect(response.status).toBe(200);
@@ -172,15 +155,13 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         impact: { approvedExpectedImpact: 250000, blockedExpectedImpact: 100000, realizedImpact: 240000, lossFromMisses: 15000 },
       };
 
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-123",
-      } as any);
+      // enforceWorkspaceScoping already mocked in beforeEach
 
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce(
         mockMetrics as any
       );
 
-      const request = new NextRequest("http://localhost/api/governance/metrics");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
       const response = await GET(request);
 
       expect(response.status).toBe(200);
@@ -217,7 +198,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         mockMetrics as any
       );
 
-      const request = new NextRequest("http://localhost/api/governance/metrics");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
       await GET(request);
 
       // Verify workspace isolation is passed to metrics calculation
@@ -246,7 +227,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         mockMetrics as any
       );
 
-      const request = new NextRequest("http://localhost/api/governance/metrics");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
       const response = await GET(request);
 
       const body = await response.json();
@@ -262,9 +243,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
     });
 
     it("should respect days query parameter", async () => {
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-123",
-      } as any);
+      // enforceWorkspaceScoping already mocked in beforeEach
 
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce({
         workspace: { workspaceId: "ws-123" },
@@ -288,9 +267,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
     });
 
     it("should cap days parameter at 90", async () => {
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-123",
-      } as any);
+      // enforceWorkspaceScoping already mocked in beforeEach
 
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce({} as any);
 
@@ -307,9 +284,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
     });
 
     it("should enforce minimum of 1 day", async () => {
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-123",
-      } as any);
+      // enforceWorkspaceScoping already mocked in beforeEach
 
       vi.mocked(calculateGovernanceMetrics).mockResolvedValueOnce({} as any);
 
@@ -337,9 +312,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         impact: { approvedExpectedImpact: 500000, blockedExpectedImpact: 200000, realizedImpact: 485000, lossFromMisses: 25000 },
       };
 
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-123",
-      } as any);
+      // enforceWorkspaceScoping already mocked in beforeEach
 
       vi.mocked(getSession).mockResolvedValueOnce({
         user: { id: "user-456" },
@@ -351,7 +324,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
 
       vi.mocked(logAuditEvent).mockResolvedValueOnce(undefined);
 
-      const request = new NextRequest("http://localhost/api/governance/metrics");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
       const response = await GET(request);
 
       expect(response.status).toBe(200);
@@ -417,9 +390,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         impact: { approvedExpectedImpact: 300000, blockedExpectedImpact: 150000, realizedImpact: 290000, lossFromMisses: 20000 },
       };
 
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-123",
-      } as any);
+      // enforceWorkspaceScoping already mocked in beforeEach
 
       vi.mocked(getSession).mockResolvedValueOnce(null);
 
@@ -431,7 +402,7 @@ describe("PHASE 5.3: Governance Metrics API", () => {
         new Error("Audit service unavailable")
       );
 
-      const request = new NextRequest("http://localhost/api/governance/metrics");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
       const response = await GET(request);
 
       // Request should succeed even if audit logging fails
@@ -443,15 +414,13 @@ describe("PHASE 5.3: Governance Metrics API", () => {
 
   describe("Error Handling", () => {
     it("should handle internal server errors gracefully", async () => {
-      vi.mocked(requireWorkspaceContext).mockResolvedValueOnce({
-        workspaceId: "ws-123",
-      } as any);
+      // enforceWorkspaceScoping already mocked in beforeEach
 
       vi.mocked(calculateGovernanceMetrics).mockRejectedValueOnce(
         new Error("Database connection failed")
       );
 
-      const request = new NextRequest("http://localhost/api/governance/metrics");
+      const request = new NextRequest("http://localhost/api/governance/metrics?workspaceId=ws-123");
       const response = await GET(request);
 
       expect(response.status).toBe(500);

@@ -1,41 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getSession } from "@/services/auth";
-import { UnauthorizedError } from "@/infra/errors";
+import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
 
 /**
  * POST /api/decisions/[decisionId]/evaluate
  *
  * Evaluate a pending decision using the existing /api/run engine.
- *
- * Flow:
- * 1. Fetch stored decision from database
- * 2. Call /api/run with decision inputs
- * 3. Capture evaluation result (approved/blocked + reasons)
- * 4. Update decision record with evaluation payload
- * 5. Log DECISION_EVALUATED audit event
- *
- * Does NOT change decision status - user still decides to approve/reject/override
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ decisionId: string }> }
 ) {
   try {
-    // Get workspace context (fail closed if missing)
-    const workspace = await requireWorkspaceContext();
-
-    // Get authenticated user for audit
     const session = await getSession();
-    const userId = session?.user.id ?? null;
-
-    if (!userId) {
-      throw new UnauthorizedError("Authentication required");
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const userId = session.user.id;
     const { decisionId } = await params;
+
+    // Get workspace ID from query or body
+    const workspaceId = request.nextUrl.searchParams.get("workspaceId");
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "Workspace ID required" },
+        { status: 400 }
+      );
+    }
+
+    // Enforce workspace scoping
+    const membership = await enforceWorkspaceScoping(request, workspaceId);
+    if (!membership) {
+      return NextResponse.json(
+        { error: "Unauthorized or invalid workspace" },
+        { status: 403 }
+      );
+    }
 
     // Fetch stored decision
     const decision = await db.operatorItem.findUnique({
@@ -49,9 +52,12 @@ export async function POST(
       );
     }
 
-    // Verify workspace access
-    if (decision.workspaceId !== workspace.workspaceId) {
-      throw new UnauthorizedError("Cross-workspace access denied");
+    // Verify decision belongs to workspace
+    if (decision.workspaceId !== workspaceId) {
+      return NextResponse.json(
+        { error: "Decision not found in this workspace" },
+        { status: 404 }
+      );
     }
 
     // Only evaluate pending decisions
@@ -144,7 +150,7 @@ export async function POST(
         control_layer_violations: evaluationResult.controlLayerViolations,
         timestamp: new Date().toISOString(),
       },
-      workspaceId: workspace.workspaceId,
+      workspaceId,
     }).catch((auditError) => {
       console.error(`Audit logging failed: ${auditError}`);
     });
@@ -163,13 +169,6 @@ export async function POST(
       { status: 200 }
     );
   } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
-
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error(`Evaluation failed: ${message}`);
 

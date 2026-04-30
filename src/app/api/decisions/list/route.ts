@@ -1,17 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 import { getSession } from "@/services/auth";
-import { UnauthorizedError } from "@/infra/errors";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 
 export async function GET(request: NextRequest) {
   try {
-    const workspace = await requireWorkspaceContext();
     const session = await getSession();
-    const userId = session?.user.id ?? null;
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
 
-    if (!userId) {
-      throw new UnauthorizedError("Authentication required");
+    const userId = session.user.id;
+    const workspaceId = request.nextUrl.searchParams.get("workspaceId");
+
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "Workspace ID required" },
+        { status: 400 }
+      );
+    }
+
+    // Enforce workspace scoping
+    const membership = await enforceWorkspaceScoping(request, workspaceId);
+    if (!membership) {
+      return NextResponse.json(
+        { error: "Unauthorized or invalid workspace" },
+        { status: 403 }
+      );
     }
 
     // Get filter from query params
@@ -21,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     // Build filter
     const where: any = {
-      workspaceId: workspace.workspaceId,
+      workspaceId,
     };
 
     if (status && ["pending", "blocked", "approved", "done", "failed"].includes(status)) {
@@ -69,10 +84,6 @@ export async function GET(request: NextRequest) {
       offset,
     });
   } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error(`Failed to fetch decisions: ${message}`);
 

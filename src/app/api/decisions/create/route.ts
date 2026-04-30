@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { getSession } from "@/services/auth";
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { checkRateLimit } from "@/services/production/safety-config";
+import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
 import { z } from "zod";
 
 // Input validation schema
@@ -31,30 +31,53 @@ type CreateDecisionInput = z.infer<typeof CreateDecisionSchema>;
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get workspace context (fail closed if missing)
-    const workspace = await requireWorkspaceContext();
-
-    // Check rate limit per workspace
-    if (!checkRateLimit(workspace.workspaceId)) {
-      return NextResponse.json(
-        { error: "Rate limit exceeded" },
-        { status: 429 }
-      );
-    }
-
-    // Get authenticated user for audit
     const session = await getSession();
-    const userId = session?.user.id ?? null;
-
-    if (!userId) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 403 }
       );
     }
 
-    // Parse and validate input
+    const userId = session.user.id;
+
+    // Get workspace ID from request body
     const body = await request.json();
+    const workspaceId = body.workspaceId;
+
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "Workspace ID required" },
+        { status: 400 }
+      );
+    }
+
+    // Enforce workspace scoping
+    const membership = await enforceWorkspaceScoping(request, workspaceId);
+    if (!membership) {
+      return NextResponse.json(
+        { error: "Unauthorized or invalid workspace" },
+        { status: 403 }
+      );
+    }
+
+    // Check permission to create
+    if (!hasPermission(membership.role, "create")) {
+      return NextResponse.json(
+        { error: "Insufficient permissions to create decision" },
+        { status: 403 }
+      );
+    }
+
+    // Check rate limit per workspace
+    if (!checkRateLimit(workspaceId)) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429 }
+      );
+    }
+
+    // Parse and validate input
     const input = CreateDecisionSchema.parse(body);
 
     // Calculate expected impact from financial inputs
@@ -65,7 +88,7 @@ export async function POST(request: NextRequest) {
     const decision = await db.operatorItem.create({
       data: {
         // IDs and workspace
-        workspaceId: workspace.workspaceId,
+        workspaceId,
         createdBy: userId,
         ownerUserId: userId,
 
@@ -124,7 +147,7 @@ export async function POST(request: NextRequest) {
         financialInputs: input.financialInputs,
         createdAt: new Date().toISOString(),
       },
-      workspaceId: workspace.workspaceId,
+      workspaceId,
     }).catch((auditError) => {
       // Log but don't fail on audit error
       console.error(`Audit logging failed: ${auditError}`);
