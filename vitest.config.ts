@@ -6,6 +6,7 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
+    globalSetup: ["./vitest-global-setup.ts"],
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     exclude: [
       "**/node_modules/**",
@@ -14,6 +15,8 @@ export default defineConfig({
       "**/*.placeholder.test.ts",
       "**/__ignored_tests__/**",
     ],
+    testTimeout: 30000,
+    hookTimeout: 30000,
   },
   resolve: {
     alias: {

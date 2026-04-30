@@ -9,8 +9,7 @@ async function createPrismaClient() {
   if (!databaseUrl) {
     throw new Error(
       "DATABASE_URL or TEST_DATABASE_URL environment variable is not set. " +
-      "Tests require a PostgreSQL database connection. " +
-      "Set DATABASE_URL=postgresql://user:password@host/dbname or TEST_DATABASE_URL=... and try again."
+      "For production: Set DATABASE_URL=postgresql://user:password@host/dbname"
     );
   }
 
@@ -45,7 +44,7 @@ async function createPrismaClient() {
     });
   } catch (error) {
     throw new Error(
-      `Failed to initialize PostgreSQL Prisma client: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to initialize Prisma client: ${error instanceof Error ? error.message : String(error)}`
     );
   }
 }
