@@ -1,10 +1,12 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createLead, listLeads } from "@/services/lead";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
+import type { NextRequest } from "next/server";
 
 const createLeadSchema = z.object({
   companyName: z.string().min(1),
@@ -23,10 +25,25 @@ const listLeadsSchema = paginationSchema.extend({
 });
 
 export const GET = withRequestContext(async (request) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  // Authenticate + authorize (fail-closed)
   await withAuth({ capability: CAPABILITIES.LEAD_VIEW, internalOnly: true });
 
-  const params = parseSearchParams(request.url, listLeadsSchema);
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const params = parseSearchParams(nextRequest.url, listLeadsSchema);
   const result = await listLeads(workspaceId, params);
 
   return Response.json(result);

@@ -1,13 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createEntity, getEntities } from "@/services/entity/store";
+import { requireAuth } from "@/lib/auth-guard";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { getSession } from "@/services/auth";
 import { canEdit } from "@/services/auth/access";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { randomUUID } from "crypto";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Require authentication (fail-closed)
+    await requireAuth();
+
+    // Require workspace context
+    const workspaceId = request.headers.get("x-workspace-id");
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "Workspace ID required (x-workspace-id header)" },
+        { status: 400 }
+      );
+    }
+
+    const membership = await enforceWorkspaceScoping(request, workspaceId);
+    if (!membership) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
     const entities = getEntities();
     return NextResponse.json(entities);
   } catch (error) {
