@@ -1,6 +1,7 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getEngagementById, updateEngagement } from "@/services/engagement";
 import { assertEngagementAccess } from "@/lib/visibility";
@@ -14,6 +15,7 @@ import {
   ENGAGEMENT_MODES,
   HEALTH_STATUSES,
 } from "@/domain/constants/statuses";
+import type { NextRequest } from "next/server";
 
 const updateEngagementSchema = z.object({
   title: z.string().min(1).optional(),
@@ -31,10 +33,26 @@ const updateEngagementSchema = z.object({
 });
 
 export const GET = withRequestContext(async (request, context) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  // Authenticate + authorize (fail-closed)
+  const { session, policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  const { session, policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
   await assertEngagementAccess(session.user.id, engagementId);
 
@@ -43,13 +61,29 @@ export const GET = withRequestContext(async (request, context) => {
 });
 
 export const PATCH = withRequestContext(async (request, context) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
-  const { engagementId } = await context.params;
-  parseOrThrow(uuidSchema, engagementId);
+  // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
     internalOnly: true,
   });
+
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const { engagementId } = await context.params;
+  parseOrThrow(uuidSchema, engagementId);
 
   await assertEngagementAccess(session.user.id, engagementId);
 
@@ -89,7 +123,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   }
 
   try {
-    await updateEngagement(engagementId, body, session.user.id, workspaceId);
+    await updateEngagement(engagementId, body, { session, policy }, workspaceId);
     const updated = await getEngagementById(engagementId, workspaceId, hasInternalAccess(policy));
     await recordIdempotencyResponse(idempotencyKey, 200, updated);
     return Response.json(updated);

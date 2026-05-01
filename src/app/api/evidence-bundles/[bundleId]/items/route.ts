@@ -19,7 +19,7 @@ export const POST = withRequestContext(async (request, context) => {
     const { bundleId } = await context.params;
     parseOrThrow(uuidSchema, bundleId);
 
-    const { session } = await withAuth({
+    const authContext = await withAuth({
       capability: CAPABILITIES.EVIDENCE_SUBMIT,
     });
 
@@ -40,7 +40,7 @@ export const POST = withRequestContext(async (request, context) => {
       );
     }
 
-    await addEvidenceToBundle(bodyData, session.user.id, workspaceId);
+    await addEvidenceToBundle(bodyData, authContext, workspaceId);
 
     return Response.json({ success: true }, { status: 201 });
   } catch (error) {
@@ -55,7 +55,7 @@ export const DELETE = withRequestContext(async (request, context) => {
     const { bundleId } = await context.params;
     parseOrThrow(uuidSchema, bundleId);
 
-    const { session } = await withAuth({
+    const authContext = await withAuth({
       capability: CAPABILITIES.EVIDENCE_SUBMIT,
     });
 
@@ -76,7 +76,7 @@ export const DELETE = withRequestContext(async (request, context) => {
       );
     }
 
-    await removeEvidenceFromBundle(bodyData, session.user.id, workspaceId);
+    await removeEvidenceFromBundle(bodyData, authContext, workspaceId);
 
     return Response.json({ success: true });
   } catch (error) {

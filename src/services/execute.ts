@@ -8,6 +8,7 @@ import { transitionActionState } from "@/services/action-lifecycle";
 import { computeEngagementHealth } from "@/services/engagement-health";
 import { ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import type { AuthContext } from "@/lib/auth-guard";
 
 export interface ExecuteInput {
   clientName: string;
@@ -49,6 +50,24 @@ export async function executeWorkflow(
     priority: input.priority,
   });
 
+  // Construct authContext for internal service-to-service calls
+  const authContext: AuthContext = {
+    session: {
+      user: {
+        id: actorId,
+        email: "",
+        name: "",
+        isActive: true,
+      },
+      sessionId: "",
+      expiresAt: new Date(),
+    },
+    policy: {
+      userId: actorId,
+      roles: [],
+    },
+  };
+
   // Validate input
   if (!input.clientName?.trim()) {
     throw new ValidationError("Client name is required");
@@ -60,6 +79,24 @@ export async function executeWorkflow(
     throw new ValidationError("At least one finding is required");
   }
 
+  // Construct authContext for internal service-to-service calls
+  const internalAuthContext: AuthContext = {
+    session: {
+      user: {
+        id: actorId,
+        email: "",
+        name: "",
+        isActive: true,
+      },
+      sessionId: "",
+      expiresAt: new Date(),
+    },
+    policy: {
+      userId: actorId,
+      roles: [],
+    },
+  };
+
   // 1. Create client
   logger.info("Creating client", { clientName: input.clientName });
   const client = await createClient(
@@ -67,7 +104,7 @@ export async function executeWorkflow(
       name: input.clientName,
       notes: `Problem: ${input.problem}`,
     },
-    actorId,
+    internalAuthContext,
     workspaceId
   );
 
@@ -82,7 +119,7 @@ export async function executeWorkflow(
       interventionMode: "recovery",
       description: input.problem,
     },
-    actorId,
+    internalAuthContext,
     workspaceId
   );
 
@@ -98,7 +135,7 @@ export async function executeWorkflow(
         severity: input.priority === "critical" ? "critical" : input.priority === "high" ? "high" : "medium",
         impactArea: "execution",
       },
-      actorId,
+      authContext,
       workspaceId
     );
     createdFindings.push(finding);
@@ -115,7 +152,7 @@ export async function executeWorkflow(
         title: `Action for ${finding.engagementId}`,
         priority: input.priority,
       },
-      actorId,
+      internalAuthContext,
       workspaceId
     );
 
@@ -128,7 +165,7 @@ export async function executeWorkflow(
         priority: input.priority,
         dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       },
-      actorId,
+      internalAuthContext,
       workspaceId
     );
 

@@ -11,19 +11,19 @@ const runConsultingEngineSchema = z.object({
 });
 
 export const POST = withRequestContext(async (request) => {
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.RECOMMENDATION_CREATE,
   });
 
   const body = await parseRequestBody(request, runConsultingEngineSchema);
   parseOrThrow(uuidSchema, body.engagementId);
 
-  await assertEngagementAccess(session.user.id, body.engagementId);
+  await assertEngagementAccess(authContext.session.user.id, body.engagementId);
 
   try {
     const result = await runConsultingPipeline(
       body.engagementId,
-      session.user.id
+      authContext
     );
 
     return Response.json(

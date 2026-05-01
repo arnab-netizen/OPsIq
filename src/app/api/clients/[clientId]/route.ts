@@ -1,6 +1,7 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   getClientById,
@@ -9,6 +10,7 @@ import {
 } from "@/services/client-account";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { z } from "zod/v4";
+import type { NextRequest } from "next/server";
 
 const updateClientSchema = z.object({
   name: z.string().min(1).optional(),
@@ -27,42 +29,90 @@ const archiveSchema = z.object({
 });
 
 export const GET = withRequestContext(async (request, context) => {
-  const { clientId } = await context.params;
-  parseOrThrow(uuidSchema, clientId);
+  // Authenticate + authorize (fail-closed)
   const { policy } = await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
 
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const { clientId } = await context.params;
+  parseOrThrow(uuidSchema, clientId);
+
   const client = await getClientById(clientId, workspaceId);
   return Response.json(client);
 });
 
 export const PATCH = withRequestContext(async (request, context) => {
-  const { clientId } = await context.params;
-  parseOrThrow(uuidSchema, clientId);
+  // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_UPDATE,
     internalOnly: true,
   });
 
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const { clientId } = await context.params;
+  parseOrThrow(uuidSchema, clientId);
+
   const body = await parseRequestBody(request, updateClientSchema);
-  await updateClient(clientId, body, session.user.id, workspaceId);
+  await updateClient(clientId, body, { session, policy }, workspaceId);
 
   const updated = await getClientById(clientId, workspaceId);
   return Response.json(updated);
 });
 
 export const POST = withRequestContext(async (request, context) => {
-  const { clientId } = await context.params;
-  parseOrThrow(uuidSchema, clientId);
-  const { session } = await withAuth({
+  // Authenticate + authorize (fail-closed)
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_ARCHIVE,
     internalOnly: true,
   });
 
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const { clientId } = await context.params;
+  parseOrThrow(uuidSchema, clientId);
+
   const body = await parseRequestBody(request, archiveSchema);
-  await archiveClient(clientId, session.user.id, body.version, workspaceId);
+  await archiveClient(clientId, { session, policy }, body.version, workspaceId);
 
   return Response.json({ status: "archived" });
 });

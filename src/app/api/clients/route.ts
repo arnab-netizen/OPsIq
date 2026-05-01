@@ -1,5 +1,6 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createClient, listClients } from "@/services/client-account";
@@ -25,7 +26,7 @@ const listClientsSchema = paginationSchema.extend({
 
 export const GET = withRequestContext(async (request) => {
   // Authenticate + authorize (fail-closed)
-  await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
+  const { policy } = await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
@@ -42,21 +43,36 @@ export const GET = withRequestContext(async (request) => {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const params = parseSearchParams(nextRequest.url, listClientsSchema);
+  const params = parseSearchParams(request.url, listClientsSchema);
   const result = await listClients(workspaceId, params);
 
   return Response.json(result);
 });
 
 export const POST = withRequestContext(async (request) => {
-  const { session } = await withAuth({
+  // Authenticate + authorize (fail-closed)
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_CREATE,
     internalOnly: true,
   });
 
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const body = await parseRequestBody(request, createClientSchema);
-  const result = await createClient(body, session.user.id, workspaceId);
+  const result = await createClient(body, { session, policy }, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

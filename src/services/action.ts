@@ -9,6 +9,8 @@ import { assertEngagementAccess } from "@/lib/visibility";
 import { withIdempotency } from "@/infra/idempotency";
 import { validateStateTransition, enforceActionRules } from "@/services/action-lifecycle";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -66,14 +68,14 @@ function validateActionTransition(fromStatus: ActionStatus, toStatus: ActionStat
 
 export async function createAction(
   input: CreateActionInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string,
   idempotencyKey?: string
 ) {
-  enforceWorkspaceId(workspaceId, "createAction", "action");
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId, workspaceId },
+    where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -92,7 +94,7 @@ export async function createAction(
               assignedTo: input.assignedTo || null,
               dueDate: input.dueDate ? new Date(input.dueDate) : null,
               priority: input.priority || "medium",
-              workspaceId,
+              workspaceId: validatedWorkspaceId,
             },
           });
 
@@ -152,7 +154,7 @@ export async function createAction(
       assignedTo: input.assignedTo || null,
       dueDate: input.dueDate ? new Date(input.dueDate) : null,
       priority: input.priority || "medium",
-      workspaceId,
+      workspaceId: validatedWorkspaceId,
     },
   });
 
@@ -204,13 +206,13 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
 export async function updateActionStatus(
   actionId: string,
   input: UpdateActionInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
-  enforceWorkspaceId(workspaceId, "updateActionStatus", "action");
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const action = await db.action.findUnique({
-    where: { id: actionId, workspaceId },
+    where: { id: actionId, workspaceId: validatedWorkspaceId },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -252,7 +254,7 @@ export async function updateActionStatus(
   const updateResult = await db.action.updateMany({
     where: {
       id: actionId,
-      workspaceId,
+      workspaceId: validatedWorkspaceId,
       version: input.version,
     },
     data: {
@@ -270,7 +272,7 @@ export async function updateActionStatus(
   }
 
   const updated = await db.action.findUnique({
-    where: { id: actionId, workspaceId },
+    where: { id: actionId, workspaceId: validatedWorkspaceId },
   });
   if (!updated) throw new NotFoundError("Action", actionId);
 
@@ -391,13 +393,13 @@ export async function getActionById(actionId: string, workspaceId: string) {
 export async function updateAction(
   actionId: string,
   input: UpdateActionInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
-  enforceWorkspaceId(workspaceId, "updateAction", "action");
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const action = await db.action.findUnique({
-    where: { id: actionId, workspaceId },
+    where: { id: actionId, workspaceId: validatedWorkspaceId },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -423,7 +425,7 @@ export async function updateAction(
   if (input.notes !== undefined) updates.notes = input.notes;
 
   const updated = await db.action.update({
-    where: { id: actionId, workspaceId },
+    where: { id: actionId, workspaceId: validatedWorkspaceId },
     data: updates,
   });
 
@@ -527,7 +529,24 @@ export async function createActionsFromInterventions(
       priority: mapPriorityScore(priIntervention.priorityScore),
     };
 
-    const action = await createAction(input, actorId, workspaceId);
+    // Construct authContext for internal service-to-service call
+    const internalAuthContext: AuthContext = {
+      session: {
+        user: {
+          id: actorId,
+          email: "",
+          name: "",
+          isActive: true,
+        },
+        sessionId: "",
+        expiresAt: new Date(),
+      },
+      policy: {
+        userId: actorId,
+        roles: [],
+      },
+    };
+    const action = await createAction(input, internalAuthContext, workspaceId);
     actions.push(action);
   }
 

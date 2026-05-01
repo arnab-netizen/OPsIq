@@ -43,21 +43,36 @@ export const GET = withRequestContext(async (request) => {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const params = parseSearchParams(nextRequest.url, listLeadsSchema);
+  const params = parseSearchParams(request.url, listLeadsSchema);
   const result = await listLeads(workspaceId, params);
 
   return Response.json(result);
 });
 
 export const POST = withRequestContext(async (request) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
-  const { session } = await withAuth({
+  // Authenticate + authorize (fail-closed)
+  const authContext = await withAuth({
     capability: CAPABILITIES.LEAD_CREATE,
     internalOnly: true,
   });
 
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const body = await parseRequestBody(request, createLeadSchema);
-  const result = await createLead(body, session.user.id, workspaceId);
+  const result = await createLead(body, authContext, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

@@ -5,20 +5,32 @@ import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import { db } from "@/lib/db";
+import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
   const { session } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
+  // Get workspace ID from request
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id") ||
+                       nextRequest.nextUrl.searchParams.get("workspaceId");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required" },
+      { status: 400 }
+    );
+  }
+
   await assertEngagementAccess(session.user.id, engagementId);
 
-  // Fetch engagement with health status
+  // Fetch engagement with health status (scoped by workspace)
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
   });
 
   if (!engagement) {
@@ -28,19 +40,19 @@ export const GET = withRequestContext(async (_request, context) => {
     );
   }
 
-  // Fetch all required data in parallel
+  // Fetch all required data in parallel (all scoped by workspace)
   const [findings, recommendations, actions, condition] = await Promise.all([
     db.finding.findMany({
-      where: { engagementId },
+      where: { engagementId, workspaceId },
     }),
     db.recommendation.findMany({
-      where: { engagementId },
+      where: { engagementId, workspaceId },
     }),
     db.action.findMany({
-      where: { engagementId },
+      where: { engagementId, workspaceId },
     }),
     db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
+      where: { engagementId, isCurrent: true, workspaceId },
       orderBy: { createdAt: "desc" },
     }),
   ]);

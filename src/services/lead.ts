@@ -13,6 +13,8 @@ import {
   withVersionIncrement,
 } from "@/lib/optimistic-lock";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -63,12 +65,14 @@ function validateLeadTransition(from: LeadStatus, to: LeadStatus): void {
 
 export async function createLead(
   input: CreateLeadInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
-  enforceWorkspaceId(workspaceId, "createLead", "lead_record");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const idempotencyKey = `lead-create:${input.companyName}:${actorId}:${workspaceId}`;
+  enforceWorkspaceId(validatedWorkspaceId, "createLead", "lead_record");
+
+  const idempotencyKey = `lead-create:${input.companyName}:${userId}:${validatedWorkspaceId}`;
 
   const result = await withIdempotency(
     idempotencyKey,
@@ -84,9 +88,9 @@ export async function createLead(
           notes: input.notes ?? null,
           estimatedValue: input.estimatedValue ?? null,
           assignedTo: input.assignedTo ?? null,
-          createdBy: actorId,
+          createdBy: userId,
           status: "new",
-          workspaceId,
+          workspaceId: validatedWorkspaceId,
         },
       });
       return { id: lead.id, companyName: lead.companyName };
@@ -95,7 +99,7 @@ export async function createLead(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_CREATED,
-    actorId,
+    actorId: userId,
     entityType: "lead_record",
     entityId: result.result.id,
     payload: { companyName: result.result.companyName },
@@ -113,12 +117,14 @@ export async function createLead(
 export async function updateLead(
   leadId: string,
   input: UpdateLeadInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<void> {
-  enforceWorkspaceId(workspaceId, "updateLead", "lead_record");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const lead = await db.leadRecord.findUnique({ where: { id: leadId, workspaceId } });
+  enforceWorkspaceId(validatedWorkspaceId, "updateLead", "lead_record");
+
+  const lead = await db.leadRecord.findUnique({ where: { id: leadId, workspaceId: validatedWorkspaceId } });
   if (!lead) throw new NotFoundError("LeadRecord", leadId);
 
   if (lead.status === "converted") {
@@ -137,14 +143,14 @@ export async function updateLead(
 
   await optimisticUpdate("lead_record", leadId, version, () =>
     db.leadRecord.update({
-      where: withVersionCheck({ id: leadId, workspaceId }, version),
+      where: withVersionCheck({ id: leadId, workspaceId: validatedWorkspaceId }, version),
       data: withVersionIncrement(data),
     })
   );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.LEAD_UPDATED,
-    actorId,
+    actorId: userId,
     entityType: "lead_record",
     entityId: leadId,
     payload: data,

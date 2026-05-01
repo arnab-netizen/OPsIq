@@ -10,6 +10,8 @@ import {
 } from "@/lib/optimistic-lock";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -38,12 +40,12 @@ export interface UpdateClientInput {
 
 export async function createClient(
   input: CreateClientInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
-  enforceWorkspaceId(workspaceId, "createClient", "client_account");
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const idempotencyKey = `client-create:${input.name}:${actorId}:${workspaceId}`;
+  const idempotencyKey = `client-create:${input.name}:${actorId}:${validatedWorkspaceId}`;
 
   const result = await withIdempotency(
     idempotencyKey,
@@ -59,7 +61,7 @@ export async function createClient(
           address: input.address ?? null,
           notes: input.notes ?? null,
           createdBy: actorId,
-          workspaceId,
+          workspaceId: validatedWorkspaceId,
         },
       });
       return { id: client.id, name: client.name };
@@ -86,13 +88,13 @@ export async function createClient(
 export async function updateClient(
   clientId: string,
   input: UpdateClientInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<void> {
-  enforceWorkspaceId(workspaceId, "updateClient", "client_account");
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const client = await db.clientAccount.findUnique({
-    where: { id: clientId, workspaceId },
+    where: { id: clientId, workspaceId: validatedWorkspaceId },
   });
 
   if (!client) throw new NotFoundError("ClientAccount", clientId);
@@ -110,7 +112,7 @@ export async function updateClient(
   // Duplicate requests with old version fail fast with 409 Conflict
   await optimisticUpdate("client_account", clientId, version, () =>
     db.clientAccount.update({
-      where: withVersionCheck({ id: clientId, workspaceId }, version),
+      where: withVersionCheck({ id: clientId, workspaceId: validatedWorkspaceId }, version),
       data: withVersionIncrement(data),
     })
   );
@@ -129,14 +131,14 @@ export async function updateClient(
 
 export async function archiveClient(
   clientId: string,
-  actorId: string,
+  authContext: AuthContext,
   version: number,
   workspaceId: string
 ): Promise<void> {
-  enforceWorkspaceId(workspaceId, "archiveClient", "client_account");
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const client = await db.clientAccount.findUnique({
-    where: { id: clientId, workspaceId },
+    where: { id: clientId, workspaceId: validatedWorkspaceId },
   });
 
   if (!client) throw new NotFoundError("ClientAccount", clientId);
@@ -149,7 +151,7 @@ export async function archiveClient(
 
   await optimisticUpdate("client_account", clientId, version, () =>
     db.clientAccount.update({
-      where: withVersionCheck({ id: clientId, workspaceId }, version),
+      where: withVersionCheck({ id: clientId, workspaceId: validatedWorkspaceId }, version),
       data: withVersionIncrement({
         status: "archived",
         archivedAt: new Date(),

@@ -14,6 +14,8 @@ import {
 } from "@/lib/optimistic-lock";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -40,19 +42,19 @@ export interface ListUsersParams {
 
 export async function createUser(
   input: CreateUserInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
-  enforceWorkspaceId(workspaceId, "createUser", "user");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const idempotencyKey = `user-create:${input.email}:${workspaceId}`;
+  const idempotencyKey = `user-create:${input.email}:${validatedWorkspaceId}`;
 
   const result = await withIdempotency(
     idempotencyKey,
     "user.create",
     async () => {
       const existing = await db.user.findUnique({
-        where: { email_workspaceId: { email: input.email, workspaceId } },
+        where: { email_workspaceId: { email: input.email, workspaceId: validatedWorkspaceId } },
       });
 
       if (existing) {
@@ -64,7 +66,7 @@ export async function createUser(
           email: input.email,
           name: input.name ?? null,
           hashedPassword: input.hashedPassword ?? null,
-          workspaceId,
+          workspaceId: validatedWorkspaceId,
         },
       });
 
@@ -74,7 +76,7 @@ export async function createUser(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.USER_CREATED,
-    actorId,
+    actorId: userId,
     entityType: "user",
     entityId: result.result.id,
     payload: { email: result.result.email, name: result.result.name },
@@ -92,12 +94,12 @@ export async function createUser(
 export async function updateUser(
   userId: string,
   input: UpdateUserInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<void> {
-  enforceWorkspaceId(workspaceId, "updateUser", "user");
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const user = await db.user.findUnique({ where: { id: userId, workspaceId } });
+  const user = await db.user.findUnique({ where: { id: userId, workspaceId: validatedWorkspaceId } });
 
   if (!user) {
     throw new NotFoundError("User", userId);
@@ -109,7 +111,7 @@ export async function updateUser(
 
   if (input.email && input.email !== user.email) {
     const emailTaken = await db.user.findUnique({
-      where: { email_workspaceId: { email: input.email, workspaceId } },
+      where: { email_workspaceId: { email: input.email, workspaceId: validatedWorkspaceId } },
     });
     if (emailTaken) {
       throw new ConflictError(`Email ${input.email} is already in use`);
@@ -118,7 +120,7 @@ export async function updateUser(
 
   await optimisticUpdate("user", userId, input.version, () =>
     db.user.update({
-      where: withVersionCheck({ id: userId, workspaceId }, input.version),
+      where: withVersionCheck({ id: userId, workspaceId: validatedWorkspaceId }, input.version),
       data: withVersionIncrement({
         ...(input.name !== undefined && { name: input.name }),
         ...(input.email !== undefined && { email: input.email }),
@@ -143,13 +145,13 @@ export async function updateUser(
 
 export async function deactivateUser(
   userId: string,
-  actorId: string,
   version: number,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<void> {
-  enforceWorkspaceId(workspaceId, "deactivateUser", "user");
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const user = await db.user.findUnique({ where: { id: userId, workspaceId } });
+  const user = await db.user.findUnique({ where: { id: userId, workspaceId: validatedWorkspaceId } });
 
   if (!user) {
     throw new NotFoundError("User", userId);
@@ -159,13 +161,13 @@ export async function deactivateUser(
     throw new ValidationError("User is already deactivated");
   }
 
-  if (userId === actorId) {
+  if (userId === authContext.session.user.id) {
     throw new ValidationError("Cannot deactivate your own account");
   }
 
   await optimisticUpdate("user", userId, version, () =>
     db.user.update({
-      where: withVersionCheck({ id: userId, workspaceId }, version),
+      where: withVersionCheck({ id: userId, workspaceId: validatedWorkspaceId }, version),
       data: withVersionIncrement({
         isActive: false,
         deactivatedAt: new Date(),
@@ -175,19 +177,19 @@ export async function deactivateUser(
 
   // Revoke all active sessions
   const sessionResult = await db.session.updateMany({
-    where: { userId, workspaceId, revokedAt: null },
+    where: { userId, workspaceId: validatedWorkspaceId, revokedAt: null },
     data: { revokedAt: new Date() },
   });
 
   // Revoke all active role assignments
   const roleResult = await db.userRoleAssignment.updateMany({
-    where: { userId, workspaceId, isActive: true },
+    where: { userId, workspaceId: validatedWorkspaceId, isActive: true },
     data: { isActive: false, revokedAt: new Date() },
   });
 
   // Remove from active engagement memberships
   const membershipResult = await db.engagementMembership.updateMany({
-    where: { userId, workspaceId, isActive: true },
+    where: { userId, workspaceId: validatedWorkspaceId, isActive: true },
     data: { isActive: false, removedAt: new Date() },
   });
 
@@ -216,13 +218,13 @@ export async function deactivateUser(
 
 export async function reactivateUser(
   userId: string,
-  actorId: string,
   version: number,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<void> {
-  enforceWorkspaceId(workspaceId, "reactivateUser", "user");
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
-  const user = await db.user.findUnique({ where: { id: userId, workspaceId } });
+  const user = await db.user.findUnique({ where: { id: userId, workspaceId: validatedWorkspaceId } });
 
   if (!user) {
     throw new NotFoundError("User", userId);
@@ -234,7 +236,7 @@ export async function reactivateUser(
 
   await optimisticUpdate("user", userId, version, () =>
     db.user.update({
-      where: withVersionCheck({ id: userId, workspaceId }, version),
+      where: withVersionCheck({ id: userId, workspaceId: validatedWorkspaceId }, version),
       data: withVersionIncrement({
         isActive: true,
         deactivatedAt: null,

@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRequestContext } from "@/lib/api-handler";
+import { withAuth } from "@/lib/auth-guard";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { NextRequest } from "next/server";
 import {
   createDecision,
   createDecisionsBulk,
@@ -6,27 +9,28 @@ import {
 } from "@/services/decisions/decision-creation-service";
 import { logger } from "@/infra/logger";
 
-export async function POST(request: NextRequest) {
+export const POST = withRequestContext(async (request) => {
   try {
-    const contentType = request.headers.get("content-type") || "";
+    // Authenticate + authorize (fail-closed)
+    const { session } = await withAuth();
 
-    // Get workspace and user from request context
-    const workspaceId = request.headers.get("x-workspace-id");
-    const userId = request.headers.get("x-user-id");
-
+    // Validate workspace membership (fail-closed)
+    const nextRequest = request as NextRequest;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     if (!workspaceId) {
-      return NextResponse.json(
+      return Response.json(
         { error: "Workspace ID is required (x-workspace-id header)" },
         { status: 400 }
       );
     }
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "User ID is required (x-user-id header)" },
-        { status: 400 }
-      );
+    const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+    if (!membership) {
+      return Response.json({ error: "Unauthorized" }, { status: 403 });
     }
+
+    const contentType = request.headers.get("content-type") || "";
+    const userId = session.user.id;
 
     // Handle JSON request (single decision)
     if (contentType.includes("application/json")) {
@@ -48,7 +52,7 @@ export async function POST(request: NextRequest) {
           count: result.summary.succeeded,
         });
 
-        return NextResponse.json(result, { status: 201 });
+        return Response.json(result, { status: 201 });
       } else {
         // Single decision creation
         const { title, type, impact, confidence, problemType, expectedOutcome } =
@@ -71,7 +75,7 @@ export async function POST(request: NextRequest) {
           userId,
         });
 
-        return NextResponse.json(decision, { status: 201 });
+        return Response.json(decision, { status: 201 });
       }
     }
 
@@ -81,7 +85,7 @@ export async function POST(request: NextRequest) {
       const file = formData.get("file") as File;
 
       if (!file) {
-        return NextResponse.json(
+        return Response.json(
           { error: "CSV file is required" },
           { status: 400 }
         );
@@ -100,9 +104,9 @@ export async function POST(request: NextRequest) {
           count: result.summary.succeeded,
         });
 
-        return NextResponse.json(result, { status: 201 });
+        return Response.json(result, { status: 201 });
       } catch (parseError) {
-        return NextResponse.json(
+        return Response.json(
           {
             error: "CSV parsing failed",
             details: parseError instanceof Error ? parseError.message : String(parseError),
@@ -112,7 +116,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(
+    return Response.json(
       { error: "Unsupported content type" },
       { status: 415 }
     );
@@ -121,7 +125,7 @@ export async function POST(request: NextRequest) {
       error: error instanceof Error ? error.message : String(error),
     });
 
-    return NextResponse.json(
+    return Response.json(
       {
         error: "Failed to create decision(s)",
         details: error instanceof Error ? error.message : String(error),
@@ -129,4 +133,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

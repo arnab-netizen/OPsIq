@@ -14,6 +14,8 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import type { EvidenceStatus } from "@/domain/constants/statuses";
 import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -53,10 +55,10 @@ export interface UpdateEvidenceInput {
 
 export async function createEvidence(
   input: CreateEvidenceInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<{ id: string; engagementId?: string }> {
-  enforceWorkspaceId(workspaceId, "createEvidence", "evidence");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   // Map old field names to new ones for backward compatibility
   const title = input.title || input.sourceLabel || "";
@@ -94,7 +96,7 @@ export async function createEvidence(
 
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId, workspaceId },
+    where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -106,7 +108,7 @@ export async function createEvidence(
     );
   }
 
-  const idempotencyKey = `evidence-create:${input.engagementId}:${title}:${actorId}`;
+  const idempotencyKey = `evidence-create:${input.engagementId}:${title}:${userId}`;
 
   const result = await withIdempotency(
     idempotencyKey,
@@ -123,10 +125,10 @@ export async function createEvidence(
           evidenceType,
           sourceReference,
           severity: input.severity ?? null,
-          submittedBy: actorId,
+          submittedBy: userId,
           status: "submitted",
           visibility,
-          workspaceId,
+          workspaceId: validatedWorkspaceId,
         },
       });
       return { id: evidence.id };
@@ -135,7 +137,7 @@ export async function createEvidence(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.EVIDENCE_SUBMITTED,
-    actorId,
+    actorId: userId,
     entityType: "evidence",
     entityId: result.result.id,
     payload: {
@@ -154,7 +156,7 @@ export async function createEvidence(
     engagementId: input.engagementId,
     severity: (input.severity ?? "medium") as "low" | "medium" | "high" | "critical",
     description: `Evidence submitted: ${title}`,
-    triggeredBy: actorId,
+    triggeredBy: userId,
   });
 
   logger.info("Evidence created", {
@@ -168,13 +170,13 @@ export async function createEvidence(
 export async function updateEvidence(
   evidenceId: string,
   input: UpdateEvidenceInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
-  enforceWorkspaceId(workspaceId, "updateEvidence", "evidence");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const evidence = await db.evidence.findUnique({
-    where: { id: evidenceId, workspaceId },
+    where: { id: evidenceId, workspaceId: validatedWorkspaceId },
   });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
@@ -212,14 +214,14 @@ export async function updateEvidence(
 
   await optimisticUpdate("evidence", evidenceId, version, () =>
     db.evidence.update({
-      where: withVersionCheck({ id: evidenceId, workspaceId }, version),
+      where: withVersionCheck({ id: evidenceId, workspaceId: validatedWorkspaceId }, version),
       data: withVersionIncrement(data),
     })
   );
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.EVIDENCE_SUBMITTED,
-    actorId,
+    actorId: userId,
     entityType: "evidence",
     entityId: evidenceId,
     payload: data,
@@ -229,7 +231,7 @@ export async function updateEvidence(
   if (statusChanged && input.status === "validated") {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.EVIDENCE_VALIDATED,
-      actorId,
+      actorId: userId,
       entityType: "evidence",
       entityId: evidenceId,
       payload: { previousStatus: evidence.status },
@@ -238,7 +240,7 @@ export async function updateEvidence(
   } else if (statusChanged && input.status === "rejected") {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.EVIDENCE_REJECTED,
-      actorId,
+      actorId: userId,
       entityType: "evidence",
       entityId: evidenceId,
       payload: { previousStatus: evidence.status, reason: input.rejectionReason },
@@ -392,17 +394,34 @@ export async function listEvidence(
 
 export async function validateEvidence(
   input: { evidenceItemId: string; isValid: boolean; version: number } | string,
-  actorId?: string,
-  workspaceId?: string
+  authContextOrActorId?: AuthContext | string,
+  workspaceIdOrUndefined?: string
 ) {
+  // Handle both function signatures: new (AuthContext) and old (actorId) for backward compatibility
+  let userId: string;
+  let workspaceId: string;
+
+  if (typeof authContextOrActorId === "string") {
+    // Old signature: validateEvidence(input, actorId, workspaceId)
+    userId = authContextOrActorId;
+    workspaceId = workspaceIdOrUndefined || "";
+  } else if (authContextOrActorId) {
+    // New signature: validateEvidence(input, authContext, workspaceId)
+    const [uid, wid] = requireServiceContext(authContextOrActorId, workspaceIdOrUndefined || "");
+    userId = uid;
+    workspaceId = wid;
+  } else {
+    throw new Error("authContext or actorId is required");
+  }
+
   if (!workspaceId) throw new Error("workspaceId is required");
   enforceWorkspaceId(workspaceId, "validateEvidence", "evidence");
 
   // Handle both function signatures for backward compatibility
   const evidenceId = typeof input === "string" ? input : input.evidenceItemId;
-  const actor = typeof input === "string" ? actorId : actorId;
+  const actor = userId;
 
-  if (!actor) throw new Error("actorId is required");
+  if (!actor) throw new Error("userId is required");
 
   const evidence = await db.evidence.findUnique({
     where: { id: evidenceId, workspaceId },
@@ -460,13 +479,13 @@ export interface RemoveEvidenceFromBundleInput {
 
 export async function createEvidenceBundle(
   input: CreateEvidenceBundleInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
-  enforceWorkspaceId(workspaceId, "createEvidenceBundle", "evidence_bundle");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId, workspaceId },
+    where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -475,14 +494,14 @@ export async function createEvidenceBundle(
       engagementId: input.engagementId,
       title: input.title,
       description: input.description ?? null,
-      createdBy: actorId,
-      workspaceId,
+      createdBy: userId,
+      workspaceId: validatedWorkspaceId,
     },
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_CREATED,
-    actorId,
+    actorId: userId,
     entityType: "evidence_bundle",
     entityId: bundle.id,
     payload: {
@@ -535,18 +554,18 @@ export async function listEvidenceBundles(engagementId: string, workspaceId: str
 
 export async function addEvidenceToBundle(
   input: AddEvidenceToBundleInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
-  enforceWorkspaceId(workspaceId, "addEvidenceToBundle", "evidence_bundle");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const bundle = await db.evidenceBundle.findUnique({
-    where: { id: input.bundleId, workspaceId },
+    where: { id: input.bundleId, workspaceId: validatedWorkspaceId },
   });
   if (!bundle) throw new NotFoundError("EvidenceBundle", input.bundleId);
 
   const evidence = await db.evidence.findUnique({
-    where: { id: input.evidenceItemId, workspaceId },
+    where: { id: input.evidenceItemId, workspaceId: validatedWorkspaceId },
   });
   if (!evidence) throw new NotFoundError("Evidence", input.evidenceItemId);
 
@@ -555,7 +574,7 @@ export async function addEvidenceToBundle(
       bundleId: input.bundleId,
       evidenceId: input.evidenceItemId,
       removedAt: null,
-      workspaceId,
+      workspaceId: validatedWorkspaceId,
     },
   });
   if (existing) {
@@ -566,14 +585,14 @@ export async function addEvidenceToBundle(
     data: {
       bundleId: input.bundleId,
       evidenceId: input.evidenceItemId,
-      addedBy: actorId,
-      workspaceId,
+      addedBy: userId,
+      workspaceId: validatedWorkspaceId,
     },
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_ITEM_ADDED,
-    actorId,
+    actorId: userId,
     entityType: "evidence_bundle_item",
     entityId: item.id,
     payload: {
@@ -588,16 +607,16 @@ export async function addEvidenceToBundle(
 
 export async function removeEvidenceFromBundle(
   input: RemoveEvidenceFromBundleInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
-  enforceWorkspaceId(workspaceId, "removeEvidenceFromBundle", "evidence_bundle");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const item = await db.evidenceBundleItem.findFirst({
     where: {
       bundleId: input.bundleId,
       evidenceId: input.evidenceItemId,
-      workspaceId,
+      workspaceId: validatedWorkspaceId,
     },
   });
   if (!item) throw new NotFoundError("EvidenceBundleItem", "notfound");
@@ -607,13 +626,13 @@ export async function removeEvidenceFromBundle(
   }
 
   const updated = await db.evidenceBundleItem.update({
-    where: { id: item.id, workspaceId },
+    where: { id: item.id, workspaceId: validatedWorkspaceId },
     data: { removedAt: new Date() },
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_ITEM_REMOVED,
-    actorId,
+    actorId: userId,
     entityType: "evidence_bundle_item",
     entityId: item.id,
     payload: {
@@ -629,13 +648,13 @@ export async function removeEvidenceFromBundle(
 export async function updateEvidenceBundle(
   bundleId: string,
   input: UpdateEvidenceBundleInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
-  enforceWorkspaceId(workspaceId, "updateEvidenceBundle", "evidence_bundle");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const bundle = await db.evidenceBundle.findUnique({
-    where: { id: bundleId, workspaceId },
+    where: { id: bundleId, workspaceId: validatedWorkspaceId },
   });
   if (!bundle) throw new NotFoundError("EvidenceBundle", bundleId);
 
@@ -649,13 +668,13 @@ export async function updateEvidenceBundle(
   if (input.status) updates.status = input.status;
 
   const updated = await db.evidenceBundle.update({
-    where: { id: bundleId, workspaceId },
+    where: { id: bundleId, workspaceId: validatedWorkspaceId },
     data: updates,
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.EVIDENCE_BUNDLE_UPDATED,
-    actorId,
+    actorId: userId,
     entityType: "evidence_bundle",
     entityId: bundleId,
     payload: updates,

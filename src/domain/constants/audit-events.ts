@@ -91,6 +91,16 @@ export const AUDIT_EVENTS = {
   DECISION_EXECUTION_SUCCESS: "decision.execution_success",
   DECISION_EXECUTION_FAILED: "decision.execution_failed",
 
+  // Decision Lifecycle
+  DECISION_SUBMITTED: "decision.submitted",
+  DECISION_APPROVED: "decision.approved",
+  DECISION_REJECTED: "decision.rejected",
+  DECISION_EXECUTED: "decision.executed",
+  DECISION_CANCELLED: "decision.cancelled",
+  DECISION_FAILED: "decision.failed",
+  DECISION_CLOSED: "decision.closed",
+  OUTCOME_RECORDED: "outcome.recorded",
+
   // KPI
   KPI_DEFINED: "kpi.defined",
   KPI_SNAPSHOT_RECORDED: "kpi.snapshot_recorded",

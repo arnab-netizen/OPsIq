@@ -648,7 +648,12 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       if (!engagementForWs) {
         logger.warn("Engagement not found for re-ranking", { engagementId: event.engagementId });
       } else {
-        const reRankResult = await reRankRecommendationsInEngagement(event.engagementId, event.triggeredBy, engagementForWs.workspaceId);
+        const authContext: any = {
+          user: { id: event.triggeredBy },
+          session: { user: { id: event.triggeredBy } },
+          workspace: { id: engagementForWs.workspaceId },
+        };
+        const reRankResult = await reRankRecommendationsInEngagement(event.engagementId, authContext, engagementForWs.workspaceId);
 
         if (reRankResult.updated > 0) {
           auditPayload.recommendationReRankingResult = {

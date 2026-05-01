@@ -8,12 +8,12 @@ export const POST = withRequestContext(async (request, context) => {
   const workspaceId = request.headers.get("x-workspace-id") || "";
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.RECOMMENDATION_APPROVE,
     internalOnly: true,
   });
 
-  const result = await reRankRecommendationsInEngagement(engagementId, session.user.id, workspaceId);
+  const result = await reRankRecommendationsInEngagement(engagementId, authContext, workspaceId);
 
   return Response.json(result);
 });

@@ -8,6 +8,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { Recommendation, Action } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
+import type { AuthContext } from "@/lib/auth-guard";
 
 export interface ConsultingEnginePipelineResult {
   status: "SUCCESS" | "INSUFFICIENT_DATA" | "ERROR";
@@ -19,7 +20,7 @@ export interface ConsultingEnginePipelineResult {
 
 export async function runConsultingPipeline(
   engagementId: string,
-  createdByUserId?: string,
+  authContext: AuthContext,
   workspaceId?: string
 ): Promise<ConsultingEnginePipelineResult> {
   try {
@@ -111,7 +112,7 @@ export async function runConsultingPipeline(
       };
     }
 
-    const actorId = createdByUserId || "consulting-engine";
+    const actorId = authContext?.session?.user?.id || "consulting-engine";
     let recommendations: Recommendation[] = [];
     let actions: Action[] = [];
 
@@ -120,7 +121,7 @@ export async function runConsultingPipeline(
       recommendations = await createRecommendationsFromInterventions(
         engagementId,
         engineOutput.decisionMemo.recommendedInterventions,
-        actorId,
+        authContext,
         workspaceId || engagement.workspaceId
       );
 

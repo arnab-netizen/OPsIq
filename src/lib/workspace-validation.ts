@@ -19,22 +19,13 @@ export function createWorkspaceValidationMiddleware() {
       return next(request);
     }
 
-    // Get workspace ID from headers
+    // Get workspace ID from headers (format validation only)
     const workspaceId = request.headers.get("x-workspace-id");
-    const userId = request.headers.get("x-user-id");
 
     if (!workspaceId) {
-      logger.warn("Request missing workspaceId header", { path, userId });
+      logger.warn("Request missing workspaceId header", { path });
       return NextResponse.json(
         { error: "Workspace ID is required (x-workspace-id header)" },
-        { status: 400 }
-      );
-    }
-
-    if (!userId) {
-      logger.warn("Request missing userId header", { path, workspaceId });
-      return NextResponse.json(
-        { error: "User ID is required (x-user-id header)" },
         { status: 400 }
       );
     }

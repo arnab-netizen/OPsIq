@@ -50,17 +50,11 @@ export function DecisionCreationForm({
         throw new Error("Confidence must be between 0 and 1");
       }
 
-      const userId =
-        (typeof window !== "undefined" &&
-          localStorage.getItem("user-id")) ||
-        "user-default";
-
       const response = await fetch("/api/decisions/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-workspace-id": workspaceId,
-          "x-user-id": userId,
         },
         body: JSON.stringify({
           title,

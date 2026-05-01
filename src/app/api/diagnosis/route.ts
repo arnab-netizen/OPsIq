@@ -23,7 +23,7 @@ const diagnosisSchema = z.object({
 });
 
 export const POST = withRequestContext(async (request) => {
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_CREATE,
     internalOnly: true,
   });
@@ -33,7 +33,7 @@ export const POST = withRequestContext(async (request) => {
 
   try {
     validateBusinessProblem(body);
-    const result = await diagnoseBusiness(body, session.user.id, workspaceId);
+    const result = await diagnoseBusiness(body, authContext, workspaceId);
     return Response.json(result, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Diagnosis failed";

@@ -1,10 +1,12 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getLeadById, updateLead, linkLeadToEngagement } from "@/services/lead";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { z } from "zod/v4";
 import { LEAD_STATUSES } from "@/domain/constants/statuses";
+import type { NextRequest } from "next/server";
 
 const updateLeadSchema = z.object({
   companyName: z.string().min(1).optional(),
@@ -26,39 +28,87 @@ const linkLeadSchema = z.object({
 });
 
 export const GET = withRequestContext(async (request, context) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  // Authenticate + authorize (fail-closed)
+  await withAuth({ capability: CAPABILITIES.LEAD_VIEW, internalOnly: true });
+
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   const { leadId } = await context.params;
   parseOrThrow(uuidSchema, leadId);
-  await withAuth({ capability: CAPABILITIES.LEAD_VIEW, internalOnly: true });
 
   const lead = await getLeadById(leadId, workspaceId);
   return Response.json(lead);
 });
 
 export const PATCH = withRequestContext(async (request, context) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
-  const { leadId } = await context.params;
-  parseOrThrow(uuidSchema, leadId);
-  const { session } = await withAuth({
+  // Authenticate + authorize (fail-closed)
+  const authContext = await withAuth({
     capability: CAPABILITIES.LEAD_UPDATE,
     internalOnly: true,
   });
 
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const { leadId } = await context.params;
+  parseOrThrow(uuidSchema, leadId);
+
   const body = await parseRequestBody(request, updateLeadSchema);
-  await updateLead(leadId, body, session.user.id, workspaceId);
+  await updateLead(leadId, body, authContext, workspaceId);
 
   const updated = await getLeadById(leadId, workspaceId);
   return Response.json(updated);
 });
 
 export const POST = withRequestContext(async (request, context) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
-  const { leadId } = await context.params;
-  parseOrThrow(uuidSchema, leadId);
+  // Authenticate + authorize (fail-closed)
   const { session } = await withAuth({
     capability: CAPABILITIES.LEAD_UPDATE,
     internalOnly: true,
   });
+
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const { leadId } = await context.params;
+  parseOrThrow(uuidSchema, leadId);
 
   const body = await parseRequestBody(request, linkLeadSchema);
   await linkLeadToEngagement(
