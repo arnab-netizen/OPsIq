@@ -6,6 +6,8 @@ import { withVersionIncrement } from "@/lib/optimistic-lock";
 import { validateStageTransition } from "@/policies/state-transition";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
+import { requireCapabilityForService } from "@/lib/auth-guard";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import type { GovernedStageState, BlockerSeverity, BlockerType } from "@/domain/constants/statuses";
 import type { AuthContext } from "@/lib/auth-guard";
 
@@ -42,6 +44,8 @@ export async function createStage(
   input: CreateStageInput,
   authContext: AuthContext
 ): Promise<{ id: string }> {
+  requireCapabilityForService(authContext, CAPABILITIES.STAGE_CREATE);
+
   const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
@@ -101,6 +105,8 @@ export async function updateStage(
   input: UpdateStageInput,
   authContext: AuthContext
 ): Promise<void> {
+  requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
+
   const actorId = authContext.session.user.id;
   const stage = await db.stage.findUnique({ where: { id } });
   if (!stage) throw new NotFoundError("Stage", id);
@@ -147,6 +153,8 @@ export async function blockStage(
   input: BlockStageInput,
   authContext: AuthContext
 ): Promise<void> {
+  requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
+
   const actorId = authContext.session.user.id;
   const stage = await db.stage.findUnique({ where: { id } });
   if (!stage) throw new NotFoundError("Stage", id);
@@ -209,6 +217,8 @@ export async function unblockStage(
   input: UnblockStageInput,
   authContext: AuthContext
 ): Promise<void> {
+  requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
+
   const actorId = authContext.session.user.id;
   const stage = await db.stage.findUnique({ where: { id } });
   if (!stage) throw new NotFoundError("Stage", id);

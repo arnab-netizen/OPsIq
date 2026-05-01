@@ -3,6 +3,8 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
+import { requireCapabilityForService } from "@/lib/auth-guard";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   FINDING_STATUSES,
 } from "@/domain/constants/statuses";
@@ -237,6 +239,8 @@ export async function validateFinding(
   findingId: string,
   authContext: AuthContext
 ): Promise<{ id: string }> {
+  requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
+
   const actorId = authContext.session.user.id;
   const existing = await db.finding.findUnique({
     where: { id: findingId },
@@ -283,6 +287,8 @@ export async function disputeFinding(
   findingId: string,
   authContext: AuthContext
 ): Promise<{ id: string }> {
+  requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
+
   const actorId = authContext.session.user.id;
   const existing = await db.finding.findUnique({
     where: { id: findingId },
@@ -314,6 +320,8 @@ export async function supersedeFinding(
   newFindingInput: CreateFindingInput,
   authContext: AuthContext
 ): Promise<{ id: string; supersededFindingId: string }> {
+  requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
+
   const actorId = authContext.session.user.id;
   // Validate old finding exists
   const oldFinding = await db.finding.findUnique({

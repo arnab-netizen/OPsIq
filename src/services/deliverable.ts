@@ -3,7 +3,9 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import { requireCapabilityForService } from "@/lib/auth-guard";
 import type { AuthContext } from "@/lib/auth-guard";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export interface CreateDeliverableInput {
   engagementId: string;
@@ -23,6 +25,8 @@ export async function createDeliverable(
   input: CreateDeliverableInput,
   authContext: AuthContext
 ) {
+  requireCapabilityForService(authContext, CAPABILITIES.DELIVERABLE_CREATE);
+
   const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
@@ -98,6 +102,8 @@ export async function updateDeliverableReviewStatus(
   input: UpdateDeliverableInput,
   authContext: AuthContext
 ) {
+  requireCapabilityForService(authContext, CAPABILITIES.DELIVERABLE_APPROVE);
+
   const actorId = authContext.session.user.id;
   const deliv = await db.deliverable.findUnique({
     where: { id: deliverableId },

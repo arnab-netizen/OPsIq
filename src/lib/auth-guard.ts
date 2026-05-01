@@ -133,3 +133,16 @@ export function canDo(
 ): boolean {
   return hasCapability(policy, capability, scope);
 }
+
+/**
+ * Require a specific capability within an authenticated context.
+ * Throws ForbiddenError if capability missing.
+ * Use at the service layer to enforce authorization independent of routes.
+ */
+export function requireCapabilityForService(
+  authContext: AuthContext,
+  capability: CapabilityName,
+  scope?: { type: string; id: string }
+): void {
+  requireCapability(authContext.policy, capability, scope);
+}
