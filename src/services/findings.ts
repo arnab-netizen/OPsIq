@@ -235,8 +235,9 @@ export async function updateFinding(
 
 export async function validateFinding(
   findingId: string,
-  actorId: string
+  authContext: AuthContext
 ): Promise<{ id: string }> {
+  const actorId = authContext.session.user.id;
   const existing = await db.finding.findUnique({
     where: { id: findingId },
     select: { id: true, engagementId: true, linkedEvidence: true },
@@ -280,8 +281,9 @@ export async function validateFinding(
 
 export async function disputeFinding(
   findingId: string,
-  actorId: string
+  authContext: AuthContext
 ): Promise<{ id: string }> {
+  const actorId = authContext.session.user.id;
   const existing = await db.finding.findUnique({
     where: { id: findingId },
     select: { id: true, engagementId: true },
@@ -310,8 +312,9 @@ export async function disputeFinding(
 export async function supersedeFinding(
   oldFindingId: string,
   newFindingInput: CreateFindingInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<{ id: string; supersededFindingId: string }> {
+  const actorId = authContext.session.user.id;
   // Validate old finding exists
   const oldFinding = await db.finding.findUnique({
     where: { id: oldFindingId },
@@ -359,21 +362,23 @@ export async function supersedeFinding(
 export async function linkEvidenceToFinding(
   findingId: string,
   evidenceId: string,
-  linkTypeOrActorId: string,
-  maybeActorId?: string
+  linkTypeOrAuthContext: string | AuthContext,
+  maybeAuthContext?: AuthContext
 ): Promise<{ id?: string; findingId: string; evidenceId: string }> {
   // Handle both calling conventions
   let linkType: string | undefined;
-  let actorId: string;
+  let authContext: AuthContext;
 
-  if (maybeActorId) {
-    // New signature: linkEvidenceToFinding(findingId, evidenceId, linkType, actorId)
-    linkType = linkTypeOrActorId;
-    actorId = maybeActorId;
+  if (maybeAuthContext) {
+    // New signature: linkEvidenceToFinding(findingId, evidenceId, linkType, authContext)
+    linkType = linkTypeOrAuthContext as string;
+    authContext = maybeAuthContext;
   } else {
-    // Old signature: linkEvidenceToFinding(findingId, evidenceId, actorId)
-    actorId = linkTypeOrActorId;
+    // Old signature: linkEvidenceToFinding(findingId, evidenceId, authContext)
+    authContext = linkTypeOrAuthContext as AuthContext;
   }
+
+  const actorId = authContext.session.user.id;
   const finding = await db.finding.findUnique({
     where: { id: findingId },
     select: { id: true, engagementId: true, linkedEvidence: true },
@@ -440,8 +445,9 @@ export async function linkEvidenceToFinding(
 export async function unlinkEvidenceFromFinding(
   findingId: string,
   evidenceId: string,
-  actorId: string
+  authContext: AuthContext
 ): Promise<{ findingId: string; evidenceId: string }> {
+  const actorId = authContext.session.user.id;
   const finding = await db.finding.findUnique({
     where: { id: findingId },
     select: { id: true, engagementId: true, linkedEvidence: true },
