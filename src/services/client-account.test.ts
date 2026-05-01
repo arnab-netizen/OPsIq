@@ -3,6 +3,7 @@ import * as clientService from "./client-account";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import type { AuthContext } from "@/lib/auth-guard";
 
 vi.mock("@/lib/db");
 vi.mock("@/infra/audit");
@@ -10,6 +11,25 @@ vi.mock("@/infra/logger");
 
 const mockUserId = "user-123";
 const mockClientId = "client-123";
+
+function createMockAuthContext(userId: string = mockUserId): AuthContext {
+  return {
+    session: {
+      user: {
+        id: userId,
+        email: "test@example.com",
+        name: "Test User",
+        isActive: true,
+      },
+      sessionId: "session-123",
+      expiresAt: new Date(Date.now() + 86400000),
+    },
+    policy: {
+      userId,
+      roles: [{ role: "admin" as const }],
+    },
+  };
+}
 
 describe("client-account service", () => {
   beforeEach(() => {
@@ -35,7 +55,7 @@ describe("client-account service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      const result = await clientService.createClient(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000');
+      const result = await clientService.createClient(input, createMockAuthContext(mockUserId), '550e8400-e29b-41d4-a716-446655440000');
 
       expect(result.id).toBe(mockClientId);
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -62,7 +82,7 @@ describe("client-account service", () => {
       await clientService.updateClient(
         mockClientId,
         { name: "New Name", version: 1 },
-        mockUserId,
+        createMockAuthContext(mockUserId),
         "550e8400-e29b-41d4-a716-446655440000"
       );
 
@@ -82,7 +102,7 @@ describe("client-account service", () => {
         clientService.updateClient(
           mockClientId,
           { name: "New Name", version: 1 },
-          mockUserId,
+          createMockAuthContext(mockUserId),
           "550e8400-e29b-41d4-a716-446655440000"
         )
       ).rejects.toThrow(ValidationError);
@@ -105,7 +125,7 @@ describe("client-account service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      await clientService.archiveClient(mockClientId, mockUserId, 1, "550e8400-e29b-41d4-a716-446655440000");
+      await clientService.archiveClient(mockClientId, createMockAuthContext(mockUserId), 1, "550e8400-e29b-41d4-a716-446655440000");
 
       expect(emitAuditEvent).toHaveBeenCalled();
     });
