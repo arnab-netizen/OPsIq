@@ -50,6 +50,24 @@ export async function executeWorkflow(
     priority: input.priority,
   });
 
+  // Construct authContext for internal service-to-service calls
+  const authContext: AuthContext = {
+    session: {
+      user: {
+        id: actorId,
+        email: "",
+        name: "",
+        isActive: true,
+      },
+      sessionId: "",
+      expiresAt: new Date(),
+    },
+    policy: {
+      userId: actorId,
+      roles: [],
+    },
+  };
+
   // Validate input
   if (!input.clientName?.trim()) {
     throw new ValidationError("Client name is required");
@@ -117,7 +135,7 @@ export async function executeWorkflow(
         severity: input.priority === "critical" ? "critical" : input.priority === "high" ? "high" : "medium",
         impactArea: "execution",
       },
-      actorId,
+      authContext,
       workspaceId
     );
     createdFindings.push(finding);

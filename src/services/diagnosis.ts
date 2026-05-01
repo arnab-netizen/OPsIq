@@ -712,6 +712,23 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
   await assessCondition(conditionInput, actorId);
 
   // Create findings
+  const internalAuthContext: AuthContext = {
+    session: {
+      user: {
+        id: actorId,
+        email: "",
+        name: "",
+        isActive: true,
+      },
+      sessionId: "",
+      expiresAt: new Date(),
+    },
+    policy: {
+      userId: actorId,
+      roles: [],
+    },
+  };
+
   const createdFindings = await Promise.all(
     findingsData.map((f) =>
       createFinding(
@@ -729,7 +746,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
                 : "execution",
           findingType: "operational",
         },
-        actorId,
+        internalAuthContext,
         workspaceId
       )
     )
@@ -755,23 +772,6 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
   // Create actions
   const createdActions = await Promise.all(
     actionPlanData.map((a) => {
-      // Construct authContext for internal service-to-service call
-      const internalAuthContext: AuthContext = {
-        session: {
-          user: {
-            id: actorId,
-            email: "",
-            name: "",
-            isActive: true,
-          },
-          sessionId: "",
-          expiresAt: new Date(),
-        },
-        policy: {
-          userId: actorId,
-          roles: [],
-        },
-      };
       return createAction(
         {
           engagementId: engagement.id,
