@@ -43,6 +43,15 @@ vi.mock("@/infra/logger", () => ({
   },
 }));
 
+const mockAuthContext = {
+  session: {
+    user: { id: "user-1", email: "test@test.com", name: "Test", isActive: true },
+    sessionId: "session-123",
+    expiresAt: new Date(),
+  },
+  policy: { userId: "user-1", roles: [] },
+};
+
 describe("Intervention State Service", () => {
   describe("Phase transition validation", () => {
     // NOTE: Tests for the old phase model (stabilize, repair, strengthen, grow, protect)
@@ -85,7 +94,7 @@ describe("Intervention State Service", () => {
       const result = await initializeInterventionState(
         "eng-1",
         "recovery",
-        "user-1",
+        mockAuthContext as any,
         "550e8400-e29b-41d4-a716-446655440000"
       );
 
@@ -104,7 +113,7 @@ describe("Intervention State Service", () => {
       const { initializeInterventionState } = await import("./intervention-state");
 
       try {
-        await initializeInterventionState("eng-1", "recovery", "user-1", "550e8400-e29b-41d4-a716-446655440000");
+        await initializeInterventionState("eng-1", "recovery", mockAuthContext as any, "550e8400-e29b-41d4-a716-446655440000");
         expect.fail("Should throw validation error");
       } catch (error) {
         expect((error as any).message).toContain("already initialized");
@@ -119,7 +128,7 @@ describe("Intervention State Service", () => {
       const { initializeInterventionState } = await import("./intervention-state");
 
       try {
-        await initializeInterventionState("nonexistent", "recovery", "user-1", "550e8400-e29b-41d4-a716-446655440000");
+        await initializeInterventionState("nonexistent", "recovery", mockAuthContext as any, "550e8400-e29b-41d4-a716-446655440000");
         expect.fail("Should throw not found error");
       } catch (error) {
         expect((error as any).message).toContain("not found");
@@ -144,7 +153,7 @@ describe("Intervention State Service", () => {
       const result = await transitionPhase(
         "eng-1",
         "stabilization" as InterventionPhase,
-        "user-1"
+        mockAuthContext as any
       );
 
       expect(result.interventionPhase).toBe("stabilization");
@@ -164,7 +173,7 @@ describe("Intervention State Service", () => {
         await transitionPhase(
           "eng-1",
           "triage" as InterventionPhase,
-          "user-1"
+          mockAuthContext as any
         );
         expect.fail("Should throw validation error");
       } catch (error) {
@@ -180,7 +189,7 @@ describe("Intervention State Service", () => {
       const { transitionPhase } = await import("./intervention-state");
 
       try {
-        await transitionPhase("eng-1", "stabilize" as InterventionPhase, "user-1");
+        await transitionPhase("eng-1", "stabilize" as InterventionPhase, mockAuthContext as any);
         expect.fail("Should throw not found error");
       } catch (error) {
         expect((error as any).message).toContain("not found");

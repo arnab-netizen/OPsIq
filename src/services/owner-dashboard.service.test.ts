@@ -2,9 +2,27 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getOwnerDashboard } from "./owner-dashboard.service";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 vi.mock("@/lib/db");
 vi.mock("@/infra/logger");
+vi.mock("@/lib/auth-guard", () => ({
+  requireCapabilityForService: vi.fn(),
+}));
+
+const mockAuthContext = {
+  session: {
+    user: { id: "user-1", email: "test@test.com", name: "Test", isActive: true },
+    sessionId: "session-123",
+    expiresAt: new Date(),
+  },
+  policy: {
+    userId: "user-1",
+    roles: [],
+    capabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
+  },
+};
+const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
 
 describe("OwnerDashboardService", () => {
   beforeEach(() => {
@@ -17,7 +35,7 @@ describe("OwnerDashboardService", () => {
       findUnique: vi.fn().mockResolvedValue(null),
     };
 
-    await expect(getOwnerDashboard("nonexistent")).rejects.toThrow(NotFoundError);
+    await expect(getOwnerDashboard("nonexistent", mockAuthContext as any, mockWorkspaceId)).rejects.toThrow(NotFoundError);
   });
 
   it("returns dashboard with basic engagement info", async () => {
@@ -47,7 +65,7 @@ describe("OwnerDashboardService", () => {
       findFirst: vi.fn().mockResolvedValue(null),
     };
 
-    const dashboard = await getOwnerDashboard("eng-123");
+    const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
     expect(dashboard.engagementId).toBe("eng-123");
     expect(dashboard.engagementCode).toBe("ENG-001");
@@ -82,7 +100,7 @@ describe("OwnerDashboardService", () => {
       findFirst: vi.fn().mockResolvedValue(null),
     };
 
-    const dashboard = await getOwnerDashboard("eng-123");
+    const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
     expect(dashboard.executionCertainty).toBeDefined();
     expect(dashboard.executionCertainty).toHaveProperty("score");
@@ -137,7 +155,7 @@ describe("OwnerDashboardService", () => {
       findFirst: vi.fn().mockResolvedValue(null),
     };
 
-    const dashboard = await getOwnerDashboard("eng-123");
+    const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
     expect(dashboard.overdueActions.length).toBe(1);
     expect(dashboard.overdueActions[0].title).toBe("Overdue Action");
@@ -188,7 +206,7 @@ describe("OwnerDashboardService", () => {
       findFirst: vi.fn().mockResolvedValue(null),
     };
 
-    const dashboard = await getOwnerDashboard("eng-123");
+    const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
     expect(dashboard.criticalActions.length).toBe(1);
     expect(dashboard.criticalActions[0].title).toBe("Critical Action");
@@ -236,7 +254,7 @@ describe("OwnerDashboardService", () => {
       findFirst: vi.fn().mockResolvedValue(null),
     };
 
-    const dashboard = await getOwnerDashboard("eng-123");
+    const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
     expect(dashboard.openRecommendations.length).toBe(1);
     expect(dashboard.openRecommendations[0].title).toBe("Open Recommendation");
@@ -282,7 +300,7 @@ describe("OwnerDashboardService", () => {
       findFirst: vi.fn().mockResolvedValue(null),
     };
 
-    const dashboard = await getOwnerDashboard("eng-123");
+    const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
     expect(dashboard.nextBestAction).toBeDefined();
     expect(dashboard.nextBestAction?.type).toBe("action");
@@ -324,7 +342,7 @@ describe("OwnerDashboardService", () => {
       findFirst: vi.fn().mockResolvedValue(null),
     };
 
-    const dashboard = await getOwnerDashboard("eng-123");
+    const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
     expect(dashboard.businessImpact).toBeDefined();
     expect(dashboard.businessImpact.summary).toBeDefined();
@@ -359,7 +377,7 @@ describe("OwnerDashboardService", () => {
       findFirst: vi.fn().mockResolvedValue(null),
     };
 
-    const dashboard = await getOwnerDashboard("eng-123");
+    const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
     expect(dashboard).toBeDefined();
     expect(dashboard.nextBestAction).toBeNull();
@@ -402,7 +420,7 @@ describe("OwnerDashboardService", () => {
       findFirst: vi.fn().mockResolvedValue(null),
     };
 
-    const dashboard = await getOwnerDashboard("eng-123");
+    const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
     expect(dashboard.overdueActions.length).toBeLessThanOrEqual(5);
   });

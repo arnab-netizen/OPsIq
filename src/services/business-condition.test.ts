@@ -13,6 +13,15 @@ vi.mock("@/infra/logger");
 const mockUserId = "user-123";
 const mockEngagementId = "eng-123";
 const mockProfileId = "profile-123";
+const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
+const mockAuthContext = {
+  session: {
+    user: { id: mockUserId, email: "test@test.com", name: "Test", isActive: true },
+    sessionId: "session-123",
+    expiresAt: new Date(),
+  },
+  policy: { userId: mockUserId, roles: [] },
+};
 
 describe("business-condition service", () => {
   beforeEach(() => {
@@ -68,7 +77,7 @@ describe("business-condition service", () => {
         auditEventId: "eval-id",
       });
 
-      const result = await bcService.assessCondition(input, mockUserId);
+      const result = await bcService.assessCondition(input, mockAuthContext as any);
 
       expect(result.id).toBe(mockProfileId);
       // Verify append-only: old ones marked as non-current
@@ -123,7 +132,7 @@ describe("business-condition service", () => {
         auditEventId: "eval-id",
       });
 
-      await bcService.assessCondition(input, mockUserId);
+      await bcService.assessCondition(input, mockAuthContext as any);
 
       expect(triggerReEvaluation).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -159,7 +168,7 @@ describe("business-condition service", () => {
         }),
       };
 
-      await expect(bcService.assessCondition(input, mockUserId)).rejects.toThrow(
+      await expect(bcService.assessCondition(input, mockAuthContext as any)).rejects.toThrow(
         ValidationError
       );
     });
@@ -191,7 +200,7 @@ describe("business-condition service", () => {
         }),
       };
 
-      await expect(bcService.assessCondition(input, mockUserId)).rejects.toThrow(
+      await expect(bcService.assessCondition(input, mockAuthContext as any)).rejects.toThrow(
         ValidationError
       );
     });
