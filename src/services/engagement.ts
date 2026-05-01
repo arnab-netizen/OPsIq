@@ -16,6 +16,8 @@ import { logger } from "@/infra/logger";
 import type { EngagementStatus, InterventionMode } from "@/domain/constants/statuses";
 import { ENGAGEMENT_STATUSES, INTERVENTION_MODES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -83,14 +85,15 @@ async function generateEngagementCode(workspaceId: string, clientId: string): Pr
 
 export async function createEngagement(
   input: CreateEngagementInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<{ id: string; code: string }> {
-  enforceWorkspaceId(workspaceId, "createEngagement", "engagement");
+  // Service-layer auth: require authContext, extract userId from it (never from parameters)
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   // Validate client exists
   const client = await db.clientAccount.findUnique({
-    where: { id: input.clientId, workspaceId },
+    where: { id: input.clientId, workspaceId: validatedWorkspaceId },
   });
   if (!client) throw new NotFoundError("ClientAccount", input.clientId);
   if (client.status === "archived") {
@@ -107,12 +110,12 @@ export async function createEngagement(
   // Validate parent engagement if provided
   if (input.parentEngagementId) {
     const parent = await db.engagement.findUnique({
-      where: { id: input.parentEngagementId, workspaceId },
+      where: { id: input.parentEngagementId, workspaceId: validatedWorkspaceId },
     });
     if (!parent) throw new NotFoundError("Engagement", input.parentEngagementId);
   }
 
-  const code = await generateEngagementCode(workspaceId, input.clientId);
+  const code = await generateEngagementCode(validatedWorkspaceId, input.clientId);
   const idempotencyKey = `engagement-create:${input.clientId}:${input.title}:${actorId}`;
 
   const result = await withIdempotency(
@@ -124,7 +127,7 @@ export async function createEngagement(
           code,
           title: input.title,
           clientId: input.clientId,
-          workspaceId,
+          workspaceId: validatedWorkspaceId,
           serviceTier: input.serviceTier,
           engagementMode: input.engagementMode,
           description: input.description ?? null,
@@ -144,7 +147,7 @@ export async function createEngagement(
         engagement.id,
         input.interventionMode,
         actorId,
-        workspaceId
+        validatedWorkspaceId
       );
 
       return { id: engagement.id, code: engagement.code, title: engagement.title };
@@ -188,13 +191,14 @@ export async function createEngagement(
 export async function updateEngagement(
   engagementId: string,
   input: UpdateEngagementInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<void> {
-  enforceWorkspaceId(workspaceId, "updateEngagement", "engagement");
+  // Service-layer auth: require authContext, extract userId from it (never from parameters)
+  const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId, workspaceId },
+    where: { id: engagementId, workspaceId: validatedWorkspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
@@ -281,7 +285,7 @@ export async function updateEngagement(
   // Duplicate requests with old version fail fast with 409 Conflict
   await optimisticUpdate("engagement", engagementId, version, () =>
     db.engagement.update({
-      where: withVersionCheck({ id: engagementId, workspaceId }, version),
+      where: withVersionCheck({ id: engagementId, workspaceId: validatedWorkspaceId }, version),
       data: withVersionIncrement(data),
     })
   );

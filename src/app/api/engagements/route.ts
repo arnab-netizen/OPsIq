@@ -58,7 +58,7 @@ export const GET = withRequestContext(async (request) => {
 
 export const POST = withRequestContext(async (request) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_CREATE,
     internalOnly: true,
   });
@@ -103,7 +103,7 @@ export const POST = withRequestContext(async (request) => {
   }
 
   try {
-    const result = await createEngagement(body, session.user.id, workspaceId);
+    const result = await createEngagement(body, { session, policy }, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
     return Response.json(result, { status: 201 });
   } catch (error) {

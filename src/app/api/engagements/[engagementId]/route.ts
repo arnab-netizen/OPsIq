@@ -123,7 +123,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   }
 
   try {
-    await updateEngagement(engagementId, body, session.user.id, workspaceId);
+    await updateEngagement(engagementId, body, { session, policy }, workspaceId);
     const updated = await getEngagementById(engagementId, workspaceId, hasInternalAccess(policy));
     await recordIdempotencyResponse(idempotencyKey, 200, updated);
     return Response.json(updated);
