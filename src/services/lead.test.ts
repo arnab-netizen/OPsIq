@@ -231,7 +231,7 @@ describe("lead service", () => {
         }),
       };
 
-      const result = await leadService.getLeadById(mockLeadId, '550e8400-e29b-41d4-a716-446655440000');
+      const result = await leadService.getLeadById(mockLeadId, mockWorkspaceId);
 
       expect(result.id).toBe(mockLeadId);
       expect(result.client).toBeDefined();
@@ -251,7 +251,7 @@ describe("lead service", () => {
         count: vi.fn().mockResolvedValue(1),
       };
 
-      const result = await leadService.listLeads('550e8400-e29b-41d4-a716-446655440000', { limit: 25, offset: 0 });
+      const result = await leadService.listLeads(mockWorkspaceId, { limit: 25, offset: 0 });
 
       expect(result.leads).toHaveLength(1);
       expect(result.total).toBe(1);
