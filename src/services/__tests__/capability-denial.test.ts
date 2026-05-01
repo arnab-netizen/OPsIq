@@ -165,10 +165,10 @@ describe("Service-layer capability denial", () => {
       }).toThrow(ForbiddenError);
     });
 
-    it("should deny USER_CREATE without capability", () => {
+    it("should allow USER_VIEW (consultant capability)", () => {
       expect(() => {
-        requireCapabilityForService(consultantAuthContext, CAPABILITIES.USER_CREATE);
-      }).not.toThrow(); // Actually, EXPERIENCED_CONSULTANT can VIEW users
+        requireCapabilityForService(consultantAuthContext, CAPABILITIES.USER_VIEW);
+      }).not.toThrow(); // EXPERIENCED_CONSULTANT can VIEW users
     });
 
     it("should deny CLIENT_CREATE without capability", () => {
