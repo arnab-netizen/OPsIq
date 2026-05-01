@@ -428,6 +428,44 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     throw new Error("engagementId required for re-evaluation");
   }
 
+  // Database-backed idempotency using correlationId
+  let idempotencyKey: string | undefined;
+  if (event.correlationId) {
+    const { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } = await import(
+      "@/services/idempotency"
+    );
+
+    idempotencyKey = `re-eval:${event.correlationId}`;
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "triggerReEvaluation",
+      actorId: event.triggeredBy || "system",
+      payload: {
+        engagementId: event.engagementId,
+        changeType: event.changeType,
+        entityType: event.entityType,
+        entityId: event.entityId,
+      },
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      logger.info("Re-evaluation skipped (idempotent duplicate)", {
+        engagementId: event.engagementId,
+        changeType: event.changeType,
+        correlationId: event.correlationId,
+      });
+      return idempotencyCheck.cachedResponse.body;
+    }
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+      logger.warn("Re-evaluation error (cached)", {
+        engagementId: event.engagementId,
+        correlationId: event.correlationId,
+      });
+      throw idempotencyCheck.cachedError;
+    }
+  }
+
   // Safety Guard 1: Debounce - prevent duplicate within same request
   const requestKey = `${++requestKeyCounter}`;
   if (!requestDebounceMap.has(requestKey)) {
@@ -445,20 +483,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
   }
   debouncedKeys.add(debounceKey);
 
-  // Safety Guard 2: Idempotency - check correlationId
-  if (event.correlationId && processedCorrelationIds.has(event.correlationId)) {
-    logger.info("Re-evaluation skipped (idempotent duplicate)", {
-      engagementId: event.engagementId,
-      changeType: event.changeType,
-      correlationId: event.correlationId,
-    });
-    throw new Error(`Re-evaluation already processed for correlationId: ${event.correlationId}`);
-  }
-  if (event.correlationId) {
-    processedCorrelationIds.add(event.correlationId);
-  }
-
-  // Safety Guard 3: Recursion guard - prevent re-eval triggering itself
+  // Safety Guard 2: Recursion guard - prevent re-eval triggering itself
   if (reEvaluationInProgress.has(event.engagementId)) {
     logger.warn("Re-evaluation recursion detected", {
       engagementId: event.engagementId,
@@ -713,7 +738,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       });
     }
 
-    return {
+    const result = {
       targets,
       businessConditionImpact,
       interventionModeImpact,
@@ -723,7 +748,22 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       healthStatusImpact,
       auditEventId,
     };
+
+    // Record successful idempotency response
+    if (idempotencyKey) {
+      const { recordIdempotencyResponse } = await import("@/services/idempotency");
+      await recordIdempotencyResponse(idempotencyKey, 200, result);
+    }
+
+    return result;
   } catch (error) {
+    // Record error for idempotency
+    if (idempotencyKey) {
+      const { recordIdempotencyError } = await import("@/services/idempotency");
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+    }
+
     // Safety Guard 4: Failure handling - propagate error to fail transaction
     logger.error("Re-evaluation failed", {
       engagementId: event.engagementId,

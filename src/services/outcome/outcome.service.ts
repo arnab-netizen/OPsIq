@@ -45,21 +45,48 @@ export interface EngagementOutcomes {
   };
 }
 
-export async function recordOutcome(actionId: string): Promise<ActionOutcome> {
-  // Fetch the action
-  const action = await db.action.findUnique({
-    where: { id: actionId },
-  });
+export async function recordOutcome(
+  actionId: string,
+  actorId?: string,
+  idempotencyKey?: string
+): Promise<ActionOutcome> {
+  // Idempotency check
+  if (idempotencyKey && actorId) {
+    const { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } = await import(
+      "@/services/idempotency"
+    );
 
-  if (!action) {
-    throw new NotFoundError("Action", actionId);
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "recordOutcome",
+      actorId,
+      payload: { actionId },
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+      throw idempotencyCheck.cachedError;
+    }
   }
 
-  if (!action.completedAt) {
-    throw new Error("Action must be completed before recording outcome");
-  }
+  try {
+    // Fetch the action
+    const action = await db.action.findUnique({
+      where: { id: actionId },
+    });
 
-  const engagementId = action.engagementId;
+    if (!action) {
+      throw new NotFoundError("Action", actionId);
+    }
+
+    if (!action.completedAt) {
+      throw new Error("Action must be completed before recording outcome");
+    }
+
+    const engagementId = action.engagementId;
 
   // Get current state (actual impact) and engagement context
   const [currentConfidence, currentImpact, engagement, condition] = await Promise.all([
@@ -137,26 +164,41 @@ export async function recordOutcome(actionId: string): Promise<ActionOutcome> {
     timestamp,
   };
 
-  // Store outcome snapshot in action record
-  await db.action.update({
-    where: { id: actionId },
-    data: {
-      outcomeSnapshot,
-    },
-  });
+    // Store outcome snapshot in action record
+    await db.action.update({
+      where: { id: actionId },
+      data: {
+        outcomeSnapshot,
+      },
+    });
 
-  return {
-    actionId,
-    engagementId,
-    predictedImpact: predictedImpactLevel,
-    actualImpact: currentImpact?.impactLevel || "unknown",
-    predictedLossINR: financialDelta.predictedLoss,
-    actualLossINR,
-    valueRecoveredINR,
-    delta: deltaDescription,
-    accuracyScore,
-    timestamp,
-  };
+    const result = {
+      actionId,
+      engagementId,
+      predictedImpact: predictedImpactLevel,
+      actualImpact: currentImpact?.impactLevel || "unknown",
+      predictedLossINR: financialDelta.predictedLoss,
+      actualLossINR,
+      valueRecoveredINR,
+      delta: deltaDescription,
+      accuracyScore,
+      timestamp,
+    };
+
+    if (idempotencyKey && actorId) {
+      const { recordIdempotencyResponse } = await import("@/services/idempotency");
+      await recordIdempotencyResponse(idempotencyKey, 200, result);
+    }
+
+    return result;
+  } catch (error) {
+    if (idempotencyKey && actorId) {
+      const { recordIdempotencyError } = await import("@/services/idempotency");
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+    }
+    throw error;
+  }
 }
 
 export async function getEngagementOutcomes(engagementId: string): Promise<EngagementOutcomes> {

@@ -231,35 +231,74 @@ export async function cancelDecision(
 export async function executeDecision(
   decisionId: string,
   workspaceId: string,
-  actorId: string
+  actorId: string,
+  idempotencyKey?: string
 ): Promise<{ id: string; status: string }> {
-  // Fetch to verify state
-  const decision = await db.operatorItem.findFirst({
-    where: { id: decisionId, workspaceId },
-  });
-
-  if (!decision) {
-    throw new NotFoundError("Decision", decisionId);
-  }
-
-  const currentState = mapStatusToState(decision.status);
-
-  // Verify decision is in executable state
-  try {
-    requireExecutable(currentState);
-  } catch (error) {
-    throw new ValidationError(
-      error instanceof Error ? error.message : String(error)
+  // Idempotency check
+  if (idempotencyKey) {
+    const { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } = await import(
+      "@/services/idempotency"
     );
+
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "executeDecision",
+      actorId,
+      payload: { decisionId, workspaceId },
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
+      throw idempotencyCheck.cachedError;
+    }
   }
 
-  return transitionDecisionState(
-    decisionId,
-    workspaceId,
-    "EXECUTED",
-    undefined,
-    actorId
-  );
+  try {
+    // Fetch to verify state
+    const decision = await db.operatorItem.findFirst({
+      where: { id: decisionId, workspaceId },
+    });
+
+    if (!decision) {
+      throw new NotFoundError("Decision", decisionId);
+    }
+
+    const currentState = mapStatusToState(decision.status);
+
+    // Verify decision is in executable state
+    try {
+      requireExecutable(currentState);
+    } catch (error) {
+      throw new ValidationError(
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+
+    const result = await transitionDecisionState(
+      decisionId,
+      workspaceId,
+      "EXECUTED",
+      undefined,
+      actorId
+    );
+
+    if (idempotencyKey) {
+      const { recordIdempotencyResponse } = await import("@/services/idempotency");
+      await recordIdempotencyResponse(idempotencyKey, 200, result);
+    }
+
+    return result;
+  } catch (error) {
+    if (idempotencyKey) {
+      const { recordIdempotencyError } = await import("@/services/idempotency");
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+    }
+    throw error;
+  }
 }
 
 /**
