@@ -37,7 +37,7 @@ export const POST = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, engagementId);
 
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
   });
 
   if (!engagement) throw new NotFoundError("Engagement", engagementId);

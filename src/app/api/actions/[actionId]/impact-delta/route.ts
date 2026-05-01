@@ -5,11 +5,12 @@ import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import { calculateImpactDelta } from "@/services/business-impact/impact-delta.service";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
+import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
   const { actionId } = await context.params;
   parseOrThrow(uuidSchema, actionId);
 
@@ -17,9 +18,20 @@ export const GET = withRequestContext(async (_request, context) => {
     capability: CAPABILITIES.ACTION_VIEW,
   });
 
-  // Fetch action to get engagementId
+  // Get workspace ID from request
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id") ||
+                       nextRequest.nextUrl.searchParams.get("workspaceId");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required" },
+      { status: 400 }
+    );
+  }
+
+  // Fetch action to get engagementId (scoped by workspace)
   const action = await db.action.findUnique({
-    where: { id: actionId },
+    where: { id: actionId, workspaceId },
   });
 
   if (!action) {

@@ -28,23 +28,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch the decision
+    // Fetch the decision (scoped by workspace at DB level)
     const decision = await db.operatorItem.findUnique({
-      where: { id: decisionId },
+      where: { id: decisionId, workspaceId: workspace.workspaceId },
     });
 
     if (!decision) {
       return NextResponse.json(
         { error: "Decision not found" },
         { status: 404 }
-      );
-    }
-
-    // Verify workspace isolation
-    if (decision.workspaceId !== workspace.workspaceId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
       );
     }
 

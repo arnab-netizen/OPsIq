@@ -98,13 +98,10 @@ export async function GET(request: NextRequest) {
 
     if (decisionId) {
       const decision = await db.operatorItem.findUnique({
-        where: { id: decisionId },
+        where: { id: decisionId, workspaceId: workspace.workspaceId },
       });
 
-      if (
-        decision &&
-        decision.workspaceId === workspace.workspaceId
-      ) {
+      if (decision) {
         const decisionResult = {
           decision: "APPROVED" as const,
           workspaceId: decision.workspaceId,
