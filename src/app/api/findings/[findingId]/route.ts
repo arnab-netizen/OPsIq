@@ -56,7 +56,7 @@ export const GET = withRequestContext(async (request, context) => {
 
 export const PATCH = withRequestContext(async (request, context) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.FINDING_UPDATE,
     internalOnly: true,
   });
@@ -80,7 +80,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, findingId);
 
   const body = await parseRequestBody(request, updateFindingSchema);
-  await updateFinding(findingId, body, session.user.id, workspaceId);
+  await updateFinding(findingId, body, { session, policy }, workspaceId);
 
   const updated = await getFindingDetail(findingId);
   return Response.json(updated);

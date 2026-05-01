@@ -30,7 +30,7 @@ const createFindingSchema = z.object({
 
 export const POST = withRequestContext(async (request) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.FINDING_CREATE,
     internalOnly: true,
   });
@@ -51,7 +51,7 @@ export const POST = withRequestContext(async (request) => {
   }
 
   const body = await parseRequestBody(request, createFindingSchema);
-  const result = await createFinding(body, session.user.id, workspaceId);
+  const result = await createFinding(body, { session, policy }, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

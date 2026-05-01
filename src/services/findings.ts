@@ -10,6 +10,8 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import { withIdempotency } from "@/infra/idempotency";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 import type {
   FindingStatus,
 } from "@/domain/constants/statuses";
@@ -52,10 +54,10 @@ export interface LinkEvidenceToFindingInput {
 
 export async function createFinding(
   input: CreateFindingInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<{ id: string; engagementId: string }> {
-  enforceWorkspaceId(workspaceId, "createFinding", "finding");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   // Map backward compatibility fields
   const summary = input.summary || input.description || input.statement || "";
@@ -63,7 +65,7 @@ export async function createFinding(
 
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId, workspaceId },
+    where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
     select: { id: true },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
@@ -111,8 +113,8 @@ export async function createFinding(
       severity: input.severity,
       rootCause: input.rootCause || null,
       linkedEvidence: primaryEvidenceId ? [primaryEvidenceId] : [],
-      createdBy: actorId,
-      workspaceId,
+      createdBy: userId,
+      workspaceId: validatedWorkspaceId,
     },
     select: { id: true, engagementId: true },
   });
@@ -120,7 +122,7 @@ export async function createFinding(
   // Emit audit event as side effect
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_CREATED,
-    actorId,
+    actorId: userId,
     entityType: "Finding",
     entityId: finding.id,
     payload: {
@@ -138,7 +140,7 @@ export async function createFinding(
     engagementId: input.engagementId,
     severity: (input.severity === "critical" ? "critical" : input.severity === "high" ? "high" : "medium") as "low" | "medium" | "high" | "critical",
     description: `Finding created: ${input.title}`,
-    triggeredBy: actorId,
+    triggeredBy: userId,
   });
 
   return finding;
@@ -147,14 +149,14 @@ export async function createFinding(
 export async function updateFinding(
   findingId: string,
   input: UpdateFindingInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
-  enforceWorkspaceId(workspaceId, "updateFinding", "finding");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   // Validate finding exists and check version
   const existing = await db.finding.findUnique({
-    where: { id: findingId, workspaceId },
+    where: { id: findingId, workspaceId: validatedWorkspaceId },
     select: { id: true, engagementId: true, version: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
@@ -196,14 +198,14 @@ export async function updateFinding(
   data.version = existing.version + 1;
 
   const updated = await db.finding.update({
-    where: { id: findingId, workspaceId },
+    where: { id: findingId, workspaceId: validatedWorkspaceId },
     data,
     select: { id: true, engagementId: true },
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_UPDATED,
-    actorId,
+    actorId: userId,
     entityType: "Finding",
     entityId: findingId,
     payload: {
@@ -225,7 +227,7 @@ export async function updateFinding(
     engagementId: existing.engagementId,
     severity: updateSeverity as "low" | "medium" | "high" | "critical",
     description: `Finding updated: ${input.title || "finding"}`,
-    triggeredBy: actorId,
+    triggeredBy: userId,
   });
 
   return { id: updated.id };
