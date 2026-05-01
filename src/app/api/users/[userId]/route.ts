@@ -63,7 +63,7 @@ export const GET = withRequestContext(async (request, context) => {
 
 export const PATCH = withRequestContext(async (request, context) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.USER_UPDATE,
     internalOnly: true,
   });
@@ -87,7 +87,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, updateUserSchema);
-  await updateUser(userId, body, session.user.id, workspaceId);
+  await updateUser(userId, body, authContext);
 
   const updated = await getUserById(userId, workspaceId);
   return Response.json(updated);
@@ -95,7 +95,7 @@ export const PATCH = withRequestContext(async (request, context) => {
 
 export const POST = withRequestContext(async (request, context) => {
   // Auth check BEFORE body parse
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.USER_DEACTIVATE,
     internalOnly: true,
   });
@@ -121,11 +121,11 @@ export const POST = withRequestContext(async (request, context) => {
   const body = await parseRequestBody(request, actionSchema);
 
   if (body.action === "deactivate") {
-    await deactivateUser(userId, session.user.id, body.version, workspaceId);
+    await deactivateUser(userId, body.version, authContext);
     return Response.json({ status: "deactivated" });
   }
 
   // reactivate
-  await reactivateUser(userId, session.user.id, body.version, workspaceId);
+  await reactivateUser(userId, body.version, authContext);
   return Response.json({ status: "reactivated" });
 });

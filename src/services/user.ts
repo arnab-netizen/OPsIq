@@ -14,6 +14,8 @@ import {
 } from "@/lib/optimistic-lock";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -40,10 +42,9 @@ export interface ListUsersParams {
 
 export async function createUser(
   input: CreateUserInput,
-  actorId: string,
-  workspaceId: string
+  authContext: AuthContext
 ): Promise<{ id: string }> {
-  enforceWorkspaceId(workspaceId, "createUser", "user");
+  const [userId, workspaceId] = requireServiceContext(authContext);
 
   const idempotencyKey = `user-create:${input.email}:${workspaceId}`;
 
@@ -74,7 +75,7 @@ export async function createUser(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.USER_CREATED,
-    actorId,
+    actorId: userId,
     entityType: "user",
     entityId: result.result.id,
     payload: { email: result.result.email, name: result.result.name },
@@ -92,10 +93,9 @@ export async function createUser(
 export async function updateUser(
   userId: string,
   input: UpdateUserInput,
-  actorId: string,
-  workspaceId: string
+  authContext: AuthContext
 ): Promise<void> {
-  enforceWorkspaceId(workspaceId, "updateUser", "user");
+  const [actorId, workspaceId] = requireServiceContext(authContext);
 
   const user = await db.user.findUnique({ where: { id: userId, workspaceId } });
 
@@ -143,11 +143,10 @@ export async function updateUser(
 
 export async function deactivateUser(
   userId: string,
-  actorId: string,
   version: number,
-  workspaceId: string
+  authContext: AuthContext
 ): Promise<void> {
-  enforceWorkspaceId(workspaceId, "deactivateUser", "user");
+  const [actorId, workspaceId] = requireServiceContext(authContext);
 
   const user = await db.user.findUnique({ where: { id: userId, workspaceId } });
 
@@ -159,7 +158,7 @@ export async function deactivateUser(
     throw new ValidationError("User is already deactivated");
   }
 
-  if (userId === actorId) {
+  if (userId === authContext.session.user.id) {
     throw new ValidationError("Cannot deactivate your own account");
   }
 
@@ -216,11 +215,10 @@ export async function deactivateUser(
 
 export async function reactivateUser(
   userId: string,
-  actorId: string,
   version: number,
-  workspaceId: string
+  authContext: AuthContext
 ): Promise<void> {
-  enforceWorkspaceId(workspaceId, "reactivateUser", "user");
+  const [actorId, workspaceId] = requireServiceContext(authContext);
 
   const user = await db.user.findUnique({ where: { id: userId, workspaceId } });
 
