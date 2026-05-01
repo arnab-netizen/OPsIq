@@ -339,7 +339,28 @@ export async function getRecommendationsForEngagement(engagementId: string, user
 
   return db.recommendation.findMany({
     where: { engagementId, workspaceId },
-    include: { actions: true },
+    select: {
+      id: true,
+      engagementId: true,
+      findingId: true,
+      title: true,
+      description: true,
+      priority: true,
+      status: true,
+      expectedImpact: true,
+      implementationPhase: true,
+      executionCertaintyScore: true,
+      version: true,
+      createdAt: true,
+      actions: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          priority: true,
+        },
+      },
+    },
     orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
   });
 }
@@ -668,9 +689,34 @@ export async function getRecommendation(recommendationId: string, workspaceId: s
 
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId, workspaceId },
-    include: {
-      engagement: true,
-      finding: true,
+    select: {
+      id: true,
+      engagementId: true,
+      findingId: true,
+      title: true,
+      description: true,
+      priority: true,
+      status: true,
+      expectedImpact: true,
+      implementationPhase: true,
+      executionCertaintyScore: true,
+      scoreBreakdown: true,
+      version: true,
+      createdAt: true,
+      engagement: {
+        select: {
+          id: true,
+          title: true,
+          status: true,
+        },
+      },
+      finding: {
+        select: {
+          id: true,
+          title: true,
+          severity: true,
+        },
+      },
     },
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);

@@ -59,9 +59,22 @@ export async function createDeliverable(
   return deliverable;
 }
 
-export async function getDeliverablesForEngagement(engagementId: string) {
+export async function getDeliverablesForEngagement(engagementId: string, workspaceId: string) {
   return db.deliverable.findMany({
-    where: { engagementId },
+    where: { engagementId, engagement: { workspaceId } },
+    select: {
+      id: true,
+      engagementId: true,
+      stageId: true,
+      title: true,
+      description: true,
+      status: true,
+      version: true,
+      createdAt: true,
+      createdBy: true,
+      approvedAt: true,
+      approvedBy: true,
+    },
     orderBy: { createdAt: "desc" },
   });
 }
