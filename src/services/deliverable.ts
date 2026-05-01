@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import type { AuthContext } from "@/lib/auth-guard";
 
 export interface CreateDeliverableInput {
   engagementId: string;
@@ -20,8 +21,9 @@ export interface UpdateDeliverableInput {
 
 export async function createDeliverable(
   input: CreateDeliverableInput,
-  actorId: string
+  authContext: AuthContext
 ) {
+  const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
   });
@@ -81,8 +83,9 @@ export async function getDeliverableById(deliverableId: string) {
 export async function updateDeliverableReviewStatus(
   deliverableId: string,
   input: UpdateDeliverableInput,
-  actorId: string
+  authContext: AuthContext
 ) {
+  const actorId = authContext.session.user.id;
   const deliv = await db.deliverable.findUnique({
     where: { id: deliverableId },
   });

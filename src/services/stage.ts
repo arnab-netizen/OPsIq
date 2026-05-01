@@ -7,6 +7,7 @@ import { validateStageTransition } from "@/policies/state-transition";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import type { GovernedStageState, BlockerSeverity, BlockerType } from "@/domain/constants/statuses";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -39,8 +40,9 @@ export interface UnblockStageInput {
 
 export async function createStage(
   input: CreateStageInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<{ id: string }> {
+  const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
   });
@@ -97,8 +99,9 @@ export async function getStagesForEngagement(engagementId: string) {
 export async function updateStage(
   id: string,
   input: UpdateStageInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<void> {
+  const actorId = authContext.session.user.id;
   const stage = await db.stage.findUnique({ where: { id } });
   if (!stage) throw new NotFoundError("Stage", id);
 
@@ -142,8 +145,9 @@ export async function updateStage(
 export async function blockStage(
   id: string,
   input: BlockStageInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<void> {
+  const actorId = authContext.session.user.id;
   const stage = await db.stage.findUnique({ where: { id } });
   if (!stage) throw new NotFoundError("Stage", id);
 
@@ -203,8 +207,9 @@ export async function blockStage(
 export async function unblockStage(
   id: string,
   input: UnblockStageInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<void> {
+  const actorId = authContext.session.user.id;
   const stage = await db.stage.findUnique({ where: { id } });
   if (!stage) throw new NotFoundError("Stage", id);
 

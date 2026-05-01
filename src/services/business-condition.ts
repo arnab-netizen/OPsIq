@@ -5,6 +5,7 @@ import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
+import type { AuthContext } from "@/lib/auth-guard";
 import {
   BUSINESS_CONDITION_RATINGS,
   PRESSURE_LEVELS,
@@ -98,8 +99,9 @@ function validateConditionInput(input: CreateConditionProfileInput): void {
 
 export async function assessCondition(
   input: CreateConditionProfileInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<{ id: string }> {
+  const actorId = authContext.session.user.id;
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },

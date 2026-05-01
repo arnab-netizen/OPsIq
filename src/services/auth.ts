@@ -113,8 +113,9 @@ export function getSessionDurationMs(): number {
 
 export async function revokeSession(
   sessionId: string,
-  actorId: string
+  authContext: any
 ): Promise<void> {
+  const actorId = typeof authContext === "string" ? authContext : authContext.session.user.id;
   await db.session.update({
     where: { id: sessionId },
     data: { revokedAt: new Date() },
