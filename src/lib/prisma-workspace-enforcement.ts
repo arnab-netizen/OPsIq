@@ -149,7 +149,7 @@ export function createWorkspaceEnforcementMiddleware() {
               }
             }
 
-            // WARNING: Log unscoped reads (potential data leaks)
+            // CRITICAL: BLOCK unscoped reads (fail-closed - no exceptions)
             if (
               operation === "findFirst" ||
               operation === "findMany" ||
@@ -159,8 +159,9 @@ export function createWorkspaceEnforcementMiddleware() {
             ) {
               const where = args.where;
               if (!isWorkspaceIdInWhere(where)) {
-                console.warn(
-                  `[WORKSPACE ISOLATION] Unscoped read: ${operation} on ${model} (should include workspaceId in WHERE)`
+                throw new Error(
+                  `WORKSPACE ISOLATION VIOLATION: ${operation} on ${model} requires workspaceId in WHERE clause. ` +
+                  `This is a CRITICAL security violation. The query has been BLOCKED.`
                 );
               }
             }
