@@ -9,6 +9,7 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import { detectShockFromCurrentState } from "@/services/shock-detection";
 import type { ShockEventType } from "@/domain/constants/statuses";
 import type { RiskSeverity } from "@/domain/constants/statuses";
+import type { AuthContext } from "@/lib/auth-guard";
 
 export interface CreateShockEventInput {
   engagementId: string;
@@ -30,8 +31,9 @@ export interface UpdateShockEventInput {
 
 export async function createShockEvent(
   input: CreateShockEventInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<{ id: string; engagementId: string; detectionConfirmed: boolean }> {
+  const actorId = authContext.session.user.id;
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId },
@@ -102,7 +104,7 @@ export async function createShockEvent(
 export async function updateShockEvent(
   shockEventId: string,
   input: UpdateShockEventInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<{ id: string }> {
   // Note: ShockEvent model does not exist in schema - always throw NotFoundError
   throw new NotFoundError("ShockEvent", shockEventId);
