@@ -45,11 +45,6 @@ export function DecisionCSVUpload({
     setResult(null);
 
     try {
-      const userId =
-        (typeof window !== "undefined" &&
-          localStorage.getItem("user-id")) ||
-        "user-default";
-
       const formData = new FormData();
       formData.append("file", file);
 
@@ -57,7 +52,6 @@ export function DecisionCSVUpload({
         method: "POST",
         headers: {
           "x-workspace-id": workspaceId,
-          "x-user-id": userId,
         },
         body: formData,
       });
