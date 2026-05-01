@@ -711,9 +711,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     notes: summary,
   };
 
-  await assessCondition(conditionInput, actorId);
-
-  // Create findings
+  // Create auth context for internal operations
   const internalAuthContext: AuthContext = {
     session: {
       user: {
@@ -730,6 +728,8 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
       roles: [],
     },
   };
+
+  await assessCondition(conditionInput, internalAuthContext);
 
   const createdFindings = await Promise.all(
     findingsData.map((f) =>

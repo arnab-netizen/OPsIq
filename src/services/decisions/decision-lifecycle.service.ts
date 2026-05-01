@@ -248,7 +248,7 @@ export async function executeDecision(
     });
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-      return idempotencyCheck.cachedResponse.body;
+      return idempotencyCheck.cachedResponse.body as { id: string; status: string };
     }
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {

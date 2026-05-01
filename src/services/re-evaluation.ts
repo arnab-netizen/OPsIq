@@ -454,7 +454,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         changeType: event.changeType,
         correlationId: event.correlationId,
       });
-      return idempotencyCheck.cachedResponse.body;
+      return idempotencyCheck.cachedResponse.body as unknown as ReEvaluationResult;
     }
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {
@@ -729,7 +729,20 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       });
       if (engagementForPhase7) {
         await checkEngagementEscalations(event.engagementId, event.triggeredBy, engagementForPhase7.workspaceId);
-        await computeNextReviewDate(event.engagementId, event.triggeredBy, engagementForPhase7.workspaceId);
+        const internalAuthContext: any = {
+          session: {
+            user: {
+              id: event.triggeredBy,
+              email: "",
+              name: "",
+              isActive: true,
+            },
+            sessionId: "",
+            expiresAt: new Date(),
+          },
+          policy: {},
+        };
+        await computeNextReviewDate(event.engagementId, internalAuthContext, engagementForPhase7.workspaceId);
       }
     } catch (escalationError) {
       logger.warn("Escalation/review check failed (non-blocking)", {

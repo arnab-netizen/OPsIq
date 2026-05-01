@@ -4,6 +4,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getOwnerDashboard } from "@/services/owner-dashboard.service";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
+import type { NextRequest } from "next/server";
 
 export const GET = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;

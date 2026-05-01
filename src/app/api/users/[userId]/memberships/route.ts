@@ -52,7 +52,7 @@ export const GET = withRequestContext(async (request, context) => {
 
 export const POST = withRequestContext(async (request, context) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
     internalOnly: true,
   });
@@ -79,7 +79,7 @@ export const POST = withRequestContext(async (request, context) => {
 
   const result = await addMember(
     { userId, ...body } as Parameters<typeof addMember>[0],
-    session.user.id
+    { session, policy }
   );
 
   return Response.json(result, { status: result.isNew ? 201 : 200 });
@@ -87,7 +87,7 @@ export const POST = withRequestContext(async (request, context) => {
 
 export const DELETE = withRequestContext(async (request, context) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
     internalOnly: true,
   });
@@ -114,7 +114,7 @@ export const DELETE = withRequestContext(async (request, context) => {
 
   await removeMember(
     { userId, ...body } as Parameters<typeof removeMember>[0],
-    session.user.id
+    { session, policy }
   );
 
   return Response.json({ status: "removed" });

@@ -64,7 +64,7 @@ export async function recordOutcome(
     });
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-      return idempotencyCheck.cachedResponse.body;
+      return idempotencyCheck.cachedResponse.body as unknown as ActionOutcome;
     }
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedError) {

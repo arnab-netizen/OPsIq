@@ -65,7 +65,7 @@ export const GET = withRequestContext(async (request, context) => {
 
 export const POST = withRequestContext(async (request, context) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.CONDITION_ASSESS,
     internalOnly: true,
   });
@@ -117,7 +117,7 @@ export const POST = withRequestContext(async (request, context) => {
   try {
     const result = await assessCondition(
       { ...body, engagementId },
-      session.user.id
+      { session, policy }
     );
     await recordIdempotencyResponse(idempotencyKey, 201, result);
     return Response.json(result, { status: 201 });

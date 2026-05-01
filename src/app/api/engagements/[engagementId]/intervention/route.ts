@@ -53,7 +53,7 @@ export const GET = withRequestContext(async (request, context) => {
 
 export const PATCH = withRequestContext(async (request, context) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.INTERVENTION_MANAGE,
     internalOnly: true,
   });
@@ -88,10 +88,10 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   if ("interventionPhase" in body) {
     const validatedBody = updateInterventionPhaseSchema.parse(body);
-    await updateInterventionPhase(engagementId, validatedBody, session.user.id);
+    await updateInterventionPhase(engagementId, validatedBody, { session, policy });
   } else if ("interventionMode" in body) {
     const validatedBody = updateInterventionModeSchema.parse(body);
-    await updateInterventionMode(engagementId, validatedBody, session.user.id);
+    await updateInterventionMode(engagementId, validatedBody, { session, policy });
   } else {
     return Response.json(
       {

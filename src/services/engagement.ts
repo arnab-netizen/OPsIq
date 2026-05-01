@@ -146,7 +146,7 @@ export async function createEngagement(
       await initializeInterventionState(
         engagement.id,
         input.interventionMode,
-        actorId,
+        authContext,
         validatedWorkspaceId
       );
 

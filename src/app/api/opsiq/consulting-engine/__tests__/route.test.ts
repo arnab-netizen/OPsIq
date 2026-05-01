@@ -108,7 +108,7 @@ describe("POST /api/opsiq/consulting-engine/run", () => {
     expect(assertEngagementAccess).toHaveBeenCalledWith(userId, engagementId);
   });
 
-  it("passes user session to pipeline", async () => {
+  it("passes authContext to pipeline", async () => {
     vi.mocked(parseRequestBody).mockResolvedValueOnce({
       engagementId,
     });
@@ -123,7 +123,12 @@ describe("POST /api/opsiq/consulting-engine/run", () => {
 
     await POST(mockRequest);
 
-    expect(runConsultingPipeline).toHaveBeenCalledWith(engagementId, userId);
+    expect(runConsultingPipeline).toHaveBeenCalledWith(
+      engagementId,
+      expect.objectContaining({
+        session: { user: { id: userId } },
+      })
+    );
   });
 
   it("returns INSUFFICIENT_DATA status with 400", async () => {

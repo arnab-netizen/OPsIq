@@ -23,7 +23,7 @@ export const GET = withRequestContext(async (request) => {
       return Response.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const report = await generateReport(workspaceId);
+    const report = await generateReport();
     return Response.json(report);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

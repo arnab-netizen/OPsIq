@@ -26,7 +26,7 @@ export const GET = withRequestContext(async (_request, context) => {
 export const PUT = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.INTERVENTION_MANAGE,
     internalOnly: true,
   });
@@ -58,7 +58,7 @@ export const PUT = withRequestContext(async (request, context) => {
   }
 
   try {
-    const result = await transitionPhase(engagementId, body.targetPhase, session.user.id);
+    const result = await transitionPhase(engagementId, body.targetPhase, { session, policy });
     await recordIdempotencyResponse(idempotencyKey, 200, result);
     return Response.json(result);
   } catch (error) {

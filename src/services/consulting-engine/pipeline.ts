@@ -129,7 +129,7 @@ export async function runConsultingPipeline(
       actions = await createActionsFromInterventions(
         engagementId,
         engineOutput.decisionMemo.recommendedInterventions,
-        actorId,
+        authContext,
         workspaceId || engagement.workspaceId
       );
 

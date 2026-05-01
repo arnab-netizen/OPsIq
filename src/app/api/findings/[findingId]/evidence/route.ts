@@ -17,13 +17,13 @@ export const POST = withRequestContext(async (request, context) => {
   const { findingId } = await context.params;
   parseOrThrow(uuidSchema, findingId);
 
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.FINDING_UPDATE,
     internalOnly: true,
   });
 
   const body = await parseRequestBody(request, linkEvidenceSchema);
-  const result = await linkEvidenceToFinding(findingId, body.evidenceId, session.user.id);
+  const result = await linkEvidenceToFinding(findingId, body.evidenceId, { session, policy });
 
   return Response.json(result, { status: 201 });
 });
@@ -32,13 +32,13 @@ export const DELETE = withRequestContext(async (request, context) => {
   const { findingId } = await context.params;
   parseOrThrow(uuidSchema, findingId);
 
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.FINDING_UPDATE,
     internalOnly: true,
   });
 
   const body = await parseRequestBody(request, unlinkEvidenceSchema);
-  const result = await unlinkEvidenceFromFinding(findingId, body.evidenceId, session.user.id);
+  const result = await unlinkEvidenceFromFinding(findingId, body.evidenceId, { session, policy });
 
   return Response.json(result, { status: 200 });
 });
