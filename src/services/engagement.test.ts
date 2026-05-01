@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { triggerReEvaluation } from "./re-evaluation";
 import { NotFoundError, ValidationError } from "@/infra/errors";
+import type { AuthContext } from "@/lib/auth-guard";
 
 vi.mock("@/lib/db");
 vi.mock("@/infra/audit");
@@ -17,6 +18,28 @@ import { computeEngagementHealth, enforceEngagementHealth } from "./engagement-h
 const mockUserId = "user-123";
 const mockClientId = "client-123";
 const mockEngagementId = "eng-123";
+const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
+
+// Helper to create mock authContext for tests
+function createMockAuthContext(userId: string = mockUserId): AuthContext {
+  return {
+    session: {
+      user: {
+        id: userId,
+        email: "test@example.com",
+        name: "Test User",
+        isActive: true,
+      },
+      sessionId: "session-123",
+      expiresAt: new Date(Date.now() + 86400000),
+    },
+    policy: {
+      userId,
+      roles: ["admin"],
+      scopes: [],
+    },
+  };
+}
 
 describe("engagement service", () => {
   beforeEach(() => {
@@ -90,7 +113,7 @@ describe("engagement service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      const result = await engagementService.createEngagement(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000');
+      const result = await engagementService.createEngagement(input, createMockAuthContext(mockUserId), '550e8400-e29b-41d4-a716-446655440000');
 
       expect(result.id).toBe(mockEngagementId);
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -114,7 +137,7 @@ describe("engagement service", () => {
       };
 
       await expect(
-        engagementService.createEngagement(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000')
+        engagementService.createEngagement(input, createMockAuthContext(mockUserId), '550e8400-e29b-41d4-a716-446655440000')
       ).rejects.toThrow(ValidationError);
     });
 
@@ -133,7 +156,7 @@ describe("engagement service", () => {
       };
 
       await expect(
-        engagementService.createEngagement(input, mockUserId, '550e8400-e29b-41d4-a716-446655440000')
+        engagementService.createEngagement(input, createMockAuthContext(mockUserId), '550e8400-e29b-41d4-a716-446655440000')
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -158,7 +181,7 @@ describe("engagement service", () => {
       await engagementService.updateEngagement(
         mockEngagementId,
         { status: "active", version: 1 },
-        mockUserId,
+        createMockAuthContext(mockUserId),
         "550e8400-e29b-41d4-a716-446655440000"
       );
 
@@ -188,7 +211,7 @@ describe("engagement service", () => {
       const response = await engagementService.updateEngagement(
         mockEngagementId,
         { interventionMode: "growth", version: 1 },
-        mockUserId,
+        createMockAuthContext(mockUserId),
         "550e8400-e29b-41d4-a716-446655440000"
       );
 
@@ -217,7 +240,7 @@ describe("engagement service", () => {
       await engagementService.updateEngagement(
         mockEngagementId,
         { status: "completed", version: 1 },
-        mockUserId,
+        createMockAuthContext(mockUserId),
         "550e8400-e29b-41d4-a716-446655440000"
       );
 
