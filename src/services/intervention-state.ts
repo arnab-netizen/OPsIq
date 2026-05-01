@@ -5,6 +5,7 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import type { AuthContext } from "@/lib/auth-guard";
 import {
   INTERVENTION_PHASES,
   INTERVENTION_MODES,
@@ -115,8 +116,9 @@ export async function getInterventionState(
 export async function updateInterventionPhase(
   engagementId: string,
   input: UpdateInterventionPhaseInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<void> {
+  const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
     select: {
@@ -191,8 +193,9 @@ export async function updateInterventionPhase(
 export async function updateInterventionMode(
   engagementId: string,
   input: UpdateInterventionModeInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<void> {
+  const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
     select: {
@@ -262,9 +265,10 @@ export async function updateInterventionMode(
 export async function initializeInterventionState(
   engagementId: string,
   interventionMode: string,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
+  const actorId = authContext.session.user.id;
   enforceWorkspaceId(workspaceId, "initializeInterventionState", "engagement");
 
   const engagement = await db.engagement.findUnique({
@@ -303,8 +307,9 @@ export async function initializeInterventionState(
 export async function transitionPhase(
   engagementId: string,
   newPhase: string,
-  actorId: string
+  authContext: AuthContext
 ) {
+  const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
   });
@@ -347,8 +352,9 @@ export async function blockEngagement(
   engagementId: string,
   blockerReason: string,
   version: number,
-  actorId: string
+  authContext: AuthContext
 ): Promise<void> {
+  const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
     select: { id: true, version: true, isBlocked: true },
@@ -407,8 +413,9 @@ export async function blockEngagement(
 export async function unblockEngagement(
   engagementId: string,
   version: number,
-  actorId: string
+  authContext: AuthContext
 ): Promise<void> {
+  const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
     select: { id: true, version: true, isBlocked: true },
