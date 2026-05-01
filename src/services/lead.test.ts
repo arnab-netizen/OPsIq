@@ -79,20 +79,22 @@ describe("lead service", () => {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
           status: "new",
+          version: 1,
         }),
         update: vi.fn().mockResolvedValue({
           id: mockLeadId,
           status: "qualifying",
         }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       };
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
       await leadService.updateLead(
         mockLeadId,
-        { status: "qualifying" },
-        mockUserId,
-        "550e8400-e29b-41d4-a716-446655440000"
+        { status: "qualifying", version: 1 },
+        mockAuthContext,
+        mockWorkspaceId
       );
 
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -104,15 +106,16 @@ describe("lead service", () => {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
           status: "converted",
+          version: 1,
         }),
       };
 
       await expect(
         leadService.updateLead(
           mockLeadId,
-          { contactName: "New Name" },
-          mockUserId,
-          "550e8400-e29b-41d4-a716-446655440000"
+          { contactName: "New Name", version: 1 },
+          mockAuthContext,
+          mockWorkspaceId
         )
       ).rejects.toThrow(ValidationError);
     });
@@ -125,11 +128,13 @@ describe("lead service", () => {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
           status: "qualified",
+          version: 1,
         }),
         update: vi.fn().mockResolvedValue({
           id: mockLeadId,
           status: "converted",
         }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       };
       mockDb.engagement = {
         findUnique: vi.fn().mockResolvedValue({
@@ -154,7 +159,7 @@ describe("lead service", () => {
         mockEngagementId,
         mockClientId,
         mockUserId,
-        '550e8400-e29b-41d4-a716-446655440000'
+        mockWorkspaceId
       );
 
       expect(triggerReEvaluation).toHaveBeenCalledWith(
@@ -171,6 +176,7 @@ describe("lead service", () => {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
           status: "qualified",
+          version: 1,
         }),
       };
       mockDb.engagement = {
@@ -186,7 +192,7 @@ describe("lead service", () => {
           mockEngagementId,
           mockClientId,
           mockUserId,
-          '550e8400-e29b-41d4-a716-446655440000'
+          mockWorkspaceId
         )
       ).rejects.toThrow(ValidationError);
     });
@@ -197,6 +203,7 @@ describe("lead service", () => {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
           status: "new",
+          version: 1,
         }),
       };
 
@@ -206,7 +213,7 @@ describe("lead service", () => {
           mockEngagementId,
           mockClientId,
           mockUserId,
-          '550e8400-e29b-41d4-a716-446655440000'
+          mockWorkspaceId
         )
       ).rejects.toThrow(ValidationError);
     });
