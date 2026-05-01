@@ -65,8 +65,11 @@ export async function POST(
     }
 
     try {
+      // Get idempotency key from request header (optional)
+      const idempotencyKey = request.headers.get("idempotency-key") || undefined;
+
       // Execute via lifecycle service
-      const updated = await executeDecision(decisionId, workspaceId, userId);
+      const updated = await executeDecision(decisionId, workspaceId, userId, idempotencyKey);
 
       logger.info("Decision executed via API", {
         decisionId,
