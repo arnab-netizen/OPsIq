@@ -87,7 +87,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, updateUserSchema);
-  await updateUser(userId, body, authContext);
+  await updateUser(userId, body, authContext, workspaceId);
 
   const updated = await getUserById(userId, workspaceId);
   return Response.json(updated);
@@ -121,11 +121,11 @@ export const POST = withRequestContext(async (request, context) => {
   const body = await parseRequestBody(request, actionSchema);
 
   if (body.action === "deactivate") {
-    await deactivateUser(userId, body.version, authContext);
+    await deactivateUser(userId, body.version, authContext, workspaceId);
     return Response.json({ status: "deactivated" });
   }
 
   // reactivate
-  await reactivateUser(userId, body.version, authContext);
+  await reactivateUser(userId, body.version, authContext, workspaceId);
   return Response.json({ status: "reactivated" });
 });

@@ -69,7 +69,7 @@ export const POST = withRequestContext(async (request) => {
   }
 
   const body = await parseRequestBody(request, createUserSchema);
-  const result = await createUser(body, authContext);
+  const result = await createUser(body, authContext, workspaceId);
 
   return Response.json(result, { status: 201 });
 });
