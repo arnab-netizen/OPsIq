@@ -1,6 +1,7 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createEngagement, listEngagements } from "@/services/engagement";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
@@ -8,6 +9,7 @@ import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError 
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES } from "@/domain/constants/statuses";
+import type { NextRequest } from "next/server";
 
 const createEngagementSchema = z.object({
   title: z.string().min(1),
@@ -30,8 +32,23 @@ const listEngagementsSchema = paginationSchema.extend({
 });
 
 export const GET = withRequestContext(async (request) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  // Authenticate + authorize (fail-closed)
   const { policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
 
   const params = parseSearchParams(request.url, listEngagementsSchema);
   const result = await listEngagements(workspaceId, params, hasInternalAccess(policy));
@@ -40,11 +57,26 @@ export const GET = withRequestContext(async (request) => {
 });
 
 export const POST = withRequestContext(async (request) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  // Authenticate + authorize (fail-closed)
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_CREATE,
     internalOnly: true,
   });
+
+  // Validate workspace membership (fail-closed)
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
 
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {
