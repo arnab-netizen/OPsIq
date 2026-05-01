@@ -451,7 +451,16 @@ describe("Consulting Engine Pipeline", () => {
       expect(createActionsFromInterventions).not.toHaveBeenCalled();
     });
 
-    it("should use default actor if not provided", async () => {
+    it("should use consulting-engine actor when provided as user", async () => {
+      const engineAuthContext = {
+        session: {
+          user: { id: "consulting-engine", email: "system@opsiq.ai", name: "Consulting Engine", isActive: true },
+          sessionId: "system-session",
+          expiresAt: new Date(),
+        },
+        policy: { userId: "consulting-engine", roles: [] },
+      };
+
       vi.mocked(db.engagement.findUnique).mockResolvedValueOnce({
         id: engagementId,
         clientId,
@@ -504,19 +513,19 @@ describe("Consulting Engine Pipeline", () => {
       vi.mocked(createRecommendationsFromInterventions as any).mockResolvedValueOnce([]);
       vi.mocked(createActionsFromInterventions as any).mockResolvedValueOnce([]);
 
-      await runConsultingPipeline(engagementId); // No authContext provided
+      await runConsultingPipeline(engagementId, engineAuthContext as any);
 
-      // Should use default "consulting-engine" for audit event
+      // Should use "consulting-engine" for audit event
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           actorId: "consulting-engine",
         })
       );
-      // Should pass undefined authContext to services when not provided
+      // Should pass authContext to services
       expect(createRecommendationsFromInterventions).toHaveBeenCalledWith(
         engagementId,
         [],
-        undefined,
+        engineAuthContext,
         workspaceId
       );
     });
