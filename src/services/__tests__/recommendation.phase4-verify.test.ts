@@ -15,6 +15,20 @@ vi.mock("@/services/re-evaluation", () => ({
   triggerReEvaluation: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@/lib/auth-guard", () => ({
+  requireCapabilityForService: vi.fn(),
+}));
+
+const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
+const mockAuthContext = {
+  session: {
+    user: { id: "actor-1", email: "test@test.com", name: "Test", isActive: true },
+    sessionId: "session-123",
+    expiresAt: new Date(),
+  },
+  policy: { userId: "actor-1", roles: [] },
+};
+
 describe("PHASE 4 VERIFICATION", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -202,7 +216,7 @@ describe("PHASE 4 VERIFICATION", () => {
         priority: "high",
       } as any);
 
-      await reRankRecommendationsInEngagement("eng-1", "actor-1", "550e8400-e29b-41d4-a716-446655440000");
+      await reRankRecommendationsInEngagement("eng-1", mockAuthContext as any, mockWorkspaceId);
 
       // Verify that reprioritization would trigger audit event
       const newScore = calculateRecommendationScore(metrics);
