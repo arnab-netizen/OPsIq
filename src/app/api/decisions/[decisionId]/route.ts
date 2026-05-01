@@ -49,20 +49,12 @@ export async function PATCH(
       );
     }
 
-    // Fetch decision
+    // Fetch decision with workspace scoping
     const decision = await db.operatorItem.findUnique({
-      where: { id: decisionId },
+      where: { id: decisionId, workspaceId },  // Scope at DB level
     });
 
     if (!decision) {
-      return NextResponse.json(
-        { error: "Decision not found" },
-        { status: 404 }
-      );
-    }
-
-    // Verify decision belongs to workspace
-    if (decision.workspaceId !== workspaceId) {
       return NextResponse.json(
         { error: "Decision not found in this workspace" },
         { status: 404 }
@@ -110,9 +102,9 @@ export async function PATCH(
       );
     }
 
-    // Update decision status
+    // Update decision status (with workspace scoping)
     const updated = await db.operatorItem.update({
-      where: { id: decisionId },
+      where: { id: decisionId, workspaceId },  // Scope at DB level
       data: {
         status: input.status,
         ...(input.override_reason && {
