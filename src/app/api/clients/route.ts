@@ -51,7 +51,7 @@ export const GET = withRequestContext(async (request) => {
 
 export const POST = withRequestContext(async (request) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_CREATE,
     internalOnly: true,
   });
@@ -72,7 +72,7 @@ export const POST = withRequestContext(async (request) => {
   }
 
   const body = await parseRequestBody(request, createClientSchema);
-  const result = await createClient(body, session.user.id, workspaceId);
+  const result = await createClient(body, { session, policy }, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

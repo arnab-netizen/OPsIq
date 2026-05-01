@@ -80,7 +80,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, clientId);
 
   const body = await parseRequestBody(request, updateClientSchema);
-  await updateClient(clientId, body, session.user.id, workspaceId);
+  await updateClient(clientId, body, { session, policy }, workspaceId);
 
   const updated = await getClientById(clientId, workspaceId);
   return Response.json(updated);
@@ -88,7 +88,7 @@ export const PATCH = withRequestContext(async (request, context) => {
 
 export const POST = withRequestContext(async (request, context) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_ARCHIVE,
     internalOnly: true,
   });
@@ -112,7 +112,7 @@ export const POST = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, clientId);
 
   const body = await parseRequestBody(request, archiveSchema);
-  await archiveClient(clientId, session.user.id, body.version, workspaceId);
+  await archiveClient(clientId, { session, policy }, body.version, workspaceId);
 
   return Response.json({ status: "archived" });
 });

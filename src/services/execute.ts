@@ -86,7 +86,7 @@ export async function executeWorkflow(
       name: input.clientName,
       notes: `Problem: ${input.problem}`,
     },
-    actorId,
+    internalAuthContext,
     workspaceId
   );
 
