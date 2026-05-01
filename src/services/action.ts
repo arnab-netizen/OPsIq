@@ -312,7 +312,8 @@ export async function updateActionStatus(
   return updated;
 }
 
-export async function detectOverdueActions(engagementId: string, actorId: string, workspaceId: string) {
+export async function detectOverdueActions(engagementId: string, authContext: AuthContext, workspaceId: string) {
+  const actorId = authContext.session.user.id;
   enforceWorkspaceId(workspaceId, "detectOverdueActions", "action");
 
   const now = new Date();
@@ -476,7 +477,7 @@ export async function listActions(workspaceId: string, params: any) {
 export async function createActionsFromInterventions(
   engagementId: string,
   interventions: any[], // PrioritizedIntervention[] from consulting-engine
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
   enforceWorkspaceId(workspaceId, "createActionsFromInterventions", "action");
@@ -529,24 +530,7 @@ export async function createActionsFromInterventions(
       priority: mapPriorityScore(priIntervention.priorityScore),
     };
 
-    // Construct authContext for internal service-to-service call
-    const internalAuthContext: AuthContext = {
-      session: {
-        user: {
-          id: actorId,
-          email: "",
-          name: "",
-          isActive: true,
-        },
-        sessionId: "",
-        expiresAt: new Date(),
-      },
-      policy: {
-        userId: actorId,
-        roles: [],
-      },
-    };
-    const action = await createAction(input, internalAuthContext, workspaceId);
+    const action = await createAction(input, authContext, workspaceId);
     actions.push(action);
   }
 

@@ -438,9 +438,10 @@ export async function listEngagements(
 
 export async function computeNextReviewDate(
   engagementId: string,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<{ nextReviewDate: Date; isDueSoon: boolean; daysUntilDue: number }> {
+  const actorId = authContext.session.user.id;
   enforceWorkspaceId(workspaceId, "computeNextReviewDate", "engagement");
 
   const engagement = await db.engagement.findUnique({
