@@ -11,7 +11,19 @@ vi.mock("@/services/re-evaluation", () => ({
   triggerReEvaluation: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@/lib/auth-guard", () => ({
+  requireCapabilityForService: vi.fn(),
+}));
+
 const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
+const mockAuthContext = {
+  session: {
+    user: { id: "actor-1", email: "test@test.com", name: "Test", isActive: true },
+    sessionId: "session-123",
+    expiresAt: new Date(),
+  },
+  policy: { userId: "actor-1", roles: [] },
+};
 
 describe("Recommendation Priority Mapping", () => {
   describe("mapScoreToPriority", () => {
@@ -63,7 +75,7 @@ describe("Recommendation Priority Mapping", () => {
           priority: "critical",
           title: "Test Recommendation",
         },
-        "actor-1",
+        mockAuthContext as any,
         mockWorkspaceId
       );
 
@@ -103,7 +115,7 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 5,
           },
         },
-        "actor-1",
+        mockAuthContext as any,
         mockWorkspaceId
       );
 
@@ -142,7 +154,7 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 5,
           },
         },
-        "actor-1",
+        mockAuthContext as any,
         mockWorkspaceId
       );
 
@@ -181,7 +193,7 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 3,
           },
         },
-        "actor-1",
+        mockAuthContext as any,
         mockWorkspaceId
       );
 
@@ -220,7 +232,7 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 1,
           },
         },
-        "actor-1",
+        mockAuthContext as any,
         mockWorkspaceId
       );
 
@@ -260,8 +272,8 @@ describe("Recommendation Priority Mapping", () => {
           dependency: 0,
           strategicAlignment: 5,
         },
-        "actor-1",
-        "550e8400-e29b-41d4-a716-446655440000"
+        mockAuthContext as any,
+        mockWorkspaceId
       );
 
       expect(result.priority).toBe("high");
@@ -286,8 +298,8 @@ describe("Recommendation Priority Mapping", () => {
             dependency: 5,
             strategicAlignment: 3,
           },
-          "actor-1",
-          "550e8400-e29b-41d4-a716-446655440000"
+          mockAuthContext as any,
+          mockWorkspaceId
         )
       ).rejects.toThrow(NotFoundError);
     });
@@ -317,8 +329,8 @@ describe("Recommendation Priority Mapping", () => {
           dependency: 1,
           strategicAlignment: 4,
         },
-        "actor-1",
-        "550e8400-e29b-41d4-a716-446655440000"
+        mockAuthContext as any,
+        mockWorkspaceId
       );
 
       expect(result.id).toBe("rec-1");
