@@ -75,16 +75,26 @@ function worseProbability(
 export async function calculateImpactDelta(
   engagementId: string,
   actionId: string,
-  actorId: string
+  actorId: string,
+  workspaceId?: string
 ): Promise<ImpactDeltaResult> {
   // Fetch action and engagement
   const [action, engagement, currentBusinessImpact] = await Promise.all([
-    db.action.findUnique({ where: { id: actionId } }),
-    db.engagement.findUnique({ where: { id: engagementId } }),
+    db.action.findUnique({
+      where: { id: actionId },
+      include: { engagement: true },
+    }),
+    db.engagement.findUnique({
+      where: { id: engagementId, ...(workspaceId ? { workspaceId } : {}) },
+    }),
     generateBusinessImpact(engagementId, actorId),
   ]);
 
   if (!action) {
+    throw new NotFoundError("Action", actionId);
+  }
+
+  if (!action.engagement || (workspaceId && action.engagement.workspaceId !== workspaceId)) {
     throw new NotFoundError("Action", actionId);
   }
 

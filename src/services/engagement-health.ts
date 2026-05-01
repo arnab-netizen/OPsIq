@@ -21,10 +21,10 @@ export interface EngagementHealth {
 
 // ─── Health Computation ────────────────────────────────────────────────────────
 
-export async function computeEngagementHealth(engagementId: string): Promise<EngagementHealth> {
+export async function computeEngagementHealth(engagementId: string, workspaceId?: string): Promise<EngagementHealth> {
   // Fetch engagement
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, ...(workspaceId ? { workspaceId } : {}) },
   });
 
   if (!engagement) {
@@ -34,10 +34,16 @@ export async function computeEngagementHealth(engagementId: string): Promise<Eng
   // Fetch related data in parallel
   const [findings, actions] = await Promise.all([
     db.finding.findMany({
-      where: { engagementId },
+      where: {
+        engagementId,
+        ...(workspaceId ? { engagement: { workspaceId } } : {}),
+      },
     }),
     db.action.findMany({
-      where: { engagementId },
+      where: {
+        engagementId,
+        ...(workspaceId ? { engagement: { workspaceId } } : {}),
+      },
     }),
   ]);
 
@@ -141,9 +147,10 @@ export async function computeEngagementHealth(engagementId: string): Promise<Eng
 
 export async function enforceEngagementHealth(
   engagementId: string,
-  desiredStatus: string
+  desiredStatus: string,
+  workspaceId?: string
 ): Promise<boolean> {
-  const health = await computeEngagementHealth(engagementId);
+  const health = await computeEngagementHealth(engagementId, workspaceId);
 
   // Cannot transition to "completed" if blocked
   if (desiredStatus === "completed" && health.status === "blocked") {
@@ -162,14 +169,15 @@ export async function enforceEngagementHealth(
 
 export async function checkEngagementHealthChange(
   engagementId: string,
-  previousHealth: EngagementHealth | null
+  previousHealth: EngagementHealth | null,
+  workspaceId?: string
 ): Promise<{
   changed: boolean;
   statusTransition?: { from: EngagementHealthStatus; to: EngagementHealthStatus };
   newReasons: string[];
   resolvedReasons: string[];
 }> {
-  const currentHealth = await computeEngagementHealth(engagementId);
+  const currentHealth = await computeEngagementHealth(engagementId, workspaceId);
 
   if (!previousHealth) {
     return {

@@ -5,6 +5,7 @@ import { isFirstWinConditionMet } from "@/services/firstwin/detector";
 import { requireWorkspaceContext, validateWorkspaceAccess } from "@/services/workspace/context";
 import { recordOperatorItemLearning } from "@/services/learning/store";
 import { db } from "@/lib/db";
+import { NotFoundError } from "@/infra/errors";
 import type { Prisma } from "@/generated/prisma/client";
 
 const SYSTEM_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -139,7 +140,8 @@ export async function getItems(): Promise<OperatorItem[]> {
 
 export async function updateItem(
   id: string,
-  updates: Partial<OperatorItem>
+  updates: Partial<OperatorItem>,
+  workspaceId?: string
 ): Promise<void> {
   const updateData: Record<string, any> = {};
 
@@ -165,9 +167,16 @@ export async function updateItem(
   if (updates.executionStatus !== undefined) updateData.executionStatus = updates.executionStatus;
   if (updates.blockingDependencies !== undefined) updateData.blockingDependencies = updates.blockingDependencies && updates.blockingDependencies.length > 0 ? updates.blockingDependencies : null;
 
+  // Fetch current item first to verify workspace and capture state
+  const item = await db.operatorItem.findUnique({ where: { id } });
+  if (!item) throw new NotFoundError("OperatorItem", id);
+
+  if (workspaceId && item.workspaceId !== workspaceId) {
+    throw new NotFoundError("OperatorItem", id);
+  }
+
   // Auto-capture firstCompletedAt on first completion
   if (updates.status === "done" && updates.completedAt) {
-    const item = await db.operatorItem.findUnique({ where: { id } });
     if (item && !item.firstCompletedAt) {
       updateData.firstCompletedAt = new Date(updates.completedAt);
     }
@@ -175,7 +184,6 @@ export async function updateItem(
 
   // Auto-capture firstPositiveOutcomeAt when positive outcome first detected
   if (updates.actualOutcomeValue !== undefined && updates.actualOutcomeValue !== null && updates.actualOutcomeValue > 0) {
-    const item = await db.operatorItem.findUnique({ where: { id } });
     if (item && !item.firstPositiveOutcomeAt) {
       updateData.firstPositiveOutcomeAt = new Date();
     }
@@ -183,7 +191,6 @@ export async function updateItem(
 
   // Auto-detect first win achievement
   if ((updates.actualOutcomeValue !== undefined || updates.outcomeDelta !== undefined) && !updateData.firstWinAchieved) {
-    const item = await db.operatorItem.findUnique({ where: { id } });
     if (item && !item.firstWinAchieved) {
       const isFirstWin = isFirstWinConditionMet({
         expectedImpact: updates.actualOutcomeValue ?? updates.outcomeDelta ?? item.actualOutcomeValue ?? 0,
@@ -204,7 +211,6 @@ export async function updateItem(
 
   // Record learning when decision is completed with outcome data
   if ((updates.status === "done" || updates.actualOutcomeValue !== undefined) && updates.problemType) {
-    const item = await db.operatorItem.findUnique({ where: { id } });
     if (item && item.status === "done") {
       // Silently record learning if conditions are met
       // Don't throw if learning recording fails

@@ -198,21 +198,25 @@ export async function assessCondition(
   return { id: result.result.id };
 }
 
-export async function getConditionHistory(engagementId: string) {
+export async function getConditionHistory(engagementId: string, workspaceId?: string) {
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, ...(workspaceId ? { workspaceId } : {}) },
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
   return db.businessConditionProfile.findMany({
-    where: { engagementId },
+    where: { engagementId, ...(workspaceId ? { workspaceId } : {}) },
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function getCurrentCondition(engagementId: string) {
+export async function getCurrentCondition(engagementId: string, workspaceId?: string) {
   const profile = await db.businessConditionProfile.findFirst({
-    where: { engagementId, isCurrent: true },
+    where: {
+      engagementId,
+      isCurrent: true,
+      ...(workspaceId ? { workspaceId } : {}),
+    },
     orderBy: { createdAt: "desc" },
   });
 

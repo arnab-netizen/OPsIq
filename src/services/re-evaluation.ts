@@ -170,9 +170,9 @@ function determineReEvaluationTargets(
   }
 }
 
-async function evaluateBusinessConditionImpact(engagementId: string) {
+async function evaluateBusinessConditionImpact(engagementId: string, workspaceId?: string) {
   const current = await db.businessConditionProfile.findFirst({
-    where: { engagementId, isCurrent: true },
+    where: { engagementId, isCurrent: true, ...(workspaceId ? { workspaceId } : {}) },
   });
 
   if (!current) {
@@ -196,7 +196,10 @@ async function evaluateBusinessConditionImpact(engagementId: string) {
 
   // Evaluate KPI trends (improved or deteriorated)
   const kpis = await db.kPI.findMany({
-    where: { engagementId },
+    where: {
+      engagementId,
+      ...(workspaceId ? { engagement: { workspaceId } } : {}),
+    },
     select: { target: true, currentValue: true, direction: true },
   });
 
@@ -246,8 +249,10 @@ async function evaluateBusinessConditionImpact(engagementId: string) {
   };
 }
 
-async function evaluateInterventionModeImpact(engagementId: string) {
-  const engagement = await db.engagement.findUnique({ where: { id: engagementId } });
+async function evaluateInterventionModeImpact(engagementId: string, workspaceId?: string) {
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId, ...(workspaceId ? { workspaceId } : {}) },
+  });
   if (!engagement) {
     return {
       recommendedMode: "recovery" as InterventionMode,
@@ -257,7 +262,7 @@ async function evaluateInterventionModeImpact(engagementId: string) {
 
   const factors: string[] = [];
   const condition = await db.businessConditionProfile.findFirst({
-    where: { engagementId, isCurrent: true },
+    where: { engagementId, isCurrent: true, ...(workspaceId ? { workspaceId } : {}) },
   });
 
   if (!condition) {
@@ -297,15 +302,21 @@ async function evaluateInterventionModeImpact(engagementId: string) {
   };
 }
 
-async function evaluateInterventionPhaseImpact(engagementId: string) {
+async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId?: string) {
   // Determine phase based on findings and actions (deterministic lifecycle rules)
   const findings = await db.finding.findMany({
-    where: { engagementId },
+    where: {
+      engagementId,
+      ...(workspaceId ? { engagement: { workspaceId } } : {}),
+    },
     select: { id: true },
   });
 
   const actions = await db.action.findMany({
-    where: { engagementId },
+    where: {
+      engagementId,
+      ...(workspaceId ? { engagement: { workspaceId } } : {}),
+    },
     select: { id: true, status: true },
   });
 
@@ -495,6 +506,18 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
   reEvaluationInProgress.add(event.engagementId);
 
   try {
+    // Fetch engagement to get workspace context
+    const engagement = await db.engagement.findUnique({
+      where: { id: event.engagementId },
+      select: { workspaceId: true },
+    });
+
+    if (!engagement) {
+      throw new Error(`Engagement ${event.engagementId} not found`);
+    }
+
+    const workspaceId = engagement.workspaceId;
+
     // Structured logging with context
     logger.info("Re-evaluation triggered", {
       engagementId: event.engagementId,
@@ -508,7 +531,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     const targets = determineReEvaluationTargets(event.changeType);
 
   const businessConditionImpact = targets.businessConditionProfile
-    ? await evaluateBusinessConditionImpact(event.engagementId)
+    ? await evaluateBusinessConditionImpact(event.engagementId, workspaceId)
     : {
         recommendedRating: "stable" as BusinessConditionRating,
         reasoningFactors: ["target_not_evaluated"],
@@ -516,14 +539,14 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       };
 
   const interventionModeImpact = targets.interventionMode
-    ? await evaluateInterventionModeImpact(event.engagementId)
+    ? await evaluateInterventionModeImpact(event.engagementId, workspaceId)
     : {
         recommendedMode: "recovery" as InterventionMode,
         reasoningFactors: ["target_not_evaluated"],
       };
 
   const interventionPhaseImpact = targets.interventionPhase
-    ? await evaluateInterventionPhaseImpact(event.engagementId)
+    ? await evaluateInterventionPhaseImpact(event.engagementId, workspaceId)
     : {
         recommendedPhase: undefined,
         canAdvance: false,

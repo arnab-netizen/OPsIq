@@ -42,13 +42,14 @@ export interface UnblockStageInput {
 
 export async function createStage(
   input: CreateStageInput,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId: string
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_CREATE);
 
   const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
+    where: { id: input.engagementId, workspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -82,7 +83,9 @@ export async function createStage(
   return { id: stage.id };
 }
 
-export async function getStage(id: string) {
+export async function getStage(id: string, authContext: AuthContext, workspaceId: string) {
+  requireCapabilityForService(authContext, CAPABILITIES.STAGE_VIEW);
+
   const stage = await db.stage.findUnique({
     where: { id },
     include: {
@@ -90,12 +93,24 @@ export async function getStage(id: string) {
     },
   });
   if (!stage) throw new NotFoundError("Stage", id);
+
+  if (stage.engagement.workspaceId !== workspaceId) {
+    throw new NotFoundError("Stage", id);
+  }
+
   return stage;
 }
 
-export async function getStagesForEngagement(engagementId: string) {
+export async function getStagesForEngagement(engagementId: string, authContext: AuthContext, workspaceId: string) {
+  requireCapabilityForService(authContext, CAPABILITIES.STAGE_VIEW);
+
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId, workspaceId },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
   return db.stage.findMany({
-    where: { engagementId },
+    where: { engagementId, engagement: { workspaceId } },
     orderBy: { createdAt: "asc" },
   });
 }
@@ -103,13 +118,21 @@ export async function getStagesForEngagement(engagementId: string) {
 export async function updateStage(
   id: string,
   input: UpdateStageInput,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId: string
 ): Promise<void> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
 
   const actorId = authContext.session.user.id;
-  const stage = await db.stage.findUnique({ where: { id } });
+  const stage = await db.stage.findUnique({
+    where: { id },
+    include: { engagement: true },
+  });
   if (!stage) throw new NotFoundError("Stage", id);
+
+  if (stage.engagement.workspaceId !== workspaceId) {
+    throw new NotFoundError("Stage", id);
+  }
 
   if (input.version !== stage.version) {
     throw new ValidationError("Version mismatch");
@@ -151,13 +174,21 @@ export async function updateStage(
 export async function blockStage(
   id: string,
   input: BlockStageInput,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId: string
 ): Promise<void> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
 
   const actorId = authContext.session.user.id;
-  const stage = await db.stage.findUnique({ where: { id } });
+  const stage = await db.stage.findUnique({
+    where: { id },
+    include: { engagement: true },
+  });
   if (!stage) throw new NotFoundError("Stage", id);
+
+  if (stage.engagement.workspaceId !== workspaceId) {
+    throw new NotFoundError("Stage", id);
+  }
 
   if (input.version !== stage.version) {
     throw new ValidationError("Version mismatch");
@@ -165,7 +196,7 @@ export async function blockStage(
 
   // Block the engagement (source of truth for blocking state)
   const engagement = await db.engagement.findUnique({
-    where: { id: stage.engagementId },
+    where: { id: stage.engagementId, workspaceId },
     select: { version: true, isBlocked: true },
   });
   if (!engagement) throw new NotFoundError("Engagement", stage.engagementId);
@@ -215,13 +246,21 @@ export async function blockStage(
 export async function unblockStage(
   id: string,
   input: UnblockStageInput,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId: string
 ): Promise<void> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
 
   const actorId = authContext.session.user.id;
-  const stage = await db.stage.findUnique({ where: { id } });
+  const stage = await db.stage.findUnique({
+    where: { id },
+    include: { engagement: true },
+  });
   if (!stage) throw new NotFoundError("Stage", id);
+
+  if (stage.engagement.workspaceId !== workspaceId) {
+    throw new NotFoundError("Stage", id);
+  }
 
   if (input.version !== stage.version) {
     throw new ValidationError("Version mismatch");
@@ -229,7 +268,7 @@ export async function unblockStage(
 
   // Unblock the engagement (source of truth for blocking state)
   const engagement = await db.engagement.findUnique({
-    where: { id: stage.engagementId },
+    where: { id: stage.engagementId, workspaceId },
     select: { version: true, isBlocked: true },
   });
   if (!engagement) throw new NotFoundError("Engagement", stage.engagementId);

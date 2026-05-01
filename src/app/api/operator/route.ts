@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
       updatePayload.executionStatus = 'started';
     }
 
-    await updateItem(id, updatePayload);
+    await updateItem(id, updatePayload, workspaceId || undefined);
 
     // Capture after state and log audit event
     const allItemsAfter = await getItems();
