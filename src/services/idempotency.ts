@@ -17,6 +17,7 @@ export interface IdempotencyCheckResult {
     status: number;
     body: Record<string, unknown>;
   };
+  cachedError?: Error;
 }
 
 function hashPayload(payload: Record<string, unknown>): string {
@@ -66,9 +67,19 @@ export async function checkIdempotencyKey(
         );
       }
 
-      // If failed, allow retry with same key
+      // If failed, return the cached error
       if (existing.status === "failed") {
-        return { isNew: true };
+        const errorData = existing.responseBody as Record<string, unknown>;
+        const errorMessage = (errorData?.error as string) || "Unknown error";
+        const errorName = (errorData?.errorName as string) || "Error";
+
+        const error = new Error(errorMessage);
+        error.name = errorName;
+
+        return {
+          isNew: false,
+          cachedError: error,
+        };
       }
     }
   }
@@ -112,7 +123,10 @@ export async function recordIdempotencyError(
     where: { idempotencyKey },
     data: {
       status: "failed",
-      responseBody: { error: error.message },
+      responseBody: {
+        error: error.message,
+        errorName: error.name,
+      } as Prisma.InputJsonValue,
       completedAt: new Date(),
     },
   });
