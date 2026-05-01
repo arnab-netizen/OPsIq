@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 import dotenv from "dotenv";
 import path from "path";
+import "@testing-library/jest-dom/vitest";
 
 // Load test environment first
 dotenv.config({ path: path.resolve(process.cwd(), ".env.test") });
