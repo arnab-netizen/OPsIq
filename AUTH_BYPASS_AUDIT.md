@@ -30,11 +30,22 @@ Critical auth bypass vulnerabilities found in:
 
 ---
 
-### 2. CRITICAL: Routes Missing withAuth()
+### 2. MIXED: Routes Using getSession() vs withAuth()
 
-**Severity**: CRITICAL - No authentication enforcement
+**Severity**: MEDIUM/LOW - Mix of authentication patterns
 
-The following 34 routes lack `withAuth()` calls:
+Analysis shows:
+- ✅ Most routes (30+) use `getSession()` for basic authentication
+- ❌ Few routes (2-3) have NO authentication at all  
+- ⚠️ getSession() pattern lacks capability enforcement
+
+**Truly Unprotected Routes** (NO auth at all):
+- [x] `src/app/api/report/route.ts` - ✅ FIXED - Added withAuth()
+
+**Confirmed Protected Routes** (use getSession via workspace context):
+- ✅ `src/app/api/audit/route.ts` - Uses getWorkspaceContext → getSession()
+
+**Routes Using getSession() Pattern** (Basic auth, no capabilities):
 
 #### Financial/Decision Services (9 routes)
 - [ ] `src/app/api/decisions/create/route.ts` - Creates decisions without auth
