@@ -11,6 +11,10 @@ vi.mock("@/services/re-evaluation", () => ({
   triggerReEvaluation: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@/lib/auth-guard", () => ({
+  requireCapabilityForService: vi.fn(),
+}));
+
 describe("Evidence Integrity - Link/Unlink", () => {
   const engagementId1 = "eng-1";
   const engagementId2 = "eng-2";
@@ -18,6 +22,14 @@ describe("Evidence Integrity - Link/Unlink", () => {
   const evidenceId1 = "evidence-1";
   const evidenceId2 = "evidence-2";
   const actorId = "actor-1";
+  const mockAuthContext = {
+    session: {
+      user: { id: actorId, email: "test@test.com", name: "Test", isActive: true },
+      sessionId: "session-123",
+      expiresAt: new Date(),
+    },
+    policy: { userId: actorId, roles: [] },
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -57,7 +69,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         return callback(mockTx);
       });
 
-      const result = await linkEvidenceToFinding(findingId1, evidenceId1, actorId);
+      const result = await linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any);
 
       expect(result.findingId).toBe(findingId1);
       expect(result.evidenceId).toBe(evidenceId1);
@@ -80,7 +92,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, actorId)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -101,7 +113,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, actorId)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -122,7 +134,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, actorId)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -143,7 +155,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, actorId)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -182,7 +194,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         return callback(mockTx);
       });
 
-      const result = await unlinkEvidenceFromFinding(findingId1, evidenceId1, actorId);
+      const result = await unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as any);
 
       expect(result.findingId).toBe(findingId1);
       expect(result.evidenceId).toBe(evidenceId1);
@@ -203,7 +215,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        unlinkEvidenceFromFinding(findingId1, evidenceId1, actorId)
+        unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as any)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -218,7 +230,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        validateFinding(findingId1, actorId)
+        validateFinding(findingId1, mockAuthContext as any)
       ).rejects.toThrow(ValidationError);
     });
 
@@ -235,7 +247,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         engagementId: engagementId1,
       } as never);
 
-      const result = await validateFinding(findingId1, actorId);
+      const result = await validateFinding(findingId1, mockAuthContext as any);
 
       expect(result.id).toBe(findingId1);
     });
@@ -273,7 +285,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         return callback(mockTx);
       });
 
-      const result = await linkEvidenceToFinding(findingId1, evidenceId1, actorId);
+      const result = await linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any);
       expect(result).toBeDefined();
     });
   });
