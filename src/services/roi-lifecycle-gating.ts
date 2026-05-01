@@ -221,17 +221,17 @@ export async function recordImpactWithGating(
         throw new ValidationError(validation.reason || "Invalid state for realized impact");
       }
 
+      // Check if outcome change after closed (terminal immutability check first)
+      if (state === "CLOSED" && decision.actualOutcomeValue !== null) {
+        throw new ConflictError(
+          "Closed decision immutability: Cannot modify outcome for Closed decisions."
+        );
+      }
+
       // Check for duplicate outcome
       if (decision.actualOutcomeValue !== null && decision.actualOutcomeValue !== undefined) {
         throw new ConflictError(
           "Duplicate outcome: Decision already has recorded outcome. Cannot re-record after outcome is set."
-        );
-      }
-
-      // Check if outcome change after closed
-      if (state === "CLOSED" && decision.actualOutcomeValue !== null) {
-        throw new ConflictError(
-          "Outcome change after closed: Cannot modify outcome for closed decisions."
         );
       }
 
