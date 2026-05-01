@@ -51,6 +51,15 @@ describe("ImpactDeltaService", () => {
     mockDb.engagement = { findUnique: vi.fn() };
   });
 
+  const mockEngagement = {
+    id: "eng-123",
+    code: "ENG-001",
+    title: "Test Engagement",
+    clientId: "client-1",
+    healthStatus: "healthy",
+    workspaceId: "workspace-123",
+  };
+
   const mockAction = {
     id: "action-123",
     engagementId: "eng-123",
@@ -61,14 +70,7 @@ describe("ImpactDeltaService", () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     version: 1,
-  };
-
-  const mockEngagement = {
-    id: "eng-123",
-    code: "ENG-001",
-    title: "Test Engagement",
-    clientId: "client-1",
-    healthStatus: "healthy",
+    engagement: mockEngagement,
   };
 
   it("completion improves impact level", async () => {
