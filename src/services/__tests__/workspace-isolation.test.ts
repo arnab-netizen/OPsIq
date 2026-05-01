@@ -6,7 +6,6 @@ import { generateEngagementReport, generateAndStoreReport, listEngagementDeliver
 import { createEngagement } from "@/services/engagement";
 import { createClient } from "@/services/client-account";
 import { NotFoundError } from "@/infra/errors";
-import { TEST_IDS } from "@/domain/constants/test-ids";
 
 describe("Workspace Isolation - Security Boundaries", () => {
   let workspace1Id: string;
@@ -15,8 +14,8 @@ describe("Workspace Isolation - Security Boundaries", () => {
   let client2Id: string;
   let eng1Id: string;
   let eng2Id: string;
-  const actor1Id = TEST_IDS.TEST_ACTOR_ID;
-  const actor2Id = "other-actor-id";
+  const actor1Id = "test-actor-1";
+  const actor2Id = "test-actor-2";
 
   beforeAll(async () => {
     // Create two separate workspaces with different engagements

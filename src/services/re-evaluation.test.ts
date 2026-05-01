@@ -32,6 +32,12 @@ vi.mock("@/lib/db", () => {
       findMany: vi.fn(),
       updateMany: vi.fn(),
     },
+    idempotencyRecord: {
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
     $transaction: vi.fn((callback) => {
       // Create a mock transaction object with the same methods
       const txMock: any = {
@@ -53,6 +59,12 @@ vi.mock("@/lib/db", () => {
         },
         finding: {
           findMany: vi.fn().mockResolvedValue([]),
+        },
+        idempotencyRecord: {
+          findUnique: vi.fn().mockResolvedValue(null),
+          create: vi.fn().mockResolvedValue({ id: "rec-1" }),
+          update: vi.fn().mockResolvedValue({}),
+          delete: vi.fn().mockResolvedValue({}),
         },
       };
       return Promise.resolve(callback(txMock));
