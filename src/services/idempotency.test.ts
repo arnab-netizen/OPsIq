@@ -159,7 +159,7 @@ describe("Idempotency Service", () => {
       expect(createMock).toHaveBeenCalled();
     });
 
-    it("allows retry of failed request with same key", async () => {
+    it("returns cached error for failed request", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
 
@@ -168,6 +168,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         status: "failed",
+        responseBody: { error: "NotFoundError", errorName: "NotFoundError" },
         expiresAt: new Date(Date.now() + 3600000),
       });
 
@@ -178,7 +179,10 @@ describe("Idempotency Service", () => {
         payload: { title: "Test" },
       });
 
-      expect(result.isNew).toBe(true);
+      expect(result.isNew).toBe(false);
+      expect(result.cachedError).toBeDefined();
+      expect(result.cachedError?.message).toBe("NotFoundError");
+      expect(result.cachedError?.name).toBe("NotFoundError");
     });
   });
 
