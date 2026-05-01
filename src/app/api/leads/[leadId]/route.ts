@@ -55,7 +55,7 @@ export const GET = withRequestContext(async (request, context) => {
 
 export const PATCH = withRequestContext(async (request, context) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.LEAD_UPDATE,
     internalOnly: true,
   });
@@ -79,7 +79,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, leadId);
 
   const body = await parseRequestBody(request, updateLeadSchema);
-  await updateLead(leadId, body, session.user.id, workspaceId);
+  await updateLead(leadId, body, authContext, workspaceId);
 
   const updated = await getLeadById(leadId, workspaceId);
   return Response.json(updated);

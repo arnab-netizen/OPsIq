@@ -49,7 +49,7 @@ export const GET = withRequestContext(async (request, context) => {
 export const PUT = withRequestContext(async (request, context) => {
   try {
     // Authenticate + authorize (fail-closed)
-    const { session } = await withAuth({
+    const authContext = await withAuth({
       capability: CAPABILITIES.EVIDENCE_SUBMIT,
     });
 
@@ -73,7 +73,7 @@ export const PUT = withRequestContext(async (request, context) => {
 
     const body = await parseRequestBody(request, updateEvidenceBundleSchema);
 
-    await updateEvidenceBundle(bundleId, body, session.user.id, workspaceId);
+    await updateEvidenceBundle(bundleId, body, authContext, workspaceId);
 
     return Response.json({ success: true });
   } catch (error) {

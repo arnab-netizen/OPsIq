@@ -49,7 +49,7 @@ export const GET = withRequestContext(async (request) => {
 
 export const POST = withRequestContext(async (request) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.EVIDENCE_SUBMIT,
     internalOnly: true,
   });
@@ -70,7 +70,7 @@ export const POST = withRequestContext(async (request) => {
   }
 
   const body = await parseRequestBody(request, createEvidenceSchema);
-  const result = await createEvidence(body, session.user.id, workspaceId);
+  const result = await createEvidence(body, authContext, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

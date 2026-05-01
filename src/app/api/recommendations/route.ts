@@ -29,7 +29,7 @@ const createRecommendationSchema = z.object({
 
 export const POST = withRequestContext(async (request) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.RECOMMENDATION_CREATE,
     internalOnly: true,
   });
@@ -50,7 +50,7 @@ export const POST = withRequestContext(async (request) => {
   }
 
   const body = await parseRequestBody(request, createRecommendationSchema);
-  const result = await createRecommendation(body, session.user.id, workspaceId);
+  const result = await createRecommendation(body, authContext, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

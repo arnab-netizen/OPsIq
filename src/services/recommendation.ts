@@ -8,6 +8,8 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -212,14 +214,14 @@ export function mapScoreToPriority(score: number): string {
 
 export async function createRecommendation(
   input: CreateRecommendationInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string,
   idempotencyKey?: string
 ) {
-  enforceWorkspaceId(workspaceId, "createRecommendation", "recommendation");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId, workspaceId },
+    where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -247,13 +249,14 @@ export async function createRecommendation(
               title: input.title,
               description: input.description,
               estimatedImpact: input.expectedImpact,
-              workspaceId,
+              workspaceId: validatedWorkspaceId,
+              createdBy: userId,
             },
           });
 
           await emitAuditEvent({
             eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
-            actorId,
+            actorId: userId,
             entityType: "recommendation",
             entityId: recommendation.id,
             payload: {
@@ -267,7 +270,7 @@ export async function createRecommendation(
         });
       },
       input,
-      actorId
+      userId
     );
 
     if (!result.isNew) {
@@ -303,13 +306,14 @@ export async function createRecommendation(
       title: input.title,
       description: input.description,
       estimatedImpact: input.expectedImpact,
-      workspaceId,
+      workspaceId: validatedWorkspaceId,
+      createdBy: userId,
     },
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
-    actorId,
+    actorId: userId,
     entityType: "recommendation",
     entityId: recommendation.id,
     payload: {
@@ -343,13 +347,13 @@ export async function getRecommendationsForEngagement(engagementId: string, user
 export async function updateRecommendationStatus(
   recommendationId: string,
   input: UpdateRecommendationInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
-  enforceWorkspaceId(workspaceId, "updateRecommendationStatus", "recommendation");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const rec = await db.recommendation.findUnique({
-    where: { id: recommendationId, workspaceId },
+    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
     include: { engagement: true },
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);
@@ -367,18 +371,18 @@ export async function updateRecommendationStatus(
     try {
       const [findings, recommendations, actions] = await Promise.all([
         db.finding.findMany({
-          where: { engagementId: rec.engagementId, workspaceId },
+          where: { engagementId: rec.engagementId, workspaceId: validatedWorkspaceId },
         }),
         db.recommendation.findMany({
-          where: { engagementId: rec.engagementId, workspaceId },
+          where: { engagementId: rec.engagementId, workspaceId: validatedWorkspaceId },
         }),
         db.action.findMany({
-          where: { engagementId: rec.engagementId, workspaceId },
+          where: { engagementId: rec.engagementId, workspaceId: validatedWorkspaceId },
         }),
       ]);
 
       const engagement = await db.engagement.findUnique({
-        where: { id: rec.engagementId, workspaceId },
+        where: { id: rec.engagementId, workspaceId: validatedWorkspaceId },
       });
 
       if (engagement) {
@@ -428,7 +432,7 @@ export async function updateRecommendationStatus(
 
             await emitAuditEvent({
               eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_OVERRIDE,
-              actorId,
+              actorId: userId,
               entityType: "recommendation",
               entityId: recommendationId,
               payload: {
@@ -455,7 +459,7 @@ export async function updateRecommendationStatus(
 
             await emitAuditEvent({
               eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_WARNING,
-              actorId,
+              actorId: userId,
               entityType: "recommendation",
               entityId: recommendationId,
               payload: {
@@ -505,7 +509,7 @@ export async function updateRecommendationStatus(
   const updateResult = await db.recommendation.updateMany({
     where: {
       id: recommendationId,
-      workspaceId,
+      workspaceId: validatedWorkspaceId,
       version: input.version,
     },
     data: {
@@ -522,13 +526,13 @@ export async function updateRecommendationStatus(
   }
 
   const updated = await db.recommendation.findUnique({
-    where: { id: recommendationId, workspaceId },
+    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
   });
   if (!updated) throw new NotFoundError("Recommendation", recommendationId);
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
-    actorId,
+    actorId: userId,
     entityType: "recommendation",
     entityId: recommendationId,
     payload: {
@@ -543,14 +547,14 @@ export async function updateRecommendationStatus(
 export async function updateRecommendationPriorityFromScore(
   recommendationId: string,
   scoringInput: RecommendationScoringInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string,
   recommendationClass?: RecommendationClass
 ): Promise<{ id: string; score: number; priority: string }> {
-  enforceWorkspaceId(workspaceId, "updateRecommendationPriorityFromScore", "recommendation");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const rec = await db.recommendation.findUnique({
-    where: { id: recommendationId, workspaceId },
+    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);
 
@@ -558,7 +562,7 @@ export async function updateRecommendationPriorityFromScore(
   const newPriority = mapScoreToPriority(score);
 
   const updated = await db.recommendation.update({
-    where: { id: recommendationId, workspaceId },
+    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
     data: {
       priority: newPriority,
       version: { increment: 1 },
@@ -571,7 +575,7 @@ export async function updateRecommendationPriorityFromScore(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
-    actorId,
+    actorId: userId,
     entityType: "recommendation",
     entityId: recommendationId,
     payload: {
@@ -593,13 +597,13 @@ export async function updateRecommendationPriorityFromScore(
 
 export async function reRankRecommendationsInEngagement(
   engagementId: string,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<{ updated: number; recommendations: Array<{ id: string; oldPriority: string; newPriority: string; score: number }> }> {
-  enforceWorkspaceId(workspaceId, "reRankRecommendationsInEngagement", "recommendation");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const recommendations = await db.recommendation.findMany({
-    where: { engagementId, workspaceId },
+    where: { engagementId, workspaceId: validatedWorkspaceId },
   });
 
   const updated: Array<{ id: string; oldPriority: string; newPriority: string; score: number }> = [];
@@ -621,7 +625,7 @@ export async function reRankRecommendationsInEngagement(
       if (newPriority !== oldPriority) {
         // Update the recommendation
         await db.recommendation.update({
-          where: { id: rec.id, workspaceId },
+          where: { id: rec.id, workspaceId: validatedWorkspaceId },
           data: {
             priority: newPriority,
             version: { increment: 1 },
@@ -631,7 +635,7 @@ export async function reRankRecommendationsInEngagement(
         // Emit audit event
         await emitAuditEvent({
           eventName: AUDIT_EVENTS.RECOMMENDATION_UPDATED,
-          actorId,
+          actorId: userId,
           entityType: "recommendation",
           entityId: rec.id,
           payload: {
@@ -676,13 +680,13 @@ export async function getRecommendation(recommendationId: string, workspaceId: s
 export async function updateRecommendation(
   recommendationId: string,
   input: UpdateRecommendationInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
-  enforceWorkspaceId(workspaceId, "updateRecommendation", "recommendation");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const rec = await db.recommendation.findUnique({
-    where: { id: recommendationId, workspaceId },
+    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
   });
   if (!rec) throw new NotFoundError("Recommendation", recommendationId);
 
@@ -695,13 +699,13 @@ export async function updateRecommendation(
   if (input.priority) updates.priority = input.priority;
 
   const updated = await db.recommendation.update({
-    where: { id: recommendationId, workspaceId },
+    where: { id: recommendationId, workspaceId: validatedWorkspaceId },
     data: updates,
   });
 
   await emitAuditEvent({
     eventName: "recommendation.updated",
-    actorId,
+    actorId: userId,
     entityType: "recommendation",
     entityId: recommendationId,
     payload: updates,
@@ -714,10 +718,10 @@ export async function updateRecommendation(
 export async function createRecommendationsFromInterventions(
   engagementId: string,
   interventions: any[], // PrioritizedIntervention[] from consulting-engine
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ) {
-  enforceWorkspaceId(workspaceId, "createRecommendationsFromInterventions", "recommendation");
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   if (!interventions || interventions.length === 0) {
     return [];
@@ -748,7 +752,7 @@ export async function createRecommendationsFromInterventions(
       class: mapClassToRecommendationClass(intervention.class),
     };
 
-    const rec = await createRecommendation(input, actorId, workspaceId);
+    const rec = await createRecommendation(input, authContext, validatedWorkspaceId);
     recommendations.push(rec);
   }
 

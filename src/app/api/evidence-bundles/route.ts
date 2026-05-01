@@ -20,7 +20,7 @@ const listBundlesSchema = z.object({
 export const POST = withRequestContext(async (request) => {
   try {
     // Authenticate + authorize (fail-closed)
-    const { session } = await withAuth({
+    const authContext = await withAuth({
       capability: CAPABILITIES.EVIDENCE_SUBMIT,
     });
 
@@ -40,7 +40,7 @@ export const POST = withRequestContext(async (request) => {
     }
 
     const body = await parseRequestBody(request, createEvidenceBundleSchema);
-    const result = await createEvidenceBundle(body, session.user.id, workspaceId);
+    const result = await createEvidenceBundle(body, authContext, workspaceId);
 
     return Response.json(result, { status: 201 });
   } catch (error) {

@@ -49,7 +49,7 @@ export const GET = withRequestContext(async (request, context) => {
 
 export const PATCH = withRequestContext(async (request, context) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.EVIDENCE_VALIDATE,
     internalOnly: true,
   });
@@ -73,7 +73,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, evidenceId);
 
   const body = await parseRequestBody(request, updateEvidenceSchema);
-  await updateEvidence(evidenceId, body, session.user.id, workspaceId);
+  await updateEvidence(evidenceId, body, authContext, workspaceId);
 
   const updated = await getEvidenceById(evidenceId, workspaceId);
   return Response.json(updated);

@@ -6,6 +6,8 @@ import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { withIdempotency } from "@/infra/idempotency";
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 
 export interface CreateKPIInput {
   engagementId: string;
@@ -22,11 +24,14 @@ export interface UpdateKPIInput {
 
 export async function createKPI(
   input: CreateKPIInput,
-  actorId: string,
+  authContext: AuthContext,
+  workspaceId: string,
   idempotencyKey?: string
 ) {
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
+
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
+    where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -42,13 +47,14 @@ export async function createKPI(
               name: input.name,
               description: input.description || null,
               target: input.target || null,
-              createdBy: actorId,
+              createdBy: userId,
+              workspaceId: validatedWorkspaceId,
             },
           });
 
           await emitAuditEvent({
             eventName: AUDIT_EVENTS.KPI_DEFINED,
-            actorId,
+            actorId: userId,
             entityType: "kpi",
             entityId: kpi.id,
             payload: {
@@ -62,7 +68,7 @@ export async function createKPI(
         });
       },
       input,
-      actorId
+      userId
     );
 
     if (!result.isNew) {
@@ -86,13 +92,14 @@ export async function createKPI(
       name: input.name,
       description: input.description || null,
       target: input.target || null,
-      createdBy: actorId,
+      createdBy: userId,
+      workspaceId: validatedWorkspaceId,
     },
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.KPI_DEFINED,
-    actorId,
+    actorId: userId,
     entityType: "kpi",
     entityId: kpi.id,
     payload: {
@@ -123,11 +130,14 @@ export async function getKPIsForEngagement(engagementId: string, userId: string)
 export async function updateKPIValue(
   kpiId: string,
   input: UpdateKPIInput,
-  actorId: string,
+  authContext: AuthContext,
+  workspaceId: string,
   idempotencyKey?: string
 ) {
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
+
   const kpi = await db.kPI.findUnique({
-    where: { id: kpiId },
+    where: { id: kpiId, workspaceId: validatedWorkspaceId },
     include: {
       snapshots: {
         orderBy: { recordedAt: "desc" },
@@ -154,6 +164,7 @@ export async function updateKPIValue(
           const updateResult = await tx.kPI.updateMany({
             where: {
               id: kpiId,
+              workspaceId: validatedWorkspaceId,
               version: input.version,
             },
             data: {
@@ -176,12 +187,13 @@ export async function updateKPIValue(
             data: {
               kpiId,
               value: newValue ?? 0,
-              recordedBy: actorId,
+              recordedBy: userId,
+              workspaceId: validatedWorkspaceId,
             },
           });
 
           const updated = await tx.kPI.findUnique({
-            where: { id: kpiId },
+            where: { id: kpiId, workspaceId: validatedWorkspaceId },
           });
           if (!updated) throw new NotFoundError("KPI", kpiId);
 
@@ -195,7 +207,7 @@ export async function updateKPIValue(
               deteriorated = true;
               await emitAuditEvent({
                 eventName: AUDIT_EVENTS.KPI_DETERIORATED,
-                actorId,
+                actorId: userId,
                 entityType: "kpi",
                 entityId: kpiId,
                 payload: {
@@ -210,7 +222,7 @@ export async function updateKPIValue(
 
           await emitAuditEvent({
             eventName: AUDIT_EVENTS.KPI_SNAPSHOT_RECORDED,
-            actorId,
+            actorId: userId,
             entityType: "kpi",
             entityId: kpiId,
             payload: {
@@ -224,7 +236,7 @@ export async function updateKPIValue(
         });
       },
       { kpiId, ...input },
-      actorId
+      userId
     );
 
     if (!result.isNew) {
@@ -240,6 +252,7 @@ export async function updateKPIValue(
   const updateResult = await db.kPI.updateMany({
     where: {
       id: kpiId,
+      workspaceId: validatedWorkspaceId,
       version: input.version,
     },
     data: {
@@ -262,12 +275,13 @@ export async function updateKPIValue(
     data: {
       kpiId,
       value: newValue ?? 0,
-      recordedBy: actorId,
+      recordedBy: userId,
+      workspaceId: validatedWorkspaceId,
     },
   });
 
   const updated = await db.kPI.findUnique({
-    where: { id: kpiId },
+    where: { id: kpiId, workspaceId: validatedWorkspaceId },
   });
   if (!updated) throw new NotFoundError("KPI", kpiId);
 
@@ -281,7 +295,7 @@ export async function updateKPIValue(
       deteriorated = true;
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.KPI_DETERIORATED,
-        actorId,
+        actorId: userId,
         entityType: "kpi",
         entityId: kpiId,
         payload: {
@@ -296,7 +310,7 @@ export async function updateKPIValue(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.KPI_SNAPSHOT_RECORDED,
-    actorId,
+    actorId: userId,
     entityType: "kpi",
     entityId: kpiId,
     payload: {
