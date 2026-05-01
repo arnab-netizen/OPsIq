@@ -1,8 +1,15 @@
 # Service-Layer Actor Spoofing: Refactoring Plan
 
 **Date**: 2026-05-02  
-**Status**: 🔴 IN PROGRESS  
+**Status**: 🟡 PARTIALLY COMPLETE (findings.ts done, 12+ services remaining)  
 **Severity**: HIGH - User spoofing vulnerability at service layer
+
+## Quick Status
+- ✅ findings.ts: REFACTORED - createFinding, updateFinding now require authContext
+- ✅ findings/route.ts: Updated to pass authContext
+- ✅ findings/[findingId]/route.ts: Updated to pass authContext
+- ⏳ 12+ remaining services: Ready for systematic refactoring (use findings.ts as template)
+- 🔴 Test files: Still need updates to call refactored services with authContext
 
 ---
 
@@ -101,25 +108,29 @@ export async function createFinding(
 
 ## Implementation Phases
 
-### Phase 1: Core Infrastructure (DONE)
+### Phase 1: Core Infrastructure (✅ DONE)
 - ✅ service-auth.ts with requireServiceAuth, requireServiceContext
 - ✅ Tests verifying patterns
+- ✅ CLAUDE.md rules updated (no TODOs, no spoofing)
 
-### Phase 2: Critical Mutation Services (IN PROGRESS)
+### Phase 2: Critical Mutation Services (🟡 PARTIALLY DONE)
 Refactor these in order (all accept actorId):
-1. [ ] findings.ts (17 functions total, 2 mutations)
-2. [ ] recommendation.ts (3 mutations)
-3. [ ] evidence.ts (3 mutations)
-4. [ ] lead.ts (2 mutations)
-5. [ ] kpi.ts (2 mutations)
-6. [ ] user.ts (2 mutations)
-7. [ ] shock-event.ts (2 mutations)
-8. [ ] client-contact.ts (2 mutations)
-9. [ ] stage.ts (2 mutations)
-10. [ ] deliverable.ts (2 mutations)
-11. [ ] action.ts (3 mutations)
-12. [ ] engagement.ts (2 mutations)
-13. [ ] diagnosis.ts (1 mutation)
+1. ✅ findings.ts (createFinding, updateFinding refactored)
+   - ✅ Function signatures changed to require authContext
+   - ✅ Route handlers updated (findings/route.ts, findings/[findingId]/route.ts)
+   - ⏳ Test file needs updating
+2. [ ] recommendation.ts (3 mutations: createRecommendation, updateRecommendationStatus)
+3. [ ] evidence.ts (3 mutations: createEvidence, updateEvidence, createEvidenceBundle)
+4. [ ] lead.ts (2 mutations: createLead, updateLead)
+5. [ ] kpi.ts (2 mutations: createKPI, updateKPIValue)
+6. [ ] user.ts (2 mutations: createUser, updateUser)
+7. [ ] shock-event.ts (2 mutations: createShockEvent, updateShockEvent)
+8. [ ] client-contact.ts (2 mutations: createContact, updateContact)
+9. [ ] stage.ts (2 mutations: createStage, updateStage)
+10. [ ] deliverable.ts (2 mutations: createDeliverable, updateDeliverableReviewStatus)
+11. [ ] action.ts (3 mutations: createAction, updateAction, updateActionStatus)
+12. [ ] engagement.ts (2 mutations: createEngagement, updateEngagement)
+13. [ ] diagnosis.ts (1 mutation: diagnoseBusiness)
 
 ### Phase 3: Read Functions (workspaceId only)
 Refactor list/get functions to require authContext for consistency
@@ -134,36 +145,79 @@ Routes, jobs, internal services that call the refactored functions
 
 ---
 
-## Refactoring Checklist
+## Refactoring Checklist (Template for Each Service)
 
 For each service function:
 
 1. **Signature Change**
+   - [ ] Add import: `import type { AuthContext } from "@/lib/auth-guard";`
+   - [ ] Add import: `import { requireServiceContext } from "@/lib/service-auth";`
    - [ ] Remove `actorId: string` parameter
-   - [ ] Remove `workspaceId: string` parameter
-   - [ ] Add `authContext: AuthContext` parameter
-   - [ ] Keep `workspaceId: string` for validation if needed
+   - [ ] Keep `workspaceId: string` for validation (passed from route)
+   - [ ] Add `authContext: AuthContext` parameter (BEFORE workspaceId)
+   - [ ] Update ALL affected functions in service
 
-2. **Implementation**
-   - [ ] Add: `const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId)`
-   - [ ] Replace `actorId` → `userId`
-   - [ ] Replace `workspaceId` (param) → `validatedWorkspaceId` (extracted)
-   - [ ] Update audit events to use `userId` from context
+2. **Function Body Changes**
+   - [ ] ADD as first line: `const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);`
+   - [ ] Replace ALL `actorId` references → `userId`
+   - [ ] Replace ALL `workspaceId` (parameter) → `validatedWorkspaceId`
+   - [ ] Update audit events: `actorId: userId,` (NOT `actorId,`)
+   - [ ] Update re-evaluation triggers: `triggeredBy: userId,`
 
-3. **Database Updates**
-   - [ ] Change `createdBy: actorId` → `createdBy: userId`
-   - [ ] Change `workspaceId: workspaceId` → `workspaceId: validatedWorkspaceId`
+3. **Database Queries**
+   - [ ] Change `createdBy: actorId,` → `createdBy: userId,`
+   - [ ] Change `workspaceId: workspaceId,` → `workspaceId: validatedWorkspaceId,`
+   - [ ] Check WHERE clauses for workspaceId filters (should include `workspaceId: validatedWorkspaceId`)
 
-4. **Update Call Sites**
-   - [ ] Find all callers using grep
-   - [ ] Update route handlers to extract authContext from withAuth()
-   - [ ] Update internal service-to-service calls
-   - [ ] Construct authContext for system/background operations
+4. **Route Handler Updates**
+   - [ ] Find all routes calling this service: `grep -r "serviceName\(" src/app/api --include="*.ts" -l`
+   - [ ] For each route:
+     - [ ] Ensure it uses `const { session, policy } = await withAuth(...);` (get both)
+     - [ ] Change call from: `serviceFunc(..., session.user.id, workspaceId)` 
+     - [ ] Change call to: `serviceFunc(..., { session, policy }, workspaceId)`
 
-5. **Testing**
-   - [ ] Update test calls to pass authContext
-   - [ ] Add test for missing authContext → error
-   - [ ] Add test for spoofed userId → impossible
+5. **Test File Updates**
+   - [ ] Find: `grep -r "serviceName\(" src/services --include="*.test.ts"`
+   - [ ] For each test call site:
+     - [ ] Create mockAuthContext (see example below)
+     - [ ] Change call from: `serviceFunc(..., userId, workspaceId)`
+     - [ ] Change call to: `serviceFunc(..., authContext, workspaceId)`
+
+6. **Integration Test Updates**
+   - [ ] Update `beforeAll` fixtures to pass authContext
+   - [ ] Update all test cases that call the service
+
+7. **Verification**
+   - [ ] Run TypeScript: `npm run build` (should catch all missing updates)
+   - [ ] Run tests: `npm test` (should pass with new signatures)
+   - [ ] Verify no orphaned callers using old signature
+
+## Example: How to Create mockAuthContext in Tests
+
+```typescript
+import type { AuthContext } from "@/lib/auth-guard";
+
+const createMockAuthContext = (userId: string): AuthContext => ({
+  session: {
+    user: {
+      id: userId,
+      email: "test@example.com",
+      name: "Test User",
+      isActive: true,
+    },
+    sessionId: "session-123",
+    expiresAt: new Date(Date.now() + 86400000),
+  },
+  policy: {
+    userId,
+    roles: [{ role: "admin" as const }],
+  },
+});
+
+// Usage:
+const authContext = createMockAuthContext("real-user-id");
+const result = await createFinding(input, authContext, workspaceId);
+```
 
 ---
 
@@ -204,41 +258,125 @@ For each service function:
 
 ---
 
-## Example Refactoring: findings.ts
+## Real Example: findings.ts Refactoring (✅ COMPLETE)
 
-### Current (Lines 53-57)
+This service has been refactored. Use it as the template for other services.
+
+### Changes Made
+
+**File**: `src/services/findings.ts`
+
+**Imports Added**:
 ```typescript
-export async function createFinding(
-  input: CreateFindingInput,
-  actorId: string,
-  workspaceId: string
-): Promise<{ id: string; engagementId: string }> {
+import { requireServiceContext } from "@/lib/service-auth";
+import type { AuthContext } from "@/lib/auth-guard";
 ```
 
-### Refactored
+**createFinding - BEFORE**:
 ```typescript
-import type { AuthContext } from "@/lib/auth-guard";
-import { requireServiceContext } from "@/lib/service-auth";
-
 export async function createFinding(
   input: CreateFindingInput,
-  authContext: AuthContext,
+  actorId: string,      // ❌ Vulnerable - any caller can pass any ID
+  workspaceId: string
+): Promise<{ id: string; engagementId: string }> {
+  enforceWorkspaceId(workspaceId, "createFinding", "finding");
+  // ...
+  const finding = await db.finding.create({
+    data: {
+      // ...
+      createdBy: actorId,  // ❌ User-supplied value
+      workspaceId,         // ❌ User-supplied value
+    },
+  });
+```
+
+**createFinding - AFTER**:
+```typescript
+export async function createFinding(
+  input: CreateFindingInput,
+  authContext: AuthContext,     // ✅ Authenticated session
   workspaceId: string
 ): Promise<{ id: string; engagementId: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
+  // ...
+  const finding = await db.finding.create({
+    data: {
+      // ...
+      createdBy: userId,          // ✅ From authenticated session
+      workspaceId: validatedWorkspaceId,  // ✅ Validated
+    },
+  });
 ```
 
-### Updated Call Site
-
-**Before** (src/app/api/findings/route.ts:54):
+**updateFinding - BEFORE**:
 ```typescript
+export async function updateFinding(
+  findingId: string,
+  input: UpdateFindingInput,
+  actorId: string,      // ❌ Vulnerable
+  workspaceId: string
+): Promise<{ id: string }> {
+```
+
+**updateFinding - AFTER**:
+```typescript
+export async function updateFinding(
+  findingId: string,
+  input: UpdateFindingInput,
+  authContext: AuthContext,     // ✅ Authenticated session
+  workspaceId: string
+): Promise<{ id: string }> {
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
+```
+
+### Route Handler Updates
+
+**File**: `src/app/api/findings/route.ts` (POST handler)
+
+**BEFORE**:
+```typescript
+const { session } = await withAuth({
+  capability: CAPABILITIES.FINDING_CREATE,
+});
+// ...
 const result = await createFinding(body, session.user.id, workspaceId);
 ```
 
-**After**:
+**AFTER**:
 ```typescript
-const result = await createFinding(body, { session, policy }, workspaceId);
+const { session, policy } = await withAuth({  // ✅ Extract both
+  capability: CAPABILITIES.FINDING_CREATE,
+});
+// ...
+const result = await createFinding(body, { session, policy }, workspaceId);  // ✅ Pass authContext
 ```
+
+**File**: `src/app/api/findings/[findingId]/route.ts` (PATCH handler)
+
+Same pattern applied.
+
+### Security Improvement
+
+- ❌ **BEFORE**: Attacker can call `createFinding(input, "admin-id", workspaceId)`
+- ✅ **AFTER**: Attacker cannot pass rawactorId (type mismatch) - MUST use authContext from withAuth()
+
+---
+
+## Copy This Template for Other Services
+
+To refactor another service (e.g., recommendation.ts):
+
+1. Open `src/services/recommendation.ts`
+2. Add imports (copy from findings.ts lines 1-15)
+3. Find `createRecommendation` function (around line 100)
+4. Change signature: add `authContext: AuthContext,` before `workspaceId`
+5. Add as first line: `const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);`
+6. Replace all `actorId` → `userId` in the function
+7. Replace all `workspaceId` (param) → `validatedWorkspaceId` in function body
+8. Update callers: grep for `createRecommendation` in src/app/api
+9. Update route handlers to pass `{ session, policy }` instead of `session.user.id`
+10. Run `npm run build` to verify all callers are updated
+11. Run `npm test` to verify tests pass
 
 ---
 
