@@ -224,6 +224,7 @@ export async function updateEvidence(
     actorId: userId,
     entityType: "evidence",
     entityId: evidenceId,
+    workspaceId: validatedWorkspaceId,
     payload: data,
     visibility: "internal",
   });
@@ -677,6 +678,7 @@ export async function updateEvidenceBundle(
     actorId: userId,
     entityType: "evidence_bundle",
     entityId: bundleId,
+    workspaceId: validatedWorkspaceId,
     payload: updates,
     visibility: "internal",
   });

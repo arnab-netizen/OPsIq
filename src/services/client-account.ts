@@ -122,6 +122,7 @@ export async function updateClient(
     actorId,
     entityType: "client_account",
     entityId: clientId,
+    workspaceId: validatedWorkspaceId,
     payload: data,
     visibility: "internal",
   });
@@ -164,6 +165,7 @@ export async function archiveClient(
     actorId,
     entityType: "client_account",
     entityId: clientId,
+    workspaceId: validatedWorkspaceId,
     visibility: "internal",
   });
 

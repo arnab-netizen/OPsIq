@@ -38,6 +38,14 @@ export const POST = withRequestContext(async (request) => {
     throw new UnauthorizedError("Invalid email or password");
   }
 
+  // Get user's workspace membership for audit scope
+  const membership = await db.workspaceMembership.findFirst({
+    where: { userId: user.id, isActive: true },
+    orderBy: { addedAt: "asc" },
+  });
+
+  const workspaceId = membership?.workspaceId;
+
   // Password verification using bcrypt
   const passwordValid = await bcrypt.compare(password, user.hashedPassword);
 
@@ -45,6 +53,7 @@ export const POST = withRequestContext(async (request) => {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
       actorId: user.id,
+      workspaceId,
       payload: { reason: "invalid_password" },
       visibility: "internal",
     });
@@ -69,6 +78,7 @@ export const POST = withRequestContext(async (request) => {
     actorId: user.id,
     entityType: "session",
     entityId: session.id,
+    workspaceId,
     visibility: "internal",
   });
 

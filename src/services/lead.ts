@@ -153,6 +153,7 @@ export async function updateLead(
     actorId: userId,
     entityType: "lead_record",
     entityId: leadId,
+    workspaceId: validatedWorkspaceId,
     payload: data,
     visibility: "internal",
   });

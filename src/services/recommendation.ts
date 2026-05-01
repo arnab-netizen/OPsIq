@@ -754,6 +754,7 @@ export async function updateRecommendation(
     actorId: userId,
     entityType: "recommendation",
     entityId: recommendationId,
+    workspaceId: validatedWorkspaceId,
     payload: updates,
     visibility: "internal",
   });

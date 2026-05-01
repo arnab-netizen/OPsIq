@@ -214,16 +214,16 @@ export async function updateEngagement(
 
     // Enforce health check for critical transitions
     if (input.status === "completed" || input.status === "archived") {
-      const canProceed = await enforceEngagementHealth(engagementId, input.status);
+      const canProceed = await enforceEngagementHealth(engagementId, input.status, validatedWorkspaceId);
       if (!canProceed) {
-        const health = await computeEngagementHealth(engagementId);
+        const health = await computeEngagementHealth(engagementId, validatedWorkspaceId);
         throw new ValidationError(
           `Cannot transition engagement to ${input.status} due to critical issues: ${health.reasons.join("; ")}`
         );
       }
 
       // Emit health-related audit events
-      const health = await computeEngagementHealth(engagementId);
+      const health = await computeEngagementHealth(engagementId, validatedWorkspaceId);
       if (health.status === "blocked") {
         await emitAuditEvent({
           eventName: AUDIT_EVENTS.ENGAGEMENT_BLOCKED,
@@ -295,6 +295,7 @@ export async function updateEngagement(
     actorId,
     entityType: "engagement",
     entityId: engagementId,
+    workspaceId: validatedWorkspaceId,
     payload: data,
     visibility: "internal",
   });

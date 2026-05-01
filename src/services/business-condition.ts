@@ -5,6 +5,7 @@ import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import type { AuthContext } from "@/lib/auth-guard";
 import {
   BUSINESS_CONDITION_RATINGS,
@@ -198,24 +199,28 @@ export async function assessCondition(
   return { id: result.result.id };
 }
 
-export async function getConditionHistory(engagementId: string, workspaceId?: string) {
+export async function getConditionHistory(engagementId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "getConditionHistory", "businessConditionProfile");
+
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId, ...(workspaceId ? { workspaceId } : {}) },
+    where: { id: engagementId, workspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
   return db.businessConditionProfile.findMany({
-    where: { engagementId, ...(workspaceId ? { workspaceId } : {}) },
+    where: { engagementId, workspaceId },
     orderBy: { createdAt: "desc" },
   });
 }
 
-export async function getCurrentCondition(engagementId: string, workspaceId?: string) {
+export async function getCurrentCondition(engagementId: string, workspaceId: string) {
+  enforceWorkspaceId(workspaceId, "getCurrentCondition", "businessConditionProfile");
+
   const profile = await db.businessConditionProfile.findFirst({
     where: {
       engagementId,
       isCurrent: true,
-      ...(workspaceId ? { workspaceId } : {}),
+      workspaceId,
     },
     orderBy: { createdAt: "desc" },
   });

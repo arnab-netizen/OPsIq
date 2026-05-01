@@ -239,16 +239,14 @@ export async function getActionsByState(state: ActionLifecycleState): Promise<an
 
 export async function countActionsByEngagementState(
   engagementId: string,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<Record<ActionLifecycleState, number>> {
   // Verify engagement exists and belongs to workspace
-  if (workspaceId) {
-    const engagement = await db.engagement.findUnique({
-      where: { id: engagementId, workspaceId },
-    });
-    if (!engagement) {
-      throw new Error("Engagement not found");
-    }
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId, workspaceId },
+  });
+  if (!engagement) {
+    throw new Error("Engagement not found");
   }
 
   const states: ActionLifecycleState[] = [
@@ -274,7 +272,7 @@ export async function countActionsByEngagementState(
       where: {
         engagementId,
         status: state,
-        ...(workspaceId ? { engagement: { workspaceId } } : {}),
+        workspaceId,
       },
     });
     counts[state] = count;

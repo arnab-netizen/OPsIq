@@ -134,6 +134,7 @@ export async function updateContact(
     actorId,
     entityType: "client_contact",
     entityId: contactId,
+    workspaceId: validatedWorkspaceId,
     payload: data,
     visibility: "internal",
   });

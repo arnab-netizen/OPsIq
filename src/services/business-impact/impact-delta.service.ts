@@ -76,16 +76,16 @@ export async function calculateImpactDelta(
   engagementId: string,
   actionId: string,
   actorId: string,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<ImpactDeltaResult> {
   // Fetch action and engagement
   const [action, engagement, currentBusinessImpact] = await Promise.all([
     db.action.findUnique({
-      where: { id: actionId },
+      where: { id: actionId, workspaceId },
       include: { engagement: true },
     }),
     db.engagement.findUnique({
-      where: { id: engagementId, ...(workspaceId ? { workspaceId } : {}) },
+      where: { id: engagementId, workspaceId },
     }),
     generateBusinessImpact(engagementId, actorId),
   ]);
@@ -94,7 +94,7 @@ export async function calculateImpactDelta(
     throw new NotFoundError("Action", actionId);
   }
 
-  if (!action.engagement || (workspaceId && action.engagement.workspaceId !== workspaceId)) {
+  if (!action.engagement || action.engagement.workspaceId !== workspaceId) {
     throw new NotFoundError("Action", actionId);
   }
 

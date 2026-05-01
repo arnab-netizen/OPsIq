@@ -210,7 +210,7 @@ describe("business-condition service", () => {
         ]),
       };
 
-      const result = await bcService.getConditionHistory(mockEngagementId);
+      const result = await bcService.getConditionHistory(mockEngagementId, mockWorkspaceId);
 
       expect(result).toHaveLength(2);
     });
@@ -226,7 +226,7 @@ describe("business-condition service", () => {
         }),
       };
 
-      const result = await bcService.getCurrentCondition(mockEngagementId);
+      const result = await bcService.getCurrentCondition(mockEngagementId, mockWorkspaceId);
 
       expect(result?.id).toBe(mockProfileId);
     });
@@ -237,7 +237,7 @@ describe("business-condition service", () => {
         findFirst: vi.fn().mockResolvedValue(null),
       };
 
-      const result = await bcService.getCurrentCondition(mockEngagementId);
+      const result = await bcService.getCurrentCondition(mockEngagementId, mockWorkspaceId);
 
       expect(result).toBeNull();
     });

@@ -59,7 +59,7 @@ export const GET = withRequestContext(async (request, context) => {
 
   await assertEngagementAccess(session.user.id, engagementId);
 
-  const history = await getConditionHistory(engagementId);
+  const history = await getConditionHistory(engagementId, workspaceId);
   return Response.json({ profiles: history });
 });
 

@@ -133,6 +133,7 @@ export async function updateUser(
     actorId,
     entityType: "user",
     entityId: userId,
+    workspaceId: validatedWorkspaceId,
     payload: {
       ...(input.name !== undefined && { name: input.name }),
       ...(input.email !== undefined && { email: input.email }),

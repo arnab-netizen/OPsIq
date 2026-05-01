@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
 // ─── Engagement Health Status ──────────────────────────────────────────────────
 
@@ -21,10 +22,12 @@ export interface EngagementHealth {
 
 // ─── Health Computation ────────────────────────────────────────────────────────
 
-export async function computeEngagementHealth(engagementId: string, workspaceId?: string): Promise<EngagementHealth> {
+export async function computeEngagementHealth(engagementId: string, workspaceId: string): Promise<EngagementHealth> {
+  enforceWorkspaceId(workspaceId, "computeEngagementHealth", "engagement");
+
   // Fetch engagement
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId, ...(workspaceId ? { workspaceId } : {}) },
+    where: { id: engagementId, workspaceId },
   });
 
   if (!engagement) {
@@ -36,13 +39,13 @@ export async function computeEngagementHealth(engagementId: string, workspaceId?
     db.finding.findMany({
       where: {
         engagementId,
-        ...(workspaceId ? { engagement: { workspaceId } } : {}),
+        workspaceId,
       },
     }),
     db.action.findMany({
       where: {
         engagementId,
-        ...(workspaceId ? { engagement: { workspaceId } } : {}),
+        workspaceId,
       },
     }),
   ]);
@@ -148,7 +151,7 @@ export async function computeEngagementHealth(engagementId: string, workspaceId?
 export async function enforceEngagementHealth(
   engagementId: string,
   desiredStatus: string,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<boolean> {
   const health = await computeEngagementHealth(engagementId, workspaceId);
 
@@ -170,7 +173,7 @@ export async function enforceEngagementHealth(
 export async function checkEngagementHealthChange(
   engagementId: string,
   previousHealth: EngagementHealth | null,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<{
   changed: boolean;
   statusTransition?: { from: EngagementHealthStatus; to: EngagementHealthStatus };
@@ -207,14 +210,17 @@ export async function checkEngagementHealthChange(
 // ─── Health Snapshot for Reporting ────────────────────────────────────────────
 
 export async function getEngagementHealthSnapshot(
-  engagementId: string
+  engagementId: string,
+  workspaceId: string
 ): Promise<{
   health: EngagementHealth;
   timestamp: string;
   engagementCode: string;
 }> {
+  enforceWorkspaceId(workspaceId, "getEngagementHealthSnapshot", "engagement");
+
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     select: { code: true },
   });
 
@@ -222,7 +228,7 @@ export async function getEngagementHealthSnapshot(
     throw new NotFoundError("Engagement", engagementId);
   }
 
-  const health = await computeEngagementHealth(engagementId);
+  const health = await computeEngagementHealth(engagementId, workspaceId);
 
   return {
     health,

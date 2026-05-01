@@ -76,7 +76,7 @@ describe("ImpactDeltaService", () => {
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
 
-    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1");
+    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
 
     expect(delta.ifCompleted.impactLevel).toBe("medium"); // high → medium
     const severityOrder = ["low", "medium", "high", "critical", "existential"];
@@ -90,7 +90,7 @@ describe("ImpactDeltaService", () => {
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
 
-    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1");
+    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
 
     expect(delta.ifCompleted.estimatedLossReduction).toBeDefined();
     expect(delta.ifCompleted.estimatedLossReduction).toBeGreaterThan(0);
@@ -102,7 +102,7 @@ describe("ImpactDeltaService", () => {
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
 
-    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1");
+    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
 
     expect(delta.ifCompleted.recoveryProbability).toBe("high"); // medium → high
   });
@@ -112,7 +112,7 @@ describe("ImpactDeltaService", () => {
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
 
-    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1");
+    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
 
     expect(delta.ifDelayed.estimatedLoss).toBeGreaterThanOrEqual(delta.current.estimatedLoss!);
     expect(delta.ifDelayed.additionalLoss).toBeGreaterThanOrEqual(0);
@@ -123,7 +123,7 @@ describe("ImpactDeltaService", () => {
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
 
-    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1");
+    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
 
     expect(delta.ifDelayed.additionalLoss).toBeDefined();
     expect(delta.ifDelayed.delayPenaltyDays).toBeGreaterThan(0);
@@ -134,7 +134,7 @@ describe("ImpactDeltaService", () => {
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
 
-    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1");
+    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
 
     expect(delta.ifIgnored.impactLevel).toBe("existential"); // high → critical → existential
     expect(delta.ifIgnored.recoveryProbability).toBe("low");
@@ -146,8 +146,8 @@ describe("ImpactDeltaService", () => {
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
 
-    const delta1 = await calculateImpactDelta("eng-123", "action-123", "user-1");
-    const delta2 = await calculateImpactDelta("eng-123", "action-123", "user-1");
+    const delta1 = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
+    const delta2 = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
 
     expect(delta1.ifCompleted.impactLevel).toBe(delta2.ifCompleted.impactLevel);
     expect(delta1.ifCompleted.estimatedLossReduction).toBe(
@@ -181,7 +181,7 @@ describe("ImpactDeltaService", () => {
       topImpactDrivers: [],
     });
 
-    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1");
+    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
 
     expect(delta.ifCompleted.estimatedLossReduction).toBeNull();
     expect(delta.ifDelayed.additionalLoss).toBeNull();
@@ -195,7 +195,7 @@ describe("ImpactDeltaService", () => {
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
 
-    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1");
+    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
 
     expect(delta.actionTitle).toBe("Critical Security Fix");
   });
@@ -205,7 +205,7 @@ describe("ImpactDeltaService", () => {
     mockDb.action.findUnique.mockResolvedValue(mockAction);
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
 
-    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1");
+    const delta = await calculateImpactDelta("eng-123", "action-123", "user-1", "workspace-123");
 
     expect(delta.current.impactLevel).toBe("high");
     expect(delta.current.estimatedLoss).toBe(100000);

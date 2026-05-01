@@ -180,7 +180,7 @@ export async function executeWorkflow(
 
   // 6. Compute engagement health
   logger.info("Computing engagement health", { engagementId: engagement.id });
-  const health = await computeEngagementHealth(engagement.id);
+  const health = await computeEngagementHealth(engagement.id, workspaceId);
 
   // 7. Build output
   const blockers = health.reasons;
