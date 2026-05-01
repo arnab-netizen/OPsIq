@@ -88,6 +88,7 @@ export async function getExecutionSummary(
   // Fetch execution-related audit events
   const executionEvents = await db.auditEvent.findMany({
     where: {
+      workspaceId,
       entityId: decisionId,
       eventName: {
         in: [

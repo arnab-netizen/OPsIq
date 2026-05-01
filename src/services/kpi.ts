@@ -57,6 +57,7 @@ export async function createKPI(
             actorId: userId,
             entityType: "kpi",
             entityId: kpi.id,
+            workspaceId: validatedWorkspaceId,
             payload: {
               engagementId: input.engagementId,
               name: input.name,
@@ -102,6 +103,7 @@ export async function createKPI(
     actorId: userId,
     entityType: "kpi",
     entityId: kpi.id,
+    workspaceId: validatedWorkspaceId,
     payload: {
       engagementId: input.engagementId,
       name: input.name,
@@ -117,12 +119,16 @@ export async function createKPI(
   return kpi;
 }
 
-export async function getKPIsForEngagement(engagementId: string, userId: string) {
-  // Check engagement access
-  await assertEngagementAccess(userId, engagementId);
+export async function getKPIsForEngagement(engagementId: string, workspaceId: string) {
+  // Verify engagement belongs to workspace
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId, workspaceId },
+    select: { id: true },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
   return db.kPI.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -210,6 +216,7 @@ export async function updateKPIValue(
                 actorId: userId,
                 entityType: "kpi",
                 entityId: kpiId,
+                workspaceId: validatedWorkspaceId,
                 payload: {
                   previousValue,
                   currentValue: newValue,
@@ -225,6 +232,7 @@ export async function updateKPIValue(
             actorId: userId,
             entityType: "kpi",
             entityId: kpiId,
+            workspaceId: validatedWorkspaceId,
             payload: {
               currentValue: input.currentValue,
               deteriorated,
@@ -298,6 +306,7 @@ export async function updateKPIValue(
         actorId: userId,
         entityType: "kpi",
         entityId: kpiId,
+        workspaceId: validatedWorkspaceId,
         payload: {
           previousValue,
           currentValue: newValue,
@@ -313,6 +322,7 @@ export async function updateKPIValue(
     actorId: userId,
     entityType: "kpi",
     entityId: kpiId,
+    workspaceId: validatedWorkspaceId,
     payload: {
       currentValue: input.currentValue,
       deteriorated,

@@ -9,49 +9,50 @@ const logger = createEventLogger("retention_cleanup", "system");
 
 export async function cleanupOldRecords(): Promise<void> {
   try {
-    const now = new Date();
+    // Fetch all workspaces for scoped cleanup
+    const workspaces = await db.workspace.findMany({
+      select: { id: true },
+    }).catch(() => []);
 
-    // Delete operator items older than TTL
+    const now = new Date();
+    let totalDeletedOperatorItems = 0;
+    let totalDeletedAuditEvents = 0;
+
+    // Delete operator items older than TTL (per workspace)
     const operatorCutoff = new Date(now);
     operatorCutoff.setDate(operatorCutoff.getDate() - PRODUCTION_CONFIG.retention.operatorItemTtlDays);
 
-    const deletedOperatorItems = await db.operatorItem.deleteMany({
-      where: {
-        createdAt: { lt: operatorCutoff },
-        status: { in: ["done", "failed", "blocked"] }, // Don't delete in-progress items
-      },
-    }).catch(() => ({ count: 0 }));
-
-    if (deletedOperatorItems.count > 0) {
-      logger.success({ message: `Deleted ${deletedOperatorItems.count} expired operator items` });
+    for (const workspace of workspaces) {
+      const deletedOperatorItems = await db.operatorItem.deleteMany({
+        where: {
+          workspaceId: workspace.id,
+          createdAt: { lt: operatorCutoff },
+          status: { in: ["done", "failed", "blocked"] }, // Don't delete in-progress items
+        },
+      }).catch(() => ({ count: 0 }));
+      totalDeletedOperatorItems += deletedOperatorItems.count;
     }
 
-    // Delete audit events older than TTL
+    if (totalDeletedOperatorItems > 0) {
+      logger.success({ message: `Deleted ${totalDeletedOperatorItems} expired operator items` });
+    }
+
+    // Delete audit events older than TTL (per workspace)
     const auditCutoff = new Date(now);
     auditCutoff.setDate(auditCutoff.getDate() - PRODUCTION_CONFIG.retention.auditEventTtlDays);
 
-    const deletedAuditEvents = await db.auditLog.deleteMany({
-      where: {
-        createdAt: { lt: auditCutoff },
-      },
-    }).catch(() => ({ count: 0 }));
-
-    if (deletedAuditEvents.count > 0) {
-      logger.success({ message: `Deleted ${deletedAuditEvents.count} expired audit events` });
+    for (const workspace of workspaces) {
+      const deletedAuditEvents = await db.auditEvent.deleteMany({
+        where: {
+          workspaceId: workspace.id,
+          createdAt: { lt: auditCutoff },
+        },
+      }).catch(() => ({ count: 0 }));
+      totalDeletedAuditEvents += deletedAuditEvents.count;
     }
 
-    // Delete decision lifecycle events older than TTL
-    const lifecycleCutoff = new Date(now);
-    lifecycleCutoff.setDate(lifecycleCutoff.getDate() - PRODUCTION_CONFIG.retention.decisionLifecycleTtlDays);
-
-    const deletedLifecycleEvents = await db.decisionLifecycle.deleteMany({
-      where: {
-        occurredAt: { lt: lifecycleCutoff },
-      },
-    }).catch(() => ({ count: 0 }));
-
-    if (deletedLifecycleEvents.count > 0) {
-      logger.success({ message: `Deleted ${deletedLifecycleEvents.count} expired lifecycle events` });
+    if (totalDeletedAuditEvents > 0) {
+      logger.success({ message: `Deleted ${totalDeletedAuditEvents} expired audit events` });
     }
   } catch (error) {
     logger.error(`Retention cleanup failed: ${error instanceof Error ? error.message : String(error)}`);

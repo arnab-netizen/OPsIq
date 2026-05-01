@@ -170,9 +170,9 @@ function determineReEvaluationTargets(
   }
 }
 
-async function evaluateBusinessConditionImpact(engagementId: string, workspaceId?: string) {
+async function evaluateBusinessConditionImpact(engagementId: string, workspaceId: string) {
   const current = await db.businessConditionProfile.findFirst({
-    where: { engagementId, isCurrent: true, ...(workspaceId ? { workspaceId } : {}) },
+    where: { engagementId, workspaceId, isCurrent: true },
   });
 
   if (!current) {
@@ -198,7 +198,7 @@ async function evaluateBusinessConditionImpact(engagementId: string, workspaceId
   const kpis = await db.kPI.findMany({
     where: {
       engagementId,
-      ...(workspaceId ? { engagement: { workspaceId } } : {}),
+      workspaceId,
     },
     select: { target: true, currentValue: true, direction: true },
   });
@@ -249,9 +249,9 @@ async function evaluateBusinessConditionImpact(engagementId: string, workspaceId
   };
 }
 
-async function evaluateInterventionModeImpact(engagementId: string, workspaceId?: string) {
+async function evaluateInterventionModeImpact(engagementId: string, workspaceId: string) {
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId, ...(workspaceId ? { workspaceId } : {}) },
+    where: { id: engagementId, workspaceId },
   });
   if (!engagement) {
     return {
@@ -262,7 +262,7 @@ async function evaluateInterventionModeImpact(engagementId: string, workspaceId?
 
   const factors: string[] = [];
   const condition = await db.businessConditionProfile.findFirst({
-    where: { engagementId, isCurrent: true, ...(workspaceId ? { workspaceId } : {}) },
+    where: { engagementId, workspaceId, isCurrent: true },
   });
 
   if (!condition) {
@@ -302,12 +302,12 @@ async function evaluateInterventionModeImpact(engagementId: string, workspaceId?
   };
 }
 
-async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId?: string) {
+async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId: string) {
   // Determine phase based on findings and actions (deterministic lifecycle rules)
   const findings = await db.finding.findMany({
     where: {
       engagementId,
-      ...(workspaceId ? { engagement: { workspaceId } } : {}),
+      workspaceId,
     },
     select: { id: true },
   });
@@ -315,7 +315,7 @@ async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId
   const actions = await db.action.findMany({
     where: {
       engagementId,
-      ...(workspaceId ? { engagement: { workspaceId } } : {}),
+      workspaceId,
     },
     select: { id: true, status: true },
   });
@@ -394,13 +394,14 @@ function evaluateReviewCadenceImpact(
 
 async function evaluateHealthStatusImpact(
   conditionImpact: Awaited<ReturnType<typeof evaluateBusinessConditionImpact>>,
-  engagementId: string
+  engagementId: string,
+  workspaceId: string
 ) {
   let healthScore = 100;
   let recommendedStatus: "healthy" | "at_risk" | "critical" | "unknown" = "healthy";
 
   const condition = await db.businessConditionProfile.findFirst({
-    where: { engagementId, isCurrent: true },
+    where: { engagementId, workspaceId, isCurrent: true },
   });
 
   if (!condition) {
@@ -568,7 +569,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       };
 
   const healthStatusImpact = targets.healthStatus
-    ? await evaluateHealthStatusImpact(businessConditionImpact, event.engagementId)
+    ? await evaluateHealthStatusImpact(businessConditionImpact, event.engagementId, workspaceId)
     : {
         healthScore: 50,
         recommendedStatus: "unknown" as const,
@@ -723,6 +724,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       actorId: event.triggeredBy,
       entityType: event.entityType,
       entityId: event.entityId,
+      workspaceId,
       correlationId: event.correlationId,
       payload: auditPayload,
       visibility: "internal",

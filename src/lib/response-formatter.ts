@@ -59,6 +59,7 @@ export function createListResponse<T>(
 }
 
 export interface AuditQueryFilter {
+  workspaceId: string;
   engagementId?: string;
   entityType?: string;
   entityId?: string;
@@ -86,7 +87,9 @@ export async function queryAuditEvents(
   const limit = Math.min(filters.limit || 50, 200);
   const offset = filters.offset || 0;
 
-  const where: any = {};
+  const where: any = {
+    workspaceId: filters.workspaceId,
+  };
 
   if (filters.engagementId) {
     where.correlationId = { contains: filters.engagementId };

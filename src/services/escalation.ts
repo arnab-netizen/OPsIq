@@ -46,6 +46,7 @@ export async function detectHighPriorityOverdueActions(
       actorId,
       entityType: "escalation",
       entityId: engagementId,
+      workspaceId,
       payload: {
         engagementId,
         actionCount: criticalOverdueActions.length,
@@ -69,7 +70,8 @@ export async function detectHighPriorityOverdueActions(
 
 export async function detectKPIDeteriorationPattern(
   engagementId: string,
-  actorId: string
+  actorId: string,
+  workspaceId: string
 ): Promise<EscalationAlert | null> {
   const kpis = await db.kPI.findMany({
     where: { engagementId },
@@ -121,6 +123,7 @@ export async function detectKPIDeteriorationPattern(
       actorId,
       entityType: "escalation",
       entityId: engagementId,
+      workspaceId,
       payload: {
         engagementId,
         kpiCount: deterioratedKPIs.length,
@@ -171,7 +174,8 @@ export async function checkEngagementEscalations(
 
   const kpiPatternAlert = await detectKPIDeteriorationPattern(
     engagementId,
-    actorId
+    actorId,
+    wsId
   );
   if (kpiPatternAlert) {
     alerts.push(kpiPatternAlert);

@@ -793,6 +793,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     actorId,
     entityType: "Engagement",
     entityId: engagement.id,
+    workspaceId: validatedWorkspaceId,
     payload: {
       businessProblem: input,
       severity,

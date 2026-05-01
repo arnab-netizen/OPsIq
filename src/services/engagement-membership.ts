@@ -118,11 +118,18 @@ export async function addMember(
     }
   );
 
+  // Get engagement for workspace context
+  const engagement = await db.engagement.findUnique({
+    where: { id: input.engagementId },
+    select: { workspaceId: true },
+  });
+
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ENGAGEMENT_MEMBER_ADDED,
     actorId,
     entityType: "engagement_membership",
     entityId: result.result.id,
+    workspaceId: engagement?.workspaceId,
     payload: {
       userId: input.userId,
       engagementId: input.engagementId,
@@ -196,11 +203,18 @@ export async function removeMember(
     }
   );
 
+  // Get engagement for workspace context
+  const engagement = await db.engagement.findUnique({
+    where: { id: input.engagementId },
+    select: { workspaceId: true },
+  });
+
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ENGAGEMENT_MEMBER_REMOVED,
     actorId,
     entityType: "engagement_membership",
     entityId: membership.id,
+    workspaceId: engagement?.workspaceId,
     payload: {
       userId: input.userId,
       engagementId: input.engagementId,

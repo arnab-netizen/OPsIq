@@ -144,6 +144,7 @@ export async function generateReviewCycle(
     actorId,
     entityType: "ReviewCycle",
     entityId: cycle.id,
+    workspaceId,
     payload: {
       engagementId,
       status: cycleStatus,
@@ -171,6 +172,7 @@ export async function generateReviewCycle(
       actorId,
       entityType: "ReviewCycle",
       entityId: cycle.id,
+      workspaceId,
       payload: {
         engagementId,
         status: cycleStatus,
@@ -202,8 +204,17 @@ export async function listReviewCyclesForEngagement(
 
 export async function getLatestReviewCycle(
   engagementId: string,
+  workspaceId: string,
   visibility?: "internal" | "all"
 ): Promise<Omit<ReviewCycle, 'visibilityStatus'> | null> {
+  enforceWorkspaceId(workspaceId, "getLatestReviewCycle", "review_cycle");
+
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId, workspaceId },
+    select: { id: true },
+  });
+  if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
   // Note: ReviewCycle model does not exist in schema - returning null
   return null;
 }

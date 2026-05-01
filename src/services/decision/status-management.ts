@@ -253,6 +253,7 @@ export async function getDecisionTimeline(
   // Fetch all status-related audit events
   const statusEvents = await db.auditEvent.findMany({
     where: {
+      workspaceId,
       entityId: decisionId,
       eventName: {
         in: [

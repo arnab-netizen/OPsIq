@@ -193,11 +193,12 @@ function calculateRiskLevel(
 // ─── Report Generation ─────────────────────────────────────────────────────
 
 export async function generateEngagementReport(
-  engagementId: string
+  engagementId: string,
+  workspaceId: string
 ): Promise<EngagementReport> {
   // Fetch engagement with all required data in one transaction-like operation
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     include: {
       client: { select: { id: true, name: true } },
     },
@@ -211,23 +212,23 @@ export async function generateEngagementReport(
   const [currentCondition, findings, recommendations, actions, kpis] =
     await Promise.all([
       db.businessConditionProfile.findFirst({
-        where: { engagementId, isCurrent: true },
+        where: { engagementId, workspaceId, isCurrent: true },
         orderBy: { createdAt: "desc" },
       }),
       db.finding.findMany({
-        where: { engagementId },
+        where: { engagementId, workspaceId },
         orderBy: [{ severity: "desc" }, { createdAt: "desc" }],
       }),
       db.recommendation.findMany({
-        where: { engagementId },
+        where: { engagementId, workspaceId },
         orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
       }),
       db.action.findMany({
-        where: { engagementId },
+        where: { engagementId, workspaceId },
         orderBy: [{ dueDate: "asc" }, { priority: "desc" }],
       }),
       db.kPI.findMany({
-        where: { engagementId },
+        where: { engagementId, workspaceId },
         orderBy: { createdAt: "asc" },
       }),
     ]);
@@ -494,12 +495,22 @@ function calculateReviewStatus(
 
 export async function generateAndStoreReport(
   engagementId: string,
+  workspaceId: string,
   actorId: string,
   type: "report" | "summary" | "alert" = "report",
   visibility: "internal" | "client_visible" = "internal"
 ): Promise<{ id: string; report: EngagementReport }> {
+  // Verify engagement belongs to workspace
+  const engagement = await db.engagement.findUnique({
+    where: { id: engagementId, workspaceId },
+    select: { id: true },
+  });
+  if (!engagement) {
+    throw new NotFoundError("Engagement", engagementId);
+  }
+
   // Generate the report
-  const report = await generateEngagementReport(engagementId);
+  const report = await generateEngagementReport(engagementId, workspaceId);
 
   // Use engagement ID as the deliverable ID for now
   const deliverableId = `report-${engagementId}-${Date.now()}`;
@@ -510,6 +521,7 @@ export async function generateAndStoreReport(
     actorId,
     entityType: "deliverable",
     entityId: deliverableId,
+    workspaceId,
     payload: {
       engagementId,
       deliverableType: type,
@@ -540,10 +552,12 @@ export async function getDeliverableReport(
 
 export async function listEngagementDeliverables(
   engagementId: string,
+  workspaceId: string,
   options?: { limit?: number; offset?: number }
 ) {
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
+    select: { id: true },
   });
   if (!engagement) {
     throw new NotFoundError("Engagement", engagementId);
@@ -554,7 +568,7 @@ export async function listEngagementDeliverables(
 
   const [deliverables, total] = await Promise.all([
     db.deliverable.findMany({
-      where: { engagementId },
+      where: { engagementId, workspaceId },
       select: {
         id: true,
         title: true,
@@ -566,7 +580,7 @@ export async function listEngagementDeliverables(
       take: limit,
       skip: offset,
     }),
-    db.deliverable.count({ where: { engagementId } }),
+    db.deliverable.count({ where: { engagementId, workspaceId } }),
   ]);
 
   return { deliverables, total, limit, offset };

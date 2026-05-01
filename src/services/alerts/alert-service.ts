@@ -86,8 +86,17 @@ export async function markAlertAsRead(
   workspaceId: string
 ): Promise<Alert> {
   try {
-    const alert = await db.alert.update({
+    // Verify alert exists and belongs to workspace
+    const existingAlert = await db.alert.findUnique({
       where: { id: alertId },
+    });
+
+    if (!existingAlert || existingAlert.workspaceId !== workspaceId) {
+      throw new Error("Alert not found");
+    }
+
+    const alert = await db.alert.update({
+      where: { id: alertId, workspaceId },
       data: {
         isRead: true,
         readAt: new Date(),
