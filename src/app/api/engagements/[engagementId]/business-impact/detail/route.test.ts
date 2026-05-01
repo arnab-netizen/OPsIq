@@ -98,7 +98,12 @@ describe("BusinessImpactDetailRoute", () => {
       params: Promise.resolve({ engagementId: validId }),
     };
 
-    const response = await GET(new Request("http://localhost"), context as any);
+    const mockRequest = new Request("http://localhost/api/test");
+    const headers = new Headers(mockRequest.headers);
+    headers.set("x-workspace-id", "workspace-123");
+
+    const requestWithHeaders = new Request(mockRequest, { headers });
+    const response = await GET(requestWithHeaders as any, context as any);
     const data = await response.json();
 
     expect(data.success).toBe(true);
@@ -133,7 +138,12 @@ describe("BusinessImpactDetailRoute", () => {
       params: Promise.resolve({ engagementId: validId }),
     };
 
-    const response = await GET(new Request("http://localhost"), context as any);
+    const mockRequest = new Request("http://localhost/api/test");
+    const headers = new Headers(mockRequest.headers);
+    headers.set("x-workspace-id", "workspace-123");
+    const requestWithHeaders = new Request(mockRequest, { headers });
+
+    const response = await GET(requestWithHeaders as any, context as any);
     const data = await response.json();
 
     expect(Array.isArray(data.data.reasoning)).toBe(true);
@@ -163,7 +173,12 @@ describe("BusinessImpactDetailRoute", () => {
       params: Promise.resolve({ engagementId: validId }),
     };
 
-    const response = await GET(new Request("http://localhost"), context as any);
+    const mockRequest = new Request("http://localhost/api/test");
+    const headers = new Headers(mockRequest.headers);
+    headers.set("x-workspace-id", "workspace-123");
+    const requestWithHeaders = new Request(mockRequest, { headers });
+
+    const response = await GET(requestWithHeaders as any, context as any);
     const data = await response.json();
 
     expect(Array.isArray(data.data.actionsAffectingImpact)).toBe(true);
@@ -183,7 +198,12 @@ describe("BusinessImpactDetailRoute", () => {
       params: Promise.resolve({ engagementId: validId }),
     };
 
-    const response = await GET(new Request("http://localhost"), context as any);
+    const mockRequest = new Request("http://localhost/api/test");
+    const headers = new Headers(mockRequest.headers);
+    headers.set("x-workspace-id", "workspace-123");
+    const requestWithHeaders = new Request(mockRequest, { headers });
+
+    const response = await GET(requestWithHeaders as any, context as any);
     const data = await response.json();
 
     expect(Array.isArray(data.data.financialExplanation)).toBe(true);
@@ -205,7 +225,12 @@ describe("BusinessImpactDetailRoute", () => {
       params: Promise.resolve({ engagementId: validId }),
     };
 
-    const response = await GET(new Request("http://localhost"), context as any);
+    const mockRequest = new Request("http://localhost/api/test");
+    const headers = new Headers(mockRequest.headers);
+    headers.set("x-workspace-id", "workspace-123");
+    const requestWithHeaders = new Request(mockRequest, { headers });
+
+    const response = await GET(requestWithHeaders as any, context as any);
     const data = await response.json();
 
     expect(Array.isArray(data.data.drivers)).toBe(true);
