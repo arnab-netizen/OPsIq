@@ -1,5 +1,6 @@
 import { withRequestContext } from "@/lib/api-handler";
 import { withAuth } from "@/lib/auth-guard";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   getEvidenceBundleById,
@@ -9,16 +10,32 @@ import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { updateEvidenceBundleSchema } from "@/domain/validation/evidence";
 import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import type { NextRequest } from "next/server";
 
 export const GET = withRequestContext(async (request, context) => {
   try {
-    const workspaceId = request.headers.get("x-workspace-id") || "";
-    const { bundleId } = await context.params;
-    parseOrThrow(uuidSchema, bundleId);
-
+    // Authenticate + authorize (fail-closed)
     await withAuth({
       capability: CAPABILITIES.EVIDENCE_VIEW,
     });
+
+    // Validate workspace membership (fail-closed)
+    const nextRequest = request as NextRequest;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    if (!workspaceId) {
+      return Response.json(
+        { error: "Workspace ID required (x-workspace-id header)" },
+        { status: 400 }
+      );
+    }
+
+    const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+    if (!membership) {
+      return Response.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const { bundleId } = await context.params;
+    parseOrThrow(uuidSchema, bundleId);
 
     const result = await getEvidenceBundleById(bundleId, workspaceId);
 
@@ -31,13 +48,28 @@ export const GET = withRequestContext(async (request, context) => {
 
 export const PUT = withRequestContext(async (request, context) => {
   try {
-    const workspaceId = request.headers.get("x-workspace-id") || "";
-    const { bundleId } = await context.params;
-    parseOrThrow(uuidSchema, bundleId);
-
+    // Authenticate + authorize (fail-closed)
     const { session } = await withAuth({
       capability: CAPABILITIES.EVIDENCE_SUBMIT,
     });
+
+    // Validate workspace membership (fail-closed)
+    const nextRequest = request as NextRequest;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    if (!workspaceId) {
+      return Response.json(
+        { error: "Workspace ID required (x-workspace-id header)" },
+        { status: 400 }
+      );
+    }
+
+    const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+    if (!membership) {
+      return Response.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const { bundleId } = await context.params;
+    parseOrThrow(uuidSchema, bundleId);
 
     const body = await parseRequestBody(request, updateEvidenceBundleSchema);
 
