@@ -35,8 +35,7 @@ function createMockAuthContext(userId: string = mockUserId): AuthContext {
     },
     policy: {
       userId,
-      roles: ["admin"],
-      scopes: [],
+      roles: [{ role: "admin" as const }],
     },
   };
 }

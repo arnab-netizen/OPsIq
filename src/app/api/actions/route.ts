@@ -52,7 +52,7 @@ export const GET = withRequestContext(async (request) => {
 
 export const POST = withRequestContext(async (request) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.ACTION_CREATE,
     internalOnly: true,
   });
@@ -73,7 +73,7 @@ export const POST = withRequestContext(async (request) => {
   }
 
   const body = await parseRequestBody(request, createActionSchema);
-  const result = await createAction(body, session.user.id, workspaceId);
+  const result = await createAction(body, { session, policy }, workspaceId);
 
   return Response.json(result, { status: 201 });
 });

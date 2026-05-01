@@ -13,6 +13,7 @@ import { FinancialEngine } from "@/engines/FinancialEngine";
 import { DiagnosisOrchestrator } from "@/engines/DiagnosisOrchestrator";
 import type { BusinessAssessment, OrchestratedDiagnosis } from "@/engines/contracts";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -753,8 +754,25 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
 
   // Create actions
   const createdActions = await Promise.all(
-    actionPlanData.map((a) =>
-      createAction(
+    actionPlanData.map((a) => {
+      // Construct authContext for internal service-to-service call
+      const internalAuthContext: AuthContext = {
+        session: {
+          user: {
+            id: actorId,
+            email: "",
+            name: "",
+            isActive: true,
+          },
+          sessionId: "",
+          expiresAt: new Date(),
+        },
+        policy: {
+          userId: actorId,
+          roles: [],
+        },
+      };
+      return createAction(
         {
           engagementId: engagement.id,
           recommendationId: createdRecommendations[0]?.id || "",
@@ -762,10 +780,10 @@ export async function diagnoseBusiness(input: BusinessProblemInput, actorId: str
           description: a.description,
           priority: a.priority,
         },
-        actorId,
+        internalAuthContext,
         workspaceId
-      )
-    )
+      );
+    })
   );
 
   emitAuditEvent({

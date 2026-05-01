@@ -19,7 +19,7 @@ const updateActionSchema = z.object({
 export const PATCH = withRequestContext(async (request, context) => {
   const workspaceId = request.headers.get("x-workspace-id") || "";
   const { actionId } = await context.params;
-  const { session } = await withAuth();
+  const { session, policy } = await withAuth();
   const body = await parseRequestBody(request, updateActionSchema);
 
   // Fetch action to verify engagement access
@@ -31,6 +31,6 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   await assertEngagementAccess(session.user.id, action.engagementId);
 
-  const updated = await updateActionStatus(actionId, body, session.user.id, workspaceId);
+  const updated = await updateActionStatus(actionId, body, { session, policy }, workspaceId);
   return Response.json(updated);
 });
