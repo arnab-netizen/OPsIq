@@ -152,7 +152,7 @@ export async function executeWorkflow(
         title: `Action for ${finding.engagementId}`,
         priority: input.priority,
       },
-      actorId,
+      internalAuthContext,
       workspaceId
     );
 

@@ -14,6 +14,24 @@ const mockUserId = "user-123";
 const mockLeadId = "lead-123";
 const mockClientId = "client-123";
 const mockEngagementId = "eng-123";
+const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
+
+const mockAuthContext = {
+  session: {
+    user: {
+      id: mockUserId,
+      email: "test@example.com",
+      name: "Test User",
+      isActive: true,
+    },
+    sessionId: "session-123",
+    expiresAt: new Date(),
+  },
+  policy: {
+    userId: mockUserId,
+    roles: [],
+  },
+};
 
 describe("lead service", () => {
   beforeEach(() => {
@@ -42,7 +60,7 @@ describe("lead service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      const result = await leadService.createLead(input, mockUserId, "550e8400-e29b-41d4-a716-446655440000");
+      const result = await leadService.createLead(input, mockAuthContext, mockWorkspaceId);
 
       expect(result.id).toBe(mockLeadId);
       expect(emitAuditEvent).toHaveBeenCalledWith(

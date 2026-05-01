@@ -55,7 +55,7 @@ export const GET = withRequestContext(async (request, context) => {
 
 export const PATCH = withRequestContext(async (request, context) => {
   // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.RECOMMENDATION_APPROVE,
     internalOnly: true,
   });
@@ -79,7 +79,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, recommendationId);
 
   const body = await parseRequestBody(request, updateRecommendationSchema);
-  await updateRecommendation(recommendationId, body, session.user.id, workspaceId);
+  await updateRecommendation(recommendationId, body, authContext, workspaceId);
 
   const updated = await getRecommendation(recommendationId, workspaceId);
   return Response.json(updated);
