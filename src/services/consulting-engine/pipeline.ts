@@ -20,7 +20,7 @@ export interface ConsultingEnginePipelineResult {
 
 export async function runConsultingPipeline(
   engagementId: string,
-  authContext: AuthContext,
+  authContext?: AuthContext,
   workspaceId?: string
 ): Promise<ConsultingEnginePipelineResult> {
   try {

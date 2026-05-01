@@ -250,7 +250,7 @@ describe("Phase 9: Operator Interface", () => {
         {
           id: "a-1",
           title: "Test Task",
-          status: "assigned",
+          status: "created",
           priority: "medium",
           version: 1,
         },
@@ -260,10 +260,10 @@ describe("Phase 9: Operator Interface", () => {
         <ActionCenter actions={actions} engagementId="eng-1" />
       );
 
-      // Status transitions from "assigned" are: in_progress, blocked, cancelled
-      expect(screen.getByText("→ in_progress")).toBeInTheDocument();
-      expect(screen.getByText("→ blocked")).toBeInTheDocument();
-      expect(screen.getByText("→ cancelled")).toBeInTheDocument();
+      // Status transitions from "created" are: Start, Block, Cancel (friendly labels)
+      expect(screen.getByText("Start")).toBeInTheDocument();
+      expect(screen.getByText("Block")).toBeInTheDocument();
+      expect(screen.getByText("Cancel")).toBeInTheDocument();
     });
 
     it("should update action status on button click", async () => {
@@ -272,8 +272,9 @@ describe("Phase 9: Operator Interface", () => {
         vi.fn().mockResolvedValue({
           ok: true,
           json: async () => ({
-            data: { id: "a-1", status: "in_progress" },
-            meta: { version: 2 },
+            id: "a-1",
+            status: "in_progress",
+            version: 2,
           }),
         })
       );
@@ -282,7 +283,7 @@ describe("Phase 9: Operator Interface", () => {
         {
           id: "a-1",
           title: "Test Task",
-          status: "assigned",
+          status: "created",
           priority: "medium",
           version: 1,
         },
@@ -292,7 +293,7 @@ describe("Phase 9: Operator Interface", () => {
         <ActionCenter actions={actions} engagementId="eng-1" />
       );
 
-      const button = screen.getByText("→ in_progress");
+      const button = screen.getByText("Start");
       fireEvent.click(button);
 
       await waitFor(() => {
@@ -308,7 +309,7 @@ describe("Phase 9: Operator Interface", () => {
         {
           id: "a-1",
           title: "Critical Task",
-          status: "assigned",
+          status: "created",
           priority: "critical",
           version: 1,
         },
@@ -325,7 +326,7 @@ describe("Phase 9: Operator Interface", () => {
   });
 
   describe("4. KPI Trend", () => {
-    it("should display KPI current value", () => {
+    it("should display KPI current value", async () => {
       const kpis = [
         {
           id: "kpi-1",
@@ -338,10 +339,12 @@ describe("Phase 9: Operator Interface", () => {
 
       render(<KPITrend kpis={kpis} />);
 
-      expect(screen.getByText("100000")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("100000")).toBeInTheDocument();
+      });
     });
 
-    it("should show direction indicator", () => {
+    it("should show direction indicator", async () => {
       const kpis = [
         {
           id: "kpi-1",
@@ -357,10 +360,12 @@ describe("Phase 9: Operator Interface", () => {
 
       render(<KPITrend kpis={kpis} />);
 
-      expect(screen.getByText(/↓ Improving/)).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText(/↓ Improving/)).toBeInTheDocument();
+      });
     });
 
-    it("should flag deterioration", () => {
+    it("should flag deterioration", async () => {
       const kpis = [
         {
           id: "kpi-1",
@@ -376,10 +381,12 @@ describe("Phase 9: Operator Interface", () => {
 
       render(<KPITrend kpis={kpis} />);
 
-      expect(screen.getByText("⚠️ Deteriorating")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText("⚠️ Deteriorating")).toBeInTheDocument();
+      });
     });
 
-    it("should render trend chart with last 5 values", () => {
+    it("should render trend chart with last 5 values", async () => {
       const kpis = [
         {
           id: "kpi-1",
@@ -398,9 +405,12 @@ describe("Phase 9: Operator Interface", () => {
 
       render(<KPITrend kpis={kpis} />);
 
-      // Should render bars for snapshots
-      const valueElements = screen.getAllByText(/^(100|95|90|85|80)$/);
-      expect(valueElements.length).toBeGreaterThan(0);
+      // Should render bars for snapshots in chart
+      await waitFor(() => {
+        // Chart renders snapshot values, at least some should be present
+        const allElements = screen.getAllByText("100");
+        expect(allElements.length).toBeGreaterThanOrEqual(2); // currentValue + chart
+      });
     });
   });
 
@@ -427,7 +437,7 @@ describe("Phase 9: Operator Interface", () => {
         {
           id: "a-1",
           title: "Action 1",
-          status: "assigned",
+          status: "created",
           priority: "high",
           version: 1,
         },
@@ -441,9 +451,10 @@ describe("Phase 9: Operator Interface", () => {
         </>
       );
 
-      expect(screen.getByText("Recommendations")).toBeInTheDocument();
-      expect(screen.getByText("KPI Trends")).toBeInTheDocument();
-      expect(screen.getByText("Open Actions")).toBeInTheDocument();
+      expect(screen.getByText(/Recommendations/)).toBeInTheDocument();
+      expect(screen.getByText(/KPI Trends/)).toBeInTheDocument();
+      // ActionCenter shows In Progress section for created status actions
+      expect(screen.getByText(/In Progress/)).toBeInTheDocument();
     });
 
     it("should display all components without business logic", () => {

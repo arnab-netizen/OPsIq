@@ -51,6 +51,15 @@ describe("Consulting Engine Pipeline", () => {
   const actorId = uuidv4();
   const workspaceId = "550e8400-e29b-41d4-a716-446655440000";
 
+  const mockAuthContext = {
+    session: {
+      user: { id: actorId, email: "test@test.com", name: "Test", isActive: true },
+      sessionId: "session-123",
+      expiresAt: new Date(),
+    },
+    policy: { userId: actorId, roles: [] },
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -59,7 +68,7 @@ describe("Consulting Engine Pipeline", () => {
     it("should return ERROR if engagement not found", async () => {
       vi.mocked(db.engagement.findUnique).mockResolvedValueOnce(null);
 
-      const result = await runConsultingPipeline(engagementId, actorId);
+      const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
 
       expect(result.status).toBe("ERROR");
       expect(result.decisionMemo).toBeNull();
@@ -80,7 +89,7 @@ describe("Consulting Engine Pipeline", () => {
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([]);
 
-      const result = await runConsultingPipeline(engagementId, actorId);
+      const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
 
       expect(result.status).toBe("INSUFFICIENT_DATA");
       expect(result.warnings[0]).toContain("No validated findings available");
@@ -142,7 +151,7 @@ describe("Consulting Engine Pipeline", () => {
       vi.mocked(createRecommendationsFromInterventions as any).mockResolvedValueOnce([]);
       vi.mocked(createActionsFromInterventions as any).mockResolvedValueOnce([]);
 
-      const result = await runConsultingPipeline(engagementId, actorId);
+      const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
 
       // Verify orchestrator was called with evidence mapped from findings
       expect(runConsultingEngine).toHaveBeenCalledWith(
@@ -253,19 +262,19 @@ describe("Consulting Engine Pipeline", () => {
       ]);
       vi.mocked(createActionsFromInterventions as any).mockResolvedValueOnce([mockAction]);
 
-      const result = await runConsultingPipeline(engagementId, actorId);
+      const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
 
       // Verify adapters were called with interventions
       expect(createRecommendationsFromInterventions).toHaveBeenCalledWith(
         engagementId,
         [mockIntervention],
-        actorId,
+        mockAuthContext,
         workspaceId
       );
       expect(createActionsFromInterventions).toHaveBeenCalledWith(
         engagementId,
         [mockIntervention],
-        actorId,
+        mockAuthContext,
         workspaceId
       );
 
@@ -327,7 +336,7 @@ describe("Consulting Engine Pipeline", () => {
       vi.mocked(createRecommendationsFromInterventions as any).mockResolvedValueOnce([]);
       vi.mocked(createActionsFromInterventions as any).mockResolvedValueOnce([]);
 
-      await runConsultingPipeline(engagementId, actorId);
+      await runConsultingPipeline(engagementId, mockAuthContext as any);
 
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -400,7 +409,7 @@ describe("Consulting Engine Pipeline", () => {
       );
 
       try {
-        await runConsultingPipeline(engagementId, actorId);
+        await runConsultingPipeline(engagementId, mockAuthContext as any);
         expect.fail("Should have thrown error");
       } catch (e) {
         expect((e as Error).message).toBe("Adapter failure");
@@ -433,7 +442,7 @@ describe("Consulting Engine Pipeline", () => {
         warnings: ["Not enough evidence for diagnosis"],
       });
 
-      const result = await runConsultingPipeline(engagementId, actorId);
+      const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
 
       expect(result.status).toBe("ERROR");
       expect(result.decisionMemo).toBeNull();
@@ -495,19 +504,20 @@ describe("Consulting Engine Pipeline", () => {
       vi.mocked(createRecommendationsFromInterventions as any).mockResolvedValueOnce([]);
       vi.mocked(createActionsFromInterventions as any).mockResolvedValueOnce([]);
 
-      await runConsultingPipeline(engagementId); // No actor provided
+      await runConsultingPipeline(engagementId); // No authContext provided
 
-      // Should use default "consulting-engine"
-      expect(createRecommendationsFromInterventions).toHaveBeenCalledWith(
-        engagementId,
-        [],
-        "consulting-engine",
-        workspaceId
-      );
+      // Should use default "consulting-engine" for audit event
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           actorId: "consulting-engine",
         })
+      );
+      // Should pass undefined authContext to services when not provided
+      expect(createRecommendationsFromInterventions).toHaveBeenCalledWith(
+        engagementId,
+        [],
+        undefined,
+        workspaceId
       );
     });
   });
