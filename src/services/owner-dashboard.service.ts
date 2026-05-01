@@ -1,6 +1,9 @@
 import { db } from "@/lib/db";
-import { NotFoundError } from "@/infra/errors";
+import { NotFoundError, ForbiddenError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import type { AuthContext } from "@/lib/auth-guard";
+import { requireCapabilityForService } from "@/lib/auth-guard";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { calculateExecutionCertainty, type ExecutionCertaintyResult } from "./execution-certainty";
 import { detectExecutionDrift, type DriftDetectionResult } from "./execution-drift/execution-drift.service";
 import { computeDecisionConfidence, type DecisionConfidenceResult } from "./decision-confidence/decision-confidence.service";
@@ -59,29 +62,36 @@ export interface OwnerDashboardData {
   generatedAt: string;
 }
 
-export async function getOwnerDashboard(engagementId: string): Promise<OwnerDashboardData> {
-  // Fetch engagement
+export async function getOwnerDashboard(
+  engagementId: string,
+  authContext: AuthContext,
+  workspaceId: string
+): Promise<OwnerDashboardData> {
+  // Enforce capability check
+  requireCapabilityForService(authContext, CAPABILITIES.ENGAGEMENT_VIEW);
+
+  // Fetch engagement with workspace scoping
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
   });
 
   if (!engagement) {
     throw new NotFoundError("Engagement", engagementId);
   }
 
-  // Fetch all related data in parallel
+  // Fetch all related data in parallel with workspace scoping
   const [findings, recommendations, actions, condition] = await Promise.all([
     db.finding.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.recommendation.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.action.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
+      where: { engagementId, isCurrent: true, workspaceId },
       orderBy: { createdAt: "desc" },
     }),
   ]);

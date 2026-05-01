@@ -10,6 +10,7 @@ import {
 import { ROLES, type RoleName } from "@/domain/constants/roles";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -38,9 +39,11 @@ function validateRoleName(role: string): asserts role is RoleName {
 
 export async function addMember(
   input: AddMemberInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<{ id: string; isNew: boolean }> {
   validateRoleName(input.role);
+
+  const actorId = authContext.session.user.id;
 
   // Verify user exists and is active
   const user = await db.user.findUnique({
@@ -151,10 +154,11 @@ export async function addMember(
 
 export async function removeMember(
   input: RemoveMemberInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<void> {
   validateRoleName(input.role);
 
+  const actorId = authContext.session.user.id;
   const idempotencyKey = `membership-remove:${input.userId}:${input.engagementId}:${input.role}`;
 
   const membership = await db.engagementMembership.findFirst({
