@@ -483,6 +483,7 @@ model AuditEvent {
   payload       Json?
   correlationId String?  @map("correlation_id")
   visibility    String   @default("internal") // "internal" | "client_visible"
+  previousHash  String?  @map("previous_hash") // SHA256 hash of previous event in chain
   occurredAt    DateTime @default(now()) @map("occurred_at")
 
   actor User? @relation(fields: [actorId], references: [id])
