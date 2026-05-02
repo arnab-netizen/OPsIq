@@ -53,8 +53,8 @@ Audit Events: ✓ Complete (all mutations have emitAuditEvent + workspaceId)
 
 ## [ASYNC] - Background jobs carry workspace context, no bypass paths
 
-- [ ] src/services/decision-control/enforcement.service.ts:164 - enforceDecisionControl().catch(() => null) - fire-and-forget error handling swallows errors without logging
-- [ ] src/services/control/control-surface.service.ts:124 - enforceDecisionControl().catch(() => null) - same fire-and-forget pattern
+- [x] src/services/decision-control/enforcement.service.ts:164 - enforceDecisionControl().catch(() => null) - fire-and-forget error handling swallows errors without logging
+- [x] src/services/control/control-surface.service.ts:124 - enforceDecisionControl().catch(() => null) - same fire-and-forget pattern
 
 ---
 

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { calculateWorkspaceImpactSummary } from "@/services/business-impact/decision-impact.service";
 import { enforceDecisionControl } from "@/services/decision-control/enforcement.service";
+import { logger } from "@/infra/logger";
 
 export interface ActionItem {
   decisionId: string;
@@ -121,7 +122,14 @@ export async function getControlSurface(
   // Process each decision for control enforcement
   const controls = await Promise.all(
     summary.metrics.map((m) =>
-      enforceDecisionControl(m.decisionId, workspaceId).catch(() => null)
+      enforceDecisionControl(m.decisionId, workspaceId).catch((error) => {
+        logger.warn("Failed to enforce decision control", {
+          decisionId: m.decisionId,
+          workspaceId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      })
     )
   );
 

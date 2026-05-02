@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { calculateDecisionImpact, calculateWorkspaceImpactSummary } from "@/services/business-impact/decision-impact.service";
+import { logger } from "@/infra/logger";
 
 const PRIORITY_THRESHOLD = 70; // Block execution below this
 const AT_RISK_THRESHOLD = 50000; // Escalate if atRisk exceeds this
@@ -161,7 +162,14 @@ export async function getDailyControl(
   // Process each decision for control enforcement
   const controls = await Promise.all(
     summary.metrics.map((m) =>
-      enforceDecisionControl(m.decisionId, workspaceId).catch(() => null)
+      enforceDecisionControl(m.decisionId, workspaceId).catch((error) => {
+        logger.warn("Failed to enforce decision control", {
+          decisionId: m.decisionId,
+          workspaceId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return null;
+      })
     )
   );
 
