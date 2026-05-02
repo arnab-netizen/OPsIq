@@ -1,11 +1,5 @@
 # TASK 002 Verification - All Prisma Reads
 
-✗ VIOLATION: /home/user/OPsIq/src/services/action-lifecycle.ts:135
-    const action = await db.action.findUnique({
-    where: { id: actionId },
-    include: { engagement: true },
-  });...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/auth.ts:31
     const session = await db.session.findUnique({
     where: { token: sessionToken },
@@ -636,10 +630,9 @@
 ## Summary
 Files checked: 363
 Reads checked: 329
-Violations found: 109
+Violations found: 108
 
 ## Violations
-- /home/user/OPsIq/src/services/action-lifecycle.ts:135
 - /home/user/OPsIq/src/services/auth.ts:31
 - /home/user/OPsIq/src/services/auth.ts:80
 - /home/user/OPsIq/src/services/auth.ts:83

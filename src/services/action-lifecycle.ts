@@ -126,6 +126,7 @@ export async function transitionActionState(
     reason?: string;
     evidence?: string;
     reviewerId?: string;
+    workspaceId: string;
   }
 ): Promise<any> {
   const resolvedActorId = context.authContext?.session.user.id || context.actorId;
@@ -133,7 +134,7 @@ export async function transitionActionState(
     throw new Error("Either authContext or actorId must be provided");
   }
   const action = await db.action.findUnique({
-    where: { id: actionId },
+    where: { id: actionId, engagement: { workspaceId: context.workspaceId } },
     include: { engagement: true },
   });
 
@@ -173,7 +174,7 @@ export async function transitionActionState(
 
   // Update action state
   const updatedAction = await db.action.update({
-    where: { id: actionId },
+    where: { id: actionId, engagement: { workspaceId: context.workspaceId } },
     data: {
       status: nextState,
       blockerReason: nextState === "blocked" ? context.reason : action.blockerReason,
