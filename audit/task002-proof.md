@@ -1,157 +1,46 @@
 # TASK 002 Verification - All Prisma Reads
 
-✗ VIOLATION: /home/user/OPsIq/src/services/auth.ts:80
-      db.userRoleAssignment.findMany({
-      where: { userId: session.user.id, isActive: true, revokedAt: null },
-    }),...
+✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:353
+      oldFinding = await db.finding.findUnique({
+      where: { id: oldFindingId },
+      select: { id: true, engagementId: true },
+    });...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/auth.ts:83
-      db.engagementMembership.findMany({
-      where: { userId: session.user.id, isActive: true },
-    }),...
+✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:439
+      finding = await db.finding.findUnique({
+      where: { id: findingId },
+      select: { id: true, engagementId: true, linkedEvidence: true },
+    ...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/client-contact.ts:38
-    const client = await db.clientAccount.findUnique({
-    where: { id: input.clientId },
-  });...
+✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:456
+      evidence = await db.evidence.findUnique({
+      where: { id: evidenceId },
+      select: { id: true, engagementId: true, status: true, relatedFind...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/client-contact.ts:85
-    const contact = await db.clientContact.findUnique({
-    where: { id: contactId },
-  });...
+✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:532
+      finding = await db.finding.findUnique({
+      where: { id: findingId },
+      select: { id: true, engagementId: true, linkedEvidence: true },
+    ...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/client-contact.ts:125
-    const contact = await db.clientContact.findUnique({
-    where: { id: contactId },
-  });...
+✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:549
+      evidence = await db.evidence.findUnique({
+      where: { id: evidenceId },
+      select: { id: true, engagementId: true, relatedFindingId: true },...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/client-contact.ts:159
-    return db.clientContact.findMany({
-    where: { clientId, isActive: true },
-    orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
-  });...
+✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:753
+      finding = await db.finding.findUnique({
+      where: { id: findingId },
+      select: { engagementId: true, linkedEvidence: true },
+    });...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-determinism.service.ts:31
-    return db.decisionSnapshot.findUnique({
-    where: { id: snapshotId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-determinism.service.ts:91
-    return db.decisionSnapshot.findMany({
-    where: { engagementId },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/deliverable.ts:91
-    const deliverable = await db.deliverable.findUnique({
-    where: { id: deliverableId },
-    include: {
-      engagement: {
-        include: {
+✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:820
+      detailFinding = await db.finding.findUnique({
+      where: { id: findingId },
+      select: {
+        id: true,
+        engagementId: true,
       ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/deliverable.ts:118
-    const deliv = await db.deliverable.findUnique({
-    where: { id: deliverableId },
-    include: { engagement: true },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/engagement-membership.ts:51
-    const user = await db.user.findUnique({
-    where: { id: input.userId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/engagement-membership.ts:72
-        const existing = await db.engagementMembership.findFirst({
-        where: {
-          userId: input.userId,
-          engagementId: input.engage...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/engagement-membership.ts:88
-        const removed = await db.engagementMembership.findFirst({
-        where: {
-          userId: input.userId,
-          engagementId: input.engagem...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/engagement-membership.ts:173
-    const membership = await db.engagementMembership.findFirst({
-    where: {
-      userId: input.userId,
-      engagementId: input.engagementId,
-      ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/engagement-membership.ts:248
-    return db.engagementMembership.findMany({
-    where: { userId, isActive: true },
-    select: {
-      id: true,
-      engagementId: true,
-      role:...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/engagement-membership.ts:262
-    return db.engagementMembership.findMany({
-    where: { engagementId, isActive: true },
-    include: {
-      user: {
-        select: {
-          id: ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:343
-    const oldFinding = await db.finding.findUnique({
-    where: { id: oldFindingId },
-    select: { id: true, engagementId: true },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:419
-    const finding = await db.finding.findUnique({
-    where: { id: findingId },
-    select: { id: true, engagementId: true, linkedEvidence: true },
-  })...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:489
-    const finding = await db.finding.findUnique({
-    where: { id: findingId },
-    select: { id: true, engagementId: true, linkedEvidence: true },
-  })...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:559
-    const findingsWithEvidence = await db.finding.findMany({
-    where: {
-      engagementId,
-    },
-    select: {
-      id: true,
-      title: true,
-  ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:593
-        const evidence = await db.evidence.findMany({
-        where: {
-          id: { in: Array.from(evidenceIds) },
-        },
-        select: { id: t...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:684
-    const finding = await db.finding.findUnique({
-    where: { id: findingId },
-    select: { engagementId: true, linkedEvidence: true },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:711
-      const evidence = await db.evidence.findMany({
-      where: {
-        id: { in: linkedIds },
-      },
-      select: { id: true, visibility: true },...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:724
-    const detailFinding = await db.finding.findUnique({
-    where: { id: findingId },
-    select: {
-      id: true,
-      engagementId: true,
-      titl...
 
 ✗ VIOLATION: /home/user/OPsIq/src/services/idempotency.ts:39
     const existing = await db.idempotencyRecord.findUnique({
@@ -623,34 +512,17 @@
 
 ## Summary
 Files checked: 363
-Reads checked: 329
-Violations found: 107
+Reads checked: 336
+Violations found: 90
 
 ## Violations
-- /home/user/OPsIq/src/services/auth.ts:80
-- /home/user/OPsIq/src/services/auth.ts:83
-- /home/user/OPsIq/src/services/client-contact.ts:38
-- /home/user/OPsIq/src/services/client-contact.ts:85
-- /home/user/OPsIq/src/services/client-contact.ts:125
-- /home/user/OPsIq/src/services/client-contact.ts:159
-- /home/user/OPsIq/src/services/decision-determinism.service.ts:31
-- /home/user/OPsIq/src/services/decision-determinism.service.ts:91
-- /home/user/OPsIq/src/services/deliverable.ts:91
-- /home/user/OPsIq/src/services/deliverable.ts:118
-- /home/user/OPsIq/src/services/engagement-membership.ts:51
-- /home/user/OPsIq/src/services/engagement-membership.ts:72
-- /home/user/OPsIq/src/services/engagement-membership.ts:88
-- /home/user/OPsIq/src/services/engagement-membership.ts:173
-- /home/user/OPsIq/src/services/engagement-membership.ts:248
-- /home/user/OPsIq/src/services/engagement-membership.ts:262
-- /home/user/OPsIq/src/services/findings.ts:343
-- /home/user/OPsIq/src/services/findings.ts:419
-- /home/user/OPsIq/src/services/findings.ts:489
-- /home/user/OPsIq/src/services/findings.ts:559
-- /home/user/OPsIq/src/services/findings.ts:593
-- /home/user/OPsIq/src/services/findings.ts:684
-- /home/user/OPsIq/src/services/findings.ts:711
-- /home/user/OPsIq/src/services/findings.ts:724
+- /home/user/OPsIq/src/services/findings.ts:353
+- /home/user/OPsIq/src/services/findings.ts:439
+- /home/user/OPsIq/src/services/findings.ts:456
+- /home/user/OPsIq/src/services/findings.ts:532
+- /home/user/OPsIq/src/services/findings.ts:549
+- /home/user/OPsIq/src/services/findings.ts:753
+- /home/user/OPsIq/src/services/findings.ts:820
 - /home/user/OPsIq/src/services/idempotency.ts:39
 - /home/user/OPsIq/src/services/idempotency.ts:78
 - /home/user/OPsIq/src/services/idempotency.ts:141
