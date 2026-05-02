@@ -58,6 +58,7 @@ export async function createContact(
     actorId,
     entityType: "client_contact",
     entityId: contact.id,
+    workspaceId,
     payload: {
       clientId: input.clientId,
       name: contact.name,
@@ -102,6 +103,7 @@ export async function deactivateContact(
     actorId,
     entityType: "client_contact",
     entityId: contactId,
+    workspaceId,
     payload: { clientId: contact.clientId },
     visibility: "internal",
   });
@@ -144,6 +146,7 @@ export async function updateContact(
     actorId,
     entityType: "client_contact",
     entityId: contactId,
+    workspaceId,
     payload: data,
     visibility: "internal",
   });

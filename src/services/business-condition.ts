@@ -170,6 +170,7 @@ export async function assessCondition(
     actorId,
     entityType: "business_condition_profile",
     entityId: result.result.id,
+    workspaceId: engagement.workspaceId,
     payload: {
       engagementId: input.engagementId,
       businessStatus: result.result.businessStatus,

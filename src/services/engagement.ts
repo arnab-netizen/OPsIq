@@ -159,6 +159,7 @@ export async function createEngagement(
     actorId,
     entityType: "engagement",
     entityId: result.result.id,
+    workspaceId: validatedWorkspaceId,
     payload: {
       code: result.result.code,
       title: result.result.title,
@@ -230,6 +231,7 @@ export async function updateEngagement(
           actorId,
           entityType: "engagement",
           entityId: engagementId,
+          workspaceId: validatedWorkspaceId,
           payload: {
             reasons: health.reasons,
             blockingDetails: health.details,
@@ -242,6 +244,7 @@ export async function updateEngagement(
           actorId,
           entityType: "engagement",
           entityId: engagementId,
+          workspaceId: validatedWorkspaceId,
           payload: {
             reasons: health.reasons,
             riskDetails: health.details,
@@ -308,6 +311,7 @@ export async function updateEngagement(
         actorId,
         entityType: "engagement",
         entityId: engagementId,
+        workspaceId: validatedWorkspaceId,
         payload: { previousStatus: currentStatus },
         visibility: "internal",
       });
@@ -317,6 +321,7 @@ export async function updateEngagement(
         actorId,
         entityType: "engagement",
         entityId: engagementId,
+        workspaceId: validatedWorkspaceId,
         payload: { previousStatus: currentStatus },
         visibility: "internal",
       });
@@ -330,6 +335,7 @@ export async function updateEngagement(
       actorId,
       entityType: "engagement",
       entityId: engagementId,
+      workspaceId: validatedWorkspaceId,
       payload: {
         previousMode: engagement.interventionMode,
         newMode: input.interventionMode,
@@ -488,6 +494,7 @@ export async function computeNextReviewDate(
       actorId,
       entityType: "engagement",
       entityId: engagementId,
+      workspaceId,
       payload: {
         engagementId,
         nextReviewDate: nextReviewDate.toISOString(),

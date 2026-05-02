@@ -102,6 +102,7 @@ export async function createLead(
     actorId: userId,
     entityType: "lead_record",
     entityId: result.result.id,
+    workspaceId: validatedWorkspaceId,
     payload: { companyName: result.result.companyName },
     visibility: "internal",
   });
@@ -225,6 +226,7 @@ export async function linkLeadToEngagement(
     actorId,
     entityType: "lead_record",
     entityId: leadId,
+    workspaceId,
     payload: { engagementId, clientId },
     visibility: "internal",
   });

@@ -1,5 +1,8 @@
 import { OperatorItem } from "@/domain/operator/types";
 import { db } from "@/lib/db";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { logger } from "@/infra/logger";
 
 export interface LearningRecordInput {
   workspaceId: string;
@@ -7,6 +10,7 @@ export interface LearningRecordInput {
   actionTaken: string;
   success: boolean;
   impact: number;
+  actorId?: string;
 }
 
 /**
@@ -14,6 +18,8 @@ export interface LearningRecordInput {
  * Called when a decision is completed and outcomes are known.
  */
 export async function recordLearning(input: LearningRecordInput): Promise<void> {
+  const actorId = input.actorId || "system";
+
   await db.learningRecord.create({
     data: {
       workspaceId: input.workspaceId,
@@ -23,6 +29,26 @@ export async function recordLearning(input: LearningRecordInput): Promise<void> 
       impact: input.impact,
       timestamp: new Date(),
     },
+  });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.LEARNING_RECORDED,
+    actorId,
+    entityType: "learning_record",
+    entityId: `${input.workspaceId}:${input.problemType}`,
+    workspaceId: input.workspaceId,
+    payload: {
+      problemType: input.problemType,
+      actionTaken: input.actionTaken,
+      success: input.success,
+      impact: input.impact,
+    },
+    visibility: "internal",
+  }).catch((error) => {
+    logger.warn("Failed to emit audit event for learning record", {
+      workspaceId: input.workspaceId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   });
 }
 

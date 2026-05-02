@@ -6,6 +6,9 @@ import { requireWorkspaceContext, validateWorkspaceAccess } from "@/services/wor
 import { recordOperatorItemLearning } from "@/services/learning/store";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { logger } from "@/infra/logger";
 import type { Prisma } from "@/generated/prisma/client";
 
 const SYSTEM_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
@@ -86,7 +89,27 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
       data.projectedWithoutAction = item.projectedWithoutAction;
     }
 
-    await db.operatorItem.create({ data });
+    const created = await db.operatorItem.create({ data });
+
+    // Emit audit event for operator item creation
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OPERATOR_ITEM_CREATED,
+      actorId: item.createdBy,
+      entityType: "operator_item",
+      entityId: created.id,
+      workspaceId: item.workspaceId,
+      payload: {
+        problem: item.problem,
+        action: item.action,
+        priority: item.priorityScore,
+      },
+      visibility: "internal",
+    }).catch((error) => {
+      logger.warn("Failed to emit audit event for operator item creation", {
+        itemId: created.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
   }
 }
 
@@ -209,6 +232,29 @@ export async function updateItem(
     data: updateData,
   });
 
+  // Emit audit event for operator item update
+  const payloadFields: Record<string, unknown> = {};
+  Object.keys(updateData)
+    .slice(0, 5)
+    .forEach((key) => {
+      payloadFields[key] = updateData[key];
+    });
+
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.OPERATOR_ITEM_UPDATED,
+    actorId: item.lastUpdatedBy || item.createdBy || "system",
+    entityType: "operator_item",
+    entityId: id,
+    workspaceId: item.workspaceId,
+    payload: payloadFields,
+    visibility: "internal",
+  }).catch((error) => {
+    logger.warn("Failed to emit audit event for operator item update", {
+      itemId: id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+
   // Record learning when decision is completed with outcome data
   if ((updates.status === "done" || updates.actualOutcomeValue !== undefined) && updates.problemType) {
     if (item && item.status === "done") {
@@ -292,11 +338,43 @@ export function getCalibrationRecords(): CalibrationRecord[] {
 
 export async function applyOverride(
   id: string,
-  newAction: string
+  newAction: string,
+  workspaceId?: string,
+  actorId?: string
 ): Promise<void> {
+  // Fetch item to get workspaceId if not provided
+  const item = await db.operatorItem.findUnique({
+    where: { id },
+    select: { id: true, workspaceId: true, action: true, createdBy: true },
+  });
+
+  if (!item) throw new NotFoundError("OperatorItem", id);
+
+  const resolvedWorkspaceId = workspaceId || item.workspaceId;
+  const resolvedActorId = actorId || item.createdBy || "system";
+
   await db.operatorItem.update({
     where: { id },
     data: { action: newAction },
+  });
+
+  // Emit audit event for operator item override
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.OPERATOR_ITEM_OVERRIDDEN,
+    actorId: resolvedActorId,
+    entityType: "operator_item",
+    entityId: id,
+    workspaceId: resolvedWorkspaceId,
+    payload: {
+      previousAction: item.action,
+      newAction,
+    },
+    visibility: "internal",
+  }).catch((error) => {
+    logger.warn("Failed to emit audit event for operator item override", {
+      itemId: id,
+      error: error instanceof Error ? error.message : String(error),
+    });
   });
 }
 
@@ -439,5 +517,26 @@ export async function addBlockedDecision(params: {
   }
 
   const created = await db.operatorItem.create({ data });
+
+  // Emit audit event for blocked decision
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.OPERATOR_ITEM_BLOCKED,
+    actorId: params.createdBy,
+    entityType: "operator_item",
+    entityId: created.id,
+    workspaceId: params.workspaceId,
+    payload: {
+      blockStage: params.blockStage,
+      blockReason: params.blockReason,
+      problem: params.problem,
+    },
+    visibility: "internal",
+  }).catch((error) => {
+    logger.warn("Failed to emit audit event for blocked decision", {
+      itemId: created.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+
   return created.id;
 }

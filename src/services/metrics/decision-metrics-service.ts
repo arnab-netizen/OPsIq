@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getCache } from "@/services/cache/cache-factory";
 import { logger } from "@/infra/logger";
+import { recordLearning } from "@/services/learning/store";
 
 export interface MetricsUpdate {
   problemType: string;
@@ -15,14 +16,13 @@ export async function recordDecisionMetrics(
   metrics: MetricsUpdate
 ) {
   try {
-    const learningRecord = await db.learningRecord.create({
-      data: {
-        workspaceId,
-        problemType: metrics.problemType,
-        actionTaken: metrics.actionTaken,
-        success: metrics.success,
-        impact: metrics.actualOutcome,
-      },
+    await recordLearning({
+      workspaceId,
+      problemType: metrics.problemType,
+      actionTaken: metrics.actionTaken,
+      success: metrics.success,
+      impact: metrics.actualOutcome,
+      actorId: "system",
     });
 
     invalidateMetricsCache(workspaceId, metrics.problemType);
@@ -32,10 +32,9 @@ export async function recordDecisionMetrics(
       problemType: metrics.problemType,
       success: metrics.success,
       impact: metrics.actualOutcome,
-      recordId: learningRecord.id,
     });
 
-    return learningRecord;
+    return { workspaceId, ...metrics };
   } catch (error) {
     logger.error("Failed to record decision metrics", {
       workspaceId,

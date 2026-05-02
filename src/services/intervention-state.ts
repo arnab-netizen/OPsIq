@@ -124,6 +124,7 @@ export async function updateInterventionPhase(
     select: {
       id: true,
       status: true,
+      workspaceId: true,
       interventionPhase: true,
       interventionMode: true,
       version: true,
@@ -159,6 +160,7 @@ export async function updateInterventionPhase(
     actorId,
     entityType: "engagement",
     entityId: engagementId,
+    workspaceId: engagement.workspaceId,
     payload: {
       previousPhase,
       newPhase: input.interventionPhase,
@@ -201,6 +203,7 @@ export async function updateInterventionMode(
     select: {
       id: true,
       status: true,
+      workspaceId: true,
       interventionMode: true,
       interventionPhase: true,
       version: true,
@@ -236,6 +239,7 @@ export async function updateInterventionMode(
     actorId,
     entityType: "engagement",
     entityId: engagementId,
+    workspaceId: engagement.workspaceId,
     payload: {
       previousMode,
       newMode: input.interventionMode,
@@ -312,6 +316,11 @@ export async function transitionPhase(
   const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
+    select: {
+      id: true,
+      workspaceId: true,
+      interventionPhase: true,
+    },
   });
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
@@ -331,6 +340,7 @@ export async function transitionPhase(
     actorId,
     entityType: "engagement",
     entityId: engagementId,
+    workspaceId: engagement.workspaceId,
     payload: {
       fromPhase: currentPhase,
       toPhase: newPhase,
@@ -357,7 +367,7 @@ export async function blockEngagement(
   const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
-    select: { id: true, version: true, isBlocked: true },
+    select: { id: true, version: true, workspaceId: true, isBlocked: true },
   });
 
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
@@ -384,6 +394,7 @@ export async function blockEngagement(
     actorId,
     entityType: "engagement",
     entityId: engagementId,
+    workspaceId: engagement.workspaceId,
     payload: {
       blockerReason,
     },
@@ -418,7 +429,7 @@ export async function unblockEngagement(
   const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
-    select: { id: true, version: true, isBlocked: true },
+    select: { id: true, version: true, workspaceId: true, isBlocked: true },
   });
 
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
@@ -445,6 +456,7 @@ export async function unblockEngagement(
     actorId,
     entityType: "engagement",
     entityId: engagementId,
+    workspaceId: engagement.workspaceId,
     payload: {},
     visibility: "internal",
   });

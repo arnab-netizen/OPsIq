@@ -127,6 +127,7 @@ export async function createFinding(
     actorId: userId,
     entityType: "Finding",
     entityId: finding.id,
+    workspaceId: validatedWorkspaceId,
     payload: {
       engagementId: input.engagementId,
       severity: input.severity,
@@ -210,6 +211,7 @@ export async function updateFinding(
     actorId: userId,
     entityType: "Finding",
     entityId: findingId,
+    workspaceId: validatedWorkspaceId,
     payload: {
       engagementId: updated.engagementId,
       severity: input.severity,
@@ -237,16 +239,32 @@ export async function updateFinding(
 
 export async function validateFinding(
   findingId: string,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId?: string
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
   const actorId = authContext.session.user.id;
+
+  // If workspaceId not provided, fetch from engagement
+  let validatedWorkspaceId = workspaceId;
+
   const existing = await db.finding.findUnique({
     where: { id: findingId },
     select: { id: true, engagementId: true, linkedEvidence: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
+
+  // If workspaceId not provided, fetch from engagement
+  if (!validatedWorkspaceId) {
+    const engagement = await db.engagement.findUnique({
+      where: { id: existing.engagementId },
+      select: { workspaceId: true },
+    });
+    if (engagement) {
+      validatedWorkspaceId = engagement.workspaceId;
+    }
+  }
 
   if (existing.linkedEvidence && existing.linkedEvidence.length === 0) {
     throw new ValidationError("Finding must have at least one linked evidence before validation");
@@ -263,6 +281,7 @@ export async function validateFinding(
     actorId,
     entityType: "Finding",
     entityId: findingId,
+    workspaceId: validatedWorkspaceId,
     payload: {
       engagementId: existing.engagementId,
     },
@@ -285,16 +304,32 @@ export async function validateFinding(
 
 export async function disputeFinding(
   findingId: string,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId?: string
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
   const actorId = authContext.session.user.id;
+
+  // If workspaceId not provided, fetch from engagement
+  let validatedWorkspaceId = workspaceId;
+
   const existing = await db.finding.findUnique({
     where: { id: findingId },
     select: { id: true, engagementId: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
+
+  // If workspaceId not provided, fetch from engagement
+  if (!validatedWorkspaceId) {
+    const engagement = await db.engagement.findUnique({
+      where: { id: existing.engagementId },
+      select: { workspaceId: true },
+    });
+    if (engagement) {
+      validatedWorkspaceId = engagement.workspaceId;
+    }
+  }
 
   // Update finding status to disputed
   await db.finding.update({
@@ -307,6 +342,7 @@ export async function disputeFinding(
     actorId,
     entityType: "Finding",
     entityId: findingId,
+    workspaceId: validatedWorkspaceId,
     payload: {
       engagementId: existing.engagementId,
     },
@@ -318,17 +354,33 @@ export async function disputeFinding(
 export async function supersedeFinding(
   oldFindingId: string,
   newFindingInput: CreateFindingInput,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId?: string
 ): Promise<{ id: string; supersededFindingId: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
   const actorId = authContext.session.user.id;
+
+  // If workspaceId not provided, fetch from engagement
+  let validatedWorkspaceId = workspaceId;
+
   // Validate old finding exists
   const oldFinding = await db.finding.findUnique({
     where: { id: oldFindingId },
     select: { id: true, engagementId: true },
   });
   if (!oldFinding) throw new NotFoundError("Finding", oldFindingId);
+
+  // If workspaceId not provided, fetch from engagement
+  if (!validatedWorkspaceId) {
+    const engagement = await db.engagement.findUnique({
+      where: { id: oldFinding.engagementId },
+      select: { workspaceId: true },
+    });
+    if (engagement) {
+      validatedWorkspaceId = engagement.workspaceId;
+    }
+  }
 
   // Create new finding using the new field names
   const findingType = newFindingInput.impactArea === "revenue" ? "market" : "operational";
@@ -343,6 +395,7 @@ export async function supersedeFinding(
       rootCause: newFindingInput.rootCause || null,
       linkedEvidence: newFindingInput.primaryEvidenceId || null,
       createdBy: actorId,
+      workspaceId: validatedWorkspaceId,
     },
     select: { id: true, engagementId: true },
   });
@@ -358,6 +411,7 @@ export async function supersedeFinding(
     actorId,
     entityType: "Finding",
     entityId: newFinding.id,
+    workspaceId: validatedWorkspaceId,
     payload: {
       engagementId: newFinding.engagementId,
       supersedes: oldFindingId,
@@ -395,7 +449,7 @@ export async function linkEvidenceToFinding(
 
   const evidence = await db.evidence.findUnique({
     where: { id: evidenceId },
-    select: { id: true, engagementId: true, status: true, relatedFindingId: true },
+    select: { id: true, engagementId: true, status: true, relatedFindingId: true, workspaceId: true },
   });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
@@ -439,6 +493,7 @@ export async function linkEvidenceToFinding(
     actorId,
     entityType: "Finding",
     entityId: findingId,
+    workspaceId: evidence.workspaceId,
     payload: {
       findingId,
       evidenceId,
@@ -464,7 +519,7 @@ export async function unlinkEvidenceFromFinding(
 
   const evidence = await db.evidence.findUnique({
     where: { id: evidenceId },
-    select: { id: true, engagementId: true, relatedFindingId: true },
+    select: { id: true, engagementId: true, relatedFindingId: true, workspaceId: true },
   });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
@@ -498,6 +553,7 @@ export async function unlinkEvidenceFromFinding(
     actorId,
     entityType: "Finding",
     entityId: findingId,
+    workspaceId: evidence.workspaceId,
     payload: {
       findingId,
       evidenceId,

@@ -21,6 +21,10 @@ vi.mock("@/infra/logger", () => ({
   },
 }));
 
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 import {
   createAlert,
   markAlertAsRead,
@@ -162,7 +166,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.findUnique).mockResolvedValueOnce(mockAlert as any);
       vi.mocked(db.alert.update).mockResolvedValueOnce(readAlert as any);
 
-      const result = await markAlertAsRead("alert-1", "550e8400-e29b-41d4-a716-446655440000");
+      const result = await markAlertAsRead("alert-1", "550e8400-e29b-41d4-a716-446655440000", "user-001");
 
       expect(result.isRead).toBe(true);
       expect(result.readAt).toBeDefined();
@@ -179,7 +183,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.findUnique).mockResolvedValueOnce(mockAlert as any);
       vi.mocked(db.alert.update).mockResolvedValueOnce(readAlert as any);
 
-      await markAlertAsRead("alert-1", "550e8400-e29b-41d4-a716-446655440000");
+      await markAlertAsRead("alert-1", "550e8400-e29b-41d4-a716-446655440000", "user-001");
 
       expect(vi.mocked(logger.info)).toHaveBeenCalledWith(
         "Alert marked as read",
@@ -195,7 +199,7 @@ describe("Alert Service", () => {
       vi.mocked(db.alert.findUnique).mockResolvedValueOnce(mockAlert as any);
       vi.mocked(db.alert.update).mockRejectedValueOnce(error);
 
-      await expect(markAlertAsRead("alert-1", "550e8400-e29b-41d4-a716-446655440000")).rejects.toThrow();
+      await expect(markAlertAsRead("alert-1", "550e8400-e29b-41d4-a716-446655440000", "user-001")).rejects.toThrow();
 
       expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
         "Failed to mark alert as read",

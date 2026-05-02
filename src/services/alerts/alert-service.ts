@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 export type AlertType = "blocked" | "threshold_breach" | "execution_failure";
 export type AlertChannel = "in_app" | "email";
@@ -50,6 +52,28 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
       },
     });
 
+    // Emit audit event
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ALERT_CREATED,
+      actorId: userId,
+      entityType: "alert",
+      entityId: alert.id,
+      workspaceId,
+      payload: {
+        type,
+        channel,
+        message,
+        entityType: entityType || null,
+        entityId: entityId || null,
+      },
+      visibility: "internal",
+    }).catch((error) => {
+      logger.warn("Failed to emit audit event for alert creation", {
+        alertId: alert.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
     // Deliver based on channel
     if (channel === "email") {
       deliverEmailAlert(alert as any).catch((error) => {
@@ -83,7 +107,8 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
 
 export async function markAlertAsRead(
   alertId: string,
-  workspaceId: string
+  workspaceId: string,
+  actorId: string
 ): Promise<Alert> {
   try {
     // Verify alert exists and belongs to workspace
@@ -101,6 +126,24 @@ export async function markAlertAsRead(
         isRead: true,
         readAt: new Date(),
       },
+    });
+
+    // Emit audit event
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ALERT_UPDATED,
+      actorId,
+      entityType: "alert",
+      entityId: alertId,
+      workspaceId,
+      payload: {
+        isRead: true,
+      },
+      visibility: "internal",
+    }).catch((error) => {
+      logger.warn("Failed to emit audit event for alert update", {
+        alertId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
 
     logger.info("Alert marked as read", { alertId, workspaceId });

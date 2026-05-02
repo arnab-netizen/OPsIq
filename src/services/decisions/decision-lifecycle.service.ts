@@ -104,6 +104,7 @@ export async function transitionDecisionState(
     eventName: eventName as any,
     entityType: "OperatorItem",
     entityId: decisionId,
+    workspaceId,
     actorId: actorId || undefined,
     payload: {
       fromState,
@@ -356,6 +357,7 @@ export async function recordDecisionOutcome(
     eventName: "outcome.recorded" as any,
     entityType: "OperatorItem",
     entityId: decisionId,
+    workspaceId,
     actorId,
     payload: {
       fromState: "EXECUTED",

@@ -1,5 +1,8 @@
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { logger } from "@/infra/logger";
 import { computeDecisionConfidence } from "../decision-confidence/decision-confidence.service";
 import { generateBusinessImpact } from "../business-impact/business-impact.service";
 import { getFinancialDelta } from "../financial/financial-mapping.service";
@@ -92,7 +95,7 @@ export async function recordOutcome(
   const [currentConfidence, currentImpact, engagement, condition] = await Promise.all([
     computeDecisionConfidence({ engagementId }),
     generateBusinessImpact(engagementId, engagementId),
-    db.engagement.findUnique({ where: { id: engagementId } }),
+    db.engagement.findUnique({ where: { id: engagementId }, select: { id: true, workspaceId: true } }),
     db.businessConditionProfile.findFirst({
       where: { engagementId, isCurrent: true },
       orderBy: { createdAt: "desc" },
@@ -170,6 +173,28 @@ export async function recordOutcome(
       data: {
         outcomeSnapshot,
       },
+    });
+
+    // Emit audit event for outcome recording
+    const workspaceId = engagement?.workspaceId || "unknown";
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OUTCOME_RECORDED,
+      actorId: actorId || "system",
+      entityType: "action",
+      entityId: actionId,
+      workspaceId,
+      payload: {
+        engagementId,
+        accuracyScore,
+        valueRecoveredINR,
+        delta: deltaDescription,
+      },
+      visibility: "internal",
+    }).catch((error) => {
+      logger.warn("Failed to emit audit event for outcome recording", {
+        actionId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
 
     const result = {

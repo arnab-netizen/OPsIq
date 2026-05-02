@@ -235,6 +235,7 @@ export async function updateEvidence(
       actorId: userId,
       entityType: "evidence",
       entityId: evidenceId,
+      workspaceId: validatedWorkspaceId,
       payload: { previousStatus: evidence.status },
       visibility: "internal",
     });
@@ -244,6 +245,7 @@ export async function updateEvidence(
       actorId: userId,
       entityType: "evidence",
       entityId: evidenceId,
+      workspaceId: validatedWorkspaceId,
       payload: { previousStatus: evidence.status, reason: input.rejectionReason },
       visibility: "internal",
     });
@@ -446,6 +448,7 @@ export async function validateEvidence(
     actorId: actor,
     entityType: "evidence",
     entityId: evidenceId,
+    workspaceId,
     payload: {
       engagementId: evidence.engagementId,
     },

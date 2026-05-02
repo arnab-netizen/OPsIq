@@ -106,6 +106,12 @@ export const AUDIT_EVENTS = {
   DECISION_IMPACT_REALIZED: "decision.impact_realized",
   DECISION_ROI_RECORDED: "decision.roi_recorded",
 
+  // Operator Item (Decision Queue)
+  OPERATOR_ITEM_CREATED: "operator_item.created",
+  OPERATOR_ITEM_UPDATED: "operator_item.updated",
+  OPERATOR_ITEM_OVERRIDDEN: "operator_item.overridden",
+  OPERATOR_ITEM_BLOCKED: "operator_item.blocked",
+
   // KPI
   KPI_DEFINED: "kpi.defined",
   KPI_SNAPSHOT_RECORDED: "kpi.snapshot_recorded",
@@ -191,6 +197,13 @@ export const AUDIT_EVENTS = {
 
   // Idempotency
   IDEMPOTENCY_REPLAY_DETECTED: "idempotency.replay_detected",
+
+  // Alert
+  ALERT_CREATED: "alert.created",
+  ALERT_UPDATED: "alert.updated",
+
+  // Learning
+  LEARNING_RECORDED: "learning.recorded",
 
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",

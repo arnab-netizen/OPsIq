@@ -103,6 +103,7 @@ export async function createAction(
             actorId,
             entityType: "action",
             entityId: action.id,
+            workspaceId: validatedWorkspaceId,
             payload: {
               engagementId: input.engagementId,
               priority: input.priority,
@@ -163,6 +164,7 @@ export async function createAction(
     actorId,
     entityType: "action",
     entityId: action.id,
+    workspaceId: validatedWorkspaceId,
     payload: {
       engagementId: input.engagementId,
       priority: input.priority,
@@ -281,6 +283,7 @@ export async function updateActionStatus(
     actorId,
     entityType: "action",
     entityId: actionId,
+    workspaceId: validatedWorkspaceId,
     payload: {
       previousStatus,
       newStatus,
@@ -450,6 +453,7 @@ export async function updateAction(
       actorId,
       entityType: "action",
       entityId: actionId,
+      workspaceId: validatedWorkspaceId,
       payload: {
         fromStatus: action.status,
         toStatus: input.status,
@@ -495,6 +499,7 @@ export async function createActionsFromInterventions(
   workspaceId: string
 ) {
   enforceWorkspaceId(workspaceId, "createActionsFromInterventions", "action");
+  const actorId = authContext.session.user.id;
 
   if (!interventions || interventions.length === 0) {
     return [];
@@ -521,6 +526,20 @@ export async function createActionsFromInterventions(
         workspaceId,
       },
     });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
+      actorId,
+      entityType: "recommendation",
+      entityId: synthRec.id,
+      workspaceId,
+      payload: {
+        engagementId,
+        title: "Consulting Engine Recommendations",
+      },
+      visibility: "internal",
+    });
+
     recommendationId = synthRec.id;
   }
 

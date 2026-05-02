@@ -184,6 +184,7 @@ export async function transitionActionState(
     actorId: context.actorId,
     entityType: "action",
     entityId: actionId,
+    workspaceId: action.engagement.workspaceId,
     payload: {
       engagementId: action.engagementId,
       transition: `${currentState} → ${nextState}`,
