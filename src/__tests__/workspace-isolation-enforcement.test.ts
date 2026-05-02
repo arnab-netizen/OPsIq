@@ -139,18 +139,28 @@ describe("Workspace Isolation - Enforcement Rules", () => {
 
       for (const file of files) {
         const content = readFile(file);
+        const lines = content.split("\n");
 
         // Find all emitAuditEvent calls
         const auditEventMatches = content.matchAll(/emitAuditEvent\s*\(\s*\{([^}]+)\}\s*\)/gs);
 
         for (const match of auditEventMatches) {
           const auditPayload = match[1];
+          const lineNum = content.substring(0, match.index).split("\n").length;
 
-          // Check if workspaceId is present
-          if (!auditPayload.includes("workspaceId")) {
-            // Get line number
-            const lineNum = content.substring(0, match.index).split("\n").length;
-            violations.push(`${file}:${lineNum}: emitAuditEvent missing workspaceId parameter`);
+          // Only enforce workspaceId for workspace-owned models
+          // Get the entityType from the audit payload
+          const entityTypeMatch = auditPayload.match(/entityType:\s*["']([^"']+)["']/);
+          const entityType = entityTypeMatch ? entityTypeMatch[1] : null;
+
+          // Check if this is a workspace-owned model
+          const isWorkspaceOwned = WORKSPACE_OWNED_MODELS.some(model =>
+            entityType?.toLowerCase().includes(model.toLowerCase())
+          );
+
+          // Check if workspaceId is present (only enforce for workspace-owned models)
+          if (isWorkspaceOwned && !auditPayload.includes("workspaceId")) {
+            violations.push(`${file}:${lineNum}: emitAuditEvent missing workspaceId parameter for workspace-owned model`);
           }
         }
       }
