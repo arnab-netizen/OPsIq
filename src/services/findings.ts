@@ -339,23 +339,32 @@ export async function supersedeFinding(
   // If workspaceId not provided, fetch from engagement
   let validatedWorkspaceId = workspaceId;
 
-  // Validate old finding exists
-  const oldFinding = await db.finding.findUnique({
-    where: { id: oldFindingId },
-    select: { id: true, engagementId: true },
-  });
-  if (!oldFinding) throw new NotFoundError("Finding", oldFindingId);
-
-  // If workspaceId not provided, fetch from engagement
-  if (!validatedWorkspaceId) {
-    const engagement = await db.engagement.findUnique({
-      where: { id: oldFinding.engagementId },
-      select: { workspaceId: true },
+  // Validate old finding exists with workspace scope
+  let oldFinding;
+  if (validatedWorkspaceId) {
+    oldFinding = await db.finding.findFirst({
+      where: {
+        id: oldFindingId,
+        engagement: { workspaceId: validatedWorkspaceId },
+      },
+      select: { id: true, engagementId: true },
     });
-    if (engagement) {
-      validatedWorkspaceId = engagement.workspaceId;
+  } else {
+    oldFinding = await db.finding.findUnique({
+      where: { id: oldFindingId },
+      select: { id: true, engagementId: true },
+    });
+    if (oldFinding) {
+      const engagement = await db.engagement.findUnique({
+        where: { id: oldFinding.engagementId },
+        select: { workspaceId: true },
+      });
+      if (engagement) {
+        validatedWorkspaceId = engagement.workspaceId;
+      }
     }
   }
+  if (!oldFinding) throw new NotFoundError("Finding", oldFindingId);
 
   // Create new finding using the new field names
   const findingType = newFindingInput.impactArea === "revenue" ? "market" : "operational";
@@ -400,7 +409,8 @@ export async function linkEvidenceToFinding(
   findingId: string,
   evidenceId: string,
   linkTypeOrAuthContext: string | AuthContext,
-  maybeAuthContext?: AuthContext
+  maybeAuthContext?: AuthContext,
+  workspaceId?: string
 ): Promise<{ id?: string; findingId: string; evidenceId: string }> {
   // Handle both calling conventions
   let linkType: string | undefined;
@@ -416,16 +426,38 @@ export async function linkEvidenceToFinding(
   }
 
   const actorId = authContext.session.user.id;
-  const finding = await db.finding.findUnique({
-    where: { id: findingId },
-    select: { id: true, engagementId: true, linkedEvidence: true },
-  });
+  let finding;
+  if (workspaceId) {
+    finding = await db.finding.findFirst({
+      where: {
+        id: findingId,
+        engagement: { workspaceId },
+      },
+      select: { id: true, engagementId: true, linkedEvidence: true },
+    });
+  } else {
+    finding = await db.finding.findUnique({
+      where: { id: findingId },
+      select: { id: true, engagementId: true, linkedEvidence: true },
+    });
+  }
   if (!finding) throw new NotFoundError("Finding", findingId);
 
-  const evidence = await db.evidence.findUnique({
-    where: { id: evidenceId },
-    select: { id: true, engagementId: true, status: true, relatedFindingId: true, workspaceId: true },
-  });
+  let evidence;
+  if (workspaceId) {
+    evidence = await db.evidence.findFirst({
+      where: {
+        id: evidenceId,
+        engagement: { workspaceId },
+      },
+      select: { id: true, engagementId: true, status: true, relatedFindingId: true },
+    });
+  } else {
+    evidence = await db.evidence.findUnique({
+      where: { id: evidenceId },
+      select: { id: true, engagementId: true, status: true, relatedFindingId: true },
+    });
+  }
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
   if (finding.engagementId !== evidence.engagementId) {
@@ -483,19 +515,42 @@ export async function linkEvidenceToFinding(
 export async function unlinkEvidenceFromFinding(
   findingId: string,
   evidenceId: string,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId?: string
 ): Promise<{ findingId: string; evidenceId: string }> {
   const actorId = authContext.session.user.id;
-  const finding = await db.finding.findUnique({
-    where: { id: findingId },
-    select: { id: true, engagementId: true, linkedEvidence: true },
-  });
+  let finding;
+  if (workspaceId) {
+    finding = await db.finding.findFirst({
+      where: {
+        id: findingId,
+        engagement: { workspaceId },
+      },
+      select: { id: true, engagementId: true, linkedEvidence: true },
+    });
+  } else {
+    finding = await db.finding.findUnique({
+      where: { id: findingId },
+      select: { id: true, engagementId: true, linkedEvidence: true },
+    });
+  }
   if (!finding) throw new NotFoundError("Finding", findingId);
 
-  const evidence = await db.evidence.findUnique({
-    where: { id: evidenceId },
-    select: { id: true, engagementId: true, relatedFindingId: true, workspaceId: true },
-  });
+  let evidence;
+  if (workspaceId) {
+    evidence = await db.evidence.findFirst({
+      where: {
+        id: evidenceId,
+        engagement: { workspaceId },
+      },
+      select: { id: true, engagementId: true, relatedFindingId: true },
+    });
+  } else {
+    evidence = await db.evidence.findUnique({
+      where: { id: evidenceId },
+      select: { id: true, engagementId: true, relatedFindingId: true },
+    });
+  }
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
   if (finding.engagementId !== evidence.engagementId) {
@@ -543,7 +598,8 @@ export async function unlinkEvidenceFromFinding(
 export async function listFindingsForEngagement(
   engagementId: string,
   userId?: string,
-  visibility?: "internal" | "client_visible" | "all"
+  visibility?: "internal" | "client_visible" | "all",
+  workspaceId?: string
 ): Promise<Array<{
   id: string;
   title: string;
@@ -559,6 +615,7 @@ export async function listFindingsForEngagement(
   const findingsWithEvidence = await db.finding.findMany({
     where: {
       engagementId,
+      ...(workspaceId && { engagement: { workspaceId } }),
     },
     select: {
       id: true,
@@ -593,6 +650,7 @@ export async function listFindingsForEngagement(
       const evidence = await db.evidence.findMany({
         where: {
           id: { in: Array.from(evidenceIds) },
+          ...(workspaceId && { engagement: { workspaceId } }),
         },
         select: { id: true, visibility: true },
       });
@@ -648,7 +706,8 @@ export async function listFindingsForEngagement(
 export async function getFindingDetail(
   findingId: string,
   userIdOrVisibility?: string,
-  maybeVisibility?: "internal" | "client_visible" | "all"
+  maybeVisibility?: "internal" | "client_visible" | "all",
+  workspaceId?: string
 ): Promise<{
   id: string;
   engagementId: string;
@@ -681,10 +740,21 @@ export async function getFindingDetail(
     visibility = maybeVisibility;
   }
 
-  const finding = await db.finding.findUnique({
-    where: { id: findingId },
-    select: { engagementId: true, linkedEvidence: true },
-  });
+  let finding;
+  if (workspaceId) {
+    finding = await db.finding.findFirst({
+      where: {
+        id: findingId,
+        engagement: { workspaceId },
+      },
+      select: { engagementId: true, linkedEvidence: true },
+    });
+  } else {
+    finding = await db.finding.findUnique({
+      where: { id: findingId },
+      select: { engagementId: true, linkedEvidence: true },
+    });
+  }
 
   if (!finding) throw new NotFoundError("Finding", findingId);
 
@@ -711,6 +781,7 @@ export async function getFindingDetail(
     const evidence = await db.evidence.findMany({
       where: {
         id: { in: linkedIds },
+        ...(workspaceId && { engagement: { workspaceId } }),
       },
       select: { id: true, visibility: true },
     });
@@ -721,25 +792,51 @@ export async function getFindingDetail(
     }
   }
 
-  const detailFinding = await db.finding.findUnique({
-    where: { id: findingId },
-    select: {
-      id: true,
-      engagementId: true,
-      title: true,
-      description: true,
-      findingType: true,
-      severity: true,
-      impactArea: true,
-      rootCause: true,
-      linkedEvidence: true,
-      status: true,
-      version: true,
-      provisionalFlag: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
+  let detailFinding;
+  if (workspaceId) {
+    detailFinding = await db.finding.findFirst({
+      where: {
+        id: findingId,
+        engagement: { workspaceId },
+      },
+      select: {
+        id: true,
+        engagementId: true,
+        title: true,
+        description: true,
+        findingType: true,
+        severity: true,
+        impactArea: true,
+        rootCause: true,
+        linkedEvidence: true,
+        status: true,
+        version: true,
+        provisionalFlag: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  } else {
+    detailFinding = await db.finding.findUnique({
+      where: { id: findingId },
+      select: {
+        id: true,
+        engagementId: true,
+        title: true,
+        description: true,
+        findingType: true,
+        severity: true,
+        impactArea: true,
+        rootCause: true,
+        linkedEvidence: true,
+        status: true,
+        version: true,
+        provisionalFlag: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
 
   if (!detailFinding) throw new NotFoundError("Finding", findingId);
 

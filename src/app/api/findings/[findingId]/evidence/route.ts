@@ -5,6 +5,7 @@ import { linkEvidenceToFinding, unlinkEvidenceFromFinding } from "@/services/fin
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
+import type { NextRequest } from "next/server";
 
 const linkEvidenceSchema = z.object({
   evidenceId: z.string().uuid(),
@@ -18,10 +19,13 @@ export const POST = withRequestContext(async (request, context) => {
   const { findingId } = await context.params;
   parseOrThrow(uuidSchema, findingId);
 
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id") || "system";
+
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.FINDING_UPDATE,
     internalOnly: true,
-  });
+  }, workspaceId);
 
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {
@@ -47,7 +51,7 @@ export const POST = withRequestContext(async (request, context) => {
   }
 
   try {
-    const result = await linkEvidenceToFinding(findingId, body.evidenceId, { session, policy });
+    const result = await linkEvidenceToFinding(findingId, body.evidenceId, { session, policy }, undefined, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
     return Response.json(result, { status: 201 });
   } catch (error) {
@@ -61,13 +65,16 @@ export const DELETE = withRequestContext(async (request, context) => {
   const { findingId } = await context.params;
   parseOrThrow(uuidSchema, findingId);
 
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id") || "system";
+
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.FINDING_UPDATE,
     internalOnly: true,
-  });
+  }, workspaceId);
 
   const body = await parseRequestBody(request, unlinkEvidenceSchema);
-  const result = await unlinkEvidenceFromFinding(findingId, body.evidenceId, { session, policy });
+  const result = await unlinkEvidenceFromFinding(findingId, body.evidenceId, { session, policy }, workspaceId);
 
   return Response.json(result, { status: 200 });
 });
