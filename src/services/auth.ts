@@ -64,24 +64,34 @@ export async function getSession(workspaceId: string = "system"): Promise<Sessio
   };
 }
 
-export async function requireSession(): Promise<SessionInfo> {
-  const session = await getSession();
+export async function requireSession(workspaceId: string = "system"): Promise<SessionInfo> {
+  const session = await getSession(workspaceId);
   if (!session) {
     throw new UnauthorizedError("Valid session required");
   }
   return session;
 }
 
-export async function getPolicyContext(): Promise<PolicyContext | null> {
-  const session = await getSession();
+export async function getPolicyContext(workspaceId: string = "system"): Promise<PolicyContext | null> {
+  const session = await getSession(workspaceId);
   if (!session) return null;
 
   const [roleAssignments, engagementMemberships] = await Promise.all([
     db.userRoleAssignment.findMany({
-      where: { userId: session.user.id, isActive: true, revokedAt: null },
+      where: {
+        userId: session.user.id,
+        isActive: true,
+        revokedAt: null,
+        scope: "workspace",
+        scopeId: workspaceId,
+      },
     }),
     db.engagementMembership.findMany({
-      where: { userId: session.user.id, isActive: true },
+      where: {
+        userId: session.user.id,
+        isActive: true,
+        engagement: { workspaceId },
+      },
     }),
   ]);
 
@@ -99,8 +109,8 @@ export async function getPolicyContext(): Promise<PolicyContext | null> {
   };
 }
 
-export async function requirePolicyContext(): Promise<PolicyContext> {
-  const ctx = await getPolicyContext();
+export async function requirePolicyContext(workspaceId: string = "system"): Promise<PolicyContext> {
+  const ctx = await getPolicyContext(workspaceId);
   if (!ctx) {
     throw new UnauthorizedError("Authentication required");
   }

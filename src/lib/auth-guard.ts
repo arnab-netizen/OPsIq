@@ -36,10 +36,10 @@ export interface AuthOptions {
  * Throws UnauthorizedError if session invalid or missing.
  * Fails closed: null/missing session → throw.
  */
-export async function requireAuth(): Promise<AuthContext> {
+export async function requireAuth(workspaceId: string = "system"): Promise<AuthContext> {
   try {
-    const session = await requireSession();
-    const policy = await requirePolicyContext();
+    const session = await requireSession(workspaceId);
+    const policy = await requirePolicyContext(workspaceId);
     return { session, policy };
   } catch (error) {
     throw new UnauthorizedError("Valid session required");
@@ -53,9 +53,10 @@ export async function requireAuth(): Promise<AuthContext> {
  */
 export async function requireAuthForCapability(
   capability: CapabilityName,
-  scope?: { type: string; id: string }
+  scope?: { type: string; id: string },
+  workspaceId: string = "system"
 ): Promise<AuthContext> {
-  const auth = await requireAuth();
+  const auth = await requireAuth(workspaceId);
   requireCapability(auth.policy, capability, scope);
   return auth;
 }
@@ -65,8 +66,8 @@ export async function requireAuthForCapability(
  * Throws ForbiddenError if user has any client role.
  * Fails closed: client user → throw.
  */
-export async function requireAuthInternal(): Promise<AuthContext> {
-  const auth = await requireAuth();
+export async function requireAuthInternal(workspaceId: string = "system"): Promise<AuthContext> {
+  const auth = await requireAuth(workspaceId);
   if (!hasInternalAccess(auth.policy)) {
     throw new ForbiddenError("Internal access required");
   }
@@ -78,10 +79,10 @@ export async function requireAuthInternal(): Promise<AuthContext> {
  * Does NOT require valid auth (returns null if session invalid).
  * Use for optional auth endpoints.
  */
-export async function getServerAuthContext(): Promise<AuthContext | null> {
+export async function getServerAuthContext(workspaceId: string = "system"): Promise<AuthContext | null> {
   try {
-    const session = await requireSession();
-    const policy = await requirePolicyContext();
+    const session = await requireSession(workspaceId);
+    const policy = await requirePolicyContext(workspaceId);
     return { session, policy };
   } catch {
     return null;
@@ -95,10 +96,11 @@ export async function getServerAuthContext(): Promise<AuthContext | null> {
  * Prefer requireAuth(), requireAuthForCapability(), etc. for new code.
  */
 export async function withAuth(
-  options: AuthOptions = {}
+  options: AuthOptions = {},
+  workspaceId: string = "system"
 ): Promise<AuthContext> {
-  const session = await requireSession();
-  const policy = await requirePolicyContext();
+  const session = await requireSession(workspaceId);
+  const policy = await requirePolicyContext(workspaceId);
 
   if (options.internalOnly && !hasInternalAccess(policy)) {
     throw new ForbiddenError("This action requires internal access");
