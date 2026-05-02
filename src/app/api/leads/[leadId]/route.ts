@@ -4,6 +4,7 @@ import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getLeadById, updateLead, linkLeadToEngagement } from "@/services/lead";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import { LEAD_STATUSES } from "@/domain/constants/statuses";
 import type { NextRequest } from "next/server";
@@ -107,18 +108,47 @@ export const POST = withRequestContext(async (request, context) => {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
+
   const { leadId } = await context.params;
   parseOrThrow(uuidSchema, leadId);
 
   const body = await parseRequestBody(request, linkLeadSchema);
-  await linkLeadToEngagement(
-    leadId,
-    body.engagementId,
-    body.clientId,
-    session.user.id,
-    workspaceId
-  );
 
-  const updated = await getLeadById(leadId, workspaceId);
-  return Response.json(updated);
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "linkLeadToEngagement",
+    actorId: session.user.id,
+    payload: { leadId, engagementId: body.engagementId, clientId: body.clientId },
+  });
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
+  }
+
+  try {
+    await linkLeadToEngagement(
+      leadId,
+      body.engagementId,
+      body.clientId,
+      session.user.id,
+      workspaceId
+    );
+
+    const updated = await getLeadById(leadId, workspaceId);
+    await recordIdempotencyResponse(idempotencyKey, 200, updated);
+    return Response.json(updated);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
+    throw error;
+  }
 });

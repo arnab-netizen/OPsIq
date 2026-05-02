@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createContact, getContactsForClient } from "@/services/client-contact";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
 
@@ -41,12 +42,40 @@ export const POST = withRequestContext(async (request, context) => {
     );
   }
 
-  const body = await parseRequestBody(request, createContactSchema);
-  const result = await createContact(
-    { ...body, clientId },
-    authContext,
-    workspaceId
-  );
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
 
-  return Response.json(result, { status: 201 });
+  const body = await parseRequestBody(request, createContactSchema);
+
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "createContact",
+    actorId: authContext.session.user.id,
+    payload: { ...body, clientId },
+  });
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
+  }
+
+  try {
+    const result = await createContact(
+      { ...body, clientId },
+      authContext,
+      workspaceId
+    );
+    await recordIdempotencyResponse(idempotencyKey, 201, result);
+    return Response.json(result, { status: 201 });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
+    throw error;
+  }
 });

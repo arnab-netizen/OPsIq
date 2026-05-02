@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { linkEvidenceToFinding, unlinkEvidenceFromFinding } from "@/services/findings";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 
 const linkEvidenceSchema = z.object({
@@ -22,10 +23,38 @@ export const POST = withRequestContext(async (request, context) => {
     internalOnly: true,
   });
 
-  const body = await parseRequestBody(request, linkEvidenceSchema);
-  const result = await linkEvidenceToFinding(findingId, body.evidenceId, { session, policy });
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
 
-  return Response.json(result, { status: 201 });
+  const body = await parseRequestBody(request, linkEvidenceSchema);
+
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "linkEvidenceToFinding",
+    actorId: session.user.id,
+    payload: { findingId, evidenceId: body.evidenceId },
+  });
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
+  }
+
+  try {
+    const result = await linkEvidenceToFinding(findingId, body.evidenceId, { session, policy });
+    await recordIdempotencyResponse(idempotencyKey, 201, result);
+    return Response.json(result, { status: 201 });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
+    throw error;
+  }
 });
 
 export const DELETE = withRequestContext(async (request, context) => {

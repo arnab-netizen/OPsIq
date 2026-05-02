@@ -4,6 +4,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { runConsultingPipeline } from "@/services/consulting-engine/pipeline";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { assertEngagementAccess } from "@/lib/visibility";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 
 const runConsultingEngineSchema = z.object({
@@ -15,8 +16,29 @@ export const POST = withRequestContext(async (request) => {
     capability: CAPABILITIES.RECOMMENDATION_CREATE,
   });
 
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
+
   const body = await parseRequestBody(request, runConsultingEngineSchema);
   parseOrThrow(uuidSchema, body.engagementId);
+
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "runConsultingPipeline",
+    actorId: authContext.session.user.id,
+    payload: body,
+  });
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
+  }
 
   await assertEngagementAccess(authContext.session.user.id, body.engagementId);
 
@@ -26,19 +48,21 @@ export const POST = withRequestContext(async (request) => {
       authContext
     );
 
-    return Response.json(
-      {
-        success: result.status === "SUCCESS",
-        status: result.status,
-        data: {
-          decisionMemo: result.decisionMemo,
-          recommendations: result.recommendations,
-          actions: result.actions,
-        },
-        warnings: result.warnings,
+    const response = {
+      success: result.status === "SUCCESS",
+      status: result.status,
+      data: {
+        decisionMemo: result.decisionMemo,
+        recommendations: result.recommendations,
+        actions: result.actions,
       },
-      { status: result.status === "SUCCESS" ? 200 : 400 }
-    );
+      warnings: result.warnings,
+    };
+
+    const statusCode = result.status === "SUCCESS" ? 200 : 400;
+    await recordIdempotencyResponse(idempotencyKey, statusCode, response);
+
+    return Response.json(response, { status: statusCode });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
 
@@ -47,21 +71,22 @@ export const POST = withRequestContext(async (request) => {
       message.includes("not exist") ||
       message.includes("does not exist")
     ) {
-      return Response.json(
-        {
-          success: false,
-          status: "ERROR",
-          error: {
-            message: "Engagement not found",
-            code: "ENGAGEMENT_NOT_FOUND",
-          },
-          data: { decisionMemo: null, recommendations: [], actions: [] },
-          warnings: [],
+      const errorResponse = {
+        success: false,
+        status: "ERROR",
+        error: {
+          message: "Engagement not found",
+          code: "ENGAGEMENT_NOT_FOUND",
         },
-        { status: 404 }
-      );
+        data: { decisionMemo: null, recommendations: [], actions: [] },
+        warnings: [],
+      };
+      await recordIdempotencyError(idempotencyKey, new Error("Engagement not found"));
+      return Response.json(errorResponse, { status: 404 });
     }
 
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
     throw error;
   }
 });
