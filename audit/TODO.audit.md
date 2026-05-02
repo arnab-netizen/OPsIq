@@ -46,8 +46,8 @@ Audit Events: ✓ Complete (all mutations have emitAuditEvent + workspaceId)
 
 ## [IDEMPOTENCY] - POST routes require idempotency key, decision execution safe, retry safe
 
-- [ ] src/app/api/operator/route.ts:45 - POST endpoint missing idempotency-key requirement/validation
-- [ ] src/app/api/diagnosis/route.ts - POST endpoint missing idempotency-key requirement
+- [x] src/app/api/operator/route.ts:45 - POST endpoint missing idempotency-key requirement/validation
+- [x] src/app/api/diagnosis/route.ts - POST endpoint missing idempotency-key requirement
 
 ---
 

@@ -17,6 +17,7 @@ import { validateStatusTransition, getStatusTransitionError } from "@/services/o
 import { createEventLogger } from "@/lib/observability/log";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { emitWebhookAsync } from "@/lib/integrations/webhook";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import type { PolicyRule } from "@/domain/policy/types";
 
 export async function GET() {
@@ -46,8 +47,18 @@ export async function POST(request: NextRequest) {
   let logger: ReturnType<typeof createEventLogger> | null = null;
   let workspaceId: string | null = null;
   let id: string | null = null;
+  let idempotencyKey: string | null = null;
 
   try {
+    // Check idempotency key (required)
+    idempotencyKey = request.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      return NextResponse.json(
+        { error: "idempotency-key header required" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     id = body.id;
     const { status, actualOutcome, approvalRequired } = body;
@@ -80,6 +91,9 @@ export async function POST(request: NextRequest) {
     const session = await getSession();
     const actorId = session?.user.id ?? null;
 
+    // Check idempotency (need workspace context first)
+    // Will be set after we get workspace from item
+
     // Capture before state for audit
     const allItemsBefore = await getItems();
     const beforeItem = allItemsBefore.find((i) => i.id === id);
@@ -88,6 +102,20 @@ export async function POST(request: NextRequest) {
     if (beforeItem && beforeItem.workspaceId) {
       workspaceId = beforeItem.workspaceId;
       logger = createEventLogger("api_operator_post", workspaceId);
+
+      // Check idempotency after we have workspace context
+      const idempotencyCheck = await checkIdempotencyKey({
+        idempotencyKey,
+        operationName: "updateOperatorItem",
+        actorId: actorId || "unknown",
+        payload: body,
+      });
+
+      if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+        return NextResponse.json(idempotencyCheck.cachedResponse.body, {
+          status: idempotencyCheck.cachedResponse.status,
+        });
+      }
     }
 
     // Validate status transition
@@ -216,11 +244,19 @@ export async function POST(request: NextRequest) {
     if (logger) {
       logger.success({ itemId: id, newStatus: status });
     }
-    return NextResponse.json({ success: true });
+    const result = { success: true };
+    if (workspaceId && idempotencyKey) {
+      await recordIdempotencyResponse(idempotencyKey, 200, result);
+    }
+    return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     if (logger) {
       logger.error(message, { itemId: id });
+    }
+    if (workspaceId && idempotencyKey) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
     }
     return NextResponse.json({ error: message }, { status: 400 });
   }
