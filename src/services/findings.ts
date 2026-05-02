@@ -240,19 +240,19 @@ export async function updateFinding(
 export async function validateFinding(
   findingId: string,
   authContext: AuthContext,
-  workspaceId?: string
+  workspaceId: string = "unknown"
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
   const actorId = authContext.session.user.id;
 
   const existing = await db.finding.findUnique({
-    where: { id: findingId },
+    where: { id: findingId, engagement: { workspaceId } },
     select: { id: true, engagementId: true, linkedEvidence: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
 
-  const validatedWorkspaceId = workspaceId || "unknown";
+  const validatedWorkspaceId = workspaceId;
 
   if (existing.linkedEvidence && existing.linkedEvidence.length === 0) {
     throw new ValidationError("Finding must have at least one linked evidence before validation");
@@ -293,31 +293,18 @@ export async function validateFinding(
 export async function disputeFinding(
   findingId: string,
   authContext: AuthContext,
-  workspaceId?: string
+  workspaceId: string = "unknown"
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
   const actorId = authContext.session.user.id;
-
-  // If workspaceId not provided, fetch from engagement
-  let validatedWorkspaceId = workspaceId;
+  const validatedWorkspaceId = workspaceId;
 
   const existing = await db.finding.findUnique({
-    where: { id: findingId },
+    where: { id: findingId, engagement: { workspaceId } },
     select: { id: true, engagementId: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
-
-  // If workspaceId not provided, fetch from engagement
-  if (!validatedWorkspaceId) {
-    const engagement = await db.engagement.findUnique({
-      where: { id: existing.engagementId },
-      select: { workspaceId: true },
-    });
-    if (engagement) {
-      validatedWorkspaceId = engagement.workspaceId;
-    }
-  }
 
   // Update finding status to disputed
   await db.finding.update({
