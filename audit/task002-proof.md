@@ -13,32 +13,6 @@
       conditionProfiles: {
       ...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/stage.ts:89
-    const stage = await db.stage.findUnique({
-    where: { id },
-    include: {
-      engagement: true,
-    },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/stage.ts:127
-    const stage = await db.stage.findUnique({
-    where: { id },
-    include: { engagement: true },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/stage.ts:204
-    const stage = await db.stage.findUnique({
-    where: { id },
-    include: { engagement: true },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/stage.ts:290
-    const stage = await db.stage.findUnique({
-    where: { id },
-    include: { engagement: true },
-  });...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/enforcement.service.ts:253
     const decision = await db.operatorItem.findUnique({
     where: { id: decisionId },
@@ -331,15 +305,11 @@
 ## Summary
 Files checked: 363
 Reads checked: 328
-Violations found: 59
+Violations found: 55
 
 ## Violations
 - /home/user/OPsIq/src/services/role-assignment.ts:77
 - /home/user/OPsIq/src/services/shock-detection.ts:192
-- /home/user/OPsIq/src/services/stage.ts:89
-- /home/user/OPsIq/src/services/stage.ts:127
-- /home/user/OPsIq/src/services/stage.ts:204
-- /home/user/OPsIq/src/services/stage.ts:290
 - /home/user/OPsIq/src/services/decision-control/enforcement.service.ts:253
 - /home/user/OPsIq/src/services/decision-evidence/decision-evidence.service.ts:111
 - /home/user/OPsIq/src/services/workspace/activation-context.ts:24

@@ -86,17 +86,13 @@ export async function createStage(
 export async function getStage(id: string, authContext: AuthContext, workspaceId: string) {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_VIEW);
 
-  const stage = await db.stage.findUnique({
-    where: { id },
+  const stage = await db.stage.findFirst({
+    where: { id, engagement: { workspaceId } },
     include: {
       engagement: true,
     },
   });
   if (!stage) throw new NotFoundError("Stage", id);
-
-  if (stage.engagement.workspaceId !== workspaceId) {
-    throw new NotFoundError("Stage", id);
-  }
 
   return stage;
 }
@@ -124,15 +120,11 @@ export async function updateStage(
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
 
   const actorId = authContext.session.user.id;
-  const stage = await db.stage.findUnique({
-    where: { id },
+  const stage = await db.stage.findFirst({
+    where: { id, engagement: { workspaceId } },
     include: { engagement: true },
   });
   if (!stage) throw new NotFoundError("Stage", id);
-
-  if (stage.engagement.workspaceId !== workspaceId) {
-    throw new NotFoundError("Stage", id);
-  }
 
   if (input.version !== stage.version) {
     throw new ValidationError("Version mismatch");
@@ -201,15 +193,11 @@ export async function blockStage(
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
 
   const actorId = authContext.session.user.id;
-  const stage = await db.stage.findUnique({
-    where: { id },
+  const stage = await db.stage.findFirst({
+    where: { id, engagement: { workspaceId } },
     include: { engagement: true },
   });
   if (!stage) throw new NotFoundError("Stage", id);
-
-  if (stage.engagement.workspaceId !== workspaceId) {
-    throw new NotFoundError("Stage", id);
-  }
 
   if (input.version !== stage.version) {
     throw new ValidationError("Version mismatch");
@@ -287,15 +275,11 @@ export async function unblockStage(
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
 
   const actorId = authContext.session.user.id;
-  const stage = await db.stage.findUnique({
-    where: { id },
+  const stage = await db.stage.findFirst({
+    where: { id, engagement: { workspaceId } },
     include: { engagement: true },
   });
   if (!stage) throw new NotFoundError("Stage", id);
-
-  if (stage.engagement.workspaceId !== workspaceId) {
-    throw new NotFoundError("Stage", id);
-  }
 
   if (input.version !== stage.version) {
     throw new ValidationError("Version mismatch");
