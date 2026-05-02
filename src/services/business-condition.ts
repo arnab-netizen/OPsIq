@@ -20,6 +20,7 @@ import {
 
 export interface CreateConditionProfileInput {
   engagementId: string;
+  workspaceId: string;
   businessStatus: string;
   severityScore: number;
   urgencyLevel: string;
@@ -105,7 +106,7 @@ export async function assessCondition(
   const actorId = authContext.session.user.id;
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
+    where: { id: input.engagementId, workspaceId: input.workspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 

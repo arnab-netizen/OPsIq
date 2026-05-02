@@ -191,12 +191,10 @@ export async function updateItem(
   if (updates.blockingDependencies !== undefined) updateData.blockingDependencies = updates.blockingDependencies && updates.blockingDependencies.length > 0 ? updates.blockingDependencies : null;
 
   // Fetch current item first to verify workspace and capture state
-  const item = await db.operatorItem.findUnique({ where: { id } });
+  const item = await db.operatorItem.findFirst({
+    where: { id, ...(workspaceId && { workspaceId }) }
+  });
   if (!item) throw new NotFoundError("OperatorItem", id);
-
-  if (workspaceId && item.workspaceId !== workspaceId) {
-    throw new NotFoundError("OperatorItem", id);
-  }
 
   // Auto-capture firstCompletedAt on first completion
   if (updates.status === "done" && updates.completedAt) {
@@ -343,8 +341,8 @@ export async function applyOverride(
   actorId?: string
 ): Promise<void> {
   // Fetch item to get workspaceId if not provided
-  const item = await db.operatorItem.findUnique({
-    where: { id },
+  const item = await db.operatorItem.findFirst({
+    where: { id, ...(workspaceId && { workspaceId }) },
     select: { id: true, workspaceId: true, action: true, createdBy: true },
   });
 

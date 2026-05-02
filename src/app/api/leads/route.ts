@@ -4,6 +4,7 @@ import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createLead, listLeads } from "@/services/lead";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import type { NextRequest } from "next/server";
@@ -71,8 +72,37 @@ export const POST = withRequestContext(async (request) => {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const body = await parseRequestBody(request, createLeadSchema);
-  const result = await createLead(body, authContext, workspaceId);
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
 
-  return Response.json(result, { status: 201 });
+  const body = await parseRequestBody(request, createLeadSchema);
+
+  // Check idempotency
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "createLead",
+    actorId: authContext.session.user.id,
+    payload: body,
+  });
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
+  }
+
+  try {
+    const result = await createLead(body, authContext, workspaceId);
+    await recordIdempotencyResponse(idempotencyKey, 201, result);
+    return Response.json(result, { status: 201 });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
+    throw error;
+  }
 });

@@ -116,7 +116,7 @@ export const POST = withRequestContext(async (request, context) => {
 
   try {
     const result = await assessCondition(
-      { ...body, engagementId },
+      { ...body, engagementId, workspaceId },
       { session, policy }
     );
     await recordIdempotencyResponse(idempotencyKey, 201, result);

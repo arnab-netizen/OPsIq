@@ -18,12 +18,14 @@ export interface AddMemberInput {
   userId: string;
   engagementId: string;
   role: RoleName;
+  workspaceId: string;
 }
 
 export interface RemoveMemberInput {
   userId: string;
   engagementId: string;
   role: RoleName;
+  workspaceId: string;
 }
 
 // ─── Validation ────────────────────────────────────────────────────────────
@@ -120,7 +122,7 @@ export async function addMember(
 
   // Get engagement for workspace context
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
+    where: { id: input.engagementId, workspaceId: input.workspaceId },
     select: { workspaceId: true },
   });
 
@@ -205,7 +207,7 @@ export async function removeMember(
 
   // Get engagement for workspace context
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
+    where: { id: input.engagementId, workspaceId: input.workspaceId },
     select: { workspaceId: true },
   });
 

@@ -91,7 +91,7 @@ export interface DecisionEvidence {
   impactBasis: ImpactBasis;
 }
 
-export async function getDecisionEvidence(engagementId: string): Promise<DecisionEvidence> {
+export async function getDecisionEvidence(engagementId: string, workspaceId: string): Promise<DecisionEvidence> {
   // Fetch all required data in parallel
   const [
     engagement,
@@ -104,10 +104,10 @@ export async function getDecisionEvidence(engagementId: string): Promise<Decisio
     decisionConfidence,
     businessImpactResult,
   ] = await Promise.all([
-    db.engagement.findUnique({ where: { id: engagementId } }),
-    db.action.findMany({ where: { engagementId } }),
-    db.finding.findMany({ where: { engagementId } }),
-    db.recommendation.findMany({ where: { engagementId } }),
+    db.engagement.findUnique({ where: { id: engagementId, workspaceId } }),
+    db.action.findMany({ where: { engagementId, engagement: { workspaceId } } }),
+    db.finding.findMany({ where: { engagementId, engagement: { workspaceId } } }),
+    db.recommendation.findMany({ where: { engagementId, engagement: { workspaceId } } }),
     db.businessConditionProfile.findFirst({
       where: { engagementId, isCurrent: true },
       orderBy: { createdAt: "desc" },

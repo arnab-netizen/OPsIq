@@ -78,7 +78,7 @@ export const POST = withRequestContext(async (request, context) => {
   const body = await parseRequestBody(request, addMemberSchema);
 
   const result = await addMember(
-    { userId, ...body } as Parameters<typeof addMember>[0],
+    { userId, ...body, workspaceId } as Parameters<typeof addMember>[0],
     { session, policy }
   );
 
@@ -113,7 +113,7 @@ export const DELETE = withRequestContext(async (request, context) => {
   const body = await parseRequestBody(request, removeMemberSchema);
 
   await removeMember(
-    { userId, ...body } as Parameters<typeof removeMember>[0],
+    { userId, ...body, workspaceId } as Parameters<typeof removeMember>[0],
     { session, policy }
   );
 

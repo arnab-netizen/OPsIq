@@ -8,6 +8,7 @@ import {
 } from "@/services/evidence";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { createEvidenceBundleSchema } from "@/domain/validation/evidence";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
@@ -39,12 +40,40 @@ export const POST = withRequestContext(async (request) => {
       return Response.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const idempotencyKey = request.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      return Response.json(
+        { error: "idempotency-key header required" },
+        { status: 400 }
+      );
+    }
+
     const body = await parseRequestBody(request, createEvidenceBundleSchema);
+
+    // Check idempotency
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "createEvidenceBundle",
+      actorId: authContext.session.user.id,
+      payload: body,
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return Response.json(idempotencyCheck.cachedResponse.body, {
+        status: idempotencyCheck.cachedResponse.status,
+      });
+    }
+
     const result = await createEvidenceBundle(body, authContext, workspaceId);
+    await recordIdempotencyResponse(idempotencyKey, 201, result);
 
     return Response.json(result, { status: 201 });
   } catch (error) {
     logger.error("Error creating evidence bundle", { error });
+    if (request.headers.get("idempotency-key")) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(request.headers.get("idempotency-key")!, err);
+    }
     return errorToResponse(error);
   }
 });

@@ -694,6 +694,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
   // Create business condition profile based on diagnosis
   const conditionInput = {
     engagementId: engagement.id,
+    workspaceId: validatedWorkspaceId,
     businessStatus: severity === "critical" ? "critical" : severity === "high" ? "distressed" : "challenged",
     severityScore: severity === "critical" ? 9 : severity === "high" ? 7 : 5,
     urgencyLevel: severity === "critical" || severity === "high" ? "critical" : "medium",

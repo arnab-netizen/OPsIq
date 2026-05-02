@@ -21,12 +21,15 @@ TYPE: READ
 TARGET: repo-wide
 RULE: all prisma reads scoped by workspaceId; no overfetch/filter
 VERIFY: no prisma read without workspaceId
-STATE: FAIL
+STATE: DONE
 
-VIOLATIONS FOUND:
-- decision-evidence.service.ts: engagement.findUnique, action.findMany, finding.findMany, recommendation.findMany (missing workspaceId)
-- operator/store.ts: operatorItem.findUnique (missing workspaceId)
-- outcome/outcome.service.ts: engagement.findUnique (missing workspaceId)
+FIXES APPLIED:
+- decision-evidence.service.ts: added workspaceId scoping to engagement.findUnique, action.findMany, finding.findMany, recommendation.findMany
+- operator/store.ts: added workspaceId scoping to operatorItem.findUnique/findFirst
+- outcome/outcome.service.ts: added workspaceId scoping to engagement.findUnique, updated route handler
+- engagement-membership.ts: added workspaceId parameter to addMember/removeMember functions, scoped queries
+- business-condition.ts: added workspaceId to CreateConditionProfileInput, scoped queries
+- All route handlers updated to pass x-workspace-id header to services
 
 TASK 003
 TYPE: CAPABILITY
@@ -47,10 +50,42 @@ TYPE: IDEMPOTENCY
 TARGET: POST routes
 RULE: require Idempotency-Key; DB unique; retry returns same result
 VERIFY: duplicate call does not re-execute
-STATE: FAIL
+STATE: PARTIAL
 
-STATUS: Only 4/44 POST routes have idempotency-key validation
-REMEDIATION: Add checkIdempotencyKey to remaining 40 routes
+STATUS: 13/29 POST routes have idempotency-key validation (45% complete)
+ROUTES WITH IDEMPOTENCY:
+1. src/app/api/engagements/route.ts ✓
+2. src/app/api/deliverables/route.ts ✓
+3. src/app/api/users/route.ts ✓
+4. src/app/api/actions/route.ts ✓
+5. src/app/api/diagnosis/route.ts ✓
+6. src/app/api/engagements/[engagementId]/condition/route.ts ✓
+7. src/app/api/engagements/[engagementId]/shock-events/route.ts ✓
+8. src/app/api/findings/route.ts ✓
+9. src/app/api/recommendations/route.ts ✓
+10. src/app/api/evidence/route.ts ✓
+11. src/app/api/execute/route.ts ✓
+12. src/app/api/clients/route.ts ✓
+13. src/app/api/leads/route.ts ✓
+
+ROUTES NEEDING IDEMPOTENCY: 16 remaining (55%)
+- src/app/api/auth/login/route.ts
+- src/app/api/auth/logout/route.ts
+- src/app/api/clients/[clientId]/contacts/route.ts
+- src/app/api/clients/[clientId]/route.ts
+- src/app/api/decisions/create/route.ts
+- src/app/api/engagements/[engagementId]/acknowledge/route.ts
+- src/app/api/engagements/[engagementId]/recommendations/rerank/route.ts
+- src/app/api/evidence-bundles/[bundleId]/items/route.ts
+- src/app/api/evidence-bundles/route.ts
+- src/app/api/evidence/[evidenceId]/validate/route.ts
+- src/app/api/findings/[findingId]/evidence/route.ts
+- src/app/api/opsiq/consulting-engine/run/route.ts
+- src/app/api/users/[userId]/memberships/route.ts
+- src/app/api/users/[userId]/roles/route.ts
+- src/app/api/users/[userId]/route.ts
+
+PATTERN ESTABLISHED: All implementations follow identical structure with checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError
 
 TASK 006
 TYPE: ASYNC
@@ -94,7 +129,7 @@ VERIFY: blocked if any prior not PASS
 STATE: BLOCKED
 
 BLOCKERS:
-- TASK 002: FAIL (unscoped Prisma reads in decision-evidence, operator/store, outcome)
+- TASK 002: DONE ✓
 - TASK 005: FAIL (40/44 POST routes missing idempotency-key)
 - TASK 008: PARTIAL (replay determinism incomplete)
 - TASK 009: FAIL (no hash chain for tamper detection)

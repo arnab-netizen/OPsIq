@@ -51,7 +51,8 @@ export interface EngagementOutcomes {
 export async function recordOutcome(
   actionId: string,
   actorId?: string,
-  idempotencyKey?: string
+  idempotencyKey?: string,
+  workspaceId?: string
 ): Promise<ActionOutcome> {
   // Idempotency check
   if (idempotencyKey && actorId) {
@@ -92,10 +93,11 @@ export async function recordOutcome(
     const engagementId = action.engagementId;
 
   // Get current state (actual impact) and engagement context
+  const engagementWhere: { id: string; workspaceId?: string } = workspaceId ? { id: engagementId, workspaceId } : { id: engagementId };
   const [currentConfidence, currentImpact, engagement, condition] = await Promise.all([
     computeDecisionConfidence({ engagementId }),
     generateBusinessImpact(engagementId, engagementId),
-    db.engagement.findUnique({ where: { id: engagementId }, select: { id: true, workspaceId: true } }),
+    db.engagement.findUnique({ where: engagementWhere, select: { id: true, workspaceId: true } }),
     db.businessConditionProfile.findFirst({
       where: { engagementId, isCurrent: true },
       orderBy: { createdAt: "desc" },
@@ -176,13 +178,13 @@ export async function recordOutcome(
     });
 
     // Emit audit event for outcome recording
-    const workspaceId = engagement?.workspaceId || "unknown";
+    const auditWorkspaceId = workspaceId || engagement?.workspaceId || "unknown";
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OUTCOME_RECORDED,
       actorId: actorId || "system",
       entityType: "action",
       entityId: actionId,
-      workspaceId,
+      workspaceId: auditWorkspaceId,
       payload: {
         engagementId,
         accuracyScore,
@@ -226,7 +228,7 @@ export async function recordOutcome(
   }
 }
 
-export async function getEngagementOutcomes(engagementId: string): Promise<EngagementOutcomes> {
+export async function getEngagementOutcomes(engagementId: string, workspaceId?: string): Promise<EngagementOutcomes> {
   // Fetch all completed actions with outcome snapshots
   const completedActions = await db.action.findMany({
     where: {
@@ -239,7 +241,7 @@ export async function getEngagementOutcomes(engagementId: string): Promise<Engag
 
   // Get engagement context for financial calculations
   const [engagement, condition] = await Promise.all([
-    db.engagement.findUnique({ where: { id: engagementId } }),
+    db.engagement.findUnique({ where: { id: engagementId, ...(workspaceId && { workspaceId }) } }),
     db.businessConditionProfile.findFirst({
       where: { engagementId, isCurrent: true },
       orderBy: { createdAt: "desc" },
