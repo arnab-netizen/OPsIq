@@ -4,6 +4,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     auditEvent: {
       create: vi.fn(),
+      findFirst: vi.fn(),
     },
   },
 }));
@@ -22,6 +23,8 @@ import { logger } from "@/infra/logger";
 describe("Audit Fail-Safe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock findFirst to return null (no previous event in chain)
+    vi.mocked(db.auditEvent.findFirst).mockResolvedValue(null);
   });
 
   describe("Missing workspaceId Guard", () => {
@@ -100,7 +103,7 @@ describe("Audit Fail-Safe", () => {
       });
 
       expect(vi.mocked(logger.info)).toHaveBeenCalledWith(
-        "Audit event emitted",
+        "Audit event emitted with hash chain",
         expect.objectContaining({
           eventName: "user.logged_in",
           auditEventId: "event-123",

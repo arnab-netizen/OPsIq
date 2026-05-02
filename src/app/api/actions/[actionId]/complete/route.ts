@@ -79,7 +79,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   // Record outcome for decision tracking
   try {
     const idempotencyKey = nextRequest.headers.get("idempotency-key") || undefined;
-    await recordOutcome(actionId, session.user.id, idempotencyKey);
+    await recordOutcome(actionId, session.user.id, idempotencyKey, workspaceId);
   } catch (err) {
     // Log but don't fail the action completion
     logger.error("Failed to record outcome", {

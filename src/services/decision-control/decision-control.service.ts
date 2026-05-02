@@ -200,20 +200,20 @@ export async function getPrimaryDecisionWithSnapshot(engagementId: string): Prom
 
   // Create snapshot input
   const snapshotInput: DecisionInput = {
-    actions: actions.map((a) => ({
+    actions: actions.map((a: typeof actions[0]) => ({
       id: a.id,
       title: a.title,
       priority: a.priority,
       status: a.status,
       dueDate: a.dueDate,
     })),
-    findings: findings.map((f) => ({
+    findings: findings.map((f: typeof findings[0]) => ({
       id: f.id,
       title: f.title,
       severity: f.severity || "unknown",
       status: f.status,
     })),
-    recommendations: recommendations.map((r) => ({
+    recommendations: recommendations.map((r: typeof recommendations[0]) => ({
       id: r.id,
       title: r.title,
       status: r.status,

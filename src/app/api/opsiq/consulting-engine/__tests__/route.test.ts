@@ -26,6 +26,12 @@ vi.mock("@/services/consulting-engine/pipeline", () => ({
   runConsultingPipeline: vi.fn(),
 }));
 
+vi.mock("@/services/idempotency", () => ({
+  checkIdempotencyKey: vi.fn(async () => ({ isNew: true })),
+  recordIdempotencyResponse: vi.fn(async () => {}),
+  recordIdempotencyError: vi.fn(async () => {}),
+}));
+
 import { POST } from "../run/route";
 import { runConsultingPipeline } from "@/services/consulting-engine/pipeline";
 import { parseRequestBody } from "@/lib/validation";
@@ -40,6 +46,12 @@ describe("POST /api/opsiq/consulting-engine/run", () => {
     vi.clearAllMocks();
     mockRequest = {
       json: vi.fn(),
+      headers: {
+        get: vi.fn((key: string) => {
+          if (key === "idempotency-key") return "test-idempotency-key";
+          return null;
+        }),
+      },
     };
   });
 

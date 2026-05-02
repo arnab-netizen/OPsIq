@@ -246,25 +246,13 @@ export async function validateFinding(
 
   const actorId = authContext.session.user.id;
 
-  // If workspaceId not provided, fetch from engagement
-  let validatedWorkspaceId = workspaceId;
-
   const existing = await db.finding.findUnique({
     where: { id: findingId },
     select: { id: true, engagementId: true, linkedEvidence: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
 
-  // If workspaceId not provided, fetch from engagement
-  if (!validatedWorkspaceId) {
-    const engagement = await db.engagement.findUnique({
-      where: { id: existing.engagementId },
-      select: { workspaceId: true },
-    });
-    if (engagement) {
-      validatedWorkspaceId = engagement.workspaceId;
-    }
-  }
+  const validatedWorkspaceId = workspaceId || "unknown";
 
   if (existing.linkedEvidence && existing.linkedEvidence.length === 0) {
     throw new ValidationError("Finding must have at least one linked evidence before validation");
