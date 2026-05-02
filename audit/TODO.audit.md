@@ -74,20 +74,20 @@ Audit Events: ✓ Complete (all mutations have emitAuditEvent + workspaceId)
 
 | Category | Violations | Status |
 |----------|-----------|--------|
-| AUTH | 12 | ⚠️ actorId → authContext conversion needed |
-| READ | 3 | ⚠️ Missing workspaceId scoping on escalation/action queries |
+| AUTH | 4/12 remaining | ⚠️ 6 fixed: escalation (3), execute, action-lifecycle, execution-certainty, idempotency, review-cycle |
+| READ | 0/3 | ✓ CLEAR (Phase 2 complete) |
 | CAPABILITY | 0 | ✓ CLEAR |
 | AUDIT | 0 | ✓ CLEAR (Phase 1 complete) |
-| IDEMPOTENCY | 2 | ⚠️ Missing idempotency-key on 2 POST routes |
-| ASYNC | 2 | ⚠️ Fire-and-forget error handling needs logging |
-| DETERMINISM | 1 | ⚠️ Missing orderBy on escalation KPI query |
+| IDEMPOTENCY | 0/2 | ✓ CLEAR (Phase 2 complete) |
+| ASYNC | 0/2 | ✓ CLEAR (Phase 2 complete) |
+| DETERMINISM | 0/1 | ✓ CLEAR (Phase 2 complete) |
 | DEPLOYMENT | 0 | ✓ CLEAR |
 
-**Total: 23 violations**
+**Total: 9 violations remaining (down from 23)**
 
 ---
 
-## Phase 1 Completion (Current)
+## Phase 1 Completion
 
 ✓ All mutations now emit audit events  
 ✓ All emitAuditEvent calls include workspaceId (REQUIRED)  
@@ -96,10 +96,21 @@ Audit Events: ✓ Complete (all mutations have emitAuditEvent + workspaceId)
 
 ---
 
+## Phase 2 Completion (Current)
+
+✓ READ Safety - All queries scoped by workspaceId (escalation KPI, action state queries)
+✓ IDEMPOTENCY - All new POST routes (operator, diagnosis) require and validate idempotency-key  
+✓ ASYNC Safety - All fire-and-forget patterns replaced with proper error logging
+✓ DETERMINISM - All critical queries have stable orderBy clauses
+✓ AUTH Conversion (Partial) - 6/12 functions converted: escalation (3), execute, action-lifecycle, execution-certainty, idempotency, review-cycle
+✓ Build passing with zero type errors
+
+**Remaining Phase 2 Work:** 4 AUTH violations (report-generator, lead, role-assignment x2) - These require coordinated updates across multiple callers
+
+---
+
 ## Next Phase Goals
 
-**Phase 2: AUTH Conversion** - Replace all raw `actorId: string` parameters with proper `authContext: AuthContext`  
-**Phase 2: READ Safety** - Add workspaceId to all query where clauses for escalation and action state queries  
-**Phase 2: IDEMPOTENCY** - Add idempotency-key requirement to operator and diagnosis POST endpoints  
-**Phase 2: ASYNC Safety** - Replace fire-and-forget error handling with proper logging  
-**Phase 2: DETERMINISM** - Add missing orderBy clauses for stable output ordering
+**Phase 2.5: Complete AUTH Conversion** - Fix remaining 4 actorId → authContext conversions (report-generator, lead, role-assignment)
+- These require updating callers in test files and service dependencies
+- May be simpler to batch fix once caller patterns are identified
