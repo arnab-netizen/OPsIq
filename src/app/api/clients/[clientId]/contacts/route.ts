@@ -4,6 +4,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createContact, getContactsForClient } from "@/services/client-contact";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { z } from "zod/v4";
+import type { NextRequest } from "next/server";
 
 const createContactSchema = z.object({
   name: z.string().min(1),
@@ -31,10 +32,20 @@ export const POST = withRequestContext(async (request, context) => {
     internalOnly: true,
   });
 
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
   const body = await parseRequestBody(request, createContactSchema);
   const result = await createContact(
     { ...body, clientId },
-    authContext
+    authContext,
+    workspaceId
   );
 
   return Response.json(result, { status: 201 });
