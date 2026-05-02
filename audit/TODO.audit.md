@@ -27,8 +27,8 @@ Audit Events: ✓ Complete (all mutations have emitAuditEvent + workspaceId)
 ## [READ] - All queries require workspaceId, no overfetch/filter, includes/select safe, joins scoped
 
 - [x] src/services/escalation.ts:76 - db.kPI.findMany missing workspaceId in where clause (only has engagementId)
-- [ ] src/services/action-lifecycle.ts:225 - getActionsByEngagementAndState missing workspaceId in query where clause
-- [ ] src/services/action-lifecycle.ts:234 - getActionsByState missing workspaceId entirely - no workspace isolation on state queries
+- [x] src/services/action-lifecycle.ts:225 - getActionsByEngagementAndState missing workspaceId in query where clause
+- [x] src/services/action-lifecycle.ts:234 - getActionsByState missing workspaceId entirely - no workspace isolation on state queries
 
 ---
 

@@ -226,20 +226,25 @@ export async function transitionActionState(
 
 export async function getActionsByEngagementAndState(
   engagementId: string,
-  state: ActionLifecycleState
+  state: ActionLifecycleState,
+  workspaceId: string
 ): Promise<any[]> {
   return db.action.findMany({
     where: {
       engagementId,
       status: state,
+      engagement: { workspaceId },
     },
     orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
   });
 }
 
-export async function getActionsByState(state: ActionLifecycleState): Promise<any[]> {
+export async function getActionsByState(state: ActionLifecycleState, workspaceId: string): Promise<any[]> {
   return db.action.findMany({
-    where: { status: state },
+    where: {
+      status: state,
+      engagement: { workspaceId },
+    },
     include: { engagement: { select: { id: true, code: true, title: true } } },
   });
 }
