@@ -2,11 +2,13 @@ import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { ValidationError } from "@/infra/errors";
 import crypto from "crypto";
+import type { AuthContext } from "@/lib/auth-guard";
 
 export interface IdempotencyOptions {
   idempotencyKey: string;
   operationName: string;
-  actorId: string;
+  authContext?: AuthContext;
+  actorId?: string;
   payload: Record<string, unknown>;
   expirationMinutes?: number;
 }
