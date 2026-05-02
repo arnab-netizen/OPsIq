@@ -47,7 +47,7 @@ export const GET = withRequestContext(async (request, context) => {
   const { userId } = await context.params;
   parseOrThrow(uuidSchema, userId);
 
-  const memberships = await getMembershipsForUser(userId);
+  const memberships = await getMembershipsForUser(userId, workspaceId);
   return Response.json({ memberships });
 });
 
