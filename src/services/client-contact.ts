@@ -36,7 +36,7 @@ export async function createContact(
   if (!workspaceId) throw new Error("workspaceId is required");
   const actorId = authContext.session.user.id;
   const client = await db.clientAccount.findUnique({
-    where: { id: input.clientId },
+    where: { id: input.clientId, workspaceId },
   });
   if (!client) throw new NotFoundError("ClientAccount", input.clientId);
 
@@ -82,8 +82,11 @@ export async function deactivateContact(
 ): Promise<void> {
   if (!workspaceId) throw new Error("workspaceId is required");
   const actorId = authContext.session.user.id;
-  const contact = await db.clientContact.findUnique({
-    where: { id: contactId },
+  const contact = await db.clientContact.findFirst({
+    where: {
+      id: contactId,
+      client: { workspaceId },
+    },
   });
   if (!contact) throw new NotFoundError("ClientContact", contactId);
 
@@ -122,8 +125,11 @@ export async function updateContact(
 ): Promise<void> {
   if (!workspaceId) throw new Error("workspaceId is required");
   const actorId = authContext.session.user.id;
-  const contact = await db.clientContact.findUnique({
-    where: { id: contactId },
+  const contact = await db.clientContact.findFirst({
+    where: {
+      id: contactId,
+      client: { workspaceId },
+    },
   });
   if (!contact) throw new NotFoundError("ClientContact", contactId);
 
@@ -155,9 +161,13 @@ export async function updateContact(
 }
 
 
-export async function getContactsForClient(clientId: string) {
+export async function getContactsForClient(clientId: string, workspaceId: string) {
   return db.clientContact.findMany({
-    where: { clientId, isActive: true },
+    where: {
+      clientId,
+      isActive: true,
+      client: { workspaceId },
+    },
     orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
   });
 }

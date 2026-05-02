@@ -16,12 +16,20 @@ const createContactSchema = z.object({
   notes: z.string().optional(),
 });
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
   const { clientId } = await context.params;
   parseOrThrow(uuidSchema, clientId);
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
   await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
 
-  const contacts = await getContactsForClient(clientId);
+  const contacts = await getContactsForClient(clientId, workspaceId);
   return Response.json({ contacts });
 });
 
