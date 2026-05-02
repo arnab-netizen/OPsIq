@@ -143,9 +143,11 @@ export function calculateExecutionCertainty(
   };
 }
 
+import type { AuthContext } from "@/lib/auth-guard";
+
 export async function generateExecutionCertainty(
   engagementId: string,
-  actorId: string
+  authContext: AuthContext
 ) {
   return {
     engagementId,

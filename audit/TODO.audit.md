@@ -14,7 +14,7 @@ Audit Events: ✓ Complete (all mutations have emitAuditEvent + workspaceId)
 - [x] src/services/escalation.ts:149 - checkEngagementEscalations accepts actorId: string instead of authContext
 - [x] src/services/execute.ts:44 - executeWorkflow accepts actorId: string instead of authContext
 - [x] src/services/action-lifecycle.ts:123 - transitionActionState context.actorId: string (should use authContext)
-- [ ] src/services/execution-certainty.ts:148 - calculateExecutionCertainty accepts actorId: string instead of authContext
+- [x] src/services/execution-certainty.ts:148 - calculateExecutionCertainty accepts actorId: string instead of authContext
 - [ ] src/services/idempotency.ts:9 - IdempotencyRecord interface has actorId: string instead of authContext
 - [ ] src/services/review-cycle.ts:38 - generateReviewCycle accepts actorId: string instead of authContext
 - [ ] src/services/report-generator.ts:499 - generateWorkflowReport accepts actorId: string instead of authContext
