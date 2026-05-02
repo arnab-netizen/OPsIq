@@ -13,12 +13,15 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { requireServiceContext } from "@/lib/service-auth";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
   DecisionState,
   isTerminalState,
   TERMINAL_STATES,
 } from "@/domain/decision-lifecycle";
 import { ValidationError, NotFoundError, ConflictError } from "@/infra/errors";
+import type { AuthContext } from "@/lib/auth-guard";
 
 /**
  * Impact type classification
@@ -164,7 +167,7 @@ export function validateFinalROIMarking(
  */
 export async function recordImpactWithGating(
   request: ImpactRecordingRequest,
-  authContext: any
+  authContext: AuthContext
 ): Promise<{ decisionId: string; impactType: ImpactType; recorded: boolean }> {
   // Verify auth
   requireServiceContext(authContext, request.workspaceId);
@@ -203,8 +206,18 @@ export async function recordImpactWithGating(
         data: {
           impactExpected: request.expectedOutcomeValue || null,
           updatedAt: new Date(),
-          lastUpdatedBy: authContext.user?.id,
+          lastUpdatedBy: authContext.session.user.id,
         },
+      });
+
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.DECISION_IMPACT_PROJECTED,
+        actorId: authContext.session.user.id,
+        entityType: "decision",
+        entityId: decisionId,
+        workspaceId,
+        payload: { expectedValue: request.expectedOutcomeValue },
+        visibility: "internal",
       });
 
       logger.info("Projected impact recorded", {
@@ -242,8 +255,18 @@ export async function recordImpactWithGating(
           actualOutcomeValue: actualOutcomeValue || null,
           actualOutcome: actualOutcome || null,
           updatedAt: new Date(),
-          lastUpdatedBy: authContext.user?.id,
+          lastUpdatedBy: authContext.session.user.id,
         },
+      });
+
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.DECISION_IMPACT_REALIZED,
+        actorId: authContext.session.user.id,
+        entityType: "decision",
+        entityId: decisionId,
+        workspaceId,
+        payload: { actualValue: actualOutcomeValue, actualOutcome },
+        visibility: "internal",
       });
 
       logger.info("Realized impact recorded", {
@@ -278,7 +301,7 @@ export async function recordImpactWithGating(
  */
 export async function recordROIWithGating(
   request: ROIRecordingRequest,
-  authContext: any
+  authContext: AuthContext
 ): Promise<{ decisionId: string; roiValue: number; isFinal: boolean }> {
   // Verify auth
   requireServiceContext(authContext, request.workspaceId);
@@ -327,8 +350,18 @@ export async function recordROIWithGating(
         impactActual: roiValue,
         isROIFinal: markFinal ? true : false,
         updatedAt: new Date(),
-        lastUpdatedBy: authContext.user?.id,
+        lastUpdatedBy: authContext.session.user.id,
       },
+    });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.DECISION_ROI_RECORDED,
+      actorId: authContext.session.user.id,
+      entityType: "decision",
+      entityId: decisionId,
+      workspaceId,
+      payload: { roiValue, isFinal: markFinal },
+      visibility: "internal",
     });
 
     logger.info("ROI recorded with gating", {

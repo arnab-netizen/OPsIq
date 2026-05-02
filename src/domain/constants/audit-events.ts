@@ -50,6 +50,7 @@ export const AUDIT_EVENTS = {
 
   // Stage
   STAGE_CREATED: "stage.created",
+  STAGE_UPDATED: "stage.updated",
   STAGE_TRANSITIONED: "stage.transitioned",
   STAGE_BLOCKED: "stage.blocked",
   STAGE_UNBLOCKED: "stage.unblocked",
@@ -84,6 +85,7 @@ export const AUDIT_EVENTS = {
   ACTION_STARTED: "action.started",
   ACTION_COMPLETED: "action.completed",
   ACTION_OVERDUE: "action.overdue",
+  ACTION_PRIORITY_ESCALATED: "action.priority_escalated",
 
   // Execution Commitment
   EXECUTION_ACKNOWLEDGED: "execution.acknowledged",
@@ -100,6 +102,9 @@ export const AUDIT_EVENTS = {
   DECISION_FAILED: "decision.failed",
   DECISION_CLOSED: "decision.closed",
   OUTCOME_RECORDED: "outcome.recorded",
+  DECISION_IMPACT_PROJECTED: "decision.impact_projected",
+  DECISION_IMPACT_REALIZED: "decision.impact_realized",
+  DECISION_ROI_RECORDED: "decision.roi_recorded",
 
   // KPI
   KPI_DEFINED: "kpi.defined",

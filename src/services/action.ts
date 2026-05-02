@@ -355,6 +355,20 @@ export async function detectOverdueActions(engagementId: string, authContext: Au
         },
       });
 
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.ACTION_PRIORITY_ESCALATED,
+        actorId,
+        entityType: "action",
+        entityId: action.id,
+        workspaceId,
+        payload: {
+          previousPriority: action.priority,
+          newPriority,
+          reason: "overdue",
+        },
+        visibility: "internal",
+      });
+
       results.push({
         actionId: action.id,
         overdue: true,

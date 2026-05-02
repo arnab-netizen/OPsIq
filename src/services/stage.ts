@@ -142,24 +142,45 @@ export async function updateStage(
     validateStageTransition(stage.status as GovernedStageState, input.status);
   }
 
+  const updateData = {
+    title: input.title ?? undefined,
+    description: input.description ?? undefined,
+    status: input.status ?? undefined,
+  };
+
   await db.stage.update({
     where: { id },
-    data: withVersionIncrement({
-      title: input.title ?? undefined,
-      description: input.description ?? undefined,
-      status: input.status ?? undefined,
-    }),
+    data: withVersionIncrement(updateData),
   });
 
-  if (input.status && input.status !== stage.status) {
+  const hasPropertyChanges = input.title !== undefined || input.description !== undefined;
+  const hasStatusChange = input.status && input.status !== stage.status;
+
+  if (hasStatusChange) {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.STAGE_TRANSITIONED,
       actorId,
       entityType: "stage",
       entityId: id,
+      workspaceId: stage.engagement.workspaceId,
       payload: {
         fromStatus: stage.status,
         toStatus: input.status,
+      },
+      visibility: "internal",
+    });
+  }
+
+  if (hasPropertyChanges && !hasStatusChange) {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.STAGE_UPDATED,
+      actorId,
+      entityType: "stage",
+      entityId: id,
+      workspaceId: stage.engagement.workspaceId,
+      payload: {
+        title: input.title,
+        description: input.description,
       },
       visibility: "internal",
     });
@@ -211,6 +232,19 @@ export async function blockStage(
         version: { increment: 1 },
       },
     });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ENGAGEMENT_BLOCKED,
+      actorId,
+      entityType: "engagement",
+      entityId: stage.engagementId,
+      workspaceId: stage.engagement.workspaceId,
+      payload: {
+        blockerReason: input.blockerReason,
+        blockerSeverity: input.blockerSeverity,
+      },
+      visibility: "internal",
+    });
   }
 
   await emitAuditEvent({
@@ -218,6 +252,7 @@ export async function blockStage(
     actorId,
     entityType: "stage",
     entityId: id,
+    workspaceId: stage.engagement.workspaceId,
     payload: {
       engagementId: stage.engagementId,
       blockerSeverity: input.blockerSeverity,
@@ -283,6 +318,16 @@ export async function unblockStage(
         version: { increment: 1 },
       },
     });
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ENGAGEMENT_UNBLOCKED,
+      actorId,
+      entityType: "engagement",
+      entityId: stage.engagementId,
+      workspaceId: stage.engagement.workspaceId,
+      payload: {},
+      visibility: "internal",
+    });
   }
 
   await emitAuditEvent({
@@ -290,6 +335,7 @@ export async function unblockStage(
     actorId,
     entityType: "stage",
     entityId: id,
+    workspaceId: stage.engagement.workspaceId,
     payload: {
       engagementId: stage.engagementId,
     },

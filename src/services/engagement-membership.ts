@@ -102,7 +102,7 @@ export async function addMember(
             addedAt: new Date(),
           },
         });
-        return { id: updated.id };
+        return { id: updated.id, isReactivation: true };
       }
 
       const membership = await db.engagementMembership.create({
@@ -114,7 +114,7 @@ export async function addMember(
         },
       });
 
-      return { id: membership.id };
+      return { id: membership.id, isReactivation: false };
     }
   );
 

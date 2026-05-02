@@ -12,11 +12,15 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/service-auth", () => ({
   requireServiceContext: vi.fn((authContext, workspaceId) => {
-    if (!authContext || !authContext.workspace?.id) {
+    if (!authContext || !authContext.session?.user?.id) {
       throw new Error("Auth context required");
     }
-    return [authContext.user.id, workspaceId];
+    return [authContext.session.user.id, workspaceId];
   }),
+}));
+
+vi.mock("@/infra/audit", () => ({
+  emitAuditEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/infra/logger", () => ({
@@ -43,7 +47,12 @@ import { ValidationError, ConflictError } from "@/infra/errors";
 
 describe("ROI Lifecycle Gating Service", () => {
   const mockAuthContext = {
-    user: { id: "user-123" },
+    session: {
+      user: { id: "user-123", email: "user@test.com", name: "Test", isActive: true },
+      sessionId: "session-123",
+      expiresAt: new Date(),
+    },
+    policy: { userId: "user-123", roles: [] },
     workspace: { id: "workspace-123" },
   };
 
