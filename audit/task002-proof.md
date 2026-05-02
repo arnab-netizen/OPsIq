@@ -13,26 +13,6 @@
       conditionProfiles: {
       ...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/shock-event.ts:38
-    const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId },
-    select: { id: true, status: true },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/shock-event.ts:129
-    const events = await db.shockEvent.findMany({
-    where: { engagementId },
-    select: {
-      id: true,
-      type: true,
-      severity: true,
-   ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/shock-event.ts:158
-    const shockEvent = await db.shockEvent.findUnique({
-    where: { id: shockEventId },
-  });...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/stage.ts:89
     const stage = await db.stage.findUnique({
     where: { id },
@@ -351,14 +331,11 @@
 ## Summary
 Files checked: 363
 Reads checked: 328
-Violations found: 62
+Violations found: 59
 
 ## Violations
 - /home/user/OPsIq/src/services/role-assignment.ts:77
 - /home/user/OPsIq/src/services/shock-detection.ts:192
-- /home/user/OPsIq/src/services/shock-event.ts:38
-- /home/user/OPsIq/src/services/shock-event.ts:129
-- /home/user/OPsIq/src/services/shock-event.ts:158
 - /home/user/OPsIq/src/services/stage.ts:89
 - /home/user/OPsIq/src/services/stage.ts:127
 - /home/user/OPsIq/src/services/stage.ts:204
