@@ -247,6 +247,7 @@ model Engagement {
   kpis                  KPI[]
   deliverables          Deliverable[]
   risks                 Risk[]
+  decisionSnapshots     DecisionSnapshot[]
 
   @@index([clientId])
   @@index([status])
@@ -446,6 +447,23 @@ model Action {
   @@index([recommendationId])
   @@index([assignedTo])
   @@map("actions")
+}
+
+// ─── Decision Determinism: Snapshot & Replay ────────────────────────────────
+
+model DecisionSnapshot {
+  id               String   @id @default(uuid()) @db.Uuid
+  engagementId     String   @map("engagement_id") @db.Uuid
+  decisionInput    Json     @map("decision_input") // captured state: actions, findings, recommendations, drift, confidence
+  decisionOutput   Json     @map("decision_output") // decision result for validation on replay
+  version          Int      @default(1)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade)
+
+  @@index([engagementId])
+  @@index([createdAt])
+  @@map("decision_snapshots")
 }
 
 // ─── Foundation: ShockEvent ─────────────────────────────────────────────────

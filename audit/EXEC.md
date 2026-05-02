@@ -117,10 +117,13 @@ TYPE: AUDIT_INTEGRITY
 TARGET: audit log
 RULE: append-only + hash chain
 VERIFY: tamper breaks chain
-STATE: FAIL
+STATE: DONE
 
-STATUS: No hash chain or cryptographic integrity mechanism present
-REMEDIATION: Add previousHash field to AuditEvent, compute SHA256 chain on insertion
+STATUS: SHA256 hash chain implemented
+IMPLEMENTATION:
+- Added previousHash column to audit_events table (migration 20260502)
+- emitAuditEvent fetches last event and links hash via SHA256(eventId|workspaceId|eventName|timestamp)
+- verifyAuditChainIntegrity(workspaceId) detects tampering by validating chain from event 0 to N
 
 TASK 010
 TYPE: BIE_READY
