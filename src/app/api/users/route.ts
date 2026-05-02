@@ -4,6 +4,7 @@ import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createUser, listUsers } from "@/services/user";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
+import { withIdempotency } from "@/infra/idempotency";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import type { NextRequest } from "next/server";
@@ -63,13 +64,29 @@ export const POST = withRequestContext(async (request) => {
     );
   }
 
+  // Require Idempotency-Key (fail-closed)
+  const idempotencyKey = nextRequest.headers.get("Idempotency-Key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "Idempotency-Key header required" },
+      { status: 400 }
+    );
+  }
+
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   const body = await parseRequestBody(request, createUserSchema);
-  const result = await createUser(body, authContext, workspaceId);
 
-  return Response.json(result, { status: 201 });
+  const { isNew, result } = await withIdempotency(
+    idempotencyKey,
+    "user.create",
+    async () => createUser(body, authContext, workspaceId),
+    body,
+    authContext.session.user.id
+  );
+
+  return Response.json(result, { status: isNew ? 201 : 200 });
 });
