@@ -9,9 +9,9 @@ Audit Events: ✓ Complete (all mutations have emitAuditEvent + workspaceId)
 
 ## [AUTH] - Enforce authContext only, no raw actorId
 
-- [ ] src/services/escalation.ts:17 - detectHighPriorityOverdueActions accepts actorId: string instead of authContext
-- [ ] src/services/escalation.ts:73 - detectKPIDeteriorationPattern accepts actorId: string instead of authContext
-- [ ] src/services/escalation.ts:149 - checkEngagementEscalations accepts actorId: string instead of authContext
+- [x] src/services/escalation.ts:17 - detectHighPriorityOverdueActions accepts actorId: string instead of authContext
+- [x] src/services/escalation.ts:73 - detectKPIDeteriorationPattern accepts actorId: string instead of authContext
+- [x] src/services/escalation.ts:149 - checkEngagementEscalations accepts actorId: string instead of authContext
 - [ ] src/services/execute.ts:44 - executeWorkflow accepts actorId: string instead of authContext
 - [ ] src/services/action-lifecycle.ts:123 - transitionActionState context.actorId: string (should use authContext)
 - [ ] src/services/execution-certainty.ts:148 - calculateExecutionCertainty accepts actorId: string instead of authContext
@@ -26,7 +26,7 @@ Audit Events: ✓ Complete (all mutations have emitAuditEvent + workspaceId)
 
 ## [READ] - All queries require workspaceId, no overfetch/filter, includes/select safe, joins scoped
 
-- [ ] src/services/escalation.ts:76 - db.kPI.findMany missing workspaceId in where clause (only has engagementId)
+- [x] src/services/escalation.ts:76 - db.kPI.findMany missing workspaceId in where clause (only has engagementId)
 - [ ] src/services/action-lifecycle.ts:225 - getActionsByEngagementAndState missing workspaceId in query where clause
 - [ ] src/services/action-lifecycle.ts:234 - getActionsByState missing workspaceId entirely - no workspace isolation on state queries
 
@@ -60,7 +60,7 @@ Audit Events: ✓ Complete (all mutations have emitAuditEvent + workspaceId)
 
 ## [DETERMINISM] - Snapshot support, stable outputs
 
-- [ ] src/services/escalation.ts:76 - db.kPI.findMany() missing orderBy clause on main result set (only has orderBy on nested snapshots)
+- [x] src/services/escalation.ts:76 - db.kPI.findMany() missing orderBy clause on main result set (only has orderBy on nested snapshots)
 
 ---
 

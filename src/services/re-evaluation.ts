@@ -753,7 +753,6 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         select: { workspaceId: true },
       });
       if (engagementForPhase7) {
-        await checkEngagementEscalations(event.engagementId, event.triggeredBy, engagementForPhase7.workspaceId);
         const internalAuthContext: any = {
           session: {
             user: {
@@ -767,6 +766,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
           },
           policy: {},
         };
+        await checkEngagementEscalations(event.engagementId, internalAuthContext, engagementForPhase7.workspaceId);
         await computeNextReviewDate(event.engagementId, internalAuthContext, engagementForPhase7.workspaceId);
       }
     } catch (escalationError) {

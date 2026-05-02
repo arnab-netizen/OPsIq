@@ -337,7 +337,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
       vi.mocked(db.action.findMany).mockResolvedValueOnce([criticalOverdueAction]);
       vi.mocked(db.kPI.findMany).mockResolvedValueOnce([]);
 
-      const alert = await checkEngagementEscalations(engagementId, actorId, '550e8400-e29b-41d4-a716-446655440000');
+      const alert = await checkEngagementEscalations(engagementId, mockAuthContext as any, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(alert).toContainEqual(
         expect.objectContaining({

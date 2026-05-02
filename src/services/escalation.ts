@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import type { AuthContext } from "@/lib/auth-guard";
 
 export interface EscalationAlert {
   type: "high_priority_overdue" | "kpi_deterioration_pattern";
@@ -14,7 +15,7 @@ export interface EscalationAlert {
 
 export async function detectHighPriorityOverdueActions(
   engagementId: string,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<EscalationAlert | null> {
   enforceWorkspaceId(workspaceId, "detectHighPriorityOverdueActions", "escalation");
@@ -43,7 +44,7 @@ export async function detectHighPriorityOverdueActions(
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ESCALATION_ALERT_HIGH_PRIORITY_OVERDUE,
-      actorId,
+      actorId: authContext.session.user.id,
       entityType: "escalation",
       entityId: engagementId,
       workspaceId,
@@ -70,11 +71,12 @@ export async function detectHighPriorityOverdueActions(
 
 export async function detectKPIDeteriorationPattern(
   engagementId: string,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<EscalationAlert | null> {
   const kpis = await db.kPI.findMany({
-    where: { engagementId },
+    where: { engagementId, workspaceId },
+    orderBy: { createdAt: "desc" },
     include: {
       snapshots: {
         orderBy: { recordedAt: "desc" },
@@ -120,7 +122,7 @@ export async function detectKPIDeteriorationPattern(
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ESCALATION_ALERT_KPI_DETERIORATION_PATTERN,
-      actorId,
+      actorId: authContext.session.user.id,
       entityType: "escalation",
       entityId: engagementId,
       workspaceId,
@@ -146,7 +148,7 @@ export async function detectKPIDeteriorationPattern(
 
 export async function checkEngagementEscalations(
   engagementId: string,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId?: string
 ): Promise<EscalationAlert[]> {
   // Fetch workspaceId from engagement if not provided
@@ -165,7 +167,7 @@ export async function checkEngagementEscalations(
 
   const highPriorityAlert = await detectHighPriorityOverdueActions(
     engagementId,
-    actorId,
+    authContext,
     wsId
   );
   if (highPriorityAlert) {
@@ -174,7 +176,7 @@ export async function checkEngagementEscalations(
 
   const kpiPatternAlert = await detectKPIDeteriorationPattern(
     engagementId,
-    actorId,
+    authContext,
     wsId
   );
   if (kpiPatternAlert) {
