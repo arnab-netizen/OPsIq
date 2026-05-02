@@ -153,46 +153,6 @@
     include: { engagement: true },
   });...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:22
-      db.engagement.findUnique({
-      where: { id: engagementId },
-    }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:25
-      db.action.findMany({
-      where: { engagementId },
-    }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:28
-      db.finding.findMany({
-      where: { engagementId },
-    }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:31
-      db.recommendation.findMany({
-      where: { engagementId },
-    }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:181
-      db.engagement.findUnique({
-      where: { id: engagementId },
-    }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:184
-      db.action.findMany({
-      where: { engagementId },
-    }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:187
-      db.finding.findMany({
-      where: { engagementId },
-    }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:190
-      db.recommendation.findMany({
-      where: { engagementId },
-    }),...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/enforcement.service.ts:253
     const decision = await db.operatorItem.findUnique({
     where: { id: decisionId },
@@ -513,7 +473,7 @@
 ## Summary
 Files checked: 363
 Reads checked: 336
-Violations found: 90
+Violations found: 82
 
 ## Violations
 - /home/user/OPsIq/src/services/findings.ts:353
@@ -540,14 +500,6 @@ Violations found: 90
 - /home/user/OPsIq/src/services/stage.ts:127
 - /home/user/OPsIq/src/services/stage.ts:204
 - /home/user/OPsIq/src/services/stage.ts:290
-- /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:22
-- /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:25
-- /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:28
-- /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:31
-- /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:181
-- /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:184
-- /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:187
-- /home/user/OPsIq/src/services/decision-control/decision-control.service.ts:190
 - /home/user/OPsIq/src/services/decision-control/enforcement.service.ts:253
 - /home/user/OPsIq/src/services/decision-evidence/decision-evidence.service.ts:111
 - /home/user/OPsIq/src/services/workspace/activation-context.ts:24

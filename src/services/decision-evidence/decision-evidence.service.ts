@@ -112,7 +112,7 @@ export async function getDecisionEvidence(engagementId: string, workspaceId: str
       where: { engagementId, isCurrent: true },
       orderBy: { createdAt: "desc" },
     }),
-    getPrimaryDecision(engagementId),
+    getPrimaryDecision(engagementId, workspaceId),
     detectExecutionDrift(engagementId),
     computeDecisionConfidence({ engagementId }),
     generateBusinessImpact(engagementId, engagementId),

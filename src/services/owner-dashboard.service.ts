@@ -269,7 +269,7 @@ export async function getOwnerDashboard(
   const [decisionConfidence, businessImpactResult, primaryDecision] = await Promise.all([
     computeDecisionConfidence({ engagementId }),
     generateBusinessImpact(engagementId, engagement.id),
-    getPrimaryDecision(engagementId),
+    getPrimaryDecision(engagementId, workspaceId),
   ]);
 
   const financialImpactNormalized = normalizeFinancialImpact({

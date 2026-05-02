@@ -16,20 +16,20 @@ export interface PrimaryDecision {
   rationale: string[];
 }
 
-export async function getPrimaryDecision(engagementId: string): Promise<PrimaryDecision> {
+export async function getPrimaryDecision(engagementId: string, workspaceId: string): Promise<PrimaryDecision> {
   // Fetch engagement and required data in parallel
   const [engagement, actions, findings, recommendations] = await Promise.all([
     db.engagement.findUnique({
-      where: { id: engagementId },
+      where: { id: engagementId, workspaceId },
     }),
     db.action.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.finding.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.recommendation.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
   ]);
 
@@ -172,23 +172,23 @@ export async function getPrimaryDecision(engagementId: string): Promise<PrimaryD
   };
 }
 
-export async function getPrimaryDecisionWithSnapshot(engagementId: string): Promise<{
+export async function getPrimaryDecisionWithSnapshot(engagementId: string, workspaceId: string): Promise<{
   decision: PrimaryDecision;
   snapshotId: string;
 }> {
   // Fetch all inputs needed for decision
   const [engagement, actions, findings, recommendations, drift, decisionConfidence] = await Promise.all([
     db.engagement.findUnique({
-      where: { id: engagementId },
+      where: { id: engagementId, workspaceId },
     }),
     db.action.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.finding.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.recommendation.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     detectExecutionDrift(engagementId),
     computeDecisionConfidence({ engagementId }),
@@ -231,7 +231,7 @@ export async function getPrimaryDecisionWithSnapshot(engagementId: string): Prom
   };
 
   // Get decision using original logic
-  const decision = await getPrimaryDecision(engagementId);
+  const decision = await getPrimaryDecision(engagementId, workspaceId);
 
   // Capture snapshot for replay validation
   const snapshotId = await captureDecisionSnapshot(engagementId, snapshotInput, decision);
