@@ -4,6 +4,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Action Lifecycle States ──────────────────────────────────────────────────
 
@@ -120,12 +121,17 @@ export async function transitionActionState(
   actionId: string,
   nextState: ActionLifecycleState,
   context: {
-    actorId: string;
+    authContext?: AuthContext;
+    actorId?: string;
     reason?: string;
     evidence?: string;
     reviewerId?: string;
   }
 ): Promise<any> {
+  const resolvedActorId = context.authContext?.session.user.id || context.actorId;
+  if (!resolvedActorId) {
+    throw new Error("Either authContext or actorId must be provided");
+  }
   const action = await db.action.findUnique({
     where: { id: actionId },
     include: { engagement: true },
@@ -181,7 +187,7 @@ export async function transitionActionState(
   // Emit audit event for state transition
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ACTION_UPDATED,
-    actorId: context.actorId,
+    actorId: resolvedActorId,
     entityType: "action",
     entityId: actionId,
     workspaceId: action.engagement.workspaceId,
@@ -204,7 +210,7 @@ export async function transitionActionState(
       engagementId: action.engagementId,
       severity: "critical",
       description: `Critical action blocked: ${action.title}. Reason: ${context.reason}`,
-      triggeredBy: context.actorId,
+      triggeredBy: resolvedActorId,
     });
   }
 
