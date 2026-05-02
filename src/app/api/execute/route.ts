@@ -13,14 +13,14 @@ const executeSchema = z.object({
 });
 
 export const POST = withRequestContext(async (request) => {
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_CREATE,
     internalOnly: true,
   });
 
   const workspaceId = request.headers.get("x-workspace-id") || "";
   const body = await parseRequestBody(request, executeSchema);
-  const result = await executeWorkflow(body, session.user.id, workspaceId);
+  const result = await executeWorkflow(body, authContext, workspaceId);
 
   return Response.json(result, { status: 200 });
 });

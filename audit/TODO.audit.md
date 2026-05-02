@@ -12,7 +12,7 @@ Audit Events: ✓ Complete (all mutations have emitAuditEvent + workspaceId)
 - [x] src/services/escalation.ts:17 - detectHighPriorityOverdueActions accepts actorId: string instead of authContext
 - [x] src/services/escalation.ts:73 - detectKPIDeteriorationPattern accepts actorId: string instead of authContext
 - [x] src/services/escalation.ts:149 - checkEngagementEscalations accepts actorId: string instead of authContext
-- [ ] src/services/execute.ts:44 - executeWorkflow accepts actorId: string instead of authContext
+- [x] src/services/execute.ts:44 - executeWorkflow accepts actorId: string instead of authContext
 - [ ] src/services/action-lifecycle.ts:123 - transitionActionState context.actorId: string (should use authContext)
 - [ ] src/services/execution-certainty.ts:148 - calculateExecutionCertainty accepts actorId: string instead of authContext
 - [ ] src/services/idempotency.ts:9 - IdempotencyRecord interface has actorId: string instead of authContext

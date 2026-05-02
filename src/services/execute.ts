@@ -41,7 +41,7 @@ export interface ExecuteOutput {
 
 export async function executeWorkflow(
   input: ExecuteInput,
-  actorId: string,
+  authContext: AuthContext,
   workspaceId: string
 ): Promise<ExecuteOutput> {
   logger.info("Executing workflow", {
@@ -49,24 +49,6 @@ export async function executeWorkflow(
     findings: input.findings.length,
     priority: input.priority,
   });
-
-  // Construct authContext for internal service-to-service calls
-  const authContext: AuthContext = {
-    session: {
-      user: {
-        id: actorId,
-        email: "",
-        name: "",
-        isActive: true,
-      },
-      sessionId: "",
-      expiresAt: new Date(),
-    },
-    policy: {
-      userId: actorId,
-      roles: [],
-    },
-  };
 
   // Validate input
   if (!input.clientName?.trim()) {
@@ -79,24 +61,6 @@ export async function executeWorkflow(
     throw new ValidationError("At least one finding is required");
   }
 
-  // Construct authContext for internal service-to-service calls
-  const internalAuthContext: AuthContext = {
-    session: {
-      user: {
-        id: actorId,
-        email: "",
-        name: "",
-        isActive: true,
-      },
-      sessionId: "",
-      expiresAt: new Date(),
-    },
-    policy: {
-      userId: actorId,
-      roles: [],
-    },
-  };
-
   // 1. Create client
   logger.info("Creating client", { clientName: input.clientName });
   const client = await createClient(
@@ -104,7 +68,7 @@ export async function executeWorkflow(
       name: input.clientName,
       notes: `Problem: ${input.problem}`,
     },
-    internalAuthContext,
+    authContext,
     workspaceId
   );
 
@@ -119,7 +83,7 @@ export async function executeWorkflow(
       interventionMode: "recovery",
       description: input.problem,
     },
-    internalAuthContext,
+    authContext,
     workspaceId
   );
 
@@ -152,7 +116,7 @@ export async function executeWorkflow(
         title: `Action for ${finding.engagementId}`,
         priority: input.priority,
       },
-      internalAuthContext,
+      authContext,
       workspaceId
     );
 
@@ -165,14 +129,14 @@ export async function executeWorkflow(
         priority: input.priority,
         dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       },
-      internalAuthContext,
+      authContext,
       workspaceId
     );
 
     // 5. Transition action to in_progress
     logger.info("Transitioning action to in_progress", { actionId: action.id });
     await transitionActionState(action.id, "in_progress", {
-      actorId,
+      actorId: authContext.session.user.id,
     });
 
     createdActions.push(action);
