@@ -82,6 +82,8 @@ model Workspace {
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   memberships WorkspaceMembership[]
+  idempotencyRecords IdempotencyRecord[]
+  engagements Engagement[]
 
   @@map("workspaces")
 }
@@ -208,6 +210,7 @@ model Engagement {
   code                  String    @unique // human-readable engagement code
   title                 String
   clientId              String    @map("client_id") @db.Uuid
+  workspaceId           String    @map("workspace_id") @db.Uuid
   serviceTier           String    @map("service_tier") // "standard" | "premium" | "enterprise"
   engagementMode        String    @map("engagement_mode") // "beginner" | "expert"
   status                String    @default("draft") // governed by ENGAGEMENT_STATUSES
@@ -231,6 +234,7 @@ model Engagement {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
+  workspace             Workspace             @relation(fields: [workspaceId], references: [id])
   client                ClientAccount         @relation(fields: [clientId], references: [id])
   parent                Engagement?           @relation("EngagementLineage", fields: [parentEngagementId], references: [id])
   children              Engagement[]          @relation("EngagementLineage")
@@ -250,6 +254,7 @@ model Engagement {
   decisionSnapshots     DecisionSnapshot[]
 
   @@index([clientId])
+  @@index([workspaceId])
   @@index([status])
   @@index([ownerId])
   @@index([parentEngagementId])
@@ -521,7 +526,8 @@ model AuditEvent {
 
 model IdempotencyRecord {
   id            String   @id @default(uuid()) @db.Uuid
-  idempotencyKey String  @unique @map("idempotency_key")
+  idempotencyKey String  @map("idempotency_key")
+  workspaceId   String   @map("workspace_id") @db.Uuid
   operationName String   @map("operation_name")
   status        String   @default("pending") // "pending" | "completed" | "failed"
   payload       String?  @map("payload") // SHA256 hash of request payload for validation
@@ -531,7 +537,10 @@ model IdempotencyRecord {
   completedAt   DateTime? @map("completed_at")
   expiresAt     DateTime @map("expires_at")
 
-  @@index([idempotencyKey])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([idempotencyKey, workspaceId])
+  @@index([workspaceId])
   @@index([expiresAt])
   @@map("idempotency_records")
 }

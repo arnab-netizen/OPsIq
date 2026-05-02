@@ -1,70 +1,5 @@
 # TASK 002 Verification - All Prisma Reads
 
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:353
-      oldFinding = await db.finding.findUnique({
-      where: { id: oldFindingId },
-      select: { id: true, engagementId: true },
-    });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:439
-      finding = await db.finding.findUnique({
-      where: { id: findingId },
-      select: { id: true, engagementId: true, linkedEvidence: true },
-    ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:456
-      evidence = await db.evidence.findUnique({
-      where: { id: evidenceId },
-      select: { id: true, engagementId: true, status: true, relatedFind...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:532
-      finding = await db.finding.findUnique({
-      where: { id: findingId },
-      select: { id: true, engagementId: true, linkedEvidence: true },
-    ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:549
-      evidence = await db.evidence.findUnique({
-      where: { id: evidenceId },
-      select: { id: true, engagementId: true, relatedFindingId: true },...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:753
-      finding = await db.finding.findUnique({
-      where: { id: findingId },
-      select: { engagementId: true, linkedEvidence: true },
-    });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/findings.ts:820
-      detailFinding = await db.finding.findUnique({
-      where: { id: findingId },
-      select: {
-        id: true,
-        engagementId: true,
-      ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/idempotency.ts:39
-    const existing = await db.idempotencyRecord.findUnique({
-    where: { idempotencyKey },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/idempotency.ts:78
-            const concurrent = await db.idempotencyRecord.findUnique({
-            where: { idempotencyKey },
-          });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/idempotency.ts:141
-        const concurrent = await db.idempotencyRecord.findUnique({
-        where: { idempotencyKey },
-      });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/intervention-state.ts:93
-    const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
-    select: {
-      id: true,
-      interventionMode: true,
-   ...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/role-assignment.ts:72
     const targetUser = await db.user.findUnique({
     where: { id: input.userId },
@@ -311,34 +246,6 @@
       where: { id: action.entityId },
       select: { status: true, startedAt: true, updatedAt: true...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/outcome/outcome.service.ts:81
-      const action = await db.action.findUnique({
-      where: { id: actionId },
-    });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/outcome/outcome.service.ts:99
-      db.engagement.findUnique({ where: { id: engagementId }, select: { id: true } }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/outcome/outcome.service.ts:100
-      db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
-      orderBy: { createdAt: "desc" },
-    }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/outcome/outcome.service.ts:232
-    const completedActions = await db.action.findMany({
-    where: {
-      engagementId,
-      completedAt: { not: null },
-    },
-    orderBy: { complet...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/outcome/outcome.service.ts:244
-      db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
-      orderBy: { createdAt: "desc" },
-    }),...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:28
       const engagement = await db.engagement.findUnique({
       where: { id: engagementId },
@@ -472,21 +379,10 @@
 
 ## Summary
 Files checked: 363
-Reads checked: 336
-Violations found: 82
+Reads checked: 328
+Violations found: 66
 
 ## Violations
-- /home/user/OPsIq/src/services/findings.ts:353
-- /home/user/OPsIq/src/services/findings.ts:439
-- /home/user/OPsIq/src/services/findings.ts:456
-- /home/user/OPsIq/src/services/findings.ts:532
-- /home/user/OPsIq/src/services/findings.ts:549
-- /home/user/OPsIq/src/services/findings.ts:753
-- /home/user/OPsIq/src/services/findings.ts:820
-- /home/user/OPsIq/src/services/idempotency.ts:39
-- /home/user/OPsIq/src/services/idempotency.ts:78
-- /home/user/OPsIq/src/services/idempotency.ts:141
-- /home/user/OPsIq/src/services/intervention-state.ts:93
 - /home/user/OPsIq/src/services/role-assignment.ts:72
 - /home/user/OPsIq/src/services/role-assignment.ts:91
 - /home/user/OPsIq/src/services/role-assignment.ts:109
@@ -530,11 +426,6 @@ Violations found: 82
 - /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:36
 - /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:39
 - /home/user/OPsIq/src/services/execution-drift/next-action.service.ts:240
-- /home/user/OPsIq/src/services/outcome/outcome.service.ts:81
-- /home/user/OPsIq/src/services/outcome/outcome.service.ts:99
-- /home/user/OPsIq/src/services/outcome/outcome.service.ts:100
-- /home/user/OPsIq/src/services/outcome/outcome.service.ts:232
-- /home/user/OPsIq/src/services/outcome/outcome.service.ts:244
 - /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:28
 - /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:53
 - /home/user/OPsIq/src/services/alerts/alert-service.ts:115

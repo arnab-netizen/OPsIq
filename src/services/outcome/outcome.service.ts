@@ -78,8 +78,11 @@ export async function recordOutcome(
 
   try {
     // Fetch the action
-    const action = await db.action.findUnique({
-      where: { id: actionId },
+    const action = await db.action.findFirst({
+      where: {
+        id: actionId,
+        engagement: { workspaceId },
+      },
     });
 
     if (!action) {
@@ -96,9 +99,9 @@ export async function recordOutcome(
   const [currentConfidence, currentImpact, engagement, condition] = await Promise.all([
     computeDecisionConfidence({ engagementId }),
     generateBusinessImpact(engagementId, engagementId),
-    db.engagement.findUnique({ where: { id: engagementId }, select: { id: true } }),
+    db.engagement.findUnique({ where: { id: engagementId, workspaceId }, select: { id: true } }),
     db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
+      where: { engagementId, isCurrent: true, workspaceId },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -233,6 +236,7 @@ export async function getEngagementOutcomes(engagementId: string, workspaceId: s
     where: {
       engagementId,
       completedAt: { not: null },
+      engagement: { workspaceId },
     },
     orderBy: { completedAt: "desc" },
     take: 10,
@@ -240,9 +244,9 @@ export async function getEngagementOutcomes(engagementId: string, workspaceId: s
 
   // Get engagement context for financial calculations
   const [engagement, condition] = await Promise.all([
-    db.engagement.findUnique({ where: { id: engagementId, ...(workspaceId && { workspaceId }) } }),
+    db.engagement.findUnique({ where: { id: engagementId, workspaceId } }),
     db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
+      where: { engagementId, isCurrent: true, workspaceId },
       orderBy: { createdAt: "desc" },
     }),
   ]);

@@ -93,6 +93,7 @@ export const POST = withRequestContext(async (request) => {
     idempotencyKey,
     operationName: "createEngagement",
     actorId: session.user.id,
+    workspaceId,
     payload: body,
   });
 
@@ -104,11 +105,11 @@ export const POST = withRequestContext(async (request) => {
 
   try {
     const result = await createEngagement(body, { session, policy }, workspaceId);
-    await recordIdempotencyResponse(idempotencyKey, 201, result);
+    await recordIdempotencyResponse(idempotencyKey, 201, result, workspaceId);
     return Response.json(result, { status: 201 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
+    await recordIdempotencyError(idempotencyKey, err, workspaceId);
     throw error;
   }
 });

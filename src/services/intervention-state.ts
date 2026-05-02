@@ -88,10 +88,15 @@ function validateInterventionMode(mode: string): void {
  * Note: interventionMode is stored on Engagement model.
  */
 export async function getInterventionState(
-  engagementId: string
+  engagementId: string,
+  workspaceId?: string
 ): Promise<InterventionState> {
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+  if (!workspaceId) {
+    throw new Error("workspaceId is required for workspace-scoped queries");
+  }
+
+  const engagement = await db.engagement.findFirst({
+    where: { id: engagementId, workspaceId },
     select: {
       id: true,
       interventionMode: true,
@@ -116,11 +121,17 @@ export async function getInterventionState(
 export async function updateInterventionPhase(
   engagementId: string,
   input: UpdateInterventionPhaseInput,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId?: string
 ): Promise<void> {
   const actorId = authContext.session.user.id;
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+
+  if (!workspaceId) {
+    throw new Error("workspaceId is required for workspace-scoped queries");
+  }
+
+  const engagement = await db.engagement.findFirst({
+    where: { id: engagementId, workspaceId },
     select: {
       id: true,
       status: true,
