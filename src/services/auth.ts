@@ -22,14 +22,14 @@ export interface SessionInfo {
   expiresAt: Date;
 }
 
-export async function getSession(): Promise<SessionInfo | null> {
+export async function getSession(workspaceId: string = "system"): Promise<SessionInfo | null> {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
   if (!sessionToken) return null;
 
   const session = await db.session.findUnique({
-    where: { token: sessionToken },
+    where: { token: sessionToken, user: { workspaceMemberships: { some: { workspaceId } } } },
     include: { user: true },
   });
 

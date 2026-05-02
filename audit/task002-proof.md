@@ -1,11 +1,5 @@
 # TASK 002 Verification - All Prisma Reads
 
-✗ VIOLATION: /home/user/OPsIq/src/services/auth.ts:31
-    const session = await db.session.findUnique({
-    where: { token: sessionToken },
-    include: { user: true },
-  });...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/auth.ts:80
       db.userRoleAssignment.findMany({
       where: { userId: session.user.id, isActive: true, revokedAt: null },
@@ -630,10 +624,9 @@
 ## Summary
 Files checked: 363
 Reads checked: 329
-Violations found: 108
+Violations found: 107
 
 ## Violations
-- /home/user/OPsIq/src/services/auth.ts:31
 - /home/user/OPsIq/src/services/auth.ts:80
 - /home/user/OPsIq/src/services/auth.ts:83
 - /home/user/OPsIq/src/services/client-contact.ts:38
