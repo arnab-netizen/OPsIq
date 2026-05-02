@@ -11,6 +11,14 @@ vi.mock("@/infra/logger");
 const mockUserId = "user-123";
 const mockClientId = "client-123";
 const mockContactId = "contact-123";
+const mockAuthContext = {
+  session: {
+    user: { id: mockUserId, email: "user@test.com", name: "Test", isActive: true },
+    sessionId: "session-123",
+    expiresAt: new Date(),
+  },
+  policy: { userId: mockUserId, roles: [] },
+};
 
 describe("client-contact service", () => {
   beforeEach(() => {
@@ -38,7 +46,7 @@ describe("client-contact service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      const result = await contactService.createContact(input, mockUserId);
+      const result = await contactService.createContact(input, mockAuthContext as any);
 
       expect(result.id).toBe(mockContactId);
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -56,7 +64,7 @@ describe("client-contact service", () => {
       };
 
       await expect(
-        contactService.createContact(input, mockUserId)
+        contactService.createContact(input, mockAuthContext as any)
       ).rejects.toThrow(NotFoundError);
     });
   });

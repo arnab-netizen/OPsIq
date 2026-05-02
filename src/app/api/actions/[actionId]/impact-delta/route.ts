@@ -38,7 +38,7 @@ export const GET = withRequestContext(async (request, context) => {
     throw new NotFoundError("Action", actionId);
   }
 
-  const delta = await calculateImpactDelta(action.engagementId, actionId, session.user.id);
+  const delta = await calculateImpactDelta(action.engagementId, actionId, session.user.id, workspaceId);
 
   return Response.json({
     success: true,

@@ -3,6 +3,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -29,8 +30,9 @@ export interface UpdateContactInput {
 
 export async function createContact(
   input: CreateContactInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<{ id: string }> {
+  const actorId = authContext.session.user.id;
   const client = await db.clientAccount.findUnique({
     where: { id: input.clientId },
   });
@@ -72,8 +74,9 @@ export async function createContact(
 
 export async function deactivateContact(
   contactId: string,
-  actorId: string
+  authContext: AuthContext
 ): Promise<void> {
+  const actorId = authContext.session.user.id;
   const contact = await db.clientContact.findUnique({
     where: { id: contactId },
   });
@@ -108,8 +111,9 @@ export async function deactivateContact(
 export async function updateContact(
   contactId: string,
   input: UpdateContactInput,
-  actorId: string
+  authContext: AuthContext
 ): Promise<void> {
+  const actorId = authContext.session.user.id;
   const contact = await db.clientContact.findUnique({
     where: { id: contactId },
   });
@@ -134,7 +138,6 @@ export async function updateContact(
     actorId,
     entityType: "client_contact",
     entityId: contactId,
-    workspaceId: validatedWorkspaceId,
     payload: data,
     visibility: "internal",
   });

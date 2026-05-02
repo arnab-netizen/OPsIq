@@ -26,7 +26,7 @@ export const GET = withRequestContext(async (_request, context) => {
 export const POST = withRequestContext(async (request, context) => {
   const { clientId } = await context.params;
   parseOrThrow(uuidSchema, clientId);
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.CLIENT_UPDATE,
     internalOnly: true,
   });
@@ -34,7 +34,7 @@ export const POST = withRequestContext(async (request, context) => {
   const body = await parseRequestBody(request, createContactSchema);
   const result = await createContact(
     { ...body, clientId },
-    session.user.id
+    authContext
   );
 
   return Response.json(result, { status: 201 });

@@ -25,13 +25,13 @@ export const PATCH = withRequestContext(async (request, context) => {
   const { clientId, contactId } = await context.params;
   parseOrThrow(uuidSchema, clientId);
   parseOrThrow(uuidSchema, contactId);
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.CLIENT_UPDATE,
     internalOnly: true,
   });
 
   const body = await parseRequestBody(request, updateContactSchema);
-  await updateContact(contactId, body, session.user.id);
+  await updateContact(contactId, body, authContext);
 
   return Response.json({ status: "updated" });
 });
@@ -40,13 +40,13 @@ export const DELETE = withRequestContext(async (request, context) => {
   const { clientId, contactId } = await context.params;
   parseOrThrow(uuidSchema, clientId);
   parseOrThrow(uuidSchema, contactId);
-  const { session } = await withAuth({
+  const authContext = await withAuth({
     capability: CAPABILITIES.CLIENT_UPDATE,
     internalOnly: true,
   });
 
   const body = await parseRequestBody(request, deactivateContactSchema);
-  await deactivateContact(contactId, session.user.id);
+  await deactivateContact(contactId, authContext);
 
   return Response.json({ status: "deactivated" });
 });

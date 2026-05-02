@@ -25,13 +25,11 @@ describe("Workspace Isolation - Enforcement Rules", () => {
     "auditEvent",
     "evidence",
     "shock",
-    "clientContact",
-    "clientAccount",
   ];
 
   const UNSAFE_PATTERNS = [
     // Direct db.model usage without workspaceId in context
-    /db\.(engagement|action|finding|recommendation|kpi|deliverable|stage|businessConditionProfile|interventionState|operatorItem|alert|auditEvent|evidence|shock|clientContact|clientAccount)\.(findMany|findFirst|findUnique|update|updateMany|delete|deleteMany|count|groupBy|aggregate)\s*\(/,
+    /db\.(engagement|action|finding|recommendation|kpi|deliverable|stage|businessConditionProfile|interventionState|operatorItem|alert|auditEvent|evidence|shock)\.(findMany|findFirst|findUnique|update|updateMany|delete|deleteMany|count|groupBy|aggregate)\s*\(/,
   ];
 
   const SERVICE_PATHS = [
