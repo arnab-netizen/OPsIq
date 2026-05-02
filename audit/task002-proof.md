@@ -1,38 +1,9 @@
 # TASK 002 Verification - All Prisma Reads
 
-✗ VIOLATION: /home/user/OPsIq/src/services/role-assignment.ts:72
+✗ VIOLATION: /home/user/OPsIq/src/services/role-assignment.ts:77
     const targetUser = await db.user.findUnique({
     where: { id: input.userId },
   });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/role-assignment.ts:91
-        const existing = await db.userRoleAssignment.findFirst({
-        where: {
-          userId: input.userId,
-          role: input.role,
-          ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/role-assignment.ts:109
-        const revoked = await db.userRoleAssignment.findFirst({
-        where: {
-          userId: input.userId,
-          role: input.role,
-          s...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/role-assignment.ts:195
-    const assignment = await db.userRoleAssignment.findFirst({
-    where: {
-      userId: input.userId,
-      role: input.role,
-      scope: input.scope...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/role-assignment.ts:256
-    return db.userRoleAssignment.findMany({
-    where: { userId, isActive: true, revokedAt: null },
-    select: {
-      id: true,
-      role: true,
-    ...
 
 ✗ VIOLATION: /home/user/OPsIq/src/services/shock-detection.ts:192
     const engagement = await db.engagement.findUnique({
@@ -380,14 +351,10 @@
 ## Summary
 Files checked: 363
 Reads checked: 328
-Violations found: 66
+Violations found: 62
 
 ## Violations
-- /home/user/OPsIq/src/services/role-assignment.ts:72
-- /home/user/OPsIq/src/services/role-assignment.ts:91
-- /home/user/OPsIq/src/services/role-assignment.ts:109
-- /home/user/OPsIq/src/services/role-assignment.ts:195
-- /home/user/OPsIq/src/services/role-assignment.ts:256
+- /home/user/OPsIq/src/services/role-assignment.ts:77
 - /home/user/OPsIq/src/services/shock-detection.ts:192
 - /home/user/OPsIq/src/services/shock-event.ts:38
 - /home/user/OPsIq/src/services/shock-event.ts:129

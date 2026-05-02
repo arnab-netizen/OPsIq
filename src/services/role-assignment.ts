@@ -58,7 +58,8 @@ function assertHierarchyAuthority(
 export async function assignRole(
   input: AssignRoleInput,
   actorId: string,
-  actorHighestLevel: number
+  actorHighestLevel: number,
+  workspaceId?: string
 ): Promise<{ id: string; isNew: boolean }> {
   validateRoleName(input.role);
   assertHierarchyAuthority(actorHighestLevel, input.role);
@@ -66,6 +67,10 @@ export async function assignRole(
   // Prevent self-assignment (privilege escalation vector)
   if (input.userId === actorId) {
     throw new ForbiddenError("Cannot assign roles to yourself");
+  }
+
+  if (!workspaceId) {
+    throw new Error("workspaceId is required for workspace-scoped role assignment");
   }
 
   // Verify target user exists and is active
@@ -92,8 +97,8 @@ export async function assignRole(
         where: {
           userId: input.userId,
           role: input.role,
-          scope: input.scope ?? null,
-          scopeId: input.scopeId ?? null,
+          scope: input.scope ?? "workspace",
+          scopeId: input.scopeId ?? workspaceId,
           isActive: true,
           revokedAt: null,
         },
@@ -110,8 +115,8 @@ export async function assignRole(
         where: {
           userId: input.userId,
           role: input.role,
-          scope: input.scope ?? null,
-          scopeId: input.scopeId ?? null,
+          scope: input.scope ?? "workspace",
+          scopeId: input.scopeId ?? workspaceId,
           isActive: false,
         },
       });
@@ -182,7 +187,8 @@ export async function assignRole(
 export async function revokeRole(
   input: RevokeRoleInput,
   actorId: string,
-  actorHighestLevel: number
+  actorHighestLevel: number,
+  workspaceId?: string
 ): Promise<void> {
   validateRoleName(input.role);
   assertHierarchyAuthority(actorHighestLevel, input.role);
@@ -192,12 +198,16 @@ export async function revokeRole(
     throw new ForbiddenError("Cannot revoke your own roles");
   }
 
+  if (!workspaceId) {
+    throw new Error("workspaceId is required for workspace-scoped role revocation");
+  }
+
   const assignment = await db.userRoleAssignment.findFirst({
     where: {
       userId: input.userId,
       role: input.role,
-      scope: input.scope ?? null,
-      scopeId: input.scopeId ?? null,
+      scope: input.scope ?? "workspace",
+      scopeId: input.scopeId ?? workspaceId,
       isActive: true,
       revokedAt: null,
     },
@@ -252,9 +262,16 @@ export async function revokeRole(
   });
 }
 
-export async function getRolesForUser(userId: string) {
+export async function getRolesForUser(userId: string, workspaceId?: string) {
+  const where = { userId, isActive: true, revokedAt: null } as any;
+
+  if (workspaceId) {
+    where.scope = "workspace";
+    where.scopeId = workspaceId;
+  }
+
   return db.userRoleAssignment.findMany({
-    where: { userId, isActive: true, revokedAt: null },
+    where,
     select: {
       id: true,
       role: true,
