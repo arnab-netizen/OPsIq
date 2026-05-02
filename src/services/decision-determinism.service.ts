@@ -27,17 +27,21 @@ export async function captureDecisionSnapshot(
   return snapshot.id;
 }
 
-export async function getDecisionSnapshot(snapshotId: string) {
-  return db.decisionSnapshot.findUnique({
-    where: { id: snapshotId },
+export async function getDecisionSnapshot(snapshotId: string, workspaceId: string) {
+  return db.decisionSnapshot.findFirst({
+    where: {
+      id: snapshotId,
+      engagement: { workspaceId },
+    },
   });
 }
 
 export async function verifyDecisionDeterminism(
   snapshotId: string,
-  replayOutput: PrimaryDecision
+  replayOutput: PrimaryDecision,
+  workspaceId: string
 ): Promise<{ isDeterministic: boolean; differences?: string[] }> {
-  const snapshot = await getDecisionSnapshot(snapshotId);
+  const snapshot = await getDecisionSnapshot(snapshotId, workspaceId);
   if (!snapshot) {
     return { isDeterministic: false, differences: ["Snapshot not found"] };
   }
@@ -87,9 +91,12 @@ export async function verifyDecisionDeterminism(
   };
 }
 
-export async function queryDecisionSnapshots(engagementId: string) {
+export async function queryDecisionSnapshots(engagementId: string, workspaceId: string) {
   return db.decisionSnapshot.findMany({
-    where: { engagementId },
+    where: {
+      engagementId,
+      engagement: { workspaceId },
+    },
     orderBy: { createdAt: "desc" },
     take: 50,
   });
