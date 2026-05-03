@@ -981,3 +981,18 @@ model UsageEvent {
   @@index([timestamp])
   @@map("usage_events")
 }
+
+// ─── Webhook Event Tracking: Idempotency ────────────────────────────────────
+
+model WebhookEvent {
+  id           String   @id @default(uuid()) @db.Uuid
+  stripeEventId String  @unique @map("stripe_event_id") // Stripe event ID for deduplication
+  type         String   // e.g., "checkout.session.completed", "customer.subscription.created"
+  processedAt  DateTime @default(now()) @map("processed_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([stripeEventId])
+  @@index([type])
+  @@index([processedAt])
+  @@map("webhook_events")
+}
