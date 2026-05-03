@@ -1,15 +1,26 @@
 import { v4 as uuidv4 } from "uuid";
-import { getDb } from "@/lib/db";
 
 async function seedTestDb() {
-  const db = await getDb();
-
   try {
+    // Dynamically import PrismaClient and adapter to avoid top-level await issues
+    const { PrismaClient } = await import("../src/generated/prisma/client");
+    const { PrismaPg } = await import("@prisma/adapter-pg");
+
+    const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
+    if (!databaseUrl) {
+      throw new Error("DATABASE_URL or TEST_DATABASE_URL environment variable is not set");
+    }
+
+    const adapter = new PrismaPg({
+      connectionString: databaseUrl,
+    });
+    const prisma = new PrismaClient({ adapter });
+
     console.log("🌱 Seeding test database...");
 
     // Create test workspace
     const workspaceId = uuidv4();
-    const workspace = await db.workspace.upsert({
+    const workspace = await prisma.workspace.upsert({
       where: { id: workspaceId },
       update: {},
       create: {
@@ -21,7 +32,7 @@ async function seedTestDb() {
 
     // Create test user
     const userId = uuidv4();
-    const user = await db.user.upsert({
+    const user = await prisma.user.upsert({
       where: { id: userId },
       update: {},
       create: {
@@ -33,7 +44,7 @@ async function seedTestDb() {
     console.log(`  ✓ Created user: ${user.id}`);
 
     // Create workspace membership
-    const membership = await db.workspaceMembership.upsert({
+    const membership = await prisma.workspaceMembership.upsert({
       where: {
         userId_workspaceId: {
           userId: user.id,
@@ -51,7 +62,7 @@ async function seedTestDb() {
 
     // Create test engagement
     const engagementId = uuidv4();
-    const engagement = await db.engagement.upsert({
+    const engagement = await prisma.engagement.upsert({
       where: { id: engagementId },
       update: {},
       create: {
@@ -70,7 +81,7 @@ async function seedTestDb() {
     console.log(`  ✓ Created engagement: ${engagement.id}`);
 
     // Create engagement membership
-    const engagementMembership = await db.engagementMembership.upsert({
+    const engagementMembership = await prisma.engagementMembership.upsert({
       where: {
         userId_engagementId: {
           userId: user.id,
@@ -86,6 +97,7 @@ async function seedTestDb() {
     });
     console.log(`  ✓ Created engagement membership: ${engagementMembership.id}`);
 
+    await prisma.$disconnect();
     console.log("✓ Test database seeded\n");
     return { workspaceId, userId, engagementId };
   } catch (error) {
@@ -94,7 +106,11 @@ async function seedTestDb() {
   }
 }
 
-seedTestDb().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+seedTestDb()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
