@@ -12,6 +12,7 @@ jobs:
     environment: test
 
     env:
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
       DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
       NODE_ENV: test
       SKIP_ENV_VALIDATION: "true"
@@ -20,38 +21,39 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Verify DATABASE_URL_TEST exists
+      - name: Verify database URL exists and is safe
+        shell: bash
         run: |
-          if [ -z "${{ secrets.DATABASE_URL_TEST }}" ]; then
+          set -euo pipefail
+
+          if [ -z "${DATABASE_URL_TEST:-}" ]; then
+            echo "DB_SAFE=false" >> "$GITHUB_ENV"
             echo "❌ STOP: DATABASE_URL_TEST secret not found"
             exit 1
           fi
-          echo "✓ DATABASE_URL_TEST secret exists"
 
-      - name: Verify DATABASE_URL_TEST is safe (contains test/ci marker)
-        run: |
-          DB_URL="${{ secrets.DATABASE_URL_TEST }}"
+          DB_URL="$DATABASE_URL_TEST"
 
           if [[ ! "$DB_URL" =~ (test|ci|staging-test) ]]; then
+            echo "DB_SAFE=false" >> "$GITHUB_ENV"
             echo "❌ STOP: DATABASE_URL_TEST does not contain test/ci marker"
-            echo "DB_SAFE=false" >> $GITHUB_ENV
             exit 1
           fi
-          echo "✓ DATABASE_URL_TEST contains test/ci marker"
 
           if [[ "$DB_URL" =~ (prod|main|production) ]]; then
+            echo "DB_SAFE=false" >> "$GITHUB_ENV"
             echo "❌ STOP: DATABASE_URL_TEST contains production marker"
-            echo "DB_SAFE=false" >> $GITHUB_ENV
             exit 1
           fi
-          echo "✓ DATABASE_URL_TEST does not contain production markers"
-          echo "DB_SAFE=true" >> $GITHUB_ENV
+
+          echo "DB_SAFE=true" >> "$GITHUB_ENV"
+          echo "✓ DATABASE_URL_TEST is present and safe"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -60,73 +62,65 @@ jobs:
         run: npx prisma generate
 
       - name: Run migrations
-        run: npx prisma migrate deploy && echo "MIGRATIONS=SUCCESS" >> $GITHUB_ENV || echo "MIGRATIONS=FAILED" >> $GITHUB_ENV
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx prisma migrate deploy
+          echo "MIGRATIONS=SUCCESS" >> "$GITHUB_ENV"
 
       - name: Seed test database
+        shell: bash
         run: |
-          echo "🌱 Seeding test database..."
-          npx ts-node scripts/seed-test-db.ts || {
-            echo "⚠️  Seed script not runnable via ts-node, attempting with tsx..."
-            npx tsx scripts/seed-test-db.ts || {
-              echo "⚠️  Seed failed, continuing with tests (some may fail if data missing)"
-            }
-          }
+          set -euo pipefail
+          if [ -f scripts/seed-test-db.ts ]; then
+            npx tsx scripts/seed-test-db.ts
+          else
+            echo "❌ STOP: scripts/seed-test-db.ts not found"
+            exit 1
+          fi
 
       - name: Run database-dependent tests only
+        shell: bash
         run: |
-          echo "Running only database-dependent tests..."
+          set +e
           npm test -- --run \
             src/services \
             src/__tests__/workspace-isolation-enforcement.test.ts \
             src/app/api/opsiq \
             2>&1 | tee test-output.log
-        continue-on-error: true
+          echo "TEST_EXIT=${PIPESTATUS[0]}" >> "$GITHUB_ENV"
+          exit 0
 
       - name: Parse test results
+        shell: bash
         run: |
-          TEST_OUTPUT=$(cat test-output.log)
+          set -euo pipefail
 
-          # Extract test counts from summary line
-          FAILED=$(echo "$TEST_OUTPUT" | grep "Tests " | grep -o "[0-9]* failed" | grep -o "[0-9]*" | head -1 || echo "0")
-          SKIPPED=$(echo "$TEST_OUTPUT" | grep "Tests " | grep -o "[0-9]* skipped" | grep -o "[0-9]*" | head -1 || echo "0")
-          PASSED=$(echo "$TEST_OUTPUT" | grep "Tests " | grep -o "[0-9]* passed" | grep -o "[0-9]*" | head -1 || echo "0")
+          FAILED=$(grep -Eo '[0-9]+ failed' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
+          PASSED=$(grep -Eo '[0-9]+ passed' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
+          SKIPPED=$(grep -Eo '[0-9]+ skipped' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
 
-          echo "FAILED=${FAILED}" >> $GITHUB_ENV
-          echo "SKIPPED=${SKIPPED}" >> $GITHUB_ENV
-          echo "PASSED=${PASSED}" >> $GITHUB_ENV
+          echo "FAILED=$FAILED" >> "$GITHUB_ENV"
+          echo "PASSED=$PASSED" >> "$GITHUB_ENV"
+          echo "SKIPPED=$SKIPPED" >> "$GITHUB_ENV"
 
-          if [ "$FAILED" -gt "0" ]; then
-            TEST_STATUS="UNCLEAN"
+          if [ "$FAILED" -gt 0 ] || [ "${TEST_EXIT:-1}" -ne 0 ]; then
+            echo "TEST_STATUS=UNCLEAN" >> "$GITHUB_ENV"
           else
-            TEST_STATUS="CLEAN"
-          fi
-          echo "TEST_STATUS=${TEST_STATUS}" >> $GITHUB_ENV
-
-          # Set DB_SAFE and MIGRATIONS defaults if not already set
-          if [ -z "${{ env.DB_SAFE }}" ]; then
-            echo "DB_SAFE=true" >> $GITHUB_ENV
-          fi
-          if [ -z "${{ env.MIGRATIONS }}" ]; then
-            echo "MIGRATIONS=SUCCESS" >> $GITHUB_ENV
+            echo "TEST_STATUS=CLEAN" >> "$GITHUB_ENV"
           fi
 
       - name: Report results
+        shell: bash
         run: |
-          echo "════════════════════════════════════════════════════════"
-          echo "Phase 1 Database Test Results"
-          echo "════════════════════════════════════════════════════════"
-          echo ""
-          echo "DB_SAFE: ${{ env.DB_SAFE }}"
-          echo "MIGRATIONS: ${{ env.MIGRATIONS }}"
-          echo "FAILED: ${{ env.FAILED }}"
-          echo "PASSED: ${{ env.PASSED }}"
-          echo "SKIPPED: ${{ env.SKIPPED }}"
-          echo "TEST_STATUS: ${{ env.TEST_STATUS }}"
-          echo ""
-          echo "════════════════════════════════════════════════════════"
+          echo "DB_SAFE: ${DB_SAFE:-false}"
+          echo "MIGRATIONS: ${MIGRATIONS:-FAILED}"
+          echo "FAILED: ${FAILED:-0}"
+          echo "PASSED: ${PASSED:-0}"
+          echo "SKIPPED: ${SKIPPED:-0}"
+          echo "TEST_STATUS: ${TEST_STATUS:-UNCLEAN}"
 
-          if [ "${{ env.TEST_STATUS }}" != "CLEAN" ]; then
-            echo "⚠️  Database tests not passing"
+          if [ "${TEST_STATUS:-UNCLEAN}" != "CLEAN" ]; then
             exit 1
           fi
 
@@ -134,5 +128,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: phase-1-db-test-results
           path: test-output.log
+          if-no-files-found: warn
