@@ -65,8 +65,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "⚠️ Resetting TEST database/schema only..."
-          npx prisma migrate reset --force --skip-seed
+          echo "⚠️ Resetting TEST database/schema..."
+
+          if npx prisma migrate reset --help | grep -q -- "--skip-seed"; then
+            npx prisma migrate reset --force --skip-seed
+          else
+            npx prisma migrate reset --force
+          fi
 
       - name: Run migrations
         shell: bash
@@ -79,6 +84,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           if [ -f scripts/seed-test-db.ts ]; then
             npx tsx scripts/seed-test-db.ts
           else
@@ -90,11 +96,13 @@ jobs:
         shell: bash
         run: |
           set +e
+
           npm test -- --run \
             src/services \
             src/__tests__/workspace-isolation-enforcement.test.ts \
             src/app/api/opsiq \
             2>&1 | tee test-output.log
+
           echo "TEST_EXIT=${PIPESTATUS[0]}" >> "$GITHUB_ENV"
           exit 0
 
@@ -102,6 +110,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if [ ! -f test-output.log ]; then
+            echo "FAILED=999999" >> "$GITHUB_ENV"
+            echo "PASSED=0" >> "$GITHUB_ENV"
+            echo "SKIPPED=0" >> "$GITHUB_ENV"
+            echo "TEST_STATUS=UNCLEAN" >> "$GITHUB_ENV"
+            exit 0
+          fi
 
           FAILED=$(grep -Eo '[0-9]+ failed' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
           PASSED=$(grep -Eo '[0-9]+ passed' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
@@ -120,12 +136,16 @@ jobs:
       - name: Report results
         shell: bash
         run: |
+          echo "════════════════════════════════════════════════════════"
+          echo "Phase 1 Database Test Results"
+          echo "════════════════════════════════════════════════════════"
           echo "DB_SAFE: ${DB_SAFE:-false}"
           echo "MIGRATIONS: ${MIGRATIONS:-FAILED}"
           echo "FAILED: ${FAILED:-0}"
           echo "PASSED: ${PASSED:-0}"
           echo "SKIPPED: ${SKIPPED:-0}"
           echo "TEST_STATUS: ${TEST_STATUS:-UNCLEAN}"
+          echo "════════════════════════════════════════════════════════"
 
           if [ "${TEST_STATUS:-UNCLEAN}" != "CLEAN" ]; then
             exit 1
