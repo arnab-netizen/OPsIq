@@ -9,6 +9,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     engagement: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       update: vi.fn(),
     },
     businessConditionProfile: {
