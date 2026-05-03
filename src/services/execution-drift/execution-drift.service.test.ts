@@ -14,7 +14,10 @@ describe("ExecutionDriftService", () => {
   it("throws NotFoundError when engagement does not exist", async () => {
     const mockDb = db as any;
     mockDb.engagement = {
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
       findUnique: vi.fn().mockResolvedValue(null),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(null),
     };
 
     await expect(detectExecutionDrift("nonexistent")).rejects.toThrow(NotFoundError);
@@ -33,7 +36,10 @@ describe("ExecutionDriftService", () => {
 
     const mockDb = db as any;
     mockDb.engagement = {
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
       findUnique: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
     };
     mockDb.finding = {
       findMany: vi.fn().mockResolvedValue([]),
@@ -82,7 +88,10 @@ describe("ExecutionDriftService", () => {
 
     const mockDb = db as any;
     mockDb.engagement = {
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
       findUnique: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
     };
     mockDb.finding = {
       findMany: vi.fn().mockResolvedValue([]),
@@ -129,7 +138,10 @@ describe("ExecutionDriftService", () => {
 
     const mockDb = db as any;
     mockDb.engagement = {
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
       findUnique: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
     };
     mockDb.finding = {
       findMany: vi.fn().mockResolvedValue([]),
@@ -164,7 +176,10 @@ describe("ExecutionDriftService", () => {
 
     const mockDb = db as any;
     mockDb.engagement = {
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
       findUnique: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
     };
     mockDb.finding = {
       findMany: vi.fn().mockResolvedValue([]),
@@ -210,7 +225,10 @@ describe("ExecutionDriftService", () => {
 
     const mockDb = db as any;
     mockDb.engagement = {
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
       findUnique: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
     };
     mockDb.finding = {
       findMany: vi.fn().mockResolvedValue(mockFindings),
@@ -244,7 +262,10 @@ describe("ExecutionDriftService", () => {
 
     const mockDb = db as any;
     mockDb.engagement = {
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
       findUnique: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
     };
     mockDb.finding = {
       findMany: vi.fn().mockResolvedValue([]),
@@ -339,7 +360,10 @@ describe("ExecutionDriftService", () => {
 
     const mockDb = db as any;
     mockDb.engagement = {
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
       findUnique: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
+      findFirst: vi.fn().mockResolvedValue(mockEngagement),
     };
     mockDb.finding = {
       findMany: vi.fn().mockResolvedValue([]),

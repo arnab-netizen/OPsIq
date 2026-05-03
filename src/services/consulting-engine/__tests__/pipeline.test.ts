@@ -6,6 +6,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     engagement: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
     },
     finding: {
       findMany: vi.fn(),
@@ -66,7 +67,7 @@ describe("Consulting Engine Pipeline", () => {
 
   describe("runConsultingPipeline", () => {
     it("should return ERROR if engagement not found", async () => {
-      vi.mocked(db.engagement.findUnique).mockResolvedValueOnce(null);
+      vi.mocked(db.engagement.findFirst).mockResolvedValueOnce(null);
 
       const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
 
@@ -78,7 +79,7 @@ describe("Consulting Engine Pipeline", () => {
     });
 
     it("should return INSUFFICIENT_DATA if no findings", async () => {
-      vi.mocked(db.engagement.findUnique).mockResolvedValueOnce({
+      vi.mocked(db.engagement.findFirst).mockResolvedValueOnce({
         id: engagementId,
         clientId,
         title: "Test Engagement",
@@ -98,7 +99,7 @@ describe("Consulting Engine Pipeline", () => {
     it("should run consulting engine with mapped evidence", async () => {
       const findingId = uuidv4();
 
-      vi.mocked(db.engagement.findUnique).mockResolvedValueOnce({
+      vi.mocked(db.engagement.findFirst).mockResolvedValueOnce({
         id: engagementId,
         clientId,
         title: "Recovery Engagement",
@@ -181,7 +182,7 @@ describe("Consulting Engine Pipeline", () => {
     it("should create recommendations and actions from interventions", async () => {
       const interventionId = uuidv4();
 
-      vi.mocked(db.engagement.findUnique).mockResolvedValueOnce({
+      vi.mocked(db.engagement.findFirst).mockResolvedValueOnce({
         id: engagementId,
         clientId,
         title: "Engagement",
@@ -284,7 +285,7 @@ describe("Consulting Engine Pipeline", () => {
     });
 
     it("should emit audit event on success", async () => {
-      vi.mocked(db.engagement.findUnique).mockResolvedValueOnce({
+      vi.mocked(db.engagement.findFirst).mockResolvedValueOnce({
         id: engagementId,
         clientId,
         title: "Engagement",
@@ -354,7 +355,7 @@ describe("Consulting Engine Pipeline", () => {
     });
 
     it("should emit error event on adapter failure", async () => {
-      vi.mocked(db.engagement.findUnique).mockResolvedValueOnce({
+      vi.mocked(db.engagement.findFirst).mockResolvedValueOnce({
         id: engagementId,
         clientId,
         title: "Engagement",
@@ -417,7 +418,7 @@ describe("Consulting Engine Pipeline", () => {
     });
 
     it("should handle engine returning non-success status", async () => {
-      vi.mocked(db.engagement.findUnique).mockResolvedValueOnce({
+      vi.mocked(db.engagement.findFirst).mockResolvedValueOnce({
         id: engagementId,
         clientId,
         title: "Engagement",
@@ -461,7 +462,7 @@ describe("Consulting Engine Pipeline", () => {
         policy: { userId: "consulting-engine", roles: [] },
       };
 
-      vi.mocked(db.engagement.findUnique).mockResolvedValueOnce({
+      vi.mocked(db.engagement.findFirst).mockResolvedValueOnce({
         id: engagementId,
         clientId,
         title: "Engagement",
