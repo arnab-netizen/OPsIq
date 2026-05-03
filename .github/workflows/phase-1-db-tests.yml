@@ -12,7 +12,6 @@ jobs:
 
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
-      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
       NODE_ENV: test
       SKIP_ENV_VALIDATION: "true"
 
@@ -30,15 +29,15 @@ jobs:
 
       - name: Verify DATABASE_URL_TEST is safe (contains test/ci marker)
         run: |
-          if [[ ! "${{ secrets.DATABASE_URL_TEST }}" =~ (test|ci|staging-test) ]]; then
+          DB_URL="${{ secrets.DATABASE_URL_TEST }}"
+
+          if [[ ! "$DB_URL" =~ (test|ci|staging-test) ]]; then
             echo "❌ STOP: DATABASE_URL_TEST does not contain test/ci marker"
-            echo "URL safety check failed - cannot proceed"
             exit 1
           fi
           echo "✓ DATABASE_URL_TEST contains test/ci marker"
 
-          # Additional safety: reject production markers
-          if [[ "${{ secrets.DATABASE_URL_TEST }}" =~ (prod|main|production) ]]; then
+          if [[ "$DB_URL" =~ (prod|main|production) ]]; then
             echo "❌ STOP: DATABASE_URL_TEST contains production marker"
             exit 1
           fi
@@ -59,15 +58,31 @@ jobs:
       - name: Run migrations
         run: npx prisma migrate deploy
 
-      - name: Run Phase 1 database tests
-        run: npm test -- --run 2>&1 | tee test-output.log
+      - name: Seed test database
+        run: |
+          echo "🌱 Seeding test database..."
+          npx ts-node scripts/seed-test-db.ts || {
+            echo "⚠️  Seed script not runnable via ts-node, attempting with tsx..."
+            npx tsx scripts/seed-test-db.ts || {
+              echo "⚠️  Seed failed, continuing with tests (some may fail if data missing)"
+            }
+          }
+
+      - name: Run database-dependent tests only
+        run: |
+          echo "Running only database-dependent tests..."
+          npm test -- --run \
+            src/services \
+            src/__tests__/workspace-isolation-enforcement.test.ts \
+            src/app/api/opsiq \
+            2>&1 | tee test-output.log
         continue-on-error: true
 
       - name: Parse test results
         run: |
           TEST_OUTPUT=$(cat test-output.log)
 
-          # Extract test counts
+          # Extract test counts from summary line
           FAILED=$(echo "$TEST_OUTPUT" | grep "Tests " | grep -o "[0-9]* failed" | grep -o "[0-9]*" | head -1 || echo "0")
           SKIPPED=$(echo "$TEST_OUTPUT" | grep "Tests " | grep -o "[0-9]* skipped" | grep -o "[0-9]*" | head -1 || echo "0")
           PASSED=$(echo "$TEST_OUTPUT" | grep "Tests " | grep -o "[0-9]* passed" | grep -o "[0-9]*" | head -1 || echo "0")
@@ -90,16 +105,14 @@ jobs:
           echo "════════════════════════════════════════════════════════"
           echo ""
           echo "FAILED: ${{ env.FAILED }}"
-          echo "SKIPPED: ${{ env.SKIPPED }}"
           echo "PASSED: ${{ env.PASSED }}"
-          echo ""
           echo "TEST_STATUS: ${{ env.TEST_STATUS }}"
           echo ""
           echo "════════════════════════════════════════════════════════"
 
           if [ "${{ env.TEST_STATUS }}" != "CLEAN" ]; then
-            echo ""
-            echo "⚠️  Database tests not passing. See logs for details."
+            echo "⚠️  Database tests not passing"
+            exit 1
           fi
 
       - name: Upload test results
