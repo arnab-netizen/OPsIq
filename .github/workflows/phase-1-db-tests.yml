@@ -61,6 +61,13 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Reset test database
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "⚠️ Resetting TEST database/schema only..."
+          npx prisma migrate reset --force --skip-seed
+
       - name: Run migrations
         shell: bash
         run: |
