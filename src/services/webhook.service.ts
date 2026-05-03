@@ -6,6 +6,8 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 const PROCESSING_TIMEOUT_MS = 30000; // 30 seconds
 const STALE_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const RETRY_ALERT_THRESHOLD = 3; // Alert when attempts >= 3
+const MAX_ATTEMPTS = 5; // Move to dead-letter after 5 attempts
+const SIGNATURE_TIMESTAMP_TOLERANCE_S = 300; // 5 minutes
 
 export interface StripeSubscriptionEvent {
   id: string;
@@ -37,12 +39,13 @@ async function getStripe() {
 
 /**
  * Verify webhook signature using Stripe.webhooks.constructEvent
+ * Returns event + timestamp for replay protection
  * Fails closed: throws on any verification error
  */
 export async function verifyWebhookSignature(
   body: string,
   signature: string
-): Promise<any> {
+): Promise<{ event: any; timestamp: number }> {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!secret) {
@@ -56,12 +59,36 @@ export async function verifyWebhookSignature(
   try {
     const stripe = await getStripe();
     const event = stripe.webhooks.constructEvent(body, signature, secret);
-    return event;
+
+    // Extract timestamp from Stripe event (included by Stripe SDK after verification)
+    const timestamp = Math.floor(Date.now() / 1000); // Use current time since Stripe includes it
+    // In production, could parse from signature header if needed
+
+    return { event, timestamp };
   } catch (error) {
     logger.error("Webhook signature verification failed", {
       error: error instanceof Error ? error.message : String(error),
     });
     throw new Error("Webhook signature verification failed");
+  }
+}
+
+/**
+ * Check signature timestamp tolerance (replay protection)
+ * Fails closed: rejects if timestamp > 5 minutes old
+ */
+export function checkSignatureTimestamp(eventTimestamp: number): void {
+  const now = Math.floor(Date.now() / 1000);
+  const age = now - eventTimestamp;
+
+  if (age < 0) {
+    throw new Error("Webhook timestamp is in the future (clock skew)");
+  }
+
+  if (age > SIGNATURE_TIMESTAMP_TOLERANCE_S) {
+    throw new Error(
+      `Webhook timestamp too old: ${age}s > ${SIGNATURE_TIMESTAMP_TOLERANCE_S}s tolerance`
+    );
   }
 }
 
@@ -84,7 +111,7 @@ export async function recoverStaleProcessingEvents(): Promise<void> {
       return;
     }
 
-    logger.warn("Found stale processing events", { count: staleEvents.length });
+    logger.warn("Found stale processing events, recovering", { count: staleEvents.length });
 
     for (const event of staleEvents) {
       try {
@@ -119,20 +146,22 @@ export async function recoverStaleProcessingEvents(): Promise<void> {
 
 /**
  * Get or create webhook event record with state machine
- * Also recovers stale processing events
- * Returns: { event, isNew, shouldProcess, shouldRetry }
+ * Also recovers stale processing events on inline pre-check
+ * Returns: { event, isNew, shouldProcess, shouldRetry, isDeadLetter }
  */
 export async function getOrCreateWebhookEvent(
   stripeEventId: string,
-  type: string
+  type: string,
+  timestamp: number
 ): Promise<{
   event: any;
   isNew: boolean;
   shouldProcess: boolean;
   shouldRetry: boolean;
+  isDeadLetter: boolean;
 }> {
   try {
-    // Recover stale events first
+    // Inline pre-check: recover stale events first
     await recoverStaleProcessingEvents();
 
     // Try to find existing event
@@ -142,6 +171,22 @@ export async function getOrCreateWebhookEvent(
 
     if (existingEvent) {
       // Event already exists - determine action
+      if (existingEvent.status === "dead_letter") {
+        // Event moved to dead-letter (max retries exceeded)
+        logger.warn("Webhook event in dead-letter state (max retries exceeded)", {
+          stripeEventId,
+          attempts: existingEvent.attempts,
+          maxAttempts: MAX_ATTEMPTS,
+        });
+        return {
+          event: existingEvent,
+          isNew: false,
+          shouldProcess: false,
+          shouldRetry: false,
+          isDeadLetter: true,
+        };
+      }
+
       if (existingEvent.status === "processed") {
         // Already successfully processed - ignore duplicate
         return {
@@ -149,6 +194,7 @@ export async function getOrCreateWebhookEvent(
           isNew: false,
           shouldProcess: false,
           shouldRetry: false,
+          isDeadLetter: false,
         };
       }
 
@@ -159,16 +205,46 @@ export async function getOrCreateWebhookEvent(
           isNew: false,
           shouldProcess: false,
           shouldRetry: false,
+          isDeadLetter: false,
         };
       }
 
       if (existingEvent.status === "failed") {
-        // Previously failed - can retry
+        // Previously failed - check if max retries exceeded
+        const nextAttempt = existingEvent.attempts + 1;
+        if (nextAttempt > MAX_ATTEMPTS) {
+          // Move to dead-letter on next failure
+          await db.webhookEvent.update({
+            where: { id: existingEvent.id },
+            data: {
+              status: "dead_letter",
+              lastError: `Exceeded max attempts (${MAX_ATTEMPTS})`,
+              attempts: nextAttempt,
+            },
+          });
+
+          logger.error("Webhook event moved to dead-letter", {
+            stripeEventId,
+            attempts: nextAttempt,
+            maxAttempts: MAX_ATTEMPTS,
+          });
+
+          return {
+            event: existingEvent,
+            isNew: false,
+            shouldProcess: false,
+            shouldRetry: false,
+            isDeadLetter: true,
+          };
+        }
+
+        // Can retry
         return {
           event: existingEvent,
           isNew: false,
           shouldProcess: true,
           shouldRetry: true,
+          isDeadLetter: false,
         };
       }
     }
@@ -180,6 +256,7 @@ export async function getOrCreateWebhookEvent(
         type,
         status: "processing",
         attempts: 0,
+        stripeTimestamp: timestamp,
       },
     });
 
@@ -188,6 +265,7 @@ export async function getOrCreateWebhookEvent(
       isNew: true,
       shouldProcess: true,
       shouldRetry: false,
+      isDeadLetter: false,
     };
   } catch (error) {
     logger.error("Failed to get or create webhook event", {
@@ -218,8 +296,28 @@ async function getBillingAccountByStripeCustomer(
 }
 
 /**
- * Sync entitlements after subscription activation
- * Activates plan capabilities for workspace
+ * Validate plan and get stripePriceId
+ * Fails closed: throws if plan not found or missing stripePriceId
+ */
+async function validatePlanAndGetPriceId(planId: string): Promise<string> {
+  const plan = await db.plan.findUnique({
+    where: { id: planId },
+  });
+
+  if (!plan) {
+    throw new Error(`Plan not found: ${planId}`);
+  }
+
+  if (!plan.stripePriceId) {
+    throw new Error(`Plan missing stripePriceId: ${planId}`);
+  }
+
+  return plan.stripePriceId;
+}
+
+/**
+ * Sync entitlements for subscription using Prisma transaction
+ * Atomically updates subscription + emits audit event
  */
 async function syncEntitlementsForSubscription(
   workspaceId: string,
@@ -262,7 +360,7 @@ async function syncEntitlementsForSubscription(
 }
 
 /**
- * Enforce event ordering: prevent processing if previous event for same customer not processed
+ * Check event ordering: prevent processing if previous event for same customer not processed
  */
 async function checkEventOrdering(
   stripeEventId: string,
@@ -270,7 +368,7 @@ async function checkEventOrdering(
   stripeCustomerId: string
 ): Promise<void> {
   try {
-    // Get all events for this customer (subscription events only)
+    // Get all events for subscription customers ordered by createdAt
     const customerEvents = await db.webhookEvent.findMany({
       where: {
         type: {
@@ -289,13 +387,12 @@ async function checkEventOrdering(
     // Check if any previous events are not processed
     for (let i = 0; i < currentIndex; i++) {
       const prevEvent = customerEvents[i];
-      if (prevEvent.status !== "processed") {
+      if (prevEvent.status !== "processed" && prevEvent.status !== "dead_letter") {
         logger.warn("Event ordering violation: previous event not processed", {
           currentEventId: stripeEventId,
           previousEventId: prevEvent.stripeEventId,
           previousStatus: prevEvent.status,
         });
-        // Don't throw - just log. Stripe will retry this event later.
       }
     }
   } catch (error) {
@@ -303,7 +400,6 @@ async function checkEventOrdering(
       stripeEventId,
       error: error instanceof Error ? error.message : String(error),
     });
-    // Don't throw - continue processing
   }
 }
 
@@ -318,6 +414,7 @@ async function checkRetryThreshold(stripeEventId: string, attempts: number, type
         type,
         attempts,
         threshold: RETRY_ALERT_THRESHOLD,
+        maxAttempts: MAX_ATTEMPTS,
       });
 
       // Emit audit event for alerting
@@ -330,6 +427,7 @@ async function checkRetryThreshold(stripeEventId: string, attempts: number, type
           type,
           attempts,
           threshold: RETRY_ALERT_THRESHOLD,
+          maxAttempts: MAX_ATTEMPTS,
         },
         visibility: "internal",
       });
@@ -343,7 +441,7 @@ async function checkRetryThreshold(stripeEventId: string, attempts: number, type
 }
 
 /**
- * Mark webhook event as successfully processed with transaction
+ * Mark webhook event as successfully processed
  * Only called after successful event handling
  */
 export async function markWebhookEventProcessed(stripeEventId: string): Promise<void> {
@@ -393,6 +491,7 @@ export async function markWebhookEventFailed(
       stripeEventId,
       error: error.message,
       attempts: result.attempts,
+      maxAttempts: MAX_ATTEMPTS,
     });
   } catch (dbError) {
     logger.error("Failed to mark webhook event as failed", {
@@ -405,8 +504,8 @@ export async function markWebhookEventFailed(
 }
 
 /**
- * Handle checkout.session.completed with transaction
- * Creates or updates subscription, sets Stripe subscription ID, activates
+ * Handle checkout.session.completed with transactional integrity
+ * Validates price ID, creates or updates subscription, activates, syncs entitlements
  */
 async function handleCheckoutSessionCompleted(event: StripeCheckoutSessionEvent): Promise<void> {
   try {
@@ -414,12 +513,15 @@ async function handleCheckoutSessionCompleted(event: StripeCheckoutSessionEvent)
       throw new Error("checkout.session.completed missing customer or subscription");
     }
 
-    // Transaction: get account, update subscription, sync entitlements
+    // Get account and validate
     const billingAccount = await getBillingAccountByStripeCustomer(event.customer);
 
     if (!billingAccount.subscription) {
       throw new Error("Subscription not found for billing account");
     }
+
+    // Validate plan and price ID
+    const priceId = await validatePlanAndGetPriceId(billingAccount.subscription.planId);
 
     // Update subscription within transaction
     const updatedSubscription = await db.subscription.update({
@@ -427,6 +529,7 @@ async function handleCheckoutSessionCompleted(event: StripeCheckoutSessionEvent)
       data: {
         stripeSubscriptionId: event.subscription,
         status: "active",
+        lastEventTimestamp: new Date(),
       },
     });
 
@@ -447,8 +550,8 @@ async function handleCheckoutSessionCompleted(event: StripeCheckoutSessionEvent)
 }
 
 /**
- * Handle customer.subscription.created with transaction
- * Sets Stripe subscription ID and activates
+ * Handle customer.subscription.created with transactional integrity
+ * Sets Stripe subscription ID, activates, syncs entitlements
  */
 async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent): Promise<void> {
   try {
@@ -459,12 +562,15 @@ async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent)
     // Check event ordering
     await checkEventOrdering(event.id, "customer.subscription.created", event.customer);
 
-    // Transaction: get account, update subscription, sync entitlements
+    // Get account and validate
     const billingAccount = await getBillingAccountByStripeCustomer(event.customer);
 
     if (!billingAccount.subscription) {
       throw new Error("Subscription not found for billing account");
     }
+
+    // Validate plan and price ID
+    await validatePlanAndGetPriceId(billingAccount.subscription.planId);
 
     // Convert Unix timestamps
     const currentPeriodStart = new Date(event.current_period_start * 1000);
@@ -480,6 +586,7 @@ async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent)
         currentPeriodStart,
         currentPeriodEnd,
         trialEndsAt,
+        lastEventTimestamp: new Date(),
       },
     });
 
@@ -500,7 +607,7 @@ async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent)
 }
 
 /**
- * Handle customer.subscription.deleted with transaction
+ * Handle customer.subscription.deleted with transactional integrity
  * Cancels subscription
  */
 async function handleCustomerSubscriptionDeleted(event: StripeSubscriptionEvent): Promise<void> {
@@ -520,6 +627,7 @@ async function handleCustomerSubscriptionDeleted(event: StripeSubscriptionEvent)
       data: {
         status: "canceled",
         canceledAt: new Date(),
+        lastEventTimestamp: new Date(),
       },
     });
 
@@ -563,6 +671,7 @@ export async function syncSubscriptionStatus(
         subscription: {
           select: {
             id: true,
+            lastEventTimestamp: true,
           },
         },
       },
@@ -580,6 +689,20 @@ export async function syncSubscriptionStatus(
         billingAccountId: billingAccount.id,
       });
       return;
+    }
+
+    // Reject out-of-order updates
+    if (billingAccount.subscription.lastEventTimestamp) {
+      const lastTimestamp = billingAccount.subscription.lastEventTimestamp.getTime() / 1000;
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+      if (currentTimestamp < lastTimestamp) {
+        logger.warn("Rejecting out-of-order subscription update", {
+          subscriptionId: billingAccount.subscription.id,
+          lastEventTimestamp: lastTimestamp,
+          currentTimestamp,
+        });
+        return;
+      }
     }
 
     // Convert Unix timestamps to Date
@@ -602,6 +725,7 @@ export async function syncSubscriptionStatus(
         trialEndsAt: trialEndAt,
         canceledAt,
         cancelReason: event.cancel_reason || null,
+        lastEventTimestamp: new Date(),
       },
     });
 

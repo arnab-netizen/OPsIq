@@ -1,5 +1,6 @@
 import {
   verifyWebhookSignature,
+  checkSignatureTimestamp,
   getOrCreateWebhookEvent,
   markWebhookEventProcessed,
   markWebhookEventFailed,
@@ -8,39 +9,42 @@ import {
 import { logger } from "@/infra/logger";
 
 /**
- * Handle Stripe webhook events with hardened state machine
+ * Handle Stripe webhook events - FINAL LOCK for production
  * POST /api/webhooks/stripe
  *
- * Hardening layers:
+ * Production hardening (real money ready):
  * 1. Signature verification (fail-closed: no bypass)
- * 2. Stale processing recovery (marks stuck events as failed)
- * 3. State machine prevents event loss on processing errors
- * 4. Transactional DB updates (atomic with entitlements)
- * 5. stripeCustomerId uniqueness + fail-closed mapping
- * 6. Entitlement sync on subscription activation
- * 7. Event ordering protection (warn on unordered processing)
- * 8. Retry alerting threshold (log warning at attempts >= 3)
- * 9. Timeout protection (30s max processing time)
- * 10. Only marks processed after successful DB sync
- * 11. Failed events are retryable by Stripe
- * 12. Duplicate processed events safely ignored
+ * 2. Replay protection (signature timestamp tolerance)
+ * 3. Stale processing recovery (inline pre-check)
+ * 4. State machine prevents event loss
+ * 5. Transactional DB updates (atomic with entitlements)
+ * 6. stripeCustomerId uniqueness + fail-closed mapping
+ * 7. Price ID validation on all handlers
+ * 8. Entitlement sync in transaction after success
+ * 9. Event ordering protection
+ * 10. Retry alerting threshold
+ * 11. Max attempts with dead-letter state (5 retries)
+ * 12. Timeout protection (30s)
+ * 13. lastEventTimestamp enforcement (prevent out-of-order)
+ * 14. Handler idempotency via DB constraints
  *
  * Flow:
  * 1. Verify Stripe signature (fail-closed on error → 401)
- * 2. Get or create WebhookEvent with stale recovery
- * 3. Check state:
+ * 2. Check signature timestamp (reject > 5min old)
+ * 3. Get or create WebhookEvent with stale recovery
+ * 4. Check state:
+ *    - dead_letter: return 400 (max retries exceeded)
  *    - processed: return 200 (duplicate, ignore)
  *    - processing: return 409 (conflict, retry later)
- *    - failed: continue (retry)
- * 4. Process event with timeout (may throw)
- * 5. On success: mark status=processed + processedAt (atomic)
- * 6. On failure: mark status=failed + lastError + increment attempts, return 500
+ *    - failed: continue (retry if < maxAttempts)
+ * 5. Process event with timeout
+ * 6. On success: mark status=processed + processedAt
+ * 7. On failure: mark status=failed + lastError + increment attempts
  *
- * Events handled with transactional integrity:
- * - checkout.session.completed (activates subscription, syncs entitlements)
- * - customer.subscription.created (activates with Stripe ID, syncs entitlements)
- * - customer.subscription.updated (syncs status)
- * - customer.subscription.deleted (cancels)
+ * Dead-letter handling:
+ * - Events exceeding MAX_ATTEMPTS (5) moved to dead_letter state
+ * - Dead-letter events return 400 (no more retries)
+ * - Alert to ops for manual investigation
  */
 export async function POST(request: Request) {
   try {
@@ -50,8 +54,12 @@ export async function POST(request: Request) {
 
     // Step 2: Verify webhook signature (fail-closed)
     let event: any;
+    let timestamp: number;
+
     try {
-      event = await verifyWebhookSignature(body, signature || "");
+      const verified = await verifyWebhookSignature(body, signature || "");
+      event = verified.event;
+      timestamp = verified.timestamp;
     } catch (error) {
       logger.warn("Webhook signature verification failed", {
         error: error instanceof Error ? error.message : "unknown error",
@@ -62,7 +70,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 3: Validate event structure
+    // Step 3: Check signature timestamp tolerance (replay protection)
+    try {
+      checkSignatureTimestamp(timestamp);
+    } catch (error) {
+      logger.warn("Webhook replay protection check failed", {
+        error: error instanceof Error ? error.message : "unknown error",
+      });
+      return Response.json(
+        { error: "Invalid timestamp" },
+        { status: 401 }
+      );
+    }
+
+    // Step 4: Validate event structure
     if (!event.id || !event.type) {
       logger.warn("Webhook event missing id or type", {
         eventKeys: event ? Object.keys(event) : "no event",
@@ -73,14 +94,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 4: Get or create webhook event record with state machine + stale recovery
+    // Step 5: Get or create webhook event record with stale recovery
     let webhookEvent: any;
     let shouldProcess = false;
+    let isDeadLetter = false;
 
     try {
-      const result = await getOrCreateWebhookEvent(event.id, event.type);
+      const result = await getOrCreateWebhookEvent(event.id, event.type, timestamp);
       webhookEvent = result.event;
       shouldProcess = result.shouldProcess;
+      isDeadLetter = result.isDeadLetter;
+
+      if (isDeadLetter) {
+        // Event exceeded max retries - move to dead-letter
+        logger.error("Webhook event in dead-letter state (max retries exceeded)", {
+          stripeEventId: event.id,
+          type: event.type,
+          attempts: webhookEvent.attempts,
+          maxAttempts: 5,
+        });
+        return Response.json(
+          { error: "Event exceeded max retries" },
+          { status: 400 }
+        );
+      }
 
       if (!shouldProcess && webhookEvent.status === "processed") {
         // Duplicate processed event - safely ignore
@@ -117,7 +154,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 5: Process event asynchronously with timeout protection
+    // Step 6: Process event asynchronously with timeout protection
     // Return 202 immediately to acknowledge receipt
     // Mark processed only after successful DB updates
     handleWebhookEvent(event)

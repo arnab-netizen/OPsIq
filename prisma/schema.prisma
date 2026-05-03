@@ -942,18 +942,19 @@ model PlanCapability {
 }
 
 model Subscription {
-  id                 String    @id @default(uuid()) @db.Uuid
-  billingAccountId   String    @unique @map("billing_account_id") @db.Uuid // One subscription per account
-  planId             String    @map("plan_id") @db.Uuid
-  status             String    @default("trialing") // "active" | "trialing" | "past_due" | "canceled"
-  currentPeriodStart DateTime  @map("current_period_start")
-  currentPeriodEnd   DateTime  @map("current_period_end")
-  trialEndsAt        DateTime? @map("trial_ends_at")
-  canceledAt         DateTime? @map("canceled_at")
-  cancelReason       String?   @map("cancel_reason")
-  stripeSubscriptionId String? @map("stripe_subscription_id") // Stripe subscription ID for webhook reconciliation
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  id                   String    @id @default(uuid()) @db.Uuid
+  billingAccountId     String    @unique @map("billing_account_id") @db.Uuid // One subscription per account
+  planId               String    @map("plan_id") @db.Uuid
+  status               String    @default("trialing") // "active" | "trialing" | "past_due" | "canceled"
+  currentPeriodStart   DateTime  @map("current_period_start")
+  currentPeriodEnd     DateTime  @map("current_period_end")
+  trialEndsAt          DateTime? @map("trial_ends_at")
+  canceledAt           DateTime? @map("canceled_at")
+  cancelReason         String?   @map("cancel_reason")
+  stripeSubscriptionId String?   @map("stripe_subscription_id") // Stripe subscription ID for webhook reconciliation
+  lastEventTimestamp   DateTime? @map("last_event_timestamp") // Timestamp of last webhook that updated this (prevent out-of-order)
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
   billingAccount BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
   plan           Plan           @relation(fields: [planId], references: [id])
@@ -963,6 +964,7 @@ model Subscription {
   @@index([status])
   @@index([currentPeriodEnd])
   @@index([stripeSubscriptionId])
+  @@index([lastEventTimestamp])
   @@map("subscriptions")
 }
 
@@ -987,10 +989,11 @@ model WebhookEvent {
   id            String   @id @default(uuid()) @db.Uuid
   stripeEventId String   @unique @map("stripe_event_id") // Stripe event ID for deduplication
   type          String   // e.g., "checkout.session.completed", "customer.subscription.created"
-  status        String   @default("processing") // "processing" | "processed" | "failed"
+  status        String   @default("processing") // "processing" | "processed" | "failed" | "dead_letter"
   attempts      Int      @default(0) // Number of processing attempts
   lastError     String?  @map("last_error") // Error message from last failed attempt
   processedAt   DateTime? @map("processed_at") // Timestamp when successfully processed
+  stripeTimestamp Int?    @map("stripe_timestamp") // Stripe webhook timestamp (Unix epoch seconds) for replay protection
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
