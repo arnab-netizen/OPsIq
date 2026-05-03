@@ -11,6 +11,10 @@ vi.mock("@/infra/audit");
 vi.mock("./re-evaluation");
 vi.mock("./engagement-health");
 vi.mock("@/infra/logger");
+vi.mock("@/services/entitlement.service", () => ({
+  assertCapability: vi.fn().mockResolvedValue({ allowed: true }),
+  trackUsage: vi.fn().mockResolvedValue(undefined),
+}));
 
 // Import mocked modules to set up default behavior
 import { computeEngagementHealth, enforceEngagementHealth } from "./engagement-health";

@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { NotFoundError, ValidationError, PlanLimitError } from "@/infra/errors";
 import {
   optimisticUpdate,
   withVersionCheck,
@@ -18,6 +18,7 @@ import { ENGAGEMENT_STATUSES, INTERVENTION_MODES } from "@/domain/constants/stat
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
+import { assertCapability } from "@/services/entitlement.service";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -88,6 +89,12 @@ export async function createEngagement(
   authContext: AuthContext,
   workspaceId: string
 ): Promise<{ id: string; code: string }> {
+  // Check capability: create_engagement
+  const capabilityCheck = await assertCapability(workspaceId, "create_engagement");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("create_engagement", capabilityCheck.reason || "Plan limit exceeded");
+  }
+
   // Service-layer auth: require authContext, extract userId from it (never from parameters)
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 

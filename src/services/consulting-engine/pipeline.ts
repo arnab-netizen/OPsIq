@@ -9,6 +9,8 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { Recommendation, Action } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import type { AuthContext } from "@/lib/auth-guard";
+import { assertCapability } from "@/services/entitlement.service";
+import { PlanLimitError } from "@/infra/errors";
 
 export interface ConsultingEnginePipelineResult {
   status: "SUCCESS" | "INSUFFICIENT_DATA" | "ERROR";
@@ -23,6 +25,12 @@ export async function runConsultingPipeline(
   authContext: AuthContext,
   workspaceId: string
 ): Promise<ConsultingEnginePipelineResult> {
+  // Check capability: decision_engine
+  const capabilityCheck = await assertCapability(workspaceId, "decision_engine");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("decision_engine", capabilityCheck.reason || "Plan limit exceeded");
+  }
+
   try {
     // 1. Load engagement
     const engagement = await db.engagement.findFirst({

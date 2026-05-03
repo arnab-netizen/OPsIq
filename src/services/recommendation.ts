@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError, ConflictError, ValidationError } from "@/infra/errors";
+import { NotFoundError, ConflictError, ValidationError, PlanLimitError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
@@ -10,6 +10,7 @@ import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
+import { assertCapability } from "@/services/entitlement.service";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -218,6 +219,12 @@ export async function createRecommendation(
   workspaceId: string,
   idempotencyKey?: string
 ) {
+  // Check capability: generate_recommendation
+  const capabilityCheck = await assertCapability(workspaceId, "generate_recommendation");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("generate_recommendation", capabilityCheck.reason || "Plan limit exceeded");
+  }
+
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const engagement = await db.engagement.findUnique({

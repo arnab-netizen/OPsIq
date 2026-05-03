@@ -15,6 +15,11 @@ vi.mock("@/lib/auth-guard", () => ({
   requireCapabilityForService: vi.fn(),
 }));
 
+vi.mock("@/services/entitlement.service", () => ({
+  assertCapability: vi.fn().mockResolvedValue({ allowed: true }),
+  trackUsage: vi.fn().mockResolvedValue(undefined),
+}));
+
 const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
 const mockAuthContext = {
   session: {

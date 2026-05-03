@@ -19,6 +19,8 @@ import { requireWorkspaceContext } from "@/services/workspace/context";
 import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import type { PolicyRule } from "@/domain/policy/types";
+import { assertCapability } from "@/services/entitlement.service";
+import { PlanLimitError } from "@/infra/errors";
 
 export async function GET() {
   let logger: ReturnType<typeof createEventLogger> | null = null;
@@ -102,6 +104,12 @@ export async function POST(request: NextRequest) {
     if (beforeItem && beforeItem.workspaceId) {
       workspaceId = beforeItem.workspaceId;
       logger = createEventLogger("api_operator_post", workspaceId);
+
+      // Check capability: decision_engine
+      const capabilityCheck = await assertCapability(workspaceId, "decision_engine");
+      if (!capabilityCheck.allowed) {
+        throw new PlanLimitError("decision_engine", capabilityCheck.reason || "Plan limit exceeded");
+      }
 
       // Check idempotency after we have workspace context
       const idempotencyCheck = await checkIdempotencyKey({

@@ -10,6 +10,8 @@ import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES } from "@/domain/constants/statuses";
 import type { NextRequest } from "next/server";
+import { assertCapability } from "@/services/entitlement.service";
+import { PlanLimitError } from "@/infra/errors";
 
 const createEngagementSchema = z.object({
   title: z.string().min(1),
@@ -84,6 +86,12 @@ export const POST = withRequestContext(async (request) => {
       { error: "idempotency-key header required" },
       { status: 400 }
     );
+  }
+
+  // Check capability: create_engagement
+  const capabilityCheck = await assertCapability(workspaceId, "create_engagement");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("create_engagement", capabilityCheck.reason || "Plan limit exceeded");
   }
 
   const body = await parseRequestBody(request, createEngagementSchema);

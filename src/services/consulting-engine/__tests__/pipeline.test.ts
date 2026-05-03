@@ -38,6 +38,11 @@ vi.mock("@/infra/logger", () => ({
   },
 }));
 
+vi.mock("@/services/entitlement.service", () => ({
+  assertCapability: vi.fn().mockResolvedValue({ allowed: true }),
+  trackUsage: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Now import the pipeline
 import { runConsultingPipeline } from "../pipeline";
 import { db } from "@/lib/db";

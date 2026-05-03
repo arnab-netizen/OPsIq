@@ -12,6 +12,8 @@ import {
   FINDING_IMPACTS,
 } from "@/domain/constants/statuses";
 import type { NextRequest } from "next/server";
+import { assertCapability } from "@/services/entitlement.service";
+import { PlanLimitError } from "@/infra/errors";
 
 const createFindingSchema = z.object({
   engagementId: z.string().uuid(),
@@ -57,6 +59,12 @@ export const POST = withRequestContext(async (request) => {
       { error: "idempotency-key header required" },
       { status: 400 }
     );
+  }
+
+  // Check capability: generate_recommendation
+  const capabilityCheck = await assertCapability(workspaceId, "generate_recommendation");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("generate_recommendation", capabilityCheck.reason || "Plan limit exceeded");
   }
 
   const body = await parseRequestBody(request, createFindingSchema);
