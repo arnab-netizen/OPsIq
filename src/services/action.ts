@@ -199,7 +199,7 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
   enforceWorkspaceId(workspaceId, "getActionsForEngagement", "action");
 
   // Check engagement access
-  await assertEngagementAccess(userId, engagementId);
+  await assertEngagementAccess(userId, engagementId, workspaceId);
 
   return db.action.findMany({
     where: { engagementId, workspaceId },

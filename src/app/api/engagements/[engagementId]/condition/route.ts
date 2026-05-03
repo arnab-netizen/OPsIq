@@ -57,7 +57,7 @@ export const GET = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   const history = await getConditionHistory(engagementId, workspaceId);
   return Response.json({ profiles: history });
@@ -88,7 +88,7 @@ export const POST = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {

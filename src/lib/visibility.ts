@@ -3,13 +3,15 @@ import { ForbiddenError } from "@/infra/errors";
 
 export async function assertEngagementAccess(
   userId: string,
-  engagementId: string
+  engagementId: string,
+  workspaceId: string
 ): Promise<void> {
   const membership = await db.engagementMembership.findFirst({
     where: {
       userId,
       engagementId,
       isActive: true,
+      engagement: { workspaceId },
     },
   });
 

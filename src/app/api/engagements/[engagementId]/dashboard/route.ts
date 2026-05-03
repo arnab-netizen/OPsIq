@@ -20,7 +20,7 @@ export const GET = withRequestContext(async (request, context) => {
     );
   }
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   try {
     const dashboard = await getOwnerDashboard(engagementId, { session, policy }, workspaceId);

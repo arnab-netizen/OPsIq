@@ -18,11 +18,11 @@ export const GET = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, engagementId);
   const { session } = await withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW });
 
-  await assertEngagementAccess(session.user.id, engagementId);
-
   // Get workspace ID from request
   const nextRequest = request as unknown as any;
   const workspaceId = nextRequest?.headers?.get?.("x-workspace-id");
+
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   const state = await getInterventionState(engagementId, workspaceId);
   return Response.json(state);
@@ -36,11 +36,11 @@ export const PUT = withRequestContext(async (request, context) => {
     internalOnly: true,
   });
 
-  await assertEngagementAccess(session.user.id, engagementId);
-
   // Get workspace ID from request
   const nextRequest = request as unknown as any;
   const workspaceId = nextRequest?.headers?.get?.("x-workspace-id");
+
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {

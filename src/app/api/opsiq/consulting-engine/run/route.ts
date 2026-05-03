@@ -27,6 +27,8 @@ export const POST = withRequestContext(async (request) => {
   const body = await parseRequestBody(request, runConsultingEngineSchema);
   parseOrThrow(uuidSchema, body.engagementId);
 
+  const workspaceId = request.headers.get("x-workspace-id") || "";
+
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "runConsultingPipeline",
@@ -40,7 +42,7 @@ export const POST = withRequestContext(async (request) => {
     });
   }
 
-  await assertEngagementAccess(authContext.session.user.id, body.engagementId);
+  await assertEngagementAccess(authContext.session.user.id, body.engagementId, workspaceId);
 
   try {
     const result = await runConsultingPipeline(

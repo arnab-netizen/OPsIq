@@ -8,7 +8,7 @@ export const GET = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   const { session } = await withAuth();
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   const recommendations = await getRecommendationsForEngagement(engagementId, session.user.id, workspaceId);
   return Response.json(recommendations);

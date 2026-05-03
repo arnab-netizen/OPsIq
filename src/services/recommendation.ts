@@ -335,7 +335,7 @@ export async function getRecommendationsForEngagement(engagementId: string, user
   enforceWorkspaceId(workspaceId, "getRecommendationsForEngagement", "recommendation");
 
   // Check engagement access
-  await assertEngagementAccess(userId, engagementId);
+  await assertEngagementAccess(userId, engagementId, workspaceId);
 
   return db.recommendation.findMany({
     where: { engagementId, workspaceId },

@@ -45,7 +45,7 @@ export const GET = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   const state = await getInterventionState(engagementId);
   return Response.json(state);
@@ -76,7 +76,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   // Parse body and determine which field is being updated
   let body;

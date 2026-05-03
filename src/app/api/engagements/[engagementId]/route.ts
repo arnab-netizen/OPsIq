@@ -54,7 +54,7 @@ export const GET = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   const engagement = await getEngagementById(engagementId, workspaceId, hasInternalAccess(policy));
   return Response.json(engagement);
@@ -85,7 +85,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   // Check for interventionPhase in raw request body to provide clear error
   const rawBody = await request.clone().json().catch(() => ({}));

@@ -569,8 +569,8 @@ export async function listFindingsForEngagement(
   createdAt: Date;
 }>> {
   // Check engagement access if userId provided
-  if (userId) {
-    await assertEngagementAccess(userId, engagementId);
+  if (userId && workspaceId) {
+    await assertEngagementAccess(userId, engagementId, workspaceId);
   }
 
   const findingsWithEvidence = await db.finding.findMany({
@@ -717,7 +717,7 @@ export async function getFindingDetail(
 
   // Check engagement access if userId provided
   if (userId) {
-    await assertEngagementAccess(userId, finding.engagementId);
+    await assertEngagementAccess(userId, finding.engagementId, workspaceId);
   }
 
   // Check visibility if visibility filter is provided

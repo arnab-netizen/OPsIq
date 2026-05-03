@@ -11,12 +11,12 @@ export const GET = withRequestContext(async (request, context) => {
   parseOrThrow(uuidSchema, engagementId);
   const { session } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
-  await assertEngagementAccess(session.user.id, engagementId);
-
   // Get workspace ID from request
   const nextRequest = request as unknown as any;
   const workspaceId = nextRequest?.headers?.get?.("x-workspace-id") ||
                        nextRequest?.nextUrl?.searchParams?.get?.("workspaceId");
+
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   try {
     const drift = await detectExecutionDrift(engagementId, workspaceId);

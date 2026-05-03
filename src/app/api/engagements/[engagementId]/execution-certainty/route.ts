@@ -26,7 +26,7 @@ export const GET = withRequestContext(async (request, context) => {
     );
   }
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   // Fetch engagement with health status (scoped by workspace)
   const engagement = await db.engagement.findUnique({

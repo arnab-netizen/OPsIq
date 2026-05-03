@@ -130,8 +130,8 @@ export async function listShockEventsForEngagement(
   createdAt: Date;
 }>> {
   // Check engagement access if userId provided
-  if (userId) {
-    await assertEngagementAccess(userId, engagementId);
+  if (userId && workspaceId) {
+    await assertEngagementAccess(userId, engagementId, workspaceId);
   }
 
   if (!workspaceId) {
@@ -180,7 +180,7 @@ export async function getShockEventDetail(
 
   // Check engagement access if userId provided
   if (userId) {
-    await assertEngagementAccess(userId, shockEvent.engagementId);
+    await assertEngagementAccess(userId, shockEvent.engagementId, workspaceId);
   }
 
   return shockEvent;

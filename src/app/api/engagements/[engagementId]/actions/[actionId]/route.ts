@@ -29,7 +29,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
-  await assertEngagementAccess(session.user.id, action.engagementId);
+  await assertEngagementAccess(session.user.id, action.engagementId, workspaceId);
 
   const updated = await updateActionStatus(actionId, body, { session, policy }, workspaceId);
   return Response.json(updated);
