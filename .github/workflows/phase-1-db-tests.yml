@@ -61,6 +61,14 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      - name: Audit migrations for replay integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Auditing migration chain integrity..."
+          bash scripts/audit-migration-replay.sh
+          echo "✓ Migration audit passed"
+
       - name: Reset test database
         shell: bash
         run: |
