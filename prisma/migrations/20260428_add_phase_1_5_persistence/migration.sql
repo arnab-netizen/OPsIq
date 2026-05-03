@@ -101,11 +101,6 @@ CREATE INDEX "calibration_records_operator_item_id_idx" ON "calibration_records"
 CREATE INDEX "calibration_records_created_at_idx" ON "calibration_records"("created_at");
 
 -- CreateIndex
--- Note: operator_items_status_idx and operator_items_created_at_idx are already created in 20260428_add_asymmetric_signature
--- Using IF NOT EXISTS as safety in case of stale state
-CREATE INDEX IF NOT EXISTS "operator_items_status_idx" ON "operator_items"("status");
-
--- CreateIndex
 CREATE INDEX "operator_items_created_by_idx" ON "operator_items"("created_by");
 
 -- CreateIndex
