@@ -87,7 +87,7 @@ export async function calculateImpactDelta(
     db.engagement.findUnique({
       where: { id: engagementId, workspaceId },
     }),
-    generateBusinessImpact(engagementId, actorId),
+    generateBusinessImpact(engagementId, actorId, workspaceId),
   ]);
 
   if (!action) {

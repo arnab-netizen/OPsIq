@@ -206,11 +206,17 @@ export async function updateInterventionPhase(
 export async function updateInterventionMode(
   engagementId: string,
   input: UpdateInterventionModeInput,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId?: string
 ): Promise<void> {
   const actorId = authContext.session.user.id;
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+
+  if (!workspaceId) {
+    throw new Error("workspaceId is required for workspace-scoped queries");
+  }
+
+  const engagement = await db.engagement.findFirst({
+    where: { id: engagementId, workspaceId },
     select: {
       id: true,
       status: true,
@@ -240,7 +246,7 @@ export async function updateInterventionMode(
 
   await optimisticUpdate("engagement", engagementId, input.version, () =>
     db.engagement.update({
-      where: withVersionCheck({ id: engagementId }, input.version),
+      where: withVersionCheck({ id: engagementId, workspaceId }, input.version),
       data: withVersionIncrement({ interventionMode: input.interventionMode }),
     })
   );
@@ -322,11 +328,17 @@ export async function initializeInterventionState(
 export async function transitionPhase(
   engagementId: string,
   newPhase: string,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId?: string
 ) {
   const actorId = authContext.session.user.id;
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+
+  if (!workspaceId) {
+    throw new Error("workspaceId is required for workspace-scoped queries");
+  }
+
+  const engagement = await db.engagement.findFirst({
+    where: { id: engagementId, workspaceId },
     select: {
       id: true,
       workspaceId: true,
@@ -339,7 +351,7 @@ export async function transitionPhase(
   validatePhaseTransition(currentPhase, newPhase as InterventionPhase);
 
   const updated = await db.engagement.update({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     data: {
       interventionPhase: newPhase as InterventionPhase,
       version: { increment: 1 },
@@ -373,11 +385,12 @@ export async function blockEngagement(
   engagementId: string,
   blockerReason: string,
   version: number,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId: string
 ): Promise<void> {
   const actorId = authContext.session.user.id;
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+  const engagement = await db.engagement.findFirst({
+    where: { id: engagementId, workspaceId },
     select: { id: true, version: true, workspaceId: true, isBlocked: true },
   });
 
@@ -392,7 +405,7 @@ export async function blockEngagement(
   }
 
   await db.engagement.update({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     data: withVersionIncrement({
       isBlocked: true,
       blockerReason,
@@ -435,11 +448,12 @@ export async function blockEngagement(
 export async function unblockEngagement(
   engagementId: string,
   version: number,
-  authContext: AuthContext
+  authContext: AuthContext,
+  workspaceId: string
 ): Promise<void> {
   const actorId = authContext.session.user.id;
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+  const engagement = await db.engagement.findFirst({
+    where: { id: engagementId, workspaceId },
     select: { id: true, version: true, workspaceId: true, isBlocked: true },
   });
 
@@ -454,7 +468,7 @@ export async function unblockEngagement(
   }
 
   await db.engagement.update({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
     data: withVersionIncrement({
       isBlocked: false,
       blockerReason: null,

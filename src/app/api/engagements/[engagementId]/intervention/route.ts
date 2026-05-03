@@ -88,10 +88,10 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   if ("interventionPhase" in body) {
     const validatedBody = updateInterventionPhaseSchema.parse(body);
-    await updateInterventionPhase(engagementId, validatedBody, { session, policy });
+    await updateInterventionPhase(engagementId, validatedBody, { session, policy }, workspaceId);
   } else if ("interventionMode" in body) {
     const validatedBody = updateInterventionModeSchema.parse(body);
-    await updateInterventionMode(engagementId, validatedBody, { session, policy });
+    await updateInterventionMode(engagementId, validatedBody, { session, policy }, workspaceId);
   } else {
     return Response.json(
       {
@@ -101,6 +101,6 @@ export const PATCH = withRequestContext(async (request, context) => {
     );
   }
 
-  const updated = await getInterventionState(engagementId);
+  const updated = await getInterventionState(engagementId, workspaceId);
   return Response.json(updated);
 });

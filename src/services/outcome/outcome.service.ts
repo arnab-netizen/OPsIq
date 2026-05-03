@@ -97,8 +97,8 @@ export async function recordOutcome(
 
   // Get current state (actual impact) and engagement context
   const [currentConfidence, currentImpact, engagement, condition] = await Promise.all([
-    computeDecisionConfidence({ engagementId }),
-    generateBusinessImpact(engagementId, engagementId),
+    computeDecisionConfidence({ engagementId, workspaceId }),
+    generateBusinessImpact(engagementId, engagementId, workspaceId),
     db.engagement.findUnique({ where: { id: engagementId, workspaceId }, select: { id: true } }),
     db.businessConditionProfile.findFirst({
       where: { engagementId, isCurrent: true, workspaceId },

@@ -109,13 +109,13 @@ export async function getDecisionEvidence(engagementId: string, workspaceId: str
     db.finding.findMany({ where: { engagementId, engagement: { workspaceId } } }),
     db.recommendation.findMany({ where: { engagementId, engagement: { workspaceId } } }),
     db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
+      where: { engagementId, isCurrent: true, workspaceId },
       orderBy: { createdAt: "desc" },
     }),
     getPrimaryDecision(engagementId, workspaceId),
-    detectExecutionDrift(engagementId),
-    computeDecisionConfidence({ engagementId }),
-    generateBusinessImpact(engagementId, engagementId),
+    detectExecutionDrift(engagementId, workspaceId),
+    computeDecisionConfidence({ engagementId, workspaceId }),
+    generateBusinessImpact(engagementId, engagementId, workspaceId),
   ]);
 
   if (!engagement) {

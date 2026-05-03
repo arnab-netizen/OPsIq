@@ -39,8 +39,8 @@ export async function getPrimaryDecision(engagementId: string, workspaceId: stri
 
   // Fetch decision context in parallel
   const [drift, decisionConfidence] = await Promise.all([
-    detectExecutionDrift(engagementId),
-    computeDecisionConfidence({ engagementId }),
+    detectExecutionDrift(engagementId, workspaceId),
+    computeDecisionConfidence({ engagementId, workspaceId }),
   ]);
 
   // Identify critical findings
@@ -190,8 +190,8 @@ export async function getPrimaryDecisionWithSnapshot(engagementId: string, works
     db.recommendation.findMany({
       where: { engagementId, engagement: { workspaceId } },
     }),
-    detectExecutionDrift(engagementId),
-    computeDecisionConfidence({ engagementId }),
+    detectExecutionDrift(engagementId, workspaceId),
+    computeDecisionConfidence({ engagementId, workspaceId }),
   ]);
 
   if (!engagement) {

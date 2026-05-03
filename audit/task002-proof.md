@@ -18,12 +18,6 @@
     where: { id: decisionId },
   });...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-evidence/decision-evidence.service.ts:111
-      db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
-      orderBy: { createdAt: "desc" },
-    }),...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/workspace/activation-context.ts:24
     const membership = await db.workspaceMembership.findFirst({
     where: {
@@ -32,63 +26,6 @@
     },
     include: {
       workspace: ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/business-impact/business-impact.service.ts:34
-    const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/business-impact/business-impact.service.ts:45
-        db.finding.findMany({
-        where: { engagementId },
-      }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/business-impact/business-impact.service.ts:48
-        db.recommendation.findMany({
-        where: { engagementId },
-      }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/business-impact/business-impact.service.ts:51
-        db.action.findMany({
-        where: { engagementId },
-      }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/business-impact/business-impact.service.ts:54
-        db.businessConditionProfile.findFirst({
-        where: { engagementId, isCurrent: true },
-        orderBy: { createdAt: "desc" },
-      }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/business-impact/decision-impact.service.ts:51
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-confidence/decision-confidence.service.ts:22
-        db.engagement.findUnique({
-        where: { id: engagementId },
-      }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-confidence/decision-confidence.service.ts:25
-        db.finding.findMany({
-        where: { engagementId },
-      }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-confidence/decision-confidence.service.ts:28
-        db.recommendation.findMany({
-        where: { engagementId },
-      }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-confidence/decision-confidence.service.ts:31
-        db.action.findMany({
-        where: { engagementId },
-      }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-confidence/decision-confidence.service.ts:34
-        db.businessConditionProfile.findFirst({
-        where: { engagementId, isCurrent: true },
-        orderBy: { createdAt: "desc" },
-      }),...
 
 ✗ VIOLATION: /home/user/OPsIq/src/services/decision/decision-timeline.ts:44
     const decision = await db.operatorItem.findUnique({
@@ -140,30 +77,9 @@
     where: { id: decisionId },
   });...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:20
-    const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:30
-      db.finding.findMany({
-      where: { engagementId },
-    }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:33
-      db.recommendation.findMany({
-      where: { engagementId },
-    }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:36
-      db.action.findMany({
-      where: { engagementId },
-    }),...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:39
-      db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
-      orderBy: { createdAt: "desc" },
+      db.finding.findMany({
+      where: findingWhere,
     }),...
 
 ✗ VIOLATION: /home/user/OPsIq/src/services/execution-drift/next-action.service.ts:240
@@ -305,25 +221,13 @@
 ## Summary
 Files checked: 363
 Reads checked: 328
-Violations found: 55
+Violations found: 39
 
 ## Violations
 - /home/user/OPsIq/src/services/role-assignment.ts:77
 - /home/user/OPsIq/src/services/shock-detection.ts:192
 - /home/user/OPsIq/src/services/decision-control/enforcement.service.ts:253
-- /home/user/OPsIq/src/services/decision-evidence/decision-evidence.service.ts:111
 - /home/user/OPsIq/src/services/workspace/activation-context.ts:24
-- /home/user/OPsIq/src/services/business-impact/business-impact.service.ts:34
-- /home/user/OPsIq/src/services/business-impact/business-impact.service.ts:45
-- /home/user/OPsIq/src/services/business-impact/business-impact.service.ts:48
-- /home/user/OPsIq/src/services/business-impact/business-impact.service.ts:51
-- /home/user/OPsIq/src/services/business-impact/business-impact.service.ts:54
-- /home/user/OPsIq/src/services/business-impact/decision-impact.service.ts:51
-- /home/user/OPsIq/src/services/decision-confidence/decision-confidence.service.ts:22
-- /home/user/OPsIq/src/services/decision-confidence/decision-confidence.service.ts:25
-- /home/user/OPsIq/src/services/decision-confidence/decision-confidence.service.ts:28
-- /home/user/OPsIq/src/services/decision-confidence/decision-confidence.service.ts:31
-- /home/user/OPsIq/src/services/decision-confidence/decision-confidence.service.ts:34
 - /home/user/OPsIq/src/services/decision/decision-timeline.ts:44
 - /home/user/OPsIq/src/services/decision/execution-stub.ts:19
 - /home/user/OPsIq/src/services/decision/execution-stub.ts:110
@@ -334,10 +238,6 @@ Violations found: 55
 - /home/user/OPsIq/src/services/decision/transaction-detail.ts:89
 - /home/user/OPsIq/src/services/decision/transaction-execution.ts:21
 - /home/user/OPsIq/src/services/decision/transaction-execution.ts:80
-- /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:20
-- /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:30
-- /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:33
-- /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:36
 - /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:39
 - /home/user/OPsIq/src/services/execution-drift/next-action.service.ts:240
 - /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:28

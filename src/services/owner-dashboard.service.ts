@@ -263,12 +263,12 @@ export async function getOwnerDashboard(
   );
 
   // Detect execution drift
-  const drift = await detectExecutionDrift(engagementId);
+  const drift = await detectExecutionDrift(engagementId, workspaceId);
 
   // Compute decision confidence, financial normalization, and primary decision in parallel
   const [decisionConfidence, businessImpactResult, primaryDecision] = await Promise.all([
-    computeDecisionConfidence({ engagementId }),
-    generateBusinessImpact(engagementId, engagement.id),
+    computeDecisionConfidence({ engagementId, workspaceId }),
+    generateBusinessImpact(engagementId, engagement.id, workspaceId),
     getPrimaryDecision(engagementId, workspaceId),
   ]);
 

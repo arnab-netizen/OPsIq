@@ -12,27 +12,32 @@ export interface DecisionConfidenceResult {
 
 export async function computeDecisionConfidence(input: {
   engagementId: string;
+  workspaceId: string;
   asOf?: Date;
 }): Promise<DecisionConfidenceResult> {
-  const { engagementId, asOf = new Date() } = input;
+  const { engagementId, workspaceId, asOf = new Date() } = input;
+
+  if (!workspaceId) {
+    throw new Error("workspaceId is required");
+  }
 
   // Fetch engagement and related data in parallel
   const [engagement, findings, recommendations, actions, condition] =
     await Promise.all([
-      db.engagement.findUnique({
-        where: { id: engagementId },
+      db.engagement.findFirst({
+        where: { id: engagementId, workspaceId },
       }),
       db.finding.findMany({
-        where: { engagementId },
+        where: { engagementId, engagement: { workspaceId } },
       }),
       db.recommendation.findMany({
-        where: { engagementId },
+        where: { engagementId, engagement: { workspaceId } },
       }),
       db.action.findMany({
-        where: { engagementId },
+        where: { engagementId, engagement: { workspaceId } },
       }),
       db.businessConditionProfile.findFirst({
-        where: { engagementId, isCurrent: true },
+        where: { engagementId, isCurrent: true, workspaceId },
         orderBy: { createdAt: "desc" },
       }),
     ]);
@@ -83,7 +88,7 @@ export async function computeDecisionConfidence(input: {
   );
 
   // Detect execution drift
-  const drift = await detectExecutionDrift(engagementId);
+  const drift = await detectExecutionDrift(engagementId, workspaceId);
 
   // Deduction 1: Execution certainty score
   if (executionCertainty.score < 50) {

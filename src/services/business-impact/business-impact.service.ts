@@ -28,11 +28,12 @@ export interface BusinessImpactResult {
 
 export async function generateBusinessImpact(
   engagementId: string,
-  _actorId: string
+  _actorId: string,
+  workspaceId: string
 ): Promise<BusinessImpactResult> {
   // Fetch engagement and related data
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+    where: { id: engagementId, workspaceId },
   });
 
   if (!engagement) {
@@ -43,16 +44,16 @@ export async function generateBusinessImpact(
   const [findings, recommendations, actions, condition] =
     await Promise.all([
       db.finding.findMany({
-        where: { engagementId },
+        where: { engagementId, engagement: { workspaceId } },
       }),
       db.recommendation.findMany({
-        where: { engagementId },
+        where: { engagementId, engagement: { workspaceId } },
       }),
       db.action.findMany({
-        where: { engagementId },
+        where: { engagementId, engagement: { workspaceId } },
       }),
       db.businessConditionProfile.findFirst({
-        where: { engagementId, isCurrent: true },
+        where: { engagementId, isCurrent: true, workspaceId },
         orderBy: { createdAt: "desc" },
       }),
     ]);
@@ -110,7 +111,7 @@ export async function generateBusinessImpact(
   );
 
   // Detect execution drift
-  const drift = await detectExecutionDrift(engagementId);
+  const drift = await detectExecutionDrift(engagementId, workspaceId);
 
   // Calculate timeline to failure based on business condition
   const now = new Date();
