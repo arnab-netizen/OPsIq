@@ -13,11 +13,6 @@
       conditionProfiles: {
       ...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/decision-control/enforcement.service.ts:253
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/workspace/activation-context.ts:24
     const membership = await db.workspaceMembership.findFirst({
     where: {
@@ -26,56 +21,6 @@
     },
     include: {
       workspace: ...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision/decision-timeline.ts:44
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision/execution-stub.ts:19
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision/execution-stub.ts:110
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision/status-management.ts:132
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision/status-management.ts:245
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision/transaction-actions.ts:16
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision/transaction-detail.ts:13
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision/transaction-detail.ts:89
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision/transaction-execution.ts:21
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/decision/transaction-execution.ts:80
-    const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
-  });...
 
 ✗ VIOLATION: /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:39
       db.finding.findMany({
@@ -221,23 +166,12 @@
 ## Summary
 Files checked: 363
 Reads checked: 328
-Violations found: 39
+Violations found: 28
 
 ## Violations
 - /home/user/OPsIq/src/services/role-assignment.ts:77
 - /home/user/OPsIq/src/services/shock-detection.ts:192
-- /home/user/OPsIq/src/services/decision-control/enforcement.service.ts:253
 - /home/user/OPsIq/src/services/workspace/activation-context.ts:24
-- /home/user/OPsIq/src/services/decision/decision-timeline.ts:44
-- /home/user/OPsIq/src/services/decision/execution-stub.ts:19
-- /home/user/OPsIq/src/services/decision/execution-stub.ts:110
-- /home/user/OPsIq/src/services/decision/status-management.ts:132
-- /home/user/OPsIq/src/services/decision/status-management.ts:245
-- /home/user/OPsIq/src/services/decision/transaction-actions.ts:16
-- /home/user/OPsIq/src/services/decision/transaction-detail.ts:13
-- /home/user/OPsIq/src/services/decision/transaction-detail.ts:89
-- /home/user/OPsIq/src/services/decision/transaction-execution.ts:21
-- /home/user/OPsIq/src/services/decision/transaction-execution.ts:80
 - /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:39
 - /home/user/OPsIq/src/services/execution-drift/next-action.service.ts:240
 - /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:28

@@ -13,16 +13,12 @@ export async function executeDecisionAction(
   overrideReason?: string
 ) {
   // Fetch current decision state
-  const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
+  const decision = await db.operatorItem.findFirst({
+    where: { id: decisionId, workspaceId },
   });
 
   if (!decision) {
     throw new Error("Decision not found");
-  }
-
-  if (decision.workspaceId !== workspaceId) {
-    throw new Error("Unauthorized");
   }
 
   // Validate action is allowed on current state
