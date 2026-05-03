@@ -72,7 +72,7 @@ export async function createShockEvent(
   }
 
   // Run shock detection to confirm
-  const detection = await detectShockFromCurrentState(input.engagementId);
+  const detection = await detectShockFromCurrentState(input.engagementId, workspaceId);
   const detectionConfirmed = detection.shockDetected;
 
   // Note: ShockEvent model does not exist in schema - not persisting to database

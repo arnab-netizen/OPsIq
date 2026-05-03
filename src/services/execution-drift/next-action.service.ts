@@ -224,7 +224,7 @@ export function mapDriftToRequiredAction(drift: DriftDetectionResult): RequiredA
  * Status progression: pending → in_progress → completed
  * "acknowledged" is a user-initiated state (would require DB, so we skip it for now)
  */
-export async function deriveCommitmentStatus(action: RequiredAction): Promise<ActionCommitment> {
+export async function deriveCommitmentStatus(action: RequiredAction, workspaceId?: string): Promise<ActionCommitment> {
   // Default commitment state
   const commitment: ActionCommitment = {
     status: "pending",
@@ -237,8 +237,10 @@ export async function deriveCommitmentStatus(action: RequiredAction): Promise<Ac
 
   try {
     // Look up the action in the database
-    const dbAction = await db.action.findUnique({
-      where: { id: action.entityId },
+    const dbAction = await db.action.findFirst({
+      where: workspaceId
+        ? { id: action.entityId, engagement: { workspaceId } }
+        : { id: action.entityId },
       select: { status: true, startedAt: true, updatedAt: true },
     });
 
@@ -267,7 +269,8 @@ export async function deriveCommitmentStatus(action: RequiredAction): Promise<Ac
  * Get required action with commitment status.
  */
 export async function getRequiredActionWithCommitment(
-  drift: DriftDetectionResult
+  drift: DriftDetectionResult,
+  workspaceId?: string
 ): Promise<RequiredActionWithCommitment | null> {
   const action = mapDriftToRequiredAction(drift);
 
@@ -275,7 +278,7 @@ export async function getRequiredActionWithCommitment(
     return null;
   }
 
-  const commitment = await deriveCommitmentStatus(action);
+  const commitment = await deriveCommitmentStatus(action, workspaceId);
 
   return {
     action,

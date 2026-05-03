@@ -5,14 +5,6 @@
     where: { id: input.userId },
   });...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/shock-detection.ts:192
-    const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
-    select: {
-      id: true,
-      conditionProfiles: {
-      ...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/workspace/activation-context.ts:24
     const membership = await db.workspaceMembership.findFirst({
     where: {
@@ -26,11 +18,6 @@
       db.finding.findMany({
       where: findingWhere,
     }),...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/execution-drift/next-action.service.ts:240
-      const dbAction = await db.action.findUnique({
-      where: { id: action.entityId },
-      select: { status: true, startedAt: true, updatedAt: true...
 
 ✗ VIOLATION: /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:28
       const engagement = await db.engagement.findUnique({
@@ -166,14 +153,12 @@
 ## Summary
 Files checked: 363
 Reads checked: 328
-Violations found: 28
+Violations found: 26
 
 ## Violations
 - /home/user/OPsIq/src/services/role-assignment.ts:77
-- /home/user/OPsIq/src/services/shock-detection.ts:192
 - /home/user/OPsIq/src/services/workspace/activation-context.ts:24
 - /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:39
-- /home/user/OPsIq/src/services/execution-drift/next-action.service.ts:240
 - /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:28
 - /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:53
 - /home/user/OPsIq/src/services/alerts/alert-service.ts:115

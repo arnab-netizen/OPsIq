@@ -212,7 +212,7 @@ export async function detectExecutionDrift(engagementId: string, workspaceId?: s
   };
 
   // Map drift conditions to required action with commitment status
-  const requiredAction = await getRequiredActionWithCommitment(intermediateResult);
+  const requiredAction = await getRequiredActionWithCommitment(intermediateResult, workspaceId);
 
   const result: DriftDetectionResult = {
     ...intermediateResult,
