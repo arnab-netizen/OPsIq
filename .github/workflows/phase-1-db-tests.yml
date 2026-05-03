@@ -38,6 +38,14 @@ jobs:
 
       - run: npx prisma generate
 
+      - name: MIGRATION_REPLAY_STRICT - Test clean migration replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Testing clean database migration replay..."
+          bash scripts/test-migration-replay.sh
+          echo "MIGRATION_REPLAY_STRICT=PASSED" >> "$GITHUB_ENV"
+
       - name: Force rebuild test DB from Prisma schema
         shell: bash
         run: |
