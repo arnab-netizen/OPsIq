@@ -209,6 +209,7 @@ export async function transitionActionState(
       entityType: "action",
       entityId: actionId,
       engagementId: action.engagementId,
+      workspaceId: action.engagement.workspaceId,
       severity: "critical",
       description: `Critical action blocked: ${action.title}. Reason: ${context.reason}`,
       triggeredBy: resolvedActorId,

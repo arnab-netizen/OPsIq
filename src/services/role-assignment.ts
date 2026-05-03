@@ -164,15 +164,22 @@ export async function assignRole(
 
   // V3 adaptive: engagement-scoped role changes trigger re-evaluation
   if (input.scope === "engagement" && input.scopeId) {
-    await triggerReEvaluation({
-      changeType: "scope_change",
-      entityType: "user_role_assignment",
-      entityId: result.result.id,
-      engagementId: input.scopeId,
-      severity: "medium",
-      description: `Role "${input.role}" assigned to user ${input.userId} in engagement`,
-      triggeredBy: actorId,
+    const engagement = await db.engagement.findUnique({
+      where: { id: input.scopeId },
+      select: { workspaceId: true },
     });
+    if (engagement) {
+      await triggerReEvaluation({
+        changeType: "scope_change",
+        entityType: "user_role_assignment",
+        entityId: result.result.id,
+        engagementId: input.scopeId,
+        workspaceId: engagement.workspaceId,
+        severity: "medium",
+        description: `Role "${input.role}" assigned to user ${input.userId} in engagement`,
+        triggeredBy: actorId,
+      });
+    }
   }
 
   logger.info("Role assigned", {
@@ -244,15 +251,22 @@ export async function revokeRole(
 
   // V3 adaptive: engagement-scoped role changes trigger re-evaluation
   if (input.scope === "engagement" && input.scopeId) {
-    await triggerReEvaluation({
-      changeType: "scope_change",
-      entityType: "user_role_assignment",
-      entityId: assignment.id,
-      engagementId: input.scopeId,
-      severity: "medium",
-      description: `Role "${input.role}" revoked from user ${input.userId} in engagement`,
-      triggeredBy: actorId,
+    const engagement = await db.engagement.findUnique({
+      where: { id: input.scopeId },
+      select: { workspaceId: true },
     });
+    if (engagement) {
+      await triggerReEvaluation({
+        changeType: "scope_change",
+        entityType: "user_role_assignment",
+        entityId: assignment.id,
+        engagementId: input.scopeId,
+        workspaceId: engagement.workspaceId,
+        severity: "medium",
+        description: `Role "${input.role}" revoked from user ${input.userId} in engagement`,
+        triggeredBy: actorId,
+      });
+    }
   }
 
   logger.info("Role revoked", {

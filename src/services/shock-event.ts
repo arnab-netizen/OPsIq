@@ -99,6 +99,7 @@ export async function createShockEvent(
     entityType: "ShockEvent",
     entityId: shockEventId,
     engagementId: input.engagementId,
+    workspaceId,
     severity: input.severity,
     description: `Shock event recorded: ${type}${detectionConfirmed ? " (detection confirmed)" : ""}`,
     triggeredBy: actorId,

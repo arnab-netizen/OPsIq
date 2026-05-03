@@ -255,6 +255,7 @@ export async function blockStage(
     entityType: "stage",
     entityId: id,
     engagementId: stage.engagementId,
+    workspaceId: stage.engagement.workspaceId,
     severity: input.blockerSeverity === "critical" ? "critical" : "high",
     description: `Stage blocked: ${input.blockerReason}`,
     triggeredBy: actorId,

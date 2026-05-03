@@ -154,6 +154,7 @@ export async function createEvidence(
     entityType: "evidence",
     entityId: result.result.id,
     engagementId: input.engagementId,
+    workspaceId: validatedWorkspaceId,
     severity: (input.severity ?? "medium") as "low" | "medium" | "high" | "critical",
     description: `Evidence submitted: ${title}`,
     triggeredBy: userId,

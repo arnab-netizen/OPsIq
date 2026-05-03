@@ -164,6 +164,7 @@ export async function generateReviewCycle(
       entityType: "ReviewCycle",
       entityId: cycle.id,
       engagementId,
+      workspaceId,
       severity: "high",
       description: `Review cycle status worsening: ${rationale}`,
       triggeredBy: actorId,

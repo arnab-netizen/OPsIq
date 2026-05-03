@@ -15,44 +15,29 @@ export interface DriftDetectionResult {
   detectedAt: string;
 }
 
-export async function detectExecutionDrift(engagementId: string, workspaceId?: string): Promise<DriftDetectionResult> {
+export async function detectExecutionDrift(engagementId: string, workspaceId: string): Promise<DriftDetectionResult> {
   // Fetch engagement
-  const engagement = await db.engagement.findUnique({
-    where: workspaceId ? { id: engagementId, workspaceId } : { id: engagementId },
+  const engagement = await db.engagement.findFirst({
+    where: { id: engagementId, workspaceId },
   });
 
   if (!engagement) {
     throw new NotFoundError("Engagement", engagementId);
   }
 
-  // If workspaceId provided, validate it matches
-  if (workspaceId && engagement.workspaceId !== workspaceId) {
-    throw new NotFoundError("Engagement", engagementId);
-  }
-
   // Fetch all required data in parallel
-  const findingWhere = workspaceId
-    ? { engagementId, engagement: { workspaceId } }
-    : { engagementId };
-
   const [findings, recommendations, actions, condition] = await Promise.all([
     db.finding.findMany({
-      where: findingWhere,
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.recommendation.findMany({
-      where: workspaceId
-        ? { engagementId, engagement: { workspaceId } }
-        : { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.action.findMany({
-      where: workspaceId
-        ? { engagementId, engagement: { workspaceId } }
-        : { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.businessConditionProfile.findFirst({
-      where: workspaceId
-        ? { engagementId, isCurrent: true, workspaceId }
-        : { engagementId, isCurrent: true },
+      where: { engagementId, isCurrent: true, workspaceId },
       orderBy: { createdAt: "desc" },
     }),
   ]);
