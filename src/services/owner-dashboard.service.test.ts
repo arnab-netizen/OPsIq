@@ -55,6 +55,7 @@ describe("OwnerDashboardService", () => {
 
   it("throws NotFoundError when engagement does not exist", async () => {
     mockDb.engagement.findUnique.mockResolvedValue(null);
+    mockDb.engagement.findFirst.mockResolvedValue(null);
 
     await expect(getOwnerDashboard("nonexistent", mockAuthContext as any, mockWorkspaceId)).rejects.toThrow(NotFoundError);
   });
@@ -70,6 +71,7 @@ describe("OwnerDashboardService", () => {
     };
 
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([]);
@@ -94,6 +96,7 @@ describe("OwnerDashboardService", () => {
     };
 
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([]);
@@ -310,6 +313,7 @@ describe("OwnerDashboardService", () => {
     };
 
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([]);

@@ -448,6 +448,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "triggerReEvaluation",
+      workspaceId: event.workspaceId,
       actorId: event.triggeredBy || "system",
       payload: {
         engagementId: event.engagementId,
@@ -788,7 +789,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     // Record successful idempotency response
     if (idempotencyKey) {
       const { recordIdempotencyResponse } = await import("@/services/idempotency");
-      await recordIdempotencyResponse(idempotencyKey, 200, result);
+      await recordIdempotencyResponse(idempotencyKey, 200, result, event.workspaceId);
     }
 
     return result;
@@ -797,7 +798,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     if (idempotencyKey) {
       const { recordIdempotencyError } = await import("@/services/idempotency");
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      await recordIdempotencyError(idempotencyKey, err, event.workspaceId);
     }
 
     // Safety Guard 4: Failure handling - propagate error to fail transaction

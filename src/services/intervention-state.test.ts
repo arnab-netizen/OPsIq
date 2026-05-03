@@ -176,7 +176,8 @@ describe("Intervention State Service", () => {
         await transitionPhase(
           "eng-1",
           "triage" as InterventionPhase,
-          mockAuthContext as any
+          mockAuthContext as any,
+          "workspace-1"
         );
         expect.fail("Should throw validation error");
       } catch (error) {
@@ -187,12 +188,12 @@ describe("Intervention State Service", () => {
     it("throws error if intervention state not found", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.engagement.findUnique.mockResolvedValue(null);
+      mockDb.engagement.findFirst.mockResolvedValue(null);
 
       const { transitionPhase } = await import("./intervention-state");
 
       try {
-        await transitionPhase("eng-1", "stabilize" as InterventionPhase, mockAuthContext as any);
+        await transitionPhase("eng-1", "stabilization" as InterventionPhase, mockAuthContext as any, "workspace-1");
         expect.fail("Should throw not found error");
       } catch (error) {
         expect((error as any).message).toContain("not found");

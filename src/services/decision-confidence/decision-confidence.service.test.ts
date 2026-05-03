@@ -4,6 +4,7 @@ import { computeDecisionConfidence } from "./decision-confidence.service";
 vi.mock("@/lib/db", () => ({
   db: {
     engagement: {
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
     },
     finding: {
@@ -65,7 +66,7 @@ describe("DecisionConfidenceService", () => {
   };
 
   it("achieves very_high confidence with strong signals", async () => {
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([
@@ -99,7 +100,7 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("deducts points for low execution certainty", async () => {
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([]);
@@ -127,7 +128,7 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("deducts points for critical drift severity", async () => {
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([]);
@@ -158,7 +159,7 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("deducts points for overdue critical actions", async () => {
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([
@@ -183,7 +184,7 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("deducts points for blockers", async () => {
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([]);
@@ -211,7 +212,7 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("deducts points for unresolved critical findings", async () => {
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([
       {
         id: "finding-1",
@@ -235,7 +236,7 @@ describe("DecisionConfidenceService", () => {
 
   it("deducts points for stale actions (no updates in 7 days)", async () => {
     const sevenDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([
@@ -260,7 +261,7 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("does not apply stale deduction if no actions exist", async () => {
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([]); // No actions
@@ -275,7 +276,7 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("clamps score to 0-100", async () => {
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([
       {
         id: "finding-1",
@@ -321,7 +322,7 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("is deterministic - same input produces same output", async () => {
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([]);
