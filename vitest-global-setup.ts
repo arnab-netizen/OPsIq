@@ -1,87 +1,41 @@
 /**
  * Global setup for vitest - runs once before all tests
- * Initializes test environment for deterministic, isolated test database
+ * Initializes test environment with mocked database
  */
 
 import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 
-const TEST_DB_PATH = path.resolve(__dirname, "test.db");
-
-function runCommand(cmd: string, logOutput: boolean = false): boolean {
-  try {
-    const stdio = logOutput ? "inherit" : "pipe";
-    execSync(cmd, {
-      cwd: __dirname,
-      stdio: [stdio, stdio, "pipe"],
-      encoding: "utf-8",
-    });
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
 async function setup() {
-  console.log("\n📊 Initializing deterministic test environment...");
+  console.log("\n📊 Initializing test environment...");
 
   // Set test environment
   (process.env as any).NODE_ENV = "test";
   (process.env as any).VITEST = "true";
-  (process.env as any).DATABASE_URL = `file:${TEST_DB_PATH}`;
   (process.env as any).SKIP_ENV_VALIDATION = "true";
 
-  // Ensure directory exists
-  const testDir = path.dirname(TEST_DB_PATH);
-  if (!fs.existsSync(testDir)) {
-    fs.mkdirSync(testDir, { recursive: true });
+  // For tests: use a test DATABASE_URL that won't be used (tests will mock the db)
+  if (!process.env.DATABASE_URL) {
+    (process.env as any).DATABASE_URL = "postgresql://test:test@localhost/test_db";
   }
 
-  // Clean previous database
-  if (fs.existsSync(TEST_DB_PATH)) {
-    try {
-      fs.unlinkSync(TEST_DB_PATH);
-    } catch {
-      // Ignore cleanup errors
-    }
-  }
-
-  // Try to set up test database
-  console.log("  → Preparing test database...");
-
+  console.log("  → Generating Prisma client...");
   try {
-    // Attempt to push schema to SQLite database
-    if (runCommand("npx prisma generate")) {
-      console.log("  ✓ Prisma Client generated");
-    }
-
-    // Try to push schema - this will create SQLite db if provider allows
-    if (runCommand("npx prisma db push --skip-generate --accept-data-loss")) {
-      if (fs.existsSync(TEST_DB_PATH)) {
-        const stats = fs.statSync(TEST_DB_PATH);
-        console.log(`  ✓ Test database created (${stats.size} bytes)`);
-      }
-    } else {
-      // If push fails, tests will use mocked database
-      console.log("  ℹ Tests configured to use mocked database");
-    }
+    execSync("npx prisma generate", {
+      cwd: __dirname,
+      stdio: "pipe",
+    });
+    console.log("  ✓ Prisma Client generated");
   } catch (error) {
-    console.log("  ℹ Tests configured to use mocked database");
+    console.log("  ℹ Prisma Client already generated");
   }
 
   console.log("✓ Test environment ready\n");
 }
 
 async function teardown() {
-  // Clean up test database
-  try {
-    if (fs.existsSync(TEST_DB_PATH)) {
-      fs.unlinkSync(TEST_DB_PATH);
-    }
-  } catch {
-    // Ignore cleanup errors
-  }
+  // No cleanup needed
 }
 
 export { setup, teardown };
