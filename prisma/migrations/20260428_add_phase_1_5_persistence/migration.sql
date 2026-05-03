@@ -101,13 +101,7 @@ CREATE INDEX "calibration_records_operator_item_id_idx" ON "calibration_records"
 CREATE INDEX "calibration_records_created_at_idx" ON "calibration_records"("created_at");
 
 -- CreateIndex
-CREATE INDEX "operator_items_status_idx" ON "operator_items"("status");
-
--- CreateIndex
 CREATE INDEX "operator_items_created_by_idx" ON "operator_items"("created_by");
-
--- CreateIndex
-CREATE INDEX "operator_items_created_at_idx" ON "operator_items"("created_at");
 
 -- CreateIndex
 CREATE INDEX "override_records_operator_item_id_idx" ON "override_records"("operator_item_id");
