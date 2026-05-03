@@ -14,11 +14,6 @@
     include: {
       workspace: ...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:39
-      db.finding.findMany({
-      where: findingWhere,
-    }),...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/alerts/alert-service.ts:115
       const existingAlert = await db.alert.findUnique({
       where: { id: alertId },
@@ -138,13 +133,12 @@
 
 ## Summary
 Files checked: 363
-Reads checked: 328
-Violations found: 24
+Reads checked: 330
+Violations found: 23
 
 ## Violations
 - /home/user/OPsIq/src/services/role-assignment.ts:77
 - /home/user/OPsIq/src/services/workspace/activation-context.ts:24
-- /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:39
 - /home/user/OPsIq/src/services/alerts/alert-service.ts:115
 - /home/user/OPsIq/src/app/api/auth/logout/route.ts:16
 - /home/user/OPsIq/src/app/api/auth/login/route.ts:30
