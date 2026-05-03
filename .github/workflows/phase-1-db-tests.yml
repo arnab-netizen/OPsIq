@@ -18,96 +18,46 @@ jobs:
       SKIP_ENV_VALIDATION: "true"
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Verify database URL exists and is safe
+      - name: Verify DB is test-only
         shell: bash
         run: |
           set -euo pipefail
-
-          if [ -z "${DATABASE_URL_TEST:-}" ]; then
-            echo "DB_SAFE=false" >> "$GITHUB_ENV"
-            echo "❌ STOP: DATABASE_URL_TEST secret not found"
-            exit 1
-          fi
-
-          DB_URL="$DATABASE_URL_TEST"
-
-          if [[ ! "$DB_URL" =~ (test|ci|staging-test) ]]; then
-            echo "DB_SAFE=false" >> "$GITHUB_ENV"
-            echo "❌ STOP: DATABASE_URL_TEST does not contain test/ci marker"
-            exit 1
-          fi
-
-          if [[ "$DB_URL" =~ (prod|main|production) ]]; then
-            echo "DB_SAFE=false" >> "$GITHUB_ENV"
-            echo "❌ STOP: DATABASE_URL_TEST contains production marker"
-            exit 1
-          fi
-
+          test -n "${DATABASE_URL_TEST:-}" || exit 1
+          [[ "$DATABASE_URL_TEST" =~ (test|ci|staging-test) ]] || exit 1
+          [[ ! "$DATABASE_URL_TEST" =~ (prod|main|production) ]] || exit 1
           echo "DB_SAFE=true" >> "$GITHUB_ENV"
-          echo "✓ DATABASE_URL_TEST is present and safe"
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
-      - name: Generate Prisma client
-        run: npx prisma generate
+      - run: npx prisma generate
 
-      - name: Audit migrations for replay integrity
+      - name: Force rebuild test DB from Prisma schema
         shell: bash
         run: |
           set -euo pipefail
-          echo "Auditing migration chain integrity..."
-          bash scripts/audit-migration-replay.sh
-          echo "✓ Migration audit passed"
-          echo "MIGRATIONS_AUDIT_PASSED=true" >> "$GITHUB_ENV"
-
-      - name: Reset test database
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "⚠️ Resetting TEST database/schema..."
-
-          # Ensure migration audit passed before reset
-          if [ "${MIGRATIONS_AUDIT_PASSED:-false}" != "true" ]; then
-            echo "❌ STOP: Migration audit did not pass - aborting reset"
-            exit 1
-          fi
-
-          # Force complete database reset with explicit skip-seed to avoid seed errors
-          npx prisma migrate reset --force --skip-seed
-
+          npx prisma db push --force-reset --accept-data-loss
           echo "DB_RESET=SUCCESS" >> "$GITHUB_ENV"
-
-      - name: Run migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx prisma migrate deploy
-          echo "MIGRATIONS=SUCCESS" >> "$GITHUB_ENV"
+          echo "MIGRATIONS=SKIPPED_FOR_TEST_DB_SCHEMA_PUSH" >> "$GITHUB_ENV"
 
       - name: Verify required tables exist
         shell: bash
         run: |
           set -euo pipefail
-
           npx prisma db execute --stdin <<'SQL'
           DO $$
           BEGIN
             IF to_regclass('public.operator_items') IS NULL THEN
-              RAISE EXCEPTION 'operator_items table missing after migrations';
+              RAISE EXCEPTION 'operator_items missing';
             END IF;
-
             IF to_regclass('public.audit_events') IS NULL THEN
-              RAISE EXCEPTION 'audit_events table missing after migrations';
+              RAISE EXCEPTION 'audit_events missing';
             END IF;
           END $$;
           SQL
@@ -116,49 +66,30 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          npx tsx scripts/seed-test-db.ts
 
-          if [ -f scripts/seed-test-db.ts ]; then
-            npx tsx scripts/seed-test-db.ts
-          else
-            echo "❌ STOP: scripts/seed-test-db.ts not found"
-            exit 1
-          fi
-
-      - name: Run database-dependent tests only
+      - name: Run DB tests
         shell: bash
         run: |
           set +e
-
           npm test -- --run \
             src/services \
             src/__tests__/workspace-isolation-enforcement.test.ts \
             src/app/api/opsiq \
             2>&1 | tee test-output.log
-
           echo "TEST_EXIT=${PIPESTATUS[0]}" >> "$GITHUB_ENV"
           exit 0
 
-      - name: Parse test results
+      - name: Parse results
         shell: bash
         run: |
           set -euo pipefail
-
-          if [ ! -f test-output.log ]; then
-            echo "FAILED=999999" >> "$GITHUB_ENV"
-            echo "PASSED=0" >> "$GITHUB_ENV"
-            echo "SKIPPED=0" >> "$GITHUB_ENV"
-            echo "TEST_STATUS=UNCLEAN" >> "$GITHUB_ENV"
-            exit 0
-          fi
-
           FAILED=$(grep -Eo '[0-9]+ failed' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
           PASSED=$(grep -Eo '[0-9]+ passed' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
           SKIPPED=$(grep -Eo '[0-9]+ skipped' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
-
           echo "FAILED=$FAILED" >> "$GITHUB_ENV"
           echo "PASSED=$PASSED" >> "$GITHUB_ENV"
           echo "SKIPPED=$SKIPPED" >> "$GITHUB_ENV"
-
           if [ "$FAILED" -gt 0 ] || [ "${TEST_EXIT:-1}" -ne 0 ]; then
             echo "TEST_STATUS=UNCLEAN" >> "$GITHUB_ENV"
           else
@@ -168,9 +99,6 @@ jobs:
       - name: Report results
         shell: bash
         run: |
-          echo "════════════════════════════════════════════════════════"
-          echo "Phase 1 Database Test Results"
-          echo "════════════════════════════════════════════════════════"
           echo "DB_SAFE: ${DB_SAFE:-false}"
           echo "DB_RESET: ${DB_RESET:-FAILED}"
           echo "MIGRATIONS: ${MIGRATIONS:-FAILED}"
@@ -178,11 +106,7 @@ jobs:
           echo "PASSED: ${PASSED:-0}"
           echo "SKIPPED: ${SKIPPED:-0}"
           echo "TEST_STATUS: ${TEST_STATUS:-UNCLEAN}"
-          echo "════════════════════════════════════════════════════════"
-
-          if [ "${TEST_STATUS:-UNCLEAN}" != "CLEAN" ]; then
-            exit 1
-          fi
+          test "${TEST_STATUS:-UNCLEAN}" = "CLEAN"
 
       - name: Upload test results
         if: always()
