@@ -1,7 +1,7 @@
-import { verifyAuth } from "@/lib/auth-guard";
+import type { NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
 import { ValidationError, errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
-import { emitAuditEvent } from "@/infra/audit";
 
 interface UpgradeRequest {
   targetPlanId: string;
@@ -10,13 +10,17 @@ interface UpgradeRequest {
 
 export async function POST(request: Request) {
   try {
-    const authContext = await verifyAuth(request);
-    const workspaceId = authContext.policy.workspaceId;
+    // Authenticate
+    const authContext = await withAuth();
     const userId = authContext.policy.userId;
+
+    // Get workspaceId from header
+    const nextRequest = request as NextRequest;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     if (!workspaceId) {
       return errorToResponse(
-        new Error("workspaceId is required in auth context")
+        new Error("Workspace ID required (x-workspace-id header)")
       );
     }
 
@@ -50,19 +54,6 @@ export async function POST(request: Request) {
       userId,
       targetPlanId: body.targetPlanId,
       billingCycle,
-    });
-
-    // Emit audit event
-    await emitAuditEvent({
-      workspaceId,
-      action: "PLAN_UPGRADE_REQUESTED",
-      resourceType: "subscription",
-      resourceId: "pending",
-      details: {
-        targetPlanId: body.targetPlanId,
-        billingCycle,
-      },
-      status: "success",
     });
 
     return Response.json(

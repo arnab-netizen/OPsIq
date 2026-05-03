@@ -1,15 +1,20 @@
-import { verifyAuth } from "@/lib/auth-guard";
+import type { NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
 import { resolveEntitlements } from "@/services/entitlement.service";
 import { errorToResponse } from "@/infra/errors";
 
 export async function GET(request: Request) {
   try {
-    const authContext = await verifyAuth(request);
-    const workspaceId = authContext.policy.workspaceId;
+    // Authenticate
+    await withAuth();
+
+    // Get workspaceId from header
+    const nextRequest = request as NextRequest;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     if (!workspaceId) {
       return errorToResponse(
-        new Error("workspaceId is required in auth context")
+        new Error("Workspace ID required (x-workspace-id header)")
       );
     }
 

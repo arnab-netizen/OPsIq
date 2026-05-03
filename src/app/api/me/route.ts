@@ -13,7 +13,7 @@ export const GET = withRequestContext(async (request) => {
   const { session, policy } = await withAuth(undefined, workspaceId);
 
   const [roles, memberships] = await Promise.all([
-    getRolesForUser(session.user.id),
+    getRolesForUser(session.user.id, workspaceId),
     getMembershipsForUser(session.user.id, workspaceId),
   ]);
 

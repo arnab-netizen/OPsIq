@@ -49,7 +49,7 @@ export const GET = withRequestContext(async (request, context) => {
   const { userId } = await context.params;
   parseOrThrow(uuidSchema, userId);
 
-  const roles = await getRolesForUser(userId);
+  const roles = await getRolesForUser(userId, workspaceId);
   return Response.json({ roles });
 });
 
@@ -94,6 +94,7 @@ export const POST = withRequestContext(async (request, context) => {
     operationName: "assignRole",
     actorId: session.user.id,
     payload: { userId, ...body },
+    workspaceId,
   });
 
   if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
@@ -106,7 +107,8 @@ export const POST = withRequestContext(async (request, context) => {
     const result = await assignRole(
       { userId, ...body } as Parameters<typeof assignRole>[0],
       session.user.id,
-      actorLevel
+      actorLevel,
+      workspaceId
     );
     await recordIdempotencyResponse(idempotencyKey, result.isNew ? 201 : 200, result);
     return Response.json(result, { status: result.isNew ? 201 : 200 });
@@ -148,7 +150,8 @@ export const DELETE = withRequestContext(async (request, context) => {
   await revokeRole(
     { userId, ...body } as Parameters<typeof revokeRole>[0],
     session.user.id,
-    actorLevel
+    actorLevel,
+    workspaceId
   );
 
   return Response.json({ status: "revoked" });

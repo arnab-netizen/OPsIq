@@ -120,7 +120,7 @@ describe("POST /api/opsiq/consulting-engine/run", () => {
     expect(assertEngagementAccess).toHaveBeenCalledWith(userId, engagementId, "");
   });
 
-  it("passes authContext to pipeline", async () => {
+  it("passes authContext and workspaceId to pipeline", async () => {
     vi.mocked(parseRequestBody).mockResolvedValueOnce({
       engagementId,
     });
@@ -139,7 +139,8 @@ describe("POST /api/opsiq/consulting-engine/run", () => {
       engagementId,
       expect.objectContaining({
         session: { user: { id: userId } },
-      })
+      }),
+      "" // workspaceId from header (default empty string)
     );
   });
 

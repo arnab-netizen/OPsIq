@@ -34,6 +34,7 @@ export const POST = withRequestContext(async (request) => {
     operationName: "runConsultingPipeline",
     actorId: authContext.session.user.id,
     payload: body,
+    workspaceId,
   });
 
   if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
@@ -47,7 +48,8 @@ export const POST = withRequestContext(async (request) => {
   try {
     const result = await runConsultingPipeline(
       body.engagementId,
-      authContext
+      authContext,
+      workspaceId
     );
 
     const response = {

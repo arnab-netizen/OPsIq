@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
-import { emitAuditEvent } from "@/infra/audit";
 
 export interface StripeSubscriptionEvent {
   id: string;
@@ -83,19 +82,8 @@ export async function syncSubscriptionStatus(
       },
     });
 
-    // Emit audit event
-    await emitAuditEvent({
-      workspaceId: billingAccount.workspaceId,
-      action: "SUBSCRIPTION_SYNCED",
-      resourceType: "subscription",
-      resourceId: billingAccount.subscription.id,
-      details: {
-        providerEventId: event.id,
-        status: event.status,
-        currentPeriodEnd: currentPeriodEnd.toISOString(),
-      },
-      status: "success",
-    });
+    // Log subscription sync (audit event types not yet defined for billing)
+    // TODO: Add billing-specific audit event types to domain/constants/audit-events.ts
 
     logger.info("Subscription status synced", {
       billingAccountId: billingAccount.id,

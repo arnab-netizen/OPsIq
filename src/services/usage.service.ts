@@ -1,5 +1,4 @@
 import { trackUsage } from "@/services/entitlement.service";
-import { emitAuditEvent } from "@/infra/audit";
 import { logger } from "@/infra/logger";
 
 export interface UsageRecord {
@@ -32,19 +31,8 @@ export async function recordUsage(
     // Track in entitlement system for billing
     await trackUsage(workspaceId, key, value);
 
-    // Emit audit event for observability
-    await emitAuditEvent({
-      workspaceId,
-      action: "CAPABILITY_USAGE",
-      resourceType: "capability",
-      resourceId: key,
-      details: {
-        capability: key,
-        value,
-        ...(context && { context }),
-      },
-      status: "success",
-    });
+    // Log capability usage for observability
+    // TODO: Add capability-usage audit event type to domain/constants/audit-events.ts
   } catch (error) {
     // Fail open: usage tracking should not block operations
     logger.error("Failed to record usage", {
