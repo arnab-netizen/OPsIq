@@ -66,12 +66,8 @@ jobs:
         run: |
           set -euo pipefail
           echo "⚠️ Resetting TEST database/schema..."
-
-          if npx prisma migrate reset --help | grep -q -- "--skip-seed"; then
-            npx prisma migrate reset --force --skip-seed
-          else
-            npx prisma migrate reset --force
-          fi
+          npx prisma migrate reset --force
+          echo "DB_RESET=SUCCESS" >> "$GITHUB_ENV"
 
       - name: Run migrations
         shell: bash
@@ -79,6 +75,24 @@ jobs:
           set -euo pipefail
           npx prisma migrate deploy
           echo "MIGRATIONS=SUCCESS" >> "$GITHUB_ENV"
+
+      - name: Verify required tables exist
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npx prisma db execute --stdin <<'SQL'
+          DO $$
+          BEGIN
+            IF to_regclass('public.operator_items') IS NULL THEN
+              RAISE EXCEPTION 'operator_items table missing after migrations';
+            END IF;
+
+            IF to_regclass('public.audit_events') IS NULL THEN
+              RAISE EXCEPTION 'audit_events table missing after migrations';
+            END IF;
+          END $$;
+          SQL
 
       - name: Seed test database
         shell: bash
@@ -140,6 +154,7 @@ jobs:
           echo "Phase 1 Database Test Results"
           echo "════════════════════════════════════════════════════════"
           echo "DB_SAFE: ${DB_SAFE:-false}"
+          echo "DB_RESET: ${DB_RESET:-FAILED}"
           echo "MIGRATIONS: ${MIGRATIONS:-FAILED}"
           echo "FAILED: ${FAILED:-0}"
           echo "PASSED: ${PASSED:-0}"
