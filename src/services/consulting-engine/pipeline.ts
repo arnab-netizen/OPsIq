@@ -11,6 +11,7 @@ import { logger } from "@/infra/logger";
 import type { AuthContext } from "@/lib/auth-guard";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
+import { recordDecisionEngineUsage } from "@/services/usage.service";
 
 export interface ConsultingEnginePipelineResult {
   status: "SUCCESS" | "INSUFFICIENT_DATA" | "ERROR";
@@ -158,6 +159,12 @@ export async function runConsultingPipeline(
           status: engineOutput.status,
         },
         visibility: "internal",
+      });
+
+      // 8. Record usage for decision engine execution
+      await recordDecisionEngineUsage(workspaceId || engagement.workspaceId, {
+        engagementId,
+        interventionCount: engineOutput.decisionMemo.recommendedInterventions.length,
       });
 
       logger.info("Consulting pipeline completed successfully", {

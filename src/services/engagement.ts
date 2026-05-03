@@ -19,6 +19,7 @@ import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
 import { assertCapability } from "@/services/entitlement.service";
+import { recordEngagementCreationUsage } from "@/services/usage.service";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -186,6 +187,13 @@ export async function createEngagement(
     severity: "high",
     description: `New engagement created: ${result.result.code} (${input.interventionMode})`,
     triggeredBy: actorId,
+  });
+
+  // Record usage for engagement creation
+  await recordEngagementCreationUsage(validatedWorkspaceId, {
+    engagementId: result.result.id,
+    code: result.result.code,
+    clientId: input.clientId,
   });
 
   logger.info("Engagement created", {

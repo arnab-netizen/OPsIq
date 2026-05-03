@@ -11,6 +11,7 @@ import { validateStateTransition, enforceActionRules } from "@/services/action-l
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
+import { recordActionUsage } from "@/services/usage.service";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -138,6 +139,12 @@ export async function createAction(
         });
       }
 
+      // Record usage for action creation (only on new creation)
+      await recordActionUsage(validatedWorkspaceId, 1, {
+        actionId: result.result.id,
+        engagementId: input.engagementId,
+      });
+
       logger.info("Action created", {
         actionId: result.result.id,
         engagementId: input.engagementId,
@@ -186,6 +193,12 @@ export async function createAction(
       triggeredBy: actorId,
     });
   }
+
+  // Record usage for action creation
+  await recordActionUsage(validatedWorkspaceId, 1, {
+    actionId: action.id,
+    engagementId: input.engagementId,
+  });
 
   logger.info("Action created", {
     actionId: action.id,

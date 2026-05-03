@@ -11,6 +11,7 @@ import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
 import { assertCapability } from "@/services/entitlement.service";
+import { recordRecommendationUsage } from "@/services/usage.service";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -290,6 +291,12 @@ export async function createRecommendation(
         recommendationId: result.result.id,
         engagementId: input.engagementId,
       });
+
+      // Record usage for recommendation generation (only on new creation)
+      await recordRecommendationUsage(validatedWorkspaceId, 1, {
+        recommendationId: result.result.id,
+        engagementId: input.engagementId,
+      });
     }
 
     return result.result;
@@ -328,6 +335,12 @@ export async function createRecommendation(
       priority: input.priority,
     },
     visibility: "internal",
+  });
+
+  // Record usage for recommendation generation
+  await recordRecommendationUsage(validatedWorkspaceId, 1, {
+    recommendationId: recommendation.id,
+    engagementId: input.engagementId,
   });
 
   logger.info("Recommendation created", {
