@@ -60,17 +60,75 @@ export async function verifyWebhookSignature(
 }
 
 /**
- * Check if webhook event has already been processed
- * Uses stripeEventId for deduplication
+ * Get or create webhook event record with state machine
+ * Returns: { event, isNew, shouldProcess, shouldRetry }
  */
-export async function checkWebhookIdempotency(stripeEventId: string): Promise<boolean> {
+export async function getOrCreateWebhookEvent(
+  stripeEventId: string,
+  type: string
+): Promise<{
+  event: any;
+  isNew: boolean;
+  shouldProcess: boolean;
+  shouldRetry: boolean;
+}> {
   try {
+    // Try to find existing event
     const existingEvent = await db.webhookEvent.findUnique({
       where: { stripeEventId },
     });
-    return !!existingEvent;
+
+    if (existingEvent) {
+      // Event already exists - determine action
+      if (existingEvent.status === "processed") {
+        // Already successfully processed - ignore duplicate
+        return {
+          event: existingEvent,
+          isNew: false,
+          shouldProcess: false,
+          shouldRetry: false,
+        };
+      }
+
+      if (existingEvent.status === "processing") {
+        // Currently processing - retry later (409 conflict)
+        return {
+          event: existingEvent,
+          isNew: false,
+          shouldProcess: false,
+          shouldRetry: false,
+        };
+      }
+
+      if (existingEvent.status === "failed") {
+        // Previously failed - can retry
+        return {
+          event: existingEvent,
+          isNew: false,
+          shouldProcess: true,
+          shouldRetry: true,
+        };
+      }
+    }
+
+    // No existing event - create new one with status=processing
+    const newEvent = await db.webhookEvent.create({
+      data: {
+        stripeEventId,
+        type,
+        status: "processing",
+        attempts: 0,
+      },
+    });
+
+    return {
+      event: newEvent,
+      isNew: true,
+      shouldProcess: true,
+      shouldRetry: false,
+    };
   } catch (error) {
-    logger.error("Failed to check webhook idempotency", {
+    logger.error("Failed to get or create webhook event", {
       stripeEventId,
       error: error instanceof Error ? error.message : String(error),
     });
@@ -79,22 +137,60 @@ export async function checkWebhookIdempotency(stripeEventId: string): Promise<bo
 }
 
 /**
- * Record processed webhook event for idempotency
+ * Mark webhook event as successfully processed
+ * Only called after successful event handling
  */
-export async function recordWebhookEvent(stripeEventId: string, type: string): Promise<void> {
+export async function markWebhookEventProcessed(stripeEventId: string): Promise<void> {
   try {
-    await db.webhookEvent.create({
+    await db.webhookEvent.update({
+      where: { stripeEventId },
       data: {
-        stripeEventId,
-        type,
+        status: "processed",
+        processedAt: new Date(),
       },
     });
+
+    logger.info("Webhook event marked as processed", { stripeEventId });
   } catch (error) {
-    logger.error("Failed to record webhook event", {
+    logger.error("Failed to mark webhook event as processed", {
       stripeEventId,
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;
+  }
+}
+
+/**
+ * Mark webhook event as failed and record error
+ * Called after processing fails
+ */
+export async function markWebhookEventFailed(
+  stripeEventId: string,
+  error: Error
+): Promise<void> {
+  try {
+    await db.webhookEvent.update({
+      where: { stripeEventId },
+      data: {
+        status: "failed",
+        lastError: error.message,
+        attempts: {
+          increment: 1,
+        },
+      },
+    });
+
+    logger.warn("Webhook event marked as failed", {
+      stripeEventId,
+      error: error.message,
+    });
+  } catch (dbError) {
+    logger.error("Failed to mark webhook event as failed", {
+      stripeEventId,
+      originalError: error.message,
+      dbError: dbError instanceof Error ? dbError.message : String(dbError),
+    });
+    throw dbError;
   }
 }
 
@@ -212,6 +308,45 @@ async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent)
 }
 
 /**
+ * Handle customer.subscription.deleted
+ * Cancels subscription
+ */
+async function handleCustomerSubscriptionDeleted(event: StripeSubscriptionEvent): Promise<void> {
+  try {
+    if (!event.customer) {
+      logger.warn("customer.subscription.deleted missing customer", {
+        eventId: event.id,
+      });
+      return;
+    }
+
+    const billingAccount = await db.billingAccount.findFirst({
+      where: { stripeCustomerId: event.customer },
+      select: { subscription: { select: { id: true } } },
+    });
+
+    if (billingAccount?.subscription) {
+      await db.subscription.update({
+        where: { id: billingAccount.subscription.id },
+        data: {
+          status: "canceled",
+          canceledAt: new Date(),
+        },
+      });
+
+      logger.info("Subscription marked as canceled via webhook", {
+        subscriptionId: billingAccount.subscription.id,
+      });
+    }
+  } catch (error) {
+    logger.error("Failed to handle customer.subscription.deleted", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
+/**
  * Sync subscription status from Stripe webhook event
  * Fails open: logs errors but doesn't throw
  */
@@ -297,7 +432,7 @@ export async function syncSubscriptionStatus(
 
 /**
  * Handle webhook event from Stripe
- * Fail-closed: throws on critical errors
+ * Throws on processing errors (caller marks event as failed)
  */
 export async function handleWebhookEvent(event: any): Promise<void> {
   try {
@@ -328,24 +463,7 @@ export async function handleWebhookEvent(event: any): Promise<void> {
 
       case "customer.subscription.deleted":
         if (event.data?.object) {
-          const billingAccount = await db.billingAccount.findFirst({
-            where: { stripeCustomerId: event.data.object.customer },
-            select: { subscription: { select: { id: true } } },
-          });
-
-          if (billingAccount?.subscription) {
-            await db.subscription.update({
-              where: { id: billingAccount.subscription.id },
-              data: {
-                status: "canceled",
-                canceledAt: new Date(),
-              },
-            });
-
-            logger.info("Subscription marked as canceled via webhook", {
-              subscriptionId: billingAccount.subscription.id,
-            });
-          }
+          await handleCustomerSubscriptionDeleted(event.data.object as StripeSubscriptionEvent);
         }
         break;
 
