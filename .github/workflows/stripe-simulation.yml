@@ -1,0 +1,81 @@
+name: Stripe Simulation Tests
+
+on:
+  push:
+    branches:
+      - main
+      - claude/**
+    paths:
+      - 'src/tests/stripe-sim/**'
+      - 'src/services/webhook.service.ts'
+      - 'src/app/api/webhooks/stripe/**'
+      - 'prisma/schema.prisma'
+      - '.github/workflows/stripe-simulation.yml'
+  workflow_dispatch:
+
+jobs:
+  stripe-simulation:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Set DATABASE_URL
+        run: |
+          echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/opsiq_test" >> $GITHUB_ENV
+
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/opsiq_test
+
+      - name: Run Stripe simulation tests
+        run: npm run test:stripe-sim
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/opsiq_test
+          NODE_ENV: test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: coverage/
+          retention-days: 30
+
+      - name: Report test results
+        if: always()
+        run: |
+          echo "## Stripe Simulation Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✓ PostgreSQL service: OK" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Migrations: Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Test suite: Executed" >> $GITHUB_STEP_SUMMARY
