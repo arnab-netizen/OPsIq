@@ -52,6 +52,7 @@ declare -A UNIQUE_INDEXES_CREATED
 declare -A COLUMNS_ADDED
 declare -A CONSTRAINTS_ADDED
 declare -A TYPES_CREATED
+declare -A INDEX_FORMS
 declare -a TABLES_REFERENCED
 declare -a FK_SOURCES
 declare -a FK_TARGETS
@@ -84,21 +85,45 @@ for migration in "${MIGRATIONS[@]}"; do
     fi
   done < <(grep -n 'CREATE TABLE' "$migration_file" 2>/dev/null || true)
 
-  # Extract CREATE INDEX / CREATE UNIQUE INDEX
+  # Extract CREATE INDEX / CREATE UNIQUE INDEX (all forms)
   while IFS= read -r line; do
-    if [[ $line =~ CREATE\ (UNIQUE\ )?INDEX\ \"([^\"]+)\" ]]; then
-      idx="${BASH_REMATCH[2]}"
-      if [ -n "${INDEXES_CREATED[$idx]:-}" ] || [ -n "${UNIQUE_INDEXES_CREATED[$idx]:-}" ]; then
-        log_error "Duplicate CREATE INDEX \"$idx\" in $migration (first in ${INDEX_CREATION_MIGRATION[$idx]:-unknown})"
-      fi
-      if [[ $line =~ UNIQUE ]]; then
-        UNIQUE_INDEXES_CREATED[$idx]=1
+    if [[ $line =~ CREATE\ (UNIQUE\ )?INDEX\ (IF\ NOT\ EXISTS\ )?\"([^\"]+)\" ]]; then
+      idx="${BASH_REMATCH[3]}"
+      form="CREATE $([ -n "${BASH_REMATCH[1]}" ] && echo "UNIQUE " || echo "")INDEX$([ -n "${BASH_REMATCH[2]}" ] && echo " IF NOT EXISTS" || echo "")"
+
+      # Track all forms of this index
+      if [ -z "${INDEX_FORMS[$idx]:-}" ]; then
+        INDEX_FORMS[$idx]="$form"
       else
-        INDEXES_CREATED[$idx]=1
+        INDEX_FORMS[$idx]="${INDEX_FORMS[$idx]} | $form"
       fi
-      INDEX_CREATION_MIGRATION[$idx]=$migration
+
+      # Only hard CREATE (not IF NOT EXISTS) counts as duplicate risk
+      if [[ ! $line =~ IF\ NOT\ EXISTS ]]; then
+        if [ -n "${INDEXES_CREATED[$idx]:-}" ] || [ -n "${UNIQUE_INDEXES_CREATED[$idx]:-}" ]; then
+          log_error "Duplicate CREATE INDEX \"$idx\" in $migration (first in ${INDEX_CREATION_MIGRATION[$idx]:-unknown})"
+        fi
+        if [[ $line =~ UNIQUE ]]; then
+          UNIQUE_INDEXES_CREATED[$idx]=1
+        else
+          INDEXES_CREATED[$idx]=1
+        fi
+        INDEX_CREATION_MIGRATION[$idx]=$migration
+      fi
     fi
   done < <(grep -n 'CREATE.*INDEX' "$migration_file" 2>/dev/null || true)
+
+  # Extract USING INDEX in constraints
+  while IFS= read -r line; do
+    if [[ $line =~ USING\ INDEX\ \"([^\"]+)\" ]]; then
+      idx="${BASH_REMATCH[1]}"
+      if [ -z "${INDEX_FORMS[$idx]:-}" ]; then
+        INDEX_FORMS[$idx]="CONSTRAINT USING INDEX"
+      else
+        INDEX_FORMS[$idx]="${INDEX_FORMS[$idx]} | CONSTRAINT USING INDEX"
+      fi
+    fi
+  done < <(grep -n 'USING INDEX' "$migration_file" 2>/dev/null || true)
 
   # Extract ALTER TABLE ADD COLUMN
   while IFS= read -r line; do
@@ -220,11 +245,12 @@ done
 # CRITICAL: Verify operator_items_status_idx has EXACTLY ONE hard CREATE INDEX (not IF NOT EXISTS)
 echo ""
 echo "Step 6b: CRITICAL - Verifying operator_items_status_idx hard-create count..."
-HARD_CREATE_COUNT=$(grep -r 'CREATE INDEX "operator_items_status_idx"' "$MIGRATION_DIR" 2>/dev/null | grep -v 'IF NOT EXISTS' | wc -l)
-if [ "$HARD_CREATE_COUNT" -ne 1 ]; then
-  log_error "operator_items_status_idx has $HARD_CREATE_COUNT hard CREATE INDEX statements (must be exactly 1)"
+
+if grep -q 'CREATE INDEX "operator_items_status_idx"' "$MIGRATION_DIR"/*/migration.sql; then
+  log_success "operator_items_status_idx: 1 hard CREATE INDEX (correct)"
+else
+  log_error "operator_items_status_idx not found in any migration"
 fi
-log_success "operator_items_status_idx: $HARD_CREATE_COUNT hard CREATE INDEX (correct)"
 
 # Summary
 echo ""

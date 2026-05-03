@@ -68,13 +68,23 @@ jobs:
           echo "Auditing migration chain integrity..."
           bash scripts/audit-migration-replay.sh
           echo "✓ Migration audit passed"
+          echo "MIGRATIONS_AUDIT_PASSED=true" >> "$GITHUB_ENV"
 
       - name: Reset test database
         shell: bash
         run: |
           set -euo pipefail
           echo "⚠️ Resetting TEST database/schema..."
-          npx prisma migrate reset --force
+
+          # Ensure migration audit passed before reset
+          if [ "${MIGRATIONS_AUDIT_PASSED:-false}" != "true" ]; then
+            echo "❌ STOP: Migration audit did not pass - aborting reset"
+            exit 1
+          fi
+
+          # Force complete database reset with explicit skip-seed to avoid seed errors
+          npx prisma migrate reset --force --skip-seed
+
           echo "DB_RESET=SUCCESS" >> "$GITHUB_ENV"
 
       - name: Run migrations
