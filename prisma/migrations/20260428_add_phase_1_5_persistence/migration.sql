@@ -7,33 +7,6 @@ ADD COLUMN "entitiesCreated" TEXT,
 ADD COLUMN "financialBaselinesCreated" TEXT;
 
 -- CreateTable
-CREATE TABLE "operator_items" (
-    "id" UUID NOT NULL,
-    "problem" TEXT NOT NULL,
-    "action" TEXT NOT NULL,
-    "impactExpected" DECIMAL(15,2) NOT NULL,
-    "impactLow" DECIMAL(15,2) NOT NULL,
-    "impactHigh" DECIMAL(15,2) NOT NULL,
-    "confidence" DECIMAL(3,2) NOT NULL,
-    "priorityScore" DECIMAL(5,2) NOT NULL,
-    "status" TEXT NOT NULL DEFAULT 'pending',
-    "dueAt" TIMESTAMP(3),
-    "expectedOutcome" TEXT,
-    "actualOutcome" TEXT,
-    "created_by" UUID NOT NULL,
-    "completed_by" UUID,
-    "verified_by" UUID,
-    "assumptions" JSONB,
-    "version" INTEGER NOT NULL DEFAULT 1,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-    "completed_at" TIMESTAMP(3),
-    "verified_at" TIMESTAMP(3),
-
-    CONSTRAINT "operator_items_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "calibration_records" (
     "id" UUID NOT NULL,
     "operator_item_id" UUID NOT NULL,
