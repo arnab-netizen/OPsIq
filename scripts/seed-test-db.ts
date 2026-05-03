@@ -18,19 +18,7 @@ async function seedTestDb() {
 
     console.log("🌱 Seeding test database...");
 
-    // Create test workspace
-    const workspaceId = uuidv4();
-    const workspace = await prisma.workspace.upsert({
-      where: { id: workspaceId },
-      update: {},
-      create: {
-        id: workspaceId,
-        name: "Test Workspace",
-      },
-    });
-    console.log(`  ✓ Created workspace: ${workspace.id}`);
-
-    // Create test user
+    // Create test user first (required for createdBy references)
     const userId = uuidv4();
     const user = await prisma.user.upsert({
       where: { id: userId },
@@ -42,6 +30,21 @@ async function seedTestDb() {
       },
     });
     console.log(`  ✓ Created user: ${user.id}`);
+
+    // Create test workspace with required slug and createdBy
+    const workspaceId = uuidv4();
+    const workspaceSlug = `test-workspace-${Date.now()}`;
+    const workspace = await prisma.workspace.upsert({
+      where: { slug: workspaceSlug },
+      update: {},
+      create: {
+        id: workspaceId,
+        name: "Test Workspace",
+        slug: workspaceSlug,
+        createdBy: user.id,
+      },
+    });
+    console.log(`  ✓ Created workspace: ${workspace.id}`);
 
     // Create workspace membership
     const membership = await prisma.workspaceMembership.upsert({
@@ -60,46 +63,59 @@ async function seedTestDb() {
     });
     console.log(`  ✓ Created membership: ${membership.id}`);
 
-    // Create test engagement
+    // Create test client account (required for engagement)
+    const clientId = uuidv4();
+    const client = await prisma.clientAccount.upsert({
+      where: { id: clientId },
+      update: {},
+      create: {
+        id: clientId,
+        name: "Test Client",
+      },
+    });
+    console.log(`  ✓ Created client: ${client.id}`);
+
+    // Create test engagement with all required fields
     const engagementId = uuidv4();
+    const engagementCode = `ENG-${Date.now()}`;
     const engagement = await prisma.engagement.upsert({
-      where: { id: engagementId },
+      where: { code: engagementCode },
       update: {},
       create: {
         id: engagementId,
+        code: engagementCode,
+        title: "Test Engagement",
         workspaceId: workspace.id,
-        clientName: "Test Client",
+        clientId: client.id,
+        serviceTier: "standard",
+        engagementMode: "expert",
         description: "Test Engagement",
-        businessProblem: "Test Problem",
-        condition: "healthy",
-        interventionMode: "operational",
-        interventionPhase: "assess",
-        executionCertainty: 50,
         startDate: new Date(),
       },
     });
     console.log(`  ✓ Created engagement: ${engagement.id}`);
 
-    // Create engagement membership
+    // Create engagement membership with required role
     const engagementMembership = await prisma.engagementMembership.upsert({
       where: {
-        userId_engagementId: {
+        userId_engagementId_role: {
           userId: user.id,
           engagementId: engagement.id,
+          role: "lead",
         },
       },
       update: {},
       create: {
         userId: user.id,
         engagementId: engagement.id,
-        isActive: true,
+        role: "lead",
       },
     });
     console.log(`  ✓ Created engagement membership: ${engagementMembership.id}`);
 
     await prisma.$disconnect();
     console.log("✓ Test database seeded\n");
-    return { workspaceId, userId, engagementId };
+    return { workspaceId, userId, engagementId, clientId };
   } catch (error) {
     console.error("❌ Seed failed:", error);
     throw error;
