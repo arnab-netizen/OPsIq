@@ -195,6 +195,16 @@ done < <(grep -rn "REFERENCES" "$MIGRATION_DIR" 2>/dev/null || true)
 
 log_success "Foreign key target tables exist"
 
+# CRITICAL: Verify 20260428_add_phase_1_5_persistence does NOT have operator_items_status_idx
+echo ""
+echo "Step 5b: CRITICAL - Verifying failing migration is clean..."
+PHASE_1_5_MIGRATION="$MIGRATION_DIR/20260428_add_phase_1_5_persistence/migration.sql"
+if grep -q 'CREATE INDEX "operator_items_status_idx"' "$PHASE_1_5_MIGRATION" 2>/dev/null; then
+  log_error "Migration 20260428_add_phase_1_5_persistence contains hard CREATE INDEX operator_items_status_idx (must be removed)"
+else
+  log_success "Migration 20260428_add_phase_1_5_persistence is clean (no operator_items_status_idx)"
+fi
+
 # 6. Specific object verification
 echo ""
 echo "Step 6: Verifying critical objects..."
@@ -206,6 +216,15 @@ for obj in "${CRITICAL_OPERATOR_TABLES[@]}"; do
     log_success "Critical index \"$obj\" exists"
   fi
 done
+
+# CRITICAL: Verify operator_items_status_idx has EXACTLY ONE hard CREATE INDEX (not IF NOT EXISTS)
+echo ""
+echo "Step 6b: CRITICAL - Verifying operator_items_status_idx hard-create count..."
+HARD_CREATE_COUNT=$(grep -r 'CREATE INDEX "operator_items_status_idx"' "$MIGRATION_DIR" 2>/dev/null | grep -v 'IF NOT EXISTS' | wc -l)
+if [ "$HARD_CREATE_COUNT" -ne 1 ]; then
+  log_error "operator_items_status_idx has $HARD_CREATE_COUNT hard CREATE INDEX statements (must be exactly 1)"
+fi
+log_success "operator_items_status_idx: $HARD_CREATE_COUNT hard CREATE INDEX (correct)"
 
 # Summary
 echo ""
