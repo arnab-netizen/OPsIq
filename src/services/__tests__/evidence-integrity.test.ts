@@ -40,13 +40,13 @@ describe("Evidence Integrity - Link/Unlink", () => {
 
   describe("Same-engagement linking", () => {
     it("should link evidence to finding in same engagement", async () => {
-      vi.spyOn(db.finding, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.finding, "findFirst").mockResolvedValueOnce({
         id: findingId1,
         engagementId: engagementId1,
         linkedEvidence: [],
       } as never);
 
-      vi.spyOn(db.evidence, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.evidence, "findFirst").mockResolvedValueOnce({
         id: evidenceId1,
         engagementId: engagementId1,
         status: "validated",
@@ -81,13 +81,13 @@ describe("Evidence Integrity - Link/Unlink", () => {
 
   describe("Cross-engagement rejection", () => {
     it("should reject evidence from different engagement", async () => {
-      vi.spyOn(db.finding, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.finding, "findFirst").mockResolvedValueOnce({
         id: findingId1,
         engagementId: engagementId1,
         linkedEvidence: [],
       } as never);
 
-      vi.spyOn(db.evidence, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.evidence, "findFirst").mockResolvedValueOnce({
         id: evidenceId1,
         engagementId: engagementId2,
         status: "validated",
@@ -95,20 +95,20 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
   });
 
   describe("Duplicate link rejection", () => {
     it("should reject duplicate link attempt", async () => {
-      vi.spyOn(db.finding, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.finding, "findFirst").mockResolvedValueOnce({
         id: findingId1,
         engagementId: engagementId1,
         linkedEvidence: [evidenceId1],
       } as never);
 
-      vi.spyOn(db.evidence, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.evidence, "findFirst").mockResolvedValueOnce({
         id: evidenceId1,
         engagementId: engagementId1,
         status: "validated",
@@ -116,20 +116,20 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
   });
 
   describe("Rejected evidence rejection", () => {
     it("should reject linking rejected evidence", async () => {
-      vi.spyOn(db.finding, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.finding, "findFirst").mockResolvedValueOnce({
         id: findingId1,
         engagementId: engagementId1,
         linkedEvidence: [],
       } as never);
 
-      vi.spyOn(db.evidence, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.evidence, "findFirst").mockResolvedValueOnce({
         id: evidenceId1,
         engagementId: engagementId1,
         status: "rejected",
@@ -137,20 +137,20 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
   });
 
   describe("Superseded evidence rejection", () => {
     it("should reject linking superseded evidence", async () => {
-      vi.spyOn(db.finding, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.finding, "findFirst").mockResolvedValueOnce({
         id: findingId1,
         engagementId: engagementId1,
         linkedEvidence: [],
       } as never);
 
-      vi.spyOn(db.evidence, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.evidence, "findFirst").mockResolvedValueOnce({
         id: evidenceId1,
         engagementId: engagementId1,
         status: "superseded",
@@ -158,21 +158,21 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
   });
 
   describe("Unlinking evidence", () => {
     it("should unlink evidence from finding", async () => {
-      vi.spyOn(db.finding, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.finding, "findFirst").mockResolvedValueOnce({
         id: findingId1,
         engagementId: engagementId1,
         linkedEvidence: [evidenceId1, evidenceId2],
         status: "identified",
       } as never);
 
-      vi.spyOn(db.evidence, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.evidence, "findFirst").mockResolvedValueOnce({
         id: evidenceId1,
         engagementId: engagementId1,
         relatedFindingId: findingId1,
@@ -197,28 +197,28 @@ describe("Evidence Integrity - Link/Unlink", () => {
         return callback(mockTx);
       });
 
-      const result = await unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId);
+      const result = await unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as any, workspaceId);
 
       expect(result.findingId).toBe(findingId1);
       expect(result.evidenceId).toBe(evidenceId1);
     });
 
     it("should fail unlinking non-linked evidence", async () => {
-      vi.spyOn(db.finding, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.finding, "findFirst").mockResolvedValueOnce({
         id: findingId1,
         engagementId: engagementId1,
         linkedEvidence: [],
         status: "identified",
       } as never);
 
-      vi.spyOn(db.evidence, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.evidence, "findFirst").mockResolvedValueOnce({
         id: evidenceId1,
         engagementId: engagementId1,
         relatedFindingId: null,
       } as never);
 
       await expect(
-        unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as any)
+        unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as any, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -250,7 +250,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         engagementId: engagementId1,
       } as never);
 
-      const result = await validateFinding(findingId1, mockAuthContext as any);
+      const result = await validateFinding(findingId1, mockAuthContext as any, workspaceId);
 
       expect(result.id).toBe(findingId1);
     });
@@ -260,13 +260,13 @@ describe("Evidence Integrity - Link/Unlink", () => {
     it("should emit audit events on link/unlink operations", async () => {
       // Audit events are verified through vi.mock setup
       // This test ensures the service functions can be called
-      vi.spyOn(db.finding, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.finding, "findFirst").mockResolvedValueOnce({
         id: findingId1,
         engagementId: engagementId1,
         linkedEvidence: [],
       } as never);
 
-      vi.spyOn(db.evidence, "findUnique").mockResolvedValueOnce({
+      vi.spyOn(db.evidence, "findFirst").mockResolvedValueOnce({
         id: evidenceId1,
         engagementId: engagementId1,
         status: "validated",
