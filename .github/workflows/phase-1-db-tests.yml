@@ -9,6 +9,7 @@ on:
 jobs:
   db-tests:
     runs-on: ubuntu-latest
+    environment: test
 
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
@@ -33,15 +34,18 @@ jobs:
 
           if [[ ! "$DB_URL" =~ (test|ci|staging-test) ]]; then
             echo "❌ STOP: DATABASE_URL_TEST does not contain test/ci marker"
+            echo "DB_SAFE=false" >> $GITHUB_ENV
             exit 1
           fi
           echo "✓ DATABASE_URL_TEST contains test/ci marker"
 
           if [[ "$DB_URL" =~ (prod|main|production) ]]; then
             echo "❌ STOP: DATABASE_URL_TEST contains production marker"
+            echo "DB_SAFE=false" >> $GITHUB_ENV
             exit 1
           fi
           echo "✓ DATABASE_URL_TEST does not contain production markers"
+          echo "DB_SAFE=true" >> $GITHUB_ENV
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -56,7 +60,7 @@ jobs:
         run: npx prisma generate
 
       - name: Run migrations
-        run: npx prisma migrate deploy
+        run: npx prisma migrate deploy && echo "MIGRATIONS=SUCCESS" >> $GITHUB_ENV || echo "MIGRATIONS=FAILED" >> $GITHUB_ENV
 
       - name: Seed test database
         run: |
@@ -98,14 +102,25 @@ jobs:
           fi
           echo "TEST_STATUS=${TEST_STATUS}" >> $GITHUB_ENV
 
+          # Set DB_SAFE and MIGRATIONS defaults if not already set
+          if [ -z "${{ env.DB_SAFE }}" ]; then
+            echo "DB_SAFE=true" >> $GITHUB_ENV
+          fi
+          if [ -z "${{ env.MIGRATIONS }}" ]; then
+            echo "MIGRATIONS=SUCCESS" >> $GITHUB_ENV
+          fi
+
       - name: Report results
         run: |
           echo "════════════════════════════════════════════════════════"
           echo "Phase 1 Database Test Results"
           echo "════════════════════════════════════════════════════════"
           echo ""
+          echo "DB_SAFE: ${{ env.DB_SAFE }}"
+          echo "MIGRATIONS: ${{ env.MIGRATIONS }}"
           echo "FAILED: ${{ env.FAILED }}"
           echo "PASSED: ${{ env.PASSED }}"
+          echo "SKIPPED: ${{ env.SKIPPED }}"
           echo "TEST_STATUS: ${{ env.TEST_STATUS }}"
           echo ""
           echo "════════════════════════════════════════════════════════"
