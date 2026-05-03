@@ -141,8 +141,9 @@ describe("Intervention State Service", () => {
     it("successfully transitions to allowed phase", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.engagement.findUnique.mockResolvedValue({
+      mockDb.engagement.findFirst.mockResolvedValue({
         id: "eng-1",
+        workspaceId: "workspace-1",
         interventionPhase: "triage",
       });
       mockDb.engagement.update.mockResolvedValue({
@@ -154,7 +155,8 @@ describe("Intervention State Service", () => {
       const result = await transitionPhase(
         "eng-1",
         "stabilization" as InterventionPhase,
-        mockAuthContext as any
+        mockAuthContext as any,
+        "workspace-1"
       );
 
       expect(result.interventionPhase).toBe("stabilization");
@@ -202,14 +204,15 @@ describe("Intervention State Service", () => {
     it("retrieves current intervention state", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.engagement.findUnique.mockResolvedValue({
+      mockDb.engagement.findFirst.mockResolvedValue({
         id: "eng-1",
+        workspaceId: "workspace-1",
         interventionMode: "stabilization",
         version: 2,
       });
 
       const { getInterventionState } = await import("./intervention-state");
-      const result = await getInterventionState("eng-1");
+      const result = await getInterventionState("eng-1", "workspace-1");
 
       expect(result.engagementId).toBe("eng-1");
       expect(result.interventionMode).toBe("stabilization");
@@ -219,12 +222,12 @@ describe("Intervention State Service", () => {
     it("throws error if state not found", async () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
-      mockDb.engagement.findUnique.mockResolvedValue(null);
+      mockDb.engagement.findFirst.mockResolvedValue(null);
 
       const { getInterventionState } = await import("./intervention-state");
 
       try {
-        await getInterventionState("eng-1");
+        await getInterventionState("eng-1", "workspace-1");
         expect.fail("Should throw not found error");
       } catch (error) {
         expect((error as any).message).toContain("not found");

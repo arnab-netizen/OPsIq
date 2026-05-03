@@ -331,13 +331,9 @@ export async function transitionPhase(
   engagementId: string,
   newPhase: string,
   authContext: AuthContext,
-  workspaceId?: string
+  workspaceId: string
 ) {
   const actorId = authContext.session.user.id;
-
-  if (!workspaceId) {
-    throw new Error("workspaceId is required for workspace-scoped queries");
-  }
 
   const engagement = await db.engagement.findFirst({
     where: { id: engagementId, workspaceId },
