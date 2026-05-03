@@ -896,6 +896,7 @@ model BillingAccount {
   workspaceId        String   @unique @map("workspace_id") @db.Uuid // One account per workspace
   provider           String   @default("stripe") // "stripe"
   providerCustomerId String   @map("provider_customer_id") // Stripe customer ID
+  stripeCustomerId   String?  @map("stripe_customer_id") // Stripe customer reference for checkout sessions
   status             String   @default("active") // "active" | "suspended" | "canceled"
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -904,6 +905,7 @@ model BillingAccount {
 
   @@index([workspaceId])
   @@index([status])
+  @@index([stripeCustomerId])
   @@map("billing_accounts")
 }
 
@@ -913,6 +915,7 @@ model Plan {
   description  String?
   priceMonthly Float    @map("price_monthly") // Monthly subscription price
   priceYearly  Float    @map("price_yearly") // Yearly subscription price
+  stripePriceId String?  @map("stripe_price_id") // Stripe price ID for checkout sessions
   active       Boolean  @default(true)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -949,6 +952,7 @@ model Subscription {
   trialEndsAt        DateTime? @map("trial_ends_at")
   canceledAt         DateTime? @map("canceled_at")
   cancelReason       String?   @map("cancel_reason")
+  stripeSubscriptionId String? @map("stripe_subscription_id") // Stripe subscription ID for webhook reconciliation
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
@@ -959,6 +963,7 @@ model Subscription {
   @@index([planId])
   @@index([status])
   @@index([currentPeriodEnd])
+  @@index([stripeSubscriptionId])
   @@map("subscriptions")
 }
 
