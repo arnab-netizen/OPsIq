@@ -205,6 +205,10 @@ export const AUDIT_EVENTS = {
   // Learning
   LEARNING_RECORDED: "learning.recorded",
 
+  // Billing/Subscription
+  SUBSCRIPTION_ACTIVATED: "subscription.activated",
+  WEBHOOK_RETRY_THRESHOLD_EXCEEDED: "webhook.retry_threshold_exceeded",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",

@@ -896,7 +896,7 @@ model BillingAccount {
   workspaceId        String   @unique @map("workspace_id") @db.Uuid // One account per workspace
   provider           String   @default("stripe") // "stripe"
   providerCustomerId String   @map("provider_customer_id") // Stripe customer ID
-  stripeCustomerId   String?  @map("stripe_customer_id") // Stripe customer reference for checkout sessions
+  stripeCustomerId   String?  @unique @map("stripe_customer_id") // Stripe customer reference for checkout sessions (unique for fail-closed mapping)
   status             String   @default("active") // "active" | "suspended" | "canceled"
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -905,7 +905,6 @@ model BillingAccount {
 
   @@index([workspaceId])
   @@index([status])
-  @@index([stripeCustomerId])
   @@map("billing_accounts")
 }
 

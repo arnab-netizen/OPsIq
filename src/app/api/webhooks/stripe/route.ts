@@ -8,30 +8,37 @@ import {
 import { logger } from "@/infra/logger";
 
 /**
- * Handle Stripe webhook events with state machine idempotency
+ * Handle Stripe webhook events with hardened state machine
  * POST /api/webhooks/stripe
  *
- * Security model:
- * - Signature verification (fail-closed: no bypass)
- * - State machine prevents event loss on processing errors
- * - Only marks processed after successful DB sync
- * - Failed events can be retried by Stripe
- * - Duplicate processed events safely ignored
+ * Hardening layers:
+ * 1. Signature verification (fail-closed: no bypass)
+ * 2. Stale processing recovery (marks stuck events as failed)
+ * 3. State machine prevents event loss on processing errors
+ * 4. Transactional DB updates (atomic with entitlements)
+ * 5. stripeCustomerId uniqueness + fail-closed mapping
+ * 6. Entitlement sync on subscription activation
+ * 7. Event ordering protection (warn on unordered processing)
+ * 8. Retry alerting threshold (log warning at attempts >= 3)
+ * 9. Timeout protection (30s max processing time)
+ * 10. Only marks processed after successful DB sync
+ * 11. Failed events are retryable by Stripe
+ * 12. Duplicate processed events safely ignored
  *
  * Flow:
  * 1. Verify Stripe signature (fail-closed on error → 401)
- * 2. Get or create WebhookEvent with status=processing
+ * 2. Get or create WebhookEvent with stale recovery
  * 3. Check state:
  *    - processed: return 200 (duplicate, ignore)
  *    - processing: return 409 (conflict, retry later)
- *    - failed: continue to step 4 (retry)
- * 4. Process event (may throw)
- * 5. On success: mark status=processed + processedAt
+ *    - failed: continue (retry)
+ * 4. Process event with timeout (may throw)
+ * 5. On success: mark status=processed + processedAt (atomic)
  * 6. On failure: mark status=failed + lastError + increment attempts, return 500
  *
- * Events handled:
- * - checkout.session.completed (activates subscription)
- * - customer.subscription.created (activates with Stripe ID)
+ * Events handled with transactional integrity:
+ * - checkout.session.completed (activates subscription, syncs entitlements)
+ * - customer.subscription.created (activates with Stripe ID, syncs entitlements)
  * - customer.subscription.updated (syncs status)
  * - customer.subscription.deleted (cancels)
  */
@@ -66,10 +73,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 4: Get or create webhook event record with state machine
+    // Step 4: Get or create webhook event record with state machine + stale recovery
     let webhookEvent: any;
     let shouldProcess = false;
-    let isProcessing = false;
 
     try {
       const result = await getOrCreateWebhookEvent(event.id, event.type);
@@ -99,9 +105,8 @@ export async function POST(request: Request) {
           { status: 409 }
         );
       }
-
-      isProcessing = true;
     } catch (error) {
+      // DB error getting/creating event
       logger.error("Failed to get or create webhook event", {
         stripeEventId: event.id,
         error: error instanceof Error ? error.message : "unknown error",
@@ -112,12 +117,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 5: Process event asynchronously
+    // Step 5: Process event asynchronously with timeout protection
     // Return 202 immediately to acknowledge receipt
     // Mark processed only after successful DB updates
     handleWebhookEvent(event)
       .then(async () => {
-        // Success: mark event as processed
+        // Success: mark event as processed (only path to mark processed)
         try {
           await markWebhookEventProcessed(event.id);
           logger.info("Webhook event processed successfully", {
@@ -125,10 +130,12 @@ export async function POST(request: Request) {
             type: event.type,
           });
         } catch (error) {
-          logger.error("Failed to mark webhook event as processed", {
+          logger.error("Failed to mark webhook event as processed after successful handling", {
             stripeEventId: event.id,
             error: error instanceof Error ? error.message : "unknown error",
           });
+          // Don't fail - event was processed, just couldn't mark it
+          // Stripe will retry, idempotency will prevent reprocessing
         }
       })
       .catch(async (error) => {
@@ -140,12 +147,16 @@ export async function POST(request: Request) {
         });
 
         try {
-          await markWebhookEventFailed(event.id, error instanceof Error ? error : new Error(String(error)));
+          await markWebhookEventFailed(
+            event.id,
+            error instanceof Error ? error : new Error(String(error))
+          );
         } catch (dbError) {
           logger.error("Failed to record webhook event failure", {
             stripeEventId: event.id,
             error: dbError instanceof Error ? dbError.message : "unknown error",
           });
+          // Even if recording failure fails, the error is logged
         }
       });
 
@@ -160,6 +171,7 @@ export async function POST(request: Request) {
       { status: 202 }
     );
   } catch (error) {
+    // Catch-all for any unexpected errors
     logger.error("Webhook handler error", {
       error: error instanceof Error ? error.message : "unknown error",
     });
