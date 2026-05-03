@@ -1,0 +1,110 @@
+name: Phase 1 Database Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/fix-actorid-authcontext-BKuip
+
+jobs:
+  db-tests:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
+      NODE_ENV: test
+      SKIP_ENV_VALIDATION: "true"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify DATABASE_URL_TEST exists
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL_TEST }}" ]; then
+            echo "❌ STOP: DATABASE_URL_TEST secret not found"
+            exit 1
+          fi
+          echo "✓ DATABASE_URL_TEST secret exists"
+
+      - name: Verify DATABASE_URL_TEST is safe (contains test/ci marker)
+        run: |
+          if [[ ! "${{ secrets.DATABASE_URL_TEST }}" =~ (test|ci|staging-test) ]]; then
+            echo "❌ STOP: DATABASE_URL_TEST does not contain test/ci marker"
+            echo "URL safety check failed - cannot proceed"
+            exit 1
+          fi
+          echo "✓ DATABASE_URL_TEST contains test/ci marker"
+
+          # Additional safety: reject production markers
+          if [[ "${{ secrets.DATABASE_URL_TEST }}" =~ (prod|main|production) ]]; then
+            echo "❌ STOP: DATABASE_URL_TEST contains production marker"
+            exit 1
+          fi
+          echo "✓ DATABASE_URL_TEST does not contain production markers"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Run migrations
+        run: npx prisma migrate deploy
+
+      - name: Run Phase 1 database tests
+        run: npm test -- --run 2>&1 | tee test-output.log
+        continue-on-error: true
+
+      - name: Parse test results
+        run: |
+          TEST_OUTPUT=$(cat test-output.log)
+
+          # Extract test counts
+          FAILED=$(echo "$TEST_OUTPUT" | grep "Tests " | grep -o "[0-9]* failed" | grep -o "[0-9]*" | head -1 || echo "0")
+          SKIPPED=$(echo "$TEST_OUTPUT" | grep "Tests " | grep -o "[0-9]* skipped" | grep -o "[0-9]*" | head -1 || echo "0")
+          PASSED=$(echo "$TEST_OUTPUT" | grep "Tests " | grep -o "[0-9]* passed" | grep -o "[0-9]*" | head -1 || echo "0")
+
+          echo "FAILED=${FAILED}" >> $GITHUB_ENV
+          echo "SKIPPED=${SKIPPED}" >> $GITHUB_ENV
+          echo "PASSED=${PASSED}" >> $GITHUB_ENV
+
+          if [ "$FAILED" -gt "0" ]; then
+            TEST_STATUS="UNCLEAN"
+          else
+            TEST_STATUS="CLEAN"
+          fi
+          echo "TEST_STATUS=${TEST_STATUS}" >> $GITHUB_ENV
+
+      - name: Report results
+        run: |
+          echo "════════════════════════════════════════════════════════"
+          echo "Phase 1 Database Test Results"
+          echo "════════════════════════════════════════════════════════"
+          echo ""
+          echo "FAILED: ${{ env.FAILED }}"
+          echo "SKIPPED: ${{ env.SKIPPED }}"
+          echo "PASSED: ${{ env.PASSED }}"
+          echo ""
+          echo "TEST_STATUS: ${{ env.TEST_STATUS }}"
+          echo ""
+          echo "════════════════════════════════════════════════════════"
+
+          if [ "${{ env.TEST_STATUS }}" != "CLEAN" ]; then
+            echo ""
+            echo "⚠️  Database tests not passing. See logs for details."
+          fi
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-output.log
