@@ -117,7 +117,7 @@ describe("POST /api/opsiq/consulting-engine/run", () => {
 
     await POST(mockRequest);
 
-    expect(assertEngagementAccess).toHaveBeenCalledWith(userId, engagementId);
+    expect(assertEngagementAccess).toHaveBeenCalledWith(userId, engagementId, "");
   });
 
   it("passes authContext to pipeline", async () => {
