@@ -268,13 +268,8 @@ export async function revokeRole(
   });
 }
 
-export async function getRolesForUser(userId: string, workspaceId?: string) {
-  const where = { userId, isActive: true, revokedAt: null } as any;
-
-  if (workspaceId) {
-    where.scope = "workspace";
-    where.scopeId = workspaceId;
-  }
+export async function getRolesForUser(userId: string, workspaceId: string) {
+  const where = { userId, isActive: true, revokedAt: null, scope: "workspace", scopeId: workspaceId } as any;
 
   return db.userRoleAssignment.findMany({
     where,
