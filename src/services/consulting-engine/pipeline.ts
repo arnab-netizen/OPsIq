@@ -25,8 +25,8 @@ export async function runConsultingPipeline(
 ): Promise<ConsultingEnginePipelineResult> {
   try {
     // 1. Load engagement
-    const engagement = await db.engagement.findUnique({
-      where: { id: engagementId },
+    const engagement = await db.engagement.findFirst({
+      where: workspaceId ? { id: engagementId, workspaceId } : { id: engagementId },
       include: {
         client: {
           select: { industry: true, size: true },
@@ -54,6 +54,7 @@ export async function runConsultingPipeline(
       where: {
         engagementId,
         status: "approved", // Align with main's approval flow
+        ...(workspaceId && { engagement: { workspaceId } }),
       },
     });
 

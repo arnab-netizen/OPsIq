@@ -19,20 +19,6 @@
       where: findingWhere,
     }),...
 
-✗ VIOLATION: /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:28
-      const engagement = await db.engagement.findUnique({
-      where: { id: engagementId },
-      include: {
-        client: {
-          select: { indu...
-
-✗ VIOLATION: /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:53
-      const findings = await db.finding.findMany({
-      where: {
-        engagementId,
-        status: "approved", // Align with main's approval flow
- ...
-
 ✗ VIOLATION: /home/user/OPsIq/src/services/alerts/alert-service.ts:115
       const existingAlert = await db.alert.findUnique({
       where: { id: alertId },
@@ -153,14 +139,12 @@
 ## Summary
 Files checked: 363
 Reads checked: 328
-Violations found: 26
+Violations found: 24
 
 ## Violations
 - /home/user/OPsIq/src/services/role-assignment.ts:77
 - /home/user/OPsIq/src/services/workspace/activation-context.ts:24
 - /home/user/OPsIq/src/services/execution-drift/execution-drift.service.ts:39
-- /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:28
-- /home/user/OPsIq/src/services/consulting-engine/pipeline.ts:53
 - /home/user/OPsIq/src/services/alerts/alert-service.ts:115
 - /home/user/OPsIq/src/app/api/auth/logout/route.ts:16
 - /home/user/OPsIq/src/app/api/auth/login/route.ts:30
