@@ -11,6 +11,7 @@ import {
 import { parseRequestBody } from "@/lib/validation";
 import { uuidSchema } from "@/lib/validation";
 import { parseOrThrow } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
 
@@ -115,17 +116,48 @@ export const POST = withRequestContext(async (request, context) => {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
+
   const { userId } = await context.params;
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, actionSchema);
 
-  if (body.action === "deactivate") {
-    await deactivateUser(userId, body.version, authContext, workspaceId);
-    return Response.json({ status: "deactivated" });
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "userAction",
+    actorId: authContext.session.user.id,
+    payload: { userId, action: body.action, version: body.version },
+  });
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
   }
 
-  // reactivate
-  await reactivateUser(userId, body.version, authContext, workspaceId);
-  return Response.json({ status: "reactivated" });
+  try {
+    if (body.action === "deactivate") {
+      await deactivateUser(userId, body.version, authContext, workspaceId);
+      const result = { status: "deactivated" };
+      await recordIdempotencyResponse(idempotencyKey, 200, result);
+      return Response.json(result);
+    }
+
+    // reactivate
+    await reactivateUser(userId, body.version, authContext, workspaceId);
+    const result = { status: "reactivated" };
+    await recordIdempotencyResponse(idempotencyKey, 200, result);
+    return Response.json(result);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
+    throw error;
+  }
 });

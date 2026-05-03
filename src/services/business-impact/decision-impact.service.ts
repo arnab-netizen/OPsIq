@@ -48,11 +48,11 @@ export async function calculateDecisionImpact(
 ): Promise<DecisionImpactMetrics> {
   enforceWorkspaceId(workspaceId, "calculateDecisionImpact", "OperatorItem");
 
-  const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
+  const decision = await db.operatorItem.findFirst({
+    where: { id: decisionId, workspaceId },
   });
 
-  if (!decision || decision.workspaceId !== workspaceId) {
+  if (!decision) {
     throw new Error(`Decision not found or unauthorized`);
   }
 

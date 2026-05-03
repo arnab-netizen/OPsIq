@@ -4,6 +4,7 @@ import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { validateEvidence } from "@/services/evidence";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { validateEvidenceSchema } from "@/domain/validation/evidence";
 import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
@@ -32,6 +33,14 @@ export const POST = withRequestContext(async (request, context) => {
       return Response.json({ error: "Unauthorized" }, { status: 403 });
     }
 
+    const idempotencyKey = request.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      return Response.json(
+        { error: "idempotency-key header required" },
+        { status: 400 }
+      );
+    }
+
     const { evidenceId } = await context.params;
     parseOrThrow(uuidSchema, evidenceId);
 
@@ -49,9 +58,24 @@ export const POST = withRequestContext(async (request, context) => {
       );
     }
 
-    await validateEvidence(bodyData, session.user.id, workspaceId);
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "validateEvidence",
+      actorId: session.user.id,
+      payload: bodyData,
+    });
 
-    return Response.json({ success: true });
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return Response.json(idempotencyCheck.cachedResponse.body, {
+        status: idempotencyCheck.cachedResponse.status,
+      });
+    }
+
+    await validateEvidence(bodyData, session.user.id, workspaceId);
+    const result = { success: true };
+    await recordIdempotencyResponse(idempotencyKey, 200, result);
+
+    return Response.json(result);
   } catch (error) {
     logger.error("Error validating evidence", { error });
     return errorToResponse(error);

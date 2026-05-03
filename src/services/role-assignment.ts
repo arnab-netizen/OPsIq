@@ -58,7 +58,8 @@ function assertHierarchyAuthority(
 export async function assignRole(
   input: AssignRoleInput,
   actorId: string,
-  actorHighestLevel: number
+  actorHighestLevel: number,
+  workspaceId: string
 ): Promise<{ id: string; isNew: boolean }> {
   validateRoleName(input.role);
   assertHierarchyAuthority(actorHighestLevel, input.role);
@@ -92,8 +93,8 @@ export async function assignRole(
         where: {
           userId: input.userId,
           role: input.role,
-          scope: input.scope ?? null,
-          scopeId: input.scopeId ?? null,
+          scope: input.scope ?? "workspace",
+          scopeId: input.scopeId ?? workspaceId,
           isActive: true,
           revokedAt: null,
         },
@@ -110,8 +111,8 @@ export async function assignRole(
         where: {
           userId: input.userId,
           role: input.role,
-          scope: input.scope ?? null,
-          scopeId: input.scopeId ?? null,
+          scope: input.scope ?? "workspace",
+          scopeId: input.scopeId ?? workspaceId,
           isActive: false,
         },
       });
@@ -159,15 +160,22 @@ export async function assignRole(
 
   // V3 adaptive: engagement-scoped role changes trigger re-evaluation
   if (input.scope === "engagement" && input.scopeId) {
-    await triggerReEvaluation({
-      changeType: "scope_change",
-      entityType: "user_role_assignment",
-      entityId: result.result.id,
-      engagementId: input.scopeId,
-      severity: "medium",
-      description: `Role "${input.role}" assigned to user ${input.userId} in engagement`,
-      triggeredBy: actorId,
+    const engagement = await db.engagement.findUnique({
+      where: { id: input.scopeId },
+      select: { workspaceId: true },
     });
+    if (engagement) {
+      await triggerReEvaluation({
+        changeType: "scope_change",
+        entityType: "user_role_assignment",
+        entityId: result.result.id,
+        engagementId: input.scopeId,
+        workspaceId: engagement.workspaceId,
+        severity: "medium",
+        description: `Role "${input.role}" assigned to user ${input.userId} in engagement`,
+        triggeredBy: actorId,
+      });
+    }
   }
 
   logger.info("Role assigned", {
@@ -182,7 +190,8 @@ export async function assignRole(
 export async function revokeRole(
   input: RevokeRoleInput,
   actorId: string,
-  actorHighestLevel: number
+  actorHighestLevel: number,
+  workspaceId: string
 ): Promise<void> {
   validateRoleName(input.role);
   assertHierarchyAuthority(actorHighestLevel, input.role);
@@ -196,8 +205,8 @@ export async function revokeRole(
     where: {
       userId: input.userId,
       role: input.role,
-      scope: input.scope ?? null,
-      scopeId: input.scopeId ?? null,
+      scope: input.scope ?? "workspace",
+      scopeId: input.scopeId ?? workspaceId,
       isActive: true,
       revokedAt: null,
     },
@@ -234,15 +243,22 @@ export async function revokeRole(
 
   // V3 adaptive: engagement-scoped role changes trigger re-evaluation
   if (input.scope === "engagement" && input.scopeId) {
-    await triggerReEvaluation({
-      changeType: "scope_change",
-      entityType: "user_role_assignment",
-      entityId: assignment.id,
-      engagementId: input.scopeId,
-      severity: "medium",
-      description: `Role "${input.role}" revoked from user ${input.userId} in engagement`,
-      triggeredBy: actorId,
+    const engagement = await db.engagement.findUnique({
+      where: { id: input.scopeId },
+      select: { workspaceId: true },
     });
+    if (engagement) {
+      await triggerReEvaluation({
+        changeType: "scope_change",
+        entityType: "user_role_assignment",
+        entityId: assignment.id,
+        engagementId: input.scopeId,
+        workspaceId: engagement.workspaceId,
+        severity: "medium",
+        description: `Role "${input.role}" revoked from user ${input.userId} in engagement`,
+        triggeredBy: actorId,
+      });
+    }
   }
 
   logger.info("Role revoked", {
@@ -252,9 +268,11 @@ export async function revokeRole(
   });
 }
 
-export async function getRolesForUser(userId: string) {
+export async function getRolesForUser(userId: string, workspaceId: string) {
+  const where = { userId, isActive: true, revokedAt: null, scope: "workspace", scopeId: workspaceId } as any;
+
   return db.userRoleAssignment.findMany({
-    where: { userId, isActive: true, revokedAt: null },
+    where,
     select: {
       id: true,
       role: true,

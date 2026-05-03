@@ -16,16 +16,12 @@ export async function executeDecisionStub(
   details: Record<string, any>;
 }> {
   // Fetch decision
-  const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
+  const decision = await db.operatorItem.findFirst({
+    where: { id: decisionId, workspaceId },
   });
 
   if (!decision) {
     throw new Error("Decision not found");
-  }
-
-  if (decision.workspaceId !== workspaceId) {
-    throw new Error("Unauthorized");
   }
 
   // Verify decision is approved
@@ -107,11 +103,11 @@ export async function getExecutionStatus(
   decisionId: string,
   workspaceId: string
 ) {
-  const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
+  const decision = await db.operatorItem.findFirst({
+    where: { id: decisionId, workspaceId },
   });
 
-  if (!decision || decision.workspaceId !== workspaceId) {
+  if (!decision) {
     throw new Error("Decision not found");
   }
 

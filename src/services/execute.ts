@@ -137,6 +137,7 @@ export async function executeWorkflow(
     logger.info("Transitioning action to in_progress", { actionId: action.id });
     await transitionActionState(action.id, "in_progress", {
       authContext,
+      workspaceId,
     });
 
     createdActions.push(action);

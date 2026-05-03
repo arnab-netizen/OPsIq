@@ -52,7 +52,7 @@ export async function recordOutcome(
   actionId: string,
   actorId?: string,
   idempotencyKey?: string,
-  workspaceId?: string
+  workspaceId: string = "unknown"
 ): Promise<ActionOutcome> {
   // Idempotency check
   if (idempotencyKey && actorId) {
@@ -78,8 +78,11 @@ export async function recordOutcome(
 
   try {
     // Fetch the action
-    const action = await db.action.findUnique({
-      where: { id: actionId },
+    const action = await db.action.findFirst({
+      where: {
+        id: actionId,
+        engagement: { workspaceId },
+      },
     });
 
     if (!action) {
@@ -93,13 +96,12 @@ export async function recordOutcome(
     const engagementId = action.engagementId;
 
   // Get current state (actual impact) and engagement context
-  const engagementWhere: { id: string; workspaceId?: string } = workspaceId ? { id: engagementId, workspaceId } : { id: engagementId };
   const [currentConfidence, currentImpact, engagement, condition] = await Promise.all([
-    computeDecisionConfidence({ engagementId }),
-    generateBusinessImpact(engagementId, engagementId),
-    db.engagement.findUnique({ where: engagementWhere, select: { id: true, workspaceId: true } }),
+    computeDecisionConfidence({ engagementId, workspaceId }),
+    generateBusinessImpact(engagementId, engagementId, workspaceId),
+    db.engagement.findUnique({ where: { id: engagementId, workspaceId }, select: { id: true } }),
     db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
+      where: { engagementId, isCurrent: true, workspaceId },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -228,12 +230,13 @@ export async function recordOutcome(
   }
 }
 
-export async function getEngagementOutcomes(engagementId: string, workspaceId?: string): Promise<EngagementOutcomes> {
+export async function getEngagementOutcomes(engagementId: string, workspaceId: string = "unknown"): Promise<EngagementOutcomes> {
   // Fetch all completed actions with outcome snapshots
   const completedActions = await db.action.findMany({
     where: {
       engagementId,
       completedAt: { not: null },
+      engagement: { workspaceId },
     },
     orderBy: { completedAt: "desc" },
     take: 10,
@@ -241,9 +244,9 @@ export async function getEngagementOutcomes(engagementId: string, workspaceId?: 
 
   // Get engagement context for financial calculations
   const [engagement, condition] = await Promise.all([
-    db.engagement.findUnique({ where: { id: engagementId, ...(workspaceId && { workspaceId }) } }),
+    db.engagement.findUnique({ where: { id: engagementId, workspaceId } }),
     db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
+      where: { engagementId, isCurrent: true, workspaceId },
       orderBy: { createdAt: "desc" },
     }),
   ]);

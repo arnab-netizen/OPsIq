@@ -47,9 +47,12 @@ export async function addMember(
 
   const actorId = authContext.session.user.id;
 
-  // Verify user exists and is active
-  const user = await db.user.findUnique({
-    where: { id: input.userId },
+  // Verify user exists, is active, and is member of the workspace
+  const user = await db.user.findFirst({
+    where: {
+      id: input.userId,
+      workspaceMemberships: { some: { workspaceId: input.workspaceId, isActive: true } },
+    },
   });
 
   if (!user) {
@@ -75,6 +78,7 @@ export async function addMember(
           engagementId: input.engagementId,
           role: input.role,
           isActive: true,
+          engagement: { workspaceId: input.workspaceId },
         },
       });
 
@@ -91,6 +95,7 @@ export async function addMember(
           engagementId: input.engagementId,
           role: input.role,
           isActive: false,
+          engagement: { workspaceId: input.workspaceId },
         },
       });
 
@@ -146,6 +151,7 @@ export async function addMember(
     entityType: "engagement_membership",
     entityId: result.result.id,
     engagementId: input.engagementId,
+    workspaceId: input.workspaceId,
     severity: "low",
     description: `Member added: user ${input.userId} as "${input.role}"`,
     triggeredBy: actorId,
@@ -176,6 +182,7 @@ export async function removeMember(
       engagementId: input.engagementId,
       role: input.role,
       isActive: true,
+      engagement: { workspaceId: input.workspaceId },
     },
   });
 
@@ -231,6 +238,7 @@ export async function removeMember(
     entityType: "engagement_membership",
     entityId: membership.id,
     engagementId: input.engagementId,
+    workspaceId: input.workspaceId,
     severity: "medium",
     description: `Member removed: user ${input.userId} from role "${input.role}"`,
     triggeredBy: actorId,
@@ -244,9 +252,13 @@ export async function removeMember(
   });
 }
 
-export async function getMembershipsForUser(userId: string) {
+export async function getMembershipsForUser(userId: string, workspaceId: string) {
   return db.engagementMembership.findMany({
-    where: { userId, isActive: true },
+    where: {
+      userId,
+      isActive: true,
+      engagement: { workspaceId },
+    },
     select: {
       id: true,
       engagementId: true,
@@ -258,9 +270,13 @@ export async function getMembershipsForUser(userId: string) {
   });
 }
 
-export async function getMembersForEngagement(engagementId: string) {
+export async function getMembersForEngagement(engagementId: string, workspaceId: string) {
   return db.engagementMembership.findMany({
-    where: { engagementId, isActive: true },
+    where: {
+      engagementId,
+      isActive: true,
+      engagement: { workspaceId },
+    },
     include: {
       user: {
         select: {

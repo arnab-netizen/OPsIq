@@ -154,6 +154,7 @@ export async function createEvidence(
     entityType: "evidence",
     entityId: result.result.id,
     engagementId: input.engagementId,
+    workspaceId: validatedWorkspaceId,
     severity: (input.severity ?? "medium") as "low" | "medium" | "high" | "critical",
     description: `Evidence submitted: ${title}`,
     triggeredBy: userId,
@@ -285,7 +286,7 @@ export async function getEvidenceById(
 
   // Check engagement access if userId provided
   if (userId) {
-    await assertEngagementAccess(userId, evidence.engagementId);
+    await assertEngagementAccess(userId, evidence.engagementId, workspaceId);
   }
 
   const fullEvidence = await db.evidence.findUnique({
@@ -358,7 +359,7 @@ export async function listEvidence(
 
   // Check engagement access if userId provided
   if (engagementId && userId) {
-    await assertEngagementAccess(userId, engagementId);
+    await assertEngagementAccess(userId, engagementId, workspaceId);
   }
 
   const where = {

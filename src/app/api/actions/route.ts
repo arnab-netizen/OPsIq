@@ -8,6 +8,8 @@ import { withIdempotency } from "@/infra/idempotency";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import type { NextRequest } from "next/server";
+import { assertCapability } from "@/services/entitlement.service";
+import { PlanLimitError } from "@/infra/errors";
 
 const createActionSchema = z.object({
   engagementId: z.string().uuid(),
@@ -80,6 +82,12 @@ export const POST = withRequestContext(async (request) => {
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  // Check capability: action_create
+  const capabilityCheck = await assertCapability(workspaceId, "action_create");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("action_create", capabilityCheck.reason || "Plan limit exceeded");
   }
 
   const body = await parseRequestBody(request, createActionSchema);

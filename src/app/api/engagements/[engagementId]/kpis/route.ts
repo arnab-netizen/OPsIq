@@ -9,8 +9,6 @@ export const GET = withRequestContext(async (_request, context) => {
   const { engagementId } = await context.params;
   const { session } = await withAuth();
 
-  await assertEngagementAccess(session.user.id, engagementId);
-
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
     select: { workspaceId: true },
@@ -18,6 +16,8 @@ export const GET = withRequestContext(async (_request, context) => {
   if (!engagement) {
     throw new NotFoundError("Engagement", engagementId);
   }
+
+  await assertEngagementAccess(session.user.id, engagementId, engagement.workspaceId);
 
   const kpis = await getKPIsForEngagement(engagementId, engagement.workspaceId);
   return Response.json(kpis);

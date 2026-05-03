@@ -12,8 +12,6 @@ export const GET = withRequestContext(async (_request, context) => {
   parseOrThrow(uuidSchema, engagementId);
   const { session } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
-  await assertEngagementAccess(session.user.id, engagementId);
-
   const engagement = await db.engagement.findUnique({
     where: { id: engagementId },
     select: { workspaceId: true },
@@ -21,6 +19,8 @@ export const GET = withRequestContext(async (_request, context) => {
   if (!engagement) {
     throw new NotFoundError("Engagement", engagementId);
   }
+
+  await assertEngagementAccess(session.user.id, engagementId, engagement.workspaceId);
 
   const report = await generateEngagementReport(engagementId, engagement.workspaceId);
   return Response.json(report);

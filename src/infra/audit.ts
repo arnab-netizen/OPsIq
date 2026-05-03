@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import type { AuditEventName } from "@/domain/constants/audit-events";
+import { createHash } from "crypto";
 
 export type Visibility = "internal" | "client_visible";
 
@@ -17,6 +18,11 @@ export interface AuditEventInput {
   visibility?: Visibility;
 }
 
+function computeEventHash(eventId: string, workspaceId: string, eventName: string, timestamp: Date): string {
+  const hashInput = `${eventId}|${workspaceId}|${eventName}|${timestamp.toISOString()}`;
+  return createHash("sha256").update(hashInput).digest("hex");
+}
+
 export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
   if (!input.workspaceId) {
     logger.warn("Audit event emitted without workspaceId - fail-safe activated", {
@@ -27,6 +33,13 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
     });
     return "fail-safe-no-workspace-id";
   }
+
+  // Fetch the last audit event for this workspace to chain hashes
+  const lastEvent = await db.auditEvent.findFirst({
+    where: { workspaceId: input.workspaceId },
+    orderBy: { occurredAt: "desc" },
+    select: { id: true, previousHash: true },
+  });
 
   const event = await db.auditEvent.create({
     data: {
@@ -41,14 +54,16 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
         : Prisma.DbNull,
       correlationId: input.correlationId ?? null,
       visibility: input.visibility ?? "internal",
+      previousHash: lastEvent ? computeEventHash(lastEvent.id, input.workspaceId, lastEvent.id, new Date()) : null,
     },
   });
 
-  logger.info("Audit event emitted", {
+  logger.info("Audit event emitted with hash chain", {
     eventName: input.eventName,
     entityType: input.entityType,
     entityId: input.entityId,
     auditEventId: event.id,
+    hashChainLinked: !!lastEvent,
   });
 
   return event.id;
@@ -87,4 +102,24 @@ export async function queryAuditEvents(filter: {
     take: Math.min(filter.limit ?? 50, 100),
     skip: filter.offset ?? 0,
   });
+}
+
+export async function verifyAuditChainIntegrity(workspaceId: string): Promise<{ isValid: boolean; tamperedAt?: number }> {
+  const events = await db.auditEvent.findMany({
+    where: { workspaceId },
+    orderBy: { occurredAt: "asc" },
+    select: { id: true, previousHash: true },
+  });
+
+  for (let i = 1; i < events.length; i++) {
+    const currentEvent = events[i];
+    const previousEvent = events[i - 1];
+    const expectedHash = computeEventHash(previousEvent.id, workspaceId, previousEvent.id, new Date());
+
+    if (currentEvent.previousHash !== expectedHash) {
+      return { isValid: false, tamperedAt: i };
+    }
+  }
+
+  return { isValid: true };
 }

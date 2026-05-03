@@ -15,10 +15,10 @@ export interface DriftDetectionResult {
   detectedAt: string;
 }
 
-export async function detectExecutionDrift(engagementId: string): Promise<DriftDetectionResult> {
+export async function detectExecutionDrift(engagementId: string, workspaceId: string): Promise<DriftDetectionResult> {
   // Fetch engagement
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+  const engagement = await db.engagement.findFirst({
+    where: { id: engagementId, workspaceId },
   });
 
   if (!engagement) {
@@ -28,16 +28,16 @@ export async function detectExecutionDrift(engagementId: string): Promise<DriftD
   // Fetch all required data in parallel
   const [findings, recommendations, actions, condition] = await Promise.all([
     db.finding.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.recommendation.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.action.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true },
+      where: { engagementId, isCurrent: true, workspaceId },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -197,7 +197,7 @@ export async function detectExecutionDrift(engagementId: string): Promise<DriftD
   };
 
   // Map drift conditions to required action with commitment status
-  const requiredAction = await getRequiredActionWithCommitment(intermediateResult);
+  const requiredAction = await getRequiredActionWithCommitment(intermediateResult, workspaceId);
 
   const result: DriftDetectionResult = {
     ...intermediateResult,

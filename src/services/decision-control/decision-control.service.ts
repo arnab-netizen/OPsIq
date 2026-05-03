@@ -3,6 +3,7 @@ import { NotFoundError } from "@/infra/errors";
 import { detectExecutionDrift } from "../execution-drift/execution-drift.service";
 import { calculateImpactDelta } from "../business-impact/impact-delta.service";
 import { computeDecisionConfidence } from "../decision-confidence/decision-confidence.service";
+import { captureDecisionSnapshot, type DecisionInput } from "../decision-determinism.service";
 
 export interface PrimaryDecision {
   decisionId: string;
@@ -15,20 +16,20 @@ export interface PrimaryDecision {
   rationale: string[];
 }
 
-export async function getPrimaryDecision(engagementId: string): Promise<PrimaryDecision> {
+export async function getPrimaryDecision(engagementId: string, workspaceId: string): Promise<PrimaryDecision> {
   // Fetch engagement and required data in parallel
   const [engagement, actions, findings, recommendations] = await Promise.all([
     db.engagement.findUnique({
-      where: { id: engagementId },
+      where: { id: engagementId, workspaceId },
     }),
     db.action.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.finding.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
     db.recommendation.findMany({
-      where: { engagementId },
+      where: { engagementId, engagement: { workspaceId } },
     }),
   ]);
 
@@ -38,8 +39,8 @@ export async function getPrimaryDecision(engagementId: string): Promise<PrimaryD
 
   // Fetch decision context in parallel
   const [drift, decisionConfidence] = await Promise.all([
-    detectExecutionDrift(engagementId),
-    computeDecisionConfidence({ engagementId }),
+    detectExecutionDrift(engagementId, workspaceId),
+    computeDecisionConfidence({ engagementId, workspaceId }),
   ]);
 
   // Identify critical findings
@@ -168,5 +169,75 @@ export async function getPrimaryDecision(engagementId: string): Promise<PrimaryD
     consequence,
     confidenceScore: Math.round(confidenceScore),
     rationale,
+  };
+}
+
+export async function getPrimaryDecisionWithSnapshot(engagementId: string, workspaceId: string): Promise<{
+  decision: PrimaryDecision;
+  snapshotId: string;
+}> {
+  // Fetch all inputs needed for decision
+  const [engagement, actions, findings, recommendations, drift, decisionConfidence] = await Promise.all([
+    db.engagement.findUnique({
+      where: { id: engagementId, workspaceId },
+    }),
+    db.action.findMany({
+      where: { engagementId, engagement: { workspaceId } },
+    }),
+    db.finding.findMany({
+      where: { engagementId, engagement: { workspaceId } },
+    }),
+    db.recommendation.findMany({
+      where: { engagementId, engagement: { workspaceId } },
+    }),
+    detectExecutionDrift(engagementId, workspaceId),
+    computeDecisionConfidence({ engagementId, workspaceId }),
+  ]);
+
+  if (!engagement) {
+    throw new NotFoundError("Engagement", engagementId);
+  }
+
+  // Create snapshot input
+  const snapshotInput: DecisionInput = {
+    actions: actions.map((a: typeof actions[0]) => ({
+      id: a.id,
+      title: a.title,
+      priority: a.priority,
+      status: a.status,
+      dueDate: a.dueDate,
+    })),
+    findings: findings.map((f: typeof findings[0]) => ({
+      id: f.id,
+      title: f.title,
+      severity: f.severity || "unknown",
+      status: f.status,
+    })),
+    recommendations: recommendations.map((r: typeof recommendations[0]) => ({
+      id: r.id,
+      title: r.title,
+      status: r.status,
+      priority: r.priority,
+    })),
+    drift: {
+      driftDetected: drift.driftDetected,
+      severity: drift.severity,
+    },
+    confidence: {
+      score: decisionConfidence.score,
+      level: decisionConfidence.level,
+    },
+    timestamp: new Date().toISOString(),
+  };
+
+  // Get decision using original logic
+  const decision = await getPrimaryDecision(engagementId, workspaceId);
+
+  // Capture snapshot for replay validation
+  const snapshotId = await captureDecisionSnapshot(engagementId, snapshotInput, decision);
+
+  return {
+    decision,
+    snapshotId,
   };
 }

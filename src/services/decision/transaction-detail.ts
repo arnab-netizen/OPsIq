@@ -10,17 +10,12 @@ export async function getDecisionDetail(
   workspaceId: string
 ) {
   // Fetch decision from database
-  const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
+  const decision = await db.operatorItem.findFirst({
+    where: { id: decisionId, workspaceId },
   });
 
   if (!decision) {
     throw new Error("Decision not found");
-  }
-
-  // Verify workspace membership
-  if (decision.workspaceId !== workspaceId) {
-    throw new Error("Unauthorized");
   }
 
   // Fetch audit trail
@@ -86,11 +81,11 @@ export async function getDecisionSummary(
   decisionId: string,
   workspaceId: string
 ) {
-  const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
+  const decision = await db.operatorItem.findFirst({
+    where: { id: decisionId, workspaceId },
   });
 
-  if (!decision || decision.workspaceId !== workspaceId) {
+  if (!decision) {
     throw new Error("Decision not found");
   }
 

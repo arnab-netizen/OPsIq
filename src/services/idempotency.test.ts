@@ -4,29 +4,33 @@ import {
   recordIdempotencyResponse,
   recordIdempotencyError,
 } from "./idempotency";
+import { TEST_WORKSPACE_ID } from "@/__tests__/test-fixtures";
 
 vi.mock("@/lib/db", () => ({
   db: {
     idempotencyRecord: {
-      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
       delete: vi.fn(),
     },
   },
 }));
 
 describe("Idempotency Service", () => {
-  beforeEach(() => {
+  let mockDb: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { db } = await import("@/lib/db");
+    mockDb = db;
   });
 
   describe("checkIdempotencyKey", () => {
     it("creates new idempotency record for first request", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.idempotencyRecord.findUnique.mockResolvedValue(null);
+      mockDb.idempotencyRecord.findFirst.mockResolvedValue(null);
       mockDb.idempotencyRecord.create.mockResolvedValue({
         id: "idem-1",
         idempotencyKey: "key-1",
@@ -39,6 +43,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: TEST_WORKSPACE_ID,
         payload: { title: "Test" },
       });
 
@@ -47,10 +52,7 @@ describe("Idempotency Service", () => {
     });
 
     it("returns cached response for duplicate request", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.idempotencyRecord.findUnique.mockResolvedValue({
+      mockDb.idempotencyRecord.findFirst.mockResolvedValue({
         id: "idem-1",
         idempotencyKey: "key-1",
         operationName: "createEngagement",
@@ -64,6 +66,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: TEST_WORKSPACE_ID,
         payload: { title: "Test" },
       });
 
@@ -75,10 +78,7 @@ describe("Idempotency Service", () => {
     });
 
     it("rejects request if key reused for different operation", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.idempotencyRecord.findUnique.mockResolvedValue({
+      mockDb.idempotencyRecord.findFirst.mockResolvedValue({
         id: "idem-1",
         idempotencyKey: "key-1",
         operationName: "createEngagement",
@@ -91,6 +91,7 @@ describe("Idempotency Service", () => {
           idempotencyKey: "key-1",
           operationName: "updateEngagement",
           actorId: "user-1",
+          workspaceId: TEST_WORKSPACE_ID,
           payload: { title: "Updated" },
         });
         expect.fail("Should throw ValidationError");
@@ -100,10 +101,7 @@ describe("Idempotency Service", () => {
     });
 
     it("rejects duplicate request in flight", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.idempotencyRecord.findUnique.mockResolvedValue({
+      mockDb.idempotencyRecord.findFirst.mockResolvedValue({
         id: "idem-1",
         idempotencyKey: "key-1",
         operationName: "createEngagement",
@@ -116,6 +114,7 @@ describe("Idempotency Service", () => {
           idempotencyKey: "key-1",
           operationName: "createEngagement",
           actorId: "user-1",
+          workspaceId: TEST_WORKSPACE_ID,
           payload: { title: "Test" },
         });
         expect.fail("Should throw ValidationError");
@@ -125,9 +124,6 @@ describe("Idempotency Service", () => {
     });
 
     it("cleans up expired records and treats as new request", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
       const createMock = vi.fn().mockResolvedValue({
         id: "idem-2",
         idempotencyKey: "key-1",
@@ -136,7 +132,7 @@ describe("Idempotency Service", () => {
         expiresAt: new Date(Date.now() + 3600000),
       });
 
-      mockDb.idempotencyRecord.findUnique.mockResolvedValue({
+      mockDb.idempotencyRecord.findFirst.mockResolvedValue({
         id: "idem-1",
         idempotencyKey: "key-1",
         operationName: "createEngagement",
@@ -146,11 +142,13 @@ describe("Idempotency Service", () => {
       });
 
       mockDb.idempotencyRecord.create = createMock;
+      mockDb.idempotencyRecord.delete.mockResolvedValue({});
 
       const result = await checkIdempotencyKey({
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: TEST_WORKSPACE_ID,
         payload: { title: "Test" },
       });
 
@@ -160,10 +158,7 @@ describe("Idempotency Service", () => {
     });
 
     it("returns cached error for failed request", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.idempotencyRecord.findUnique.mockResolvedValue({
+      mockDb.idempotencyRecord.findFirst.mockResolvedValue({
         id: "idem-1",
         idempotencyKey: "key-1",
         operationName: "createEngagement",
@@ -176,6 +171,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: TEST_WORKSPACE_ID,
         payload: { title: "Test" },
       });
 
@@ -186,13 +182,10 @@ describe("Idempotency Service", () => {
     });
 
     it("rejects different payload with same key", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
       const payloadHash1 = "hash-of-title-test";
       const payloadHash2 = "hash-of-title-different";
 
-      mockDb.idempotencyRecord.findUnique.mockResolvedValue({
+      mockDb.idempotencyRecord.findFirst.mockResolvedValue({
         id: "idem-1",
         idempotencyKey: "key-1",
         operationName: "createEngagement",
@@ -208,6 +201,7 @@ describe("Idempotency Service", () => {
           idempotencyKey: "key-1",
           operationName: "createEngagement",
           actorId: "user-1",
+          workspaceId: TEST_WORKSPACE_ID,
           payload: { title: "Different" }, // Different payload
         });
         expect.fail("Should throw ValidationError for payload mismatch");
@@ -217,9 +211,6 @@ describe("Idempotency Service", () => {
     });
 
     it("handles concurrent creation race with P2002 unique constraint error", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
       const createMock = vi.fn()
         .mockRejectedValueOnce({
           code: "P2002",
@@ -233,7 +224,7 @@ describe("Idempotency Service", () => {
           expiresAt: new Date(Date.now() + 3600000),
         });
 
-      mockDb.idempotencyRecord.findUnique = vi
+      mockDb.idempotencyRecord.findFirst = vi
         .fn()
         .mockResolvedValueOnce(null) // First check returns null
         .mockResolvedValueOnce({
@@ -253,6 +244,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: TEST_WORKSPACE_ID,
         payload: { title: "Test" },
       });
 
@@ -262,10 +254,7 @@ describe("Idempotency Service", () => {
     });
 
     it("stores payload hash to prevent tampering", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.idempotencyRecord.findUnique.mockResolvedValue(null);
+      mockDb.idempotencyRecord.findFirst.mockResolvedValue(null);
       const createMock = vi.fn().mockResolvedValue({
         id: "idem-1",
         idempotencyKey: "key-1",
@@ -281,6 +270,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: TEST_WORKSPACE_ID,
         payload: { title: "Test" },
       });
 
@@ -297,23 +287,15 @@ describe("Idempotency Service", () => {
 
   describe("recordIdempotencyResponse", () => {
     it("records completed response", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.idempotencyRecord.update.mockResolvedValue({
-        id: "idem-1",
-        idempotencyKey: "key-1",
-        status: "completed",
-        responseCode: 201,
-        responseBody: { id: "eng-1" },
-        completedAt: new Date(),
+      mockDb.idempotencyRecord.updateMany.mockResolvedValue({
+        count: 1,
       });
 
-      await recordIdempotencyResponse("key-1", 201, { id: "eng-1", title: "Test" });
+      await recordIdempotencyResponse("key-1", 201, { id: "eng-1", title: "Test" }, TEST_WORKSPACE_ID);
 
-      expect(mockDb.idempotencyRecord.update).toHaveBeenCalledWith(
+      expect(mockDb.idempotencyRecord.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { idempotencyKey: "key-1" },
+          where: { idempotencyKey: "key-1", workspaceId: TEST_WORKSPACE_ID },
           data: expect.objectContaining({
             status: "completed",
             responseCode: 201,
@@ -325,21 +307,15 @@ describe("Idempotency Service", () => {
 
   describe("recordIdempotencyError", () => {
     it("records failed response with error message", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
-      mockDb.idempotencyRecord.update.mockResolvedValue({
-        id: "idem-1",
-        idempotencyKey: "key-1",
-        status: "failed",
-        responseBody: { error: "NotFoundError" },
+      mockDb.idempotencyRecord.updateMany.mockResolvedValue({
+        count: 1,
       });
 
-      await recordIdempotencyError("key-1", new Error("NotFoundError"));
+      await recordIdempotencyError("key-1", new Error("NotFoundError"), TEST_WORKSPACE_ID);
 
-      expect(mockDb.idempotencyRecord.update).toHaveBeenCalledWith(
+      expect(mockDb.idempotencyRecord.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { idempotencyKey: "key-1" },
+          where: { idempotencyKey: "key-1", workspaceId: TEST_WORKSPACE_ID },
           data: expect.objectContaining({
             status: "failed",
           }),

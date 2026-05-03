@@ -42,7 +42,8 @@ export interface SignificantChangeEvent {
   changeType: SignificantChangeType;
   entityType: string;
   entityId: string;
-  engagementId?: string;
+  engagementId: string;
+  workspaceId: string;
   severity: "low" | "medium" | "high" | "critical";
   description: string;
   triggeredBy: string;
@@ -436,10 +437,6 @@ async function evaluateHealthStatusImpact(
 }
 
 export async function triggerReEvaluation(event: SignificantChangeEvent): Promise<ReEvaluationResult> {
-  if (!event.engagementId) {
-    throw new Error("engagementId required for re-evaluation");
-  }
-
   // Database-backed idempotency using correlationId
   let idempotencyKey: string | undefined;
   if (event.correlationId) {
@@ -447,13 +444,15 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       "@/services/idempotency"
     );
 
-    idempotencyKey = `re-eval:${event.correlationId}`;
+    idempotencyKey = `re-eval:${event.correlationId}:${event.workspaceId}`;
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "triggerReEvaluation",
+      workspaceId: event.workspaceId,
       actorId: event.triggeredBy || "system",
       payload: {
         engagementId: event.engagementId,
+        workspaceId: event.workspaceId,
         changeType: event.changeType,
         entityType: event.entityType,
         entityId: event.entityId,
@@ -507,17 +506,17 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
   reEvaluationInProgress.add(event.engagementId);
 
   try {
-    // Fetch engagement to get workspace context
-    const engagement = await db.engagement.findUnique({
-      where: { id: event.engagementId },
-      select: { workspaceId: true },
+    // Verify engagement exists in workspace
+    const engagement = await db.engagement.findFirst({
+      where: { id: event.engagementId, workspaceId: event.workspaceId },
+      select: { id: true },
     });
 
     if (!engagement) {
-      throw new Error(`Engagement ${event.engagementId} not found`);
+      throw new Error(`Engagement ${event.engagementId} not found in workspace ${event.workspaceId}`);
     }
 
-    const workspaceId = engagement.workspaceId;
+    const workspaceId = event.workspaceId;
 
     // Structured logging with context
     logger.info("Re-evaluation triggered", {
@@ -592,13 +591,13 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     };
 
     // Fetch current values
-    const engagement = await tx.engagement.findUnique({
-      where: { id: event.engagementId },
+    const engagement = await tx.engagement.findFirst({
+      where: { id: event.engagementId, workspaceId: event.workspaceId },
       select: { id: true, healthStatus: true },
     });
 
     const condition = await tx.businessConditionProfile.findFirst({
-      where: { engagementId: event.engagementId, isCurrent: true },
+      where: { engagementId: event.engagementId, isCurrent: true, workspaceId: event.workspaceId },
       select: { id: true, businessStatus: true },
     });
 
@@ -790,7 +789,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     // Record successful idempotency response
     if (idempotencyKey) {
       const { recordIdempotencyResponse } = await import("@/services/idempotency");
-      await recordIdempotencyResponse(idempotencyKey, 200, result);
+      await recordIdempotencyResponse(idempotencyKey, 200, result, event.workspaceId);
     }
 
     return result;
@@ -799,7 +798,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     if (idempotencyKey) {
       const { recordIdempotencyError } = await import("@/services/idempotency");
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      await recordIdempotencyError(idempotencyKey, err, event.workspaceId);
     }
 
     // Safety Guard 4: Failure handling - propagate error to fail transaction

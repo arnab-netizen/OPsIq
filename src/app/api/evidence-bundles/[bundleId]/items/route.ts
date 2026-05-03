@@ -6,6 +6,7 @@ import {
   removeEvidenceFromBundle,
 } from "@/services/evidence";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import {
   addEvidenceToBundleSchema,
   removeEvidenceFromBundleSchema,
@@ -22,6 +23,14 @@ export const POST = withRequestContext(async (request, context) => {
     const authContext = await withAuth({
       capability: CAPABILITIES.EVIDENCE_SUBMIT,
     });
+
+    const idempotencyKey = request.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      return Response.json(
+        { error: "idempotency-key header required" },
+        { status: 400 }
+      );
+    }
 
     const bodyData = await parseRequestBody(
       request,
@@ -40,11 +49,29 @@ export const POST = withRequestContext(async (request, context) => {
       );
     }
 
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "addEvidenceToBundle",
+      actorId: authContext.session.user.id,
+      payload: bodyData,
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return Response.json(idempotencyCheck.cachedResponse.body, {
+        status: idempotencyCheck.cachedResponse.status,
+      });
+    }
+
     await addEvidenceToBundle(bodyData, authContext, workspaceId);
+    await recordIdempotencyResponse(idempotencyKey, 201, { success: true });
 
     return Response.json({ success: true }, { status: 201 });
   } catch (error) {
     logger.error("Error adding evidence to bundle", { error });
+    if (request.headers.get("idempotency-key")) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(request.headers.get("idempotency-key")!, err);
+    }
     return errorToResponse(error);
   }
 });

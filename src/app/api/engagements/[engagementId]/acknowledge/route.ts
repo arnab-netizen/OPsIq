@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -33,29 +34,60 @@ export const POST = withRequestContext(async (request, context) => {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
+
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
 
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId, workspaceId },
-  });
-
-  if (!engagement) throw new NotFoundError("Engagement", engagementId);
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.EXECUTION_ACKNOWLEDGED,
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "acknowledgeEngagement",
     actorId: session.user.id,
-    entityType: "engagement",
-    entityId: engagementId,
-    payload: {
-      acknowledgedAt: new Date().toISOString(),
-    },
-    visibility: "internal",
+    payload: { engagementId },
   });
 
-  return Response.json({
-    success: true,
-    engagementId,
-    acknowledgedAt: new Date().toISOString(),
-  });
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
+  }
+
+  try {
+    const engagement = await db.engagement.findUnique({
+      where: { id: engagementId, workspaceId },
+    });
+
+    if (!engagement) throw new NotFoundError("Engagement", engagementId);
+
+    const acknowledgedAt = new Date().toISOString();
+
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.EXECUTION_ACKNOWLEDGED,
+      actorId: session.user.id,
+      entityType: "engagement",
+      entityId: engagementId,
+      payload: {
+        acknowledgedAt,
+      },
+      visibility: "internal",
+    });
+
+    const result = {
+      success: true,
+      engagementId,
+      acknowledgedAt,
+    };
+    await recordIdempotencyResponse(idempotencyKey, 200, result);
+    return Response.json(result);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
+    throw error;
+  }
 });

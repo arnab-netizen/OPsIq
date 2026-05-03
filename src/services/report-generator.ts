@@ -392,7 +392,7 @@ export async function generateEngagementReport(
   };
 
   // Generate business impact assessment
-  const businessImpactResult = await generateBusinessImpact(engagementId, engagement.id);
+  const businessImpactResult = await generateBusinessImpact(engagementId, engagement.id, workspaceId);
   const businessImpactSummary: BusinessImpactSummary = {
     impactLevel: businessImpactResult.impactLevel,
     estimatedLoss: businessImpactResult.estimatedLoss,

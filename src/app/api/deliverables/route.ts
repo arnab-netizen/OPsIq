@@ -45,7 +45,7 @@ export const GET = withRequestContext(async (request) => {
 
   parseOrThrow(uuidSchema, engagementId);
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   const deliverables = await getDeliverablesForEngagement(engagementId, workspaceId);
   return Response.json(deliverables);
@@ -86,7 +86,7 @@ export const POST = withRequestContext(async (request) => {
   parseOrThrow(uuidSchema, body.engagementId);
   parseOrThrow(uuidSchema, body.stageId);
 
-  await assertEngagementAccess(authContext.session.user.id, body.engagementId);
+  await assertEngagementAccess(authContext.session.user.id, body.engagementId, workspaceId);
 
   const { isNew, result } = await withIdempotency(
     idempotencyKey,

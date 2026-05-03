@@ -9,6 +9,7 @@ export type ErrorCode =
   | "OPTIMISTIC_LOCK_FAILURE"
   | "POLICY_VIOLATION"
   | "RATE_LIMITED"
+  | "PLAN_LIMIT_EXCEEDED"
   | "EXTERNAL_SERVICE_ERROR"
   | "STORAGE_ERROR"
   | "SCHEDULER_ERROR"
@@ -121,6 +122,18 @@ export class PolicyViolationError extends AppError {
   constructor(policy: string, message: string) {
     super("POLICY_VIOLATION", message, 403, { policy });
     this.name = "PolicyViolationError";
+  }
+}
+
+export class PlanLimitError extends AppError {
+  constructor(capability: string, message: string) {
+    super(
+      "PLAN_LIMIT_EXCEEDED",
+      message,
+      402,
+      { capability }
+    );
+    this.name = "PlanLimitError";
   }
 }
 

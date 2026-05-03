@@ -129,16 +129,12 @@ export async function changeDecisionStatus(
   timestamp: Date;
 }> {
   // Fetch current decision
-  const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
+  const decision = await db.operatorItem.findFirst({
+    where: { id: decisionId, workspaceId },
   });
 
   if (!decision) {
     throw new Error("Decision not found");
-  }
-
-  if (decision.workspaceId !== workspaceId) {
-    throw new Error("Unauthorized");
   }
 
   const currentStatus = decision.status;
@@ -242,11 +238,11 @@ export async function getDecisionTimeline(
   decisionId: string,
   workspaceId: string
 ) {
-  const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
+  const decision = await db.operatorItem.findFirst({
+    where: { id: decisionId, workspaceId },
   });
 
-  if (!decision || decision.workspaceId !== workspaceId) {
+  if (!decision) {
     throw new Error("Decision not found");
   }
 

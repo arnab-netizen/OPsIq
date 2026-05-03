@@ -1,0 +1,125 @@
+name: Phase 1 Database Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/fix-actorid-authcontext-BKuip
+
+jobs:
+  db-tests:
+    runs-on: ubuntu-latest
+    environment: test
+
+    env:
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
+      NODE_ENV: test
+      SKIP_ENV_VALIDATION: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify DB is test-only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${DATABASE_URL_TEST:-}" || exit 1
+          [[ "$DATABASE_URL_TEST" =~ (test|ci|staging-test) ]] || exit 1
+          [[ ! "$DATABASE_URL_TEST" =~ (prod|main|production) ]] || exit 1
+          echo "DB_SAFE=true" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - run: npx prisma generate
+
+      - name: MIGRATION_REPLAY_STRICT - Test clean migration replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Testing clean database migration replay..."
+          bash scripts/test-migration-replay.sh
+          echo "MIGRATION_REPLAY_STRICT=PASSED" >> "$GITHUB_ENV"
+
+      - name: Force rebuild test DB from Prisma schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx prisma db push --force-reset --accept-data-loss
+          echo "DB_RESET=SUCCESS" >> "$GITHUB_ENV"
+          echo "MIGRATIONS=SKIPPED_FOR_TEST_DB_SCHEMA_PUSH" >> "$GITHUB_ENV"
+
+      - name: Verify required tables exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx prisma db execute --stdin <<'SQL'
+          DO $$
+          BEGIN
+            IF to_regclass('public.operator_items') IS NULL THEN
+              RAISE EXCEPTION 'operator_items missing';
+            END IF;
+            IF to_regclass('public.audit_events') IS NULL THEN
+              RAISE EXCEPTION 'audit_events missing';
+            END IF;
+          END $$;
+          SQL
+
+      - name: Seed test database
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx tsx scripts/seed-test-db.ts
+
+      - name: Run DB tests
+        shell: bash
+        run: |
+          set +e
+          npm test -- --run \
+            src/services \
+            src/__tests__/workspace-isolation-enforcement.test.ts \
+            src/app/api/opsiq \
+            2>&1 | tee test-output.log
+          echo "TEST_EXIT=${PIPESTATUS[0]}" >> "$GITHUB_ENV"
+          exit 0
+
+      - name: Parse results
+        shell: bash
+        run: |
+          set -euo pipefail
+          FAILED=$(grep -Eo '[0-9]+ failed' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
+          PASSED=$(grep -Eo '[0-9]+ passed' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
+          SKIPPED=$(grep -Eo '[0-9]+ skipped' test-output.log | tail -1 | grep -Eo '[0-9]+' || echo 0)
+          echo "FAILED=$FAILED" >> "$GITHUB_ENV"
+          echo "PASSED=$PASSED" >> "$GITHUB_ENV"
+          echo "SKIPPED=$SKIPPED" >> "$GITHUB_ENV"
+          if [ "$FAILED" -gt 0 ] || [ "${TEST_EXIT:-1}" -ne 0 ]; then
+            echo "TEST_STATUS=UNCLEAN" >> "$GITHUB_ENV"
+          else
+            echo "TEST_STATUS=CLEAN" >> "$GITHUB_ENV"
+          fi
+
+      - name: Report results
+        shell: bash
+        run: |
+          echo "DB_SAFE: ${DB_SAFE:-false}"
+          echo "DB_RESET: ${DB_RESET:-FAILED}"
+          echo "MIGRATIONS: ${MIGRATIONS:-FAILED}"
+          echo "FAILED: ${FAILED:-0}"
+          echo "PASSED: ${PASSED:-0}"
+          echo "SKIPPED: ${SKIPPED:-0}"
+          echo "TEST_STATUS: ${TEST_STATUS:-UNCLEAN}"
+          test "${TEST_STATUS:-UNCLEAN}" = "CLEAN"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-1-db-test-results
+          path: test-output.log
+          if-no-files-found: warn

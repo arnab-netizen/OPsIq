@@ -237,6 +237,7 @@ export async function linkLeadToEngagement(
     entityType: "lead_record",
     entityId: leadId,
     engagementId,
+    workspaceId,
     severity: "medium",
     description: `Lead converted to client and linked to engagement ${engagementId}`,
     triggeredBy: actorId,

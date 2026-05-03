@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { triggerReEvaluation } from "./re-evaluation";
 
-vi.mock("@/lib/db", () => {
-  const createDbMock = () => ({
+vi.mock("@/lib/db", () => ({
+  db: {
     businessConditionProfile: {
       findFirst: vi.fn(),
       update: vi.fn(),
@@ -15,13 +15,14 @@ vi.mock("@/lib/db", () => {
       count: vi.fn(),
     },
     finding: {
-      findMany: vi.fn().mockResolvedValue([]),
+      findMany: vi.fn(),
     },
     shockEvent: {
       findMany: vi.fn(),
     },
     engagement: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       update: vi.fn(),
     },
     interventionState: {
@@ -33,13 +34,14 @@ vi.mock("@/lib/db", () => {
       updateMany: vi.fn(),
     },
     idempotencyRecord: {
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn(),
       delete: vi.fn(),
     },
-    $transaction: vi.fn((callback) => {
-      // Create a mock transaction object with the same methods
+    $transaction: vi.fn((callback: (tx: any) => Promise<any>) => {
       const txMock: any = {
         businessConditionProfile: {
           update: vi.fn().mockResolvedValue({}),
@@ -47,6 +49,7 @@ vi.mock("@/lib/db", () => {
         },
         engagement: {
           findUnique: vi.fn().mockResolvedValue(null),
+          findFirst: vi.fn().mockResolvedValue(null),
           update: vi.fn().mockResolvedValue({}),
         },
         interventionState: {
@@ -64,17 +67,14 @@ vi.mock("@/lib/db", () => {
           findUnique: vi.fn().mockResolvedValue(null),
           create: vi.fn().mockResolvedValue({ id: "rec-1" }),
           update: vi.fn().mockResolvedValue({}),
+          updateMany: vi.fn().mockResolvedValue({ count: 0 }),
           delete: vi.fn().mockResolvedValue({}),
         },
       };
       return Promise.resolve(callback(txMock));
     }),
-  });
-
-  return {
-    db: createDbMock(),
-  };
-});
+  },
+}));
 
 vi.mock("@/infra/audit", () => ({
   emitAuditEvent: vi.fn().mockResolvedValue({ id: "audit-1" }),
@@ -108,8 +108,12 @@ vi.mock("@/services/recommendation", () => ({
 }));
 
 describe("Re-evaluation Service", () => {
-  beforeEach(() => {
+  let mockDb: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { db } = await import("@/lib/db");
+    mockDb = db;
   });
 
   describe("triggerReEvaluation", () => {
@@ -119,20 +123,18 @@ describe("Re-evaluation Service", () => {
           changeType: "shock_event",
           entityType: "shock_event",
           entityId: "shock-1",
+          workspaceId: "ws-1",
           severity: "critical",
           description: "Test",
           triggeredBy: "user-1",
-        });
+        } as any);
         expect.fail("Should throw");
       } catch (error: any) {
-        expect(error.message).toContain("engagementId");
+        expect(error.message).toContain("Engagement");
       }
     });
 
     it("returns ReEvaluationResult with all impact areas", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
       mockDb.businessConditionProfile.findFirst.mockResolvedValue({
         businessStatus: "challenged",
         severityScore: 6,
@@ -147,6 +149,8 @@ describe("Re-evaluation Service", () => {
         { id: "kpi-2", status: "stable" },
       ]);
 
+      mockDb.finding.findMany.mockResolvedValue([]);
+
       mockDb.action.findMany.mockResolvedValue([
         { id: "action-1", status: "completed", priority: "high" },
         { id: "action-2", status: "in_progress", priority: "medium" },
@@ -155,6 +159,9 @@ describe("Re-evaluation Service", () => {
 
       mockDb.shockEvent.findMany.mockResolvedValue([]);
 
+      mockDb.engagement.findFirst.mockResolvedValue({
+        id: "eng-1",
+      });
       mockDb.engagement.findUnique.mockResolvedValue({
         id: "eng-1",
         interventionMode: "stabilization",
@@ -174,6 +181,7 @@ describe("Re-evaluation Service", () => {
         entityType: "shock_event",
         entityId: "shock-1",
         engagementId: "eng-1",
+        workspaceId: "ws-1",
         severity: "critical",
         description: "Critical shock event",
         triggeredBy: "user-1",
@@ -191,9 +199,6 @@ describe("Re-evaluation Service", () => {
     });
 
     it("deterministically computes same output for same input", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
       const mockSetup = () => {
         mockDb.businessConditionProfile.findFirst.mockResolvedValue({
           businessStatus: "stable",
@@ -225,6 +230,7 @@ describe("Re-evaluation Service", () => {
         entityType: "evidence",
         entityId: "ev-1",
         engagementId: "eng-1",
+        workspaceId: "ws-1",
         severity: "low",
         description: "Minor evidence",
         triggeredBy: "user-1",
@@ -239,6 +245,7 @@ describe("Re-evaluation Service", () => {
         entityType: "evidence",
         entityId: "ev-2",
         engagementId: "eng-1",
+        workspaceId: "ws-1",
         severity: "low",
         description: "Minor evidence",
         triggeredBy: "user-1",
@@ -267,9 +274,13 @@ describe("Re-evaluation Service", () => {
       });
 
       mockDb.kPI.findMany.mockResolvedValue([]);
+      mockDb.finding.findMany.mockResolvedValue([]);
       mockDb.action.findMany.mockResolvedValue([]);
       mockDb.action.count.mockResolvedValue(0);
       mockDb.shockEvent.findMany.mockResolvedValue([]);
+      mockDb.engagement.findFirst.mockResolvedValue({
+        id: "eng-1",
+      });
       mockDb.engagement.findUnique.mockResolvedValue({
         id: "eng-1",
         interventionMode: "stabilization",
@@ -285,6 +296,7 @@ describe("Re-evaluation Service", () => {
         entityType: "kpi",
         entityId: "kpi-1",
         engagementId: "eng-1",
+        workspaceId: "ws-1",
         severity: "high",
         description: "KPI deterioration",
         triggeredBy: "user-1",
@@ -306,6 +318,9 @@ describe("Re-evaluation Service", () => {
         moraleFragilityLevel: "low",
       });
 
+      mockDb.engagement.findFirst.mockResolvedValue({
+        id: "eng-1",
+      });
       mockDb.engagement.findUnique.mockResolvedValue({
         id: "eng-1",
         interventionMode: "growth",
@@ -320,6 +335,7 @@ describe("Re-evaluation Service", () => {
         entityType: "shock_event",
         entityId: "shock-1",
         engagementId: "eng-1",
+        workspaceId: "ws-1",
         severity: "critical",
         description: "Shock event",
         triggeredBy: "user-1",
@@ -342,9 +358,13 @@ describe("Re-evaluation Service", () => {
       });
 
       mockDb.kPI.findMany.mockResolvedValue([]);
+      mockDb.finding.findMany.mockResolvedValue([]);
       mockDb.action.findMany.mockResolvedValue([]);
       mockDb.action.count.mockResolvedValue(0);
       mockDb.shockEvent.findMany.mockResolvedValue([]);
+      mockDb.engagement.findFirst.mockResolvedValue({
+        id: "eng-1",
+      });
       mockDb.engagement.findUnique.mockResolvedValue({
         id: "eng-1",
         interventionMode: "recovery",
@@ -360,6 +380,7 @@ describe("Re-evaluation Service", () => {
         entityType: "shock_event",
         entityId: "shock-1",
         engagementId: "eng-1",
+        workspaceId: "ws-1",
         severity: "critical",
         description: "Shock event",
         triggeredBy: "user-1",
@@ -383,9 +404,13 @@ describe("Re-evaluation Service", () => {
       });
 
       mockDb.kPI.findMany.mockResolvedValue([]);
+      mockDb.finding.findMany.mockResolvedValue([]);
       mockDb.action.findMany.mockResolvedValue([]);
       mockDb.action.count.mockResolvedValue(0);
       mockDb.shockEvent.findMany.mockResolvedValue([]);
+      mockDb.engagement.findFirst.mockResolvedValue({
+        id: "eng-1",
+      });
       mockDb.engagement.findUnique.mockResolvedValue({
         id: "eng-1",
         interventionMode: "stabilization",
@@ -401,6 +426,7 @@ describe("Re-evaluation Service", () => {
         entityType: "action",
         entityId: "action-1",
         engagementId: "eng-1",
+        workspaceId: "ws-1",
         severity: "high",
         description: "Blocker",
         triggeredBy: "user-1",
@@ -429,9 +455,13 @@ describe("Re-evaluation Service", () => {
       });
 
       mockDb.kPI.findMany.mockResolvedValue([]);
+      mockDb.finding.findMany.mockResolvedValue([]);
       mockDb.action.findMany.mockResolvedValue([]);
       mockDb.action.count.mockResolvedValue(0);
       mockDb.shockEvent.findMany.mockResolvedValue([]);
+      mockDb.engagement.findFirst.mockResolvedValue({
+        id: "eng-1",
+      });
       mockDb.engagement.findUnique.mockResolvedValue({
         id: "eng-1",
         interventionMode: "stabilization",
@@ -447,6 +477,7 @@ describe("Re-evaluation Service", () => {
         entityType: "evidence",
         entityId: "ev-1",
         engagementId: "eng-1",
+        workspaceId: "ws-1",
         severity: "high",
         description: "Evidence",
         triggeredBy: "user-1",

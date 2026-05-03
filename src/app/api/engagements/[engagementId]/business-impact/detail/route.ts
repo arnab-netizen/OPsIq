@@ -56,8 +56,8 @@ export const GET = withRequestContext(async (request, context) => {
   const [engagement, businessImpact, drift, findings, recommendations, actions] =
     await Promise.all([
       db.engagement.findUnique({ where: { id: engagementId, workspaceId } }),  // Scoped
-      generateBusinessImpact(engagementId, session.user.id),
-      detectExecutionDrift(engagementId),
+      generateBusinessImpact(engagementId, session.user.id, workspaceId),
+      detectExecutionDrift(engagementId, workspaceId),
       db.finding.findMany({ where: { engagementId, workspaceId } }),  // Scoped
       db.recommendation.findMany({ where: { engagementId, workspaceId } }),  // Scoped
       db.action.findMany({ where: { engagementId, workspaceId } }),  // Scoped

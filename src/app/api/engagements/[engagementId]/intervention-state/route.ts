@@ -7,19 +7,24 @@ import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import { INTERVENTION_PHASES } from "@/domain/constants/statuses";
+import type { NextRequest } from "next/server";
 
 const transitionPhaseSchema = z.object({
   targetPhase: z.enum(INTERVENTION_PHASES),
 });
 
-export const GET = withRequestContext(async (_request, context) => {
+export const GET = withRequestContext(async (request, context) => {
   const { engagementId } = await context.params;
   parseOrThrow(uuidSchema, engagementId);
   const { session } = await withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW });
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  // Get workspace ID from request
+  const nextRequest = request as unknown as any;
+  const workspaceId = nextRequest?.headers?.get?.("x-workspace-id");
 
-  const state = await getInterventionState(engagementId);
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
+
+  const state = await getInterventionState(engagementId, workspaceId);
   return Response.json(state);
 });
 
@@ -31,7 +36,11 @@ export const PUT = withRequestContext(async (request, context) => {
     internalOnly: true,
   });
 
-  await assertEngagementAccess(session.user.id, engagementId);
+  // Get workspace ID from request
+  const nextRequest = request as unknown as any;
+  const workspaceId = nextRequest?.headers?.get?.("x-workspace-id");
+
+  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {
@@ -48,6 +57,7 @@ export const PUT = withRequestContext(async (request, context) => {
     idempotencyKey,
     operationName: "transitionPhase",
     actorId: session.user.id,
+    workspaceId,
     payload: { engagementId, ...body },
   });
 
@@ -58,12 +68,12 @@ export const PUT = withRequestContext(async (request, context) => {
   }
 
   try {
-    const result = await transitionPhase(engagementId, body.targetPhase, { session, policy });
-    await recordIdempotencyResponse(idempotencyKey, 200, result);
+    const result = await transitionPhase(engagementId, body.targetPhase, { session, policy }, workspaceId);
+    await recordIdempotencyResponse(idempotencyKey, 200, result, workspaceId);
     return Response.json(result);
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
+    await recordIdempotencyError(idempotencyKey, err, workspaceId);
     throw error;
   }
 });

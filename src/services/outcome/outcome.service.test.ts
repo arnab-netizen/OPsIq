@@ -31,8 +31,8 @@ describe("OutcomeService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     const mockDb = db as any;
-    mockDb.action = { findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() };
-    mockDb.engagement = { findUnique: vi.fn() };
+    mockDb.action = { findUnique: vi.fn(), findFirst: vi.fn(), update: vi.fn(), findMany: vi.fn() };
+    mockDb.engagement = { findUnique: vi.fn(), findFirst: vi.fn() };
     mockDb.businessConditionProfile = { findFirst: vi.fn() };
   });
 
@@ -65,9 +65,9 @@ describe("OutcomeService", () => {
 
   it("records outcome with financial impact calculation", async () => {
     const mockDb = db as any;
-    mockDb.action.findUnique.mockResolvedValue(mockAction);
+    mockDb.action.findFirst.mockResolvedValue(mockAction);
     mockDb.action.update.mockResolvedValue(mockAction);
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const outcome = await recordOutcome("action-123");
@@ -80,9 +80,9 @@ describe("OutcomeService", () => {
 
   it("calculates correct INR value recovery from critical to medium", async () => {
     const mockDb = db as any;
-    mockDb.action.findUnique.mockResolvedValue(mockAction);
+    mockDb.action.findFirst.mockResolvedValue(mockAction);
     mockDb.action.update.mockResolvedValue(mockAction);
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const outcome = await recordOutcome("action-123");
@@ -95,9 +95,9 @@ describe("OutcomeService", () => {
 
   it("stores outcome snapshot with financial data", async () => {
     const mockDb = db as any;
-    mockDb.action.findUnique.mockResolvedValue(mockAction);
+    mockDb.action.findFirst.mockResolvedValue(mockAction);
     mockDb.action.update.mockResolvedValue(mockAction);
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     await recordOutcome("action-123");
@@ -118,9 +118,9 @@ describe("OutcomeService", () => {
 
   it("is deterministic - same input produces same output", async () => {
     const mockDb = db as any;
-    mockDb.action.findUnique.mockResolvedValue(mockAction);
+    mockDb.action.findFirst.mockResolvedValue(mockAction);
     mockDb.action.update.mockResolvedValue(mockAction);
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const outcome1 = await recordOutcome("action-123");
@@ -132,9 +132,9 @@ describe("OutcomeService", () => {
 
   it("handles missing revenue data gracefully", async () => {
     const mockDb = db as any;
-    mockDb.action.findUnique.mockResolvedValue(mockAction);
+    mockDb.action.findFirst.mockResolvedValue(mockAction);
     mockDb.action.update.mockResolvedValue(mockAction);
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const outcome = await recordOutcome("action-123");
@@ -179,7 +179,7 @@ describe("OutcomeService", () => {
         },
       },
     ]);
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const result = await getEngagementOutcomes("eng-123");
@@ -218,7 +218,7 @@ describe("OutcomeService", () => {
         },
       },
     ]);
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const result = await getEngagementOutcomes("eng-123");
@@ -248,7 +248,7 @@ describe("OutcomeService", () => {
         },
       },
     ]);
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(mockCondition);
 
     const result = await getEngagementOutcomes("eng-123");
@@ -260,7 +260,7 @@ describe("OutcomeService", () => {
   it("handles empty outcomes without crashing", async () => {
     const mockDb = db as any;
     mockDb.action.findMany.mockResolvedValue([]);
-    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const result = await getEngagementOutcomes("eng-123");

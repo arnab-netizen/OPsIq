@@ -250,11 +250,11 @@ export async function triggerReEvaluationOnCompletion(
     "OperatorItem"
   );
 
-  const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId },
+  const decision = await db.operatorItem.findFirst({
+    where: { id: decisionId, workspaceId },
   });
 
-  if (!decision || decision.workspaceId !== workspaceId) {
+  if (!decision) {
     return null;
   }
 
@@ -273,7 +273,7 @@ export async function triggerReEvaluationOnCompletion(
   if (decision.outcomeDelta === null) {
     try {
       await db.operatorItem.update({
-        where: { id: decisionId },
+        where: { id: decisionId, workspaceId },
         data: {
           outcomeDelta: delta,
         },

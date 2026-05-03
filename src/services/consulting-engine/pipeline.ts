@@ -9,6 +9,9 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { Recommendation, Action } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import type { AuthContext } from "@/lib/auth-guard";
+import { assertCapability } from "@/services/entitlement.service";
+import { PlanLimitError } from "@/infra/errors";
+import { recordDecisionEngineUsage } from "@/services/usage.service";
 
 export interface ConsultingEnginePipelineResult {
   status: "SUCCESS" | "INSUFFICIENT_DATA" | "ERROR";
@@ -21,12 +24,18 @@ export interface ConsultingEnginePipelineResult {
 export async function runConsultingPipeline(
   engagementId: string,
   authContext: AuthContext,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<ConsultingEnginePipelineResult> {
+  // Check capability: decision_engine
+  const capabilityCheck = await assertCapability(workspaceId, "decision_engine");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("decision_engine", capabilityCheck.reason || "Plan limit exceeded");
+  }
+
   try {
     // 1. Load engagement
-    const engagement = await db.engagement.findUnique({
-      where: { id: engagementId },
+    const engagement = await db.engagement.findFirst({
+      where: { id: engagementId, workspaceId },
       include: {
         client: {
           select: { industry: true, size: true },
@@ -54,6 +63,7 @@ export async function runConsultingPipeline(
       where: {
         engagementId,
         status: "approved", // Align with main's approval flow
+        ...(workspaceId && { engagement: { workspaceId } }),
       },
     });
 
@@ -149,6 +159,12 @@ export async function runConsultingPipeline(
           status: engineOutput.status,
         },
         visibility: "internal",
+      });
+
+      // 8. Record usage for decision engine execution
+      await recordDecisionEngineUsage(workspaceId || engagement.workspaceId, {
+        engagementId,
+        interventionCount: engineOutput.decisionMemo.recommendedInterventions.length,
       });
 
       logger.info("Consulting pipeline completed successfully", {

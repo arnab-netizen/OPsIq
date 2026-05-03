@@ -186,11 +186,12 @@ export async function detectShockState(
 }
 
 export async function detectShockFromCurrentState(
-  engagementId: string
+  engagementId: string,
+  workspaceId: string
 ): Promise<ShockDetectionResult> {
   // Fetch current engagement state
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
+  const engagement = await db.engagement.findFirst({
+    where: { id: engagementId, workspaceId },
     select: {
       id: true,
       conditionProfiles: {

@@ -8,6 +8,7 @@ import {
   getMembershipsForUser,
 } from "@/services/engagement-membership";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import { ROLES } from "@/domain/constants/roles";
 import type { NextRequest } from "next/server";
@@ -46,7 +47,7 @@ export const GET = withRequestContext(async (request, context) => {
   const { userId } = await context.params;
   parseOrThrow(uuidSchema, userId);
 
-  const memberships = await getMembershipsForUser(userId);
+  const memberships = await getMembershipsForUser(userId, workspaceId);
   return Response.json({ memberships });
 });
 
@@ -67,6 +68,15 @@ export const POST = withRequestContext(async (request, context) => {
     );
   }
 
+  // Require Idempotency-Key (fail-closed)
+  const idempotencyKey = nextRequest.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
+
   const membershipCheck = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membershipCheck) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
@@ -77,12 +87,32 @@ export const POST = withRequestContext(async (request, context) => {
 
   const body = await parseRequestBody(request, addMemberSchema);
 
-  const result = await addMember(
-    { userId, ...body, workspaceId } as Parameters<typeof addMember>[0],
-    { session, policy }
-  );
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "addMember",
+    actorId: session.user.id,
+    payload: { userId, ...body },
+  });
 
-  return Response.json(result, { status: result.isNew ? 201 : 200 });
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
+  }
+
+  try {
+    const result = await addMember(
+      { userId, ...body, workspaceId } as Parameters<typeof addMember>[0],
+      { session, policy }
+    );
+
+    await recordIdempotencyResponse(idempotencyKey, result.isNew ? 201 : 200, result);
+    return Response.json(result, { status: result.isNew ? 201 : 200 });
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
+    throw error;
+  }
 });
 
 export const DELETE = withRequestContext(async (request, context) => {

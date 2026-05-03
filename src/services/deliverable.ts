@@ -88,8 +88,11 @@ export async function getDeliverablesForEngagement(engagementId: string, workspa
 
 export async function getDeliverableById(deliverableId: string, workspaceId: string) {
   if (!workspaceId) throw new Error("workspaceId is required");
-  const deliverable = await db.deliverable.findUnique({
-    where: { id: deliverableId },
+  const deliverable = await db.deliverable.findFirst({
+    where: {
+      id: deliverableId,
+      engagement: { workspaceId },
+    },
     include: {
       engagement: {
         include: {
@@ -99,9 +102,6 @@ export async function getDeliverableById(deliverableId: string, workspaceId: str
       },
     },
   });
-  if (deliverable && deliverable.engagement.workspaceId !== workspaceId) {
-    throw new Error("Unauthorized: deliverable not in this workspace");
-  }
   return deliverable;
 }
 
@@ -115,14 +115,14 @@ export async function updateDeliverableReviewStatus(
   requireCapabilityForService(authContext, CAPABILITIES.DELIVERABLE_APPROVE);
 
   const actorId = authContext.session.user.id;
-  const deliv = await db.deliverable.findUnique({
-    where: { id: deliverableId },
+  const deliv = await db.deliverable.findFirst({
+    where: {
+      id: deliverableId,
+      engagement: { workspaceId },
+    },
     include: { engagement: true },
   });
   if (!deliv) throw new NotFoundError("Deliverable", deliverableId);
-  if (deliv.engagement.workspaceId !== workspaceId) {
-    throw new Error("Unauthorized: deliverable not in this workspace");
-  }
 
   const updated = await db.deliverable.update({
     where: { id: deliverableId },

@@ -9,6 +9,7 @@ import {
   archiveClient,
 } from "@/services/client-account";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
+import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
 
@@ -108,11 +109,40 @@ export const POST = withRequestContext(async (request, context) => {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
+  const idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    return Response.json(
+      { error: "idempotency-key header required" },
+      { status: 400 }
+    );
+  }
+
   const { clientId } = await context.params;
   parseOrThrow(uuidSchema, clientId);
 
   const body = await parseRequestBody(request, archiveSchema);
-  await archiveClient(clientId, { session, policy }, body.version, workspaceId);
 
-  return Response.json({ status: "archived" });
+  const idempotencyCheck = await checkIdempotencyKey({
+    idempotencyKey,
+    operationName: "archiveClient",
+    actorId: session.user.id,
+    payload: { clientId, version: body.version },
+  });
+
+  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+    return Response.json(idempotencyCheck.cachedResponse.body, {
+      status: idempotencyCheck.cachedResponse.status,
+    });
+  }
+
+  try {
+    await archiveClient(clientId, { session, policy }, body.version, workspaceId);
+    const result = { status: "archived" };
+    await recordIdempotencyResponse(idempotencyKey, 200, result);
+    return Response.json(result);
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err);
+    throw error;
+  }
 });

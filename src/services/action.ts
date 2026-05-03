@@ -11,6 +11,7 @@ import { validateStateTransition, enforceActionRules } from "@/services/action-l
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
+import { recordActionUsage } from "@/services/usage.service";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -131,11 +132,18 @@ export async function createAction(
           entityType: "action",
           entityId: result.result.id,
           engagementId: input.engagementId,
+          workspaceId: validatedWorkspaceId,
           severity: "critical",
           description: `Critical action created: ${input.title}`,
           triggeredBy: actorId,
         });
       }
+
+      // Record usage for action creation (only on new creation)
+      await recordActionUsage(validatedWorkspaceId, 1, {
+        actionId: result.result.id,
+        engagementId: input.engagementId,
+      });
 
       logger.info("Action created", {
         actionId: result.result.id,
@@ -179,11 +187,18 @@ export async function createAction(
       entityType: "action",
       entityId: action.id,
       engagementId: input.engagementId,
+      workspaceId: validatedWorkspaceId,
       severity: "critical",
       description: `Critical action created: ${input.title}`,
       triggeredBy: actorId,
     });
   }
+
+  // Record usage for action creation
+  await recordActionUsage(validatedWorkspaceId, 1, {
+    actionId: action.id,
+    engagementId: input.engagementId,
+  });
 
   logger.info("Action created", {
     actionId: action.id,
@@ -197,7 +212,7 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
   enforceWorkspaceId(workspaceId, "getActionsForEngagement", "action");
 
   // Check engagement access
-  await assertEngagementAccess(userId, engagementId);
+  await assertEngagementAccess(userId, engagementId, workspaceId);
 
   return db.action.findMany({
     where: { engagementId, workspaceId },
@@ -299,6 +314,7 @@ export async function updateActionStatus(
       entityType: "action",
       entityId: actionId,
       engagementId: action.engagementId,
+      workspaceId: validatedWorkspaceId,
       severity: "high",
       description: `Action blocked: ${input.title || "action"}`,
       triggeredBy: actorId,

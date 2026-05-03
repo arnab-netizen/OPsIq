@@ -6,12 +6,12 @@ import {
   getDailyControl,
   triggerReEvaluationOnCompletion,
 } from "./enforcement.service";
-import { db } from "@/lib/db";
 
 vi.mock("@/lib/db", () => ({
   db: {
     operatorItem: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       update: vi.fn(),
     },
@@ -34,8 +34,12 @@ import {
 const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
 
 describe("Decision Control Enforcement Service", () => {
-  beforeEach(() => {
+  let mockDb: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { db } = await import("@/lib/db");
+    mockDb = db;
   });
 
   describe("enforceDecisionControl", () => {
@@ -227,12 +231,12 @@ describe("Decision Control Enforcement Service", () => {
       };
 
       vi.mocked(calculateDecisionImpact).mockResolvedValueOnce(mockMetrics as any);
-      vi.mocked(db.alert.create).mockResolvedValueOnce({} as any);
+      mockDb.alert.create.mockResolvedValueOnce({} as any);
 
       const result = await createEscalationIfNeeded(decisionId, mockWorkspaceId, userId);
 
       expect(result).toBe(true);
-      expect(vi.mocked(db.alert.create)).toHaveBeenCalledWith(
+      expect(mockDb.alert.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             workspaceId: mockWorkspaceId,
@@ -270,7 +274,7 @@ describe("Decision Control Enforcement Service", () => {
       const result = await createEscalationIfNeeded(decisionId, mockWorkspaceId, userId);
 
       expect(result).toBe(false);
-      expect(vi.mocked(db.alert.create)).not.toHaveBeenCalled();
+      expect(mockDb.alert.create).not.toHaveBeenCalled();
     });
   });
 
@@ -373,11 +377,11 @@ describe("Decision Control Enforcement Service", () => {
         outcomeDelta: null,
       };
 
-      vi.mocked(db.operatorItem.findUnique).mockResolvedValueOnce(
+      mockDb.operatorItem.findFirst.mockResolvedValueOnce(
         mockDecision as any
       );
       vi.mocked(calculateDecisionImpact).mockResolvedValueOnce(mockMetrics as any);
-      vi.mocked(db.operatorItem.update).mockResolvedValueOnce({} as any);
+      mockDb.operatorItem.update.mockResolvedValueOnce({} as any);
 
       const result = await triggerReEvaluationOnCompletion(decisionId, mockWorkspaceId);
 

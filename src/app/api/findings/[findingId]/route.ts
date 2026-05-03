@@ -50,7 +50,7 @@ export const GET = withRequestContext(async (request, context) => {
   const { findingId } = await context.params;
   parseOrThrow(uuidSchema, findingId);
 
-  const finding = await getFindingDetail(findingId);
+  const finding = await getFindingDetail(findingId, undefined, undefined, workspaceId);
   return Response.json(finding);
 });
 
@@ -82,6 +82,6 @@ export const PATCH = withRequestContext(async (request, context) => {
   const body = await parseRequestBody(request, updateFindingSchema);
   await updateFinding(findingId, body, { session, policy }, workspaceId);
 
-  const updated = await getFindingDetail(findingId);
+  const updated = await getFindingDetail(findingId, undefined, undefined, workspaceId);
   return Response.json(updated);
 });
