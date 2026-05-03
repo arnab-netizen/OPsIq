@@ -21,12 +21,12 @@ export interface ConsultingEnginePipelineResult {
 export async function runConsultingPipeline(
   engagementId: string,
   authContext: AuthContext,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<ConsultingEnginePipelineResult> {
   try {
     // 1. Load engagement
     const engagement = await db.engagement.findFirst({
-      where: workspaceId ? { id: engagementId, workspaceId } : { id: engagementId },
+      where: { id: engagementId, workspaceId },
       include: {
         client: {
           select: { industry: true, size: true },

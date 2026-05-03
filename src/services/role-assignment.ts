@@ -59,7 +59,7 @@ export async function assignRole(
   input: AssignRoleInput,
   actorId: string,
   actorHighestLevel: number,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<{ id: string; isNew: boolean }> {
   validateRoleName(input.role);
   assertHierarchyAuthority(actorHighestLevel, input.role);
@@ -67,10 +67,6 @@ export async function assignRole(
   // Prevent self-assignment (privilege escalation vector)
   if (input.userId === actorId) {
     throw new ForbiddenError("Cannot assign roles to yourself");
-  }
-
-  if (!workspaceId) {
-    throw new Error("workspaceId is required for workspace-scoped role assignment");
   }
 
   // Verify target user exists and is active
@@ -195,7 +191,7 @@ export async function revokeRole(
   input: RevokeRoleInput,
   actorId: string,
   actorHighestLevel: number,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<void> {
   validateRoleName(input.role);
   assertHierarchyAuthority(actorHighestLevel, input.role);
@@ -203,10 +199,6 @@ export async function revokeRole(
   // Prevent self-revocation
   if (input.userId === actorId) {
     throw new ForbiddenError("Cannot revoke your own roles");
-  }
-
-  if (!workspaceId) {
-    throw new Error("workspaceId is required for workspace-scoped role revocation");
   }
 
   const assignment = await db.userRoleAssignment.findFirst({
