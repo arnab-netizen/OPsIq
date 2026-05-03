@@ -9,6 +9,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     idempotencyRecord: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -39,6 +40,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: "workspace-1",
         payload: { title: "Test" },
       });
 
@@ -64,6 +66,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: "workspace-1",
         payload: { title: "Test" },
       });
 
@@ -151,6 +154,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: "workspace-1",
         payload: { title: "Test" },
       });
 
@@ -176,6 +180,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: "workspace-1",
         payload: { title: "Test" },
       });
 
@@ -253,6 +258,7 @@ describe("Idempotency Service", () => {
         idempotencyKey: "key-1",
         operationName: "createEngagement",
         actorId: "user-1",
+        workspaceId: "workspace-1",
         payload: { title: "Test" },
       });
 
