@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { triggerReEvaluation } from "./re-evaluation";
 
-vi.mock("@/lib/db", () => {
-  const createDbMock = () => ({
+vi.mock("@/lib/db", () => ({
+  db: {
     businessConditionProfile: {
       findFirst: vi.fn(),
       update: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock("@/lib/db", () => {
       count: vi.fn(),
     },
     finding: {
-      findMany: vi.fn().mockResolvedValue([]),
+      findMany: vi.fn(),
     },
     shockEvent: {
       findMany: vi.fn(),
@@ -33,13 +33,13 @@ vi.mock("@/lib/db", () => {
       updateMany: vi.fn(),
     },
     idempotencyRecord: {
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
     },
-    $transaction: vi.fn((callback) => {
-      // Create a mock transaction object with the same methods
+    $transaction: vi.fn((callback: (tx: any) => Promise<any>) => {
       const txMock: any = {
         businessConditionProfile: {
           update: vi.fn().mockResolvedValue({}),
@@ -69,12 +69,8 @@ vi.mock("@/lib/db", () => {
       };
       return Promise.resolve(callback(txMock));
     }),
-  });
-
-  return {
-    db: createDbMock(),
-  };
-});
+  },
+}));
 
 vi.mock("@/infra/audit", () => ({
   emitAuditEvent: vi.fn().mockResolvedValue({ id: "audit-1" }),
@@ -108,8 +104,12 @@ vi.mock("@/services/recommendation", () => ({
 }));
 
 describe("Re-evaluation Service", () => {
-  beforeEach(() => {
+  let mockDb: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { db } = await import("@/lib/db");
+    mockDb = db;
   });
 
   describe("triggerReEvaluation", () => {
@@ -130,9 +130,6 @@ describe("Re-evaluation Service", () => {
     });
 
     it("returns ReEvaluationResult with all impact areas", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
       mockDb.businessConditionProfile.findFirst.mockResolvedValue({
         businessStatus: "challenged",
         severityScore: 6,
@@ -191,9 +188,6 @@ describe("Re-evaluation Service", () => {
     });
 
     it("deterministically computes same output for same input", async () => {
-      const { db } = await import("@/lib/db");
-      const mockDb = db as any;
-
       const mockSetup = () => {
         mockDb.businessConditionProfile.findFirst.mockResolvedValue({
           businessStatus: "stable",

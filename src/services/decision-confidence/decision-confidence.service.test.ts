@@ -1,8 +1,26 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { computeDecisionConfidence } from "./decision-confidence.service";
-import { db } from "@/lib/db";
 
-vi.mock("@/lib/db");
+vi.mock("@/lib/db", () => ({
+  db: {
+    engagement: {
+      findUnique: vi.fn(),
+    },
+    finding: {
+      findMany: vi.fn(),
+    },
+    recommendation: {
+      findMany: vi.fn(),
+    },
+    action: {
+      findMany: vi.fn(),
+    },
+    businessConditionProfile: {
+      findFirst: vi.fn(),
+    },
+  },
+}));
+
 vi.mock("@/services/execution-certainty", () => ({
   calculateExecutionCertainty: vi.fn(() => ({
     score: 75,
@@ -28,14 +46,12 @@ vi.mock("@/services/execution-drift/execution-drift.service", () => ({
 }));
 
 describe("DecisionConfidenceService", () => {
-  beforeEach(() => {
+  let mockDb: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
-    const mockDb = db as any;
-    mockDb.engagement = { findUnique: vi.fn() };
-    mockDb.finding = { findMany: vi.fn() };
-    mockDb.recommendation = { findMany: vi.fn() };
-    mockDb.action = { findMany: vi.fn() };
-    mockDb.businessConditionProfile = { findFirst: vi.fn() };
+    const { db } = await import("@/lib/db");
+    mockDb = db;
   });
 
   const mockEngagement = {
@@ -49,7 +65,6 @@ describe("DecisionConfidenceService", () => {
   };
 
   it("achieves very_high confidence with strong signals", async () => {
-    const mockDb = db as any;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
@@ -77,14 +92,13 @@ describe("DecisionConfidenceService", () => {
       reasons: [],
     });
 
-    const result = await computeDecisionConfidence({ engagementId: "eng-123" });
+    const result = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1" });
 
     expect(result.score).toBeGreaterThanOrEqual(85);
     expect(result.level).toBe("very_high");
   });
 
   it("deducts points for low execution certainty", async () => {
-    const mockDb = db as any;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
@@ -103,7 +117,7 @@ describe("DecisionConfidenceService", () => {
       reasons: [],
     });
 
-    const result = await computeDecisionConfidence({ engagementId: "eng-123" });
+    const result = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1" });
 
     const lowCertaintyDeduction = result.deductions.find(
       (d) => d.reason.includes("certainty")
@@ -113,7 +127,6 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("deducts points for critical drift severity", async () => {
-    const mockDb = db as any;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
@@ -135,7 +148,7 @@ describe("DecisionConfidenceService", () => {
       detectedAt: new Date().toISOString(),
     });
 
-    const result = await computeDecisionConfidence({ engagementId: "eng-123" });
+    const result = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1" });
 
     const driftDeduction = result.deductions.find((d) =>
       d.reason.includes("drift")
@@ -145,7 +158,6 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("deducts points for overdue critical actions", async () => {
-    const mockDb = db as any;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
@@ -161,7 +173,7 @@ describe("DecisionConfidenceService", () => {
     ]);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
-    const result = await computeDecisionConfidence({ engagementId: "eng-123" });
+    const result = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1" });
 
     const overdueDeduction = result.deductions.find((d) =>
       d.reason.includes("overdue")
@@ -171,7 +183,6 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("deducts points for blockers", async () => {
-    const mockDb = db as any;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
@@ -190,7 +201,7 @@ describe("DecisionConfidenceService", () => {
       reasons: [],
     });
 
-    const result = await computeDecisionConfidence({ engagementId: "eng-123" });
+    const result = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1" });
 
     const blockerDeduction = result.deductions.find((d) =>
       d.reason.includes("blocker")
@@ -200,7 +211,6 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("deducts points for unresolved critical findings", async () => {
-    const mockDb = db as any;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([
       {
@@ -214,7 +224,7 @@ describe("DecisionConfidenceService", () => {
     mockDb.action.findMany.mockResolvedValue([]);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
-    const result = await computeDecisionConfidence({ engagementId: "eng-123" });
+    const result = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1" });
 
     const findingDeduction = result.deductions.find((d) =>
       d.reason.includes("finding")
@@ -224,7 +234,6 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("deducts points for stale actions (no updates in 7 days)", async () => {
-    const mockDb = db as any;
     const sevenDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
@@ -241,7 +250,7 @@ describe("DecisionConfidenceService", () => {
     ]);
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
-    const result = await computeDecisionConfidence({ engagementId: "eng-123" });
+    const result = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1" });
 
     const staleDeduction = result.deductions.find((d) =>
       d.reason.includes("7 days")
@@ -251,14 +260,13 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("does not apply stale deduction if no actions exist", async () => {
-    const mockDb = db as any;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
     mockDb.action.findMany.mockResolvedValue([]); // No actions
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
-    const result = await computeDecisionConfidence({ engagementId: "eng-123" });
+    const result = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1" });
 
     const staleDeduction = result.deductions.find((d) =>
       d.reason.includes("7 days")
@@ -267,7 +275,6 @@ describe("DecisionConfidenceService", () => {
   });
 
   it("clamps score to 0-100", async () => {
-    const mockDb = db as any;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([
       {
@@ -307,14 +314,13 @@ describe("DecisionConfidenceService", () => {
       reasons: [],
     });
 
-    const result = await computeDecisionConfidence({ engagementId: "eng-123" });
+    const result = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1" });
 
     expect(result.score).toBeGreaterThanOrEqual(0);
     expect(result.score).toBeLessThanOrEqual(100);
   });
 
   it("is deterministic - same input produces same output", async () => {
-    const mockDb = db as any;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
@@ -322,8 +328,8 @@ describe("DecisionConfidenceService", () => {
     mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const asOf = new Date("2026-04-28T12:00:00Z");
-    const result1 = await computeDecisionConfidence({ engagementId: "eng-123", asOf });
-    const result2 = await computeDecisionConfidence({ engagementId: "eng-123", asOf });
+    const result1 = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1", asOf });
+    const result2 = await computeDecisionConfidence({ engagementId: "eng-123", workspaceId: "workspace-1", asOf });
 
     expect(result1.score).toBe(result2.score);
     expect(result1.level).toBe(result2.level);

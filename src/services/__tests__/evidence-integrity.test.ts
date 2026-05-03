@@ -3,6 +3,8 @@ import { linkEvidenceToFinding, unlinkEvidenceFromFinding, validateFinding } fro
 import { db } from "@/lib/db";
 import { ValidationError } from "@/infra/errors";
 
+vi.mock("@/lib/db");
+
 vi.mock("@/infra/audit", () => ({
   emitAuditEvent: vi.fn().mockResolvedValue(undefined),
 }));
@@ -22,6 +24,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
   const evidenceId1 = "evidence-1";
   const evidenceId2 = "evidence-2";
   const actorId = "actor-1";
+  const workspaceId = "workspace-1";
   const mockAuthContext = {
     session: {
       user: { id: actorId, email: "test@test.com", name: "Test", isActive: true },
@@ -69,7 +72,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         return callback(mockTx);
       });
 
-      const result = await linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any);
+      const result = await linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId);
 
       expect(result.findingId).toBe(findingId1);
       expect(result.evidenceId).toBe(evidenceId1);
@@ -194,7 +197,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         return callback(mockTx);
       });
 
-      const result = await unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as any);
+      const result = await unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId);
 
       expect(result.findingId).toBe(findingId1);
       expect(result.evidenceId).toBe(evidenceId1);
@@ -230,7 +233,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        validateFinding(findingId1, mockAuthContext as any)
+        validateFinding(findingId1, mockAuthContext as any, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
 
@@ -285,7 +288,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         return callback(mockTx);
       });
 
-      const result = await linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any);
+      const result = await linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId);
       expect(result).toBeDefined();
     });
   });

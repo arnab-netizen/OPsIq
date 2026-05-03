@@ -10,17 +10,20 @@ vi.mock("@/lib/db", () => ({
     operatorItem: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
+      update: vi.fn(),
     },
   },
 }));
 
-import { db } from "@/lib/db";
-
 const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
 
 describe("Decision Impact Service", () => {
-  beforeEach(() => {
+  let mockDb: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { db } = await import("@/lib/db");
+    mockDb = db;
   });
 
   describe("calculateDecisionImpact", () => {
@@ -39,7 +42,7 @@ describe("Decision Impact Service", () => {
         priorityScore: 85,
       };
 
-      vi.mocked(db.operatorItem.findUnique).mockResolvedValueOnce(
+      mockDb.operatorItem.findUnique.mockResolvedValueOnce(
         mockDecision as any
       );
 
@@ -68,7 +71,7 @@ describe("Decision Impact Service", () => {
         priorityScore: 75,
       };
 
-      vi.mocked(db.operatorItem.findUnique).mockResolvedValueOnce(
+      mockDb.operatorItem.findUnique.mockResolvedValueOnce(
         mockDecision as any
       );
 
@@ -95,7 +98,7 @@ describe("Decision Impact Service", () => {
         priorityScore: 90,
       };
 
-      vi.mocked(db.operatorItem.findUnique).mockResolvedValueOnce(
+      mockDb.operatorItem.findUnique.mockResolvedValueOnce(
         mockDecision as any
       );
 
@@ -121,7 +124,7 @@ describe("Decision Impact Service", () => {
         priorityScore: null,
       };
 
-      vi.mocked(db.operatorItem.findUnique).mockResolvedValueOnce(
+      mockDb.operatorItem.findUnique.mockResolvedValueOnce(
         mockDecision as any
       );
 
@@ -149,7 +152,7 @@ describe("Decision Impact Service", () => {
         priorityScore: 60,
       };
 
-      vi.mocked(db.operatorItem.findUnique).mockResolvedValueOnce(
+      mockDb.operatorItem.findUnique.mockResolvedValueOnce(
         mockDecision as any
       );
 
@@ -169,7 +172,7 @@ describe("Decision Impact Service", () => {
         status: "done",
       };
 
-      vi.mocked(db.operatorItem.findUnique).mockResolvedValueOnce(
+      mockDb.operatorItem.findUnique.mockResolvedValueOnce(
         mockDecision as any
       );
 
@@ -184,7 +187,7 @@ describe("Decision Impact Service", () => {
       const decision1Id = uuidv4();
       const decision2Id = uuidv4();
 
-      vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([
+      mockDb.operatorItem.findMany.mockResolvedValueOnce([
         {
           id: decision1Id,
           workspaceId: mockWorkspaceId,
@@ -250,7 +253,7 @@ describe("Decision Impact Service", () => {
     });
 
     it("should return empty summary for workspace with no decisions", async () => {
-      vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([]);
+      mockDb.operatorItem.findMany.mockResolvedValueOnce([]);
 
       const summary = await calculateWorkspaceImpactSummary(mockWorkspaceId);
 
@@ -264,7 +267,7 @@ describe("Decision Impact Service", () => {
       const decision1Id = uuidv4();
       const decision2Id = uuidv4();
 
-      vi.mocked(db.operatorItem.findMany).mockResolvedValueOnce([
+      mockDb.operatorItem.findMany.mockResolvedValueOnce([
         {
           id: decision1Id,
           workspaceId: mockWorkspaceId,

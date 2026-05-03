@@ -1,30 +1,49 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { detectExecutionDrift, assessDriftTrend } from "./execution-drift.service";
-import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
+import { mockEngagement } from "@/__tests__/test-fixtures";
 
-vi.mock("@/lib/db");
+vi.mock("@/lib/db", () => ({
+  db: {
+    engagement: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+    },
+    finding: {
+      findMany: vi.fn(),
+    },
+    recommendation: {
+      findMany: vi.fn(),
+    },
+    action: {
+      findMany: vi.fn(),
+    },
+    businessConditionProfile: {
+      findFirst: vi.fn(),
+    },
+  },
+}));
+
 vi.mock("@/infra/logger");
 
 describe("ExecutionDriftService", () => {
-  beforeEach(() => {
+  let mockDb: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { db } = await import("@/lib/db");
+    mockDb = db;
   });
 
   it("throws NotFoundError when engagement does not exist", async () => {
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findUnique: vi.fn().mockResolvedValue(null),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findFirst.mockResolvedValue(null);
 
     await expect(detectExecutionDrift("nonexistent")).rejects.toThrow(NotFoundError);
   });
 
   it("detects no drift when engagement is healthy", async () => {
-    const mockEngagement = {
+    const testEngagement = {
+      ...mockEngagement,
       id: "eng-123",
       code: "ENG-001",
       title: "Test",
@@ -34,25 +53,11 @@ describe("ExecutionDriftService", () => {
       updatedAt: new Date(),
     };
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findFirst.mockResolvedValue(testEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const drift = await detectExecutionDrift("eng-123");
 
@@ -65,7 +70,8 @@ describe("ExecutionDriftService", () => {
     const now = new Date();
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    const mockEngagement = {
+    const testEngagement = {
+      ...mockEngagement,
       id: "eng-123",
       code: "ENG-001",
       title: "Test",
@@ -86,25 +92,11 @@ describe("ExecutionDriftService", () => {
       },
     ];
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue(mockActions),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findFirst.mockResolvedValue(testEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue(mockActions);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const drift = await detectExecutionDrift("eng-123");
 
@@ -115,7 +107,8 @@ describe("ExecutionDriftService", () => {
   });
 
   it("detects execution certainty blockers", async () => {
-    const mockEngagement = {
+    const testEngagement = {
+      ...mockEngagement,
       id: "eng-123",
       code: "ENG-001",
       title: "Test",
@@ -136,25 +129,11 @@ describe("ExecutionDriftService", () => {
       },
     ];
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue(mockActions),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findFirst.mockResolvedValue(testEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue(mockActions);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const drift = await detectExecutionDrift("eng-123");
 
@@ -164,7 +143,8 @@ describe("ExecutionDriftService", () => {
   });
 
   it("detects critical health status", async () => {
-    const mockEngagement = {
+    const testEngagement = {
+      ...mockEngagement,
       id: "eng-123",
       code: "ENG-001",
       title: "Test",
@@ -174,25 +154,11 @@ describe("ExecutionDriftService", () => {
       updatedAt: new Date(),
     };
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findFirst.mockResolvedValue(testEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const drift = await detectExecutionDrift("eng-123");
 
@@ -202,7 +168,8 @@ describe("ExecutionDriftService", () => {
   });
 
   it("detects unresolved critical findings", async () => {
-    const mockEngagement = {
+    const testEngagement = {
+      ...mockEngagement,
       id: "eng-123",
       code: "ENG-001",
       title: "Test",
@@ -223,25 +190,11 @@ describe("ExecutionDriftService", () => {
       },
     ];
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue(mockFindings),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findFirst.mockResolvedValue(testEngagement);
+    mockDb.finding.findMany.mockResolvedValue(mockFindings);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const drift = await detectExecutionDrift("eng-123");
 
@@ -250,7 +203,8 @@ describe("ExecutionDriftService", () => {
   });
 
   it("detects at-risk health status", async () => {
-    const mockEngagement = {
+    const testEngagement = {
+      ...mockEngagement,
       id: "eng-123",
       code: "ENG-001",
       title: "Test",
@@ -260,25 +214,11 @@ describe("ExecutionDriftService", () => {
       updatedAt: new Date(),
     };
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findFirst.mockResolvedValue(testEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const drift = await detectExecutionDrift("eng-123");
 
@@ -339,7 +279,8 @@ describe("ExecutionDriftService", () => {
   });
 
   it("limits reasons and affected actions", async () => {
-    const mockEngagement = {
+    const testEngagement = {
+      ...mockEngagement,
       id: "eng-123",
       code: "ENG-001",
       title: "Test",
@@ -358,25 +299,11 @@ describe("ExecutionDriftService", () => {
       createdAt: new Date(),
     }));
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-      findFirst: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue(mockActions),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findFirst.mockResolvedValue(testEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue(mockActions);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const drift = await detectExecutionDrift("eng-123");
 

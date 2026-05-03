@@ -1,10 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getOwnerDashboard } from "./owner-dashboard.service";
-import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 
-vi.mock("@/lib/db");
+vi.mock("@/lib/db", () => ({
+  db: {
+    engagement: {
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+    },
+    finding: {
+      findMany: vi.fn(),
+    },
+    recommendation: {
+      findMany: vi.fn(),
+    },
+    action: {
+      findMany: vi.fn(),
+    },
+    businessConditionProfile: {
+      findFirst: vi.fn(),
+    },
+  },
+}));
+
 vi.mock("@/infra/logger");
 vi.mock("@/lib/auth-guard", () => ({
   requireCapabilityForService: vi.fn(),
@@ -25,15 +45,16 @@ const mockAuthContext = {
 const mockWorkspaceId = "550e8400-e29b-41d4-a716-446655440000";
 
 describe("OwnerDashboardService", () => {
-  beforeEach(() => {
+  let mockDb: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { db } = await import("@/lib/db");
+    mockDb = db;
   });
 
   it("throws NotFoundError when engagement does not exist", async () => {
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findUnique: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findUnique.mockResolvedValue(null);
 
     await expect(getOwnerDashboard("nonexistent", mockAuthContext as any, mockWorkspaceId)).rejects.toThrow(NotFoundError);
   });
@@ -48,22 +69,11 @@ describe("OwnerDashboardService", () => {
       interventionMode: "tactical",
     };
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
@@ -83,22 +93,11 @@ describe("OwnerDashboardService", () => {
       interventionMode: "tactical",
     };
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
@@ -138,22 +137,12 @@ describe("OwnerDashboardService", () => {
       },
     ];
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue(mockActions),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue(mockActions);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
@@ -189,22 +178,12 @@ describe("OwnerDashboardService", () => {
       },
     ];
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue(mockActions),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue(mockActions);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
@@ -237,22 +216,12 @@ describe("OwnerDashboardService", () => {
       },
     ];
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue(mockRecommendations),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue(mockRecommendations);
+    mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
@@ -283,22 +252,12 @@ describe("OwnerDashboardService", () => {
       },
     ];
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue(mockActions),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue(mockActions);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
@@ -317,30 +276,20 @@ describe("OwnerDashboardService", () => {
       interventionMode: "tactical",
     };
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue([
-        {
-          id: "act-1",
-          title: "Completed Action",
-          priority: "high",
-          status: "completed",
-          dueDate: null,
-        },
-      ]),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue([
+      {
+        id: "act-1",
+        title: "Completed Action",
+        priority: "high",
+        status: "completed",
+        dueDate: null,
+      },
+    ]);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
@@ -360,22 +309,11 @@ describe("OwnerDashboardService", () => {
       interventionMode: "strategic",
     };
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue([]);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 
@@ -403,22 +341,12 @@ describe("OwnerDashboardService", () => {
       dueDate: new Date(Date.now() - 24 * 60 * 60 * 1000),
     }));
 
-    const mockDb = db as any;
-    mockDb.engagement = {
-      findUnique: vi.fn().mockResolvedValue(mockEngagement),
-    };
-    mockDb.finding = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.recommendation = {
-      findMany: vi.fn().mockResolvedValue([]),
-    };
-    mockDb.action = {
-      findMany: vi.fn().mockResolvedValue(mockActions),
-    };
-    mockDb.businessConditionProfile = {
-      findFirst: vi.fn().mockResolvedValue(null),
-    };
+    mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
+    mockDb.engagement.findFirst.mockResolvedValue(mockEngagement);
+    mockDb.finding.findMany.mockResolvedValue([]);
+    mockDb.recommendation.findMany.mockResolvedValue([]);
+    mockDb.action.findMany.mockResolvedValue(mockActions);
+    mockDb.businessConditionProfile.findFirst.mockResolvedValue(null);
 
     const dashboard = await getOwnerDashboard("eng-123", mockAuthContext as any, mockWorkspaceId);
 

@@ -1,13 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mapDriftToRequiredAction, deriveCommitmentStatus, type RequiredAction } from "./next-action.service";
-import { db } from "@/lib/db";
 import type { DriftDetectionResult } from "./execution-drift.service";
 
-vi.mock("@/lib/db");
+vi.mock("@/lib/db", () => ({
+  db: {
+    action: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+    },
+  },
+}));
 
 describe("NextActionService", () => {
-  beforeEach(() => {
+  let mockDb: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { db } = await import("@/lib/db");
+    mockDb = db;
   });
 
   const createMockDrift = (overrides?: Partial<DriftDetectionResult>): DriftDetectionResult => ({
@@ -194,89 +204,71 @@ describe("NextActionService", () => {
     };
 
     it("returns pending by default", async () => {
-      const mockDb = db as any;
-      mockDb.action = {
-        findUnique: vi.fn().mockResolvedValue(null),
-      };
+      mockDb.action.findFirst.mockResolvedValue(null);
 
-      const commitment = await deriveCommitmentStatus(mockAction);
+      const commitment = await deriveCommitmentStatus(mockAction, "workspace-1");
 
       expect(commitment.status).toBe("pending");
     });
 
     it("returns completed for completed actions", async () => {
-      const mockDb = db as any;
-      mockDb.action = {
-        findUnique: vi.fn().mockResolvedValue({
-          status: "completed",
-          startedAt: new Date("2026-01-01"),
-          updatedAt: new Date("2026-01-05"),
-        }),
-      };
+      mockDb.action.findFirst.mockResolvedValue({
+        status: "completed",
+        startedAt: new Date("2026-01-01"),
+        updatedAt: new Date("2026-01-05"),
+      });
 
-      const commitment = await deriveCommitmentStatus(mockAction);
+      const commitment = await deriveCommitmentStatus(mockAction, "workspace-1");
 
       expect(commitment.status).toBe("completed");
       expect(commitment.completedAt).toBeDefined();
     });
 
     it("returns in_progress for in_progress actions", async () => {
-      const mockDb = db as any;
-      mockDb.action = {
-        findUnique: vi.fn().mockResolvedValue({
-          status: "in_progress",
-          startedAt: new Date("2026-01-01"),
-          updatedAt: new Date("2026-01-03"),
-        }),
-      };
+      mockDb.action.findFirst.mockResolvedValue({
+        status: "in_progress",
+        startedAt: new Date("2026-01-01"),
+        updatedAt: new Date("2026-01-03"),
+      });
 
-      const commitment = await deriveCommitmentStatus(mockAction);
+      const commitment = await deriveCommitmentStatus(mockAction, "workspace-1");
 
       expect(commitment.status).toBe("in_progress");
       expect(commitment.startedAt).toBeDefined();
     });
 
     it("returns pending for pending actions", async () => {
-      const mockDb = db as any;
-      mockDb.action = {
-        findUnique: vi.fn().mockResolvedValue({
-          status: "pending",
-          startedAt: null,
-          updatedAt: new Date("2026-01-01"),
-        }),
-      };
+      mockDb.action.findFirst.mockResolvedValue({
+        status: "pending",
+        startedAt: null,
+        updatedAt: new Date("2026-01-01"),
+      });
 
-      const commitment = await deriveCommitmentStatus(mockAction);
+      const commitment = await deriveCommitmentStatus(mockAction, "workspace-1");
 
       expect(commitment.status).toBe("pending");
     });
 
     it("handles blocked actions as pending", async () => {
-      const mockDb = db as any;
-      mockDb.action = {
-        findUnique: vi.fn().mockResolvedValue({
-          status: "blocked",
-          startedAt: null,
-          updatedAt: new Date("2026-01-01"),
-        }),
-      };
+      mockDb.action.findFirst.mockResolvedValue({
+        status: "blocked",
+        startedAt: null,
+        updatedAt: new Date("2026-01-01"),
+      });
 
-      const commitment = await deriveCommitmentStatus(mockAction);
+      const commitment = await deriveCommitmentStatus(mockAction, "workspace-1");
 
       expect(commitment.status).toBe("pending");
     });
 
     it("handles verified actions as completed", async () => {
-      const mockDb = db as any;
-      mockDb.action = {
-        findUnique: vi.fn().mockResolvedValue({
-          status: "verified",
-          startedAt: new Date("2026-01-01"),
-          updatedAt: new Date("2026-01-05"),
-        }),
-      };
+      mockDb.action.findFirst.mockResolvedValue({
+        status: "verified",
+        startedAt: new Date("2026-01-01"),
+        updatedAt: new Date("2026-01-05"),
+      });
 
-      const commitment = await deriveCommitmentStatus(mockAction);
+      const commitment = await deriveCommitmentStatus(mockAction, "workspace-1");
 
       expect(commitment.status).toBe("completed");
     });
@@ -296,12 +288,11 @@ describe("NextActionService", () => {
     });
 
     it("handles DB errors gracefully", async () => {
-      const mockDb = db as any;
-      mockDb.action = {
-        findUnique: vi.fn().mockRejectedValue(new Error("DB error")),
-      };
+      // Reset any previous mock returns
+      mockDb.action.findFirst.mockReset();
+      mockDb.action.findFirst.mockRejectedValue(new Error("DB error"));
 
-      const commitment = await deriveCommitmentStatus(mockAction);
+      const commitment = await deriveCommitmentStatus(mockAction, "workspace-1");
 
       expect(commitment.status).toBe("pending");
     });
@@ -310,16 +301,13 @@ describe("NextActionService", () => {
       const startedTime = new Date("2026-01-01T10:00:00Z");
       const updatedTime = new Date("2026-01-03T14:30:00Z");
 
-      const mockDb = db as any;
-      mockDb.action = {
-        findUnique: vi.fn().mockResolvedValue({
-          status: "in_progress",
-          startedAt: startedTime,
-          updatedAt: updatedTime,
-        }),
-      };
+      mockDb.action.findFirst.mockResolvedValue({
+        status: "in_progress",
+        startedAt: startedTime,
+        updatedAt: updatedTime,
+      });
 
-      const commitment = await deriveCommitmentStatus(mockAction);
+      const commitment = await deriveCommitmentStatus(mockAction, "workspace-1");
 
       expect(commitment.startedAt).toBe(startedTime.toISOString());
     });
