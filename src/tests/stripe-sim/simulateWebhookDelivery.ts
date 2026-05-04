@@ -4,7 +4,7 @@
  */
 
 import { StripeEvent } from "./stripeSimulator";
-import { handleWebhookEvent, getOrCreateWebhookEvent, markWebhookEventProcessed, markWebhookEventFailed } from "@/services/webhook.service";
+import { handleWebhookEvent, getOrCreateWebhookEvent, markWebhookEventProcessed, markWebhookEventFailed, checkSignatureTimestamp } from "@/services/webhook.service";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 
@@ -56,6 +56,21 @@ export async function simulateWebhookDelivery(
     eventToProcess.created = Math.floor(Date.now() / 1000) - 360; // 6 minutes old
   }
 
+  // Validate timestamp (replay protection - same as webhook route)
+  try {
+    checkSignatureTimestamp(eventToProcess.created);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return {
+      eventId: eventToProcess.id,
+      eventType: eventToProcess.type,
+      success: false,
+      attempts: 1,
+      finalStatus: "failed",
+      error: errorMsg,
+    };
+  }
+
   // Simulate timeout by wrapping handler
   const handlerPromise = (async () => {
     try {
@@ -105,7 +120,8 @@ export async function simulateWebhookDelivery(
           lastError = error instanceof Error ? error : new Error(String(error));
 
           if (attempts < retryCount) {
-            // Will retry
+            // Will retry - update attempts count for this failure
+            await markWebhookEventFailed(eventToProcess.id, lastError);
             logger.debug(`Webhook processing failed, retrying`, {
               eventId: eventToProcess.id,
               attempt: attempts + 1,

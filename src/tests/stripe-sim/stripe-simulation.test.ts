@@ -33,6 +33,11 @@ describe("Stripe Event Simulation", () => {
         priceMonthly: 99,
         priceYearly: 990,
         active: true,
+        capabilities: {
+          create: [
+            { key: "decision_engine", limit: null }, // unlimited
+          ],
+        },
       },
     });
     planId = plan.id;
