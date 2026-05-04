@@ -105,7 +105,7 @@ CREATE INDEX "calibration_records_operator_item_id_idx" ON "calibration_records"
 CREATE INDEX "calibration_records_created_at_idx" ON "calibration_records"("created_at");
 
 -- CreateIndex
-CREATE INDEX "operator_items_created_by_idx" ON "operator_items"("created_by");
+CREATE INDEX "operator_items_created_by_idx" ON "operator_items"("created_by_user_id");
 
 -- CreateIndex
 CREATE INDEX "override_records_operator_item_id_idx" ON "override_records"("operator_item_id");
@@ -141,7 +141,7 @@ CREATE INDEX "financial_baselines_engagement_id_idx" ON "financial_baselines"("e
 CREATE INDEX "financial_baselines_source_idx" ON "financial_baselines"("source");
 
 -- AddForeignKey
-ALTER TABLE "operator_items" ADD CONSTRAINT "operator_items_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "operator_items" ADD CONSTRAINT "operator_items_created_by_fkey" FOREIGN KEY ("created_by_user_id") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "operator_items" ADD CONSTRAINT "operator_items_completed_by_fkey" FOREIGN KEY ("completed_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
