@@ -1,6 +1,12 @@
 -- CreateTable "operator_items" (moved here to run before ALTER statements)
 CREATE TABLE "operator_items" (
     "id" UUID NOT NULL,
+    "workspace_id" UUID NOT NULL,
+    "owner_user_id" UUID,
+    "created_by_user_id" UUID,
+    "last_updated_by_user_id" UUID,
+    "assigned_to_user_id" UUID,
+    "reviewed_by_user_id" UUID,
     "problem" TEXT NOT NULL,
     "action" TEXT NOT NULL,
     "impactExpected" DOUBLE PRECISION NOT NULL,
@@ -15,7 +21,6 @@ CREATE TABLE "operator_items" (
     "explanation" JSONB,
     "decision_hash" TEXT,
     "engine_version" TEXT NOT NULL DEFAULT 'v1.0.0',
-    "created_by" UUID,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 

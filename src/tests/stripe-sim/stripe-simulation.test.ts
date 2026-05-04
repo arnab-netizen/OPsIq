@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
 import { simulateCheckoutCompleted, simulateSubscriptionCreated, simulateSubscriptionUpdated, simulateSubscriptionDeleted } from "./stripeSimulator";
 import { simulateWebhookDelivery, simulateWebhookBatch } from "./simulateWebhookDelivery";
@@ -20,7 +21,7 @@ describe("Stripe Event Simulation", () => {
 
   beforeEach(async () => {
     // Setup
-    workspaceId = "ws_sim_" + Math.random().toString(36).substring(7);
+    workspaceId = uuidv4();
     stripeCustomerId = "cus_sim_" + Math.random().toString(36).substring(7);
     stripeSubscriptionId = "sub_sim_" + Math.random().toString(36).substring(7);
 
