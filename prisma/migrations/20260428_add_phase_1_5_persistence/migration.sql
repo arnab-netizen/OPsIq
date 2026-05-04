@@ -6,6 +6,10 @@ ADD COLUMN "overrideRecords" TEXT,
 ADD COLUMN "entitiesCreated" TEXT,
 ADD COLUMN "financialBaselinesCreated" TEXT;
 
+-- AlterTable: Add missing columns to operator_items before FK constraints
+ALTER TABLE "operator_items" ADD COLUMN "completed_by" UUID,
+ADD COLUMN "verified_by" UUID;
+
 -- CreateTable
 CREATE TABLE "calibration_records" (
     "id" UUID NOT NULL,
