@@ -132,6 +132,58 @@ Run only after inspecting package.json:
 
 # CURRENT EXECUTION LOG
 
+## Phase B-DIAG-1 Complete ✓ (2026-05-05 15:25)
+
+**Root Cause Engine (STRICT DIAGNOSTIC MODE)**
+- ✓ Created: src/domain/diagnostic/root-cause.ts (types)
+- ✓ Created: src/services/diagnostic-core/root-cause-engine.ts (strict engine)
+- ✓ Created: src/services/diagnostic-core/__tests__/root-cause-engine.test.ts (13/13 passing)
+- ✓ Tests: All root cause tests passing with fail-closed validation
+
+**Slice Summary**:
+- **Data Sufficiency Gate (STRICT)**:
+  - Requires: ≥3 metrics, ≥2 observations, ≥2 timeline events
+  - FAILS CLOSED on insufficient data
+  - FAILS CLOSED on contradictions (e.g., simultaneous revenue & cost decline)
+- **Hypothesis Competition (STRICT)**:
+  - Generates minimum 3 competing hypotheses
+  - Scores by evidence quality + quantity only
+  - Selects best hypothesis by confidence score
+  - Returns rejected hypotheses with reasons
+- **Causal Chain (MANDATORY)**:
+  - cause → mechanism → effect → metric change
+  - Includes baseline vs current measurements
+  - Calculates percentage change
+- **Falsifier (MANDATORY)**:
+  - Every hypothesis includes testable falsifier
+  - Specifies condition that disproves hypothesis
+  - Defines test method and threshold
+- **Confidence Validation (STRICT)**:
+  - Confidence MUST align with evidence quantity
+  - FAILS if confidence > 0.7 with < 5 evidence points
+  - FAILS if confidence > 0.85 with < 8 evidence points
+- **Uncertainty Exposure (MANDATORY)**:
+  - Risk assessment of misdiagnosis
+  - List of missing data
+  - List of assumptions
+
+**Test Coverage (13/13)**:
+- Data sufficiency gate: insufficient metrics, observations, timeline
+- Contradiction detection: simultaneous decline
+- Hypothesis competition: 3+ hypotheses, ranking by confidence
+- Causal chain inclusion: cause, mechanism, effect, metric change
+- Falsifier inclusion: condition, test method, threshold
+- Confidence vs evidence validation
+- Uncertainty exposure: risk, missing data, assumptions
+- Workspace isolation preservation
+
+**Files Changed**: 3 new files
+- src/domain/diagnostic/root-cause.ts
+- src/services/diagnostic-core/root-cause-engine.ts
+- src/services/diagnostic-core/__tests__/root-cause-engine.test.ts
+
+---
+
 ## Phase A Audit Complete ✓ (2026-05-05 09:42)
 
 **Audit Status**: ALL VERIFICATIONS PASSED ✓
