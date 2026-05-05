@@ -96,6 +96,7 @@ export const AUDIT_EVENTS = {
   // Decision Lifecycle
   DECISION_SUBMITTED: "decision.submitted",
   DECISION_APPROVED: "decision.approved",
+  DECISION_ACCEPTED: "decision.accepted",
   DECISION_REJECTED: "decision.rejected",
   DECISION_EXECUTED: "decision.executed",
   DECISION_CANCELLED: "decision.cancelled",
