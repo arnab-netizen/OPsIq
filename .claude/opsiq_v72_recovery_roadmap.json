@@ -1,0 +1,386 @@
+{
+  "roadmap_id": "opsiq_v72_recovery",
+  "version": "1.0",
+  "created_date": "2026-05-05",
+  "audit_reference": "claude/audit-socops-opsiq-uso5o",
+  "goal": "Apply only missing/partial OPSIQ work. Do not reimplement existing Owner Mode, SaaS layer, or attack tests.",
+  "source_of_truth": "OPSIQ architecture",
+  "reference_only": "SocOps (do not copy blindly)",
+
+  "preserved_opsiq_components": {
+    "owner_mode_workflow": {
+      "status": "EXISTING - DO NOT MODIFY",
+      "files": [
+        "src/services/owner-dashboard.service.ts",
+        "src/ui/owner-dashboard.tsx",
+        "src/ui/owner-dashboard.test.tsx",
+        "src/services/owner-dashboard.service.test.ts"
+      ],
+      "rule": "Use as-is for integration points"
+    },
+    "saas_extraction_layer": {
+      "status": "EXISTING - DO NOT MODIFY",
+      "files": [
+        "src/services/entitlement.service.ts",
+        "src/services/entitlement.service.test.ts",
+        "src/services/usage.service.ts",
+        "src/app/api/billing/usage"
+      ],
+      "rule": "Reuse for capability checks in new layers"
+    },
+    "extreme_reality_attack_tests": {
+      "status": "EXISTING - DO NOT MODIFY",
+      "files": [
+        "src/services/control/__tests__/bypass-attack.test.ts",
+        "src/tenant-isolation.test.ts",
+        "audits/opsiq-hostile-audit.md"
+      ],
+      "rule": "Reference for security patterns; extend but don't replace"
+    },
+    "decision_control_service": {
+      "status": "EXISTING - REUSE FOR INTEGRATION",
+      "files": [
+        "src/services/decision-control/decision-control.service.ts",
+        "src/services/decision-control/decision-control.service.test.ts"
+      ],
+      "rule": "Foundation for human decision validation"
+    },
+    "business_impact_engine": {
+      "status": "EXISTING - REUSE FOR VALUE PROOFS",
+      "files": [
+        "src/services/business-impact/business-impact.service.ts",
+        "src/services/business-impact/impact-delta.service.ts",
+        "src/services/outcome/outcome.service.ts"
+      ],
+      "rule": "Base for value proof measurements"
+    }
+  },
+
+  "recovery_steps": [
+    {
+      "step_id": "V72-R1",
+      "name": "Owner Mode E2E Acceptance Audit",
+      "status": "pending",
+      "priority": "CRITICAL",
+      "duration_sprints": 1,
+      "dependencies": [
+        "existing owner-dashboard.service.ts",
+        "existing decision-control.service.ts",
+        "existing outcome.service.ts"
+      ],
+      "deliverables": {
+        "tests": [
+          "src/__tests__/owner-mode-e2e-acceptance.test.ts"
+        ],
+        "documentation": [
+          ".claude/v72-r1-acceptance-criteria.md"
+        ]
+      },
+      "acceptance_criteria": [
+        "Dashboard loads with owner context",
+        "Next best action determined from engagement state",
+        "Owner can view decision confidence and rationale",
+        "Decision can be accepted/rejected with audit trail",
+        "Outcome tracking shows impact accuracy",
+        "All workspace isolation checks pass",
+        "Financial metrics are deterministic",
+        "100% of test cases passing"
+      ],
+      "constraints": {
+        "no_new_db_migrations": true,
+        "preserve_audit_events": true,
+        "preserve_workspace_scoping": true,
+        "no_real_stripe": true
+      },
+      "socops_reference": "Use only for test structure, not business logic"
+    },
+
+    {
+      "step_id": "V72-R2",
+      "name": "Human Decision Validation Layer",
+      "status": "pending",
+      "priority": "CRITICAL",
+      "duration_sprints": 2,
+      "dependencies": [
+        "V72-R1",
+        "existing decision-control.service.ts",
+        "existing auth-guard.ts"
+      ],
+      "deliverables": {
+        "services": [
+          "src/services/decision-validation/human-decision-validator.ts",
+          "src/services/decision-validation/decision-acceptance.service.ts",
+          "src/services/decision-validation/__tests__/human-validator.test.ts"
+        ],
+        "ui": [
+          "src/ui/decision-acceptance-modal.tsx",
+          "src/ui/decision-acceptance-modal.test.tsx"
+        ],
+        "routes": [
+          "src/app/api/decisions/[decisionId]/accept/route.ts",
+          "src/app/api/decisions/[decisionId]/reject/route.ts"
+        ],
+        "documentation": [
+          ".claude/v72-r2-human-validation-contract.md"
+        ]
+      },
+      "acceptance_criteria": [
+        "Owner can explicitly accept/reject primary decisions",
+        "Decision acceptance recorded in audit trail",
+        "Capability check enforced (DECISION_ACCEPT)",
+        "Rejection reason captured and logged",
+        "Timestamp recorded for compliance",
+        "Financial consequences shown before acceptance",
+        "No silent mutations - all writes to Decision audit",
+        "All tests passing; workspace isolation verified"
+      ],
+      "constraints": {
+        "no_new_db_migrations": true,
+        "reuse_existing_decision_schemas": true,
+        "audit_events_mandatory": true,
+        "deterministic_timestamps": true
+      },
+      "socops_reference": "Rejection flow logic only; ignore SocOps-specific approval chains"
+    },
+
+    {
+      "step_id": "V72-R3",
+      "name": "Reality-Aware Decision Engine",
+      "status": "pending",
+      "priority": "HIGH",
+      "duration_sprints": 3,
+      "dependencies": [
+        "V72-R2",
+        "existing business-condition-profile schema",
+        "existing engagement schema"
+      ],
+      "deliverables": {
+        "services": [
+          "src/services/reality-awareness/human-factors-engine.ts",
+          "src/services/reality-awareness/bottleneck-detector.ts",
+          "src/services/reality-awareness/follow-through-risk.ts",
+          "src/services/reality-awareness/__tests__/human-factors-engine.test.ts"
+        ],
+        "domain": [
+          "src/domain/reality/human-factors-model.ts",
+          "src/domain/reality/risk-factors.ts"
+        ],
+        "integration": [
+          "src/services/decision-control/decision-control.service.ts (enhanced)"
+        ],
+        "documentation": [
+          ".claude/v72-r3-reality-aware-design.md"
+        ]
+      },
+      "acceptance_criteria": [
+        "Owner bottleneck detected from action timeline and history",
+        "Follow-through risk calculated from pattern analysis",
+        "Communication breakdown risk scored",
+        "Morale fragility assessment on engagement health",
+        "Reality factors integrated into confidence deductions",
+        "Decision type escalated if human factors below threshold",
+        "No mental-health diagnosis; operational variables only",
+        "V6 diagnosis backbone behavior unchanged",
+        "All tests passing; deterministic scoring"
+      ],
+      "constraints": {
+        "preserve_v6_diagnosis": true,
+        "operational_variables_only": true,
+        "no_personality_diagnosis": true,
+        "deterministic_calculations": true,
+        "audit_trail_for_factors": true
+      },
+      "socops_reference": "Human factors taxonomy only; ignore SocOps implementation details"
+    },
+
+    {
+      "step_id": "V72-R4",
+      "name": "Value Proof Test Suite",
+      "status": "pending",
+      "priority": "HIGH",
+      "duration_sprints": 2,
+      "dependencies": [
+        "V72-R3",
+        "existing outcome.service.ts",
+        "existing financial-normalization.service.ts"
+      ],
+      "deliverables": {
+        "tests": [
+          "src/__tests__/value-proof-accuracy.test.ts",
+          "src/__tests__/value-proof-roi.test.ts",
+          "src/services/outcome/__tests__/outcome-accuracy.integration.test.ts"
+        ],
+        "services": [
+          "src/services/value-proof/impact-accuracy-validator.ts",
+          "src/services/value-proof/roi-calculator.ts"
+        ],
+        "documentation": [
+          ".claude/v72-r4-value-proof-matrix.md"
+        ]
+      },
+      "acceptance_criteria": [
+        "Predicted vs actual impact tracked per decision",
+        "Accuracy score calculated (100 - |confidence_gain - 10|)",
+        "ROI per engagement measured",
+        "Value recovered = max(0, predicted_loss - actual_loss)",
+        "Financial metrics deterministic (no randomization)",
+        "Test coverage: 50+ scenarios",
+        "Impact accuracy score >= 85% for high-confidence decisions",
+        "All workspace isolation checks in test data"
+      ],
+      "constraints": {
+        "reuse_existing_financial_engine": true,
+        "deterministic_calculations": true,
+        "no_real_stripe_data": true,
+        "audit_trail_for_proofs": true
+      },
+      "socops_reference": "Proof methodology only; ignore SocOps-specific KPIs"
+    },
+
+    {
+      "step_id": "V72-R5",
+      "name": "Ultimate Business Decision Engine V7.2 ADR",
+      "status": "pending",
+      "priority": "MEDIUM",
+      "duration_sprints": 1,
+      "dependencies": [
+        "V72-R4",
+        "v8/docs/opsiq-v2/V7_MODULE_PRESENCE_MAP.md",
+        "v8/ARCHITECTURE_CONTRACT.md"
+      ],
+      "deliverables": {
+        "documentation": [
+          ".claude/v72-adr-ultimate-business-decision-engine.md"
+        ],
+        "validation": [
+          ".claude/v72-decision-engine-version-audit.json"
+        ]
+      },
+      "acceptance_criteria": [
+        "Clear statement: V7.2 is V7 module presence + V72-R1 through R4 implementations",
+        "Ultimate Business Decision Engine = V6 diagnosis + V7 orchestration + V72 human validation + reality factors",
+        "Decision engine readiness documented against 8 requirements",
+        "No gaps in 4-dimension modeling (consulting lifecycle, business condition, intervention mode/phase, human reality)",
+        "Explicit yes/no on each requirement"
+      ],
+      "constraints": {
+        "adr_format_required": true,
+        "reference_existing_architecture": true,
+        "no_new_code_required": false,
+        "decision_record_immutable": true
+      },
+      "socops_reference": "None; architectural decision only"
+    },
+
+    {
+      "step_id": "V72-R6",
+      "name": "Hostile Final Audit",
+      "status": "pending",
+      "priority": "CRITICAL",
+      "duration_sprints": 2,
+      "dependencies": [
+        "V72-R5",
+        "all prior steps complete"
+      ],
+      "deliverables": {
+        "tests": [
+          "src/__tests__/v72-hostile-audit.test.ts"
+        ],
+        "report": [
+          ".claude/v72-hostile-audit-final-report.md"
+        ]
+      },
+      "acceptance_criteria": [
+        "All 8 requirements from audit checklist met",
+        "No silent mutations of approved/locked records",
+        "All protected actions enforce auth server-side",
+        "Workspace isolation verified in all new services",
+        "Audit events for all meaningful mutations",
+        "Financial metrics deterministic",
+        "Human decision validation actually recorded",
+        "No new vulnerabilities introduced",
+        "All 189+ tests passing",
+        "TypeScript 0 errors"
+      ],
+      "constraints": {
+        "hostile_attack_vectors_required": true,
+        "security_audit_mandatory": true,
+        "determinism_verification": true,
+        "workspace_isolation_verified": true
+      },
+      "socops_reference": "None; final validation only"
+    }
+  ],
+
+  "critical_rules": [
+    "OPSIQ architecture is source of truth",
+    "SocOps is reference only - do not copy code blindly",
+    "Do NOT modify existing Owner Mode workflow, SaaS layer, or attack tests",
+    "Preserve workspace isolation in all new services",
+    "All protected actions must enforce authorization server-side",
+    "All meaningful mutations must emit audit events",
+    "No silent mutations of approved/issued/validated/locked records",
+    "All write paths must validate input",
+    "Financial metrics must be deterministic (no randomization)",
+    "Idempotency required or protected against duplicate submission",
+    "No TODOs, placeholders, stubs, or fake implementations",
+    "Every significant change routes to BusinessConditionProfile reevaluation",
+    "Concurrency-safe update patterns for governed records",
+    "No collapsing distinct entities for convenience"
+  ],
+
+  "reuse_these_opsiq_components": {
+    "auth_guard": "src/lib/auth-guard.ts",
+    "capability_check": "src/lib/auth-guard.ts (requireCapabilityForService)",
+    "audit_logging": "src/services/audit.service.ts",
+    "error_handling": "src/infra/errors.ts (NotFoundError, ForbiddenError, etc.)",
+    "response_formatter": "src/lib/response-formatter.ts",
+    "database_workspace_scoping": "src/lib/secure-prisma.ts",
+    "financial_calculations": "src/services/financial-mapping.service.ts",
+    "confidence_scoring": "src/services/decision-confidence/decision-confidence.service.ts",
+    "outcome_tracking": "src/services/outcome/outcome.service.ts",
+    "business_condition_profile": "Prisma schema (BusinessConditionProfile model)"
+  },
+
+  "do_not_touch_these_files": [
+    "src/services/owner-dashboard.service.ts",
+    "src/ui/owner-dashboard.tsx",
+    "src/ui/owner-dashboard.test.tsx",
+    "src/services/owner-dashboard.service.test.ts",
+    "src/services/entitlement.service.ts",
+    "src/services/entitlement.service.test.ts",
+    "src/services/usage.service.ts",
+    "src/services/control/__tests__/bypass-attack.test.ts",
+    "src/tenant-isolation.test.ts",
+    "audits/opsiq-hostile-audit.md"
+  ],
+
+  "migration_strategy": {
+    "no_migrations_needed": true,
+    "reason": "Existing schemas support all new services",
+    "verify_against": [
+      "BusinessConditionProfile",
+      "Decision",
+      "Action",
+      "Finding",
+      "Recommendation",
+      "AuditEvent"
+    ]
+  },
+
+  "deployment_checklist": [
+    "V72-R1 E2E tests passing",
+    "V72-R2 human validation flows tested",
+    "V72-R3 reality factors integrated and tested",
+    "V72-R4 value proof accuracy verified",
+    "V72-R5 ADR approved",
+    "V72-R6 hostile audit passing",
+    "All 189+ tests passing",
+    "TypeScript build clean",
+    "No new database migrations",
+    "All audit events logged correctly",
+    "Workspace isolation verified",
+    "Financial metrics deterministic",
+    "Security review passed"
+  ]
+}
