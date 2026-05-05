@@ -1020,7 +1020,7 @@ Process:
 
 # Phase C — DECISION CORE (STRICT MODE)
 
-## Current Phase: Phase C (PARTIAL - C-GATES COMPLETE)
+## Current Phase: Phase C (PARTIAL - C-GATES & C-SCENARIO COMPLETE)
 
 ---
 
@@ -1426,6 +1426,57 @@ Decision is VALID only if:
 - Deterministic: identical inputs produce identical outputs
 - Workspace isolation: maintained via input context
 - Audit: logging at gate level for failures
+
+---
+
+## Phase C-SCENARIO Complete ✓ (2026-05-05 16:23)
+
+**Scenario Engine (Best/Base/Worst Case Analysis - STRICT)**
+
+**Slice Summary**:
+- 3 scenario cases per path with weighted expected value calculation
+- Best Case: impact * 1.3, probability 0.2 (optimistic - all risks mitigated)
+- Base Case: impact * probability * (1 - bottleneck%), probability 0.6 (realistic)
+- Worst Case: impact * 0.5 * (1 - risk_score), probability 0.2 (pessimistic)
+- Expected Value: (best.value × 0.2) + (base.value × 0.6) + (worst.value × 0.2)
+- Downside Exposure: worst_case.value (explicit lower bound)
+- Failure Triggers: generated based on dependency_count, risk_score, bottleneck impact
+
+**Service Features**:
+- analyzePathScenarios(): Single-path scenario analysis with EV calculation
+- analyzeMultiplePathScenarios(): Batch analysis for 3+ paths
+- calculateExpectedValue(): Manual EV calculation with custom probabilities
+- compareScenarios(): Identify better path by EV
+- rankPathsByExpectedValue(): Sort paths descending by EV (without modifying input)
+- calculateRiskAdjustedEV(): Discount EV by diagnostic confidence
+- identifyDownsideRisks(): Filter paths by downside exposure threshold
+- validateScenarioAnalysis(): Verify probability sum = 1.0, all values finite
+- generateFailureTriggers(): Create explicit failure conditions (internal)
+
+**Files Created**: 3 new files
+- src/domain/decision/scenario.ts (ScenarioCase, ScenarioAnalysis types)
+- src/services/decision-core/scenarios-engine.ts (ScenariosEngine class)
+- src/services/decision-core/__tests__/scenarios-engine.test.ts
+
+**Tests**: 37/37 passing
+- Scenario generation: 11 tests (best/base/worst values, EV, triggers, edge cases)
+- Multiple paths: 2 tests (independent analysis, context preservation)
+- Manual EV: 3 tests (default/custom probabilities, negative values)
+- Scenario comparison: 1 test (EV ranking)
+- Path ranking: 2 tests (descending order, immutability)
+- Risk-adjusted EV: 3 tests (confidence discounting)
+- Downside filtering: 2 tests (threshold filtering)
+- Validation: 5 tests (prob sum, invalid values, NaN/Infinity)
+- Edge cases: 5 tests (zero dependencies, many dependencies, large values, bottleneck > 50%)
+- Consistency: 2 tests (probabilities sum to 1.0, EV bounds)
+
+**Integration Notes**:
+- Pure computation (no DB calls)
+- PathDimensions input: pathId, impactValue, probability, riskScore, timeToResultDays, dependencyCount, bottleneckImpactPercent
+- Scenario analysis output includes: bestCase, baseCase, worstCase, expectedValue, downsideExposure, failureTriggers
+- Deterministic: identical inputs produce identical outputs
+- Logging at analyzePathScenarios() for audit trail
+- Reuses diagnostic confidence from Phase B (optional discount factor)
 
 ---
 
