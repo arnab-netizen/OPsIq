@@ -1020,7 +1020,7 @@ Process:
 
 # Phase C — DECISION CORE (STRICT MODE)
 
-## Current Phase: Phase C (NOT YET IMPLEMENTED)
+## Current Phase: Phase C (PARTIAL - C-GATES COMPLETE)
 
 ---
 
@@ -1386,4 +1386,46 @@ Decision is VALID only if:
 
 ---
 
+## Phase C-GATES Complete ✓ (2026-05-05 16:20)
+
+**Constraint Enforcer (5 Global Gates - STRICT)**
+
+**Slice Summary**:
+- 5 global gates that MUST pass before any path scoring
+- Data Sufficiency: ✓ rootCauseIdentified, ✓ primaryBottleneck, ✓ archetype, ✓ maturityLevel
+- Contradiction-Free: ✓ avg diagnostic confidence > 0.3, ✓ no strategy conflicts
+- Capacity Available: ✓ effort_hours ≤ available_hours
+- Cash Runway Safe: ✓ payback_days ≤ 180 days, ✓ capital_required ≥ 0
+- Legal/Compliance OK: ✓ strategy_type not in blocked list (high_risk_pivot, aggressive_downsizing)
+
+**Service Features**:
+- enforceAllGates(): Sequential gate checking with early exit (fail-closed)
+- All gates must pass or function returns null with firstFailure indicator
+- Each gate returns GateResult: name, passed, reason, details
+- ConstraintCheckResult: allPassed, passedGates[], failedGates[], gateResults[], firstFailure
+- Gate ordering: 1→2→3→4→5 (cannot skip or reorder)
+- No subsequent gates evaluated after first failure
+
+**Files Created**: 3 new files
+- src/domain/decision/constraint.ts (types)
+- src/services/decision-core/constraint-enforcer.ts (5-gate enforcement)
+- src/services/decision-core/__tests__/constraint-enforcer.test.ts
+
+**Tests**: 24/24 passing
+- Data sufficiency: 5 tests (all required, missing individual fields)
+- Contradiction-free: 3 tests (low confidence, strategy conflicts)
+- Capacity available: 4 tests (sufficient, insufficient, edge case, default)
+- Cash runway safe: 4 tests (safe, exceed threshold, negative, boundary)
+- Legal/compliance: 4 tests (allowed, blocked strategies, no strategy)
+- Fail-closed behavior: 3 tests (early exit, all pass, no subsequent evaluation)
+- Gate order: 1 test (sequence enforcement)
+
+**Integration Notes**:
+- Reuses diagnostic data structure from Phase B (rootCauseIdentified, bottleneckConfidence, etc.)
+- No external service calls (pure computation for gates)
+- Deterministic: identical inputs produce identical outputs
+- Workspace isolation: maintained via input context
+- Audit: logging at gate level for failures
+
+---
 
