@@ -920,7 +920,74 @@ Diagnosis is VALID only if:
 
 ---
 
-## PHASE B COMPLETE ✓
+---
+
+# PHASE B AUDIT ✓ (2026-05-05 16:08)
+
+## Audit Checklist vs Specification
+
+**Requirement 1: Root Cause - causal chain, falsifier, evidence, alternatives**
+- ✓ CausalChain: cause → mechanism → effect → metricChange
+- ✓ Falsifier: condition, testMethod, expectedResult, disproveThreshold
+- ✓ Supporting Evidence: populated from observations + metrics (FIXED)
+- ✓ Alternatives: minimum 2, ranked by confidence, rejection reasons (FIXED)
+
+**Requirement 2: Bottleneck - one primary numeric constraint**
+- ✓ primaryBottleneck: single Bottleneck object
+- ✓ Numeric: metricValue, baseline, current, changePercent, percentageImpact, projectedChange
+- ✓ ConstraintType enum: capacity | conversion | cost | time | quality
+
+**Requirement 3: Archetype - restricts strategies**
+- ✓ DecisionConstraints: allowedStrategyTypes[], forbiddenStrategyTypes[]
+- ✓ Enforced at 4 levels: risk_profile, capital_sensitivity, growth_mode, strategy restrictions
+- ✓ BestPathOrchestrator filters paths by archetype constraints
+
+**Requirement 4: Maturity - restricts complexity/horizon**
+- ✓ ExecutionCapabilities: maxExecutionComplexity, maxDecisionHorizonDays, maxPlanSizeActions
+- ✓ BestPathOrchestrator enforces maturity constraints on path selection
+
+**Requirement 5: Insufficient data fails closed**
+- ✓ checkDataSufficiency validates minimum metrics, observations, timeline
+- ✓ Returns null if isSufficient = false
+- ✓ Tests verify failure on <3 metrics, <2 observations, <2 timeline events
+
+**Requirement 6: Contradictions fail**
+- ✓ checkDataSufficiency detects simultaneous revenue + cost decline >50%
+- ✓ contradictionsDetected added to return
+- ✓ Returns null if contradictions present
+- ✓ Tests verify contradiction detection and failure
+
+**Requirement 7: Confidence tied to evidence**
+- ✓ confidenceReason: "Based on X evidence items (Y observations, Z metrics)"
+- ✓ confidence = evidenceScore (0.7) + coherenceScore (0.5) + falseifiabilityScore (0.15)
+- ✓ validateConfidenceAgainstEvidence: fails if confidence > 0.7 with <5 evidence
+- ✓ (IMPROVED) confidenceReason now explicitly states "Confidence tied to evidence quality"
+
+**Requirement 8: No duplicate logic**
+- ✓ Diagnostic engines complementary to existing diagnosis.ts service
+- ✓ No duplication of financial, baseline, or execution engines
+- ✓ Reuses only framework patterns (fail-closed, scoring, orchestration)
+
+**Requirement 9: Gates pass**
+- ✓ All 87 diagnostic-core tests passing
+- ✓ All 18 best-path-engine tests passing
+- ✓ All 22 E2E diagnostic tests passing
+- ✓ Total: 127+ Phase B tests, 100% pass rate
+
+## Gaps Fixed During Audit
+
+**Gap 1**: Root cause supportingEvidence was empty array
+- FIXED: Now populated with Evidence objects from observations + metrics
+
+**Gap 2**: Alternative hypotheses lacked rejection reasoning
+- FIXED: Added confidenceReason with score comparison and rejection explanation
+
+**Gap 3**: Confidence reason didn't explicitly tie to evidence quality
+- FIXED: Updated to state "Confidence tied to evidence quality" with item counts
+
+---
+
+## PHASE B COMPLETE ✓ (AUDIT VERIFIED)
 
 Phase B-DIAG-1: Root Cause Engine ✓
 Phase B-DIAG-2: Bottleneck Engine ✓
