@@ -132,6 +132,34 @@ Run only after inspecting package.json:
 
 # CURRENT EXECUTION LOG
 
+## Phase A-4 Complete ✓ (2026-05-05 09:24)
+
+**Failure Containment Service**
+- ✓ Created: src/domain/execution/failure.ts (types + enums)
+- ✓ Created: src/services/failure-containment/containment-engine.ts (containment logic)
+- ✓ Created: src/services/failure-containment/__tests__/containment-engine.test.ts (16/16 passing)
+- ✓ Tests: All failure containment tests passing
+- ✓ Status: Ready for Phase A-5 (Best Path Engine - CRITICAL)
+
+**Slice Summary**:
+- 6 failure types: ACTION_FAILED, TIMEOUT, DEPENDENCY_FAILURE, RESOURCE_EXHAUSTED, STATE_VIOLATION, UNKNOWN
+- 4 severity levels: LOW, MEDIUM, HIGH, CRITICAL
+- 3 containment strategies: ISOLATE, ROLLBACK, ESCALATE
+- Severity calculation based on failure type
+- Strategy selection: ESCALATE on critical, ROLLBACK on state violation, ISOLATE on others
+- Cascade prevention validation (ISOLATE always prevents, ROLLBACK for ≤50%, ESCALATE never)
+- Rollback logic with state transitions (running→pending, paused→running, etc.)
+- Affected actions estimation from state transitions
+- Recommendations generation per failure type
+- Workspace-scoped failure handling
+
+**Files Changed**: 3 new files
+- src/domain/execution/failure.ts
+- src/services/failure-containment/containment-engine.ts
+- src/services/failure-containment/__tests__/containment-engine.test.ts
+
+---
+
 ## Phase A-3 Complete ✓ (2026-05-05 09:14)
 
 **Funnel Analysis Service**
