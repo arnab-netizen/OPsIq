@@ -742,10 +742,53 @@ Diagnosis is VALID only if:
 
 ---
 
+## Phase B-DIAG-2 Complete ✓ (2026-05-05 15:36)
+
+**Bottleneck Engine (STRICT)**
+
+**Slice Summary**:
+- ConstraintType enum: capacity | conversion | cost | time | quality
+- MetricDelta: baseline, current, unit, changePercent (quantified delta)
+- Bottleneck: bottleneckVariable, metricValue, metricDelta, throughputImpact, downstreamImpact, constraintType, evidenceLink, confidenceScore
+- BottleneckAnalysis: primaryBottleneck, alternativeBottlenecks, uncertaintyExposure
+
+**Service Features**:
+- Data sufficiency gate: ≥2 metrics, ≥2 timeline points, ≥1 KPI (FAIL CLOSED)
+- Bottleneck identification: Auto-detects 5 constraint types based on metric thresholds
+- Metric quantification: Calculates baseline→current delta, changePercent
+- Throughput impact: Quantifies affected volume and percentage
+- Downstream linking: Projects KPI change from bottleneck impact
+- Evidence linking: Metric-specific reference (metric:variable_timeline_analysis)
+- Scoring: Ranked by impact magnitude (0.6) + downstream effect (0.3) + throughput (0.1)
+- Confidence validation: confidenceScore tied to metric changePercent magnitude
+
+**Files Created**: 3 new files
+- src/domain/diagnostic/bottleneck.ts
+- src/services/diagnostic-core/bottleneck-engine.ts
+- src/services/diagnostic-core/__tests__/bottleneck-engine.test.ts
+
+**Tests**: 21/21 passing
+- Data sufficiency failures (≥3): insufficient metrics, timeline, KPIs
+- Bottleneck identification (≥5): capacity, conversion, cost, time, quality
+- Metric quantification (≥3): delta calculation, throughput, KPI linking
+- Ranking (≥3): score ordering, primary selection, confidence reason
+- Evidence (≥3): source linking, baseline reference, constraint type
+- Uncertainty (≥3): risk assessment, alternatives in message, assumptions list
+- Isolation (≥1): workspace preservation
+
+**Integration Notes**:
+- Reuses existing RootCauseEngine patterns (fail-closed, confidence scoring, uncertainty exposure)
+- No duplication: uses domain models in diagnostic layer
+- Workspace isolation: preserved at service layer
+- Determinism: no randomization (fixed scoring weights)
+- Audit: logging at analyzeBottleneck() entry/exit
+
+---
+
 ## IMPLEMENTATION (NEXT PHASE)
 
 Phase B-DIAG-1: Root Cause Engine ✓
-Phase B-DIAG-2: Bottleneck Engine (pending)
+Phase B-DIAG-2: Bottleneck Engine ✓
 Phase B-DIAG-3: Archetype Engine (pending)
 Phase B-DIAG-4: Maturity Model (pending)
 
