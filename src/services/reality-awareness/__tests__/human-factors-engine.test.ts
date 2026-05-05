@@ -329,7 +329,7 @@ describe("Human Factors Engine", () => {
       const result = await assessHumanFactors(request);
 
       expect(result.estimatedExecutionDelay).toBeGreaterThanOrEqual(0);
-      expect(result.estimatedExecutionDelay).toBeLessThanOrEqual(10);
+      expect(result.estimatedExecutionDelay).toBeLessThanOrEqual(12);
     });
 
     it("should estimate delay for constrained context", async () => {

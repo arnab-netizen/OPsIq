@@ -108,6 +108,11 @@ export function DecisionAcceptanceModal({
     if (mode === "view") {
       return (
         <div className="space-y-4">
+          {/* Decision Title */}
+          <div className="rounded-lg bg-slate-50 p-4 border border-slate-200">
+            <p className="text-lg font-bold text-slate-900">{decisionTitle}</p>
+          </div>
+
           {/* Financial Consequences */}
           <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
             <p className="text-sm font-semibold text-blue-900 mb-2">
