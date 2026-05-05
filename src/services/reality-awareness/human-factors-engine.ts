@@ -28,12 +28,14 @@ import {
   BottleneckContext,
   assessBottleneckRisk,
   estimateExecutionDelay as estimateBottleneckDelay,
+  detectBottlenecks,
 } from "./bottleneck-detector";
 
 import {
   FollowThroughContext,
   assessFollowThroughRisk,
   estimateFollowThroughDelay,
+  detectFollowThroughRisks,
 } from "./follow-through-risk";
 
 export interface HumanFactorsAssessmentRequest {
@@ -62,9 +64,9 @@ export interface HumanRealityImpact {
 /**
  * Assess human factors for engagement decision
  */
-export async function assessHumanFactors(
+export function assessHumanFactors(
   request: HumanFactorsAssessmentRequest
-): Promise<HumanFactorsAssessmentResult> {
+): HumanFactorsAssessmentResult {
   const factors: Record<HumanFactorKey, HumanFactorAssessment> = {} as Record<
     HumanFactorKey,
     HumanFactorAssessment
@@ -129,10 +131,14 @@ export async function assessHumanFactors(
     throw new Error(`Invalid human factors profile: ${validation.errors.join(", ")}`);
   }
 
+  // Get delay indicators from contexts
+  const bottleneckIndicators = detectBottlenecks(bottleneckContext);
+  const followThroughIndicators = detectFollowThroughRisks(followThroughContext);
+
   // Calculate execution delay
   const estimatedDelay =
-    estimateBottleneckDelay(bottleneckContext) +
-    estimateFollowThroughDelay(followThroughContext);
+    estimateBottleneckDelay(bottleneckIndicators) +
+    estimateFollowThroughDelay(followThroughIndicators);
 
   // Generate recommendations
   const recommendations = generateRecommendations(profile);
