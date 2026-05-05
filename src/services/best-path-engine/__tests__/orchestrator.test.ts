@@ -1,4 +1,4 @@
-import { BestPathOrchestrator } from "../orchestrator";
+import { BestPathOrchestrator, DiagnosticInput } from "../orchestrator";
 import { DecisionPath } from "@/domain/decision/best-path";
 import { v4 as uuidv4 } from "uuid";
 
@@ -301,6 +301,173 @@ describe("BestPathOrchestrator", () => {
       );
 
       expect(result.bestPath.overallScore).toBeGreaterThan(95);
+    });
+  });
+
+  describe("runFullDiagnosticsAndAnalyzePaths", () => {
+    const createValidDiagnosticInput = (): DiagnosticInput => ({
+      rootCauseMetrics: {
+        revenue_change_pct: -25,
+        cost_change_pct: 15,
+        execution_delay_days: 14,
+      },
+      rootCauseObservations: [
+        "Revenue declined",
+        "Customer churn observed",
+        "Marketing effectiveness decreased",
+        "Sales team morale declining",
+      ],
+      rootCauseTimeline: {
+        start: new Date(Date.now() - 604800000),
+        event1: new Date(Date.now() - 172800000),
+        event2: new Date(),
+      },
+      bottleneckMetrics: {
+        utilization_pct: 85,
+        conversion_rate: 0.25,
+      },
+      bottleneckTimelineData: {
+        baseline: {
+          value: 70,
+          timestamp: new Date(Date.now() - 86400000),
+        },
+        current: {
+          value: 85,
+          timestamp: new Date(),
+        },
+      },
+      bottleneckAffectedKpis: {
+        revenue: 1000000,
+      },
+      archetypeIndicators: {
+        revenueTrend: 25,
+        profitMargin: 15,
+        cashFlow: 500000,
+        debtToEquity: 0.5,
+        marketShare: 5,
+        customerAcquisitionCost: 500,
+        customerLifetimeValue: 5000,
+        burnRate: 100000,
+        runwayMonths: 24,
+      },
+      maturityIndicators: {
+        processDocumentation: 65,
+        processConsistency: 70,
+        teamTraining: 60,
+        toolsAvailable: 65,
+        dataQuality: 70,
+        decisionTracking: 65,
+        riskManagement: 70,
+        governanceStructure: 65,
+        executionTrackRecord: 75,
+      },
+    });
+
+    it("should run all diagnostics and analyze paths", async () => {
+      const paths = [createMockPath()];
+      const diagnosticInput = createValidDiagnosticInput();
+
+      const result = await orchestrator.runFullDiagnosticsAndAnalyzePaths(
+        decisionId,
+        engagementId,
+        workspaceId,
+        diagnosticInput,
+        mockConstraintData,
+        paths
+      );
+
+      expect(result).not.toBeNull();
+      if (result) {
+        expect(result.bestPath).toBeDefined();
+        expect(result.reasoning.diagnosticSummary).toBeDefined();
+      }
+    });
+
+    it("should combine all diagnostic outputs into diagnosticData", async () => {
+      const paths = [createMockPath()];
+      const diagnosticInput = createValidDiagnosticInput();
+
+      const result = await orchestrator.runFullDiagnosticsAndAnalyzePaths(
+        decisionId,
+        engagementId,
+        workspaceId,
+        diagnosticInput,
+        mockConstraintData,
+        paths
+      );
+
+      expect(result).not.toBeNull();
+      if (result) {
+        const diagnosticSummary = result.reasoning.diagnosticSummary;
+        expect(diagnosticSummary.rootCauseIdentified).toBe(true);
+        expect(diagnosticSummary.bottlenecksDetected).toBeGreaterThan(0);
+      }
+    });
+
+    it("should fail gracefully if any diagnostic fails", async () => {
+      const paths = [createMockPath()];
+      // Provide insufficient data to trigger diagnostic failures
+      const invalidInput: DiagnosticInput = {
+        rootCauseMetrics: { metric1: 10 }, // < 3 required
+        rootCauseObservations: ["Only one"], // < 2 required
+        rootCauseTimeline: { only_one: new Date() }, // < 2 required
+        bottleneckMetrics: {},
+        bottleneckTimelineData: {},
+        bottleneckAffectedKpis: {},
+        archetypeIndicators: {
+          revenueTrend: NaN,
+          profitMargin: NaN,
+          cashFlow: NaN,
+          debtToEquity: NaN,
+          marketShare: NaN,
+          customerAcquisitionCost: NaN,
+          customerLifetimeValue: NaN,
+          burnRate: NaN,
+          runwayMonths: NaN,
+        },
+        maturityIndicators: {
+          processDocumentation: 0,
+          processConsistency: 0,
+          teamTraining: 0,
+          toolsAvailable: 0,
+          dataQuality: 0,
+          decisionTracking: 0,
+          riskManagement: 0,
+          governanceStructure: 0,
+          executionTrackRecord: 0,
+        },
+      };
+
+      const result = await orchestrator.runFullDiagnosticsAndAnalyzePaths(
+        decisionId,
+        engagementId,
+        workspaceId,
+        invalidInput,
+        mockConstraintData,
+        paths
+      );
+
+      expect(result).toBeNull();
+    });
+
+    it("should preserve workspace context", async () => {
+      const paths = [createMockPath()];
+      const diagnosticInput = createValidDiagnosticInput();
+
+      const result = await orchestrator.runFullDiagnosticsAndAnalyzePaths(
+        decisionId,
+        engagementId,
+        workspaceId,
+        diagnosticInput,
+        mockConstraintData,
+        paths
+      );
+
+      expect(result).not.toBeNull();
+      if (result) {
+        expect(result.workspaceId).toBe(workspaceId);
+        expect(result.engagementId).toBe(engagementId);
+      }
     });
   });
 });
