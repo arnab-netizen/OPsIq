@@ -1749,3 +1749,584 @@ Decision is VALID only if:
 
 ---
 
+# Phase D — EXECUTION LAYER (STRICT MODE)
+
+## Current Phase: Phase D (NOT YET STARTED)
+
+---
+
+## Objective
+
+Transform decision outputs (from Phase C) into deterministic, audited execution sequences.
+Execute actions in correct order, with friction delays, capacity enforcement, and failure isolation.
+
+System must:
+- Generate deterministic execution plans (identical inputs → identical sequence)
+- Enforce capacity and concurrency limits
+- Apply friction delays per dependency complexity
+- Prevent duplicate execution via idempotency
+- Isolate failures and validate rollbacks
+- Emit complete audit trail with before/after state
+
+---
+
+## GLOBAL RULES
+
+1. **Every action MUST have**:
+   - owner (UUID of responsible person)
+   - due_date (ISO date, realistic given capacity + friction)
+   - success_metric (measurable outcome, falsifiable)
+   - failure_condition (explicit condition that triggers rollback)
+   - rollback_plan (concrete steps to undo, with cost + time estimates)
+
+2. **Duplicate execution MUST be prevented**:
+   - idempotency_key: UUID per action (request deduplication)
+   - job_unique_key: deterministic hash of action inputs
+   - Duplicate detection before executing
+
+3. **Capacity MUST NOT be exceeded**:
+   - Per-owner available_hours allocated
+   - Parallel execution tracked per owner
+   - Execution plan must respect capacity constraints
+   - Over-capacity → action BLOCKED (not queued)
+
+4. **Friction delays MUST be applied**:
+   - dependency_count = 0 → friction_delay_days = 0
+   - dependency_count = 1-2 → friction_delay_days = 5
+   - dependency_count = 3-5 → friction_delay_days = 10
+   - dependency_count ≥ 6 → friction_delay_days = 20
+   - Adjusted timeline: start_time + effort_hours + friction_delay_days
+
+5. **Failures MUST be classified and contained**:
+   - Recoverable (retry eligible)
+   - Retryable (with backoff)
+   - Fatal (triggers rollback)
+   - Isolation strategy: ISOLATE (stop spread), ROLLBACK (undo), ESCALATE (alert owner)
+
+6. **All mutations MUST emit audit events**:
+   - before_state, after_state, action_id, decision_id, timestamp, actor
+   - Outcome: success | failure | cancelled
+   - Audit trail searchable, immutable, workspace-scoped
+
+---
+
+## 10 ENGINES (PHASE D)
+
+### 1. ACTION FSM (State Machine)
+
+**States**:
+- DRAFT: Created, not yet ready
+- READY: Validated, awaiting execution window
+- IN_PROGRESS: Currently executing
+- DONE: Completed successfully
+- BLOCKED: Cannot proceed (dependency failed, capacity issue)
+- FAILED: Execution failed
+- CANCELLED: Owner cancelled
+
+**Transitions** (only valid transitions allowed):
+```
+DRAFT → READY (validate succeeds)
+DRAFT → CANCELLED (owner cancels)
+READY → IN_PROGRESS (start time reached, capacity available)
+READY → BLOCKED (dependency failed)
+READY → CANCELLED (owner cancels)
+IN_PROGRESS → DONE (execution succeeds)
+IN_PROGRESS → FAILED (execution fails)
+BLOCKED → READY (dependency resolved)
+BLOCKED → CANCELLED (owner cancels)
+FAILED → BLOCKED (waiting for rollback)
+CANCELLED → (terminal, no further transitions)
+```
+
+**Required Fields per State**:
+- DRAFT: action_id, owner, title
+- READY: + due_date, success_metric, failure_condition, rollback_plan
+- IN_PROGRESS: + start_time, job_id
+- DONE: + end_time, result
+- FAILED: + failure_reason, failure_classification
+- BLOCKED: + blocked_reason, blocking_dependency_id
+
+**Validation Rules**:
+- No transition without state_reason
+- No invalid transitions (e.g., DONE → BLOCKED)
+- All required fields present for target state
+- Owner must have execution capability
+
+**Output**:
+- action_state: current state
+- allowed_transitions: list of valid next states
+- state_history: list of all previous states (audit trail)
+
+---
+
+### 2. DEPENDENCY GRAPH (Topological Ordering)
+
+**Input**:
+- List of actions with depends_on: [action_ids]
+- Detect cycles (fail-closed)
+- Detect missing dependencies (action_id references nonexistent action)
+
+**Processing**:
+1. Check for cycles → FAIL if found
+2. Topological sort → deterministic ordering
+3. Calculate downstream impact: if action X fails, which other actions are blocked?
+4. Assign execution_order: 1, 2, 3, ... (deterministic, repeatable)
+
+**Output**:
+```
+{
+  execution_order: [action_id1, action_id2, ...],  // topologically sorted
+  cycles_detected: bool,
+  dependency_map: {action_id: [downstream_action_ids]},
+  critical_path: [action_id1, action_id2, ...],    // longest path by duration
+  total_duration_days: N,
+}
+```
+
+**Failure Modes**:
+- Circular dependency → FAIL
+- Missing dependency → FAIL
+- Orphaned actions (no path to completion) → WARN
+
+---
+
+### 3. EXECUTION SEQUENCER (Timeline Calculation)
+
+**Input**:
+- Topologically sorted actions
+- Per-action: effort_hours, dependency_count, owner
+- Per-owner: available_hours per week
+- Capacity plan: current allocations per owner
+
+**Output**:
+- Execution plan (deterministic, repeatable):
+  - start_time (ISO)
+  - end_time (ISO)
+  - friction_delay_days (from dependency_count)
+  - capacity_hours_allocated (from effort_hours)
+  - parallelizable: bool (can run simultaneously with other actions)
+
+**Rules**:
+- Sequential actions: end_time(N) + friction_delay_days = start_time(N+1)
+- Parallel actions: same owner → check available_hours (fail if exceeded)
+- Friction applied AFTER effort_hours (not included in effort_hours calculation)
+- Timeline deterministic: identical inputs → identical plan
+
+**Validation**:
+- Total effort_hours per owner ≤ available_hours per period
+- No timeline conflicts (two actions for same owner at same time)
+- All dependencies resolved before dependent action starts
+
+---
+
+### 4. CAPACITY + CONCURRENCY CONTROL
+
+**Input**:
+- Per-owner available_hours (weekly or monthly)
+- Execution plan with capacity_hours_allocated per action
+- Current allocations (from ongoing actions)
+
+**Rules**:
+- Available capacity = available_hours - current_allocations
+- Action requires E effort_hours
+- If E ≤ available capacity: ALLOW
+- If E > available capacity: BLOCK action (no queuing)
+
+**Concurrency Limits**:
+- Per-owner: max N actions in-progress (typically 2-3)
+- If limit reached: queue action until a prior action completes
+
+**Output**:
+- capacity_check: {available: N, allocated: N, remaining: N}
+- can_execute: bool
+- reason_if_blocked: "Insufficient capacity: 50h allocated, 40h available"
+
+---
+
+### 5. FRICTION MODEL (Delay Application)
+
+**Input**:
+- Per-action: dependency_count
+- Base effort_hours
+
+**Calculation**:
+```
+friction_delay_days = case dependency_count:
+  0       → 0
+  1–2     → 5
+  3–5     → 10
+  ≥6      → 20
+
+adjusted_time_to_result = effort_hours + friction_delay_days
+```
+
+**Rationale**:
+- Each dependency adds coordination overhead
+- Higher dependency count = higher uncertainty and delay
+- Friction applied to calendar days, not work hours
+
+**Output**:
+- friction_delay_days (0, 5, 10, or 20)
+- adjusted_timeline (effort_hours + friction_delay_days)
+
+---
+
+### 6. EXECUTION JOB SAFETY (Idempotency + Retries)
+
+**Input**:
+- action_id
+- job_inputs: Record<string, any>
+- idempotency_key: UUID (request-level deduplication)
+
+**Idempotency**:
+- job_unique_key: SHA256(action_id + sorted(job_inputs))
+- Check if job_unique_key already executed
+- If yes: return cached result (no re-execution)
+- If no: execute and cache result
+
+**Retry Policy**:
+- max_attempts: 3 (configurable)
+- backoff_strategy: exponential (2s, 4s, 8s)
+- retry_on: transient failures (network, timeout)
+- NOT on: fatal failures (validation error, access denied)
+
+**Lock Management**:
+- lock_ttl: 5 minutes (prevent concurrent execution of same job)
+- If lock expires: attempt reacquisition (idempotency check)
+
+**Dead Letter**:
+- dead_letter_reason: why job was abandoned
+- Logged for manual investigation
+
+**Output**:
+```
+{
+  job_id: UUID,
+  idempotency_key,
+  status: "cached" | "executed" | "failed",
+  result,
+  attempt_count: N,
+  final_error: string (if failed)
+}
+```
+
+---
+
+### 7. FAILURE CLASSIFICATION
+
+**Recoverable** (can retry after brief delay):
+- Transient network failure
+- Temporary resource unavailable
+- Timeout (may succeed on retry)
+
+**Retryable** (eligible for exponential backoff):
+- Database lock contention
+- Rate limiting
+- Temporary service unavailable
+
+**Fatal** (cannot recover, triggers rollback):
+- Permission denied
+- Resource deleted (cannot restore)
+- Validation error (inputs fundamentally invalid)
+- Owner cancelled execution
+- Manual intervention required (blocking)
+
+**Classification Rules**:
+- If error matches transient pattern → RECOVERABLE
+- If error matches service degradation pattern → RETRYABLE
+- If error matches terminal pattern → FATAL
+
+**Output**:
+```
+{
+  failure_class: "recoverable" | "retryable" | "fatal",
+  reason: string,
+  should_retry: bool,
+  should_rollback: bool
+}
+```
+
+---
+
+### 8. FAILURE CONTAINMENT (Isolation)
+
+**Input**:
+- Failed action_id
+- Failure classification
+- Downstream actions (from dependency graph)
+
+**Strategies**:
+1. **ISOLATE** (stop spread): Mark action FAILED, block downstream actions
+   - Downstream actions → BLOCKED state
+   - Owner notified, can manually approve continuation
+   - No automatic rollback
+   - Use for: recoverable failures where retry might succeed
+
+2. **ROLLBACK** (undo): Execute rollback_plan, mark action CANCELLED
+   - Revert state to before action started
+   - Cost: time + resources
+   - Downstream actions → CANCELLED
+   - Use for: fatal failures where undo is feasible
+
+3. **ESCALATE** (alert owner): Notify owner, pause execution
+   - Action → BLOCKED
+   - All downstream → BLOCKED
+   - Requires owner decision to continue
+   - Use for: critical failures needing human judgment
+
+**Cascade Prevention**:
+- ISOLATE: always prevents cascade (downstream blocked)
+- ROLLBACK: prevents cascade if rollback succeeds
+- ESCALATE: prevents cascade (human decision required)
+
+**Output**:
+```
+{
+  strategy: "isolate" | "rollback" | "escalate",
+  affected_actions: [action_id1, action_id2, ...],
+  containment_success: bool,
+  reason: string
+}
+```
+
+---
+
+### 9. ROLLBACK VALIDATION (Feasibility Check)
+
+**Input**:
+- Failed action_id
+- rollback_plan: [steps]
+- rollback_cost: dollars
+- rollback_time: days
+
+**Validation**:
+1. Can rollback succeed? (Check dependencies: can we undo all side effects?)
+2. Is rollback cost < benefit? (rollback_cost < original_investment)
+3. Is rollback time acceptable? (rollback_time ≤ time_budget)
+4. Are dependencies safe? (downstream actions not yet started)
+
+**Failure Cases** (rollback cannot proceed):
+- Action already DONE (too late to rollback)
+- Downstream actions already started (would break their contract)
+- Rollback cost exceeds original investment
+- Owner explicitly declined rollback
+
+**Output**:
+```
+{
+  can_rollback: bool,
+  reasons: [string],
+  rollback_feasibility: "safe" | "risky" | "impossible",
+  estimated_cost: dollars,
+  estimated_time: days
+}
+```
+
+---
+
+### 10. EXECUTION AUDIT (Complete Trail)
+
+**Input**:
+- action_id, decision_id
+- before_state, after_state
+- actor: owner UUID or "system"
+- outcome: "success" | "failure" | "cancelled"
+- timestamp: ISO
+
+**Output**:
+```
+{
+  event_id: UUID,
+  action_id,
+  decision_id,
+  before_state: {...},
+  after_state: {...},
+  actor,
+  outcome,
+  timestamp,
+  workspace_id,
+  tags: [string]  // for filtering (e.g., ["failure", "rollback", "manual"])
+}
+```
+
+**Audit Requirements**:
+- Immutable (no mutation after creation)
+- Queryable: filter by action_id, decision_id, workspace_id, timestamp
+- Searchable: full-text search on failure reasons
+- Retentionable: at least 2 years (HIPAA/SOC2)
+- Performance: O(1) write, O(log N) read
+
+---
+
+## TEST REQUIREMENTS
+
+**Minimum 10 test types** (60-80 total tests):
+
+### 1. Action FSM Transitions
+- Valid transitions succeed
+- Invalid transitions rejected (e.g., DONE → BLOCKED)
+- State reason required
+- Audit event emitted
+
+### 2. Dependency Graph
+- Topological sort produces deterministic order
+- Cycle detection (fail on cycle)
+- Missing dependency detection (fail)
+- Downstream impact calculation
+
+### 3. Execution Sequencer
+- Deterministic timeline (same inputs → same plan)
+- Friction delays applied correctly (0, 5, 10, 20 days)
+- Capacity allocation tracked
+- No timeline conflicts
+
+### 4. Capacity + Concurrency
+- Available capacity calculated correctly
+- Over-capacity actions blocked
+- Concurrency limits enforced
+- Current allocations subtracted from available
+
+### 5. Friction Delay
+- dependency_count 0 → 0 days
+- dependency_count 1-2 → 5 days
+- dependency_count 3-5 → 10 days
+- dependency_count ≥6 → 20 days
+
+### 6. Idempotency + Retries
+- Duplicate execution prevented (cached result returned)
+- Max attempts enforced
+- Exponential backoff applied
+- Transient failures retried, fatal failures not retried
+
+### 7. Failure Classification
+- Transient failures classified as RECOVERABLE
+- Service errors classified as RETRYABLE
+- Fatal errors classified as FATAL
+- Classification drives retry/rollback decision
+
+### 8. Failure Containment
+- ISOLATE strategy blocks downstream
+- ROLLBACK strategy executes undo steps
+- ESCALATE strategy pauses execution
+- Cascade prevention validated
+
+### 9. Rollback Validation
+- Can't rollback if action DONE
+- Can't rollback if downstream already started
+- Rollback cost < benefit check
+- Feasibility assessment accurate
+
+### 10. Execution Audit Trail
+- Before/after state captured
+- Actor recorded (owner or system)
+- Outcome recorded (success/failure/cancelled)
+- Timestamp ISO format
+- Immutable and queryable
+
+---
+
+## INTEGRATION RULES
+
+1. **Reuse Phase C outputs**:
+   - decision_id from audit output
+   - selected_path_id, expected_value, downside_exposure
+   - dominance_proof for confidence context
+   - gates_passed, gates_failed for preconditions
+
+2. **Reuse existing services**:
+   - Audit event system (already in codebase)
+   - Capacity tracking (from execution-drift service)
+   - Owner/RBAC (from auth layer)
+   - Workspace isolation (from request context)
+
+3. **No duplicate scheduling**:
+   - Check if action already scheduled (by action_id + decision_id)
+   - Return existing execution plan if idempotent key matches
+   - Prevent accidental duplicate planning
+
+4. **Preserve determinism**:
+   - Identical inputs → identical sequence
+   - No randomization in timeline calculation
+   - No time-dependent decisions (e.g., "current time is close to deadline")
+   - Seeded randomness only for testing
+
+5. **Maintain workspace isolation**:
+   - All execution plans scoped to workspace_id
+   - Cannot see/modify other workspace actions
+   - Capacity tracked per workspace
+   - Audit trail per workspace
+
+---
+
+## SUCCESS CRITERIA
+
+Execution plan is VALID only if:
+
+- ✓ Deterministic sequence (identical inputs → identical plan)
+- ✓ No capacity violations (total effort_hours ≤ available_hours)
+- ✓ No duplicate execution (idempotency enforced)
+- ✓ Failures contained (isolation strategy prevents cascade)
+- ✓ Rollback validated (can only rollback if feasible)
+- ✓ Full audit trail (before/after state, actor, outcome, timestamp)
+- ✓ Friction delays applied (per dependency_count)
+- ✓ Cyclic dependencies detected and failed
+- ✓ All actions have required fields (owner, due_date, success_metric, failure_condition, rollback_plan)
+- ✓ Retry policy honored (transient failures retry, fatal failures stop)
+
+---
+
+## FILES TO CREATE
+
+**Domain Types**:
+- `src/domain/execution/action.ts` (Action, ActionState, ActionTransition types)
+- `src/domain/execution/dependency.ts` (DependencyGraph, TopoSort types)
+- `src/domain/execution/sequence.ts` (ExecutionPlan, SequenceStep types)
+- `src/domain/execution/job.ts` (Job, JobStatus, RetryPolicy types)
+- `src/domain/execution/failure.ts` (FailureClassification, ContainmentStrategy - EXTEND existing)
+- `src/domain/execution/rollback.ts` (RollbackPlan, RollbackValidation types)
+
+**Services**:
+- `src/services/execution-core/action-fsm.ts` (ActionFSM class)
+- `src/services/execution-core/dependency-graph.ts` (DependencyGraph class)
+- `src/services/execution-core/sequencer.ts` (ExecutionSequencer class)
+- `src/services/execution-core/capacity-controller.ts` (CapacityController class)
+- `src/services/execution-core/friction-model.ts` (FrictionModel class)
+- `src/services/execution-core/job-safety.ts` (JobSafety class)
+- `src/services/execution-core/failure-classifier.ts` (FailureClassifier class)
+- `src/services/execution-core/failure-containment.ts` (EXTEND existing if exists)
+- `src/services/execution-core/rollback-validator.ts` (RollbackValidator class)
+- `src/services/execution-core/execution-auditor.ts` (ExecutionAuditor class)
+
+**Tests**:
+- `src/services/execution-core/__tests__/*.test.ts` (10 test suites, 60-80 tests)
+
+---
+
+## BUILD ORDER (Dependency Chain)
+
+```
+Phase D-FSM: Action FSM (state machine)
+    ↓
+Phase D-DEPS: Dependency Graph (cycle detection, topo sort)
+    ↓
+Phase D-SEQ: Execution Sequencer (timeline + friction)
+    ↓
+Phase D-CAP: Capacity Controller (per-owner limits)
+    ↓
+Phase D-FRICTION: Friction Model (delay calculation)
+    ↓
+Phase D-JOB: Job Safety (idempotency + retries)
+    ↓
+Phase D-FAIL-CLASS: Failure Classification (recoverable/retryable/fatal)
+    ↓
+Phase D-CONTAIN: Failure Containment (isolation strategies)
+    ↓
+Phase D-ROLLBACK: Rollback Validator (feasibility check)
+    ↓
+Phase D-AUDIT: Execution Auditor (trail logging)
+    ↓
+Phase D-ORCHESTRATION: Execution Orchestrator (ties all together)
+```
+
+---
+
