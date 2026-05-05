@@ -77,12 +77,18 @@ export class RootCauseEngine {
       return null;
     }
 
+    // Add rejection reasons to alternatives
+    const alternativesWithRejection = alternatives.map((alt, idx) => ({
+      ...alt,
+      confidenceReason: `${alt.confidenceReason} [REJECTED: Score ${alt.confidenceScore.toFixed(2)} < Primary ${selectedHypothesis.confidenceScore.toFixed(2)}]`,
+    }));
+
     logger.info("Root cause analysis complete", {
       analysisId,
       engagementId,
       selectedHypothesis: selectedHypothesis.statement,
       confidence: selectedHypothesis.confidenceScore,
-      alternativeCount: alternatives.length,
+      alternativeCount: alternativesWithRejection.length,
     });
 
     return {
@@ -91,11 +97,11 @@ export class RootCauseEngine {
       workspaceId,
       dataValidation: sufficiencyCheck,
       selectedHypothesis,
-      alternativeHypotheses: alternatives,
+      alternativeHypotheses: alternativesWithRejection,
       overallConfidence: selectedHypothesis.confidenceScore,
       uncertaintyExposure: this.exposeUncertainty(
         selectedHypothesis,
-        alternatives,
+        alternativesWithRejection,
         sufficiencyCheck
       ),
       analyzedAt: new Date(),
@@ -243,6 +249,34 @@ export class RootCauseEngine {
     metrics: Record<string, number>,
     observations: string[]
   ): Hypothesis {
+    // Populate supporting evidence from observations and metrics
+    const evidenceItems: Evidence[] = [];
+
+    // Add evidence from observations
+    observations.forEach((obs, idx) => {
+      evidenceItems.push({
+        id: uuidv4(),
+        type: "observation",
+        description: obs,
+        confidence: "high",
+        source: `observation_${idx + 1}`,
+      });
+    });
+
+    // Add evidence from metrics
+    Object.entries(metrics).forEach(([key, value]) => {
+      evidenceItems.push({
+        id: uuidv4(),
+        type: "metric",
+        description: `${key} = ${value}`,
+        value: value,
+        confidence: "high",
+        source: `metric_${key}`,
+      });
+    });
+
+    hypothesis.supportingEvidence = evidenceItems;
+
     // Score based ONLY on evidence quality and quantity
     const evidenceScore = Math.min(
       0.7,
@@ -259,7 +293,7 @@ export class RootCauseEngine {
     const confidenceScore = Math.min(1, Math.max(0, rawScore));
 
     hypothesis.confidenceScore = confidenceScore;
-    hypothesis.confidenceReason = `Based on ${observations.length} observations and ${Object.keys(metrics).length} metrics. Coherence: ${Math.round(coherenceScore * 100)}%.`;
+    hypothesis.confidenceReason = `Based on ${evidenceItems.length} evidence items (${observations.length} observations, ${Object.keys(metrics).length} metrics). Confidence tied to evidence quality (all items marked 'high' confidence). Coherence: ${Math.round(coherenceScore * 100)}%.`;
 
     return hypothesis;
   }
