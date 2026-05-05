@@ -785,12 +785,61 @@ Diagnosis is VALID only if:
 
 ---
 
-## IMPLEMENTATION (NEXT PHASE)
+## Phase B-DIAG-4 Complete ✓ (2026-05-05 15:39)
+
+**Maturity Model (STRICT)**
+
+**Slice Summary**:
+- MaturityLevel: 1-5 scale (Ad-hoc → Leading-edge)
+- ExecutionCapabilities: Define execution constraints at each level
+- 4 Dimension Scores: Process (40% doc + 40% consistency + 20% decision tracking), Team (50% training + 50% track record), Systems (50% tools + 50% data), Governance (60% structure + 40% risk management)
+- Gap Identification: Targets 80% per dimension, quantifies shortfall for improvement roadmap
+
+**Service Features**:
+- Data sufficiency gate: All 9 indicators required (FAIL CLOSED)
+- Maturity classification: Composite score determines level 1-5
+- Capability constraints: Each level defines max complexity, decision horizon, plan size, allowed/blocked strategies
+- Dimension assessment: 4 independent maturity tracks with separate scores
+- Gap analysis: Identifies shortfalls against 80% target
+- Alternative assessments: Adjacent maturity levels for context
+- Confidence scoring: Based on overall maturity (minimum 50%)
+
+**Files Created**: 3 new files
+- src/domain/diagnostic/maturity.ts
+- src/services/diagnostic-core/maturity-engine.ts
+- src/services/diagnostic-core/__tests__/maturity-engine.test.ts
+
+**Tests**: 27/27 passing
+- Data sufficiency (1 test)
+- Maturity classification (5 tests: Level 1-5)
+- Execution constraints (5 tests: complexity, horizon, plan size, allowed, blocked)
+- Dimension scoring (4 tests: process, team, systems, governance)
+- Gap identification (3 tests: detection, quantification, linkage)
+- Alternatives (2 tests: generation, adjacency)
+- Confidence (2 tests: overall score, maturity score)
+- Uncertainty (3 tests: confidence, assumptions, dimension breakdown)
+- Isolation (1 test: workspace preservation)
+
+---
+
+## IMPLEMENTATION STATUS
 
 Phase B-DIAG-1: Root Cause Engine ✓
 Phase B-DIAG-2: Bottleneck Engine ✓
-Phase B-DIAG-3: Archetype Engine (pending)
-Phase B-DIAG-4: Maturity Model (pending)
+Phase B-DIAG-3: Archetype Engine ✓
+Phase B-DIAG-4: Maturity Model ✓
+
+**Summary**: All 4 diagnostic engines implemented and tested (85/85 tests passing total).
+
+**Next Steps**:
+- Phase B API: Create REST API routes for all 4 engines with:
+  - Authorization checks
+  - Input validation
+  - Audit events
+  - Error handling
+  - Response formatting
+- Phase B Integration: Wire engines into Best Path Engine orchestrator
+- Phase B Testing: End-to-end diagnostic flow tests
 
 Process:
 - Smallest safe slice first
