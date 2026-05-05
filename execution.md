@@ -1018,4 +1018,372 @@ Process:
 
 ---
 
+# Phase C — DECISION CORE (STRICT MODE)
+
+## Current Phase: Phase C (NOT YET IMPLEMENTED)
+
+---
+
+## Objective
+
+Produce decision-grade path selection with constraint enforcement, scenario-based expected value calculation, and provable dominance.
+
+System must:
+- Enforce all global gates before scoring
+- Quantify all dimensions consistently
+- Calculate expected value across scenarios
+- Prove winner vs runner-up dominance
+- Emit complete audit trail with decision justification
+
+---
+
+## GLOBAL GATES (RUN BEFORE SCORING)
+
+**These 5 gates MUST pass or entire decision fails (return null)**
+
+1. **data_sufficient?**
+   - Diagnostic engines returned non-null results
+   - All required dimensions present
+   - No missing critical metrics
+
+2. **contradiction_free?**
+   - No logical inconsistencies in diagnostic outputs
+   - No conflicting constraints
+   - No mutually exclusive requirements
+
+3. **capacity_available?**
+   - Team has available_hours ≥ effort_hours for selected path
+   - No timeline conflicts with existing commitments
+   - Resource overlap checks pass
+
+4. **cash_runway_safe?**
+   - Projected burn rate ≤ runway months
+   - Capital required ≤ available liquidity
+   - Payback period fits cash reserves
+
+5. **legal/compliance_ok?**
+   - No governance violations
+   - No policy conflicts
+   - No blocked strategy types by compliance
+
+**Fail-Closed Behavior**: If ANY gate fails → return null (no decision made)
+
+---
+
+## DIMENSIONS (ALL 8 REQUIRED)
+
+Every decision path MUST have:
+
+1. **impact_value** ($): Revenue gain or cost reduction, quantified in dollars
+2. **probability** (0–1): Success likelihood from diagnostic confidence
+3. **time_to_result_days** (N): How many days to measurable outcome
+4. **effort_hours** (N): Team hours required to execute
+5. **direct_cost** ($): Cash outlay for resources, tools, contractors
+6. **dependency_count** (N): Number of external or internal dependencies
+7. **risk_score** (0–1): Probability of failure (inverse of success)
+8. **capital_required** ($): Up-front investment needed
+9. **payback_days** (N): Days to recover capital_required from cash flow
+
+**Derived Metrics**:
+- **speed_factor** = 1 / time_to_result_days
+- **cost_total** = direct_cost + (effort_hours × hourly_rate)
+- **risk_adjusted_impact** = impact_value × probability × (1 - risk_score)
+
+---
+
+## PRIORITIZATION FORMULA
+
+```
+priority_score = (risk_adjusted_impact × speed_factor) / (cost_total × (1 + dependency_count))
+```
+
+**Interpretation**:
+- Numerator: Impact adjusted for risk and speed
+- Denominator: Cost and complexity (dependency drag)
+- High score: Strong impact, fast, cheap, minimal dependencies
+- Low score: Weak impact, slow, expensive, many dependencies
+
+**Use Case**: When multiple paths have similar EV, rank by priority_score
+
+---
+
+## SCENARIO ENGINE (MANDATORY)
+
+For EACH path, calculate 3 scenarios:
+
+### Best Case
+- **value**: optimistic financial outcome
+- **prob**: probability if everything goes well (e.g., 0.2)
+- Trigger: All risks mitigated, full team engagement
+
+### Base Case
+- **value**: realistic financial outcome
+- **prob**: most likely probability (e.g., 0.6)
+- Trigger: Normal execution, standard adoption rate
+
+### Worst Case
+- **value**: pessimistic financial outcome (may be negative)
+- **prob**: probability if things go wrong (e.g., 0.2)
+- Trigger: Execution delays, team resistance, market headwinds
+
+### Expected Value
+```
+EV = (best_case.value × best_case.prob) + 
+     (base_case.value × base_case.prob) + 
+     (worst_case.value × worst_case.prob)
+```
+
+### Downside Exposure
+```
+downside_exposure = worst_case.value
+```
+
+**Failure Triggers**: List explicit conditions that would cause worst-case scenario
+
+---
+
+## MONETIZATION ENGINE (MANDATORY)
+
+For EACH path, quantify financial impact:
+
+- **revenue_delta**: New revenue or prevented loss
+- **cost_delta**: Savings or new costs
+- **margin_delta**: Change in gross margin %
+- **payback_days**: How many days to break even
+- **capital_required**: Initial investment
+
+**Output**: Complete P&L projection for path execution
+
+---
+
+## CAPACITY + FRICTION ENFORCEMENT
+
+**Checks**:
+- available_hours ≥ effort_hours (team has capacity)
+- No timeline overlaps with ongoing commitments
+- friction_delay_days added to time_to_result (realistic delay penalty)
+
+**Friction Rules**:
+- Dependency_count = 0 → friction_delay_days = 0
+- Dependency_count = 1-2 → friction_delay_days = 5
+- Dependency_count = 3-5 → friction_delay_days = 10
+- Dependency_count ≥ 6 → friction_delay_days = 20
+
+**Adjusted Timeline**:
+```
+adjusted_time_to_result = time_to_result_days + friction_delay_days
+```
+
+---
+
+## BEST PATH ENGINE (CRITICAL)
+
+### Inputs
+- 3+ decision paths (scenarios) with full dimension data
+- Diagnostic results (root cause, bottleneck, archetype, maturity)
+- Constraint data (capacity, cash, compliance)
+- Monetization projections
+
+### Processing Steps
+
+**1. Eliminate Infeasible Options**
+```
+if capacity_available = FALSE
+   OR cash_runway_safe = FALSE
+   OR legal/compliance_ok = FALSE
+   → path is BLOCKED (cannot execute)
+```
+
+**2. Rank by Multiple Criteria**
+- Primary: priority_score (highest first)
+- Secondary: expected_value (highest first)
+- Tertiary: feasibility_score (highest first)
+
+**3. Apply Tie-Breaker (If scores within 5%)**
+- Lower downside_exposure (less risk)
+- Shorter payback_days (faster ROI)
+- Fewer dependencies (lower execution risk)
+
+### Dominance Proof
+
+**Winner vs Runner-Up Comparison**:
+- EV margin: |winner.EV - runner_up.EV| / runner_up.EV (%)
+- Risk margin: |winner.risk - runner_up.risk| × 100 (basis points)
+- Speed margin: |winner.speed - runner_up.speed| × 100 (%)
+- Cost margin: |winner.cost - runner_up.cost| / winner.cost (%)
+
+**Dominance**: Winner must beat runner-up on ≥2 of 4 dimensions
+- If dominance < 2 dimensions: Confidence ≤ 0.6
+
+### Output
+
+```
+{
+  selected_path: DecisionPath,
+  rejected_paths: [
+    {path_id, reasons: ["capacity exceeded", "negative EV", ...]},
+    ...
+  ],
+  dominance_proof: {
+    winner_id,
+    runner_up_id,
+    ev_margin_pct,
+    risk_margin_bp,
+    speed_margin_pct,
+    cost_margin_pct,
+    dimensions_won: 2-4
+  },
+  expected_value: N,
+  downside_exposure: N,
+  payback_days: N,
+  confidence: 0–1 (based on dominance + margin)
+}
+```
+
+---
+
+## AUDIT OUTPUT (MANDATORY)
+
+Every decision must emit:
+
+```
+{
+  decision_id: UUID (idempotent hash of inputs),
+  engagement_id: UUID,
+  workspace_id: UUID,
+  
+  inputs_snapshot: {
+    paths_count: N,
+    diagnostic_confidence: 0–1,
+    constraints_count: N,
+  },
+  
+  inputs_snapshot_hash: SHA256,
+  engine_version: "7.2.0",
+  
+  metrics: {
+    priority_score: N,
+    expected_value: $,
+    downside_exposure: $,
+    payback_days: N,
+    dimensions_won: 2-4,
+  },
+  
+  gates_passed: [data_sufficient, contradiction_free, capacity_available, cash_runway_safe, legal_compliance_ok],
+  gates_failed: [],
+  
+  constraints_enforced: {
+    capacity: bool,
+    cash_runway: bool,
+    compliance: bool,
+    archetype: bool,
+    maturity: bool,
+  },
+  
+  assumptions: [
+    "Team availability remains stable",
+    "Market conditions do not change",
+    "External dependencies deliver on time",
+    ...
+  ],
+  
+  decision_made_at: ISO8601 timestamp,
+}
+```
+
+---
+
+## TEST REQUIREMENTS
+
+**Minimum 6 test types** (covering all gates and tie-breaks):
+
+### Test 1: High ROI but Infeasible → Rejected
+- Path has great EV but capacity_available = FALSE
+- Expected: Path blocked, confidence = null
+
+### Test 2: Low ROI but Fast/Feasible → Sometimes Selected
+- Path has modest EV but fastest time_to_result and zero dependencies
+- Expected: Path selected if it beats alternatives on speed + cost
+
+### Test 3: Capacity Breach → Blocked
+- effort_hours exceed available_hours
+- Expected: Path fails capacity_available gate
+
+### Test 4: Cash Risk → Blocked
+- payback_days exceed runway months
+- Expected: Path fails cash_runway_safe gate
+
+### Test 5: Misleading Best-Case → Caught by Scenario EV
+- Path has optimistic scenario but weighted EV is low
+- Expected: Scenario engine reveals true expected value
+
+### Test 6: Tie-Break Correctness
+- Two paths with same priority_score
+- Expected: Winner determined by downside_exposure, then payback_days, then dependencies
+
+---
+
+## CONSTRAINT INTEGRATION
+
+**Archetype Constraints** (from Phase B):
+- allowedStrategyTypes: list of permitted strategies
+- forbiddenStrategyTypes: list of blocked strategies
+- Filter decision paths: remove any path not in allowed list
+
+**Maturity Constraints** (from Phase B):
+- maxExecutionComplexity: {simple | moderate | complex | expert}
+- maxDecisionHorizonDays: maximum planning window
+- Filter decision paths: remove complexity or duration > limits
+
+**Bottleneck Impact** (from Phase B):
+- Primary bottleneck reduces success probability proportionally
+- Adjust probability = base_probability × (1 - bottleneck_percentageImpact)
+
+**Root Cause Impact** (from Phase B):
+- Uncertainty exposure increases risk_score
+- Adjust risk_score = base_risk + (1 - root_cause_confidence) × 0.2
+
+---
+
+## IMPLEMENTATION NOTES
+
+### Files to Create
+- `src/domain/decision/scenario.ts` (ScenarioCase, ScenarioAnalysis types)
+- `src/domain/decision/monetization.ts` (MonetizationOutput type)
+- `src/services/decision-core/scenarios-engine.ts` (scenario calculation)
+- `src/services/decision-core/monetization-engine.ts` (financial projection)
+- `src/services/decision-core/constraint-enforcer.ts` (5 global gates)
+- `src/services/decision-core/__tests__/*.test.ts` (minimum 60 tests)
+
+### Files to Modify
+- `src/services/best-path-engine/orchestrator.ts` (wire gates + dominance proof)
+- `src/services/best-path-engine/__tests__/orchestrator.test.ts` (add 6 gate tests)
+
+### Integration Points
+- Load diagnostic results from Phase B engines
+- Load capacity from execution-drift service
+- Load compliance from decision-control
+- Load archetype/maturity constraints from Phase B
+- Emit audit events to control/audit layer
+
+---
+
+## SUCCESS CRITERIA
+
+Decision is VALID only if:
+
+- ✓ All 5 gates pass (or system returns null)
+- ✓ All 8 dimensions quantified numerically
+- ✓ Scenario analysis covers 3 cases (best/base/worst)
+- ✓ Expected value weighted across probabilities
+- ✓ Dominance proof shows winner > runner-up on ≥2 dimensions
+- ✓ Tie-breaks applied correctly when within margin
+- ✓ Downside exposure explicitly quantified
+- ✓ Payback period calculated
+- ✓ Capital requirement verified against cash runway
+- ✓ Audit trail complete with all assumptions
+- ✓ No silent degradation (fail-closed behavior)
+
+---
+
 
