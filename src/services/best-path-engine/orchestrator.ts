@@ -7,8 +7,132 @@ import {
   PathReasoning,
   ConstraintSummary,
 } from "@/domain/decision/best-path";
+import { rootCauseEngine } from "@/services/diagnostic-core/root-cause-engine";
+import { bottleneckEngine } from "@/services/diagnostic-core/bottleneck-engine";
+import { archetypeEngine } from "@/services/diagnostic-core/archetype-engine";
+import { maturityEngine } from "@/services/diagnostic-core/maturity-engine";
+
+export interface DiagnosticInput {
+  rootCauseMetrics: Record<string, number>;
+  rootCauseObservations: string[];
+  rootCauseTimeline: Record<string, Date>;
+  bottleneckMetrics: Record<string, number>;
+  bottleneckTimelineData: Record<string, { value: number; timestamp: Date }>;
+  bottleneckAffectedKpis: Record<string, number>;
+  archetypeIndicators: {
+    revenueTrend: number;
+    profitMargin: number;
+    cashFlow: number;
+    debtToEquity: number;
+    marketShare: number;
+    customerAcquisitionCost: number;
+    customerLifetimeValue: number;
+    burnRate: number;
+    runwayMonths: number;
+  };
+  maturityIndicators: {
+    processDocumentation: number;
+    processConsistency: number;
+    teamTraining: number;
+    toolsAvailable: number;
+    dataQuality: number;
+    decisionTracking: number;
+    riskManagement: number;
+    governanceStructure: number;
+    executionTrackRecord: number;
+  };
+}
 
 export class BestPathOrchestrator {
+  async runFullDiagnosticsAndAnalyzePaths(
+    decisionId: string,
+    engagementId: string,
+    workspaceId: string,
+    diagnosticInput: DiagnosticInput,
+    constraintData: Record<string, unknown>,
+    scenarioPaths: DecisionPath[]
+  ): Promise<BestPathAnalysis | null> {
+    logger.info("Running full diagnostics and path analysis", {
+      decisionId,
+      engagementId,
+      workspaceId,
+    });
+
+    try {
+      // Run all 4 diagnostic engines in parallel
+      const [rootCauseResult, bottleneckResult, archetypeResult, maturityResult] = await Promise.all([
+        rootCauseEngine.analyzeRootCause(
+          engagementId,
+          workspaceId,
+          diagnosticInput.rootCauseMetrics,
+          diagnosticInput.rootCauseObservations,
+          diagnosticInput.rootCauseTimeline
+        ),
+        bottleneckEngine.analyzeBottleneck(
+          engagementId,
+          workspaceId,
+          diagnosticInput.bottleneckMetrics,
+          diagnosticInput.bottleneckTimelineData,
+          diagnosticInput.bottleneckAffectedKpis
+        ),
+        archetypeEngine.analyzeArchetype(
+          engagementId,
+          workspaceId,
+          diagnosticInput.archetypeIndicators
+        ),
+        maturityEngine.analyzeMaturity(
+          engagementId,
+          workspaceId,
+          diagnosticInput.maturityIndicators
+        ),
+      ]);
+
+      // Check if any critical diagnostic failed
+      if (!rootCauseResult || !bottleneckResult || !archetypeResult || !maturityResult) {
+        logger.warn("One or more diagnostics failed; falling back to default analysis", {
+          decisionId,
+          rootCauseFailed: !rootCauseResult,
+          bottleneckFailed: !bottleneckResult,
+          archetypeFailed: !archetypeResult,
+          maturityFailed: !maturityResult,
+        });
+        return null;
+      }
+
+      // Combine diagnostic results into diagnosticData
+      const combinedDiagnosticData = this.combineDiagnosticResults(
+        rootCauseResult,
+        bottleneckResult,
+        archetypeResult,
+        maturityResult
+      );
+
+      logger.info("All diagnostics completed successfully", {
+        decisionId,
+        rootCauseConfidence: rootCauseResult.overallConfidence,
+        bottleneckConfidence: bottleneckResult.overallConfidence,
+        archetypeConfidence: archetypeResult.overallConfidence,
+        maturityConfidence: maturityResult.overallConfidence,
+      });
+
+      // Call analyzePaths with combined diagnostic data
+      return this.analyzePaths(
+        decisionId,
+        engagementId,
+        workspaceId,
+        combinedDiagnosticData,
+        constraintData,
+        scenarioPaths
+      );
+    } catch (error) {
+      logger.error("Diagnostics and path analysis error", {
+        decisionId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      return null;
+    }
+  }
+
   async analyzePaths(
     decisionId: string,
     engagementId: string,
@@ -157,9 +281,14 @@ export class BestPathOrchestrator {
   ): Record<string, unknown> {
     return {
       rootCauseIdentified: !!diagnosticData.rootCause,
-      bottlenecksDetected: (diagnosticData.bottlenecks as any[])?.length || 0,
+      bottlenecksDetected:
+        // Support both old format (bottlenecks array) and new format (primaryBottleneck string)
+        (diagnosticData.bottlenecks as any[])?.length ||
+        (diagnosticData.primaryBottleneck ? 1 : 0),
       rfmSegment: diagnosticData.rfmSegment || "unknown",
       metricsHealthy: (diagnosticData.metrics as any[])?.length > 0,
+      archetype: diagnosticData.archetype || "unknown",
+      maturityLevel: diagnosticData.maturityLevel || 0,
     };
   }
 
@@ -209,6 +338,59 @@ export class BestPathOrchestrator {
 
     // Confidence based on score margin: 0-20 margin = 0.5, >40 = 0.95
     return Math.min(0.95, Math.max(0.5, 0.5 + margin / 80));
+  }
+
+  private combineDiagnosticResults(
+    rootCauseResult: any,
+    bottleneckResult: any,
+    archetypeResult: any,
+    maturityResult: any
+  ): Record<string, unknown> {
+    return {
+      // Root Cause Engine outputs
+      rootCause: rootCauseResult.selectedHypothesis.statement,
+      rootCauseConfidence: rootCauseResult.overallConfidence,
+      rootCauseAnalysisId: rootCauseResult.analysisId,
+      causalChain: rootCauseResult.selectedHypothesis.causalChain,
+      rootCauseAlternatives: rootCauseResult.alternativeHypotheses.map((h: any) => h.statement),
+
+      // Bottleneck Engine outputs
+      primaryBottleneck: bottleneckResult.primaryBottleneck?.bottleneckVariable || "unknown",
+      bottleneckConfidence: bottleneckResult.overallConfidence,
+      bottleneckAnalysisId: bottleneckResult.analysisId,
+      bottleneckVariable: bottleneckResult.primaryBottleneck.bottleneckVariable,
+      bottleneckImpact: bottleneckResult.primaryBottleneck.throughputImpact.percentageImpact,
+      bottleneckKpi: bottleneckResult.primaryBottleneck.downstreamImpact.affectedKpi,
+      bottleneckAlternatives: bottleneckResult.alternativeBottlenecks.map((b: any) => b.bottleneckVariable),
+
+      // Archetype Engine outputs
+      archetype: archetypeResult.selectedArchetype.archetyppe,
+      archetypeConfidence: archetypeResult.overallConfidence,
+      archetypeAnalysisId: archetypeResult.analysisId,
+      riskProfile: archetypeResult.selectedArchetype.riskProfile,
+      growthMode: archetypeResult.selectedArchetype.growthMode,
+      capitalSensitivity: archetypeResult.selectedArchetype.capitalSensitivity,
+      allowedStrategies: archetypeResult.selectedArchetype.decisionConstraints.allowedStrategyTypes,
+      forbiddenStrategies: archetypeResult.selectedArchetype.decisionConstraints.forbiddenStrategyTypes,
+      maxInvestmentHorizonMonths: archetypeResult.selectedArchetype.decisionConstraints.maximumInvestmentHorizonMonths,
+
+      // Maturity Model outputs
+      maturityLevel: maturityResult.currentMaturity.maturityLevel,
+      maturityConfidence: maturityResult.overallConfidence,
+      maturityAnalysisId: maturityResult.analysisId,
+      maxExecutionComplexity: maturityResult.currentMaturity.maxExecutionComplexity,
+      maxDecisionHorizonDays: maturityResult.currentMaturity.maxDecisionHorizonDays,
+      maxPlanSize: maturityResult.currentMaturity.maxPlanSizeActions,
+      maturityGaps: maturityResult.maturityGaps,
+
+      // Overall metrics
+      overallDiagnosticConfidence: (
+        rootCauseResult.overallConfidence +
+        bottleneckResult.overallConfidence +
+        archetypeResult.overallConfidence +
+        maturityResult.overallConfidence
+      ) / 4,
+    };
   }
 
   private createDefaultAnalysis(
