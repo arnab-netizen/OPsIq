@@ -1020,7 +1020,7 @@ Process:
 
 # Phase C — DECISION CORE (STRICT MODE)
 
-## Current Phase: Phase C (PARTIAL - C-GATES, C-SCENARIO, C-MONETIZATION COMPLETE)
+## Current Phase: Phase C COMPLETE ✓ (C-GATES, C-SCENARIO, C-MONETIZATION, C-BESTPATH ALL COMPLETE)
 
 ---
 
@@ -1536,6 +1536,80 @@ Decision is VALID only if:
 - Logging at projectFinancials() for audit trail
 - Handles edge cases: zero revenue/cost, negative margins, delays > 1 year
 - All financial metrics validated for finite values and reasonable bounds
+
+---
+
+## Phase C-BESTPATH Complete ✓ (2026-05-05 16:31)
+
+**Best Path Selector (Path Selection with Dominance Proof - STRICT)**
+
+**Slice Summary**:
+- Multi-criteria path selection with dominance proof and tie-breakers
+- Eliminates infeasible options (blocked by gates, capacity, cash)
+- Ranks by: priority_score (primary), expected_value (secondary), roi_percent (tertiary)
+- Dominance proof: Winner vs Runner-up on 4 dimensions (EV, Risk, Speed, Cost)
+- Dominance requires ≥2 dimension wins; confidence 0.6 if <2, otherwise 0.7-0.95
+- Tie-breakers: downside_exposure, payback_days, effort_hours
+
+**Service Features**:
+- selectBestPath(): Multi-path selection with fail-closed gate enforcement
+- rankPaths(): Sort by priority_score → expected_value → roi_percent + 3 tie-breakers
+- calculateDominanceProof(): Compare winner vs runner-up on 4 dimensions
+- calculateMarginPercent(): |a - b| / b * 100 for relative comparison
+- calculateConfidence(): 0.6 if dominance <2, else 0.7 + (dimensions_won/4 * 0.25)
+- generateRejectedPaths(): List all non-selected paths with rejection reasons
+- assessFeasibility(): Single-path feasibility assessment
+- validateDominanceProof(): Verify all margin values finite and is_dominant correct
+
+**Files Created**: 2 new files
+- src/domain/decision/best-path-selection.ts (types for dominance proof, selection result)
+- src/services/decision-core/best-path-selector.ts (BestPathSelector class)
+- src/services/decision-core/__tests__/best-path-selector.test.ts (31 comprehensive tests)
+
+**Tests**: 31/31 passing
+- Path selection: 8 tests (primary/secondary/tertiary ranking, gate elimination, capacity/cash checks)
+- Dominance proof: 6 tests (EV/risk/speed/cost dimensions, dominance detection)
+- Feasibility: 4 tests (no issues, gate blocks, capacity issue, cash issue)
+- Validation: 5 tests (correct proof, invalid dimensions, NaN margins, negative margins, is_dominant mismatch)
+- Edge cases: 5 tests (single path, all blocked, zero cost, identical scores, confidence calculation)
+- Confidence: 2 tests (low dominance → 0.6, high dominance → 0.95)
+
+**Dominance Dimensions**:
+1. **EV Margin %**: |winner.EV - runner_up.EV| / runner_up.EV * 100
+2. **Risk Margin (bp)**: |winner.risk_score - runner_up.risk_score| * 100 (lower risk wins)
+3. **Speed Margin %**: |winner.speed_factor - runner_up.speed_factor| * 100 (higher speed wins)
+4. **Cost Margin %**: |winner.cost_total - runner_up.cost_total| / winner.cost_total * 100 (lower cost wins)
+
+**Ranking Algorithm**:
+```
+1. Filter out gate-blocked paths
+2. Filter out paths with insufficient capacity
+3. Filter out paths with insufficient cash
+4. If no paths remain → return null (fail-closed)
+5. Sort by:
+   - priority_score DESC (primary)
+   - expected_value DESC (secondary, if priority_score within 1%)
+   - roi_percent DESC (tertiary, if expected_value within $1K)
+6. Tie-breakers (if still tied):
+   - downside_exposure DESC (higher is less risk)
+   - payback_days ASC (shorter is better)
+   - effort_hours ASC (fewer is better)
+```
+
+**Confidence Logic**:
+- If dimensions_won < 2: confidence = 0.6 (weak dominance)
+- If dimensions_won = 2: confidence = 0.8
+- If dimensions_won = 3: confidence = 0.875
+- If dimensions_won = 4: confidence = 0.95 (perfect dominance)
+
+**Integration Notes**:
+- Takes PathDimensionsForSelection input: priority_score, expected_value, payback_days, roi_percent, risk_score, etc.
+- Accepts blockedByGates Map<path_id, string[]> from constraint enforcer
+- Pure computation (no DB calls)
+- Deterministic: identical inputs produce identical outputs
+- Fail-closed: returns null if no feasible paths exist
+- Returns complete rejection reasons for transparency
+- Validates dominance proof before returning
 
 ---
 
