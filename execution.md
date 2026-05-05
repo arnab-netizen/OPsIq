@@ -523,94 +523,237 @@ Phase A-5: Best Path Engine (master orchestrator)
 
 ---
 
-# Phase B — API INTEGRATION & ORCHESTRATION (READY)
+# Phase B — DIAGNOSTIC CORE (STRICT MODE)
 
 ## Objective
-Integrate v7.2 engines into API layer with proper authorization, audit, and orchestration.
+
+Produce defensible, falsifiable, decision-grade diagnosis.
+Reject weak or incomplete analysis.
 
 System must:
-- Enforce authorization at API boundary
-- Emit audit events for all mutations
-- Orchestrate services without duplication
-- Maintain idempotency
-- Fail-closed on any component failure
+- Fail closed on insufficient data
+- Fail on contradictions
+- Fail on missing causal chains
+- Fail on unmeasurable impact
+- Never allow confidence to exceed evidence quality
 
-## Build Order
+---
 
-### Phase B-1: Validation Contract API Routes
-- Create: `src/app/api/v7.2/decisions/{decisionId}/validate` (POST)
-- Route logic: Call contractValidator.validateAndThrow()
-- Authorization: Check workspace access + VALIDATE_DECISION capability
-- Audit: Emit DECISION_VALIDATED event
-- Error handling: Return 400 on validation failure
-- Tests: 8-10 tests (auth, valid/invalid input, edge cases)
+## GLOBAL RULES
 
-### Phase B-2: Contradiction Detection API Routes
-- Create: `src/app/api/v7.2/decisions/{decisionId}/contradictions` (POST)
-- Route logic: Call contradictionDetector.detectAndThrow()
-- Authorization: Check workspace access + ANALYZE_DECISION capability
-- Audit: Emit DECISION_ANALYZED event
-- Error handling: Return 400 on contradiction errors
-- Tests: 8-10 tests
+1. **No sufficient data → FAIL CLOSED**
+2. **No causal chain → FAIL**
+3. **No measurable impact → FAIL**
+4. **Contradiction present → FAIL**
+5. **Diagnosis confidence > evidence → FAIL**
 
-### Phase B-3: Funnel Analysis API Routes
-- Create: `src/app/api/v7.2/engagements/{engagementId}/funnel` (GET)
-- Route logic: Call funnelAnalyzer.analyzeEngagementFunnel()
-- Authorization: Check workspace access + READ_ENGAGEMENT capability
-- Audit: Emit FUNNEL_ANALYZED event
-- Tests: 6-8 tests
+Diagnosis should FAIL often. This is correct behavior.
 
-### Phase B-4: Failure Containment API Routes
-- Create: `src/app/api/v7.2/decisions/{decisionId}/failures` (POST)
-- Route logic: Call containmentEngine.detectAndContainFailure()
-- Route logic: Call containmentEngine.rollbackDecision()
-- Authorization: Check workspace access + MANAGE_FAILURES capability
-- Audit: Emit FAILURE_DETECTED, FAILURE_CONTAINED events
-- Tests: 8-10 tests
+---
 
-### Phase B-5: Best Path Engine API Routes (CRITICAL)
-- Create: `src/app/api/v7.2/decisions/{decisionId}/best-paths` (POST)
-- Route logic: Orchestrate all diagnostic + constraint engines
-- Authorization: Check workspace access + ANALYZE_DECISION capability
-- Audit: Emit PATHS_ANALYZED, BEST_PATH_SELECTED events
-- Error handling: Graceful degradation on any engine failure
-- Tests: 12-15 tests (auth, scoring, ranking, fallbacks, edge cases)
+## ENGINES (STRICT)
 
-## Integration Points
+### 1. ROOT CAUSE ENGINE
 
-### Authorization Layer
-- Use centralized policy checks (existing pattern)
-- Check workspace isolation at API boundary
-- Enforce capabilities: VALIDATE_DECISION, ANALYZE_DECISION, MANAGE_FAILURES, READ_ENGAGEMENT
+**Output**:
+- hypothesis_id
+- root_cause_statement
+- causal_chain:
+  - cause → mechanism → effect → metric change
+- supporting_evidence:
+  - list of data points (type, confidence, source)
+- falsifier:
+  - exact condition that disproves hypothesis
+- confidence_score:
+  - based ONLY on:
+    - evidence quantity
+    - evidence quality
+    - contradiction penalty
+- alternative_hypotheses:
+  - minimum 2 competing causes
+  - ranking by confidence
+  - rejection reasons
 
-### Audit Layer
-- Emit events at API layer (not service layer)
-- Events: DECISION_VALIDATED, DECISION_ANALYZED, PATHS_ANALYZED, FAILURE_DETECTED
-- Include decision_id, engagement_id, workspace_id, user_id, timestamp
-- Reference v7.2 reason for traceability
+**Rules**:
+- MUST compare ≥3 hypotheses
+- MUST select best hypothesis
+- MUST explain why others rejected
+- MUST include metric baseline vs current
+- MUST link evidence to causal chain
 
-### Orchestration
-- Best Path Engine calls diagnostics + constraints
-- API layer orchestrates services in proper dependency order
-- Fail-closed: If any service fails, abort and return error
-- No silent degradation
+**FAIL IF**:
+- single hypothesis only
+- no causal chain
+- no falsifier
+- narrative-only explanation
+- confidence unlinked to evidence quality
 
-## Testing Strategy
+---
 
-- Unit tests: Service-level tests (already done in Phase A)
-- Integration tests: API routes + services
-- Authorization tests: Capability checks
-- Audit tests: Event emission verification
-- Edge case tests: Malformed input, missing data, cascade failures
+### 2. BOTTLENECK ENGINE
 
-**Target**: 50-60 Phase B tests (all passing)
+**Output**:
+- bottleneck_variable (ONE primary constraint)
+- metric_value (numeric)
+- baseline vs current (measurable delta)
+- throughput_impact (quantified)
+- downstream_impact (linked to KPIs)
+- constraint_type:
+  - {capacity | conversion | cost | time | quality}
+- evidence_link (reference to supporting data)
 
-## Validation Gates
+**Rules**:
+- MUST identify ONE primary bottleneck
+- MUST quantify impact numerically
+- MUST show baseline → current change
+- MUST link to downstream outcome metrics
 
-- npm test (all tests passing)
-- npm run build (no TypeScript errors)
-- prisma validate (schema valid)
-- Code review for authorization patterns
+**FAIL IF**:
+- multiple vague bottlenecks
+- descriptive only (no numbers)
+- no numeric linkage to outcome
+
+---
+
+### 3. ARCHETYPE ENGINE
+
+**Output**:
+- archetype (bounded enum)
+- risk_profile (LOW | MEDIUM | HIGH | CRITICAL)
+- capital_sensitivity (HIGH | MEDIUM | LOW)
+- growth_mode (survival | stabilize | grow | scale)
+- decision_constraints:
+  - allowed_strategy_types: []
+  - forbidden_strategy_types: []
+  - maximum_investment_horizon_months: N
+  - maximum_execution_complexity: {simple | moderate | complex | expert}
+
+**Rule**:
+- MUST affect downstream decisions
+- MUST restrict allowed strategies by risk/capital/growth mode
+
+**FAIL IF**:
+- classification only (no behavioral impact)
+- no constraints on strategy selection
+
+---
+
+### 4. MATURITY MODEL
+
+**Output**:
+- maturity_level (1-5 scale)
+- max_execution_complexity:
+  - {simple | moderate | complex | expert}
+- decision_horizon:
+  - days | weeks | months (maximum planning window)
+- allowed_strategy_types:
+  - list of strategies executable at this maturity
+- blocked_strategy_types:
+  - list of strategies forbidden at this maturity
+
+**Rule**:
+- MUST constrain:
+  - plan size
+  - execution depth
+  - time horizon
+  - strategy complexity
+
+**FAIL IF**:
+- not used to restrict decisions
+- no measurable impact on execution
+
+---
+
+## DATA SUFFICIENCY GATE (MANDATORY BEFORE ANY DIAGNOSIS)
+
+**Check**:
+- minimum required metrics present
+- no critical missing fields
+- no unresolved contradictions
+
+**If insufficient**:
+→ RETURN NULL / FAIL STATE
+→ Do NOT generate diagnosis
+→ Log missing fields explicitly
+
+---
+
+## HYPOTHESIS COMPETITION (MANDATORY)
+
+**Process**:
+1. Generate ≥3 hypotheses
+2. Score each:
+   - evidence support (0-1)
+   - contradiction penalty (-0.5 if contradictions exist)
+   - explanatory power (0-1)
+3. Select best hypothesis
+4. Output rejected hypotheses + reasons
+
+---
+
+## UNCERTAINTY OUTPUT (MANDATORY)
+
+**System must output**:
+- confidence_score (0–1)
+- confidence_reason (tied to evidence quantity/quality)
+- missing_data_list (explicit gaps)
+- risk_of_misdiagnosis (HIGH | MEDIUM | LOW)
+
+**FAIL IF**:
+- confidence not tied to evidence
+- missing data list empty when data is incomplete
+
+---
+
+## TEST REQUIREMENTS
+
+For EACH engine (4 engines × 5 tests = 20 minimum tests):
+
+1. **Valid case** (sufficient data, no contradictions)
+2. **Insufficient data → FAIL** (< minimum required fields)
+3. **Contradiction → FAIL** (logically inconsistent inputs)
+4. **Misleading data** (multiple plausible causes; best hypothesis selected)
+5. **Edge case** (boundary conditions; proper failure behavior)
+
+**Target**: 20-25 tests per engine (80-100 total Phase B tests)
+
+---
+
+## INTEGRATION RULES
+
+- Reuse existing OPSIQ services (financial, baseline, etc.)
+- Do NOT duplicate financial logic
+- Do NOT bypass decision-control
+- Preserve audit events (log at service layer)
+- Preserve determinism (no randomization)
+- Preserve workspace isolation
+
+---
+
+## SUCCESS CRITERIA
+
+Diagnosis is VALID only if:
+
+- Falsifiable (includes testable falsifier)
+- Evidence-backed (confidence ≤ evidence quality)
+- Quantitatively linked (metrics tied to causal chain)
+- Competing hypotheses evaluated (≥3 compared)
+- Uncertainty exposed (confidence reason + missing data)
+
+---
+
+## IMPLEMENTATION (NEXT PHASE)
+
+Phase B-DIAG-1: Root Cause Engine ✓
+Phase B-DIAG-2: Bottleneck Engine (pending)
+Phase B-DIAG-3: Archetype Engine (pending)
+Phase B-DIAG-4: Maturity Model (pending)
+
+Process:
+- Smallest safe slice first
+- Update /execution.md
+- Run validation gates
+- Proceed incrementally
 
 ---
 
