@@ -132,6 +132,60 @@ Run only after inspecting package.json:
 
 # CURRENT EXECUTION LOG
 
+## Phase A-2 Complete ✓ (2026-05-05 09:11)
+
+**Contradiction Detection Service**
+- ✓ Created: src/domain/validation/contradiction.ts (types)
+- ✓ Created: src/services/contradiction-detector/detector.ts (detection logic)
+- ✓ Created: src/services/contradiction-detector/__tests__/detector.test.ts (12/12 passing)
+- ✓ Tests: All contradiction detection tests passing
+- ✓ Status: Ready for Phase A-3
+
+**Slice Summary**:
+- Detects logical contradictions in validated contracts
+- Rules implemented:
+  - Critical health vs high revenue: Warning
+  - Strong health vs zero revenue: Error
+  - Owner absence + critical urgency: Error
+  - Low budget + critical urgency: Warning
+- Provides suggestions for resolution
+- Throws on error-level contradictions
+- Reuses validation contract from Phase A-1
+- Maintains workspace isolation
+- Logging for all detection results
+
+**Files Changed**: 3 new files
+- src/domain/validation/contradiction.ts
+- src/services/contradiction-detector/detector.ts
+- src/services/contradiction-detector/__tests__/detector.test.ts
+
+---
+
+## Phase A-1 Complete ✓ (2026-05-05 09:10)
+
+**Input Contract Service**
+- ✓ Created: src/domain/validation/contract.ts (schema + types)
+- ✓ Created: src/services/validation-contracts/contract-validator.ts (validation logic)
+- ✓ Created: src/services/validation-contracts/__tests__/contract-validator.test.ts (11/11 passing)
+- ✓ Tests: All contract validation tests passing
+- ✓ Status: Ready for integration into Phase A-2
+
+**Slice Summary**:
+- DecisionRequestContract schema (Zod) with required fields: engagementId, workspaceId, requestType, businessCondition
+- Optional fields: constraints, context
+- ContractValidator class with validate() and validateAndThrow() methods
+- Comprehensive test coverage: valid/invalid inputs, UUIDs, enums, ranges, optional fields, error handling
+- No duplication: reuses existing validation patterns from decision-validation service
+- Workspace isolation: inherited from request context
+- Audit: logging implemented for all validations
+
+**Files Changed**: 3 new files
+- src/domain/validation/contract.ts
+- src/services/validation-contracts/contract-validator.ts
+- src/services/validation-contracts/__tests__/contract-validator.test.ts
+
+---
+
 ## Phase 0 Complete ✓
 
 **Date**: 2026-05-05  
