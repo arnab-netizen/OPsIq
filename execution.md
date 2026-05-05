@@ -1,443 +1,227 @@
-# OPSIQ EXECUTION ROADMAP
-# Reality-Based Growth + Survival Operating System
+# OPSIQ v7.2 Execution Control File
 
-## STRICT EXECUTION MODE
+## Objective
+Integrate v7.2 as an extension of OPSIQ, not a parallel system.
 
-Rules:
-- Read repo before changes
-- Reuse existing implementation
-- Upgrade existing implementation if partial
-- Do not duplicate concepts/files/models/services
-- Build backbone-first
-- Deterministic + fail-closed only
-- No generic advice systems
-- No public/owner leakage
-- Run tests after every phase
-- Never proceed with failing state
-
-Maintain:
-.claude/execution_state.json
-
-Schema:
-{
-  "current_phase": "",
-  "completed_phases": [],
-  "completed_steps": [],
-  "failed_steps": [],
-  "existing_reused": [],
-  "existing_upgraded": [],
-  "new_files_created": [],
-  "duplicates_avoided": [],
-  "invariants_verified": [],
-  "last_green_command": "",
-  "next_step": ""
-}
-
-Update after every step.
+System must:
+- remain deterministic
+- remain fail-closed
+- reuse existing services
+- preserve audit chain
+- remain deployable at every step
 
 ---
 
-# SYSTEM NORTH STAR
+## CRITICAL RULES
 
-OPSIQ optimizes for:
-
-MINIMUM OPERATOR ENTROPY
-
-The user must leave with:
-- fewer decisions
-- clearer priorities
-- safer execution
-- measurable next steps
-- lower ambiguity
-
-Reject any feature that does not improve:
-- survival
-- revenue
-- margin
-- cashflow
-- execution reliability
-- decision quality
-- scalability
-- operator clarity
+1. NEVER duplicate existing logic
+2. ALWAYS inspect repo before building
+3. EXTEND instead of REBUILD
+4. FAIL CLOSED on uncertainty
+5. PRESERVE:
+   - auth
+   - RBAC
+   - workspace isolation
+   - idempotency
+   - audit events
 
 ---
 
-# GLOBAL RECOMMENDATION RULES
+# Phase 0 — ENGINE MAPPING (MANDATORY)
 
-Every recommendation MUST include:
-- action
-- reason
-- evidence_refs
-- constraints_considered
-- expected_impact
-- cost
-- time_required
-- difficulty
-- risk
-- rollback_cost
-- rollback_time
-- reversibility
-- confidence_state
-- confidence_reason
-- first_step
-- stop_condition
-- review_date
+For EACH engine:
 
-Required confidence states:
-- HIGH_CONFIDENCE
-- MEDIUM_CONFIDENCE
-- LOW_CONFIDENCE
-- NEED_MORE_DATA
-- CANNOT_DETERMINE
-- DANGER_DO_NOT_ACT
+1. Inspect repo
+2. Find:
+   - existing service
+   - schema
+   - API
+   - tests
 
-Fail recommendation generation if:
-- evidence insufficient
-- contradictions unresolved
-- rollback missing for high-risk action
-- recommendation generic
-- constraints ignored
+3. Classify:
+   - EXISTS → reuse
+   - PARTIAL → extend
+   - MISSING → build
+
+4. Record:
+
+Engine:
+- mapped_to:
+- status:
+- reuse_strategy:
+- duplication_risk:
+
+RULE:
+DO NOT PROCEED TO PHASE A until mapping is COMPLETE.
 
 ---
 
-# MASTER LAYERS
+# SYSTEM ARCHITECTURE (UPDATED)
 
-## Layer 0 — Reality Integrity Layer
-- Evidence Reliability Engine
-- Evidence Sufficiency Engine
-- Contradiction Engine
-- Data Quality Scoring
-- Confidence Gating
-- Benchmark Calibration
-- Fail-Closed Logic
+Use LAYERED GRAPH, not linear pipeline:
 
-## Layer 1 — Reality Backbone
-- Business Profile
-- Hybrid Business Model
-- Business Maturity State
-- Owner Constraint Profile
-- Financial Constraint Profile
-- Customer Profile
-- Local Market Profile
-- Capacity Profile
-- Compliance Flags
-- Constraint Registry
-
-## Layer 2 — Event + Temporal Memory Fabric
-- Canonical Event Store
-- Event Replay
-- Snapshot Engine
-- Projection Engine
-- KPI History
-- Intervention History
-- Decision History
-- Outcome History
-
-## Layer 3 — Survival Intelligence
-- Cash Runway Engine
-- Burn Pressure Engine
-- Debt Pressure Engine
-- Margin Risk Engine
-- Revenue Concentration Engine
-- Survival Priority Engine
-- Financial Health Gate
-
-## Layer 4 — Growth Operating Engines
-- Revenue Growth Engine
-- Customer Acquisition Engine
-- Sales Pipeline Engine
-- Offer Strength Engine
-- Pricing Engine
-- Unit Economics Engine
-- Retention Engine
-- Customer Segment Profitability Engine
-
-## Layer 5 — Execution Reality Layer
-- Financial Feasibility Engine
-- Time Constraint Engine
-- Staff Constraint Engine
-- Skill Constraint Engine
-- Local Feasibility Engine
-- Dependency Graph
-- Execution Friction Engine
-- Rollback Accounting Engine
-
-## Layer 6 — Experimentation + Validation
-- Reversible Experiment Engine
-- Proof-of-Impact Engine
-- Attribution Confidence
-- Success Thresholds
-- Failure Thresholds
-- Rollback Planning
-
-## Layer 7 — Decision + Priority System
-- Financial Normalization
-- Business Impact Engine
-- Decision Confidence Engine
-- Priority Engine
-- Decision Compression Engine
-- Escalation Engine
-- Dangerous Action Detection
-
-## Layer 8 — Guided Operating System
-- Daily Action Queue
-- Weekly Operating Plan
-- Review System
-- Follow-Up System
-- KPI Review
-- Execution Tracking
-
-## Layer 9 — Adaptive Learning
-- Expected vs Actual
-- Failed Action Memory
-- Local Pattern Learning
-- Recommendation Adjustment
-- Constraint Drift Detection
-- Strategic Debt Detection
+1. Validation Layer
+2. Baseline Layer
+3. Diagnostic Layer
+4. Constraint Layer
+5. Decision Layer
+6. Execution Layer
+7. Outcome Layer
+8. Output Layer
 
 ---
 
-# GUARDRAILS
+# ENGINE LIST (v7.2)
 
-## Avoid over-complexity
-Every engine must answer:
-“What operator decision becomes simpler?”
+## Validation Layer
+1. Input Contract
+2. Data Quality
+3. Contradiction Detection
+4. Fail-State System
 
-Never show:
-- >1 primary action
-- >3 supporting actions
-- >1 warning
+## Baseline Layer
+5. Financial Health
+6. Archetype
+7. Maturity
 
-## Avoid fake localization
-Every local assumption requires:
-- source
-- confidence
-- timestamp
-- validation_status
-- expiry
+## Diagnostic Layer
+8. Root Cause
+9. Customer RFM
+10. Offer Metrics
+11. Funnel
+12. Bottleneck
 
-## Avoid causal graph explosion
-Allowed domains only:
-- revenue
-- cashflow
-- margin
-- conversion
-- churn
-- lead flow
-- delivery
-- capacity
-- customer complaints
+## Constraint Layer
+13. Compliance
+14. Decision Halt
+15. Capacity + Friction
 
-Max causal depth: 5.
+## Decision Layer
+16. Prioritization
+17. Scenario
+18. Monetization
+19. BEST PATH ENGINE (NEW, CRITICAL)
 
-## Avoid pseudo-strategic AI
-No strategic recommendation without:
-- evidence
-- financial basis
-- execution feasibility
-- rollback analysis
-- confidence state
+## Execution Layer
+20. Action FSM
+21. Dependency Graph
+22. Sequencer
+23. Failure Containment
 
-System must support:
-“Do not expand yet.”
+## Outcome Layer
+24. Impact Tracker
+25. Confidence
+26. Feedback
 
-## Avoid operator trust erosion
-Forbidden:
-- morale scoring
-- personality scoring
-- emotional assumptions
-
-Allowed:
-- execution latency
-- missed deadlines
-- response delay
-- blocker frequency
-
-## Avoid computational explosion
-
-HOT:
-current operational state
-
-WARM:
-recent projections
-
-COLD:
-immutable historical events
-
-Tier 0 synchronous:
-- auth
-- permission
-- workspace isolation
-- entitlement
-- quota
-- contradiction fail-closed
-
-Tier 1 near-real-time:
-- priorities
-- KPI drift
-- confidence updates
-
-Tier 2 background:
-- causal recalculation
-- strategic analysis
-- pattern mining
+## Output Layer
+27. Output Mode
+28. Quick Win
 
 ---
 
-# PHASE ORDER
+# VALIDATION GATES
 
-## PHASE 0 — System Truth Contract
-Create enforceable system laws.
-Add tests for:
-- generic advice rejection
-- missing confidence rejection
-- missing evidence rejection
-- rollback enforcement
+Run only after inspecting package.json:
 
-## PHASE 1 — Reality Integrity Layer
-Implement:
-- evidence reliability
-- contradiction fail-closed
-- confidence gating
-- data quality score
-
-## PHASE 2 — Reality Backbone
-Implement:
-- hybrid business models
-- maturity states
-- constraint profiles
-- customer profiles
-- local market profiles
-
-## PHASE 3 — Event + Temporal Fabric
-Implement:
-- append-only canonical event store
-- replay
-- snapshots
-- projections
-
-## PHASE 4 — Survival Intelligence
-Implement:
-- runway
-- burn
-- debt pressure
-- concentration risk
-- financial health gate
-
-Block growth if survival thresholds fail.
-
-## PHASE 5 — Growth Operating Engines
-Implement:
-- revenue growth
-- customer acquisition
-- sales pipeline
-- pricing
-- offer strength
-- retention
-- unit economics
-
-## PHASE 6 — Execution Reality
-Implement:
-- feasibility
-- dependency graph
-- execution friction
-- rollback accounting
-
-## PHASE 7 — Experimentation + Validation
-Implement:
-- reversible experiments
-- proof-of-impact
-- attribution confidence
-- rollback plans
-
-## PHASE 8 — Decision + Priority System
-Implement:
-- business impact
-- financial normalization
-- priority engine
-- decision compression
-- escalation rules
-
-## PHASE 9 — Guided Operating System
-Implement:
-- daily action queue
-- weekly operating plan
-- review loops
-- follow-up tracking
-
-## PHASE 10 — Adaptive Learning
-Implement:
-- recommendation adjustment
-- failed-action memory
-- constraint drift
-- strategic debt
-
-## PHASE 11 — Owner Mode Full OS
-Implement:
-- portfolio intelligence
-- advanced reports
-- strategic planning
-- owner admin systems
-
-## PHASE 12 — Public SMB Shell
-Implement:
-- Problem → Best Action → Track Result
-- onboarding
-- simplified UI
-- DTO isolation
-
-## PHASE 13 — Enterprise Hardening
-Implement:
-- CI gates
-- monitoring
-- backups
-- security
-- DTO leakage tests
-- tenant isolation tests
+- npm run test / npm test
+- npm run build
+- npm run lint (if exists)
+- prisma validate (if exists)
 
 ---
 
-# REQUIRED CI GATES
+# CURRENT EXECUTION LOG
 
-Every phase must pass:
-- build
-- typecheck
-- lint
-- tests
-- prisma validate
-- migration replay
-- tenant isolation tests
-- permission matrix tests
-- DTO leakage tests
-- audit event tests
+## Phase 0 Complete ✓
+
+**Date**: 2026-05-05  
+**Status**: Mapping complete - Ready for Phase A
+
+### Engine Summary
+
+| Status | Count | Details |
+|--------|-------|---------|
+| EXISTS (reuse) | 23 | Ready to integrate |
+| PARTIAL | 0 | N/A |
+| MISSING (build) | 5 | See build order below |
+| **TOTAL** | **28** | |
+
+### Mapping Results
+
+#### ✓ EXISTS: 23 Engines (Ready)
+
+**Validation**: Data Quality (integrity), Fail-State (control)  
+**Baseline**: Financial (financial), Archetype (segmentation), Maturity (baseline)  
+**Diagnostic**: Root Cause (intelligence), RFM (segmentation), Offer Metrics (governance), Bottleneck (reality-awareness)  
+**Constraint**: Compliance (policy), Decision Halt (decision-control), Capacity (execution-drift)  
+**Decision**: Prioritization (consulting-engine), Scenario (scenario), Monetization (value)  
+**Execution**: FSM, Dependency Graph, Sequencer (all in execution)  
+**Outcome**: Impact Tracker (outcome), Confidence (decision-confidence), Feedback (learning)  
+**Output**: Output Mode (report), Quick Win (firstwin)  
+
+#### ✗ MISSING: 5 Engines (MUST BUILD - Dependency Order)
+
+1. **Input Contract** (Validation Layer)
+   - Maps to: `src/services/validation-contracts`
+   - Purpose: Schema contracts, ZOD validation
+   - Build: NEW service, extend existing validation domain
+   - Blocker: None (start first)
+
+2. **Contradiction Detection** (Validation Layer)
+   - Maps to: `src/services/contradiction-detector`
+   - Purpose: Logical contradiction detection
+   - Build: NEW service on top of integrity + decision-validation
+   - Blocker: Input Contract must exist
+
+3. **Funnel Analysis** (Diagnostic Layer)
+   - Maps to: `src/services/funnel-analysis`
+   - Purpose: Conversion funnel analysis
+   - Build: NEW service or extend execution tracking
+   - Blocker: None (diagnostic layer)
+
+4. **Failure Containment** (Execution Layer)
+   - Maps to: `src/services/failure-containment`
+   - Purpose: Failure isolation, rollback logic
+   - Build: NEW service, integrate with execution + control
+   - Blocker: None (execution layer)
+
+5. **BEST PATH ENGINE** (Decision Layer - CRITICAL)
+   - Maps to: `src/services/best-path-engine`
+   - Purpose: Multi-path routing, optimization, orchestration
+   - Build: NEW service, orchestrates all 23 + 4 other engines
+   - Blocker: All diagnostic + constraint engines must be complete
+   - Risk: HIGHEST - mission-critical
+
+### Build Order (Dependency Chain)
+
+```
+Phase A-1: Input Contract Validation
+    ↓
+Phase A-2: Contradiction Detection
+    ↓
+Phase A-3: Funnel Analysis
+    ↓
+Phase A-4: Failure Containment
+    ↓
+Phase A-5: Best Path Engine (master orchestrator)
+```
+
+### Integration Constraints
+
+- **NO duplication**: Reuse all 23 existing services as-is
+- **NO schema migrations**: 23 services have schemas; use existing tables
+- **Preserve**: Workspace isolation, audit events, RBAC, idempotency
+- **Audit**: All mutations must emit events (existing audit system)
+- **Type safety**: TypeScript, Zod contracts for all new services
+
+### Critical Rules (Non-Negotiable)
+
+1. **NEVER** call existing service code from UI directly
+2. **ALWAYS** use API layer for authorization checks
+3. **FAIL CLOSED** if any engine fails (no silent degradation)
+4. **VALIDATE** all inputs at boundary (API layer)
+5. **AUDIT** all mutations immediately (no batch delays)
 
 ---
 
-# STRICT FAIL CONDITIONS
 
-Fail implementation if:
-- duplicate engines created
-- unscoped workspace query exists
-- public DTO leaks owner/internal fields
-- recommendation generic
-- contradiction allows false high confidence
-- growth allowed during survival critical state
-- high-risk action lacks rollback fields
-- AI mutates final state directly
-- learning updates from unverified outcomes
-
----
-
-# REQUIRED END-OF-PHASE REPORT
-
-Only report:
-1. Phase completed
-2. Files reused
-3. Files upgraded
-4. Files created
-5. Duplicates avoided
-6. Tests added/updated
-7. Commands run
-8. Result
-9. Remaining blockers
-10. Next phase
