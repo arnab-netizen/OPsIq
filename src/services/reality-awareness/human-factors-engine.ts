@@ -172,7 +172,7 @@ function assessResistanceToChange(
     complex: "HIGH",
   };
 
-  const severity = maturityRiskMap[context.organizationalMaturity] || "MODERATE";
+  const severity: SeverityLevel = maturityRiskMap[context.organizationalMaturity] || "MODERATE";
 
   const evidencePoints: string[] = [];
   if (context.recentlyFailedInitiatives && context.recentlyFailedInitiatives.length > 0) {
@@ -210,7 +210,7 @@ function assessCommunicationBreakdown(
     excellent: "NONE",
   };
 
-  const severity = communicationQualityMap[context.communicationQuality];
+  const severity = communicationQualityMap[context.communicationQuality] || "MODERATE";
 
   const evidence = [
     `Communication quality: ${context.communicationQuality}`,
@@ -242,7 +242,7 @@ function assessMoraleFragility(
     high: "NONE",
   };
 
-  const severity = moraleMap[context.teamMorale];
+  const severity = moraleMap[context.teamMorale] || "MODERATE";
 
   const evidence = [
     `Team morale: ${context.teamMorale}`,
@@ -349,7 +349,7 @@ function assessAccountabilityWeakness(
     rigorous: "NONE",
   };
 
-  const severity = accountabilityMap[context.accountabilityFramework];
+  const severity = accountabilityMap[context.accountabilityFramework] || "MODERATE";
 
   const evidence = [
     `Accountability framework: ${context.accountabilityFramework}`,
@@ -430,7 +430,7 @@ function estimateTimeToMitigation(
 
   Object.entries(factors).forEach(([key, assessment]) => {
     const factor = key as HumanFactorKey;
-    const times = timingMap[assessment.severity];
+    const times = timingMap[assessment.severity as any] || timingMap.MODERATE;
     mitigation[factor] = times[factor];
   });
 
