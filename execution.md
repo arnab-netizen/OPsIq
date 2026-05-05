@@ -822,24 +822,50 @@ Diagnosis is VALID only if:
 
 ---
 
+## Phase B-API Complete ✓ (2026-05-05 15:52)
+
+**Diagnostic Engine REST Routes**
+
+**Routes Created**:
+- POST /api/diagnosis/root-cause: Root cause analysis endpoint
+- POST /api/diagnosis/bottleneck: Bottleneck identification endpoint
+- POST /api/diagnosis/archetype: Business archetype classification endpoint
+- POST /api/diagnosis/maturity: Organizational maturity assessment endpoint
+
+**Features**:
+- Authorization: CAPABILITIES.DIAGNOSIS_READ per withAuth pattern
+- Validation: Zod schemas for all inputs with detailed error messages
+- Idempotency: idempotency-key header required; cached responses for duplicates
+- Audit: Logging of userId, engagementId, workspaceId, analysisId, confidence scores
+- Error Handling: Fail-closed (400 for validation errors, 500 for system errors)
+- Response: Standard JSON with analysisId, results, confidence, uncertainty exposure
+- Workspace Isolation: Preserved via request context and explicit workspaceId parameter
+
+**Domain Models**:
+- Added CAPABILITIES.DIAGNOSIS_READ and DIAGNOSIS_CREATE to constants
+
+**Files Created**: 4 new API route files
+- src/app/api/diagnosis/root-cause/route.ts
+- src/app/api/diagnosis/bottleneck/route.ts
+- src/app/api/diagnosis/archetype/route.ts
+- src/app/api/diagnosis/maturity/route.ts
+
+---
+
 ## IMPLEMENTATION STATUS
 
 Phase B-DIAG-1: Root Cause Engine ✓
 Phase B-DIAG-2: Bottleneck Engine ✓
 Phase B-DIAG-3: Archetype Engine ✓
 Phase B-DIAG-4: Maturity Model ✓
+Phase B-API: REST Routes ✓
 
-**Summary**: All 4 diagnostic engines implemented and tested (85/85 tests passing total).
+**Summary**: All diagnostic engines + API routes complete (87/87 tests passing, 4 endpoints ready).
 
 **Next Steps**:
-- Phase B API: Create REST API routes for all 4 engines with:
-  - Authorization checks
-  - Input validation
-  - Audit events
-  - Error handling
-  - Response formatting
 - Phase B Integration: Wire engines into Best Path Engine orchestrator
 - Phase B Testing: End-to-end diagnostic flow tests
+- Phase C: Advanced features (trend analysis, predictive diagnostics)
 
 Process:
 - Smallest safe slice first
