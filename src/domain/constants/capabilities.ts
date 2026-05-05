@@ -97,6 +97,10 @@ export const CAPABILITIES = {
   REVIEW_MANAGE: "review:manage",
   REVIEW_VIEW: "review:view",
 
+  // Decisions
+  DECISION_ACCEPT: "decision:accept",
+  DECISION_REJECT: "decision:reject",
+
   // Files
   FILE_UPLOAD: "file:upload",
   FILE_VIEW: "file:view",
