@@ -168,3 +168,46 @@ export function formatCurrency(value: number): string {
 export function formatPercentage(value: number): string {
   return `${(value * 100).toFixed(0)}%`;
 }
+
+/**
+ * Phase C Monetization Engine Types
+ * Quantify financial impact, ROI, payback period for decision paths
+ */
+
+export interface MonetizationMetrics {
+  revenue_delta: number; // New revenue or prevented loss ($)
+  cost_delta: number; // Savings (positive) or new costs (negative) ($)
+  margin_delta: number; // Change in gross margin percentage (0-100)
+  payback_days: number; // Days to recover capital_required from cash flow
+  capital_required: number; // Initial investment required ($)
+}
+
+export interface FinancialProjection {
+  pathId: string;
+  baseline: {
+    annual_revenue: number;
+    annual_cost: number;
+    gross_margin_pct: number;
+  };
+  projected: {
+    annual_revenue: number;
+    annual_cost: number;
+    gross_margin_pct: number;
+  };
+  delta: MonetizationMetrics;
+  cashFlowProjection: {
+    month_1: number;
+    month_3: number;
+    month_6: number;
+    month_12: number;
+  };
+  breakEvenDate?: string; // ISO date when project breaks even
+  roi_percent: number; // Return on Investment (%)
+  npv_12months: number; // Net Present Value over 12 months
+}
+
+export interface PathWithMonetization {
+  pathId: string;
+  expectedValue: number; // From scenarios
+  monetization: FinancialProjection;
+}
