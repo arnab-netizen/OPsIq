@@ -1020,7 +1020,7 @@ Process:
 
 # Phase C — DECISION CORE (STRICT MODE)
 
-## Current Phase: Phase C (PARTIAL - C-GATES & C-SCENARIO COMPLETE)
+## Current Phase: Phase C (PARTIAL - C-GATES, C-SCENARIO, C-MONETIZATION COMPLETE)
 
 ---
 
@@ -1477,6 +1477,65 @@ Decision is VALID only if:
 - Deterministic: identical inputs produce identical outputs
 - Logging at analyzePathScenarios() for audit trail
 - Reuses diagnostic confidence from Phase B (optional discount factor)
+
+---
+
+## Phase C-MONETIZATION Complete ✓ (2026-05-05 16:27)
+
+**Monetization Engine (Financial Projection & P&L Analysis - STRICT)**
+
+**Slice Summary**:
+- Complete financial projection for each decision path
+- Monetization Metrics: revenue_delta, cost_delta, margin_delta, payback_days, capital_required
+- Financial Projection includes: baseline, projected, delta, cash flow, break-even date, ROI, NPV
+- Extended src/domain/decision/monetization.ts with Phase C types (kept existing types)
+
+**Service Features**:
+- projectFinancials(): Single-path financial projection with all metrics
+- projectMultiplePathFinancials(): Batch projection for 3+ paths
+- calculateGrossMargin(): Margin % calculation from revenue/cost
+- calculatePaybackDays(): Capital recovery timeline
+- calculateMonthlyNetCashFlow(): Monthly benefit with ramp-up adjustment
+- calculateROI(): Return on investment (%)
+- calculateNPV(): Net present value over 12 months (10% discount rate)
+- calculateBreakEvenDate(): ISO date when path breaks even
+- validateFinancialProjection(): Verify all metrics are finite and reasonable
+- rankPathsByROI(): Sort descending by return percentage
+- rankPathsByPayback(): Sort ascending by payback period (shortest first)
+- rankPathsByNPV(): Sort descending by NPV
+- identifyProfitablePaths(): Filter paths with ROI > 0
+- identifyFastPaybackPaths(): Filter paths with payback ≤ threshold (default 180 days)
+- comparePaths(): Multi-metric comparison (ROI, payback, NPV, overall winner)
+
+**Files Created/Modified**: 2 files
+- src/domain/decision/monetization.ts (added Phase C types)
+- src/services/decision-core/monetization-engine.ts (MonetizationEngine class)
+- src/services/decision-core/__tests__/monetization-engine.test.ts
+
+**Tests**: 40/40 passing
+- Financial calculations: 11 tests (revenue, cost, margin, payback, ROI, NPV, cash flow)
+- Multiple paths: 2 tests (independent analysis, context preservation)
+- Validation: 6 tests (NaN/Infinity, unreasonable values, negative payback)
+- Ranking: 3 tests (ROI, payback, NPV ranking)
+- Path filtering: 2 tests (profitable paths, fast payback)
+- Path comparison: 5 tests (ROI winner, payback winner, NPV winner, overall winner)
+- Edge cases: 5 tests (zero revenue/cost, large deltas, negative margins, delays > 1 year)
+- Consistency: 3 tests (margin calculation, payback logic, break-even formula)
+
+**Financial Calculations**:
+- ROI = ((annual_net_benefit - capital_required) / capital_required) * 100
+- Payback Days = (capital_required / monthly_net_benefit) * 30 + time_to_result_days
+- NPV = Σ(monthly_cash_flow / (1.1^month)) - capital_required (12-month, 10% discount)
+- Monthly Net Cash Flow = (revenue_delta + cost_delta) / 12 * ramp_up_factor
+- Ramp-up Factor = (365 - time_to_result_days) / 365 (accounts for delayed start)
+
+**Integration Notes**:
+- Pure computation (no DB calls)
+- PathFinancialInput: pathId, expectedValue, baseline metrics, delta metrics, capital_required, timeToResultDays
+- Deterministic: identical inputs produce identical outputs
+- Logging at projectFinancials() for audit trail
+- Handles edge cases: zero revenue/cost, negative margins, delays > 1 year
+- All financial metrics validated for finite values and reasonable bounds
 
 ---
 
