@@ -101,6 +101,10 @@ export const CAPABILITIES = {
   DECISION_ACCEPT: "decision:accept",
   DECISION_REJECT: "decision:reject",
 
+  // Diagnosis
+  DIAGNOSIS_READ: "diagnosis:read",
+  DIAGNOSIS_CREATE: "diagnosis:create",
+
   // Files
   FILE_UPLOAD: "file:upload",
   FILE_VIEW: "file:view",
