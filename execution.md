@@ -1,0 +1,227 @@
+# OPSIQ v7.2 Execution Control File
+
+## Objective
+Integrate v7.2 as an extension of OPSIQ, not a parallel system.
+
+System must:
+- remain deterministic
+- remain fail-closed
+- reuse existing services
+- preserve audit chain
+- remain deployable at every step
+
+---
+
+## CRITICAL RULES
+
+1. NEVER duplicate existing logic
+2. ALWAYS inspect repo before building
+3. EXTEND instead of REBUILD
+4. FAIL CLOSED on uncertainty
+5. PRESERVE:
+   - auth
+   - RBAC
+   - workspace isolation
+   - idempotency
+   - audit events
+
+---
+
+# Phase 0 — ENGINE MAPPING (MANDATORY)
+
+For EACH engine:
+
+1. Inspect repo
+2. Find:
+   - existing service
+   - schema
+   - API
+   - tests
+
+3. Classify:
+   - EXISTS → reuse
+   - PARTIAL → extend
+   - MISSING → build
+
+4. Record:
+
+Engine:
+- mapped_to:
+- status:
+- reuse_strategy:
+- duplication_risk:
+
+RULE:
+DO NOT PROCEED TO PHASE A until mapping is COMPLETE.
+
+---
+
+# SYSTEM ARCHITECTURE (UPDATED)
+
+Use LAYERED GRAPH, not linear pipeline:
+
+1. Validation Layer
+2. Baseline Layer
+3. Diagnostic Layer
+4. Constraint Layer
+5. Decision Layer
+6. Execution Layer
+7. Outcome Layer
+8. Output Layer
+
+---
+
+# ENGINE LIST (v7.2)
+
+## Validation Layer
+1. Input Contract
+2. Data Quality
+3. Contradiction Detection
+4. Fail-State System
+
+## Baseline Layer
+5. Financial Health
+6. Archetype
+7. Maturity
+
+## Diagnostic Layer
+8. Root Cause
+9. Customer RFM
+10. Offer Metrics
+11. Funnel
+12. Bottleneck
+
+## Constraint Layer
+13. Compliance
+14. Decision Halt
+15. Capacity + Friction
+
+## Decision Layer
+16. Prioritization
+17. Scenario
+18. Monetization
+19. BEST PATH ENGINE (NEW, CRITICAL)
+
+## Execution Layer
+20. Action FSM
+21. Dependency Graph
+22. Sequencer
+23. Failure Containment
+
+## Outcome Layer
+24. Impact Tracker
+25. Confidence
+26. Feedback
+
+## Output Layer
+27. Output Mode
+28. Quick Win
+
+---
+
+# VALIDATION GATES
+
+Run only after inspecting package.json:
+
+- npm run test / npm test
+- npm run build
+- npm run lint (if exists)
+- prisma validate (if exists)
+
+---
+
+# CURRENT EXECUTION LOG
+
+## Phase 0 Complete ✓
+
+**Date**: 2026-05-05  
+**Status**: Mapping complete - Ready for Phase A
+
+### Engine Summary
+
+| Status | Count | Details |
+|--------|-------|---------|
+| EXISTS (reuse) | 23 | Ready to integrate |
+| PARTIAL | 0 | N/A |
+| MISSING (build) | 5 | See build order below |
+| **TOTAL** | **28** | |
+
+### Mapping Results
+
+#### ✓ EXISTS: 23 Engines (Ready)
+
+**Validation**: Data Quality (integrity), Fail-State (control)  
+**Baseline**: Financial (financial), Archetype (segmentation), Maturity (baseline)  
+**Diagnostic**: Root Cause (intelligence), RFM (segmentation), Offer Metrics (governance), Bottleneck (reality-awareness)  
+**Constraint**: Compliance (policy), Decision Halt (decision-control), Capacity (execution-drift)  
+**Decision**: Prioritization (consulting-engine), Scenario (scenario), Monetization (value)  
+**Execution**: FSM, Dependency Graph, Sequencer (all in execution)  
+**Outcome**: Impact Tracker (outcome), Confidence (decision-confidence), Feedback (learning)  
+**Output**: Output Mode (report), Quick Win (firstwin)  
+
+#### ✗ MISSING: 5 Engines (MUST BUILD - Dependency Order)
+
+1. **Input Contract** (Validation Layer)
+   - Maps to: `src/services/validation-contracts`
+   - Purpose: Schema contracts, ZOD validation
+   - Build: NEW service, extend existing validation domain
+   - Blocker: None (start first)
+
+2. **Contradiction Detection** (Validation Layer)
+   - Maps to: `src/services/contradiction-detector`
+   - Purpose: Logical contradiction detection
+   - Build: NEW service on top of integrity + decision-validation
+   - Blocker: Input Contract must exist
+
+3. **Funnel Analysis** (Diagnostic Layer)
+   - Maps to: `src/services/funnel-analysis`
+   - Purpose: Conversion funnel analysis
+   - Build: NEW service or extend execution tracking
+   - Blocker: None (diagnostic layer)
+
+4. **Failure Containment** (Execution Layer)
+   - Maps to: `src/services/failure-containment`
+   - Purpose: Failure isolation, rollback logic
+   - Build: NEW service, integrate with execution + control
+   - Blocker: None (execution layer)
+
+5. **BEST PATH ENGINE** (Decision Layer - CRITICAL)
+   - Maps to: `src/services/best-path-engine`
+   - Purpose: Multi-path routing, optimization, orchestration
+   - Build: NEW service, orchestrates all 23 + 4 other engines
+   - Blocker: All diagnostic + constraint engines must be complete
+   - Risk: HIGHEST - mission-critical
+
+### Build Order (Dependency Chain)
+
+```
+Phase A-1: Input Contract Validation
+    ↓
+Phase A-2: Contradiction Detection
+    ↓
+Phase A-3: Funnel Analysis
+    ↓
+Phase A-4: Failure Containment
+    ↓
+Phase A-5: Best Path Engine (master orchestrator)
+```
+
+### Integration Constraints
+
+- **NO duplication**: Reuse all 23 existing services as-is
+- **NO schema migrations**: 23 services have schemas; use existing tables
+- **Preserve**: Workspace isolation, audit events, RBAC, idempotency
+- **Audit**: All mutations must emit events (existing audit system)
+- **Type safety**: TypeScript, Zod contracts for all new services
+
+### Critical Rules (Non-Negotiable)
+
+1. **NEVER** call existing service code from UI directly
+2. **ALWAYS** use API layer for authorization checks
+3. **FAIL CLOSED** if any engine fails (no silent degradation)
+4. **VALIDATE** all inputs at boundary (API layer)
+5. **AUDIT** all mutations immediately (no batch delays)
+
+---
+
+
