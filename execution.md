@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D-FAIL-CLASS Complete ✓ (Next: Phase D-CONTAIN)
+## Current Phase: Phase D-CONTAIN Complete ✓ (Next: Phase D-ROLLBACK)
 
 ---
 
@@ -2104,6 +2104,66 @@ System must:
 - Fail-closed: Returns RETRYABLE for unknown errors (safe default)
 - Case-insensitive regex matching for all patterns
 - Used in job-safety for retry decisions after failures
+
+---
+
+## Phase D-CONTAIN Complete ✓ (2026-05-06 01:07)
+
+**Failure Containment (Isolation Strategies)**
+
+**Slice Summary**:
+- Strategy selection based on failure classification
+- Three containment strategies: ISOLATE, ROLLBACK, ESCALATE
+- Cascade prevention for all strategies
+- Action state transitions for failure containment
+- Affected action determination from dependency graph
+- Human-readable containment reasons
+
+**Service Features**:
+- containFailure(): Contain failure and determine affected actions based on failure class
+- selectStrategy(): Choose ISOLATE/ROLLBACK/ESCALATE based on failure class
+- determineAffectedActions(): Get downstream actions impacted by failure
+- calculateActionImpacts(): Compute state transitions for all affected actions
+- validateCascadePrevention(): Verify cascade is blocked
+- canTransitionForStrategy(): Check if state transition is valid
+- getNewStateForStrategy(): Get target state for action under strategy
+- preventsCascade(): Verify strategy prevents failure cascade
+- getAffectedActionCount(): Count affected actions
+
+**Strategy Mappings**:
+- RECOVERABLE → ISOLATE (stop spread, keep downstream blocked)
+- RETRYABLE → ISOLATE (stop spread, allow retry decision)
+- FATAL → ROLLBACK (undo action, cancel downstream)
+
+**State Transitions**:
+- ISOLATE: READY→BLOCKED, IN_PROGRESS→FAILED, DONE→DONE (no change)
+- ROLLBACK: READY→CANCELLED, IN_PROGRESS→CANCELLED, DRAFT→CANCELLED
+- ESCALATE: READY→BLOCKED, IN_PROGRESS→BLOCKED, all→BLOCKED (except DONE)
+
+**Files Created**: 3 new files
+- src/domain/execution/containment.ts (ContainmentStrategy enum, types, state transition maps)
+- src/services/execution-core/failure-containment.ts (FailureContainment class)
+- src/services/execution-core/__tests__/failure-containment.test.ts (36 comprehensive tests)
+
+**Tests**: 36/36 passing ✓
+- containFailure: 8 tests (RECOVERABLE/RETRYABLE/FATAL strategies, affected actions, impacts, cascade prevention)
+- selectStrategy: 3 tests (strategy selection for each failure class)
+- canTransitionForStrategy: 3 tests (valid transitions for each strategy)
+- getNewStateForStrategy: 4 tests (state transitions, DONE unchanged)
+- preventsCascade: 3 tests (all strategies prevent cascade)
+- getAffectedActionCount: 2 tests (correct count, zero count)
+- getAffectedActionsForStrategy: 3 tests (all strategies return affected actions)
+- Strategy state transitions: 5 tests (each strategy's state transitions)
+- Containment result structure: 2 tests (required fields, action impacts)
+- Edge cases: 3 tests (large action counts, determinism, all action states)
+
+**Integration Notes**:
+- Uses FailureClass from Phase D-FAIL-CLASS to select strategy
+- Requires downstream_actions from dependency graph (Phase D-DEPS)
+- Cascade prevention always true (strategies enforce blocking or cancellation)
+- Fail-closed: All strategies have defined state transitions
+- Workspace-scoped: Input includes decision_id and workspace_id
+- Action impacts provide before/after states for audit trail
 
 ---
 
