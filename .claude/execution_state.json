@@ -1,0 +1,70 @@
+{
+  "phase": "C-CONSTRAINT-1",
+  "status": "COMPLETE",
+  "timestamp": "2026-05-06T16:46:30Z",
+  "branch": "claude/audit-socops-opsiq-uso5o",
+  "critical_gaps": [],
+  "mapped_engines": {
+    "validation_layer": {
+      "1_input_contract": { "exists": true, "location": "src/services/validation-contracts/contract-validator.ts", "status": "REUSE" },
+      "2_data_quality": { "exists": true, "location": "src/services/decision-validation", "status": "REUSE" },
+      "3_contradiction": { "exists": true, "location": "src/services/contradiction-detector", "status": "REUSE" },
+      "4_fail_state": { "exists": true, "location": "src/services/control/{enforcement,guardrails}.ts", "status": "REUSE" }
+    },
+    "baseline_layer": {
+      "5_financial": { "exists": true, "location": "src/services/financial", "status": "REUSE" },
+      "6_archetype": { "exists": true, "location": "src/services/diagnostic-core/archetype-engine.ts", "status": "REUSE" },
+      "7_maturity": { "exists": true, "location": "src/services/diagnostic-core/maturity-engine.ts", "status": "REUSE" }
+    },
+    "diagnostic_layer": {
+      "8_root_cause": { "exists": true, "location": "src/services/diagnostic-core/root-cause-engine.ts", "status": "REUSE" },
+      "9_rfm": { "exists": true, "location": "src/services/segmentation", "status": "REUSE" },
+      "10_offer_metrics": { "exists": true, "location": "src/services/governance/metrics.ts", "status": "REUSE" },
+      "11_funnel": { "exists": true, "location": "src/services/funnel-analysis", "status": "REUSE" },
+      "12_bottleneck": { "exists": true, "location": "src/services/diagnostic-core/bottleneck-engine.ts", "status": "REUSE" }
+    },
+    "constraint_layer": {
+      "13_compliance": { "exists": true, "location": "src/services/policy", "status": "REUSE" },
+      "14_decision_halt": { "exists": true, "location": "src/services/constraint-core/decision-halt-engine.ts", "status": "BUILD-COMPLETE" },
+      "15_capacity_friction": { "exists": true, "location": "src/services/execution-core/capacity-controller.ts", "status": "REUSE" }
+    },
+    "decision_layer": {
+      "16_prioritization": { "exists": true, "location": "src/services/operator/priority.ts", "status": "REUSE" },
+      "17_scenario": { "exists": true, "location": "src/services/decision-core/scenarios-engine.ts", "status": "REUSE" },
+      "18_monetization": { "exists": true, "location": "src/services/decision-core/monetization-engine.ts", "status": "REUSE" },
+      "19_best_path": { "exists": true, "location": "src/services/decision-core/best-path-selector.ts", "status": "REUSE" }
+    },
+    "execution_layer": {
+      "20_action_fsm": { "exists": true, "location": "src/services/execution-core/action-fsm.ts", "status": "REUSE" },
+      "21_dependency_graph": { "exists": true, "location": "src/services/execution-core/dependency-graph.ts", "status": "REUSE" },
+      "22_sequencer": { "exists": true, "location": "src/services/execution-core/sequencer.ts", "status": "REUSE" },
+      "23_failure_containment": { "exists": true, "location": "src/services/execution-core/failure-containment.ts", "status": "REUSE" }
+    },
+    "outcome_layer": {
+      "24_impact_tracker": { "exists": true, "location": "src/services/segmentation/impact.ts", "status": "REUSE" },
+      "25_confidence": { "exists": true, "location": "src/services/outcome-core/confidence-updater.ts", "status": "REUSE" },
+      "26_feedback": { "exists": true, "location": "src/services/outcome-core/feedback-loop.ts", "status": "REUSE" }
+    },
+    "output_layer": {
+      "27_output_mode": { "exists": true, "location": "src/services/decision-core/audit-output-generator.ts", "status": "REUSE" },
+      "28_quick_win": { "exists": true, "location": "src/services/outcome-core/quick-win-enforcer.ts", "status": "REUSE" }
+    }
+  },
+  "summary": {
+    "total_engines": 28,
+    "existing": 28,
+    "missing": 0,
+    "reuse_count": 27,
+    "build_count": 1,
+    "build_complete": 1,
+    "duplication_risk": "LOW (all services properly isolated)"
+  },
+  "next_phase": "C-CONSTRAINT-2: Capacity Friction (Engine 15 - Already Reused)",
+  "rules_enforced": [
+    "NEVER duplicate existing logic (27 REUSE)",
+    "ALWAYS inspect repo before building (SCAN COMPLETE)",
+    "EXTEND instead of REBUILD (27 engines extended, 1 new)",
+    "FAIL CLOSED on uncertainty (decision halt is explicit blocker)",
+    "PRESERVE auth/RBAC/workspace/idempotency/audit (verified in reused engines)"
+  ]
+}
