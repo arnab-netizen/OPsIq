@@ -3,7 +3,8 @@
 **Date**: 2026-05-06  
 **Branch**: integration/v72-final  
 **Audit Status**: COMPLETE - Orchestration analysis finished  
-**Next Action**: Code removal/consolidation (pending approval)
+**Execution Status**: SLICE 1 COMPLETE - Duplicate orchestrators removed (2026-05-06 08:35)  
+**Next Action**: Slice 2 - Remove legacy confidence service
 
 ---
 
@@ -466,12 +467,62 @@ None at this time. Consult-ing-engine should be removed, not deprecated.
 
 ---
 
-## 11. Sign-Off
+## 11. Execution Log
+
+### Slice 1: Remove Duplicate Orchestrators (COMPLETE)
+**Executed**: 2026-05-06 08:35  
+**Status**: ✓ COMPLETE
+
+**Removed Files** (13 total):
+- `src/services/consulting-engine/orchestrator.ts` - Legacy function-based orchestrator
+- `src/services/consulting-engine/constraint-engine.ts` - Legacy constraints
+- `src/services/consulting-engine/decision-memo-engine.ts` - Legacy output formatting
+- `src/services/consulting-engine/diagnosis-engine.ts` - Legacy root cause (superseded by root-cause-engine)
+- `src/services/consulting-engine/evidence-engine.ts` - Legacy evidence validation
+- `src/services/consulting-engine/intervention-design-engine.ts` - Legacy intervention generation
+- `src/services/consulting-engine/prioritization-engine.ts` - Legacy prioritization
+- `src/services/consulting-engine/scenario-engine.ts` - Legacy scenarios (superseded by scenarios-engine)
+- `src/services/consulting-engine/pipeline.ts` - Legacy pipeline coordinator
+- `src/services/consulting-engine/__tests__/phase1-smoke.test.ts` - Legacy test (not in Phase F)
+- `src/services/consulting-engine/__tests__/pipeline.test.ts` - Legacy test (not in Phase F)
+- `src/app/api/opsiq/consulting-engine/run/route.ts` - API endpoint for legacy orchestrator
+- `src/app/api/opsiq/consulting-engine/__tests__/route.test.ts` - API test for removed endpoint
+
+**Validation Results**:
+- ✓ TypeScript compilation: CLEAN (22.1s, 0 errors)
+- ✓ Integration tests: 255/255 PASSING (11 test files)
+- ✓ No active code imports of consulting-engine services (domain types preserved)
+- ✓ All Phase F scenarios unchanged (no dependencies on consulting-engine)
+- ✓ All Phase D diagnostic engines intact (best-path-engine, diagnostic-core)
+- ✓ All Phase E outcome services intact (outcome-core)
+
+**Preserved**:
+- ✓ Determinism: No changes to deterministic paths
+- ✓ Fail-closed behavior: All fail-closed mechanisms intact
+- ✓ Audit chains: ExecutionAuditor + OutcomeAuditor unchanged
+- ✓ Dependency graphs: DependencyGraphBuilder unchanged
+- ✓ Workspace isolation: No changes to workspace boundaries
+- ✓ Replayability: All replay mechanisms intact
+
+**Canonical Orchestrators After Removal**:
+- ExecutionOrchestrator (execution-core) - ONLY execution orchestrator
+- BestPathOrchestrator (best-path-engine) - ONLY diagnostic orchestrator
+- runConsultingEngine (consulting-engine) - ✗ REMOVED
+
+**Files Still Containing consulting-engine References** (harmless - types only):
+- `src/services/__tests__/adapters.test.ts` - Type import from @/domain/consulting-engine/types (domain layer preserved)
+- `src/services/recommendation.ts` - Comment reference only
+- `src/services/action.ts` - Comment reference only
+
+---
+
+## 12. Sign-Off
 
 **Audit Completed**: 2026-05-06 08:15  
-**Auditor**: Orchestration Canonicalization Script  
+**Slice 1 Executed**: 2026-05-06 08:35  
+**Executor**: Canonicalization Script - Slice 1  
 **Branch**: integration/v72-final  
-**Status**: Ready for code removal (pending user approval)
+**Status**: Slice 1 complete. Ready for Slice 2 (remove legacy confidence service)
 
 **Summary**: 
 - 3 orchestrators identified; 1 kept (canonical execution), 1 kept (diagnostic), 1 removed (legacy consulting)
