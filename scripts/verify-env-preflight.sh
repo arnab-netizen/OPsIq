@@ -17,9 +17,7 @@ if [ "$CONTEXT" = "true" ]; then
   # CI environment - requires DATABASE_URL_TEST secret
   if [ -z "${DATABASE_URL:-}" ]; then
     echo "❌ DATABASE_URL_TEST: NOT SET (CI_TEST_ENV_BLOCKED)"
-    echo "   Action: Configure DATABASE_URL_TEST secret in GitHub repository settings"
-    echo "   Environment: test"
-    echo "   Pattern: Must contain 'test', 'ci', 'staging', or 'ephemeral'"
+    echo "   Action: Configure DATABASE_URL_TEST secret in GitHub environment:test"
     EXIT_CODE=1
   else
     echo "✓ DATABASE_URL_TEST: SET (CI environment detected)"
