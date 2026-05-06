@@ -14,6 +14,12 @@ jobs:
   preflight:
     name: Environment Preflight Check
     runs-on: ubuntu-latest
+    environment: test
+
+    env:
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -97,6 +103,7 @@ jobs:
 
     env:
       NODE_ENV: test
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
       DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
 
     steps:
