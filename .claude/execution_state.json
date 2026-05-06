@@ -1,6 +1,6 @@
 {
   "roadmap": "EXECUTION_MD_V3_1_FINAL_PHASE_0_13_GROWTH_SURVIVAL_OS",
-  "current_phase": "RESET_TO_PHASE_0_13_CONTRACT",
+  "current_phase": "Phase 0 — System Truth Contract",
   "reset_reason": "Legacy Phase A-F roadmap replaced with Phase 0-13 system truth contract",
   "reset_date": "2026-05-06T19:00:00Z",
   "verification": {
@@ -10,7 +10,9 @@
     "old_phases_removed": true
   },
   "completed_phases": [],
-  "phase_status": {},
+  "phase_status": {
+    "Phase 0 — System Truth Contract": "NOT_STARTED"
+  },
   "existing_systems": {
     "reusable": [
       "User (foundational auth)",
@@ -136,12 +138,11 @@
       "Implement DangerousActionGate validation layer",
       "Wire validation contracts into API request path"
     ],
-    "recommended_first_phase": "PHASE_0_PREP",
-    "phase_0_prep_tasks": [
-      "1. Create RecommendationTruthContract validation service",
-      "2. Create DangerousActionGate validation gate",
+    "phase_0_prerequisites": [
+      "1. Implement RecommendationTruthContract validation service",
+      "2. Implement DangerousActionGate validation gate",
       "3. Wire validation into recommendation generation path",
-      "4. Create RecommendationExpiryPolicy enforcement",
+      "4. Implement RecommendationExpiryPolicy enforcement",
       "5. Implement AIProposalSandbox containment",
       "6. Add tests for all Phase 0 requirements",
       "7. Verify no generic recommendations pass validation"
@@ -149,5 +150,5 @@
   },
   "safe_to_begin": false,
   "safety_justification": "Phase 0 requirements are foundational validation contracts that must be in place before any phase implementation. Current codebase lacks 7 critical Phase 0 systems. CRM concerns and legacy phase naming must be cleaned up. Decision model consolidation required. Proceeding without Phase 0 infrastructure would violate execution.md hard rules: no fake confidence, no generic recommendations, no claims without validation.",
-  "next_action": "Create Phase 0 PREP phase to build validation infrastructure before Phase 0 proper can begin"
+  "next_phase": "Phase 0 — System Truth Contract"
 }
