@@ -12,6 +12,7 @@ import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
+import { recommendationTruthContract } from "@/services/validation-contracts/recommendation-truth-contract";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -19,10 +20,17 @@ export interface CreateRecommendationInput {
   priority: string;
   title: string;
   description?: string;
+  rationale?: string; // Phase 0: RecommendationTruthContract
   expectedImpact?: string;
   implementationPhase?: string;
   class?: RecommendationClass;
   scoringInput?: RecommendationScoringInput;
+  // Phase 0 System Truth Contract required fields
+  rollbackPlan?: string;
+  constraintsConsidered?: string[];
+  confidenceLevel?: "HIGH_CONFIDENCE" | "MEDIUM_CONFIDENCE" | "LOW_CONFIDENCE" | "NEED_MORE_DATA" | "CANNOT_DETERMINE" | "DANGER_DO_NOT_ACT";
+  expiresAt?: Date;
+  isAIProposal?: boolean;
 }
 
 export interface UpdateRecommendationInput {
@@ -232,6 +240,21 @@ export async function createRecommendation(
     where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
+
+  // Phase 0: System Truth Contract validation
+  // Enforce root laws for recommendations before any persistence
+  await recommendationTruthContract.validateAndThrow({
+    title: input.title,
+    description: input.description,
+    rationale: input.rationale,
+    estimatedImpact: input.expectedImpact,
+    priority: input.priority,
+    rollbackPlan: input.rollbackPlan,
+    constraintsConsidered: input.constraintsConsidered,
+    confidenceLevel: input.confidenceLevel,
+    expiresAt: input.expiresAt,
+    isAIProposal: input.isAIProposal,
+  });
 
   if (idempotencyKey) {
     const result = await withIdempotency(

@@ -27,6 +27,7 @@ model User {
   submittedEvidence       Evidence[]             @relation("SubmittedEvidence")
   validatedEvidence       Evidence[]             @relation("ValidatedEvidence")
   recommendationApprovals Recommendation[]
+  recommendationsCreated  Recommendation[]       @relation("RecommendationCreator")
   assignedActions         Action[]               @relation("AssignedActions")
   completedActions        Action[]               @relation("CompletedActions")
   verifiedActions         Action[]               @relation("VerifiedActions")
@@ -408,14 +409,25 @@ model Recommendation {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
+  // Phase 0 — System Truth Contract fields
+  rollbackPlan           String?                @map("rollback_plan") // RollbackRequirementPolicy
+  constraintsConsidered  Json?                  @map("constraints_considered") // array of constraint strings
+  confidenceLevel        String?                @map("confidence_level") // HIGH_CONFIDENCE | MEDIUM_CONFIDENCE | LOW_CONFIDENCE | NEED_MORE_DATA | CANNOT_DETERMINE | DANGER_DO_NOT_ACT
+  expiresAt              DateTime?              @map("expires_at") // RecommendationExpiryPolicy
+  isAIProposal           Boolean                @default(false) @map("is_ai_proposal") // AIProposalSandbox
+  createdBy              String?                @map("created_by") @db.Uuid
+
   engagement Engagement @relation(fields: [engagementId], references: [id])
   finding    Finding?   @relation(fields: [findingId], references: [id])
   approver   User?      @relation(fields: [approvedBy], references: [id])
+  creator    User?      @relation("RecommendationCreator", fields: [createdBy], references: [id])
   actions    Action[]
 
   @@unique([findingId, title])
   @@index([engagementId])
   @@index([status])
+  @@index([expiresAt])
+  @@index([isAIProposal])
   @@map("recommendations")
 }
 
@@ -1002,4 +1014,44 @@ model WebhookEvent {
   @@index([status])
   @@index([processedAt])
   @@map("webhook_events")
+}
+
+// ─── Phase 0 — System Truth Contract Models ────────────────────────────────
+
+model AIProposalSandbox {
+  id               String   @id @default(uuid()) @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid
+  recommendationId String   @map("recommendation_id") @db.Uuid
+  sourceModel      String   @map("source_model") // e.g., "claude-opus", "gpt-4"
+  confidenceLevel  String   @map("confidence_level") // HIGH_CONFIDENCE | MEDIUM_CONFIDENCE | LOW_CONFIDENCE | NEED_MORE_DATA | CANNOT_DETERMINE | DANGER_DO_NOT_ACT
+  isApproved       Boolean  @default(false) @map("is_approved")
+  approvedBy       String?  @map("approved_by") @db.Uuid
+  approvedAt       DateTime? @map("approved_at")
+  rejectedReason   String?  @map("rejected_reason")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([recommendationId])
+  @@index([sourceModel])
+  @@index([isApproved])
+  @@map("ai_proposal_sandboxes")
+}
+
+model RecommendationExpiryPolicy {
+  id               String   @id @default(uuid()) @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid
+  recommendationId String   @unique @map("recommendation_id") @db.Uuid
+  expiresAt        DateTime @map("expires_at")
+  status           String   @default("active") @map("status") // "active" | "expired" | "superseded"
+  expiredAt        DateTime? @map("expired_at")
+  reason           String?  @map("reason") // Why was it expired (e.g., "manual", "timeout", "replaced_by_id")
+  replacedById     String?  @map("replaced_by_id") @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([workspaceId])
+  @@index([expiresAt])
+  @@index([status])
+  @@map("recommendation_expiry_policies")
 }
