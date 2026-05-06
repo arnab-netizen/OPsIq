@@ -1,63 +1,153 @@
 {
-  "current_phase": "Phase F",
-  "status": "COMPLETE",
-  "timestamp": "2026-05-06T18:00:00Z",
-  "completed_phases": [
-    "Phase 0 — ENGINE MAPPING",
-    "Phase A — VALIDATION LAYER",
-    "Phase B — DIAGNOSTIC CORE",
-    "Phase C — DECISION CORE",
-    "Phase D — EXECUTION LAYER",
-    "Phase E — OUTCOME LAYER",
-    "Phase F — INTEGRATION TESTING"
-  ],
-  "phase_summary": {
-    "phase_0": "COMPLETE ✓ (28/28 engines mapped: 23 reuse, 5 new)",
-    "phase_a": "COMPLETE ✓ (Input Contract, Contradiction, Funnel, Failure Containment, Best Path Orchestrator)",
-    "phase_b": "COMPLETE ✓ (Root Cause, Bottleneck, Archetype, Maturity - strict-mode validated)",
-    "phase_c": "COMPLETE ✓ (Gates, Scenario, Monetization, Best Path - constraint-enforcer implemented)",
-    "phase_d": "COMPLETE ✓ (FSM, Deps, Sequencer, Capacity, Friction, Job, Fail-Class, Containment)",
-    "phase_e": "COMPLETE ✓ (Impact, Variance, Confidence, Feedback, Output, QuickWin, Audit)",
-    "phase_f": "COMPLETE ✓ (10 hostile scenarios + core behaviors, 255/255 tests passing)"
+  "roadmap": "EXECUTION_MD_V3_1_FINAL_PHASE_0_13_GROWTH_SURVIVAL_OS",
+  "current_phase": "RESET_TO_PHASE_0_13_CONTRACT",
+  "reset_reason": "Legacy Phase A-F roadmap replaced with Phase 0-13 system truth contract",
+  "reset_date": "2026-05-06T19:00:00Z",
+  "verification": {
+    "execution_md_version": "v3.1",
+    "global_object_rule_present": true,
+    "phase_0_13_present": true,
+    "old_phases_removed": true
   },
-  "engine_mapping": {
-    "engine_14_decision_halt": {
-      "roadmap_name": "Decision Halt (Constraint Layer)",
-      "execution_md_phase": "Phase C — DECISION CORE",
-      "implementation": "src/services/decision-core/constraint-enforcer.ts",
-      "status": "IMPLEMENTED & TESTED",
-      "test_coverage": "24/24 tests passing",
-      "integration_status": "PARKED — Not wired into decision path; marked for future integration",
-      "runtime_behavior": "NOT ACTIVE — No calls from best-path-engine or decision flow",
-      "gates_implemented": [
-        "Data Sufficiency",
-        "Contradiction-Free",
-        "Capacity Available",
-        "Cash Runway Safe",
-        "Legal/Compliance OK"
-      ]
-    }
+  "completed_phases": [],
+  "phase_status": {},
+  "existing_systems": {
+    "reusable": [
+      "User (foundational auth)",
+      "Workspace (tenant boundary)",
+      "AuditEvent (mutation tracking)",
+      "Evidence (foundation for reality layer)",
+      "Recommendation (business logic)",
+      "Action (execution model)",
+      "Plan (structured intent)",
+      "KPI (outcome measurement)",
+      "UsageEvent (observability)",
+      "Subscription (lifecycle management)",
+      "auth-guard.ts (authorization foundation)",
+      "capability-check.ts (permission enforcement)",
+      "audit.ts (audit event system)",
+      "idempotency.ts (duplicate prevention)",
+      "tenant-isolation.test.ts (boundary verification)"
+    ],
+    "partial": [
+      "BusinessProfile (needs expansion to BusinessMaturityState, OwnerConstraintProfile, FinancialConstraintProfile)",
+      "Evidence (needs EvidenceSource, EvidenceReliabilityScore fields)",
+      "Recommendation (needs RecommendationLifecycle, expiryPolicy wiring)",
+      "decision-lifecycle.service.ts (needs Decision, DecisionRecord models)",
+      "state-transition.ts (needs completion for RecommendationExpiryPolicy, StateTransitionRule)",
+      "response-formatter.ts (needs DangerousActionGate validation layer)",
+      "contradiction-detector (needs full ContradictionEngine for Phase 1)",
+      "decision-validation (foundation exists, needs expansion)"
+    ],
+    "parked": [
+      "decision-core/constraint-enforcer.ts (implemented, not wired into decision path)",
+      "best-path-engine (extensive implementation, integration status unknown)",
+      "consulting-engine (diagnosis-engine, intervention-design-engine present)",
+      "diagnostic-core (root-cause, bottleneck, archetype, maturity engines)",
+      "financial (finance, financial-normalization services)",
+      "learning (learning service exists, wiring unknown)",
+      "scenario (scenario analysis service)",
+      "WebhookEvent model (exists, uncertain if wired)"
+    ],
+    "obsolete_or_legacy": [
+      "ClientAccount (CRM concern, not Phase 0-13 contract)",
+      "ClientContact (CRM concern, not Phase 0-13 contract)",
+      "LeadRecord (CRM concern, not Phase 0-13 contract)",
+      "Engagement, EngagementMembership (consulting model, may conflict with workspace scope)",
+      "DecisionLifecycle, DecisionSnapshot (legacy naming, conflicts with Phase 0-13 Decision, DecisionRecord)",
+      "Alert, Finding (unclear purpose relative to Phase 0-13 evidence/recommendation model)",
+      "BillingAccount (Phase 0-13 does not mention billing in root contract)",
+      "LearningRecord (conflicts with phase-specific learning in Phase 10)",
+      "OperatorItem (unclear purpose relative to UserRole, Capability)",
+      "multiple decision-* services (Decision, decision-confidence, decision-control, decision-lifecycle-integrity - consolidation needed)"
+    ],
+    "duplicate_risks": [
+      "Decision vs DecisionLifecycle vs DecisionSnapshot (three competing models)",
+      "decision.ts, decision-lifecycle.service.ts, decisions/decision-lifecycle.service.ts (multiple services)",
+      "Recommendation (model) vs recommendation.ts (service) - needs clear separation",
+      "Evidence vs EvidenceBundle vs EvidenceBundleItem (potential normalization issue)",
+      "KPI vs KPISnapshot (temporal model confusion)",
+      "BusinessProfile vs BusinessConditionProfile vs BusinessMaturityState (overlapping concerns)",
+      "Multiple financial services (finance, financial-normalization, financial-constraint handling scattered)",
+      "Contradiction vs contradiction-detector (naming mismatch: model vs service)"
+    ],
+    "missing_critical_phase_0": [
+      "RecommendationTruthContract (validation enforcement)",
+      "RecommendationExplanationContract (explainability enforcement)",
+      "DangerousActionGate (safety enforcement)",
+      "RollbackRequirementPolicy (mutation safety)",
+      "AIProposalSandbox (AI safety containment)",
+      "RecommendationExpiryPolicy (stale-data refusal)",
+      "MinimumUsefulOutputPolicy (useful degradation under low confidence)"
+    ],
+    "missing_critical_phase_1": [
+      "EvidenceReliabilityEngine (weighted evidence)",
+      "EvidenceSufficiencyEngine (completeness checking)",
+      "DataQualityScoreEngine (quality assessment)",
+      "ConfidenceGate (confidence enforcement)",
+      "BenchmarkProvenanceRegistry (provenance tracking)",
+      "OutcomeVerificationContract (claim vs reality separation)",
+      "ManipulationRiskEngine (anomaly detection)",
+      "EvidenceAnomalyDetector (outlier detection)",
+      "Contradiction model (must be schema, not just service)"
+    ],
+    "missing_global_objects": [
+      "AIProposalSandbox", "ActionCorrection", "AiProposal", "AttributionRecord",
+      "BenchmarkRegistry", "BusinessMaturityState", "BusinessModelProfile", "Capability",
+      "CapacityProfile", "ComplianceFlag", "ConstraintRegistry", "Contradiction",
+      "CustomerProfile", "Decision", "DecisionRecord", "EmbeddedSurfaceRegistration",
+      "Event", "EvidenceReliabilityScore", "EvidenceRetentionPolicy", "EvidenceSource",
+      "Experiment", "ExportPacket", "FileAsset", "FinancialConstraintProfile",
+      "IncidentModeState", "IntegrationConflict", "IntegrationConnection", "IntegrationSyncJob",
+      "Job", "KPIRegistry", "LocalMarketProfile", "Notification", "NotificationPolicy",
+      "OfflineActionBuffer", "OnboardingSession", "OperatorAdherenceProfile",
+      "Organization", "Outcome", "OutcomeVerification", "OwnerConstraintProfile",
+      "PortabilityRequest", "Projection", "ProjectionFreshnessPolicy",
+      "RecommendationLifecycle", "Report", "ResourceBudget", "Role",
+      "Snapshot", "StateTransitionRule", "TenantContextEnvelope"
+    ]
   },
-  "test_summary": {
-    "total_tests": 4139,
-    "passed": 4026,
-    "failed": 45,
-    "skipped": 68,
-    "pass_rate": "97.3%",
-    "failure_classification": "ALL ENVIRONMENT-RELATED (DATABASE_URL not set) - not code defects",
-    "failure_breakdown": {
-      "phase4_revenue_flow": 19,
-      "webhook_idempotency": 8,
-      "workspace_isolation_enforcement": 2,
-      "stripe_simulation": 16
-    }
+  "system_categorization_summary": {
+    "reusable_count": 15,
+    "partial_count": 7,
+    "parked_count": 8,
+    "obsolete_count": 10,
+    "duplicate_risks_count": 7,
+    "missing_critical_phase_0_count": 7,
+    "missing_critical_phase_1_count": 9,
+    "missing_global_objects_count": 43
   },
-  "system_readiness": {
-    "deterministic": true,
-    "fail_closed": true,
-    "audit_trail_complete": true,
-    "workspace_isolated": true,
-    "production_ready": true
+  "implementation_recommendation": {
+    "phase_0_readiness": "NOT_READY",
+    "blockers": [
+      "RecommendationTruthContract not implemented",
+      "RecommendationExpiryPolicy not wired",
+      "DangerousActionGate not implemented",
+      "AIProposalSandbox missing",
+      "No validation enforcement at recommendation generation",
+      "No stale-data refusal mechanism"
+    ],
+    "prerequisite_cleanups": [
+      "Audit all services against Phase 0-13 contract requirements",
+      "Determine Decision vs DecisionLifecycle consolidation",
+      "Separate CRM concerns (ClientAccount, LeadRecord) from Phase 0-13 contract",
+      "Create clear Decision, DecisionRecord models per Phase 0-13",
+      "Establish RecommendationExpiryPolicy enforcement",
+      "Implement DangerousActionGate validation layer",
+      "Wire validation contracts into API request path"
+    ],
+    "recommended_first_phase": "PHASE_0_PREP",
+    "phase_0_prep_tasks": [
+      "1. Create RecommendationTruthContract validation service",
+      "2. Create DangerousActionGate validation gate",
+      "3. Wire validation into recommendation generation path",
+      "4. Create RecommendationExpiryPolicy enforcement",
+      "5. Implement AIProposalSandbox containment",
+      "6. Add tests for all Phase 0 requirements",
+      "7. Verify no generic recommendations pass validation"
+    ]
   },
-  "next_phase": "Production deployment validation or Phase G (not in execution.md roadmap)"
+  "safe_to_begin": false,
+  "safety_justification": "Phase 0 requirements are foundational validation contracts that must be in place before any phase implementation. Current codebase lacks 7 critical Phase 0 systems. CRM concerns and legacy phase naming must be cleaned up. Decision model consolidation required. Proceeding without Phase 0 infrastructure would violate execution.md hard rules: no fake confidence, no generic recommendations, no claims without validation.",
+  "next_action": "Create Phase 0 PREP phase to build validation infrastructure before Phase 0 proper can begin"
 }
