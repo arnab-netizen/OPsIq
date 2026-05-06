@@ -26,8 +26,8 @@ export class ContractValidator {
         validatedAt: new Date(),
       };
     } catch (err) {
-      if (err instanceof ZodError && err.errors) {
-        err.errors.forEach((error) => {
+      if (err instanceof ZodError && err.issues) {
+        err.issues.forEach((error) => {
           const field = error.path ? error.path.join(".") : "root";
           errors.push({
             field: field || "root",
