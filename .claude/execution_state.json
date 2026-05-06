@@ -11,7 +11,7 @@
   },
   "completed_phases": [],
   "phase_status": {
-    "Phase 0 — System Truth Contract": "IN_PROGRESS"
+    "Phase 0 — System Truth Contract": "BLOCKED_ON_RUNTIME_PROOF"
   },
   "existing_systems": {
     "reusable": [
@@ -124,27 +124,36 @@
     "valid_blockers": [],
     "hard_blockers": "NONE",
     "implementation_status": {
-      "RecommendationTruthContract": "IMPLEMENTED ✓",
-      "RecommendationTruthContract.tests": "IMPLEMENTED ✓",
-      "DangerousActionGate": "IMPLEMENTED ✓",
-      "RollbackRequirementPolicy": "IMPLEMENTED ✓",
-      "RecommendationExpiryPolicy": "IMPLEMENTED ✓",
-      "MinimumUsefulOutputPolicy": "IMPLEMENTED ✓",
-      "AIProposalSandbox": "IMPLEMENTED ✓",
-      "RecommendationExplanationContract": "IMPLEMENTED ✓",
-      "Schema updates": "COMPLETED ✓",
-      "Integration into recommendation path": "WIRED ✓",
-      "Database migration": "CREATED ✓"
+      "RecommendationTruthContract": "PARTIAL (code exists, not runtime-proven)",
+      "RecommendationTruthContract.tests": "CREATED (cannot execute - vitest not available)",
+      "DangerousActionGate": "PARTIAL (code exists, not runtime-proven)",
+      "RollbackRequirementPolicy": "PARTIAL (code exists, not runtime-proven)",
+      "RecommendationExpiryPolicy": "PARTIAL (code exists, not runtime-proven)",
+      "MinimumUsefulOutputPolicy": "PARTIAL (code exists, not runtime-proven)",
+      "AIProposalSandbox": "PARTIAL (code exists, not runtime-proven)",
+      "RecommendationExplanationContract": "PARTIAL (code exists, not runtime-proven)",
+      "Schema updates": "PARKED (migration SQL created, not applied)",
+      "Integration into recommendation path": "PARTIAL (code wired, not runtime-proven)",
+      "Database migration": "PARKED (SQL generated, not executed)"
     },
-    "implemented_systems": [
-      "RecommendationTruthContract (validation service)",
-      "DangerousActionGate (validation gate)",
-      "RollbackRequirementPolicy (enforcement)",
-      "RecommendationExpiryPolicy (enforcement)",
-      "MinimumUsefulOutputPolicy (enforcement)",
-      "AIProposalSandbox (containment)",
-      "RecommendationExplanationContract (validation)"
-    ],
+    "systems_by_status": {
+      "ACTIVE": [],
+      "PARTIAL": [
+        "RecommendationTruthContract (service code exists, wire proven, runtime not proven)",
+        "DangerousActionGate (service code exists, not wired, not runtime-proven)",
+        "RollbackRequirementPolicy (service code exists, not wired, not runtime-proven)",
+        "RecommendationExpiryPolicy (service code exists, not wired, not runtime-proven)",
+        "MinimumUsefulOutputPolicy (service code exists, not wired, not runtime-proven)",
+        "AIProposalSandbox (service code exists, not wired, not runtime-proven)",
+        "RecommendationExplanationContract (service code exists, not wired, not runtime-proven)",
+        "integration into recommendation.ts (code wired, not runtime-proven)"
+      ],
+      "PARKED": [
+        "AIProposalSandbox model (migration created, schema not applied, not usable)",
+        "RecommendationExpiryPolicy model (migration created, schema not applied, not usable)",
+        "Recommendation schema extensions (migration created, schema not applied, not usable)"
+      ]
+    },
     "prerequisite_cleanups": [
       "Audit all services against Phase 0-13 contract requirements",
       "Determine Decision vs DecisionLifecycle consolidation",
@@ -154,38 +163,59 @@
       "Implement DangerousActionGate validation layer",
       "Wire validation contracts into API request path"
     ],
-    "phase_0_completed": [
-      "1. ✓ Implement RecommendationTruthContract validation service",
-      "2. ✓ Implement DangerousActionGate validation gate",
-      "3. ✓ Wire validation into recommendation generation path",
-      "4. ✓ Implement RecommendationExpiryPolicy enforcement",
-      "5. ✓ Implement AIProposalSandbox containment",
-      "6. ✓ Add comprehensive test suite (14 test cases)",
-      "7. ⏳ Verify runtime wiring with integration tests (pending test env)"
-    ],
-    "phase_0_acceptance_criteria": {
-      "Generic recommendations fail validation": "IMPLEMENTED - RecommendationTruthContract rejects empty/short descriptions",
-      "Missing evidence fails validation": "IMPLEMENTED - Phase 1 dependency; framework in place",
-      "Missing rollback fails validation": "IMPLEMENTED - RollbackRequirementPolicy enforces rollback plan",
-      "Missing constraints fail validation": "IMPLEMENTED - DangerousActionGate checks constraints",
-      "Expired recommendation becomes non-actionable": "IMPLEMENTED - RecommendationExpiryPolicy with status tracking",
-      "AI cannot bypass validation": "IMPLEMENTED - AIProposalSandbox prevents DANGER_DO_NOT_ACT escape",
-      "Minimum useful output exists under low confidence": "IMPLEMENTED - MinimumUsefulOutputPolicy provides safe fallbacks",
-      "Runtime wiring is proven": "IN_PROGRESS - Wired into createRecommendation; integration tests pending",
-      "Tests pass": "CREATED - 14 test cases; awaiting test environment setup"
-    }
+    "phase_0_gates": {
+      "Generic recommendations fail validation": "GATE_FAILING - code exists, runtime not proven, test cannot execute",
+      "Missing evidence fails validation": "GATE_PARKED - Phase 1 dependency, framework created",
+      "Missing rollback fails validation": "GATE_FAILING - code exists, runtime not proven, test cannot execute",
+      "Missing constraints fail validation": "GATE_FAILING - code exists, runtime not proven, test cannot execute",
+      "Expired recommendation becomes non-actionable": "GATE_FAILING - schema change not applied, model not usable",
+      "AI cannot bypass validation": "GATE_FAILING - schema change not applied, model not usable",
+      "Minimum useful output exists under low confidence": "GATE_FAILING - code exists, runtime not proven, test cannot execute",
+      "Runtime wiring is proven": "GATE_FAILING - code wired but not runtime-proven",
+      "Tests pass": "GATE_FAILING - vitest not available, cannot execute tests"
+    },
+    "exact_blockers": [
+      {
+        "blocker": "vitest not installed",
+        "blocking": "test execution",
+        "command": "npm test recommendation-truth-contract.test.ts",
+        "error": "sh: 1: vitest: not found",
+        "type": "MISSING_DEPENDENCY"
+      },
+      {
+        "blocker": "DATABASE_URL not set",
+        "blocking": "migration apply (prisma migrate deploy)",
+        "command": "npx prisma migrate deploy",
+        "error": "requires DATABASE_URL environment variable",
+        "type": "MISSING_ENV"
+      },
+      {
+        "blocker": "Prisma client not regenerated",
+        "blocking": "use of new schema fields (AIProposalSandbox, RecommendationExpiryPolicy, Recommendation.expires_at, etc.)",
+        "command": "npx prisma generate",
+        "error": "requires schema to be applied first",
+        "type": "MISSING_SCHEMA"
+      }
+    ]
   },
-  "safe_to_begin": true,
-  "implementation_feasibility": "Phase 0 systems implemented. Schema extended. Validation wired into recommendation path. Requires test environment to verify runtime behavior.",
-  "remaining_phase_0_work": [
-    "1. Setup test environment (vitest/jest configuration)",
-    "2. Run integration tests to verify validation contracts fire correctly",
-    "3. Verify Prisma client regenerates with new schema",
-    "4. Run database migration on dev database",
-    "5. Test recommendation creation with Phase 0 validation enforced",
-    "6. Create integration test demonstrating all 7 acceptance criteria"
+  "safe_to_begin": false,
+  "implementation_feasibility": "BLOCKED - Phase 0 code created but lacks runtime proof. Cannot proceed to acceptance without: (1) test environment setup, (2) database migration applied, (3) tests passing.",
+  "passing_gates": [],
+  "failing_gates": [
+    "Generic recommendations fail validation - test cannot execute",
+    "Missing rollback fails validation - test cannot execute",
+    "Missing constraints fail validation - test cannot execute",
+    "Expired recommendation becomes non-actionable - schema not applied",
+    "AI cannot bypass validation - schema not applied",
+    "Minimum useful output exists under low confidence - test cannot execute",
+    "Runtime wiring is proven - no runtime execution possible",
+    "Tests pass - vitest not available"
   ],
-  "completion_estimate": "Phase 0 logic: 95% complete. Testing/runtime verification: 10% complete.",
-  "next_phase": "Phase 0 — System Truth Contract (complete runtime verification)",
-  "phase_0_commit": "7e964d46520c37da6db2d0ace8d13e3e52788a04"
+  "blocking_issues": [
+    "vitest: command not found (missing dependency)",
+    "DATABASE_URL not set (missing environment)",
+    "Prisma schema not applied (migration not executed)"
+  ],
+  "next_action": "Cannot proceed. Phase 0 requires runtime proof of all acceptance criteria. Current environment blocks all tests and migrations.",
+  "phase_0_code_commit": "7e964d46520c37da6db2d0ace8d13e3e52788a04"
 }
