@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D-JOB Complete ✓ (Next: Phase D-FAIL-CLASS)
+## Current Phase: Phase D-FAIL-CLASS Complete ✓ (Next: Phase D-CONTAIN)
 
 ---
 
@@ -2055,6 +2055,55 @@ System must:
 - Default retry policy: 3 max attempts, exponential backoff, network error patterns
 - Lock TTL: 5 minutes (configurable)
 - Fail-closed: validates job state before allowing transitions
+
+---
+
+## Phase D-FAIL-CLASS Complete ✓ (2026-05-06 01:03)
+
+**Failure Classification (Recoverable/Retryable/Fatal)**
+
+**Slice Summary**:
+- Error pattern matching with regex-based classification
+- Three failure classes: RECOVERABLE, RETRYABLE, FATAL
+- Suggested action for each failure class
+- Recovery window calculation with exponential backoff
+- Pattern-based retry policies and rollback decisions
+
+**Service Features**:
+- classifyFailure(): Classify error and determine recovery strategy
+- shouldRetry(): Determine if action should be retried based on failure class
+- shouldRollback(): Determine if failure requires rollback
+- getRecoveryWindow(): Calculate backoff time before retry (exponential: 1s→8s for RECOVERABLE, 5s→40s for RETRYABLE)
+- validateClassification(): Verify classification consistency (FATAL must rollback, others must not)
+- getMatchingPatterns(): Find all patterns matching error message
+- getPatternsForClass(): Get all patterns for specific failure class
+
+**Pattern Definitions** (13 patterns):
+- RECOVERABLE: Network errors (ECONNREFUSED, ENOTFOUND, ETIMEDOUT), service unavailability, connection reset, timeouts
+- RETRYABLE: Database locks, rate limiting (429), deadlocks
+- FATAL: Authorization errors (401, 403, permission denied, access denied), not found (404), validation errors (400), schema mismatches, constraint violations
+
+**Files Created**: 3 new files
+- src/domain/execution/failure-classification.ts (FailureClass enum, FailurePattern, FAILURE_PATTERNS array, classifyError/getFailureReason functions)
+- src/services/execution-core/failure-classifier.ts (FailureClassifier class)
+- src/services/execution-core/__tests__/failure-classifier.test.ts (39 comprehensive tests)
+
+**Tests**: 39/39 passing ✓
+- classifyFailure: 8 tests (network, service, database, rate limit, auth, not found, validation, constraint)
+- shouldRetry: 4 tests (FATAL, RECOVERABLE, RETRYABLE, max attempts)
+- shouldRollback: 3 tests (FATAL, RECOVERABLE, RETRYABLE)
+- getRecoveryWindow: 4 tests (exponential backoff, longer backoff for RETRYABLE, zero for FATAL, capping)
+- validateClassification: 5 tests (valid, missing class, FATAL without rollback, non-FATAL with rollback)
+- getMatchingPatterns: 3 tests (single match, multiple matches, non-matching, case insensitivity)
+- getPatternsForClass: 3 tests (all RECOVERABLE, all RETRYABLE, all FATAL with reasons)
+- Edge cases: 5 tests (empty error, long error, determinism, special characters, mixed patterns)
+
+**Integration Notes**:
+- Pattern order matters: RETRYABLE patterns checked before generic RECOVERABLE patterns to avoid misclassification
+- Recovery windows: RECOVERABLE 1s, 2s, 4s, 8s (capped); RETRYABLE 5s, 10s, 20s, 40s (capped)
+- Fail-closed: Returns RETRYABLE for unknown errors (safe default)
+- Case-insensitive regex matching for all patterns
+- Used in job-safety for retry decisions after failures
 
 ---
 
