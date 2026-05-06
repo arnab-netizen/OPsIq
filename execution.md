@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D-DEPS Complete ✓ (Next: Phase D-SEQ)
+## Current Phase: Phase D-SEQ Complete ✓ (Next: Phase D-CAP)
 
 ---
 
@@ -1860,6 +1860,56 @@ System must:
 - Fail-closed: returns null if cycles or missing dependencies detected
 - Workspace isolation: action_ids scoped to decision context
 - Reuses pattern from Phase B/C (service + types + comprehensive tests)
+
+---
+
+## Phase D-SEQ Complete ✓ (2026-05-06 00:35)
+
+**Execution Sequencer (Timeline Calculation with Friction - STRICT)**
+
+**Slice Summary**:
+- Timeline calculation from topologically sorted actions
+- Friction delay application per dependency_count (0→0 days, 1-2→5 days, 3-5→10 days, ≥6→20 days)
+- Capacity conflict detection (timeline overlaps per owner)
+- Start/end time calculation with deterministic ordering
+- Total duration and effort hours calculation
+- Fail-closed: returns null if invalid inputs
+
+**Service Features**:
+- buildSchedule(): Main entry point, returns null if invalid (fail-closed)
+- calculateStartTime(): Time based on dependencies and friction
+- detectConflicts(): Check timeline overlaps and capacity issues per owner
+- validateSchedule(): Verify schedule consistency
+- getStep(): Query step by action_id
+- calculateTotalDuration(): Total days from first start to last end
+
+**Files Created**: 3 new files
+- src/domain/execution/sequencer.ts (ExecutionScheduleStep, ExecutionSchedule, SequencerInput types, friction calculation)
+- src/services/execution-core/sequencer.ts (ExecutionSequencer class)
+- src/services/execution-core/__tests__/sequencer.test.ts (26 comprehensive tests)
+
+**Tests**: 26/26 passing ✓
+- Sequential actions: 1 test
+- Execution order assignment: 1 test
+- Friction delays: 1 test (0, 5, 10, 20 days)
+- Total effort hours: 1 test
+- Total duration: 1 test
+- Invalid inputs: 2 tests (empty order, missing details)
+- Timeline validation: 1 test (start < end)
+- Capacity allocation: 1 test
+- Conflict detection: 3 tests (no conflicts, same owner overlap, conflicts marked)
+- Schedule validation: 4 tests (valid, conflicts, non-consecutive order, invalid timeline)
+- Step retrieval: 2 tests (get existing, get non-existent)
+- Total duration calculation: 2 tests (valid, empty)
+- Edge cases: 6 tests (single action, large dependency count, zero hours, fractional hours, deterministic, multi-owner)
+
+**Integration Notes**:
+- Pure computation (no DB calls)
+- Deterministic: identical inputs produce identical schedule
+- Fail-closed: returns null if execution_order empty or action details missing
+- Workspace isolation: schedule scoped to decision_id + workspace_id
+- Friction delays applied per dependency_count rule
+- Capacity checks per owner (simplified: log warnings, don't block)
 
 ---
 
