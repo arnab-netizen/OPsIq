@@ -3070,7 +3070,59 @@ Phase D-ORCHESTRATION: Execution Orchestrator (ties all together)
 
 # Phase E — OUTCOME LAYER (STRICT MODE)
 
-## Current Phase: Phase E-OUTPUT Complete ✓ (Next: Phase E-QUICKWIN)
+## Current Phase: Phase E-QUICKWIN Complete ✓ (Next: Phase E-AUDIT)
+
+---
+
+## Phase E-QUICKWIN Complete ✓ (2026-05-06 04:52)
+
+**Quick Win Enforcer (≤7 Days Mandatory Enforcement)**
+
+**Slice Summary**:
+- Validate execution plans meet quick win requirement (≤7 days)
+- Fail-closed: plans >7 days rejected (is_quick_win=false)
+- Calculate days from earliest start to latest end across all steps
+- Invalid dates/inputs block quick win (fail-closed)
+- Deterministic date calculation and validation
+- Support multi-step execution plans
+
+**Service Features**:
+- validateQuickWin(): Check if execution plan meets ≤7-day requirement
+- calculatePlanDays(): Calculate total days from plan start to end
+- isQuickWin(): Check if days ≤ 7
+- getDaysRemaining(): Get remaining days until limit
+- isWarningThreshold(): Flag when approaching limit (default ≥5 days)
+
+**Validation Rules**:
+- Execution plan required and must not be empty (fail-closed if missing/empty)
+- Action with action_id required (fail-closed if missing)
+- Plans calculated from earliest start to latest end (handles non-sequential steps)
+- Days rounded up (fractional days → ceiling)
+- Invalid dates return Number.MAX_VALUE (fail-closed)
+- Result always includes max_days_allowed constant
+
+**Files Created**: 2 new files
+- src/domain/outcome/quickwin.ts (types, QUICK_WIN_MAX_DAYS=7)
+- src/services/outcome-core/__tests__/quick-win-enforcer.test.ts (23 tests)
+
+**Tests**: 23/23 passing ✓
+- Quick Win Acceptance (3 tests): exactly 7 days, under 7 days, single day
+- Quick Win Rejection (2 tests): 8 days, 30 days
+- Multi-Step Plans (2 tests): earliest start to latest end, non-sequential steps
+- Input Validation (5 tests): missing/empty plan, missing action, invalid action_id, invalid dates
+- Helper Methods (4 tests): isQuickWin, getDaysRemaining, isWarningThreshold (fixed/custom)
+- Boundary Cases (2 tests): zero duration, fractional day rounding
+- Deterministic (1 test): identical inputs produce identical results
+- Result Properties (2 tests): max_days_allowed included, empty/filled reason_if_blocked
+
+**Integration Notes**:
+- Fail-closed: Missing input, invalid dates → is_quick_win=false with explanation
+- Deterministic: Same execution plan always produces same validation result
+- Multi-step support: Finds earliest start and latest end across all plan steps
+- Date handling: ISO format required, invalid dates block quick win
+- Days calculation: Ceiling (1.5 days → 2 days)
+- Warning levels: isWarningThreshold(days >= 5) for 7-day limit
+- Remaining days: getDaysRemaining(days) returns [0, 7] range (clamped)
 
 ---
 
