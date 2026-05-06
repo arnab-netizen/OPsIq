@@ -3070,7 +3070,59 @@ Phase D-ORCHESTRATION: Execution Orchestrator (ties all together)
 
 # Phase E — OUTCOME LAYER (STRICT MODE)
 
-## Current Phase: Phase E-IMPACT Complete ✓ (Next: Phase E-VARIANCE)
+## Current Phase: Phase E-CONFIDENCE Complete ✓ (Next: Phase E-FEEDBACK)
+
+---
+
+## Phase E-CONFIDENCE Complete ✓ (2026-05-06 04:43)
+
+**Confidence Updater (Learn from Outcomes, Update Confidence)**
+
+**Slice Summary**:
+- Update confidence from variance evidence
+- Positive variance increases confidence (up to +20%)
+- Negative variance decreases confidence (up to -30%)
+- Repeated failures add additional -15% penalty
+- Low measurement confidence caps updates at ±10%
+- Deterministic confidence calculation from outcome signals
+
+**Service Features**:
+- updateConfidence(): Calculate new confidence from variance evidence
+- isSufficientConfidence(): Check if confidence >50%
+- isHighConfidence(): Check if confidence >70%
+- isLowConfidence(): Check if confidence <50%
+- getConfidenceTrend(): Detect improving/declining/stable trends
+
+**Validation Rules**:
+- Current confidence and measurement confidence must be 0-100%
+- Variance-based updates: positive (scale 0-20%), negative (scale 0-30%)
+- Repeated failure penalty: -15% only if previous outcome="failure" AND variance_pct < 0
+- Low measurement confidence (<60%): cap updates to ±10%
+- Results clamped to 0-100% range
+
+**Files Created**: 2 new files
+- src/domain/outcome/confidence.ts (types, enums, constants)
+- src/services/outcome-core/__tests__/confidence-updater.test.ts (44 tests)
+
+**Tests**: 44/44 passing ✓
+- Positive Outcome Increases (4 tests): magnitude scaling, capping at +20%, boundary handling
+- Negative Outcome Decreases (5 tests): magnitude scaling, capping at -30%, boundary handling
+- Repeated Failure Penalty (4 tests): condition testing, penalty application, no-penalty cases
+- Low Measurement Confidence Capping (5 tests): threshold boundaries (60%), cap enforcement (±10%)
+- Zero Variance (2 tests): neutral case, failure penalty interaction
+- Boundary Cases (5 tests): 0%/100% limits, clamping behavior
+- Input Validation (4 tests): confidence range validation, measurement confidence validation
+- Helper Methods (7 tests): isSufficient/High/LowConfidence, getConfidenceTrend
+- Reason Messages (3 tests): variance indication, capping indication, penalty messaging
+- Combined Effects (2 tests): multiple modifiers interaction
+
+**Integration Notes**:
+- Fail-closed: Invalid input returns no change (0% change, original confidence)
+- Deterministic: Same input always produces same confidence update
+- Scaling formula: variance_magnitude / 10 * multiplier (4x for positive, 6x for negative)
+- Penalty only applies with negative variance + failure history (not on neutral outcomes)
+- Capping threshold strict: <60% measurement confidence triggers cap
+- Result clamped to [0, 100] range with actual_change reflecting final delta
 
 ---
 
