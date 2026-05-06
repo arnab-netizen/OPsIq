@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D-FRICTION Complete ✓ (Next: Phase D-JOB)
+## Current Phase: Phase D-JOB Complete ✓ (Next: Phase D-FAIL-CLASS)
 
 ---
 
@@ -2002,6 +2002,59 @@ System must:
 - Friction delays: 0 days (0 deps), 5 days (1-2 deps), 10 days (3-5 deps), 20 days (6+ deps)
 - Provides actionable mitigation strategies for high-friction actions
 - Calculates both direct delay and downstream cascading impact
+
+---
+
+## Phase D-JOB Complete ✓ (2026-05-06 00:50)
+
+**Execution Job Safety (Idempotency + Retries - STRICT)**
+
+**Slice Summary**:
+- Idempotency checking via job_unique_key (deterministic hash)
+- Lock management for concurrent execution prevention
+- Retry policy with exponential/linear backoff
+- Error classification and smart retry logic
+- Job lifecycle management (create, start, complete, fail, abandon)
+- Dead letter queue for abandoned jobs
+
+**Service Features**:
+- checkIdempotency(): Detect duplicate job execution and return cached result
+- acquireLock(): Prevent concurrent execution of same job
+- releaseLock(): Release lock after job completion
+- createJob(): Create new execution job with unique key
+- startJob(): Transition to IN_PROGRESS and increment attempt
+- completeJob(): Mark COMPLETED with result
+- failJob(): Mark FAILED/RETRYING with smart retry decision
+- abandonJob(): Mark ABANDONED when max retries exceeded
+- calculateBackoffMs(): Compute backoff time before retry
+- getJob(): Retrieve job by unique key
+- validateJob(): Verify job state consistency
+
+**Files Created**: 3 new files
+- src/domain/execution/job.ts (ExecutionJob, JobStatus, RetryPolicy, IdempotencyCheckResult types)
+- src/services/execution-core/job-safety.ts (ExecutionJobSafety class)
+- src/services/execution-core/__tests__/job-safety.test.ts (34 comprehensive tests)
+
+**Tests**: 34/34 passing ✓
+- Idempotency: 3 tests (not duplicate, cached result, cache age)
+- Lock management: 3 tests (acquire, prevent duplicate, reacquisition after expiry)
+- Release lock: 2 tests (release, non-existent)
+- Create job: 3 tests (fields, deterministic key, caching)
+- Start job: 2 tests (IN_PROGRESS transition, attempt increment)
+- Complete job: 1 test (COMPLETED status with result)
+- Fail job: 5 tests (fatal error, retryable error, max attempts, error patterns)
+- Abandon job: 1 test (ABANDONED status)
+- Backoff calculation: 3 tests (exponential, cap at max, linear)
+- Get job: 2 tests (retrieve, non-existent)
+- Validate job: 5 tests (correct, missing ID, invalid attempts, missing timestamps)
+- Edge cases: 3 tests (complex inputs, concurrent jobs, full lifecycle)
+
+**Integration Notes**:
+- In-memory job cache (simulated; real implementation uses persistent storage)
+- Deterministic job_unique_key using SHA256(action_id + sorted inputs)
+- Default retry policy: 3 max attempts, exponential backoff, network error patterns
+- Lock TTL: 5 minutes (configurable)
+- Fail-closed: validates job state before allowing transitions
 
 ---
 
