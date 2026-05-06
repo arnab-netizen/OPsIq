@@ -3896,6 +3896,26 @@ Outcome layer is VALID only if:
 
 ---
 
+## Phase F-3 Complete ✓ (2026-05-06 05:11)
+
+**Wrong Diagnosis Scenario (actions target wrong problem)**
+- ✓ Created: src/__tests__/integration/scenarios/f3-wrong-diagnosis.test.ts (12/12 passing)
+- ✓ Tests: All diagnostic failure and halt scenarios passing
+
+**Scenario Validation**:
+- ✓ No-improvement detection: Zero variance tracked correctly
+- ✓ Confidence drift: Negative variance reduces confidence progressively
+- ✓ HALT triggered: previous_outcome=failure AND confidence<50 AND variance<0
+- ✓ Repeated failure blocking: Same recommendation blocked after HALT
+- ✓ Escalation to re-diagnose: Flag for diagnostic loop re-entry
+- ✓ Audit trail: Immutable records of failure progression
+- ✓ Cumulative failures: 3 failures required to breach <50% confidence threshold
+
+**Files Changed**: 1 new file
+- src/__tests__/integration/scenarios/f3-wrong-diagnosis.test.ts
+
+---
+
 ## Phase F-2 Complete ✓ (2026-05-06 05:09)
 
 **Low Cash Scenario (runway <3 months)**
