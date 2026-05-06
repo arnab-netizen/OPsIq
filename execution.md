@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D-CAP Complete ✓ (Next: Phase D-FRICTION)
+## Current Phase: Phase D-FRICTION Complete ✓ (Next: Phase D-JOB)
 
 ---
 
@@ -1956,6 +1956,52 @@ System must:
 - Default concurrency limit: 2 concurrent actions per owner
 - Deterministic: identical inputs produce identical results
 - Fail-closed: blocks execution if capacity exceeded
+
+---
+
+## Phase D-FRICTION Complete ✓ (2026-05-06 00:45)
+
+**Friction Model (Delay Application per Dependency Count - STRICT)**
+
+**Slice Summary**:
+- Friction delay calculation per dependency count (0→0, 1-2→5, 3-5→10, 6+→20 days)
+- Friction category classification (low/medium/high/critical)
+- Duration adjustment (effort_hours + friction_delay_days)
+- Friction impact analysis (timeline increase percentage and downstream delay)
+- Total friction aggregation across all actions
+- Mitigation strategy recommendations per friction level
+- Fail-closed: validates friction calculations
+
+**Service Features**:
+- calculateFriction(): Get friction delay and adjustment factor for dependency count
+- adjustDuration(): Add friction to base effort hours
+- analyzeFrictionImpact(): Calculate timeline impact and downstream delay
+- getFrictionCategory(): Classify dependency count into risk category
+- calculateTotalFriction(): Sum friction across multiple actions
+- validateFrictionCalculation(): Verify friction values are valid
+- getMitigationStrategies(): Recommend coordination strategies per friction level
+
+**Files Created**: 3 new files
+- src/domain/execution/friction.ts (FrictionCalculation, FrictionAdjustment, FrictionImpactAnalysis types, friction delay table, helper functions)
+- src/services/execution-core/friction-model.ts (FrictionModel class)
+- src/services/execution-core/__tests__/friction-model.test.ts (39 comprehensive tests)
+
+**Tests**: 39/39 passing ✓
+- Friction calculation: 5 tests (0 deps, 1-2 deps, 3-5 deps, 6+ deps, adjustment factor)
+- Duration adjustment: 6 tests (basic, low/medium/high/critical reasons, zero/fractional hours)
+- Impact analysis: 4 tests (low/medium/high friction, downstream impact, zero timeline)
+- Friction category: 5 tests (0, 1-2, 3-5, 6-8, 9+ dependencies)
+- Total friction: 4 tests (sum, high friction identification, empty list, single action)
+- Validation: 4 tests (valid, negative delay, factor < 1, unusually high)
+- Mitigation strategies: 4 tests (low/medium/high/critical, comprehensive strategies)
+- Edge cases: 5 tests (very large dependencies, consistency, fractional timeline, unknown category, mixed dependencies)
+
+**Integration Notes**:
+- Pure computation (no DB calls)
+- Deterministic: identical inputs produce identical results
+- Friction delays: 0 days (0 deps), 5 days (1-2 deps), 10 days (3-5 deps), 20 days (6+ deps)
+- Provides actionable mitigation strategies for high-friction actions
+- Calculates both direct delay and downstream cascading impact
 
 ---
 
