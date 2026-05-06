@@ -4310,9 +4310,9 @@ Outcome layer is VALID only if:
 
 ---
 
-## PHASE F COMPLETE ✓ (2026-05-06 06:31)
+## PHASE F COMPLETE ✓ AUDIT VERIFIED (2026-05-06 06:34)
 
-**Full Lifecycle Integration Testing - All 10 Hostile Scenarios + Core Behaviors Complete**
+**Full Lifecycle Integration Testing - All 10 Hostile Scenarios + Core Behaviors + Audit Verification Complete**
 
 **Test Coverage Summary**:
 - F-1: Revenue Collapse (11/11) - Revenue drops 40%, triggers replan when variance falls below failure threshold
@@ -4327,6 +4327,18 @@ Outcome layer is VALID only if:
 - F-10: Partial Recovery (41/41) - Crisis recovery trajectory, incomplete recovery, continue-with-caution recommendation
 
 **Total: 255/255 tests passing across 11 test suites (10 scenarios + 1 core behaviors)**
+
+**Audit Verification (10/10 Claims Verified)**:
+- ✓ Full Lifecycle Works: Complete decision→execution→outcome→replan cycle in all scenarios
+- ✓ Failures Propagate: Failed actions trigger replan, reduce confidence, create audit records
+- ✓ Confidence Drifts: Cumulative evidence changes trajectory (positive accumulates, negative deteriorates)
+- ✓ Replanning Triggers: Variance threshold (-10%) correctly triggers replan decisions
+- ✓ Repeat-Failure Blocked: Same recommendation with low confidence triggers HALT
+- ✓ Capacity Enforced: Per-owner capacity (40h/week), concurrency (max 2), quick-win (≤7d) all enforced
+- ✓ Rollback Works: Evaluated (not automatic), feasibility checked, never silent
+- ✓ Audit Replay Works: SHA256-based determinism; identical input = identical packet_id
+- ✓ Determinism Preserved: 24+ deterministic replay assertions; identical inputs → identical outputs
+- ✓ Gates Pass: 11/11 test files, 255/255 tests, 100% pass rate, 0 failures
 
 **Key Validations Across Phase F**:
 - ✓ Fail-closed behavior: Invalid inputs block operations, no silent degradation
