@@ -3964,6 +3964,24 @@ Outcome layer is VALID only if:
 
 ---
 
+## PHASE F PROGRESS: 3/10 Scenarios Complete (37/74 Tests Passing) ✓
+
+**Completed Scenarios**:
+- ✓ F-1: Revenue Collapse (11 tests) - Variance detection, replan trigger, confidence drift
+- ✓ F-2: Low Cash (14 tests) - Financial viability gate, cascade prevention, escalation
+- ✓ F-3: Wrong Diagnosis (12 tests) - No-improvement detection, HALT trigger, re-diagnosis escalation
+
+**Pending Scenarios**:
+- F-4: Execution Failure (50% of actions fail)
+- F-5: Vendor Failure (critical service unavailable)
+- F-6: Overload (capacity exceeded)
+- F-7: Contradictory KPI (metric improves but profit drops)
+- F-8: Delayed ROI (>7 days, violates quick win)
+- F-9: Competitor Response (baseline shift mid-execution)
+- F-10: Partial Recovery (50% damage recovered)
+
+---
+
 ## PHASE F RULES
 
 ### Strict Constraints
