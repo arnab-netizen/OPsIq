@@ -3070,7 +3070,59 @@ Phase D-ORCHESTRATION: Execution Orchestrator (ties all together)
 
 # Phase E — OUTCOME LAYER (STRICT MODE)
 
-## Current Phase: Phase E (In Progress)
+## Current Phase: Phase E-IMPACT Complete ✓ (Next: Phase E-VARIANCE)
+
+---
+
+## Phase E-IMPACT Complete ✓ (2026-05-06 03:57)
+
+**Impact Tracker (Measure Actual vs Baseline)**
+
+**Slice Summary**:
+- Measure actual outcomes against baseline (fail-closed if missing)
+- Calculate variance and variance_pct deterministically
+- Determine impact direction (POSITIVE/NEGATIVE/NEUTRAL)
+- Assess measurement quality based on confidence
+- Enforce evidence threshold (50% confidence minimum)
+- No synthetic/projected outcomes allowed
+
+**Service Features**:
+- trackImpact(): Measure actual vs baseline with validation
+- isSufficientEvidence(): Check if confidence meets 50% threshold
+- getImpactMagnitude(): Get absolute variance value
+- getImpactMagnitudePct(): Get absolute variance percentage
+- validateMetricCompatibility(): Verify same units
+
+**Validation Rules**:
+- Baseline metric required (fail-closed if missing)
+- Actual outcome required (no projections)
+- Measurement confidence: 0-100%
+- Impact direction: +variance=POSITIVE, -variance=NEGATIVE, 0=NEUTRAL
+- Measurement quality: HIGH(≥80%), MEDIUM(≥60%), LOW(<60%)
+
+**Files Created**: 3 new files
+- src/domain/outcome/impact.ts (types, enums, constants)
+- src/services/outcome-core/impact-tracker.ts (ImpactTracker class)
+- src/services/outcome-core/__tests__/impact-tracker.test.ts (27 tests)
+
+**Tests**: 27/27 passing ✓
+- Missing baseline fail: 2 tests (null, undefined)
+- Missing actual fail: 2 tests (null, undefined)
+- Variance calculation: 5 tests (positive, negative, zero, variance_pct, edge cases)
+- Measurement quality: 3 tests (HIGH, MEDIUM, LOW)
+- Evidence threshold: 4 tests (at 50%, above, below, 100%)
+- Impact magnitude: 2 tests (absolute values, direction)
+- Metric compatibility: 4 tests (compatible, incompatible, null cases)
+- Workspace isolation: 1 test (workspace_id included)
+- Edge cases: 2 tests (very small, very large variances)
+
+**Integration Notes**:
+- Fail-closed: Missing baseline or actual returns is_valid=false
+- Deterministic: Same input always produces same variance
+- Workspace-safe: All results include workspace_id
+- Evidence-based: Measurement confidence gates impact claim
+- No projections: Only measured outcomes count
+- Unit validation: Baseline and actual must match units
 
 ---
 
