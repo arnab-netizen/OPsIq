@@ -3896,6 +3896,28 @@ Outcome layer is VALID only if:
 
 ---
 
+## Phase F-5 Complete ✓ (2026-05-06 05:17)
+
+**Vendor Failure Scenario (critical service unavailable)**
+- ✓ Created: src/__tests__/integration/scenarios/f5-vendor-failure.test.ts (25/25 passing)
+- ✓ Tests: All transient/fatal classification and retry policy tests passing
+
+**Scenario Validation**:
+- ✓ Failure classification: Transient (RECOVERABLE) vs fatal (extended downtime)
+- ✓ Retry policy: Exponential backoff (1s, 2s, 4s, 8s = 15s total)
+- ✓ Retry limits: 4 attempts before escalation to FATAL
+- ✓ Extended downtime: >15s of failed retries triggers HALT + escalation
+- ✓ Cascade prevention: Downstream BLOCKED while vendor retry window open
+- ✓ Timeline impact: Actions shift by retry duration (15s added)
+- ✓ Audit trail: Transient recovery vs permanent unavailability tracked
+- ✓ Confidence handling: Stable on transient recovery, drops -30% on FATAL
+- ✓ Deterministic replay: Same vendor failure input produces same escalation decision
+
+**Files Changed**: 1 new file
+- src/__tests__/integration/scenarios/f5-vendor-failure.test.ts
+
+---
+
 ## Phase F-4 Complete ✓ (2026-05-06 05:14)
 
 **Execution Failure Scenario (50% of actions fail)**
@@ -3985,16 +4007,16 @@ Outcome layer is VALID only if:
 
 ---
 
-## PHASE F PROGRESS: 4/10 Scenarios Complete (61/74 Tests Passing) ✓
+## PHASE F PROGRESS: 5/10 Scenarios Complete (86/100 Tests Passing) ✓
 
 **Completed Scenarios**:
 - ✓ F-1: Revenue Collapse (11 tests) - Variance detection, replan trigger, confidence drift
 - ✓ F-2: Low Cash (14 tests) - Financial viability gate, cascade prevention, escalation
 - ✓ F-3: Wrong Diagnosis (12 tests) - No-improvement detection, HALT trigger, re-diagnosis escalation
 - ✓ F-4: Execution Failure (24 tests) - Retry/backoff, cascade prevention, partial variance
+- ✓ F-5: Vendor Failure (25 tests) - Transient/fatal classification, retry policy, escalation
 
 **Pending Scenarios**:
-- F-5: Vendor Failure (critical service unavailable)
 - F-6: Overload (capacity exceeded)
 - F-7: Contradictory KPI (metric improves but profit drops)
 - F-8: Delayed ROI (>7 days, violates quick win)
