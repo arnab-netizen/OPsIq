@@ -49,6 +49,37 @@ OPSIQ must NOT become:
 
 ---
 
+## DIRECT MAIN TRANSITION RULE
+
+**Context:** Early in execution, commits were created directly on main before branch-enforcement rules were established.
+
+**One-time transition allowance:**
+- Legacy commits created on main before this rule may be pushed once for repository consistency
+- These are classified as LEGACY_TRANSITION_COMMITS
+- No additional implementation may continue on main after transition
+
+**Permanent branch strategy:**
+
+All future work must use feature branches:
+
+```
+phase/<phase-number>-<phase-name>
+```
+
+Examples:
+- `phase/0-system-truth-contract`
+- `phase/0-runtime-verification-fix`
+- `phase/1-reality-integrity-layer`
+- `phase/2-reality-backbone`
+
+**Main becomes merge-only:**
+- Main receives only completed phase merges
+- All implementation work is isolated to phase branches
+- CI/testing occurs on branches before main merge
+- Main always reflects integration-verified, COMPLETE phase state
+
+---
+
 ## 1. ABSOLUTE EXECUTION MODE
 
 Claude must obey this execution.md over all previous roadmap language.

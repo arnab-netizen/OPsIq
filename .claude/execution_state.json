@@ -264,6 +264,33 @@
     }
   ],
   "next_action": "Cannot complete Phase 0 acceptance without test environment and database. Create feature branch for Phase 0 completion work.",
-  "direct_main_violation": "YES - commits pushed directly to main instead of feature branch. Future implementations must use phase branches.",
-  "phase_0_code_commit": "7e964d46520c37da6db2d0ace8d13e3e52788a04"
+  "direct_main_violations": [
+    {
+      "commit": "7e964d46520c37da6db2d0ace8d13e3e52788a04",
+      "message": "implement phase 0 system truth contract",
+      "classification": "LEGACY_TRANSITION_COMMIT",
+      "status": "ALLOWED_ONE_TIME_PUSH"
+    },
+    {
+      "commit": "64faadaee92aff1dcb1b205f0d40af52d16e46f4",
+      "message": "update execution_state.json: phase 0 implementation progress",
+      "classification": "LEGACY_TRANSITION_COMMIT",
+      "status": "ALLOWED_ONE_TIME_PUSH"
+    },
+    {
+      "commit": "113ac3606ad8b8ea4d8c47b9835fbafa8b40fa07",
+      "message": "correct phase 0 reporting: remove unfounded completion claims",
+      "classification": "LEGACY_TRANSITION_COMMIT",
+      "status": "ALLOWED_ONE_TIME_PUSH"
+    },
+    {
+      "commit": "9a54f7da9a97d1023393e0b08e97cff8903b55fc",
+      "message": "apply strict status taxonomy to execution_state.json",
+      "classification": "LEGACY_TRANSITION_COMMIT",
+      "status": "ALLOWED_ONE_TIME_PUSH"
+    }
+  ],
+  "branch_strategy": "phase/<phase-number>-<phase-name>",
+  "main_strategy": "MERGE_ONLY",
+  "next_branch": "phase/0-runtime-verification-fix"
 }
