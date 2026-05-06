@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D-FSM Complete ✓ (Next: Phase D-DEPS)
+## Current Phase: Phase D-DEPS Complete ✓ (Next: Phase D-SEQ)
 
 ---
 
@@ -1812,6 +1812,54 @@ System must:
 - Workspace isolation: action includes workspace_id
 - Audit: state_history tracks all changes with actor and timestamp
 - Reuses existing pattern from Phase B/C (service + types + tests)
+
+---
+
+## Phase D-DEPS Complete ✓ (2026-05-06 00:25)
+
+**Dependency Graph (Cycle Detection & Topological Sorting - STRICT)**
+
+**Slice Summary**:
+- Topological sort with deterministic ordering (Kahn's algorithm)
+- Cycle detection using DFS (fail-closed on cycles)
+- Missing dependency validation (fail-closed on missing action references)
+- Downstream impact calculation (which actions blocked if X fails)
+- Critical path identification (longest sequential chain)
+- Total duration calculation
+
+**Service Features**:
+- buildGraph(): Main entry point, returns null if invalid (fail-closed)
+- detectCycles(): DFS-based cycle detection, returns cycle path if found
+- topologicalSort(): Kahn's algorithm for deterministic ordering
+- calculateDownstreamImpact(): BFS to find all blocked actions
+- getDownstreamImpact(): Query downstream for specific action
+- findCriticalPath(): Identify longest sequential chain
+- validateGraphConsistency(): Check graph integrity
+
+**Files Created**: 3 new files
+- src/domain/execution/dependency.ts (ActionDependency, DependencyGraph, TopologicalSortResult types)
+- src/services/execution-core/dependency-graph.ts (DependencyGraphBuilder class)
+- src/services/execution-core/__tests__/dependency-graph.test.ts (36 comprehensive tests)
+
+**Tests**: 36/36 passing ✓
+- Independent actions: 1 test
+- Sequential chains: 2 tests (linear, preserve order)
+- Diamond dependency: 1 test
+- Cycle detection: 4 tests (2-node, 3-node, 3-chain, self-ref)
+- Missing dependencies: 1 test (fail-closed)
+- Dependency map: 1 test
+- Topological sort: 3 tests (deterministic, preserve order, parallel)
+- Downstream impact: 3 tests (single branch, branching, leaf nodes)
+- Critical path: 2 tests (linear, branching)
+- Graph consistency: 3 tests (valid, with cycles, empty)
+- Edge cases: 6 tests (single action, 100-action chain, 50-wide branching, multi-layer, etc.)
+
+**Integration Notes**:
+- Pure computation (no DB calls)
+- Deterministic: identical inputs produce identical execution_order
+- Fail-closed: returns null if cycles or missing dependencies detected
+- Workspace isolation: action_ids scoped to decision context
+- Reuses pattern from Phase B/C (service + types + comprehensive tests)
 
 ---
 
