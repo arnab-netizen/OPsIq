@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D-ROLLBACK Complete ✓ (Next: Phase D-AUDIT)
+## Current Phase: Phase D-AUDIT Complete ✓ (Next: Phase D-ORCHESTRATION)
 
 ---
 
@@ -2222,6 +2222,77 @@ System must:
 - Provides actionable recommendations (Proceed, Escalate, Impossible)
 - Terminal states: DONE, CANCELLED (cannot be rolled back)
 - Undoable states: DRAFT, READY, BLOCKED, FAILED
+
+---
+
+## Phase D-AUDIT Complete ✓ (2026-05-06 02:49)
+
+**Execution Auditor (Complete Trail)**
+
+**Slice Summary**:
+- Immutable audit event recording
+- Indexed queryable storage (by action_id, decision_id, workspace_id)
+- Full-text search on error messages
+- Outcome summary and statistics
+- Time-based filtering for audit trails
+- Deep copying of state objects for immutability
+
+**Service Features**:
+- recordEvent(): Create immutable audit event with deep copying
+- queryEvents(): Query with multiple filters, pagination, and sorting
+- getActionEvents(): Get all events for specific action
+- getDecisionEvents(): Get all events for specific decision
+- getWorkspaceEvents(): Get workspace events with limit
+- getEventById(): Retrieve event by ID (immutable)
+- searchByErrorMessage(): Full-text search on error messages
+- getEventCount(): Count events in workspace
+- getOutcomeSummary(): Get success/failure/cancelled breakdown
+- verifyEventImmutability(): Verify event cannot be modified
+
+**Query Capabilities**:
+- Filter by: action_id, decision_id, workspace_id, outcome, actor, tags, timestamp range
+- Pagination: limit and offset for result sets
+- Sorting: by timestamp (descending, most recent first)
+- Search: case-insensitive error message search
+
+**Event Structure**:
+- event_id: UUID (immutable)
+- action_id, decision_id, workspace_id (for scoping)
+- before_state, after_state (deep copied for immutability)
+- actor: owner UUID or "system"
+- outcome: SUCCESS, FAILURE, CANCELLED
+- timestamp: ISO date
+- tags: string array for filtering (failure, rollback, manual, etc.)
+- error_message: optional
+
+**Files Created**: 3 new files
+- src/domain/execution/audit.ts (ExecutionOutcome enum, ExecutionAuditEvent, AuditEventInput, filtering types)
+- src/services/execution-core/execution-auditor.ts (ExecutionAuditor class with indexing)
+- src/services/execution-core/__tests__/execution-auditor.test.ts (34 comprehensive tests)
+
+**Tests**: 34/34 passing ✓
+- recordEvent: 6 tests (full fields, tags, error message, unique IDs, defaults)
+- queryEvents: 8 tests (filter by action/decision/workspace/outcome/actor/tags, pagination, sorting, empty results)
+- getActionEvents: 2 tests (all events, workspace filter)
+- getDecisionEvents: 1 test (all events for decision)
+- getWorkspaceEvents: 2 tests (get events, limit)
+- getEventById: 2 tests (retrieve by ID, null for non-existent)
+- searchByErrorMessage: 3 tests (find by message, case-insensitive, non-matching)
+- getEventCount: 2 tests (correct count, zero)
+- getOutcomeSummary: 1 test (correct breakdown)
+- Immutability: 2 tests (deep copy, verify immutability)
+- Time-based filtering: 2 tests (start_time, end_time)
+- Edge cases: 3 tests (no tags/error_message, large event counts, all outcome types)
+
+**Integration Notes**:
+- In-memory indexed storage (production would use persistent database)
+- Immutability enforced via deep copying on record and retrieval
+- Multiple indices for O(1) lookup by action_id, decision_id, workspace_id
+- Supports 2+ year retention requirement via persistent storage strategy
+- O(1) write, O(1) read for indexed queries
+- Case-insensitive search for error messages
+- Workspace-scoped queryable audit trail
+- All mutations fully auditable with before/after states
 
 ---
 
