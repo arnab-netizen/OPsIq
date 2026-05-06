@@ -3918,6 +3918,31 @@ Outcome layer is VALID only if:
 
 ---
 
+## Phase F-9 Complete ✓ (2026-05-06 06:24)
+
+**Competitor Response Scenario (baseline shift mid-execution)**
+- ✓ Created: src/__tests__/integration/scenarios/f9-competitor-response.test.ts (32/32 passing)
+- ✓ Tests: All baseline shift, dual variance calculation, and market response tests passing
+
+**Scenario Validation**:
+- ✓ Baseline shift detection: Original 100 → market shrinks to 85 (competitor response, -15%)
+- ✓ Dual variance calculation: -10% vs original baseline, +5.9% vs new baseline
+- ✓ Variance contradiction: Negative vs plan (original), positive vs current (new)
+- ✓ Plan-vs-actual: Original baseline variance (-10%) drives replan decision
+- ✓ Current-market reflection: New baseline variance (+5.9%) shows action effectiveness
+- ✓ Replan trigger: -10% vs original < -10% threshold triggers REPLAN despite new baseline positive
+- ✓ External shock documentation: Competitor response identified as variance driver (not action failure)
+- ✓ Confidence reduction: -20% expected for missed plan (-6% actual with medium confidence)
+- ✓ Audit packets: Separate packets for original and new baseline variance tracking
+- ✓ Impact tracking: Dual impact results enable comparative analysis
+- ✓ Owner understanding: Action effective within new market (positive new baseline) but plan unmet (negative original)
+- ✓ Deterministic replay: Same competitor response input produces same replan decision
+
+**Files Changed**: 1 new file
+- src/__tests__/integration/scenarios/f9-competitor-response.test.ts
+
+---
+
 ## Phase F-8 Complete ✓ (2026-05-06 06:23)
 
 **Delayed ROI Scenario (plan violates quick-win ≤7 days)**
@@ -3926,7 +3951,7 @@ Outcome layer is VALID only if:
 
 **Scenario Validation**:
 - ✓ Quick-win threshold: 7-day limit enforced at plan validation gate
-- ✓ Plan rejection: 14-day plan rejected on quick-win violation (fail-closed)
+- ✓ Plan rejection: >7-day plan rejected on quick-win violation (fail-closed)
 - ✓ Clear rejection reason: "Plan exceeds 7-day quick win limit"
 - ✓ Plan adjustment offered: Break into 7-day increments with intermediate checkpoints
 - ✓ Measurement confidence: LOW confidence (50%) applied at day 7, HIGH (95%) at day 14
@@ -3936,7 +3961,7 @@ Outcome layer is VALID only if:
 - ✓ Trajectory tracking: +5% → +8% shows improving trajectory
 - ✓ Go/no-go decision: Checkpoint at day 7 enables early halt if negative signal
 - ✓ Audit trail: Packets created for both checkpoint and final measurements
-- ✓ Deterministic replay: Same 14-day input produces same rejection decision
+- ✓ Deterministic replay: Same long-duration input produces same rejection decision
 
 **Files Changed**: 1 new file
 - src/__tests__/integration/scenarios/f8-delayed-roi.test.ts
