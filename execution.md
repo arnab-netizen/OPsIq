@@ -3918,6 +3918,31 @@ Outcome layer is VALID only if:
 
 ---
 
+## Phase F-10 Complete ✓ (2026-05-06 06:26)
+
+**Partial Recovery Scenario (crisis partially mitigated)**
+- ✓ Created: src/__tests__/integration/scenarios/f10-partial-recovery.test.ts (41/41 passing)
+- ✓ Tests: All crisis baseline, dual variance, trajectory analysis, and recovery metrics tests passing
+
+**Scenario Validation**:
+- ✓ Crisis baseline: Revenue 100 → 60 (40% drop), HIGH measurement quality
+- ✓ Recovery action: 60 → 80 (+33.3% vs crisis, but -20% vs original)
+- ✓ Dual variance calculation: +33.3% recovery evidence, -20% vs original baseline
+- ✓ Trajectory analysis: RECOVERING (positive direction despite incomplete recovery)
+- ✓ Confidence update: POSITIVE increase from recovery evidence (45 → 58)
+- ✓ Recovery rate: 50% of crisis damage recovered (20 out of 40)
+- ✓ Remaining gap: +20 needed to reach original 100
+- ✓ Replan decision: CONTINUE_WITH_CAUTION (trajectory positive, not REPLAN)
+- ✓ Continuing metrics: Recovery rate, gap analysis, timeline projection
+- ✓ Plateau detection: Would trigger REPLAN if recovery stalls
+- ✓ Audit trail: Crisis packet (HALT) → Recovery packet (CONTINUE)
+- ✓ Deterministic replay: Same partial recovery input produces same decision
+
+**Files Changed**: 1 new file
+- src/__tests__/integration/scenarios/f10-partial-recovery.test.ts
+
+---
+
 ## Phase F-9 Complete ✓ (2026-05-06 06:24)
 
 **Competitor Response Scenario (baseline shift mid-execution)**
@@ -4263,6 +4288,56 @@ Outcome layer is VALID only if:
 - Confidence: modest increase from evidence of recovery
 - Outcome: continue if recovery trajectory positive, replan if plateau
 **Test**: verify trajectory analysis, partial recovery handling, continuing metrics
+
+---
+
+## PHASE F COMPLETE ✓ (2026-05-06 06:26)
+
+**Full Lifecycle Integration Testing - All 10 Hostile Scenarios Complete**
+
+**Test Coverage Summary**:
+- F-1: Revenue Collapse (11/11) - Revenue drops 40%, triggers replan when variance falls below failure threshold
+- F-2: Low Cash (14/14) - Financial viability gate enforcement, cascade prevention on insufficient runway
+- F-3: Wrong Diagnosis (12/12) - No improvement detection, confidence drift, halt on repeated failure
+- F-4: Execution Failure (24/24) - Failure mode classification, exponential backoff, partial success handling
+- F-5: Vendor Failure (25/25) - Transient vs fatal classification, retry policy, escalation on extended downtime
+- F-6: Overload (25/25) - Capacity exceeded rejection, plan rejection (fail-closed), no auto-defer
+- F-7: Contradictory KPI (19/19) - Mixed signals (revenue +10%, profit -92.5%), weighted variance override
+- F-8: Delayed ROI (32/32) - Quick-win violation (>7 days), plan adjustment, measurement confidence capping
+- F-9: Competitor Response (32/32) - Baseline shift detection, dual variance calculation, external shock handling
+- F-10: Partial Recovery (41/41) - Crisis recovery trajectory, incomplete recovery, continue-with-caution recommendation
+
+**Total: 235/235 tests passing across 10 integration scenarios**
+
+**Key Validations Across Phase F**:
+- ✓ Fail-closed behavior: Invalid inputs block operations, no silent degradation
+- ✓ Deterministic execution: Identical inputs produce identical audit packet IDs via SHA256 hashing
+- ✓ Cascade prevention: Downstream marked BLOCKED (not FAILED) when dependencies fail
+- ✓ Rollback validation: Checked at each scenario where applicable
+- ✓ Audit trails: Immutable records with deterministic packet IDs for all scenarios
+- ✓ Variance thresholds: Consistent failure threshold (-10%) applied across all scenarios
+- ✓ Confidence bounds: +20% cap on positive, -30% cap on negative updates enforced
+- ✓ Capacity constraints: 40 hours/week per owner, max 2 concurrent actions enforced
+- ✓ Quick-win enforcement: ≤7 days enforced with plan adjustment on violation
+- ✓ Workspace isolation: All operations scoped to workspace_id for multi-tenant safety
+
+**Architecture Verified**:
+- ✓ Impact Tracker: Records baseline, actual, variance, measurement confidence
+- ✓ Variance Calculator: Compares impact vs thresholds, triggers replan when variance < failure threshold
+- ✓ Confidence Updater: Evidence-based updates only (no projections), enforced caps
+- ✓ Outcome Auditor: Creates deterministic audit packets with immutable records
+- ✓ QuickWinEnforcer: Validates 7-day limit, rejects violating plans
+- ✓ Scenario Builder: Provides realistic test data for all hostile scenarios
+
+**Services Reused (No Duplication)**:
+- ImpactTracker (existing Phase D/E service)
+- VarianceCalculator (existing Phase D/E service)
+- ConfidenceUpdater (existing Phase D/E service)
+- OutcomeAuditor (existing Phase D/E service)
+- QuickWinEnforcer (existing Phase D/E service)
+- DEFAULT_KPI_THRESHOLDS (existing Phase D/E constants)
+
+**Next Phase**: Phase F is COMPLETE. OPSIQ v7.2 integration testing validates end-to-end decision→execution→outcome→replan lifecycle under 10 realistic failure scenarios. System is deterministic, fail-closed, and ready for production validation.
 
 ---
 
