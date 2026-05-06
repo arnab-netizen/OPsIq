@@ -3896,6 +3896,28 @@ Outcome layer is VALID only if:
 
 ---
 
+## Phase F-6 Complete ✓ (2026-05-06 06:07)
+
+**Overload Scenario (capacity exceeded)**
+- ✓ Created: src/__tests__/integration/scenarios/f6-overload.test.ts (25/25 passing)
+- ✓ Tests: All capacity enforcement and plan rejection tests passing
+
+**Scenario Validation**:
+- ✓ Capacity validation: 125 hours required > 40 hours/week available
+- ✓ Plan rejection: Over-capacity plan rejected at validation gate (fail-closed)
+- ✓ No auto-defer: System does not silently queue or adjust (owner approval required)
+- ✓ Concurrency limit: Max 2 in-progress actions enforced
+- ✓ Timeline calculation: 4 weeks required for 125-hour plan
+- ✓ Concurrent action blocking: 3rd action blocked despite available hours
+- ✓ Audit trail: Deterministic rejection decision on over-capacity
+- ✓ Quick win violation: Plan exceeds 7-day quick win requirement
+- ✓ Owner options: Clear rejection reason with deferral options
+
+**Files Changed**: 1 new file
+- src/__tests__/integration/scenarios/f6-overload.test.ts
+
+---
+
 ## Phase F-5 Complete ✓ (2026-05-06 05:17)
 
 **Vendor Failure Scenario (critical service unavailable)**
@@ -4007,7 +4029,7 @@ Outcome layer is VALID only if:
 
 ---
 
-## PHASE F PROGRESS: 5/10 Scenarios Complete (86/100 Tests Passing) ✓
+## PHASE F PROGRESS: 6/10 Scenarios Complete (111/130 Tests Passing) ✓
 
 **Completed Scenarios**:
 - ✓ F-1: Revenue Collapse (11 tests) - Variance detection, replan trigger, confidence drift
@@ -4015,9 +4037,9 @@ Outcome layer is VALID only if:
 - ✓ F-3: Wrong Diagnosis (12 tests) - No-improvement detection, HALT trigger, re-diagnosis escalation
 - ✓ F-4: Execution Failure (24 tests) - Retry/backoff, cascade prevention, partial variance
 - ✓ F-5: Vendor Failure (25 tests) - Transient/fatal classification, retry policy, escalation
+- ✓ F-6: Overload (25 tests) - Capacity enforcement, plan rejection, timeline constraints
 
 **Pending Scenarios**:
-- F-6: Overload (capacity exceeded)
 - F-7: Contradictory KPI (metric improves but profit drops)
 - F-8: Delayed ROI (>7 days, violates quick win)
 - F-9: Competitor Response (baseline shift mid-execution)
