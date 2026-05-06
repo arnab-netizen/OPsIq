@@ -3894,6 +3894,52 @@ Outcome layer is VALID only if:
 
 **Goal**: Validate OPSIQ decision→execution→outcome→replan cycle under realistic, hostile business conditions with failures, degradation, and capacity constraints.
 
+---
+
+## Phase F-2 Complete ✓ (2026-05-06 05:09)
+
+**Low Cash Scenario (runway <3 months)**
+- ✓ Created: src/__tests__/integration/scenarios/f2-low-cash.test.ts (14/14 passing)
+- ✓ Tests: All cascade and financial viability tests passing
+
+**Scenario Validation**:
+- ✓ Cash position validation: Action cost ($30) exceeds available cash ($5)
+- ✓ Runway calculation: <3 months triggers critical halt
+- ✓ Cost-benefit validation: Unaffordable action blocked (FATAL)
+- ✓ Cascade prevention: Downstream actions marked BLOCKED not FAILED
+- ✓ Escalation: Critical cash shortage escalates to owner
+- ✓ Audit packet: Blocked decision recorded with deterministic ID
+- ✓ Financial viability gate: Early rejection prevents wasted execution
+
+**Files Changed**: 1 new file
+- src/__tests__/integration/scenarios/f2-low-cash.test.ts
+
+---
+
+## Phase F-1 Complete ✓ (2026-05-06 05:08)
+
+**Revenue Collapse Scenario (40% drop)**
+- ✓ Created: src/__tests__/integration/scenarios/f1-revenue-collapse.test.ts (11/11 passing)
+- ✓ Created: src/__tests__/integration/helpers/scenario-builder.ts (helper utilities)
+- ✓ Created: src/__tests__/integration/helpers/assertion-helpers.ts (assertion utilities)
+- ✓ Tests: All integration tests passing with end-to-end scenario
+
+**Scenario Validation**:
+- ✓ Impact detection: 40% revenue decline tracked correctly
+- ✓ Variance calculation: -40% variance triggers replan/rollback decision
+- ✓ Confidence update: Negative modifier applied (-30% max cap respected)
+- ✓ Audit packet creation: Deterministic packet_id with immutability verification
+- ✓ Quick win enforcement: 7-day limit validated
+- ✓ Deterministic replay: Identical inputs produce identical packet_ids
+- ✓ Rollback offered: High-confidence strategy with negative variance triggers rollback evaluation
+
+**Files Created**: 3 new files
+- src/__tests__/integration/scenarios/f1-revenue-collapse.test.ts
+- src/__tests__/integration/helpers/scenario-builder.ts
+- src/__tests__/integration/helpers/assertion-helpers.ts
+
+---
+
 **Proof System**: Messy input → Diagnosis → Decision → Execution → Outcome → Variance → Replan (with failures/rollback)
 
 ---
