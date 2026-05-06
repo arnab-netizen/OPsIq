@@ -728,6 +728,61 @@ Forbidden adoption shortcuts:
 
 ---
 
+### 4.25 CI Database Verification Rule
+
+**Context:** Local development may lack DATABASE_URL configuration. Database and runtime verification MUST occur in CI using environment secrets to prove Phase 0 and later phases are production-safe.
+
+**Local development exemption:**
+- Local Claude sessions may lack DATABASE_URL
+- Missing DATABASE_URL locally = LOCAL_ENV_NOT_CONFIGURED (non-blocking)
+- Local missing env ≠ product failure
+- Local development allows test skip, not merge approval
+
+**CI is source of truth:**
+- GitHub Actions database verification determines merge readiness
+- Repository environment secrets contain DATABASE_URL_TEST
+- CI verification gates must PASS before phase merge to main
+- Secrets never printed/logged in CI output
+
+**Mandatory CI verification:** (Phase 0 and all later phases)
+
+- `npx prisma validate` — schema integrity
+- `npx prisma migrate deploy` — schema application to test DB
+- Integration test execution — runtime contract verification
+- Runtime verification gates — system truth contracts verified at runtime
+
+**Secret management:**
+
+- Primary: `DATABASE_URL_TEST` from GitHub environment:test secrets
+- No fallback to repository-level secrets
+- CI jobs must declare `environment: test` to access secrets
+- Secrets available only to jobs with explicit environment declaration
+- No database secret used in local development CI path
+
+**Taxonomy:**
+
+- `LOCAL_ENV_NOT_CONFIGURED` — local DATABASE_URL missing (permits test skip)
+- `CI_ENV_BLOCKED` — DATABASE_URL_TEST secret missing in GitHub (blocks merge)
+- `DB_CONNECTION_FAIL` — test database unreachable (blocks merge)
+- `MIGRATION_FAIL` — Prisma migration failed (blocks merge)
+
+**Merge criteria:**
+
+Phases requiring database or runtime proof cannot merge to main unless:
+
+1. GitHub Actions phase-specific verification workflow runs
+2. All CI database verification steps PASS
+3. Integration tests PASS
+4. Runtime contracts verified without errors
+5. No fallback to local development state
+
+**Non-merge phases** (Phases lacking database interaction):
+
+- May skip database verification if not architecturally required
+- Still must pass unit tests, type checks, schema validation in CI
+
+---
+
 ## 5. SYSTEM NORTH STAR
 
 Primary optimization target:
