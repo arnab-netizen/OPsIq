@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D (NOT YET STARTED)
+## Current Phase: Phase D-FSM Complete ✓ (Next: Phase D-DEPS)
 
 ---
 
@@ -1767,6 +1767,51 @@ System must:
 - Prevent duplicate execution via idempotency
 - Isolate failures and validate rollbacks
 - Emit complete audit trail with before/after state
+
+---
+
+## Phase D-FSM Complete ✓ (2026-05-06 00:10)
+
+**Action FSM (State Machine - STRICT)**
+
+**Slice Summary**:
+- 7 action states: DRAFT, READY, IN_PROGRESS, DONE, BLOCKED, FAILED, CANCELLED
+- Deterministic state transitions with validation
+- Required fields per state enforced (e.g., READY requires due_date, success_metric, failure_condition, rollback_plan)
+- State history tracking (immutable audit trail per action)
+- Allowed transitions enforced (invalid transitions rejected fail-closed)
+- Terminal states: DONE, CANCELLED (no further transitions)
+
+**Service Features**:
+- validateTransition(): Check if transition is valid, return required fields
+- transition(): Execute state change, append to state_history, emit audit event
+- getCurrentState(): Return current state and allowed next transitions
+- validateActionState(): Verify action has all required fields for current state
+- generateActionId(): Deterministic SHA256 hash of decision_id + workspace_id + index + title
+
+**Files Created**: 3 new files
+- src/domain/execution/action.ts (Action, ActionState, ActionStateChange, ActionTransition types)
+- src/services/execution-core/action-fsm.ts (ActionFSM class)
+- src/services/execution-core/__tests__/action-fsm.test.ts (30 comprehensive tests)
+
+**Tests**: 30/30 passing
+- State transitions: 8 tests (DRAFT→READY, DRAFT→CANCELLED, READY→IN_PROGRESS, IN_PROGRESS→DONE, READY→BLOCKED, IN_PROGRESS→FAILED, BLOCKED→READY, FAILED→BLOCKED)
+- Invalid transitions: 3 tests (READY→DRAFT, DONE→BLOCKED, reject invalid)
+- Transition with missing fields: 2 tests (missing owner, missing due_date)
+- Audit events: 1 test (state_reason, actor, timestamp captured)
+- State history: 2 tests (preserved through multiple transitions, correct ordering)
+- Timestamps: 1 test (updated on transition)
+- getCurrentState: 5 tests (current state + allowed transitions for each state type)
+- validateActionState: 7 tests (valid/invalid for each state type)
+- generateActionId: 3 tests (deterministic, different for different inputs)
+
+**Integration Notes**:
+- Pure computation (no DB calls)
+- Deterministic: identical inputs produce identical action_id
+- Fail-closed: invalid transitions rejected immediately
+- Workspace isolation: action includes workspace_id
+- Audit: state_history tracks all changes with actor and timestamp
+- Reuses existing pattern from Phase B/C (service + types + tests)
 
 ---
 
