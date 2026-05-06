@@ -3896,6 +3896,27 @@ Outcome layer is VALID only if:
 
 ---
 
+## Phase F-4 Complete ✓ (2026-05-06 05:14)
+
+**Execution Failure Scenario (50% of actions fail)**
+- ✓ Created: src/__tests__/integration/scenarios/f4-execution-failure.test.ts (24/24 passing)
+- ✓ Tests: All retry/backoff, cascade, and partial variance tests passing
+
+**Scenario Validation**:
+- ✓ Failure classification: RETRYABLE vs FATAL vs successful (NONE)
+- ✓ Exponential backoff: 1s → 2s → 4s → 8s sequence (15s total)
+- ✓ Retry limits: 4 attempts for retryable, 1 for fatal
+- ✓ Cascade prevention: Downstream marked BLOCKED not FAILED
+- ✓ Partial success: Some succeed, some fail (50% test case)
+- ✓ Audit trail: Success and failure packets recorded
+- ✓ Confidence drift: +10% for success, -5% for partial failure
+- ✓ Deterministic replay: Identical mixed outcomes produce same packets
+
+**Files Changed**: 1 new file
+- src/__tests__/integration/scenarios/f4-execution-failure.test.ts
+
+---
+
 ## Phase F-3 Complete ✓ (2026-05-06 05:11)
 
 **Wrong Diagnosis Scenario (actions target wrong problem)**
@@ -3964,15 +3985,15 @@ Outcome layer is VALID only if:
 
 ---
 
-## PHASE F PROGRESS: 3/10 Scenarios Complete (37/74 Tests Passing) ✓
+## PHASE F PROGRESS: 4/10 Scenarios Complete (61/74 Tests Passing) ✓
 
 **Completed Scenarios**:
 - ✓ F-1: Revenue Collapse (11 tests) - Variance detection, replan trigger, confidence drift
 - ✓ F-2: Low Cash (14 tests) - Financial viability gate, cascade prevention, escalation
 - ✓ F-3: Wrong Diagnosis (12 tests) - No-improvement detection, HALT trigger, re-diagnosis escalation
+- ✓ F-4: Execution Failure (24 tests) - Retry/backoff, cascade prevention, partial variance
 
 **Pending Scenarios**:
-- F-4: Execution Failure (50% of actions fail)
 - F-5: Vendor Failure (critical service unavailable)
 - F-6: Overload (capacity exceeded)
 - F-7: Contradictory KPI (metric improves but profit drops)
