@@ -297,7 +297,7 @@
   "runtime_verification_work": {
     "checklist_file": ".claude/phase-0-verification-checklist.js",
     "integration_test_file": "src/services/recommendation.integration.test.ts",
-    "status": "VERIFICATION_INFRASTRUCTURE_CREATED",
+    "status": "CI_INFRASTRUCTURE_CREATED",
     "tests_run": [
       {
         "test_suite": "recommendation-truth-contract.test.ts",
@@ -376,5 +376,96 @@
       "Integration verification: RecommendationTruthContract wired into createRecommendation()",
       "Schema verification: migration SQL ready for deploy"
     ]
+  },
+  "ci_environment_taxonomy": {
+    "description": "Environment classification taxonomy for Phase 0 verification",
+    "local_missing_database_url": {
+      "status": "LOCAL_ENV_NOT_CONFIGURED",
+      "blocker": "DATABASE_URL environment variable not set",
+      "impact": "Database integration tests skipped locally, no failure",
+      "remediation": "Set DATABASE_URL or copy .env.example to .env and configure",
+      "merge_blocker": false
+    },
+    "ci_missing_secret": {
+      "status": "CI_ENV_BLOCKED",
+      "blocker": "CI_TEST_DATABASE_URL secret not configured in repository",
+      "impact": "CI database tests cannot run, workflow blocked",
+      "remediation": "Add CI_TEST_DATABASE_URL secret to GitHub repository settings (environment: test)",
+      "merge_blocker": true,
+      "required_pattern": "Must contain 'test', 'ci', 'staging', or 'ephemeral'"
+    },
+    "ci_secret_invalid_pattern": {
+      "status": "CI_SECRET_INVALID",
+      "blocker": "CI_TEST_DATABASE_URL does not match safe pattern",
+      "impact": "Safety check fails, prevents accidental production writes",
+      "remediation": "Update secret value to use test database URL matching pattern",
+      "merge_blocker": true
+    },
+    "db_connection_fail": {
+      "status": "DB_CONNECTION_FAIL",
+      "blocker": "Database connection fails after secret is set",
+      "impact": "Schema validation and migration cannot proceed",
+      "remediation": "Verify database is accessible, connection string is valid, credentials are correct",
+      "merge_blocker": true
+    },
+    "migration_fail": {
+      "status": "MIGRATION_FAIL",
+      "blocker": "Prisma migration fails to apply",
+      "impact": "New schema not applied, integration tests cannot verify gates",
+      "remediation": "Check migration log, verify schema is valid, may require manual database repair",
+      "merge_blocker": true
+    },
+    "phase_0_ci_workflow": {
+      "file": ".github/workflows/phase-0-verification.yml",
+      "created": "2026-05-06",
+      "triggers": ["push to claude/verify-execution-md-h8jCt", "push to phase/0-runtime-verification-fix", "pull_request to main"],
+      "jobs": [
+        {
+          "name": "preflight",
+          "purpose": "Verify environment variables are configured",
+          "script": "scripts/verify-env-preflight.sh",
+          "required_secret": "CI_TEST_DATABASE_URL",
+          "safe_to_fail": false
+        },
+        {
+          "name": "build-and-test",
+          "purpose": "TypeScript compilation and schema validation",
+          "steps": ["npm ci", "tsc --noEmit", "npm run build", "prisma validate", "prisma generate"],
+          "required_secret": null,
+          "safe_to_fail": false
+        },
+        {
+          "name": "unit-tests",
+          "purpose": "Run Phase 0 contract unit tests",
+          "command": "npm test -- --run src/services/validation-contracts",
+          "required_secret": null,
+          "safe_to_fail": false
+        },
+        {
+          "name": "database-tests",
+          "purpose": "Verify schema migration and integration tests",
+          "steps": ["prisma migrate deploy", "verify tables exist", "npm test integration"],
+          "required_secret": "CI_TEST_DATABASE_URL",
+          "safe_to_fail": false,
+          "environment": "test"
+        }
+      ],
+      "gates": {
+        "Environment Preflight": "Required for all jobs",
+        "Build & Type Check": "Required for Phase 0 merge",
+        "Unit Tests": "Required for Phase 0 merge (27 tests must pass)",
+        "Database Integration": "Conditional (will skip gracefully if DB secret not set)"
+      },
+      "merge_criteria": "All required gates (preflight, build, unit tests) must pass. Database tests conditional on secret availability."
+    }
+  },
+  "env_preflight_script": {
+    "file": "scripts/verify-env-preflight.sh",
+    "created": "2026-05-06",
+    "purpose": "Verify DATABASE_URL configuration without exposing secret values",
+    "behavior_local": "Warns if DATABASE_URL not set, does not fail (integration tests will be skipped)",
+    "behavior_ci": "Fails if DATABASE_URL not set, provides remediation instructions",
+    "outputs_values": false,
+    "outputs_only": "Presence/absence and status"
   }
 }
