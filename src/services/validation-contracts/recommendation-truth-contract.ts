@@ -69,7 +69,7 @@ export class RecommendationTruthContract {
    * Phase 0: Missing evidence fails validation.
    * Placeholder for future Phase 1 integration when Evidence model is linked.
    */
-  private validateEvidenceRequired(): TruthContractViolation[] {
+  private validateEvidenceRequired(input: RecommendationTruthInput): TruthContractViolation[] {
     // Phase 0 ensures structure; Phase 1 validates evidence sufficiency
     return [];
   }
