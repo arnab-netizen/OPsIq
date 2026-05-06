@@ -3918,6 +3918,28 @@ Outcome layer is VALID only if:
 
 ---
 
+## Phase F-7 Complete ✓ (2026-05-06 06:22)
+
+**Contradictory KPI Scenario (mixed positive/negative signals)**
+- ✓ Created: src/__tests__/integration/scenarios/f7-contradictory-kpi.test.ts (19/19 passing)
+- ✓ Tests: All composite KPI, weighted variance, and mixed signal handling tests passing
+
+**Scenario Validation**:
+- ✓ Composite KPI tracking: Revenue (+10%) and profit margin (-92.5%) tracked independently
+- ✓ Weighted variance calculation: Profit weight 70%, revenue weight 30% → net -61.75%
+- ✓ Mixed signal detection: Revenue up but profit down triggers strategy review flag
+- ✓ Net variance override: Net negative (-61.75%) overrides positive revenue signal
+- ✓ Replan trigger: Net negative < failure threshold (-10%) triggers REPLAN despite revenue improvement
+- ✓ Root cause analysis: High cost of revenue increase identified (margin decrease > revenue increase)
+- ✓ Confidence handling: Mixed signals apply neutral/slightly negative update (-30% cap enforced)
+- ✓ Audit trail: Both KPI variances captured with weighting documentation
+- ✓ Deterministic replay: Identical contradictory inputs produce same packet_id
+
+**Files Changed**: 1 new file
+- src/__tests__/integration/scenarios/f7-contradictory-kpi.test.ts
+
+---
+
 ## Phase F-5 Complete ✓ (2026-05-06 05:17)
 
 **Vendor Failure Scenario (critical service unavailable)**
