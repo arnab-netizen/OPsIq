@@ -26,7 +26,7 @@ export interface PathReasoning {
   pathId: string;
   selectedReason: string;
   diagnosticSummary: Record<string, unknown>;
-  constraintSummary: Record<string, unknown>;
+  constraintSummary: ConstraintSummary | Record<string, unknown>;
   riskAssessment: string;
   fallbackOptions: string[];
 }

@@ -207,7 +207,7 @@ export class ActionFSM {
    */
   private findMissingFields(action: Action, required_fields: string[]): string[] {
     return required_fields.filter((field) => {
-      const value = (action as Record<string, unknown>)[field];
+      const value = (action as unknown as Record<string, unknown>)[field];
       return value === undefined || value === null || value === "";
     });
   }
