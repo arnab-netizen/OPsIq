@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D-SEQ Complete ✓ (Next: Phase D-CAP)
+## Current Phase: Phase D-CAP Complete ✓ (Next: Phase D-FRICTION)
 
 ---
 
@@ -1910,6 +1910,52 @@ System must:
 - Workspace isolation: schedule scoped to decision_id + workspace_id
 - Friction delays applied per dependency_count rule
 - Capacity checks per owner (simplified: log warnings, don't block)
+
+---
+
+## Phase D-CAP Complete ✓ (2026-05-06 00:40)
+
+**Capacity + Concurrency Control (Per-Owner Limits - STRICT)**
+
+**Slice Summary**:
+- Per-owner capacity checking (weekly/daily hours limits)
+- Concurrency limit enforcement (max N actions in-progress per owner)
+- Capacity allocation and deallocation tracking
+- Execution plan validation across all owners
+- Owner utilization percentage calculation
+- Fail-closed: blocks execution if capacity exceeded
+
+**Service Features**:
+- checkCapacity(): Verify owner has available hours for action
+- checkConcurrency(): Verify owner hasn't hit concurrent action limit
+- getOwnerCapacitySummary(): Summarize owner's capacity and allocations
+- allocateCapacity(): Add allocation to tracking
+- deallocateCapacity(): Remove allocation from tracking
+- validateExecutionPlan(): Check all actions fit within owner capacities
+- calculateUtilization(): Calculate utilization percentage per owner
+
+**Files Created**: 3 new files
+- src/domain/execution/capacity.ts (CapacityCheckResult, ConcurrencyCheckResult, OwnerCapacity, CapacityAllocation types)
+- src/services/execution-core/capacity-controller.ts (CapacityController class)
+- src/services/execution-core/__tests__/capacity-controller.test.ts (35 comprehensive tests)
+
+**Tests**: 35/35 passing ✓
+- Capacity check: 7 tests (sufficient, exceeded, with allocations, boundary, defaults, other owners, remaining hours)
+- Concurrency check: 4 tests (within limit, at limit, multiple actions, defaults)
+- Owner summary: 3 tests (summary, filter by owner, empty allocations)
+- Allocate capacity: 3 tests (add, preserve existing, multiple allocations)
+- Deallocate capacity: 3 tests (remove by ID, non-existent, remove all matches)
+- Plan validation: 5 tests (sufficient, exceeded, multiple owners, defaults, empty)
+- Utilization: 6 tests (percentage, zero hours, cap at 100%, defaults, filter owner, zero allocations)
+- Edge cases: 4 tests (fractional hours, large values, zero hours, deterministic)
+
+**Integration Notes**:
+- Pure computation (no DB calls)
+- Per-owner capacity tracked independently
+- Default capacity: 40 hours/week, 8 hours/day
+- Default concurrency limit: 2 concurrent actions per owner
+- Deterministic: identical inputs produce identical results
+- Fail-closed: blocks execution if capacity exceeded
 
 ---
 
