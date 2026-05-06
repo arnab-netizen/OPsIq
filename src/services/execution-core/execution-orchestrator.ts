@@ -81,7 +81,7 @@ export class ExecutionOrchestrator {
 
     // 2. Build dependency graph (check for cycles)
     const dependencyActions = input.actions.map((a) => ({
-      id: a.action_id,
+      action_id: a.action_id,
       depends_on: a.depends_on,
     }));
     const depGraph = this.dependencyBuilder.buildGraph(dependencyActions);
@@ -171,15 +171,21 @@ export class ExecutionOrchestrator {
       total_duration_days: totalDurationDays,
       total_effort_hours: input.actions.reduce((sum, a) => sum + a.effort_hours, 0),
       capacity_check: {
+        owner: "system",
         available_hours: 0,
         allocated_hours: 0,
         remaining_hours: 0,
-        all_actions_fit: validation.capacity_ok,
+        can_execute: validation.capacity_ok,
       },
       schedule: {
-        plan_id: planId,
+        decision_id: input.decision_id,
+        workspace_id: input.workspace_id,
         steps: [],
         total_duration_days: totalDurationDays,
+        total_effort_hours: input.actions.reduce((sum, a) => sum + a.effort_hours, 0),
+        is_valid: validation.is_valid,
+        conflict_detected: false,
+        conflicts: [],
       },
       created_at: new Date(),
     };

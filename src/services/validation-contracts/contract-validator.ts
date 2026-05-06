@@ -26,12 +26,12 @@ export class ContractValidator {
         validatedAt: new Date(),
       };
     } catch (err) {
-      if (err instanceof ZodError && err.errors) {
-        err.errors.forEach((error) => {
-          const field = error.path ? error.path.join(".") : "root";
+      if (err instanceof ZodError && err.issues) {
+        err.issues.forEach((issue) => {
+          const field = issue.path ? issue.path.join(".") : "root";
           errors.push({
             field: field || "root",
-            message: error.message,
+            message: issue.message,
             severity: "ERROR",
           });
         });

@@ -430,7 +430,8 @@ function estimateTimeToMitigation(
 
   Object.entries(factors).forEach(([key, assessment]) => {
     const factor = key as HumanFactorKey;
-    const times = timingMap[assessment.severity as any] || timingMap.MODERATE;
+    const severity = assessment.severity as keyof typeof timingMap;
+    const times = timingMap[severity] || timingMap.MODERATE;
     mitigation[factor] = times[factor];
   });
 

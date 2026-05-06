@@ -73,7 +73,8 @@ export class OutputFormatter {
    * OPERATOR: Detailed metrics, clear changes
    */
   private formatOperator(input: OutputFormatterInput): string {
-    const variance = input.impact_result.variance_pct.toFixed(1);
+    const varianceNum = input.impact_result.variance_pct;
+    const variance = varianceNum.toFixed(1);
     const before = (
       input.confidence_update.new_confidence - input.confidence_update.confidence_change
     ).toFixed(0);
@@ -82,7 +83,7 @@ export class OutputFormatter {
     const action = this.getActionDescription(input.feedback_action.action);
 
     return (
-      `Variance: ${variance > 0 ? "+" : ""}${variance}%. ` +
+      `Variance: ${varianceNum > 0 ? "+" : ""}${variance}%. ` +
       `Confidence: ${before}% ${change} ${after}%. ` +
       `Next: ${action}`
     );
