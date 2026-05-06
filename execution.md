@@ -810,6 +810,24 @@ Every object must define:
 - foreign keys if persisted
 - replay behavior if event-driven
 
+## GLOBAL OBJECT IMPLEMENTATION RULE
+
+The Global Domain Objects list is a contract inventory, not permission to create every table immediately.
+
+For each phase, Claude must:
+- map relevant objects
+- reuse existing objects
+- create only objects required for that phase
+- avoid mass schema creation
+- avoid speculative unused tables
+- mark future objects as MISSING or PARKED until their phase requires them
+
+No global object may be persisted unless:
+- required by the current phase
+- wired into runtime
+- covered by tests
+- migration validated
+
 ---
 
 ## 7. EXECUTION STATE FILE
