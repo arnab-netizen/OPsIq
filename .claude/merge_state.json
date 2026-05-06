@@ -1,0 +1,45 @@
+{
+  "branch": "integration/v72-final",
+  "timestamp": "2026-05-06T09:35:00Z",
+  "phase": 0,
+  "status": "DISCOVERY_IN_PROGRESS",
+  "orchestrators": {
+    "canonical": [
+      "src/services/execution-core/execution-orchestrator.ts",
+      "src/services/best-path-engine/orchestrator.ts"
+    ],
+    "removed": [
+      "src/services/consulting-engine/orchestrator.ts (removed in Slice 1)"
+    ]
+  },
+  "engines": {
+    "total": 16,
+    "by_phase": {
+      "diagnostic_core": 4,
+      "decision_core": 2,
+      "other": 10
+    }
+  },
+  "services": {
+    "total": 58,
+    "dead_candidates": [
+      "alerts",
+      "badges",
+      "baseline",
+      "business-impact",
+      "calibration",
+      "decision-confidence",
+      "financial",
+      "firstwin",
+      "outcome"
+    ]
+  },
+  "validation": {
+    "build": "pending",
+    "tests": "pending",
+    "lint": "pending",
+    "prisma": "pending",
+    "determinism": "pending"
+  },
+  "next_phase": "CANONICAL_ENGINE_AUDIT"
+}
