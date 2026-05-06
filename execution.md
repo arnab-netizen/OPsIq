@@ -3918,6 +3918,31 @@ Outcome layer is VALID only if:
 
 ---
 
+## Phase F-8 Complete ✓ (2026-05-06 06:23)
+
+**Delayed ROI Scenario (plan violates quick-win ≤7 days)**
+- ✓ Created: src/__tests__/integration/scenarios/f8-delayed-roi.test.ts (32/32 passing)
+- ✓ Tests: All quick-win enforcement, measurement confidence, and intermediate outcome tests passing
+
+**Scenario Validation**:
+- ✓ Quick-win threshold: 7-day limit enforced at plan validation gate
+- ✓ Plan rejection: 14-day plan rejected on quick-win violation (fail-closed)
+- ✓ Clear rejection reason: "Plan exceeds 7-day quick win limit"
+- ✓ Plan adjustment offered: Break into 7-day increments with intermediate checkpoints
+- ✓ Measurement confidence: LOW confidence (50%) applied at day 7, HIGH (95%) at day 14
+- ✓ Confidence capping: Updates capped to ±10% on LOW-confidence measurements
+- ✓ Intermediate outcome: +5% variance measured at day 7 checkpoint
+- ✓ Final outcome: +8% variance measured at day 14 completion
+- ✓ Trajectory tracking: +5% → +8% shows improving trajectory
+- ✓ Go/no-go decision: Checkpoint at day 7 enables early halt if negative signal
+- ✓ Audit trail: Packets created for both checkpoint and final measurements
+- ✓ Deterministic replay: Same 14-day input produces same rejection decision
+
+**Files Changed**: 1 new file
+- src/__tests__/integration/scenarios/f8-delayed-roi.test.ts
+
+---
+
 ## Phase F-7 Complete ✓ (2026-05-06 06:22)
 
 **Contradictory KPI Scenario (mixed positive/negative signals)**
