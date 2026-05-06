@@ -1,22 +1,10 @@
+// ⚠️ CANONICAL IMPORT: All contracts are now in @/contracts
+// This file re-exports for backward compatibility only.
+// NEW CODE: import from @/contracts
+
 import { VarianceResult } from "./variance";
+export { FeedbackAction } from "@/contracts";
+export type { FeedbackLoopInput, FeedbackLoopResult } from "@/contracts";
 
-export enum FeedbackAction {
-  CONTINUE = "CONTINUE",
-  REPLAN = "REPLAN",
-  ROLLBACK = "ROLLBACK",
-  HALT = "HALT",
-}
-
-export interface FeedbackLoopInput {
-  variance_result: VarianceResult;
-  rollback_feasible: boolean;
-  owner_id: string;
-  decision_id: string;
-}
-
-export interface FeedbackLoopResult {
-  action: FeedbackAction;
-  reason: string;
-  escalation_required: boolean;
-  requires_owner_approval: boolean;
-}
+// Legacy local definitions (deprecated - remove when all imports migrated)
+import type { FeedbackAction, FeedbackLoopInput, FeedbackLoopResult } from "@/contracts";
