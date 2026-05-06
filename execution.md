@@ -3885,3 +3885,284 @@ Outcome layer is VALID only if:
 - Replan triggers idempotent
 
 ---
+
+---
+
+# Phase F — VALIDATION LAYER (HOSTILE CONDITIONS)
+
+## Current Phase: Phase F - Full Lifecycle Integration Testing
+
+**Goal**: Validate OPSIQ decision→execution→outcome→replan cycle under realistic, hostile business conditions with failures, degradation, and capacity constraints.
+
+**Proof System**: Messy input → Diagnosis → Decision → Execution → Outcome → Variance → Replan (with failures/rollback)
+
+---
+
+## PHASE F RULES
+
+### Strict Constraints
+
+1. **No Synthetic Perfect Execution**
+   - Every scenario has failures or partial success
+   - Timelines slip realistically (friction delays)
+   - Capacity constraints enforced throughout
+   - Vendors fail, markets change, employees leave
+
+2. **Failures Propagate Realistically**
+   - When action fails: cascade to downstream (via dependency graph)
+   - Rollback validates feasibility before attempting
+   - Halt triggers when recovery impossible
+   - Escalation to owner on critical failures
+
+3. **Confidence Drifts from Evidence**
+   - Positive outcome → confidence ↑ (capped at +20%)
+   - Negative outcome → confidence ↓ (capped at -30%)
+   - Repeated failure on same recommendation → additional -15% + HALT
+   - Low measurement confidence (< 60%) → cap updates to ±10%
+
+4. **Repeated Failed Strategy Blocked**
+   - Condition: previous_outcome="failure" AND confidence < 50% AND variance < 0
+   - Action: HALT (block recommendation, escalate to owner)
+   - Prevents infinite retry loops on failing approaches
+
+5. **Timelines Realistic**
+   - Friction delays applied per dependency count (0→0, 1-2→5, 3-5→10, 6+→20 days)
+   - Parallel execution constrained by per-owner capacity (40 hours/week, max 2 concurrent)
+   - Slippage expected: test timeline adjustment on blocked actions
+   - Quick win enforcement: ≤7 days mandatory for all actions
+
+6. **Capacity Enforced**
+   - Per-owner available_hours limit (40/week)
+   - Concurrency limit (2 in-progress max)
+   - Over-capacity actions → BLOCKED (not queued)
+   - Test: attempt to schedule beyond capacity → should be rejected
+
+7. **Rollback Validated Before Attempt**
+   - Check: Can state be rolled back? (not DONE, not CANCELLED, downstream not started)
+   - Check: Cost < benefit? (rollback_cost < original_investment)
+   - Check: Time acceptable? (rollback_time ≤ time_budget)
+   - If any check fails: HALT (rollback impossible, escalate)
+
+8. **Deterministic Replay Required**
+   - Same decision input → identical execution plan (no randomness)
+   - Same outcome evidence → identical confidence update
+   - Same variance input → identical replan decision
+   - Audit packet replay: identical packet_id on repeated input
+
+---
+
+## 10 HOSTILE BUSINESS SCENARIOS
+
+### 1. Revenue Collapse (40% drop)
+**Setup**: Market downturn reduces baseline revenue from 100→60.
+**Expected**: 
+- Variance = -40% (exceeds failure threshold of -10%)
+- Trigger replan
+- If high-confidence strategy caused this → offer rollback
+- Confidence drops significantly, may block repeated execution
+**Test**: verify replan triggered, rollback evaluated, escalation clear
+
+### 2. Low Cash (runway <3 months)
+**Setup**: Initial cash position too low, expensive actions fail financially.
+**Expected**:
+- Action execution fails due to cost (FATAL classification)
+- Rollback triggered to preserve cash
+- Downstream actions blocked (dependency on failed action)
+- Halt triggered (cannot proceed without cash)
+**Test**: verify cost constraint enforced, cascade prevention, financial viability
+
+### 3. Wrong Initial Diagnosis
+**Setup**: Diagnosis wrong (e.g., attributed issue to wrong cause), actions target wrong problem.
+**Expected**:
+- Outcomes don't improve despite execution
+- Variance < 0, confidence drops
+- Repeated failures with low confidence → HALT
+- Escalate to re-diagnose
+**Test**: verify failed recommendation blocked, escalation triggered, diagnostic loop enabled
+
+### 4. Execution Failure (50% of actions fail)
+**Setup**: Actions execute but some fail mid-way (RETRYABLE or FATAL errors).
+**Expected**:
+- Retryable failures → retry with exponential backoff (1s, 2s, 4s, 8s)
+- Fatal failures → HALT, trigger rollback evaluation
+- Cascade: downstream blocked if dependency failed
+- Some actions succeed, some fail → partial variance
+**Test**: verify retry policy, backoff timing, cascading, partial outcomes handled
+
+### 5. Vendor Failure (critical service unavailable)
+**Setup**: Third-party service down, actions dependent on it timeout.
+**Expected**:
+- Transient failures → RECOVERABLE, retry with backoff
+- Extended downtime → FATAL, escalate
+- Rollback triggered if vendor failure blocks completion
+- Impact on timeline: actions shift to accommodate unavailability
+**Test**: verify transient vs fatal classification, retry limits, rollback on deps failed
+
+### 6. Overload (capacity exceeded)
+**Setup**: Owner requested to execute too many actions (>capacity).
+**Expected**:
+- Capacity check fails: BLOCKED action
+- Execution plan adjusted: some actions queued/deferred
+- Timeline shifts: later start times to respect capacity
+- Over-capacity rejection: plan validation fails
+**Test**: verify capacity enforcement, queueing, timeline adjustment, rejection
+
+### 7. Contradictory KPI (metric improves but profit drops)
+**Setup**: One KPI positive (e.g., revenue ↑10%), another negative (e.g., margin ↓15%).
+**Expected**:
+- Variance: net negative (profit margin drives decision)
+- Trigger replan despite revenue improvement
+- Confidence update: mixed signals, neutral or slightly negative
+- Outcome: continue if net positive, replan if net negative
+**Test**: verify composite KPI handling, weighted variance, correct replan trigger
+
+### 8. Delayed ROI (results slow to materialize)
+**Setup**: Action takes 14 days to show results (violates quick-win ≤7 days).
+**Expected**:
+- Quick win validation fails at plan time
+- Action rejected: is_quick_win=false
+- Plan adjustment: break into 7-day increments with intermediate outcomes
+- Measurement confidence low initially → cap updates to ±10%
+**Test**: verify quick-win blocking, measurement confidence capping, timeline compression
+
+### 9. Competitor Response (market shifts after decision)
+**Setup**: Competitor launches similar offering, reducing expected impact.
+**Expected**:
+- Baseline shifts: market conditions change mid-execution
+- Variance calculation adjusted: actual outcome vs new baseline
+- Impact less than planned → confidence drops
+- May trigger replan if variance < failure threshold
+**Test**: verify baseline adaptability, new variance calc, dynamic replan
+
+### 10. Partial Recovery (50% of damage recovered)
+**Setup**: Crisis partially mitigated: revenue recovers to 80% of original (was 60%).
+**Expected**:
+- Variance: 20% improvement from crisis low
+- Variance vs original: still -20%, may still trigger replan
+- Confidence: modest increase from evidence of recovery
+- Outcome: continue if recovery trajectory positive, replan if plateau
+**Test**: verify trajectory analysis, partial recovery handling, continuing metrics
+
+---
+
+## VERIFICATION CHECKLIST
+
+### Fail-Closed Behavior Under Stress
+- ✓ Invalid input blocks all operations (no silent degradation)
+- ✓ Missing baselines prevent impact claims
+- ✓ Over-capacity actions rejected (not queued)
+- ✓ Impossible rollbacks blocked (escalated)
+- ✓ Contradictory signals trigger halt/escalation
+
+### Realistic Degradation Handling
+- ✓ Failures propagate (no isolated failures)
+- ✓ Cascade prevention via dependency tracking
+- ✓ Partial success handled (some actions succeed, some fail)
+- ✓ Timeline slippage realistic (friction delays applied)
+- ✓ Capacity constraints enforced throughout
+
+### Replanning Triggered Correctly
+- ✓ Variance < failure_threshold → REPLAN
+- ✓ Negative variance + high confidence + success history → ROLLBACK offered
+- ✓ Repeated failures (same recommendation, low confidence, negative variance) → HALT
+- ✓ Impossible rollback → HALT (escalate instead)
+- ✓ Over-capacity → BLOCKED action (adjust plan)
+
+### Rollback Validated Before Attempt
+- ✓ Can state be rolled back? (checks: DONE, downstream started, cost, time)
+- ✓ Cost/benefit analysis correct (rollback_cost < original investment)
+- ✓ Downstream impact assessed (no orphaned dependencies)
+- ✓ Rollback impossible → HALT (clear escalation)
+
+### Audit Replay Works Deterministically
+- ✓ Same decision input → identical execution plan (audit trail matches)
+- ✓ Same outcome evidence → identical confidence update (replay detects duplicates)
+- ✓ Same variance input → identical replan decision (idempotent feedback)
+- ✓ Audit packet replay: identical packet_id (deterministic hash)
+- ✓ Full scenario replay: from diagnosis through replan (end-to-end)
+
+### Determinism Under All Conditions
+- ✓ No randomness in calculations (all deterministic formulas)
+- ✓ No time-dependent decisions (except date logging)
+- ✓ Identical inputs always produce identical outputs (tested across scenarios)
+- ✓ Replay detection via deterministic IDs (packet_id, execution plan hash)
+
+---
+
+## INTEGRATION TEST STRUCTURE
+
+### Test Categories
+
+1. **End-to-End Lifecycle Tests** (10 scenarios)
+   - Full flow: diagnosis → decision → execution → outcome → variance → replan
+   - Each scenario exercises all Phase D + E engines
+   - Verify cascade, rollback, escalation paths
+
+2. **Adversarial Tests** (failure injection)
+   - Network timeouts → RECOVERABLE retry
+   - Permission denied → FATAL halt
+   - Resource exhausted → BLOCKED action
+   - Vendor unavailable → cascading failures
+   - Verify correct failure classification and handling
+
+3. **Replay Tests** (determinism validation)
+   - Replay scenario with same input → identical outcome
+   - Verify audit packet ID matching
+   - Verify confidence update idempotency
+   - Verify replan decision reproducibility
+
+4. **Cascade Tests** (dependency validation)
+   - Action fails → downstream blocked
+   - Verify dependency graph prevents orphaned actions
+   - Verify rollback doesn't cascade (stops at failed action)
+
+5. **Capacity Tests** (constraint enforcement)
+   - Schedule beyond capacity → rejected
+   - Concurrent limit exceeded → queued/blocked
+   - Per-owner hours exhausted → action blocked
+   - Verify adjustments don't violate constraints
+
+6. **Confidence Drift Tests** (evidence-based learning)
+   - Positive outcomes → confidence increases
+   - Negative outcomes → confidence decreases
+   - Repeated failures → HALT (confidence block)
+   - Measurement confidence modifiers applied
+
+---
+
+## SUCCESS CRITERIA FOR PHASE F
+
+Phase F is **COMPLETE** only if:
+
+- ✓ All 10 scenarios execute without crashes
+- ✓ Fail-closed behavior enforced under stress
+- ✓ Failures propagate realistically (cascade tested)
+- ✓ Replanning triggered correctly (all 4 paths)
+- ✓ Rollback validated before attempt (4 checks)
+- ✓ Audit replay deterministic (end-to-end)
+- ✓ Determinism verified (identical inputs → identical outputs)
+- ✓ Capacity constraints enforced (over-capacity rejected)
+- ✓ Confidence drifts correctly (evidence-based)
+- ✓ Repeated failures blocked (HALT on low confidence + negative variance)
+
+---
+
+## PHASE F IMPLEMENTATION NOTES
+
+**No New Services**: Phase F uses existing Phase D + E services.
+
+**Test Approach**:
+- Integration tests: Orchestrator coordinates D + E engines
+- Scenario builders: Construct realistic decision inputs
+- Assertion helpers: Verify cascade, rollback, escalation
+- Replay validators: Determinism checks
+
+**Files to Create**:
+- `src/__tests__/integration/scenarios/` - 10 scenario tests
+- `src/__tests__/integration/adversarial/` - failure injection tests
+- `src/__tests__/integration/replay/` - determinism tests
+- `src/__tests__/integration/helpers/` - assertion utilities
+
+**Test Framework**: Vitest (same as Phase D/E unit tests)
+
+---
