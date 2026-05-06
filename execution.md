@@ -3070,7 +3070,59 @@ Phase D-ORCHESTRATION: Execution Orchestrator (ties all together)
 
 # Phase E — OUTCOME LAYER (STRICT MODE)
 
-## Current Phase: Phase E-FEEDBACK Complete ✓ (Next: Phase E-OUTPUT)
+## Current Phase: Phase E-OUTPUT Complete ✓ (Next: Phase E-QUICKWIN)
+
+---
+
+## Phase E-OUTPUT Complete ✓ (2026-05-06 04:50)
+
+**Output Formatter (Format Results for NOVICE/OPERATOR/EXECUTIVE Modes)**
+
+**Slice Summary**:
+- Format outcome results for three user roles with different detail levels
+- NOVICE: Plain language with minimal numbers (e.g., "delivered good results")
+- OPERATOR: Detailed metrics with changes (e.g., "Variance: +10.0%. Confidence: 70% ↑ 75%")
+- EXECUTIVE: Business impact with strategic recommendations (e.g., "ROI improved 10%. Recommend continue strategy.")
+- Deterministic formatting: same input always produces same output
+- Fail-closed on missing data (generic error message)
+
+**Service Features**:
+- formatOutput(): Transform impact/confidence/feedback to user-friendly message
+- Private helpers: formatNovice, formatOperator, formatExecutive
+- getOutcomeDescription(): Describe variance in user language
+- getActionDescription(): Plain action messaging
+- getExecutiveRecommendation(): Strategic language
+- isDeterministic(): Verify deterministic behavior
+
+**Validation Rules**:
+- Impact result, confidence update, and feedback action all required (fail-closed if missing)
+- Output mode defaults to NOVICE if invalid
+- Variance descriptions scale by magnitude (excellent >10%, good >5%, slight <-5%, failed <-10%)
+- Actions mapped to user-appropriate language per mode
+- Confidence arrows: ↑ for increase, ↓ for decrease
+
+**Files Created**: 2 new files
+- src/domain/outcome/output.ts (types, enums)
+- src/services/outcome-core/__tests__/output-formatter.test.ts (35 tests)
+
+**Tests**: 35/35 passing ✓
+- NOVICE Format (6 tests): variance descriptions, confidence %, action language, excellent/good/poor outcomes
+- OPERATOR Format (6 tests): variance %, confidence change arrows, detailed metrics, action descriptions
+- EXECUTIVE Format (5 tests): ROI %, decline detection, strategic recommendations (continue/pivot/rollback/stop)
+- Mode Differences (4 tests): different messages per mode, NOVICE has fewer numbers, OPERATOR detailed, EXECUTIVE ROI-focused
+- Input Validation (4 tests): missing fields → error message, invalid mode handling
+- Deterministic Behavior (2 tests): identical inputs produce identical outputs
+- Action Preservation (2 tests): feedback action preserved in all modes
+- Edge Cases (4 tests): zero variance, extreme variances, boundary confidences (0%, 100%)
+
+**Integration Notes**:
+- Fail-closed: Missing input → generic error message in selected mode
+- Deterministic: Same input always produces same formatted output
+- Mode-specific: NOVICE < OPERATOR < EXECUTIVE in detail/metrics
+- Variance descriptions: magnitude-based (>10%, >5%, >0%, 0%, <-5%, <-10%)
+- Action mappings: CONTINUE→continue, REPLAN→pivot, ROLLBACK→rollback, HALT→stop
+- Confidence arrows: ↑ upward, ↓ downward
+- No time-dependent formatting
 
 ---
 
