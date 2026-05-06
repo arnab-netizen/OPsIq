@@ -4291,9 +4291,28 @@ Outcome layer is VALID only if:
 
 ---
 
-## PHASE F COMPLETE ✓ (2026-05-06 06:26)
+## Phase F-Core Behaviors Complete ✓ (2026-05-06 06:31)
 
-**Full Lifecycle Integration Testing - All 10 Hostile Scenarios Complete**
+**Cross-Cutting Behavior Validation (Reality Proofs)**
+- ✓ Created: src/__tests__/integration/scenarios/f-core-behaviors.test.ts (20/20 passing)
+- ✓ Tests: All failure propagation, confidence drift, replan routing, rollback validation tests passing
+
+**Reality Proofs**:
+- ✓ Failure Propagation: Failures have real consequences (decision changed, confidence reduced, audit recorded)
+- ✓ Confidence Drift: Cumulative evidence changes decisions (positive accumulates, negative deteriorates)
+- ✓ Replan Routing: continue → replan → rollback → halt decision paths validated
+- ✓ Rollback Validation: Not automatic, requires explicit evaluation of feasibility
+- ✓ Degraded Decisions: Weak evidence produces capped confidence updates (±10% for LOW confidence)
+- ✓ Deterministic Replay: Identical inputs produce identical packet IDs; identical scenario state produces identical decisions
+
+**Files Changed**: 1 new file
+- src/__tests__/integration/scenarios/f-core-behaviors.test.ts
+
+---
+
+## PHASE F COMPLETE ✓ (2026-05-06 06:31)
+
+**Full Lifecycle Integration Testing - All 10 Hostile Scenarios + Core Behaviors Complete**
 
 **Test Coverage Summary**:
 - F-1: Revenue Collapse (11/11) - Revenue drops 40%, triggers replan when variance falls below failure threshold
@@ -4307,7 +4326,7 @@ Outcome layer is VALID only if:
 - F-9: Competitor Response (32/32) - Baseline shift detection, dual variance calculation, external shock handling
 - F-10: Partial Recovery (41/41) - Crisis recovery trajectory, incomplete recovery, continue-with-caution recommendation
 
-**Total: 235/235 tests passing across 10 integration scenarios**
+**Total: 255/255 tests passing across 11 test suites (10 scenarios + 1 core behaviors)**
 
 **Key Validations Across Phase F**:
 - ✓ Fail-closed behavior: Invalid inputs block operations, no silent degradation
