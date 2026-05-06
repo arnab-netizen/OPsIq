@@ -3070,7 +3070,56 @@ Phase D-ORCHESTRATION: Execution Orchestrator (ties all together)
 
 # Phase E — OUTCOME LAYER (STRICT MODE)
 
-## Current Phase: Phase E-CONFIDENCE Complete ✓ (Next: Phase E-FEEDBACK)
+## Current Phase: Phase E-FEEDBACK Complete ✓ (Next: Phase E-OUTPUT)
+
+---
+
+## Phase E-FEEDBACK Complete ✓ (2026-05-06 04:47)
+
+**Feedback Loop (Route Replan/Rollback/Halt Decisions)**
+
+**Slice Summary**:
+- Route variance results to appropriate action: continue/replan/rollback/halt
+- Offer rollback when feasible and recommended
+- Escalate to owner for decisions requiring approval
+- Fail-closed on missing inputs (halt, escalate)
+- Deterministic action routing based on variance signals
+
+**Service Features**:
+- determineFeedback(): Route variance result to feedback action
+- requiresApproval(): Check if action needs owner approval
+- mapToStateTransition(): Map action to ActionFSM state
+- getEscalationPriority(): Prioritize escalations (0-3 scale)
+
+**Validation Rules**:
+- Variance result required (fail-closed if missing)
+- Decision_id and owner_id required (fail-closed if missing)
+- Halt takes precedence over replan/rollback
+- Rollback only offered if trigger_rollback AND rollback_feasible
+- All replan, rollback, halt actions require owner approval
+
+**Files Created**: 2 new files
+- src/domain/outcome/feedback.ts (types, enums)
+- src/services/outcome-core/__tests__/feedback-loop.test.ts (34 tests)
+
+**Tests**: 34/34 passing ✓
+- Continue on Success (2 tests): no replan path, reason preservation
+- Trigger Replan (3 tests): replan without rollback, escalation requirement, reason messaging
+- Offer Rollback (3 tests): rollback offered + feasible, owner approval, reason indication
+- Halt on Critical (4 tests): halt precedence, escalation, reason preservation
+- Input Validation (3 tests): missing variance_result/decision_id/owner_id → halt
+- Helper Methods (8 tests): requiresApproval, mapToStateTransition, getEscalationPriority
+- Action Routing (4 tests): all routing paths covered
+- Deterministic Behavior (1 test): identical inputs produce identical outputs
+- Edge Cases (2 tests): rollback offered without replan, rollback offered but not in result
+
+**Integration Notes**:
+- Fail-closed: Missing input → HALT with escalation_required=true
+- Deterministic: Same variance_result + rollback_feasible always produces same action
+- Routing logic: halt > (replan + rollback feasible) > replan > continue
+- Owner approval: Required for REPLAN, ROLLBACK, HALT (not CONTINUE)
+- Escalation priority: HALT(3) > ROLLBACK(2) > REPLAN(1) > CONTINUE(0)
+- State mapping: CONTINUE/REPLAN → READY, ROLLBACK/HALT → BLOCKED
 
 ---
 
