@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D-ORCHESTRATION Complete ✓ (PHASE D AUDITED & VERIFIED)
+## Current Phase: Phase E — OUTCOME LAYER (PENDING)
 
 ---
 
@@ -3065,3 +3065,372 @@ Phase D-ORCHESTRATION: Execution Orchestrator (ties all together)
 
 ---
 
+
+---
+
+# Phase E — OUTCOME LAYER (STRICT MODE)
+
+## Current Phase: Phase E (In Progress)
+
+---
+
+## Objective
+
+Convert execution outcomes into confidence signals and replan decisions.
+
+Decision → Action → Outcome → Variance → Confidence → Replan proof system.
+
+System must:
+- Track actual outcomes against baseline
+- Calculate variance and impact
+- Update confidence from evidence
+- Trigger replanning on KPI failure
+- Enforce quick wins (≤7 days mandatory)
+- Block synthetic success claims
+- Emit outcome audit packets
+- Support NOVICE/OPERATOR/EXECUTIVE output modes
+- Remain deterministic and workspace-safe
+- Reuse existing audit and tracking services
+
+---
+
+## PHASE E REQUIREMENTS
+
+### Proof System Rules
+
+1. **No Baseline → Block**
+   - Reject outcome if baseline_metric undefined
+   - Fail-closed: no impact = assumption
+
+2. **No Actual → No Claim**
+   - Cannot claim impact without measured outcome
+   - No synthetic/projected success
+   - Evidence-only confidence updates
+
+3. **Variance Tracked**
+   - actual - baseline = variance
+   - variance / baseline = % change
+   - variance ≥ 0 = positive
+   - variance < 0 = negative
+
+4. **Failed KPI → Replan/Rollback/Halt**
+   - If KPI failure detected → trigger replan
+   - If rollback feasible → offer rollback
+   - If neither → halt decision (escalate)
+
+5. **Confidence Updates from Evidence**
+   - Positive outcome → confidence ↑
+   - Negative outcome → confidence ↓
+   - Same recommendation + low confidence + repeated failure → BLOCK
+
+6. **No Synthetic Success**
+   - No projections counted as actual
+   - No "if we assume X will happen" claims
+   - Only measured, audited outcomes count
+
+7. **All Mutations Audited**
+   - before_outcome, after_outcome
+   - variance calculated, tracked
+   - confidence update with reason
+   - replan trigger with justification
+
+8. **Quick Win ≤7 Days Mandatory**
+   - Actions must deliver visible result within 7 days
+   - >7 days rejected fail-closed
+   - Enforced at execution plan validation
+
+9. **Output Modes Differ**
+   - NOVICE: "outcome is X, confidence is Y%"
+   - OPERATOR: "variance = +5%, confidence ↑ from 60→65%"
+   - EXECUTIVE: "ROI improved 12%, recommend continue/pivot/stop"
+
+---
+
+## 7 ENGINES (PHASE E)
+
+### 1. IMPACT TRACKER (Measure Actual)
+
+**Input**:
+- action_id, decision_id
+- baseline_metric (required, required to have measured baseline)
+- actual_outcome (measured value)
+- measurement_date
+- measurement_confidence (0-100%)
+
+**Validation**:
+- baseline_metric must exist (fail-closed if missing)
+- actual_outcome must be measured, not projected
+- measurement_confidence ≥ 50% to count as evidence
+
+**Output**:
+```
+{
+  action_id,
+  baseline_metric,
+  actual_outcome,
+  variance: actual - baseline,
+  variance_pct: variance / baseline * 100,
+  impact_direction: "positive" | "negative" | "neutral",
+  measurement_quality: "high" | "medium" | "low"
+}
+```
+
+### 2. VARIANCE/REPLAN (Calculate Variance, Trigger Replan)
+
+**Input**:
+- impact (from Impact Tracker)
+- kpi_thresholds: { success: N, failure: -M }
+- current_confidence: 0-100%
+
+**Replan Triggers**:
+- variance < kpi_thresholds.failure → REPLAN
+- variance < 0 AND confidence was high → REPLAN
+- same_recommendation + low_confidence + variance < 0 → BLOCK (prevent repeated failures)
+
+**Output**:
+```
+{
+  variance_pct,
+  trigger_replan: bool,
+  trigger_rollback: bool,
+  trigger_halt: bool,
+  reason: string
+}
+```
+
+### 3. CONFIDENCE UPDATE (Update Confidence from Outcome)
+
+**Input**:
+- current_confidence: 0-100%
+- variance_pct
+- measurement_confidence: 0-100%
+- previous_outcome: "success" | "failure" | "unknown"
+
+**Rules**:
+- positive variance → confidence ↑ (up to +20%)
+- negative variance → confidence ↓ (down to -30%)
+- same failure twice → confidence ↓ additional -15%
+- low measurement_confidence → cap update at ±10%
+
+**Output**:
+```
+{
+  new_confidence: 0-100%,
+  confidence_change: +N or -N,
+  update_reason: string
+}
+```
+
+### 4. FEEDBACK LOOP (Trigger Replan/Rollback/Halt)
+
+**Input**:
+- variance_result (from Variance/Replan)
+- rollback_feasible: bool
+- owner_id
+- decision_id
+
+**Logic**:
+- IF trigger_replan AND rollback_feasible → offer rollback
+- IF trigger_replan AND !rollback_feasible → trigger replan
+- IF trigger_halt → escalate to owner
+
+**Output**:
+```
+{
+  action: "continue" | "replan" | "rollback" | "halt",
+  reason: string,
+  escalation_required: bool
+}
+```
+
+### 5. OUTPUT MODE (Format Results for User)
+
+**Input**:
+- impact_result, confidence_update, feedback_action
+- output_mode: "NOVICE" | "OPERATOR" | "EXECUTIVE"
+
+**NOVICE Output**:
+- "Your action delivered [outcome]. Confidence is now [X]%."
+- Plain language, minimal numbers
+
+**OPERATOR Output**:
+- "Variance: [+/-X]%. Confidence: [was Y] → [now Z]. Next: [action]"
+- Detailed metrics, clear changes
+
+**EXECUTIVE Output**:
+- "ROI improved [X]%, recommend [continue/pivot/stop] decision"
+- Business impact, strategic recommendation
+
+**Output**: Formatted message string
+
+### 6. QUICK WIN ENFORCER (≤7 Days)
+
+**Input**:
+- execution_plan
+- action (with estimated effort)
+
+**Validation**:
+- If execution plan extends >7 days → REJECT
+- "Quick win" must show measurable impact within 7 days
+- Fail-closed: >7 days blocked at plan validation
+
+**Output**:
+```
+{
+  is_quick_win: bool,
+  days_to_result: N,
+  reason_if_blocked: string
+}
+```
+
+### 7. OUTCOME AUDIT PACKET (Immutable Record)
+
+**Input**:
+- action_id, decision_id, workspace_id
+- baseline_metric, actual_outcome
+- variance, variance_pct
+- before_confidence, after_confidence
+- feedback_action
+- measurement_quality
+
+**Output**:
+```
+{
+  packet_id: UUID,
+  action_id, decision_id, workspace_id,
+  baseline_metric, actual_outcome,
+  variance, variance_pct,
+  confidence_before, confidence_after,
+  feedback_action,
+  outcome_date: ISO,
+  auditable: true (immutable)
+}
+```
+
+---
+
+## TEST REQUIREMENTS (Minimum 9 Suites, 70+ Tests)
+
+### 1. Missing Baseline Fail (5 tests)
+- reject outcome if baseline_metric undefined
+- fail-closed behavior
+- error message clear
+
+### 2. Missing Actual Fail (5 tests)
+- reject projected/assumed outcomes
+- require measured values
+- block synthetic success claims
+
+### 3. Variance Calculation (8 tests)
+- positive variance
+- negative variance
+- zero variance
+- variance_pct calculation
+- edge cases (small baselines, etc.)
+
+### 4. Failed KPI Triggers Replan (8 tests)
+- variance < failure threshold → replan
+- negative variance → replan trigger
+- rollback feasible → offer rollback
+- neither → halt
+
+### 5. Confidence Up/Down (10 tests)
+- positive outcome → confidence ↑
+- negative outcome → confidence ↓
+- same failure twice → additional ↓
+- low measurement confidence → capped update
+
+### 6. Repeated Failure Blocks (6 tests)
+- same recommendation + low confidence + failure → BLOCK
+- prevents infinite retry loops
+- escalates instead of retry
+
+### 7. Output Modes Differ (6 tests)
+- NOVICE: plain language
+- OPERATOR: detailed metrics
+- EXECUTIVE: business impact
+
+### 8. Quick Win >7 Days Rejected (7 tests)
+- >7 days → rejected
+- ≤7 days → accepted
+- fail-closed enforcement
+
+### 9. Outcome Packet Replay (5 tests)
+- idempotent replay
+- immutable records
+- workspace-scoped
+
+---
+
+## BUILD ORDER (Dependency Chain)
+
+```
+Phase E-IMPACT: Impact Tracker (measure actual)
+    ↓
+Phase E-VARIANCE: Variance/Replan (calculate, trigger)
+    ↓
+Phase E-CONFIDENCE: Confidence Update (learn from outcomes)
+    ↓
+Phase E-FEEDBACK: Feedback Loop (replan/rollback/halt)
+    ↓
+Phase E-OUTPUT: Output Mode (format for users)
+    ↓
+Phase E-QUICKWIN: Quick Win Enforcer (≤7 days)
+    ↓
+Phase E-AUDIT: Outcome Audit Packet (immutable record)
+```
+
+---
+
+## SUCCESS CRITERIA
+
+Outcome layer is VALID only if:
+
+- ✓ Baseline required (fail-closed if missing)
+- ✓ No synthetic outcomes (measured only)
+- ✓ Variance calculated correctly
+- ✓ KPI failures trigger replan/rollback/halt
+- ✓ Confidence updates from evidence
+- ✓ Repeated failures blocked
+- ✓ Output modes differ per user type
+- ✓ Quick wins ≤7 days enforced
+- ✓ Outcome packets immutable
+- ✓ Full replay idempotency
+
+---
+
+## PHASE E INTEGRATION NOTES
+
+**Reuses**:
+- ExecutionAuditor (outcome_audit_packet structure)
+- ActionFSM states (feedback action triggers)
+- FailureClassifier (variance interpretation)
+- ExecutionOrchestrator (replan trigger)
+
+**New**:
+- impact-tracker: measure actual vs baseline
+- variance-calculator: variance + threshold logic
+- confidence-updater: Bayesian confidence from outcomes
+- feedback-loop: replan/rollback/halt decision
+- output-formatter: NOVICE/OPERATOR/EXECUTIVE modes
+- quick-win-enforcer: 7-day validation
+- outcome-auditor: immutable audit packets
+
+**Workspace Isolation**:
+- All outcomes scoped to workspace_id
+- Confidence per (decision_id, workspace_id)
+- Audit packets per workspace
+- Replan decisions workspace-local
+
+**Determinism**:
+- Variance calculation always same result
+- Confidence update rules deterministic
+- Output modes deterministic per role
+- No time-based decisions
+
+**Idempotency**:
+- Same outcome packet ID on replay
+- Confidence updates idempotent (last value wins)
+- Replan triggers idempotent
+
+---
