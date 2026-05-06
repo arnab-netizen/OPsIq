@@ -1751,7 +1751,7 @@ Decision is VALID only if:
 
 # Phase D — EXECUTION LAYER (STRICT MODE)
 
-## Current Phase: Phase D-CONTAIN Complete ✓ (Next: Phase D-ROLLBACK)
+## Current Phase: Phase D-ROLLBACK Complete ✓ (Next: Phase D-AUDIT)
 
 ---
 
@@ -2164,6 +2164,64 @@ System must:
 - Fail-closed: All strategies have defined state transitions
 - Workspace-scoped: Input includes decision_id and workspace_id
 - Action impacts provide before/after states for audit trail
+
+---
+
+## Phase D-ROLLBACK Complete ✓ (2026-05-06 01:11)
+
+**Rollback Validator (Feasibility Check)**
+
+**Slice Summary**:
+- Rollback feasibility assessment with multiple validation criteria
+- Cost-benefit analysis for rollback decisions
+- Downstream action impact evaluation
+- Terminal state detection (cannot rollback DONE/CANCELLED)
+- Cost-to-benefit ratio calculation with SAFE/RISKY/IMPOSSIBLE tiers
+
+**Service Features**:
+- validateRollback(): Comprehensive rollback feasibility check
+- canStateBeRolledBack(): Check if action state allows rollback
+- areDownstreamActionsBlocking(): Detect if downstream actions prevent rollback
+- getBlockingDownstreamActions(): List specific blocking downstream actions
+- isRollbackCostJustified(): Verify cost is within investment
+- getCostBenefitRatio(): Calculate cost-to-benefit ratio
+- validateRollbackPlanSteps(): Verify rollback plan has valid steps
+
+**Validation Rules**:
+- Cannot rollback if: action in terminal state (DONE, CANCELLED)
+- Cannot rollback if: downstream actions already started (IN_PROGRESS, DONE)
+- Cannot rollback if: cost exceeds original investment
+- Cannot rollback if: owner explicitly declined
+
+**Feasibility Levels**:
+- SAFE: Can rollback, cost < 75% of investment
+- RISKY: Can rollback, cost >= 75% of investment
+- IMPOSSIBLE: Cannot rollback (fails validation)
+
+**Files Created**: 3 new files
+- src/domain/execution/rollback.ts (RollbackFeasibility enum, types, state constants)
+- src/services/execution-core/rollback-validator.ts (RollbackValidator class)
+- src/services/execution-core/__tests__/rollback-validator.test.ts (40 comprehensive tests)
+
+**Tests**: 40/40 passing ✓
+- validateRollback: 10 tests (allow/block conditions, feasibility tiers, multiple failures, recommendations)
+- canStateBeRolledBack: 6 tests (all action states)
+- areDownstreamActionsBlocking: 4 tests (no actions, ready state, blocking states)
+- getBlockingDownstreamActions: 1 test (filter blocking actions)
+- isRollbackCostJustified: 4 tests (equal, less, greater than investment, zero cost)
+- getCostBenefitRatio: 4 tests (various ratios, zero cost, zero investment)
+- validateRollbackPlanSteps: 4 tests (valid, empty, missing fields)
+- Result structure: 1 test (all required fields)
+- Edge cases: 3 tests (multiple downstream, large costs, determinism, boundary at 0.75)
+
+**Integration Notes**:
+- Uses ActionState from Phase D-FSM for state validation
+- Requires rollback_plan with steps, cost, and time estimates
+- Supports cost-benefit analysis with configurable threshold (0.75)
+- Fail-closed: All validation failures result in cannot_rollback=false
+- Provides actionable recommendations (Proceed, Escalate, Impossible)
+- Terminal states: DONE, CANCELLED (cannot be rolled back)
+- Undoable states: DRAFT, READY, BLOCKED, FAILED
 
 ---
 
