@@ -386,19 +386,20 @@
       "remediation": "Set DATABASE_URL or copy .env.example to .env and configure",
       "merge_blocker": false
     },
-    "ci_missing_secret": {
-      "status": "CI_ENV_BLOCKED",
-      "blocker": "CI_TEST_DATABASE_URL secret not configured in repository",
+    "ci_test_env_blocked": {
+      "status": "CI_TEST_ENV_BLOCKED",
+      "blocker": "DATABASE_URL_TEST secret not configured in repository",
       "impact": "CI database tests cannot run, workflow blocked",
-      "remediation": "Add CI_TEST_DATABASE_URL secret to GitHub repository settings (environment: test)",
+      "remediation": "DATABASE_URL_TEST secret must be set in GitHub environment:test (already exists in target repo)",
       "merge_blocker": true,
-      "required_pattern": "Must contain 'test', 'ci', 'staging', or 'ephemeral'"
+      "required_pattern": "Must contain 'test', 'ci', 'staging', or 'ephemeral'",
+      "current_status": "Exists in GitHub environment:test"
     },
     "ci_secret_invalid_pattern": {
       "status": "CI_SECRET_INVALID",
-      "blocker": "CI_TEST_DATABASE_URL does not match safe pattern",
+      "blocker": "DATABASE_URL_TEST does not match safe pattern",
       "impact": "Safety check fails, prevents accidental production writes",
-      "remediation": "Update secret value to use test database URL matching pattern",
+      "remediation": "Update DATABASE_URL_TEST secret value to use test database URL matching pattern",
       "merge_blocker": true
     },
     "db_connection_fail": {
@@ -424,7 +425,7 @@
           "name": "preflight",
           "purpose": "Verify environment variables are configured",
           "script": "scripts/verify-env-preflight.sh",
-          "required_secret": "CI_TEST_DATABASE_URL",
+          "required_secret": "DATABASE_URL_TEST",
           "safe_to_fail": false
         },
         {
@@ -445,7 +446,7 @@
           "name": "database-tests",
           "purpose": "Verify schema migration and integration tests",
           "steps": ["prisma migrate deploy", "verify tables exist", "npm test integration"],
-          "required_secret": "CI_TEST_DATABASE_URL",
+          "required_secret": "DATABASE_URL_TEST",
           "safe_to_fail": false,
           "environment": "test"
         }
@@ -462,9 +463,12 @@
   "env_preflight_script": {
     "file": "scripts/verify-env-preflight.sh",
     "created": "2026-05-06",
-    "purpose": "Verify DATABASE_URL configuration without exposing secret values",
+    "updated": "2026-05-06",
+    "purpose": "Verify DATABASE_URL_TEST configuration without exposing secret values",
     "behavior_local": "Warns if DATABASE_URL not set, does not fail (integration tests will be skipped)",
-    "behavior_ci": "Fails if DATABASE_URL not set, provides remediation instructions",
+    "behavior_ci": "Fails if DATABASE_URL_TEST not set (via secrets), provides remediation instructions",
+    "secret_preferred": "DATABASE_URL_TEST (primary for CI)",
+    "secret_fallback": "None (DATABASE_URL only for local dev, never used in CI)",
     "outputs_values": false,
     "outputs_only": "Presence/absence and status"
   }

@@ -97,19 +97,19 @@ jobs:
 
     env:
       NODE_ENV: test
-      DATABASE_URL: ${{ secrets.CI_TEST_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL_TEST }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify DATABASE_URL is test-only
+      - name: Verify DATABASE_URL_TEST is test-only
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${DATABASE_URL:-}" || { echo "ERROR: DATABASE_URL not set"; exit 1; }
-          [[ "$DATABASE_URL" =~ (test|ci|staging|ephemeral) ]] || { echo "ERROR: DATABASE_URL does not match test pattern"; exit 1; }
-          [[ ! "$DATABASE_URL" =~ (prod|main|production) ]] || { echo "ERROR: DATABASE_URL contains production pattern"; exit 1; }
-          echo "✓ DATABASE_URL verified as test-only"
+          test -n "${DATABASE_URL:-}" || { echo "ERROR: DATABASE_URL_TEST not set"; exit 1; }
+          [[ "$DATABASE_URL" =~ (test|ci|staging|ephemeral) ]] || { echo "ERROR: DATABASE_URL_TEST does not match test pattern"; exit 1; }
+          [[ ! "$DATABASE_URL" =~ (prod|main|production) ]] || { echo "ERROR: DATABASE_URL_TEST contains production pattern"; exit 1; }
+          echo "✓ DATABASE_URL_TEST verified as test-only"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

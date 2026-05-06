@@ -12,20 +12,20 @@ echo "=== Phase 0 Environment Preflight Check ==="
 echo "Context: $CONTEXT"
 echo ""
 
-# Check DATABASE_URL
+# Check DATABASE_URL for CI, or local configuration
 if [ "$CONTEXT" = "true" ]; then
-  # CI environment
+  # CI environment - requires DATABASE_URL_TEST secret
   if [ -z "${DATABASE_URL:-}" ]; then
-    echo "❌ DATABASE_URL: NOT SET (CI_ENV_BLOCKED)"
-    echo "   Action: Configure CI_TEST_DATABASE_URL secret in GitHub repository settings"
+    echo "❌ DATABASE_URL_TEST: NOT SET (CI_TEST_ENV_BLOCKED)"
+    echo "   Action: Configure DATABASE_URL_TEST secret in GitHub repository settings"
     echo "   Environment: test"
     echo "   Pattern: Must contain 'test', 'ci', 'staging', or 'ephemeral'"
     EXIT_CODE=1
   else
-    echo "✓ DATABASE_URL: SET (CI environment detected)"
+    echo "✓ DATABASE_URL_TEST: SET (CI environment detected)"
   fi
 else
-  # Local environment
+  # Local environment - DATABASE_URL optional
   if [ -z "${DATABASE_URL:-}" ]; then
     echo "⚠ DATABASE_URL: NOT SET (LOCAL_ENV_NOT_CONFIGURED)"
     echo "   Action: Set DATABASE_URL environment variable locally"
@@ -33,7 +33,7 @@ else
     echo "   Or copy .env.example to .env and fill in DATABASE_URL"
     echo ""
     echo "Phase 0 can continue without DATABASE_URL locally (tests will be skipped),"
-    echo "but CI verification requires it to be set via secrets."
+    echo "but CI verification requires DATABASE_URL_TEST to be set via secrets."
     EXIT_CODE=0
   else
     echo "✓ DATABASE_URL: SET (local environment)"
