@@ -11,7 +11,7 @@
   },
   "completed_phases": [],
   "phase_status": {
-    "Phase 0 — System Truth Contract": "BLOCKED_ON_RUNTIME_PROOF"
+    "Phase 0 — System Truth Contract": "ENV_BLOCKED_VERIFICATION"
   },
   "existing_systems": {
     "reusable": [
@@ -139,20 +139,21 @@
     "systems_by_status": {
       "ACTIVE": [],
       "PARTIAL": [
-        "RecommendationTruthContract (service code exists, wire proven, runtime not proven)",
-        "DangerousActionGate (service code exists, not wired, not runtime-proven)",
-        "RollbackRequirementPolicy (service code exists, not wired, not runtime-proven)",
-        "RecommendationExpiryPolicy (service code exists, not wired, not runtime-proven)",
-        "MinimumUsefulOutputPolicy (service code exists, not wired, not runtime-proven)",
-        "AIProposalSandbox (service code exists, not wired, not runtime-proven)",
-        "RecommendationExplanationContract (service code exists, not wired, not runtime-proven)",
-        "integration into recommendation.ts (code wired, not runtime-proven)"
+        "RecommendationTruthContract (code: PARTIAL, wired into recommendation.ts, runtime not proven)",
+        "DangerousActionGate (code: PARTIAL, not wired, runtime not proven)",
+        "RollbackRequirementPolicy (code: PARTIAL, not wired, runtime not proven)",
+        "RecommendationExpiryPolicy (code: PARTIAL, not wired, runtime not proven)",
+        "MinimumUsefulOutputPolicy (code: PARTIAL, not wired, runtime not proven)",
+        "AIProposalSandbox (code: PARTIAL, not wired, runtime not proven)",
+        "RecommendationExplanationContract (code: PARTIAL, not wired, runtime not proven)",
+        "recommendation.ts integration (code: PARTIAL, wired, runtime not proven)"
       ],
       "PARKED": [
-        "AIProposalSandbox model (migration created, schema not applied, not usable)",
-        "RecommendationExpiryPolicy model (migration created, schema not applied, not usable)",
-        "Recommendation schema extensions (migration created, schema not applied, not usable)"
-      ]
+        "AIProposalSandbox model (migration SQL created, schema not applied)",
+        "RecommendationExpiryPolicy model (migration SQL created, schema not applied)",
+        "Recommendation schema extensions (migration SQL created, schema not applied)"
+      ],
+      "REJECTED": []
     },
     "prerequisite_cleanups": [
       "Audit all services against Phase 0-13 contract requirements",
@@ -164,15 +165,15 @@
       "Wire validation contracts into API request path"
     ],
     "phase_0_gates": {
-      "Generic recommendations fail validation": "GATE_FAILING - code exists, runtime not proven, test cannot execute",
-      "Missing evidence fails validation": "GATE_PARKED - Phase 1 dependency, framework created",
-      "Missing rollback fails validation": "GATE_FAILING - code exists, runtime not proven, test cannot execute",
-      "Missing constraints fail validation": "GATE_FAILING - code exists, runtime not proven, test cannot execute",
-      "Expired recommendation becomes non-actionable": "GATE_FAILING - schema change not applied, model not usable",
-      "AI cannot bypass validation": "GATE_FAILING - schema change not applied, model not usable",
-      "Minimum useful output exists under low confidence": "GATE_FAILING - code exists, runtime not proven, test cannot execute",
-      "Runtime wiring is proven": "GATE_FAILING - code wired but not runtime-proven",
-      "Tests pass": "GATE_FAILING - vitest not available, cannot execute tests"
+      "Generic recommendations fail validation": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not found, test case exists)",
+      "Missing evidence fails validation": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not found, test case exists, Phase 1 dependency)",
+      "Missing rollback fails validation": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not found, test case exists)",
+      "Missing constraints fail validation": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not found, test case exists)",
+      "Expired recommendation becomes non-actionable": "NOT_EXECUTED_ENV (schema not applied, migration exists)",
+      "AI cannot bypass validation": "NOT_EXECUTED_ENV (schema not applied, migration exists)",
+      "Minimum useful output exists under low confidence": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not found, test case exists)",
+      "Runtime wiring is proven": "NOT_EXECUTED_ENV (database schema not applied, code wired)",
+      "Tests pass": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not installed)"
     },
     "exact_blockers": [
       {
@@ -199,23 +200,70 @@
     ]
   },
   "safe_to_begin": false,
-  "implementation_feasibility": "BLOCKED - Phase 0 code created but lacks runtime proof. Cannot proceed to acceptance without: (1) test environment setup, (2) database migration applied, (3) tests passing.",
+  "implementation_feasibility": "ENV_BLOCKED_VERIFICATION - Code infrastructure created. All 9 acceptance criteria gates blocked by environment.",
   "passing_gates": [],
   "failing_gates": [
-    "Generic recommendations fail validation - test cannot execute",
-    "Missing rollback fails validation - test cannot execute",
-    "Missing constraints fail validation - test cannot execute",
-    "Expired recommendation becomes non-actionable - schema not applied",
-    "AI cannot bypass validation - schema not applied",
-    "Minimum useful output exists under low confidence - test cannot execute",
-    "Runtime wiring is proven - no runtime execution possible",
-    "Tests pass - vitest not available"
+    {
+      "gate": "Generic recommendations fail validation",
+      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
+      "reason": "vitest not found"
+    },
+    {
+      "gate": "Missing evidence fails validation",
+      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
+      "reason": "vitest not found"
+    },
+    {
+      "gate": "Missing rollback fails validation",
+      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
+      "reason": "vitest not found"
+    },
+    {
+      "gate": "Missing constraints fail validation",
+      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
+      "reason": "vitest not found"
+    },
+    {
+      "gate": "Expired recommendation becomes non-actionable",
+      "status": "NOT_EXECUTED_ENV",
+      "reason": "DATABASE_URL not set"
+    },
+    {
+      "gate": "AI cannot bypass validation",
+      "status": "NOT_EXECUTED_ENV",
+      "reason": "DATABASE_URL not set"
+    },
+    {
+      "gate": "Minimum useful output exists under low confidence",
+      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
+      "reason": "vitest not found"
+    },
+    {
+      "gate": "Runtime wiring is proven",
+      "status": "NOT_EXECUTED_ENV",
+      "reason": "DATABASE_URL not set, migration not applied"
+    },
+    {
+      "gate": "Tests pass",
+      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
+      "reason": "vitest not installed"
+    }
   ],
-  "blocking_issues": [
-    "vitest: command not found (missing dependency)",
-    "DATABASE_URL not set (missing environment)",
-    "Prisma schema not applied (migration not executed)"
+  "environment_blockers": [
+    {
+      "blocker": "vitest",
+      "type": "MISSING_DEPENDENCY",
+      "blocking": "5 gates (test execution)",
+      "required_for": "PASS gate status"
+    },
+    {
+      "blocker": "DATABASE_URL",
+      "type": "MISSING_ENV",
+      "blocking": "3 gates (migration apply, schema verification)",
+      "required_for": "PASS gate status"
+    }
   ],
-  "next_action": "Cannot proceed. Phase 0 requires runtime proof of all acceptance criteria. Current environment blocks all tests and migrations.",
+  "next_action": "Cannot complete Phase 0 acceptance without test environment and database. Create feature branch for Phase 0 completion work.",
+  "direct_main_violation": "YES - commits pushed directly to main instead of feature branch. Future implementations must use phase branches.",
   "phase_0_code_commit": "7e964d46520c37da6db2d0ace8d13e3e52788a04"
 }
