@@ -11,6 +11,7 @@ describe("Database Persistence Validation [db]", () => {
   let actionIdCritical: string;
   let actionIdNormal: string;
   let userId: string;
+  const workspaceId = "system"; // Default workspace for tests
 
   beforeAll(async () => {
     // Skip if DATABASE_URL not set
@@ -119,7 +120,7 @@ describe("Database Persistence Validation [db]", () => {
       return;
     }
 
-    const drift = await detectExecutionDrift(engagementId);
+    const drift = await detectExecutionDrift(engagementId, workspaceId);
 
     expect(drift.driftDetected).toBe(true);
     expect(drift.reasons).toContain("1 critical action(s) are overdue");
@@ -139,21 +140,21 @@ describe("Database Persistence Validation [db]", () => {
 
     const certainty = calculateExecutionCertainty(
       engagementId,
-      findings.map((f) => ({
+      findings.map((f: typeof findings[0]) => ({
         id: f.id,
-        severity: (f.severity as any) || "low",
+        severity: String(f.severity) || "low",
         resolved: f.status === "resolved",
         verified: f.verified ?? false,
       })),
-      recommendations.map((r) => ({
+      recommendations.map((r: typeof recommendations[0]) => ({
         id: r.id,
-        priority: (r.priority as any) || "medium",
-        status: (r.status as any) || "in_progress",
+        priority: String(r.priority) || "medium",
+        status: String(r.status) || "in_progress",
       })),
-      actions.map((a) => ({
+      actions.map((a: typeof actions[0]) => ({
         id: a.id,
-        priority: (a.priority as any) || "medium",
-        status: (a.status as any) || "pending",
+        priority: String(a.priority) || "medium",
+        status: String(a.status) || "pending",
       })),
       []
     );
@@ -225,7 +226,7 @@ describe("Database Persistence Validation [db]", () => {
       return;
     }
 
-    const driftBefore = await detectExecutionDrift(engagementId);
+    const driftBefore = await detectExecutionDrift(engagementId, workspaceId);
     expect(driftBefore.driftDetected).toBe(true);
 
     // Complete the critical action
@@ -234,7 +235,7 @@ describe("Database Persistence Validation [db]", () => {
       data: { status: "completed", completedAt: new Date() },
     });
 
-    const driftAfter = await detectExecutionDrift(engagementId);
+    const driftAfter = await detectExecutionDrift(engagementId, workspaceId);
     // After completing the only overdue action, drift should be false
     expect(driftAfter.driftDetected).toBe(false);
     console.log("✓ Drift detection recalculated correctly after action completion");

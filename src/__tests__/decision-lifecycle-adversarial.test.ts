@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { createMockAuthContext } from "./test-factories";
 
 // Mock all dependencies
 vi.mock("@/lib/db", () => ({
@@ -19,11 +20,15 @@ vi.mock("@/lib/db", () => ({
 }));
 
 vi.mock("@/lib/service-auth", () => ({
-  requireServiceContext: vi.fn((authContext, workspaceId) => {
-    if (!authContext || !authContext.workspace?.id || !authContext.user?.id) {
-      throw new Error("Auth context required with user and workspace");
+  requireServiceContext: vi.fn((authContext: unknown, workspaceId: string) => {
+    if (!authContext || typeof authContext !== "object") {
+      throw new Error("Auth context required");
     }
-    return [authContext.user.id, workspaceId];
+    const ctx = authContext as { session?: { user?: { id?: string } } };
+    if (!ctx.session?.user?.id) {
+      throw new Error("Auth context required with user");
+    }
+    return [ctx.session.user.id, workspaceId];
   }),
 }));
 
@@ -45,17 +50,7 @@ import {
 import { ValidationError, ConflictError } from "@/infra/errors";
 
 describe("Adversarial Decision Lifecycle Audit", () => {
-  const mockAuthContext = {
-    user: { id: "user-123" },
-    session: { user: { id: "user-123" } },
-    workspace: { id: "workspace-123" },
-  };
-
-  const mockAuthContextMissing = {
-    user: null,
-    session: { user: null },
-    workspace: null,
-  };
+  const mockAuthContext = createMockAuthContext();
 
   const createDecision = (status: string) => ({
     id: "dec-123",
@@ -283,7 +278,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
 
       let error: Error | null = null;
       try {
-        // Attempting to call service with null/missing authContext
+        // Attempting to call service with null authContext
         await recordImpactWithGating(
           {
             decisionId: "dec-123",
@@ -291,7 +286,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
             impactType: "realized",
             actualOutcomeValue: 5000,
           },
-          mockAuthContextMissing // Invalid context
+          null as any // Invalid: null context
         );
       } catch (e) {
         error = e as Error;
