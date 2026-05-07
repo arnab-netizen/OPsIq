@@ -1,8 +1,10 @@
 {
   "roadmap": "EXECUTION_MD_V3_1_FINAL_PHASE_0_13_GROWTH_SURVIVAL_OS",
-  "current_phase": "Phase 0 — System Truth Contract",
+  "current_phase": "Phase 1 — Reality Integrity Layer",
   "reset_reason": "Legacy Phase A-F roadmap replaced with Phase 0-13 system truth contract",
   "reset_date": "2026-05-06T19:00:00Z",
+  "phase_0_completion_date": "2026-05-07T01:40:00Z",
+  "phase_1_start_date": "2026-05-07T02:17:00Z",
   "verification": {
     "execution_md_version": "v3.1",
     "global_object_rule_present": true,
@@ -549,7 +551,67 @@
     ],
     "phase_0_impact": "ZERO - Original services unchanged, Phase 0 tests unaffected, only new test module (critical-service-contracts.test.ts) added"
   },
-  "post_merge_hardening": {
+  "phase_1_evidence_reliability_engine": {
+    "initiated": "2026-05-07T02:17:00Z",
+    "status": "COMPLETE",
+    "slice": "EvidenceReliabilityEngine - Weighted evidence scoring",
+    "goal": "Prevent fake certainty by weighting evidence contributions based on source type, age, and validation",
+    "acceptance_criteria": {
+      "evidence_is_weighted": "COMPLETE - getSourceTypeWeight() applies 0.0-1.0 weights by source type",
+      "confidence_gates_implemented": "PARTIAL - EvidenceReliabilityEngine created, wiring deferred to Phase 1 Slice 2",
+      "tests_demonstrate_behavior": "COMPLETE - 30 deterministic tests verify all weighting logic"
+    },
+    "files_created": [
+      "src/services/evidence-reliability-engine.ts - EvidenceReliabilityEngine with scoring functions",
+      "src/__tests__/evidence-reliability-engine.test.ts - 30 deterministic tests (all passing)",
+      "prisma/migrations/20260507_phase_1_evidence_reliability/migration.sql - Schema migration"
+    ],
+    "files_modified": [
+      "prisma/schema.prisma - Added reliability_score, freshness_score, observed_at, ingested_at to Evidence model"
+    ],
+    "schema_changes": {
+      "Evidence": {
+        "added_columns": [
+          "reliability_score DOUBLE PRECISION",
+          "freshness_score DOUBLE PRECISION",
+          "observed_at TIMESTAMP(3)",
+          "ingested_at TIMESTAMP(3)"
+        ],
+        "indexes_added": [
+          "evidence_reliability_score_idx",
+          "evidence_freshness_score_idx"
+        ]
+      }
+    },
+    "verification": {
+      "typecheck": "PASS - npx tsc --noEmit",
+      "build": "PASS - npm run build (TypeScript passes, DB collection skipped expected)",
+      "tests_phase_1": "PASS - 30/30 evidence-reliability-engine tests",
+      "tests_phase_0": "PASS - 28/28 critical service contracts, 16/16 idempotency, 32/32 MVP operational flow",
+      "prisma_validate": "PASS - Schema is valid",
+      "total_tests_passing": "106/106"
+    },
+    "gates_status": {
+      "TypeScript compilation": "PASS",
+      "Build": "PASS",
+      "Unit tests": "PASS (30 Phase 1 tests)",
+      "Phase 0 regression test": "PASS (32/32 still passing)",
+      "Contract tests": "PASS (28/28 critical service contracts)",
+      "Prisma schema validation": "PASS"
+    },
+    "next_slice": "Phase 1 Slice 2: Wire EvidenceReliabilityEngine into recommendation creation + ConfidenceGate enforcement",
+    "deferred_work": [
+      "Integration of reliability scoring into recommendation.create path (Phase 1 Slice 2)",
+      "ConfidenceGate enforcement (blocks high confidence claims without strong evidence)",
+      "EvidenceSufficiencyEngine (completeness checking)",
+      "ContradictionEngine (weighting contradictions)",
+      "ManipulationRiskEngine (anomaly detection)",
+      "OutcomeVerificationContract (claim vs verified outcome separation)"
+    ]
+  },
+  "phase_status": {
+    "Phase 0 — System Truth Contract": "FOUNDATION_COMPLETE",
+    "Phase 1 — Reality Integrity Layer": "IN_PROGRESS"
     "initiated": "2026-05-07T01:40:00Z",
     "status": "COMPLETE",
     "phases": [

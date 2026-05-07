@@ -313,6 +313,10 @@ model Evidence {
   validatedBy      String?   @map("validated_by") @db.Uuid
   validatedAt      DateTime? @map("validated_at")
   rejectionReason  String?   @map("rejection_reason")
+  reliabilityScore Float?    @map("reliability_score") // 0.0 to 1.0, weight for evidence contribution
+  freshnessScore   Float?    @map("freshness_score") // 0.0 to 1.0, time-decay score
+  observedAt       DateTime? @map("observed_at") // When evidence actually occurred/was observed
+  ingestedAt       DateTime? @map("ingested_at") // When evidence entered system (may differ from created_at)
   version          Int       @default(1)
   visibility       String    @default("internal") // "internal" | "client_visible"
   createdAt        DateTime  @default(now()) @map("created_at")
