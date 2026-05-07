@@ -13,6 +13,7 @@ import type { AuthContext } from "@/lib/auth-guard";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
+import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -691,7 +692,7 @@ export async function reRankRecommendationsInEngagement(
 
   for (const rec of recommendations) {
     // Check if this recommendation has scoring metrics (for test compatibility)
-    const scoringMetrics = (rec as any).scoringMetrics;
+    const scoringMetrics = (rec as { scoringMetrics?: unknown }).scoringMetrics;
     if (!scoringMetrics) {
       continue;
     }
@@ -799,7 +800,7 @@ export async function updateRecommendation(
     throw new Error("Recommendation was modified. Please refresh and try again.");
   }
 
-  const updates: any = { version: { increment: 1 } };
+  const updates: Record<string, unknown> = { version: { increment: 1 } };
   if (input.status) updates.status = input.status;
   if (input.priority) updates.priority = input.priority;
 
@@ -823,7 +824,7 @@ export async function updateRecommendation(
 
 export async function createRecommendationsFromInterventions(
   engagementId: string,
-  interventions: any[], // PrioritizedIntervention[] from consulting-engine
+  interventions: PrioritizedIntervention[],
   authContext: AuthContext,
   workspaceId: string
 ) {

@@ -182,7 +182,7 @@ export class EventEmitterService {
       orderBy: { eventNumber: "asc" },
     });
 
-    return events.map((e: any) => ({
+    return events.map((e: typeof events[number]) => ({
       id: e.id,
       aggregateId: e.aggregateId,
       aggregateType: e.aggregateType,

@@ -263,6 +263,36 @@ grep -r "__ignored_tests__" tsconfig.json vitest.config.ts || exit 1
 - Workflow must verify no TypeScript errors from ignored tests (catch-all gate)
 - Any CI gate including quarantined tests → workflow FAIL
 
+---
+
+## LINT & TYPE RULES (Phase 3+)
+
+**No explicit `any` allowed in ACTIVE runtime paths:**
+
+### Rule
+- No `any` type annotations in: src/services/event-emitter.ts, src/services/recommendation.ts, Phase 3 callers
+- No `@ts-ignore`, `eslint-disable`, or fake casts
+- Replace with real domain types from contracts (e.g., PrioritizedIntervention[])
+- Exception: `Record<string, unknown>` for flexible JSON payloads (events, audit trails)
+- Exception: Prisma transaction callbacks where TransactionClient type is inaccessible
+
+### Local Lint/Type Preflight (Required before workflow)
+```bash
+# TypeScript must compile without errors
+npx tsc --noEmit
+
+# Linting must pass for Phase 3 files
+npx eslint src/services/event-emitter.ts src/services/recommendation.ts
+
+# Verify explicit 'any' count (should be 0 or documented exceptions)
+grep -h ":\s*any\|as any" src/services/{event-emitter,recommendation}.ts | grep -v "Record<string" | wc -l
+```
+
+### Known Acceptable Exceptions
+- `Record<string, unknown>` for event payload JSON flexibility
+- `tx: any` in Prisma transaction callbacks (generated type not accessible)
+- Array element types inferred from database queries (e.g., `typeof events[number]`)
+
 ### Test File Classification
 - **Active**: src/__tests__/phase-3-event-emitter-integration.test.ts, validation contracts
 - **Quarantined**: All other .test.ts/.test.tsx files (moved to src/__ignored_tests__/) — unresolved type errors, stale fixtures, zero runtime wiring in current phases
