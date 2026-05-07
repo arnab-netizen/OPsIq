@@ -68,20 +68,30 @@ async function getDb() {
   return globalForPrisma.prisma;
 }
 
-let dbInstance: any = null;
-const dbPromise = (async () => {
-  dbInstance = await getDb();
-  return dbInstance;
-})();
+let dbInitPromise: Promise<any> | null = null;
 
 export async function getDbInstance() {
-  return dbPromise;
+  if (!dbInitPromise) {
+    dbInitPromise = getDb();
+  }
+  return dbInitPromise;
 }
 
-// Export db directly - it will be populated by the promise
-export let db: any = null;
+// Export db as a getter that accesses the cached instance from globalForPrisma
+Object.defineProperty(global, '_dbExport', {
+  value: () => globalForPrisma.prisma,
+  configurable: true,
+});
 
-// Initialize on import
-dbPromise.then((instance) => {
-  db = instance;
+export const db = new Proxy({} as any, {
+  get(target, prop) {
+    const instance = globalForPrisma.prisma;
+    if (!instance) {
+      throw new Error(
+        `Database not initialized. Instance: ${typeof instance}. ` +
+        `Ensure vitest global setup completed or call await getDbInstance() in test setup.`
+      );
+    }
+    return Reflect.get(instance, prop);
+  },
 });
