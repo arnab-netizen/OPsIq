@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { v4 as uuidv4 } from "uuid";
+import { ProjectionEngine } from "@/services/projection-engine";
 
 export type EventPayload = Record<string, string | undefined>;
 
@@ -151,6 +152,23 @@ export class EventEmitterService {
       eventNumber: event.eventNumber,
       workspaceId: event.workspaceId,
     });
+
+    // Trigger projection (non-blocking)
+    try {
+      await ProjectionEngine.projectEvent(
+        event.id,
+        event.eventType,
+        event.aggregateId,
+        event.aggregateType,
+        event.payload as Record<string, unknown>,
+        event.workspaceId
+      );
+    } catch (error) {
+      logger.error("EventEmitterService: Projection failed (non-blocking)", {
+        eventId: event.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     const payloadData = event.payload as unknown;
     if (!isEventPayload(payloadData)) {
