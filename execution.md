@@ -14,30 +14,51 @@
 - ✓ 32/32 MVP tests passing
 
 ### Phase 1 — Reality Integrity Layer
-**Status**: FOUNDATION_COMPLETE  
-- ✓ Evidence reliability engine (30 tests)
-- ✓ Contradiction detection (28 tests)
-- ✓ Outcome verification (19 tests)
-- ✓ Integration wiring (14 tests)
-- ✓ 91/91 tests passing
-- Note: Phase 1 services NOT wired into recommendation creation
+**Status**: IN_PROGRESS  
+- ✓ Evidence reliability engine (src/services/evidence.ts - 691 lines, 3 integration tests)
+- ✓ Contradiction detection (src/services/contradiction-detector/ - unit tests)
+- ✓ Outcome verification (src/services/outcome/ - 304 lines + outcome-core/ 7 engines)
+- ✗ **BLOCKER**: Phase 1 services exist but NOT wired into recommendation/action/engagement
+  - Evidence: API-only (app/api/evidence/*), zero imports in recommendation.ts
+  - Contradiction: Exists but never called during decision flow
+  - Outcome: API-only, not invoked during action completion in orchestration
+- ⚠ Tests pass in isolation but zero integration with core lifecycle
+- **Required for COMPLETE**: Wire evidence evaluation into createRecommendation(), import and invoke contradiction detection, integrate outcome tracking into action completion
 
 ### Phase 2 — Reality Backbone
-**Status**: PARTIAL
-- ✓ 13 context/constraint systems implemented (284 tests)
-- ✓ BusinessModelProfile, CapacityProfile, KPIRegistry, etc.
-- ⚠ Status: Code complete, integration status unknown
-- ⚠ Note: Not audited for runtime wiring in this pass
+**Status**: IN_PROGRESS  
+- ✓ Constraint Engine (src/services/consulting-engine/ - 8 sub-engines, 48KB code)
+  - Sub-engines: intervention-design, prioritization, decision-memo, diagnosis, evidence, scenario
+  - Tests: 1 integration test exists
+  - **BLOCKER**: Never invoked in recommendation.ts or decision flow
+- ✓ KPI Registry (src/services/kpi.ts - 9.4KB, 1 integration test)
+  - **BLOCKER**: Zero imports in core services, not consulted for capacity decisions
+- ✓ Engagement Health (src/services/engagement-health.ts - wired in engagement.ts)
+  - ACTIVE: computeEngagementHealth called during engagement lifecycle
+- ✓ Business Condition (src/services/business-condition.ts - exists, 1 unit test)
+  - Status: Unknown wiring, appears isolated
+- ⚠ Code complete (13+ constraint + health systems, 284 tests)
+- **Required for COMPLETE**: Wire Constraint Engine into recommendation decision, invoke KPI Registry for capacity checks, integrate BusinessCondition evaluation
 
 ### Phase 3 — Event + Temporal Fabric
-**Status**: PARTIAL
-- ✓ EventEmitterService: ACTIVE (wired to recommendation.create, integration test passing)
-- ✓ Append-only enforced (database triggers prevent UPDATE/DELETE)
-- ✓ Code logic verified correct
-- ✓ Tests pass (116 unit + integration test)
-- ✗ EventReplayEngine: PARKED (only called by SnapshotEngine)
-- ✗ ProjectionEngine: PARKED (never imported in runtime)
-- ✗ SnapshotEngine: PARKED (never imported in runtime)
+**Status**: IN_PROGRESS  
+- ✓ Event Schema Registry: ACTIVE
+  - CanonicalEvent table (aggregate_id, event_type, event_number, payload, idempotency keys)
+  - Aggregate types: recommendation, decision, action, evidence, outcome, experiment, engagement, business_profile
+  - Append-only enforcement: SQL triggers canonical_events_prevent_update, canonical_events_prevent_delete
+  - Tests: 13 integration tests in phase-3-event-emitter-integration.test.ts
+- ✓ EventEmitterService: ACTIVE (wired to recommendation.create, both idempotent + non-idempotent paths)
+- ✗ **BLOCKER - EventReplayEngine**: ZERO (not found in codebase)
+  - Required: Read events from canonical_events, replay aggregate state
+  - Status: Infrastructure exists (events stored) but no replay logic
+- ✗ **BLOCKER - ProjectionEngine**: ZERO (not found in codebase)
+  - Required: Rebuild materialized views from events, update denormalized tables
+  - Status: Events persist but no projection to optimize reads
+- ✗ **BLOCKER - SnapshotEngine**: ZERO (not found in codebase)
+  - Required: Cache aggregate state at intervals to optimize replay
+  - Status: No snapshots implemented, full event stream replayed each time
+- ⚠ Material-write event emission: Partially ACTIVE (recommendation events only, not action/evidence/outcome)
+- **Required for COMPLETE**: Build EventReplayEngine, ProjectionEngine, SnapshotEngine, extend event emission to all material-write operations
 
 ### Phase 4 — Survival Intelligence  
 **Status**: SCAFFOLD
@@ -418,6 +439,62 @@ fi
 - Test row UPDATE: must fail (exit != 0) with "append-only" in stderr
 - Test row DELETE: must fail (exit != 0) with "append-only" in stderr
 - Both UPDATE/DELETE wrapped in `set +e...set -e` blocks
+
+---
+
+## PHASE COMPLETION PLAN (CURRENT SESSION)
+
+### Audit Summary
+**Scope**: Make Phases 1, 2, 3 fully COMPLETE with runtime wiring proof
+**Discovered State**:
+- Phase 1: Services exist (Evidence, Contradiction, Outcome) but ZERO runtime imports in core services
+- Phase 2: Constraint + KPI systems exist but ZERO invocation in recommendation/action flow
+- Phase 3: EventEmitter ACTIVE, but EventReplayEngine + ProjectionEngine DO NOT EXIST
+
+### TRUE HARD BLOCKERS
+**Status**: NONE IDENTIFIED
+
+All required components are technically buildable:
+- Phase 1 services exist and can be imported
+- Phase 2 systems exist and can be invoked
+- Phase 3 engines can be implemented from scratch (no impossible dependencies)
+
+### Implementation Priority
+1. **Phase 3 EventReplayEngine** (2-3 hours):
+   - Read event stream from CanonicalEvent
+   - Rebuild aggregate state by replaying events
+   - Tests: Replay recommendation events, verify state consistency
+
+2. **Phase 3 ProjectionEngine** (2-3 hours):
+   - Materialize views from events (recommendation summary, action status, outcome impact)
+   - Update denormalized tables for query optimization
+   - Tests: Project event → materialized view, verify denormalization
+
+3. **Phase 1 Evidence Wiring** (2 hours):
+   - Import getEvidenceForEngagement into recommendation.ts
+   - Add evidence evaluation to createRecommendation logic
+   - Include evidence assessment in intervention recommendations
+   - Tests: Create recommendation with evidence, verify recommendations reflect evidence state
+
+4. **Phase 2 Constraint/KPI Wiring** (2-3 hours):
+   - Import ConstraintEngine.evaluate into recommendation.ts
+   - Call KPI registry to check capacity constraints
+   - Filter/prioritize recommendations by constraint satisfaction
+   - Tests: Create recommendation respecting constraints, verify constraint violations blocked
+
+### Risk Assessment
+- Phase 3 EventReplayEngine: No architectural risk (straightforward event stream walk)
+- Phase 3 ProjectionEngine: No risk (deterministic transformation from events)
+- Phase 1 Wiring: No risk (existing code, just imports)
+- Phase 2 Wiring: No risk (existing code, just calls)
+- **Integration risk**: Medium (ensuring new wiring doesn't break existing tests)
+
+### Estimated Total Time
+~8-12 hours of implementation + testing
+
+### Stop Condition
+- **SUCCESS**: All three phases marked COMPLETE with runtime proof in execution.md
+- **HARD BLOCKED**: If code does not exist or architectural blocker found (would document file path)
 
 ---
 
