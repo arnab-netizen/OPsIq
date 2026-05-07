@@ -68,4 +68,20 @@ async function getDb() {
   return globalForPrisma.prisma;
 }
 
-export const db = await getDb();
+let dbInstance: any = null;
+const dbPromise = (async () => {
+  dbInstance = await getDb();
+  return dbInstance;
+})();
+
+export async function getDbInstance() {
+  return dbPromise;
+}
+
+// Export db directly - it will be populated by the promise
+export let db: any = null;
+
+// Initialize on import
+dbPromise.then((instance) => {
+  db = instance;
+});

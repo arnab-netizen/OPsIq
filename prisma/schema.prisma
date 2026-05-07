@@ -27,7 +27,6 @@ model User {
   submittedEvidence       Evidence[]             @relation("SubmittedEvidence")
   validatedEvidence       Evidence[]             @relation("ValidatedEvidence")
   recommendationApprovals Recommendation[]
-  recommendationsCreated  Recommendation[]       @relation("RecommendationCreator")
   assignedActions         Action[]               @relation("AssignedActions")
   completedActions        Action[]               @relation("CompletedActions")
   verifiedActions         Action[]               @relation("VerifiedActions")
@@ -393,29 +392,32 @@ model Finding {
 }
 
 model Recommendation {
-  id              String    @id @default(uuid()) @db.Uuid
-  engagementId    String    @map("engagement_id") @db.Uuid
-  findingId       String?   @map("finding_id") @db.Uuid
-  title           String
-  description     String?
-  rationale       String?
-  priority        String // "low" | "medium" | "high" | "critical"
-  estimatedImpact String?   @map("estimated_impact") // "low" | "medium" | "high"
-  status          String    @default("pending") // "pending" | "approved" | "rejected" | "superseded"
-  approvedBy      String?   @map("approved_by") @db.Uuid
-  approvedAt      DateTime? @map("approved_at")
-  version         Int       @default(1)
-  visibility      String    @default("internal") // "internal" | "client_visible"
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
+  id                         String    @id @default(uuid()) @db.Uuid
+  engagementId               String    @map("engagement_id") @db.Uuid
+  findingId                  String?   @map("finding_id") @db.Uuid
+  title                      String
+  description                String?
+  rationale                  String?
+  priority                   String // "low" | "medium" | "high" | "critical"
+  estimatedImpact            String?   @map("estimated_impact") // "low" | "medium" | "high"
+  status                     String    @default("pending") // "pending" | "approved" | "rejected" | "superseded"
+  approvedBy                 String?   @map("approved_by") @db.Uuid
+  approvedAt                 DateTime? @map("approved_at")
+  evidenceValidationScore    Int?      @map("evidence_validation_score") // 0-100
+  reliabilityLevel           String?   @map("reliability_level") // "low" | "medium" | "high"
+  kpiHealthScore             Int?      @map("kpi_health_score") // 0-100
+  kpiRiskLevel               String?   @map("kpi_risk_level") // "low" | "medium" | "high"
+  version                    Int       @default(1)
+  visibility                 String    @default("internal") // "internal" | "client_visible"
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
   // Phase 0 — System Truth Contract fields
-  rollbackPlan           String?                @map("rollback_plan") // RollbackRequirementPolicy
-  constraintsConsidered  Json?                  @map("constraints_considered") // array of constraint strings
-  confidenceLevel        String?                @map("confidence_level") // HIGH_CONFIDENCE | MEDIUM_CONFIDENCE | LOW_CONFIDENCE | NEED_MORE_DATA | CANNOT_DETERMINE | DANGER_DO_NOT_ACT
-  expiresAt              DateTime?              @map("expires_at") // RecommendationExpiryPolicy
-  isAIProposal           Boolean                @default(false) @map("is_ai_proposal") // AIProposalSandbox
-  createdBy              String?                @map("created_by") @db.Uuid
+  rollbackPlan               String?   @map("rollback_plan") // RollbackRequirementPolicy
+  constraintsConsidered      Json?     @map("constraints_considered") // array of constraint strings
+  confidenceLevel            String?   @map("confidence_level") // HIGH_CONFIDENCE | MEDIUM_CONFIDENCE | LOW_CONFIDENCE | NEED_MORE_DATA | CANNOT_DETERMINE | DANGER_DO_NOT_ACT
+  expiresAt                  DateTime? @map("expires_at") // RecommendationExpiryPolicy
+  isAIProposal               Boolean   @default(false) @map("is_ai_proposal") // AIProposalSandbox
+  createdBy                  String?   @map("created_by") @db.Uuid
 
   engagement Engagement @relation(fields: [engagementId], references: [id])
   finding    Finding?   @relation(fields: [findingId], references: [id])
@@ -426,8 +428,6 @@ model Recommendation {
   @@unique([findingId, title])
   @@index([engagementId])
   @@index([status])
-  @@index([expiresAt])
-  @@index([isAIProposal])
   @@map("recommendations")
 }
 
@@ -1016,42 +1016,31 @@ model WebhookEvent {
   @@map("webhook_events")
 }
 
-// ─── Phase 0 — System Truth Contract Models ────────────────────────────────
+// ─── Event Store: Append-Only Canonical Events ──────────────────────────────
 
-model AIProposalSandbox {
-  id               String   @id @default(uuid()) @db.Uuid
-  workspaceId      String   @map("workspace_id") @db.Uuid
-  recommendationId String   @map("recommendation_id") @db.Uuid
-  sourceModel      String   @map("source_model") // e.g., "claude-opus", "gpt-4"
-  confidenceLevel  String   @map("confidence_level") // HIGH_CONFIDENCE | MEDIUM_CONFIDENCE | LOW_CONFIDENCE | NEED_MORE_DATA | CANNOT_DETERMINE | DANGER_DO_NOT_ACT
-  isApproved       Boolean  @default(false) @map("is_approved")
-  approvedBy       String?  @map("approved_by") @db.Uuid
-  approvedAt       DateTime? @map("approved_at")
-  rejectedReason   String?  @map("rejected_reason")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+model CanonicalEvent {
+  id                        String   @id @default(uuid()) @db.Uuid
+  aggregateId               String   @map("aggregate_id")
+  aggregateType             String   @map("aggregate_type")
+  eventType                 String   @map("event_type")
+  eventVersion              Int      @map("event_version") @default(1)
+  eventNumber               Int      @map("event_number") // Monotonic sequence per aggregate
+  payload                   Json     // Event payload - deterministic
+  actorId                   String   @map("actor_id") @db.Uuid
+  workspaceId               String   @map("workspace_id") @db.Uuid
+  causationId               String   @map("causation_id") // What caused this event
+  correlationId             String   @map("correlation_id") // Request correlation ID
+  idempotencyKey            String?  @map("idempotency_key") // Idempotent replay detection
+  visibilityScope           String   @map("visibility_scope") @default("internal") // "internal" or "external"
+  sensitivityClassification String   @map("sensitivity_classification") @default("standard")
+  occurredAt                DateTime @map("occurred_at") // When the change logically occurred
+  recordedAt                DateTime @map("recorded_at") @default(now()) // When it was persisted
+  createdAt                 DateTime @default(now()) @map("created_at")
 
-  @@index([workspaceId])
-  @@index([recommendationId])
-  @@index([sourceModel])
-  @@index([isApproved])
-  @@map("ai_proposal_sandboxes")
-}
-
-model RecommendationExpiryPolicy {
-  id               String   @id @default(uuid()) @db.Uuid
-  workspaceId      String   @map("workspace_id") @db.Uuid
-  recommendationId String   @unique @map("recommendation_id") @db.Uuid
-  expiresAt        DateTime @map("expires_at")
-  status           String   @default("active") @map("status") // "active" | "expired" | "superseded"
-  expiredAt        DateTime? @map("expired_at")
-  reason           String?  @map("reason") // Why was it expired (e.g., "manual", "timeout", "replaced_by_id")
-  replacedById     String?  @map("replaced_by_id") @db.Uuid
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-
-  @@index([workspaceId])
-  @@index([expiresAt])
-  @@index([status])
-  @@map("recommendation_expiry_policies")
+  @@unique([idempotencyKey, workspaceId])
+  @@index([aggregateId, aggregateType, workspaceId])
+  @@index([workspaceId, eventType])
+  @@index([workspaceId, recordedAt])
+  @@index([actorId])
+  @@map("canonical_events")
 }

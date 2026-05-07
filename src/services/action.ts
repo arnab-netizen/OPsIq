@@ -12,6 +12,7 @@ import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
 import { recordActionUsage } from "@/services/usage.service";
+import { EventEmitterService } from "@/services/event-emitter";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -99,6 +100,28 @@ export async function createAction(
             },
           });
 
+          // Emit event sourcing event (non-blocking)
+          try {
+            await EventEmitterService.emit({
+              aggregateId: action.id,
+              aggregateType: "action",
+              eventType: "action.created",
+              eventVersion: 1,
+              payload: {
+                title: action.title,
+                priority: action.priority,
+                engagementId: input.engagementId,
+              },
+              actorId,
+              workspaceId: validatedWorkspaceId,
+            });
+          } catch (error) {
+            logger.error("Action event emission failed", {
+              actionId: action.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+
           await emitAuditEvent({
             eventName: AUDIT_EVENTS.ACTION_CREATED,
             actorId,
@@ -166,6 +189,28 @@ export async function createAction(
       workspaceId: validatedWorkspaceId,
     },
   });
+
+  // Emit event sourcing event (non-blocking)
+  try {
+    await EventEmitterService.emit({
+      aggregateId: action.id,
+      aggregateType: "action",
+      eventType: "action.created",
+      eventVersion: 1,
+      payload: {
+        title: action.title,
+        priority: action.priority,
+        engagementId: input.engagementId,
+      },
+      actorId,
+      workspaceId: validatedWorkspaceId,
+    });
+  } catch (error) {
+    logger.error("Action event emission failed", {
+      actionId: action.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ACTION_CREATED,

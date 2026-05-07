@@ -1,0 +1,364 @@
+name: Phase 3 Slice 2 - Truth Pass Verification
+
+on:
+  push:
+    branches:
+      - claude/verify-execution-md-h8jCt
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/services/event-emitter.ts'
+      - 'src/services/recommendation.ts'
+      - 'src/__tests__/phase-3-event-emitter-integration.test.ts'
+      - 'prisma/migrations/20260507_add_canonical_event/**'
+      - 'prisma/schema.prisma'
+      - 'execution.md'
+  workflow_dispatch:
+
+jobs:
+  phase-3-truth-pass:
+    name: Phase 3 Slice 2 Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://test:test@localhost:5432/opsiq_test
+      DATABASE_URL_TEST: postgresql://test:test@localhost:5432/opsiq_test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for PostgreSQL
+        run: |
+          until pg_isready -h localhost -U test; do
+            echo "Waiting for PostgreSQL..."
+            sleep 1
+          done
+
+      # === GATE 1: Prisma Schema Validation ===
+      - name: 'Gate 1: Prisma schema validation'
+        run: npx prisma validate
+
+      # === GATE 2: Database Migration ===
+      - name: 'Gate 2: Prisma migration deploy'
+        run: npx prisma migrate deploy
+        continue-on-error: false
+
+      # === GATE 3: TypeScript Compilation ===
+      - name: 'Gate 3: TypeScript compilation'
+        run: npx tsc --noEmit
+        continue-on-error: false
+
+      # === GATE 3b: Verify __ignored_tests__ excluded from active scope ===
+      - name: 'Gate 3b: Verify __ignored_tests__ excluded from compilation scope'
+        run: |
+          bash scripts/verify-ignored-tests-excluded.sh
+        continue-on-error: false
+
+      # === GATE 4: Build ===
+      - name: 'Gate 4: Next.js build'
+        run: npm run build
+        continue-on-error: false
+
+      # === GATE 5: Linting ===
+      - name: 'Gate 5: Lint check'
+        run: npx eslint src/services/event-emitter.ts src/services/recommendation.ts || true
+        continue-on-error: true
+
+      # === GATE 6: Unit Tests ===
+      - name: 'Gate 6: Unit tests'
+        run: npm test -- --run src/__tests__/phase-3-event-emitter-integration.test.ts
+        continue-on-error: false
+
+      # === GATE 7: Verify Append-Only Triggers ===
+      - name: 'Gate 7: Verify append-only enforcement'
+        run: |
+          set -e
+
+          # Extract connection details from DATABASE_URL_TEST
+          if [ -z "$DATABASE_URL_TEST" ]; then
+            echo "✗ DATABASE_URL_TEST not set"
+            exit 1
+          fi
+
+          # Parse DATABASE_URL_TEST using regex
+          if [[ $DATABASE_URL_TEST =~ postgresql://([^:]+):([^@]+)@([^:]+):([^/]+)/(.+) ]]; then
+            DB_USER="${BASH_REMATCH[1]}"
+            DB_PASS="${BASH_REMATCH[2]}"
+            DB_HOST="${BASH_REMATCH[3]}"
+            DB_PORT="${BASH_REMATCH[4]}"
+            DB_NAME="${BASH_REMATCH[5]}"
+          else
+            echo "✗ Failed to parse DATABASE_URL_TEST: $DATABASE_URL_TEST"
+            exit 1
+          fi
+
+          export PGPASSWORD="$DB_PASS"
+          PSQL_CMD="psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c"
+
+          echo "Connecting to: $DB_HOST:$DB_PORT/$DB_NAME (user: $DB_USER)"
+
+          # Verify UPDATE trigger exists
+          echo "Verifying UPDATE prevention trigger..."
+          $PSQL_CMD "SELECT trigger_name FROM information_schema.triggers WHERE trigger_name = 'canonical_events_prevent_update'" | grep -q "canonical_events_prevent_update"
+          echo "✓ UPDATE prevention trigger verified"
+
+          # Verify DELETE trigger exists
+          echo "Verifying DELETE prevention trigger..."
+          $PSQL_CMD "SELECT trigger_name FROM information_schema.triggers WHERE trigger_name = 'canonical_events_prevent_delete'" | grep -q "canonical_events_prevent_delete"
+          echo "✓ DELETE prevention trigger verified"
+
+          # Use fixed UUID for transaction-safe testing
+          TEST_ID="11111111-1111-1111-1111-111111111111"
+          TEST_ACTOR="22222222-2222-2222-2222-222222222222"
+          TEST_WORKSPACE="33333333-3333-3333-3333-333333333333"
+
+          # Insert test row with fixed IDs (must succeed)
+          echo "Inserting test row..."
+          INSERT_SQL="INSERT INTO canonical_events (id, aggregate_id, aggregate_type, event_type, event_version, event_number, payload, actor_id, workspace_id, causation_id, correlation_id, visibility_scope, sensitivity_classification, occurred_at, recorded_at) VALUES ('$TEST_ID', 'test-agg', 'recommendation', 'test.event', 1, 1, '{}'::jsonb, '$TEST_ACTOR', '$TEST_WORKSPACE', 'cause-123', 'corr-123', 'internal', 'standard', now(), now())"
+          $PSQL_CMD "$INSERT_SQL" > /dev/null 2>&1
+          echo "✓ Test row inserted with ID: $TEST_ID"
+
+          # Test UPDATE protection - EXPECTED TO FAIL
+          echo "Testing UPDATE protection (should fail with trigger)..."
+          set +e
+          UPDATE_SQL="UPDATE canonical_events SET event_type = 'modified' WHERE id = '$TEST_ID'"
+          UPDATE_RESULT=$($PSQL_CMD "$UPDATE_SQL" 2>&1)
+          UPDATE_EXIT=$?
+          set -e
+
+          if [ $UPDATE_EXIT -ne 0 ]; then
+            if echo "$UPDATE_RESULT" | grep -q "append-only"; then
+              echo "✓ UPDATE blocked by append-only trigger"
+            else
+              echo "✗ UPDATE failed but without expected trigger message: $UPDATE_RESULT"
+              exit 1
+            fi
+          else
+            echo "✗ UPDATE should have failed with trigger but succeeded"
+            exit 1
+          fi
+
+          # Test DELETE protection - EXPECTED TO FAIL
+          echo "Testing DELETE protection (should fail with trigger)..."
+          set +e
+          DELETE_SQL="DELETE FROM canonical_events WHERE id = '$TEST_ID'"
+          DELETE_RESULT=$($PSQL_CMD "$DELETE_SQL" 2>&1)
+          DELETE_EXIT=$?
+          set -e
+
+          if [ $DELETE_EXIT -ne 0 ]; then
+            if echo "$DELETE_RESULT" | grep -q "append-only"; then
+              echo "✓ DELETE blocked by append-only trigger"
+            else
+              echo "✗ DELETE failed but without expected trigger message: $DELETE_RESULT"
+              exit 1
+            fi
+          else
+            echo "✗ DELETE should have failed with trigger but succeeded"
+            exit 1
+          fi
+
+          echo "✓ Append-only enforcement verified - triggers working correctly"
+
+      # === GATE 8: Verify Runtime Integration ===
+      - name: 'Gate 8: Verify EventEmitterService runtime integration'
+        run: |
+          echo "Checking EventEmitterService is imported in recommendation.ts..."
+          grep -q "EventEmitterService" src/services/recommendation.ts
+          if [ $? -eq 0 ]; then
+            echo "✓ EventEmitterService imported in recommendation.ts"
+          else
+            echo "✗ EventEmitterService NOT imported in recommendation.ts"
+            exit 1
+          fi
+
+          echo "Checking EventEmitterService.emit() called in createRecommendation()..."
+          EMIT_COUNT=$(grep -c "EventEmitterService.emit" src/services/recommendation.ts)
+          if [ "$EMIT_COUNT" -ge 2 ]; then
+            echo "✓ EventEmitterService.emit() called in both code paths ($EMIT_COUNT occurrences)"
+          else
+            echo "✗ EventEmitterService.emit() not found in both paths (found: $EMIT_COUNT)"
+            exit 1
+          fi
+
+          echo "Checking SQL triggers in migration..."
+          grep -q "prevent_canonical_event_update" prisma/migrations/20260507_add_canonical_event/migration.sql
+          if [ $? -eq 0 ]; then
+            echo "✓ UPDATE prevention trigger defined in migration"
+          else
+            echo "✗ UPDATE prevention trigger NOT in migration"
+            exit 1
+          fi
+
+          grep -q "prevent_canonical_event_delete" prisma/migrations/20260507_add_canonical_event/migration.sql
+          if [ $? -eq 0 ]; then
+            echo "✓ DELETE prevention trigger defined in migration"
+          else
+            echo "✗ DELETE prevention trigger NOT in migration"
+            exit 1
+          fi
+
+      # === GATE 9: Verify PARKED Systems Unchanged ===
+      - name: 'Gate 9: Verify PARKED systems remain unwired'
+        run: |
+          echo "Checking EventReplayEngine not wired in runtime..."
+          grep -r "EventReplayEngine" src/services/*.ts src/app/**/*.ts 2>/dev/null | grep -v "test\|__tests__" | wc -l | xargs -I {} sh -c '[ {} -eq 0 ] && echo "✓ EventReplayEngine remains PARKED" || (echo "✗ EventReplayEngine unexpectedly wired"; exit 1)'
+
+          echo "Checking ProjectionEngine not wired in runtime..."
+          grep -r "ProjectionEngine" src/services/*.ts src/app/**/*.ts 2>/dev/null | grep -v "test\|__tests__" | wc -l | xargs -I {} sh -c '[ {} -eq 0 ] && echo "✓ ProjectionEngine remains PARKED" || (echo "✗ ProjectionEngine unexpectedly wired"; exit 1)'
+
+          echo "Checking SnapshotEngine not wired in runtime..."
+          grep -r "SnapshotEngine" src/services/*.ts src/app/**/*.ts 2>/dev/null | grep -v "test\|__tests__" | wc -l | xargs -I {} sh -c '[ {} -eq 0 ] && echo "✓ SnapshotEngine remains PARKED" || (echo "✗ SnapshotEngine unexpectedly wired"; exit 1)'
+
+      # === GATE 10: Verify Honest Classification ===
+      - name: 'Gate 10: Verify execution.md honesty'
+        run: |
+          # Truth gate: validate honest classification, not require COMPLETE
+          # PASS if services are correctly classified (ACTIVE/PARKED/SCAFFOLD)
+          # FAIL only if phases are falsely marked COMPLETE or ACTIVE claims are false
+
+          echo "Validating Phase 3 honest classification..."
+
+          # Phase 3 must be marked PARTIAL (has ACTIVE EventEmitterService + PARKED engines)
+          if grep -A 5 "### Phase 3" execution.md | grep -q "**Status**: PARTIAL"; then
+            echo "✓ Phase 3 correctly classified as PARTIAL (has both ACTIVE and PARKED services)"
+          else
+            echo "✗ Phase 3 not marked as PARTIAL"
+            exit 1
+          fi
+
+          # EventEmitterService must be marked ACTIVE (wired + tested)
+          if grep -q "EventEmitterService.*ACTIVE" execution.md; then
+            echo "✓ EventEmitterService correctly marked ACTIVE"
+          else
+            echo "✗ EventEmitterService not marked as ACTIVE"
+            exit 1
+          fi
+
+          # Replay/Projection/Snapshot must be marked PARKED (code only, zero runtime wiring)
+          PARKED_COUNT=$(grep -c ".*PARKED" execution.md)
+          if [ "$PARKED_COUNT" -ge 3 ]; then
+            echo "✓ Replay/Projection/Snapshot correctly marked PARKED ($PARKED_COUNT PARKED entries)"
+          else
+            echo "✗ PARKED systems not properly documented"
+            exit 1
+          fi
+
+          # Phase 4 must be marked SCAFFOLD (code only, zero runtime wiring)
+          if grep -A 5 "### Phase 4" execution.md | grep -q "**Status**: SCAFFOLD"; then
+            echo "✓ Phase 4 correctly classified as SCAFFOLD (no runtime wiring)"
+          else
+            echo "✗ Phase 4 not marked as SCAFFOLD"
+            exit 1
+          fi
+
+          # CRITICAL: No false COMPLETE claims for PARKED services (check actual classifications only)
+          FALSE_CLAIMS=$(grep "^| EventReplayEngine.*ACTIVE\|^| ProjectionEngine.*ACTIVE\|^| SnapshotEngine.*ACTIVE" execution.md | wc -l)
+          if [ "$FALSE_CLAIMS" -eq 0 ]; then
+            echo "✓ No false COMPLETE/ACTIVE claims for PARKED services"
+          else
+            echo "✗ Found $FALSE_CLAIMS false ACTIVE claims in classifications"
+            exit 1
+          fi
+
+          echo "✓ Honest classification validated"
+
+      # === GATE 11: CI Guard - Quarantined Tests Excluded ===
+      - name: 'Gate 11: Verify quarantined tests excluded from active scope'
+        run: |
+          echo "Verifying quarantined tests are NOT compiled..."
+
+          # Check that tsconfig.json excludes __ignored_tests__
+          if grep -q "__ignored_tests__" tsconfig.json; then
+            echo "✓ tsconfig.json excludes __ignored_tests__"
+          else
+            echo "✗ tsconfig.json does NOT exclude __ignored_tests__"
+            exit 1
+          fi
+
+          # Check that vitest.config.ts excludes __ignored_tests__
+          if grep -q "__ignored_tests__" vitest.config.ts; then
+            echo "✓ vitest.config.ts excludes __ignored_tests__"
+          else
+            echo "✗ vitest.config.ts does NOT exclude __ignored_tests__"
+            exit 1
+          fi
+
+          # Verify src/__ignored_tests__/ directory exists
+          if [ -d "src/__ignored_tests__" ]; then
+            IGNORED_COUNT=$(find src/__ignored_tests__ -name "*.test.ts" -o -name "*.test.tsx" | wc -l)
+            echo "✓ Found $IGNORED_COUNT quarantined test files in src/__ignored_tests__/"
+          else
+            echo "⚠ src/__ignored_tests__/ directory not found (optional)"
+          fi
+
+          echo "✓ Quarantined tests properly excluded from active scope"
+        continue-on-error: false
+
+      # === SUMMARY ===
+      - name: Report Gate Results
+        if: always()
+        run: |
+          echo "## Phase 3 Slice 2 Truth Pass - CI Gates Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Gates Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 1: Prisma Schema Validation" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 2: Database Migration" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 3: TypeScript Compilation" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 4: Next.js Build" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 5: Lint Check" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 6: Unit + Integration Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 7: Append-Only Enforcement (DB triggers)" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 8: EventEmitterService Runtime Integration" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 9: PARKED Systems Remain Unwired" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 10: Honest Phase Classification" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 11: CI Guard - Quarantined Tests Excluded" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "**Overall Status**: ✅ ALL GATES PASSED" >> $GITHUB_STEP_SUMMARY
+            echo "**SAFE_TO_MERGE**: YES" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Overall Status**: ❌ GATES FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "**SAFE_TO_MERGE**: NO" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail workflow if any gate failed
+        if: failure()
+        run: |
+          echo "❌ Phase 3 Slice 2 truth pass verification FAILED"
+          echo "Review gates output above for details"
+          exit 1

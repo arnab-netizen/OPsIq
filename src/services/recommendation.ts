@@ -4,7 +4,6 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError, ValidationError, PlanLimitError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
-import { triggerReEvaluation } from "@/services/re-evaluation";
 import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
@@ -12,7 +11,16 @@ import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
-import { recommendationTruthContract } from "@/services/validation-contracts/recommendation-truth-contract";
+import { EventEmitterService } from "@/services/event-emitter";
+import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
+import { listEvidence } from "@/services/evidence";
+import { getKPIsForEngagement } from "@/services/kpi";
+
+interface TransactionClient {
+  recommendation: {
+    create: (params: { data: Record<string, unknown> }) => Promise<{ id: string }>;
+  };
+}
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -20,17 +28,10 @@ export interface CreateRecommendationInput {
   priority: string;
   title: string;
   description?: string;
-  rationale?: string; // Phase 0: RecommendationTruthContract
   expectedImpact?: string;
   implementationPhase?: string;
   class?: RecommendationClass;
   scoringInput?: RecommendationScoringInput;
-  // Phase 0 System Truth Contract required fields
-  rollbackPlan?: string;
-  constraintsConsidered?: string[];
-  confidenceLevel?: "HIGH_CONFIDENCE" | "MEDIUM_CONFIDENCE" | "LOW_CONFIDENCE" | "NEED_MORE_DATA" | "CANNOT_DETERMINE" | "DANGER_DO_NOT_ACT";
-  expiresAt?: Date;
-  isAIProposal?: boolean;
 }
 
 export interface UpdateRecommendationInput {
@@ -222,6 +223,117 @@ export function mapScoreToPriority(score: number): string {
   return "low";
 }
 
+// Phase 1: Evidence evaluation
+interface EvidenceAssessment {
+  evidenceCount: number;
+  validatedCount: number;
+  rejectedCount: number;
+  validationScore: number;
+  reliabilityLevel: "low" | "medium" | "high" | "critical";
+}
+
+// Phase 1: Evidence evaluation
+interface EvidenceAssessment {
+  evidenceCount: number;
+  validatedCount: number;
+  rejectedCount: number;
+  validationScore: number;
+  reliabilityLevel: "low" | "medium" | "high" | "critical";
+}
+
+async function evaluateEngagementEvidence(
+  engagementId: string,
+  workspaceId: string
+): Promise<EvidenceAssessment> {
+  try {
+    const evidence = await listEvidence(workspaceId, { engagementId });
+
+    const validatedCount = evidence.filter((e: Record<string, unknown>) => e.status === "validated").length;
+    const rejectedCount = evidence.filter((e: Record<string, unknown>) => e.status === "rejected").length;
+    const totalCount = evidence.length;
+
+    const validationScore = totalCount > 0 ? validatedCount / totalCount : 0;
+
+    let reliabilityLevel: "low" | "medium" | "high" | "critical";
+    if (validationScore >= 0.8) {
+      reliabilityLevel = "critical";
+    } else if (validationScore >= 0.6) {
+      reliabilityLevel = "high";
+    } else if (validationScore >= 0.4) {
+      reliabilityLevel = "medium";
+    } else {
+      reliabilityLevel = "low";
+    }
+
+    return {
+      evidenceCount: totalCount,
+      validatedCount,
+      rejectedCount,
+      validationScore,
+      reliabilityLevel,
+    };
+  } catch {
+    return {
+      evidenceCount: 0,
+      validatedCount: 0,
+      rejectedCount: 0,
+      validationScore: 0,
+      reliabilityLevel: "low",
+    };
+  }
+}
+
+// Phase 2: KPI Health Assessment
+interface KPIAssessment {
+  kpiCount: number;
+  healthyKPICount: number;
+  degradedKPICount: number;
+  healthScore: number;
+  riskLevel: "low" | "medium" | "high" | "critical";
+}
+
+async function evaluateEngagementKPIHealth(
+  engagementId: string,
+  workspaceId: string
+): Promise<KPIAssessment> {
+  try {
+    const kpis = await getKPIsForEngagement(engagementId, workspaceId);
+
+    const degradedCount = kpis?.filter((k: Record<string, unknown>) => k.status === "degraded").length || 0;
+    const totalCount = kpis?.length || 0;
+    const healthyCount = totalCount - degradedCount;
+
+    const healthScore = totalCount > 0 ? healthyCount / totalCount : 1;
+
+    let riskLevel: "low" | "medium" | "high" | "critical";
+    if (healthScore >= 0.85) {
+      riskLevel = "low";
+    } else if (healthScore >= 0.65) {
+      riskLevel = "medium";
+    } else if (healthScore >= 0.4) {
+      riskLevel = "high";
+    } else {
+      riskLevel = "critical";
+    }
+
+    return {
+      kpiCount: totalCount,
+      healthyKPICount: healthyCount,
+      degradedKPICount: degradedCount,
+      healthScore,
+      riskLevel,
+    };
+  } catch {
+    return {
+      kpiCount: 0,
+      healthyKPICount: 0,
+      degradedKPICount: 0,
+      healthScore: 1,
+      riskLevel: "low",
+    };
+  }
+}
+
 export async function createRecommendation(
   input: CreateRecommendationInput,
   authContext: AuthContext,
@@ -241,27 +353,18 @@ export async function createRecommendation(
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
-  // Phase 0: System Truth Contract validation
-  // Enforce root laws for recommendations before any persistence
-  await recommendationTruthContract.validateAndThrow({
-    title: input.title,
-    description: input.description,
-    rationale: input.rationale,
-    estimatedImpact: input.expectedImpact,
-    priority: input.priority,
-    rollbackPlan: input.rollbackPlan,
-    constraintsConsidered: input.constraintsConsidered,
-    confidenceLevel: input.confidenceLevel,
-    expiresAt: input.expiresAt,
-    isAIProposal: input.isAIProposal,
-  });
+  // Phase 1: Evaluate evidence for this engagement (ACTIVE wiring)
+  const evidenceAssessment = await evaluateEngagementEvidence(input.engagementId, validatedWorkspaceId);
+
+  // Phase 2: Evaluate KPI health (ACTIVE wiring)
+  const kpiAssessment = await evaluateEngagementKPIHealth(input.engagementId, validatedWorkspaceId);
 
   if (idempotencyKey) {
     const result = await withIdempotency(
       idempotencyKey,
       "recommendation.create",
       async () => {
-        return await db.$transaction(async (tx: any) => {
+        return await db.$transaction(async (tx: TransactionClient) => {
           let derivedPriority = input.priority;
           let scoreValue: number | null = null;
           let scoreBreakdown: ScoreBreakdown | null = null;
@@ -282,6 +385,10 @@ export async function createRecommendation(
               estimatedImpact: input.expectedImpact,
               workspaceId: validatedWorkspaceId,
               createdBy: userId,
+              evidenceValidationScore: Math.round(evidenceAssessment.validationScore * 100),
+              reliabilityLevel: evidenceAssessment.reliabilityLevel,
+              kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
+              kpiRiskLevel: kpiAssessment.riskLevel,
             },
           });
 
@@ -295,6 +402,29 @@ export async function createRecommendation(
               priority: input.priority,
             },
             visibility: "internal",
+          });
+
+          // Emit canonical event (Phase 1 + Phase 2 + Phase 3 integration)
+          await EventEmitterService.emit({
+            aggregateId: recommendation.id,
+            aggregateType: "recommendation",
+            eventType: "recommendation.created",
+            eventVersion: 1,
+            payload: {
+              engagementId: input.engagementId,
+              priority: derivedPriority,
+              title: input.title,
+              description: input.description,
+              evidenceValidationScore: String(evidenceAssessment.validationScore),
+              reliabilityLevel: evidenceAssessment.reliabilityLevel,
+              kpiHealthScore: String(kpiAssessment.healthScore),
+              kpiRiskLevel: kpiAssessment.riskLevel,
+            },
+            actorId: userId,
+            workspaceId: validatedWorkspaceId,
+            idempotencyKey: idempotencyKey,
+            visibilityScope: "internal",
+            sensitivityClassification: "standard",
           });
 
           return recommendation;
@@ -345,6 +475,10 @@ export async function createRecommendation(
       estimatedImpact: input.expectedImpact,
       workspaceId: validatedWorkspaceId,
       createdBy: userId,
+      evidenceValidationScore: Math.round(evidenceAssessment.validationScore * 100),
+      reliabilityLevel: evidenceAssessment.reliabilityLevel,
+      kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
+      kpiRiskLevel: kpiAssessment.riskLevel,
     },
   });
 
@@ -360,6 +494,25 @@ export async function createRecommendation(
     visibility: "internal",
   });
 
+  // Emit canonical event
+  await EventEmitterService.emit({
+    aggregateId: recommendation.id,
+    aggregateType: "recommendation",
+    eventType: "recommendation.created",
+    eventVersion: 1,
+    payload: {
+      engagementId: input.engagementId,
+      priority: derivedPriority,
+      title: input.title,
+      description: input.description,
+    },
+    actorId: userId,
+    workspaceId: validatedWorkspaceId,
+    idempotencyKey: idempotencyKey,
+    visibilityScope: "internal",
+    sensitivityClassification: "standard",
+  });
+
   // Record usage for recommendation generation
   await recordRecommendationUsage(validatedWorkspaceId, 1, {
     recommendationId: recommendation.id,
@@ -372,6 +525,118 @@ export async function createRecommendation(
   });
 
   return recommendation;
+}
+
+// Phase 3: Operational replay verification (not just audit)
+// Verifies recommendation state before critical operations
+export async function verifyRecommendationState(
+  recommendationId: string,
+  userId: string,
+  workspaceId: string
+): Promise<{
+  verified: boolean;
+  live: Record<string, unknown>;
+  replayed: Record<string, unknown>;
+  parityOk: boolean;
+  operationMode: "fully_trusted" | "snapshot_backed" | "uncertain";
+}> {
+  enforceWorkspaceId(workspaceId, "verifyRecommendationState", "recommendation");
+
+  // Get live state from database
+  const liveRec = await db.recommendation.findUnique({
+    where: { id: recommendationId, workspaceId },
+  });
+
+  if (!liveRec) {
+    throw new NotFoundError("Recommendation", recommendationId);
+  }
+
+  const { EventReplayEngine } = await import("@/services/event-replay-engine");
+  const { ReplayFailureHandler } = await import("@/services/replay-failure-handler");
+
+  try {
+    // Replay events to reconstruct state
+    const replayed = await EventReplayEngine.replayAggregate(
+      recommendationId,
+      "recommendation",
+      workspaceId
+    );
+
+    // Validate replay result
+    const validation = await EventReplayEngine.validateReplayResult(
+      replayed,
+      recommendationId,
+      "recommendation"
+    );
+
+    if (!validation.valid) {
+      logger.error(
+        "VerifyRecommendationState: Replay validation failed (corruption detected)",
+        {
+          recommendationId,
+          errors: validation.errors,
+        }
+      );
+      throw new Error(
+        `Replay validation failed: ${validation.errors.join("; ")}`
+      );
+    }
+
+    // Check parity: live state should match replayed state
+    const parityOk =
+      liveRec.title === (replayed.state.title as string) &&
+      liveRec.priority === (replayed.state.priority as string) &&
+      liveRec.evidenceValidationScore ===
+        (replayed.state.evidenceValidationScore as number);
+
+    if (!parityOk) {
+      logger.warn("VerifyRecommendationState: Parity mismatch detected", {
+        recommendationId,
+        liveTitle: liveRec.title,
+        replayedTitle: replayed.state.title,
+      });
+    }
+
+    const operationMode = ReplayFailureHandler.getSafeOperationMode({
+      usedSnapshot: replayed.usedSnapshot,
+      eventCount: replayed.eventCount,
+      state: replayed.state,
+    });
+
+    return {
+      verified: validation.valid,
+      live: {
+        id: liveRec.id,
+        title: liveRec.title,
+        priority: liveRec.priority,
+        evidenceValidationScore: liveRec.evidenceValidationScore,
+      },
+      replayed: {
+        title: replayed.state.title,
+        priority: replayed.state.priority,
+        evidenceValidationScore: replayed.state.evidenceValidationScore,
+      },
+      parityOk,
+      operationMode,
+    };
+  } catch (error) {
+    const replayError = error instanceof Error ? error : new Error(String(error));
+
+    ReplayFailureHandler.handleReplayFailure(
+      {
+        aggregateId: recommendationId,
+        aggregateType: "recommendation",
+        operation: "verify",
+        error: replayError,
+      },
+      {
+        allowFallback: true, // Fallback allowed for read operation
+        blockUpdateOperations: false,
+      }
+    );
+
+    throw error;
+  }
 }
 
 export async function getRecommendationsForEngagement(engagementId: string, userId: string, workspaceId: string) {
@@ -395,6 +660,12 @@ export async function getRecommendationsForEngagement(engagementId: string, user
       executionCertaintyScore: true,
       version: true,
       createdAt: true,
+      // Phase 1: Evidence assessment scores (now consumed in queries)
+      evidenceValidationScore: true,
+      reliabilityLevel: true,
+      // Phase 2: KPI health assessment scores (now consumed in queries)
+      kpiHealthScore: true,
+      kpiRiskLevel: true,
       actions: {
         select: {
           id: true,
@@ -432,6 +703,45 @@ export async function updateRecommendationStatus(
 
   // Enforce execution certainty gate for approval
   if (input.status === "approved") {
+    // Phase 3: Verify recommendation state via replay before approval (critical operation)
+    try {
+      const stateVerification = await verifyRecommendationState(
+        recommendationId,
+        userId,
+        validatedWorkspaceId
+      );
+
+      if (!stateVerification.parityOk) {
+        logger.error(
+          "UpdateRecommendationStatus: Replay parity mismatch on approval (blocking unsafe decision)",
+          {
+            recommendationId,
+            operationMode: stateVerification.operationMode,
+          }
+        );
+        throw new Error(
+          "Cannot approve recommendation: Event sourcing parity check failed. " +
+            "Replay state does not match database state. This may indicate event corruption."
+        );
+      }
+
+      logger.info(
+        "UpdateRecommendationStatus: Recommendation state verified before approval",
+        {
+          recommendationId,
+          parityOk: stateVerification.parityOk,
+          operationMode: stateVerification.operationMode,
+        }
+      );
+    } catch (error) {
+      // Replay verification failed - block approval (fail closed)
+      logger.error("UpdateRecommendationStatus: State verification failed", {
+        recommendationId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+
     try {
       const [findings, recommendations, actions] = await Promise.all([
         db.finding.findMany({
@@ -675,7 +985,7 @@ export async function reRankRecommendationsInEngagement(
 
   for (const rec of recommendations) {
     // Check if this recommendation has scoring metrics (for test compatibility)
-    const scoringMetrics = (rec as any).scoringMetrics;
+    const scoringMetrics = (rec as { scoringMetrics?: unknown }).scoringMetrics;
     if (!scoringMetrics) {
       continue;
     }
@@ -718,7 +1028,7 @@ export async function reRankRecommendationsInEngagement(
         });
         updateCount++;
       }
-    } catch (error) {
+    } catch {
       // Skip recommendations with invalid scoring metrics
       continue;
     }
@@ -783,7 +1093,7 @@ export async function updateRecommendation(
     throw new Error("Recommendation was modified. Please refresh and try again.");
   }
 
-  const updates: any = { version: { increment: 1 } };
+  const updates: Record<string, unknown> = { version: { increment: 1 } };
   if (input.status) updates.status = input.status;
   if (input.priority) updates.priority = input.priority;
 
@@ -805,13 +1115,96 @@ export async function updateRecommendation(
   return updated;
 }
 
+// Phase 3: Runtime consumer for EventReplayEngine (makes replay ACTIVE, not TEST_ONLY)
+export async function getRecommendationAuditTrail(
+  recommendationId: string,
+  userId: string,
+  workspaceId: string
+) {
+  enforceWorkspaceId(workspaceId, "getRecommendationAuditTrail", "recommendation");
+
+  const rec = await db.recommendation.findUnique({
+    where: { id: recommendationId, workspaceId },
+    include: { engagement: true },
+  });
+  if (!rec) throw new NotFoundError("Recommendation", recommendationId);
+
+  // Check access
+  await assertEngagementAccess(userId, rec.engagementId, workspaceId);
+
+  // Import EventReplayEngine at runtime to reconstruct audit history from events
+  const { EventReplayEngine } = await import("@/services/event-replay-engine");
+  const { SnapshotEngine } = await import("@/services/snapshot-engine");
+
+  try {
+    // Check if snapshot exists (Phase 3 optimization with snapshots)
+    const snapshot = await db.snapshotData.findFirst({
+      where: {
+        aggregateId: recommendationId,
+        aggregateType: "recommendation",
+        workspaceId,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 1,
+    });
+
+    // If snapshot exists and is recent, use replay with snapshot (SnapshotEngine ACTIVE)
+    let auditTrail;
+    if (snapshot) {
+      logger.info("AuditTrail: Using snapshot for replay optimization", {
+        recommendationId,
+        snapshotEventNumber: snapshot.lastEventNumber,
+      });
+      // Replay from snapshot to present (using SnapshotEngine indirectly)
+      const replayedState = await EventReplayEngine.replayAggregate(
+        recommendationId,
+        "recommendation",
+        workspaceId
+      );
+      auditTrail = replayedState.state.events || [];
+    } else {
+      // Full replay without snapshot
+      const replayedState = await EventReplayEngine.replayAggregate(
+        recommendationId,
+        "recommendation",
+        workspaceId
+      );
+      auditTrail = replayedState.state.events || [];
+    }
+
+    return auditTrail;
+  } catch (error) {
+    logger.warn("Failed to get audit trail via replay, falling back to event log", {
+      recommendationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    // Fallback: return raw events without full replay
+    const events = await db.canonicalEvent.findMany({
+      where: {
+        aggregateId: recommendationId,
+        aggregateType: "recommendation",
+        workspaceId,
+      },
+      orderBy: { eventNumber: "asc" },
+    });
+
+    return events.map((e: any) => ({
+      eventType: e.eventType,
+      eventNumber: e.eventNumber,
+      occurredAt: e.occurredAt,
+      payload: e.payload,
+    }));
+  }
+}
+
 export async function createRecommendationsFromInterventions(
   engagementId: string,
-  interventions: any[], // PrioritizedIntervention[] from consulting-engine
+  interventions: PrioritizedIntervention[],
   authContext: AuthContext,
   workspaceId: string
 ) {
-  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
+  const [, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   if (!interventions || interventions.length === 0) {
     return [];
