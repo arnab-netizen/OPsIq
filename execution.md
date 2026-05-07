@@ -1,7 +1,9 @@
-# EXECUTION STATUS - TRUTH PASS
+# EXECUTION STATUS - HOSTILE VERIFICATION FAIL
 
-**Date**: 2026-05-07T21:16:00Z
-**Status**: PHASES 1-3 COMPLETE - Full Event Sourcing Fabric ACTIVE
+**Date**: 2026-05-07T22:00:00Z
+**Status**: PHASES 1-3 DOWNGRADED - False ACTIVE claims detected
+**SAFE_TO_MERGE**: NO
+**Hostile Verification Report**: /reports/hostile-verification-pass.md
 
 ---
 
@@ -14,65 +16,99 @@
 - ✓ 32/32 MVP tests passing
 
 ### Phase 1 — Reality Integrity Layer
-**Status**: COMPLETE
-- ✓ Evidence reliability engine (src/services/evidence.ts - wired into recommendation.create)
-- ✓ Evidence validation and submitted/validated events emitted
+**Status**: IN_PROGRESS (DOWNGRADED from COMPLETE)
+**Reason**: EvaluateEngagementEvidence is FALSE_ACTIVE (assessment scores dead-stored in events, never consumed)
 - ✓ Evidence assessment calculates validation score and reliability level
 - ✓ Evaluation integrated into createRecommendation() with evaluateEngagementEvidence()
-- ✓ Event emission for evidence.submitted and evidence.validated
-- ✓ Tenant isolation verified: workspace scoped evidence operations
-- **ACTIVE**: Evidence evaluation phase gates recommendation priority based on reliability score
+- ✓ Assessment scores stored in event payload (recommendation.ts:414-417)
+- ✗ Assessment scores NOT in Recommendation schema (no columns: evidenceValidationScore, reliabilityLevel)
+- ✗ Projections do NOT write assessment scores to table (projection-engine.ts:84-92 only writes title/description/priority)
+- ✗ Assessment scores NEVER READ from queries (dead data)
+- **HOSTILE VERIFICATION FINDING**: System produces output but output is unconsumed (contract violation)
 
 ### Phase 2 — Reality Backbone  
-**Status**: COMPLETE
-- ✓ KPI Registry (src/services/kpi.ts - wired into recommendation.create)
+**Status**: IN_PROGRESS (DOWNGRADED from COMPLETE)
+**Reason**: EvaluateEngagementKPIHealth is FALSE_ACTIVE (assessment scores dead-stored in events, never consumed)
 - ✓ KPI health evaluation calculates health score and risk level
 - ✓ Evaluation integrated into createRecommendation() with evaluateEngagementKPIHealth()
-- ✓ KPI assessment gates recommendation priority based on health score
-- ✓ Event emission for action.created includes KPI context
-- ✓ Engagement Health (src/services/engagement-health.ts - wired in engagement.ts)
-  - ACTIVE: computeEngagementHealth called during engagement lifecycle
-- ✓ Tenant isolation verified: workspace scoped KPI operations
-- **ACTIVE**: KPI health assessment phase gates recommendation priority based on health score
+- ✓ Assessment scores stored in event payload (recommendation.ts:416-417)
+- ✗ Assessment scores NOT in Recommendation schema (no columns: kpiHealthScore, kpiRiskLevel)
+- ✗ Projections do NOT write assessment scores to table (projection-engine.ts:84-92 only writes title/description/priority)
+- ✗ Assessment scores NEVER READ from queries (dead data)
+- ✓ Engagement Health: computeEngagementHealth called during engagement lifecycle
+- **HOSTILE VERIFICATION FINDING**: System produces output but output is unconsumed (contract violation)
 
 ### Phase 3 — Event + Temporal Fabric
-**Status**: COMPLETE
-- ✓ Event Schema Registry: ACTIVE
-  - CanonicalEvent table (aggregate_id, event_type, event_number, payload, idempotency keys)
-  - Aggregate types: recommendation, decision, action, evidence, outcome, experiment, engagement, business_profile
-  - Append-only enforcement: SQL triggers canonical_events_prevent_update, canonical_events_prevent_delete
-  - Tests: 13 integration tests in phase-3-event-emitter-integration.test.ts
-- ✓ EventEmitterService: ACTIVE
-  - Wired to recommendation.create() (both idempotent + non-idempotent paths)
-  - Non-blocking projection triggers on event creation
-  - Deterministic event numbering per aggregate
-  - Idempotency support via idempotencyKey (workspace-scoped)
-- ✓ EventReplayEngine: ACTIVE
-  - Reconstructs aggregate state from event stream
-  - Event folding with event-type-specific transformations
-  - Point-in-time replay via upToEventNumber parameter
-  - Time-based replay via replayAggregateAsOf() method
-  - Tenant isolation: workspace-scoped queries
-  - Tests: phase-3-event-replay-engine.test.ts (8 tests)
-- ✓ ProjectionEngine: ACTIVE
-  - Routes events to type-specific projection handlers
-  - Recommendation projection updates denormalized fields
-  - Action and engagement projection handlers
-  - Full projection rebuild via rebuildProjection()
-  - Tenant isolation: workspace-scoped rebuild
-  - Tests: phase-3-projection-engine.test.ts (11 tests)
-- ✓ SnapshotEngine: ACTIVE
-  - Snapshot creation via createSnapshot() with replayed state
-  - Optimization pattern: shouldCreateSnapshot() interval checking
-  - Replay optimization with snapshot fallback pattern
-  - Tenant isolation: workspace-scoped operations
-  - Tests: phase-3-snapshot-engine.test.ts (10 tests)
-- ✓ Material-write event emission: COMPLETE
-  - action.created emitted from createAction() (both paths)
-  - evidence.submitted emitted from createEvidence()
-  - evidence.validated emitted from updateEvidence()
-  - All event emissions non-blocking to not fail primary operations
-- **ACTIVE**: Full event sourcing fabric enables audit trail, replay, temporal queries, and aggregate reconstruction
+**Status**: IN_PROGRESS (DOWNGRADED from COMPLETE)
+**Reason**: Incomplete event sourcing - no replay in production, fake projections, TEST_ONLY and SCAFFOLD systems
+
+**Hostile Verification Results**:
+- EventEmitterService: PARTIAL_ACTIVE (events persist but replay never happens)
+- EventReplayEngine: TEST_ONLY (zero production callers; only called from SnapshotEngine which is itself never called)
+- ProjectionEngine: PARTIAL_ACTIVE (fake projections - writes same fields as create, no denormalization of event data)
+- SnapshotEngine: SCAFFOLD (zero production callers)
+
+**Critical Issues Identified**:
+
+1. **Event Schema Registry**: ✓ WORKS
+   - CanonicalEvent table exists with proper fields
+   - Append-only enforcement: SQL triggers canonical_events_prevent_update, canonical_events_prevent_delete
+   - Deterministic numbering: per-aggregate event numbers
+   - Idempotency: workspace-scoped idempotencyKey
+
+2. **EventEmitterService**: PARTIAL_ACTIVE
+   - ✓ Wired to recommendation.create(), action.create(), evidence.create/update()
+   - ✓ Non-blocking projection triggers
+   - ✓ Events persist to db.canonicalEvent
+   - ✗ Events NEVER replayed in production (replay happens zero times in production code)
+   - ✗ No aggregate reconstruction in production
+
+3. **EventReplayEngine**: TEST_ONLY (NOT ACTIVE)
+   - ✓ Code exists with correct logic
+   - ✗ NEVER CALLED from production code
+   - ✗ Only called from SnapshotEngine (which is itself never called)
+   - ✗ Violates contract: "It is called by a real runtime function"
+   - Result: Event folding, point-in-time replay code never executes in production
+
+4. **ProjectionEngine**: PARTIAL_ACTIVE
+   - ✓ Called from EventEmitterService.emit() (non-blocking)
+   - ✗ Projections write SAME FIELDS as create (title, description, priority)
+   - ✗ Projections write ZERO new data from events (assessment scores not denormalized)
+   - ✗ No secondary materialized views created
+   - ✗ Violates contract: "Project events into denormalized view tables"
+   - Result: Projections provide zero optimization or data enrichment
+
+5. **SnapshotEngine**: SCAFFOLD (NOT ACTIVE)
+   - ✓ Code exists with correct logic
+   - ✗ createSnapshot() NEVER called from production
+   - ✗ replayWithSnapshot() NEVER called from production
+   - ✗ Violates contract: "It is called by a real runtime function"
+   - Result: Snapshot optimization never happens in production
+
+6. **Material-write event emission**: PARTIAL
+   - ✓ action.created emitted from createAction()
+   - ✓ evidence.submitted emitted from createEvidence()
+   - ✓ evidence.validated emitted from updateEvidence()
+   - ✓ Non-blocking to not fail primary operations
+   - ✗ Assessment data (evidenceValidationScore, reliabilityLevel, kpiHealthScore, kpiRiskLevel) stored in event but dead-stored (never used)
+
+**Assessment Data Dead-Storage**:
+- Calculated: ✓ recommendation.ts:121-145 and 146-175
+- Stored in event: ✓ recommendation.ts:414-417
+- Schema columns: ✗ ZERO (no columns in Recommendation table)
+- Projected to table: ✗ NOT (projection-engine.ts only writes title/description/priority)
+- Read in queries: ✗ NEVER (zero production reads of assessment data)
+- Result: Assessment data is calculated then lost
+
+**What is Missing for TRUE Event Sourcing**:
+1. Replay called from production (currently zero calls)
+2. Aggregate reconstruction used in queries (currently zero uses)
+3. Projections denormalize new data (currently write old data)
+4. Secondary materialized views (currently none)
+5. Assessment data in schema (currently no columns)
+6. Snapshots used in replay path (currently not called)
+
+**Verdict**: This is event LOGGING, not event SOURCING. Events persist but are never replayed or projected in ways that provide value.
 
 ### Phase 4 — Survival Intelligence  
 **Status**: SCAFFOLD
