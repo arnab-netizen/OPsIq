@@ -12,6 +12,7 @@ import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
+import { EventEmitterService } from "@/services/event-emitter";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -274,6 +275,25 @@ export async function createRecommendation(
             visibility: "internal",
           });
 
+          // Emit canonical event
+          await EventEmitterService.emit({
+            aggregateId: recommendation.id,
+            aggregateType: "recommendation",
+            eventType: "recommendation.created",
+            eventVersion: 1,
+            payload: {
+              engagementId: input.engagementId,
+              priority: derivedPriority,
+              title: input.title,
+              description: input.description,
+            },
+            actorId: userId,
+            workspaceId: validatedWorkspaceId,
+            idempotencyKey: idempotencyKey,
+            visibilityScope: "internal",
+            sensitivityClassification: "standard",
+          });
+
           return recommendation;
         });
       },
@@ -335,6 +355,25 @@ export async function createRecommendation(
       priority: input.priority,
     },
     visibility: "internal",
+  });
+
+  // Emit canonical event
+  await EventEmitterService.emit({
+    aggregateId: recommendation.id,
+    aggregateType: "recommendation",
+    eventType: "recommendation.created",
+    eventVersion: 1,
+    payload: {
+      engagementId: input.engagementId,
+      priority: derivedPriority,
+      title: input.title,
+      description: input.description,
+    },
+    actorId: userId,
+    workspaceId: validatedWorkspaceId,
+    idempotencyKey: idempotencyKey,
+    visibilityScope: "internal",
+    sensitivityClassification: "standard",
   });
 
   // Record usage for recommendation generation

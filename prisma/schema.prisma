@@ -1003,3 +1003,32 @@ model WebhookEvent {
   @@index([processedAt])
   @@map("webhook_events")
 }
+
+// ─── Event Store: Append-Only Canonical Events ──────────────────────────────
+
+model CanonicalEvent {
+  id                        String   @id @default(uuid()) @db.Uuid
+  aggregateId               String   @map("aggregate_id")
+  aggregateType             String   @map("aggregate_type")
+  eventType                 String   @map("event_type")
+  eventVersion              Int      @map("event_version") @default(1)
+  eventNumber               Int      @map("event_number") // Monotonic sequence per aggregate
+  payload                   Json     // Event payload - deterministic
+  actorId                   String   @map("actor_id") @db.Uuid
+  workspaceId               String   @map("workspace_id") @db.Uuid
+  causationId               String   @map("causation_id") // What caused this event
+  correlationId             String   @map("correlation_id") // Request correlation ID
+  idempotencyKey            String?  @map("idempotency_key") // Idempotent replay detection
+  visibilityScope           String   @map("visibility_scope") @default("internal") // "internal" or "external"
+  sensitivityClassification String   @map("sensitivity_classification") @default("standard")
+  occurredAt                DateTime @map("occurred_at") // When the change logically occurred
+  recordedAt                DateTime @map("recorded_at") @default(now()) // When it was persisted
+  createdAt                 DateTime @default(now()) @map("created_at")
+
+  @@unique([idempotencyKey, workspaceId])
+  @@index([aggregateId, aggregateType, workspaceId])
+  @@index([workspaceId, eventType])
+  @@index([workspaceId, recordedAt])
+  @@index([actorId])
+  @@map("canonical_events")
+}
