@@ -84,6 +84,14 @@
         "services_created": ["ComplianceFlagService"],
         "tests_added": 18,
         "acceptance_criteria_met": ["#6: Compliance flags are captured"]
+      },
+      {
+        "name": "Slice 8: KPIRegistry",
+        "description": "Canonicalize KPI formulas with standard definitions, parameters, and health assessments",
+        "models_created": ["KPIRegistry"],
+        "services_created": ["KPIRegistryService"],
+        "tests_added": 21,
+        "acceptance_criteria_met": ["#7: KPI formulas are canonicalized"]
       }
     ],
     "acceptance_criteria": {
@@ -93,7 +101,7 @@
       "#4 - Local context captured": "COMPLETE",
       "#5 - Capacity constraints captured": "COMPLETE",
       "#6 - Compliance flags captured": "COMPLETE",
-      "#7 - KPI formulas canonicalized": "NOT_STARTED",
+      "#7 - KPI formulas canonicalized": "COMPLETE",
       "#8 - Recommendation expiration exists": "NOT_STARTED",
       "#9 - Resource budgets enforced": "NOT_STARTED",
       "#10 - Operator adherence tracked": "NOT_STARTED",
@@ -121,12 +129,16 @@
       "src/domain/compliance-flag.ts",
       "src/services/compliance-flag.ts",
       "src/__tests__/phase-2-compliance-flag.test.ts",
+      "src/domain/kpi-registry.ts",
+      "src/services/kpi-registry.ts",
+      "src/__tests__/phase-2-kpi-registry.test.ts",
       "prisma/migrations/20260507_phase_2_engagement_business_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_financial_constraint_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_customer_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_local_market_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_capacity_profile/migration.sql",
-      "prisma/migrations/20260507_phase_2_compliance_flag/migration.sql"
+      "prisma/migrations/20260507_phase_2_compliance_flag/migration.sql",
+      "prisma/migrations/20260507_phase_2_kpi_registry/migration.sql"
     ],
     "files_modified": [
       "prisma/schema.prisma",
@@ -141,18 +153,19 @@
       "phase_2_local_market": "20/20 passing",
       "phase_2_capacity": "15/15 passing",
       "phase_2_compliance_flag": "18/18 passing",
-      "phase_2_total": "135/135 passing",
+      "phase_2_kpi_registry": "21/21 passing",
+      "phase_2_total": "156/156 passing",
       "phase_0_mvp": "32/32 passing (no regression)",
       "phase_1_integration": "14/14 passing (no regression)",
-      "cumulative_total": "181/181 passing"
+      "cumulative_total": "202/202 passing"
     },
     "gates_status": {
       "typescript": "PASS",
       "schema_validation": "PASS",
       "tests": "PASS"
     },
-    "next_slice": "Slice 8: KPIRegistry (canonicalize KPI formulas - criterion #7)",
-    "progress_summary": "7 slices complete. 6/12 acceptance criteria satisfied (Financial, Customer, Local, Capacity, Compliance, Context). 135/135 Phase 2 tests. 181/181 cumulative. All constraint profiles + context gate complete."
+    "next_slice": "Slice 9: RecommendationLifecycle (expiration policy - criterion #8)",
+    "progress_summary": "8 slices complete. 7/12 acceptance criteria satisfied (Financial, Customer, Local, Capacity, Compliance, KPI, Context). 156/156 Phase 2 tests. 202/202 cumulative. Core constraints + canonical KPI formulas complete."
   },
   "phase_1_reclassification_rationale": {
     "previous_status": "IN_PROGRESS",

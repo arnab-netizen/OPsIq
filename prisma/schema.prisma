@@ -91,6 +91,7 @@ model Workspace {
   memberships        WorkspaceMembership[]
   idempotencyRecords IdempotencyRecord[]
   engagements        Engagement[]
+  kpiRegistries      KPIRegistry[]
 
   @@map("workspaces")
 }
@@ -853,6 +854,30 @@ model KPISnapshot {
   @@index([kpiId])
   @@index([recordedAt])
   @@map("kpi_snapshots")
+}
+
+model KPIRegistry {
+  id                    String    @id @default(uuid()) @db.Uuid
+  formulaName           String    @map("formula_name") // e.g., "Revenue Growth %"
+  formulaType           String    @map("formula_type") // e.g., "revenue_growth"
+  description           String?   @map("description")
+  canonicalDefinition   String    @map("canonical_definition") // How is it calculated
+  unit                  String    @map("unit") // e.g., "%", "$", "months"
+  direction             String    @map("direction") // "up" or "down"
+  inputParameters       String?   @map("input_parameters") // JSON array of parameter definitions
+  standardThreshold     String?   @map("standard_threshold") // JSON object with good/acceptable/warning/critical
+  workspaceId           String?   @map("workspace_id") @db.Uuid // Null = global formula
+  isGlobal              Boolean   @default(false) @map("is_global")
+  version               Int       @default(1)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id])
+
+  @@index([formulaType])
+  @@index([isGlobal])
+  @@index([workspaceId])
+  @@map("kpi_registries")
 }
 
 // ─── Module 3: Deliverable ──────────────────────────────────────────────────
