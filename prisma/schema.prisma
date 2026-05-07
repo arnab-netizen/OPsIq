@@ -20,17 +20,18 @@ model User {
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deactivatedAt  DateTime? @map("deactivated_at")
 
-  sessions                Session[]
-  roleAssignments         UserRoleAssignment[]
-  auditEvents             AuditEvent[]
-  engagementMemberships   EngagementMembership[]
-  submittedEvidence       Evidence[]             @relation("SubmittedEvidence")
-  validatedEvidence       Evidence[]             @relation("ValidatedEvidence")
-  recommendationApprovals Recommendation[]
-  recommendationsCreated  Recommendation[]       @relation("RecommendationCreator")
-  assignedActions         Action[]               @relation("AssignedActions")
-  completedActions        Action[]               @relation("CompletedActions")
-  verifiedActions         Action[]               @relation("VerifiedActions")
+  sessions                   Session[]
+  roleAssignments            UserRoleAssignment[]
+  auditEvents                AuditEvent[]
+  engagementMemberships      EngagementMembership[]
+  submittedEvidence          Evidence[]             @relation("SubmittedEvidence")
+  validatedEvidence          Evidence[]             @relation("ValidatedEvidence")
+  recommendationApprovals    Recommendation[]
+  recommendationsCreated     Recommendation[]       @relation("RecommendationCreator")
+  assignedActions            Action[]               @relation("AssignedActions")
+  completedActions           Action[]               @relation("CompletedActions")
+  verifiedActions            Action[]               @relation("VerifiedActions")
+  engagementBusinessProfiles EngagementBusinessProfile[]
 
   @@map("users")
 }
@@ -235,12 +236,13 @@ model Engagement {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  workspace         Workspace                  @relation(fields: [workspaceId], references: [id])
-  client            ClientAccount              @relation(fields: [clientId], references: [id])
-  parent            Engagement?                @relation("EngagementLineage", fields: [parentEngagementId], references: [id])
-  children          Engagement[]               @relation("EngagementLineage")
-  conditionProfiles BusinessConditionProfile[]
-  memberships       EngagementMembership[]
+  workspace                  Workspace                     @relation(fields: [workspaceId], references: [id])
+  client                     ClientAccount                 @relation(fields: [clientId], references: [id])
+  parent                     Engagement?                   @relation("EngagementLineage", fields: [parentEngagementId], references: [id])
+  children                   Engagement[]                  @relation("EngagementLineage")
+  engagementBusinessProfile  EngagementBusinessProfile?
+  conditionProfiles          BusinessConditionProfile[]
+  memberships                EngagementMembership[]
   leads             LeadRecord[]
   stages            Stage[]
   findings          Finding[]
@@ -295,6 +297,37 @@ model BusinessConditionProfile {
   @@index([engagementId, isCurrent])
   @@index([engagementId])
   @@map("business_condition_profiles")
+}
+
+model EngagementBusinessProfile {
+  id                    String    @id @default(uuid()) @db.Uuid
+  engagementId          String    @unique @map("engagement_id") @db.Uuid
+  businessName          String?   @map("business_name")
+  industry              String?   // e.g., "software", "manufacturing", "retail"
+  businessModelType     String?   @map("business_model_type") // "B2B", "B2C", "B2B2C", "hybrid", etc.
+  maturityState         String    @default("STABILIZE") @map("maturity_state") // "SURVIVAL", "STABILIZE", "GROWTH", "SCALE"
+  annualRevenue         Int?      @map("annual_revenue")
+  foundingYear          Int?      @map("founding_year")
+  employeeCount         Int?      @map("employee_count")
+  geoFocus              String?   @map("geo_focus") // "local", "regional", "national", "international"
+  primaryServiceOrProduct String? @map("primary_service_or_product")
+  secondaryServicesOrProducts String? @map("secondary_services_or_products") // JSON array
+  revenueRecurringPercent Int?    @map("revenue_recurring_percent") // 0-100
+  marginHealthAssessment String?  @map("margin_health_assessment") // "healthy", "declining", "at_risk"
+  customerConcentrationLevel String? @map("customer_concentration_level") // "low", "medium", "high"
+  operationalMaturityLevel String? @map("operational_maturity_level") // "low", "medium", "high"
+  keyContext            String?   @map("key_context") // Free text context about business
+  contextProvidedAt     DateTime? @map("context_provided_at")
+  contextProvidedBy     String?   @map("context_provided_by") @db.Uuid
+  version               Int       @default(1)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  provider   User?      @relation(fields: [contextProvidedBy], references: [id])
+
+  @@index([engagementId])
+  @@map("engagement_business_profiles")
 }
 
 // ─── Module: Evidence, Finding, Recommendation, Action ─────────────────────
