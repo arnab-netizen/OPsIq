@@ -13,6 +13,7 @@ import type { AuthContext } from "@/lib/auth-guard";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
 import { recommendationTruthContract } from "@/services/validation-contracts/recommendation-truth-contract";
+import { ContextGate } from "@/services/context-gate";
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -31,6 +32,8 @@ export interface CreateRecommendationInput {
   confidenceLevel?: "HIGH_CONFIDENCE" | "MEDIUM_CONFIDENCE" | "LOW_CONFIDENCE" | "NEED_MORE_DATA" | "CANNOT_DETERMINE" | "DANGER_DO_NOT_ACT";
   expiresAt?: Date;
   isAIProposal?: boolean;
+  // Phase 2: ContextGate enforcement
+  allowLowDataRecommendation?: boolean; // Explicit acknowledgment of low-data risk
 }
 
 export interface UpdateRecommendationInput {
@@ -240,6 +243,21 @@ export async function createRecommendation(
     where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
+
+  // Phase 2: ContextGate - Verify business context exists
+  const businessProfile = await db.engagementBusinessProfile.findUnique({
+    where: { engagementId: input.engagementId },
+  });
+
+  const contextGateResult = ContextGate.evaluate({
+    engagementId: input.engagementId,
+    businessProfile,
+    allowLowDataRecommendation: input.allowLowDataRecommendation,
+  });
+
+  if (!contextGateResult.isAllowed) {
+    throw new ValidationError(contextGateResult.warning || "Business profile required for recommendations");
+  }
 
   // Phase 0: System Truth Contract validation
   // Enforce root laws for recommendations before any persistence
