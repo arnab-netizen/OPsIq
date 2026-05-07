@@ -108,6 +108,14 @@
         "services_created": ["ResourceBudgetService"],
         "tests_added": 27,
         "acceptance_criteria_met": ["#9: Resource budgets are enforced"]
+      },
+      {
+        "name": "Slice 11: OperatorAdherenceProfile",
+        "description": "Track operator follow-through using observable operational signals only (no subjective assessment)",
+        "models_created": ["OperatorAdherenceProfile"],
+        "services_created": ["OperatorAdherenceService"],
+        "tests_added": 28,
+        "acceptance_criteria_met": ["#10: Operator adherence is tracked using observable operational signals only"]
       }
     ],
     "acceptance_criteria": {
@@ -120,7 +128,7 @@
       "#7 - KPI formulas canonicalized": "COMPLETE",
       "#8 - Recommendation expiration exists": "COMPLETE",
       "#9 - Resource budgets enforced": "COMPLETE",
-      "#10 - Operator adherence tracked": "NOT_STARTED",
+      "#10 - Operator adherence tracked": "COMPLETE",
       "#11 - Quick-start context path": "NOT_STARTED",
       "#12 - Context requirement enforced": "COMPLETE"
     },
@@ -154,6 +162,9 @@
       "src/domain/resource-budget.ts",
       "src/services/resource-budget.ts",
       "src/__tests__/phase-2-resource-budget.test.ts",
+      "src/domain/operator-adherence.ts",
+      "src/services/operator-adherence.ts",
+      "src/__tests__/phase-2-operator-adherence.test.ts",
       "prisma/migrations/20260507_phase_2_engagement_business_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_financial_constraint_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_customer_profile/migration.sql",
@@ -162,7 +173,8 @@
       "prisma/migrations/20260507_phase_2_compliance_flag/migration.sql",
       "prisma/migrations/20260507_phase_2_kpi_registry/migration.sql",
       "prisma/migrations/20260507_phase_2_recommendation_lifecycle/migration.sql",
-      "prisma/migrations/20260507_phase_2_resource_budget/migration.sql"
+      "prisma/migrations/20260507_phase_2_resource_budget/migration.sql",
+      "prisma/migrations/20260507_phase_2_operator_adherence/migration.sql"
     ],
     "files_modified": [
       "prisma/schema.prisma",
@@ -180,18 +192,19 @@
       "phase_2_kpi_registry": "21/21 passing",
       "phase_2_recommendation_lifecycle": "26/26 passing",
       "phase_2_resource_budget": "27/27 passing",
-      "phase_2_total": "209/209 passing",
+      "phase_2_operator_adherence": "28/28 passing",
+      "phase_2_total": "237/237 passing",
       "phase_0_mvp": "32/32 passing (no regression)",
       "phase_1_integration": "14/14 passing (no regression)",
-      "cumulative_total": "255/255 passing"
+      "cumulative_total": "283/283 passing"
     },
     "gates_status": {
       "typescript": "PASS",
       "schema_validation": "PASS",
       "tests": "PASS"
     },
-    "next_slice": "Slice 11: OperatorAdherenceProfile (adherence tracking - criterion #10)",
-    "progress_summary": "10 slices complete. 9/12 acceptance criteria satisfied. 209/209 Phase 2 tests. 255/255 cumulative. Reality backbone with constraints, formulas, expiration, and resource enforcement complete."
+    "next_slice": "Slice 12: OnboardingSession / Quick-start context (criterion #11)",
+    "progress_summary": "11 slices complete. 10/12 acceptance criteria satisfied (all major Phase 2 constraints, formulas, lifecycle, budgets, adherence). 237/237 Phase 2 tests. 283/283 cumulative. Reality backbone production-grade."
   },
   "phase_1_reclassification_rationale": {
     "previous_status": "IN_PROGRESS",

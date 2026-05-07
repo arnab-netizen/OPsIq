@@ -40,6 +40,7 @@ model User {
   approvedRecommendationLifecycles RecommendationLifecycle[] @relation("ApprovedRecommendations")
   rejectedRecommendationLifecycles RecommendationLifecycle[] @relation("RejectedRecommendations")
   budgetReviews                   ResourceBudget[]
+  adherenceProfiles               OperatorAdherenceProfile[]
 
   @@map("users")
 }
@@ -257,6 +258,7 @@ model Engagement {
   complianceFlags                ComplianceFlag[]
   recommendationLifecycles       RecommendationLifecycle[]  @relation("RecommendationLifecycles")
   resourceBudgets                ResourceBudget[]
+  operatorAdherenceProfiles      OperatorAdherenceProfile[]
   conditionProfiles              BusinessConditionProfile[]
   memberships                    EngagementMembership[]
   leads             LeadRecord[]
@@ -714,6 +716,40 @@ model ResourceBudget {
   @@index([resourceType])
   @@index([status])
   @@map("resource_budgets")
+}
+
+model OperatorAdherenceProfile {
+  id                      String    @id @default(uuid()) @db.Uuid
+  engagementId            String    @map("engagement_id") @db.Uuid
+  operatorId              String    @map("operator_id") @db.Uuid
+  totalRecommendations    Int       @default(0) @map("total_recommendations")
+  recommendationsAccepted Int       @default(0) @map("recommendations_accepted")
+  recommendationsActedOn  Int       @default(0) @map("recommendations_acted_on")
+  actionsStarted          Int       @default(0) @map("actions_started")
+  actionsCompleted        Int       @default(0) @map("actions_completed")
+  actionsVerified         Int       @default(0) @map("actions_verified")
+  milestonesReached       Int       @default(0) @map("milestones_reached")
+  deadlinesMet            Int       @default(0) @map("deadlines_met")
+  deadlinesMissed         Int       @default(0) @map("deadlines_missed")
+  acceptanceRate          Float?    @map("acceptance_rate")
+  completionRate          Float?    @map("completion_rate")
+  onTimeRate              Float?    @map("on_time_rate")
+  adherenceScore          Float?    @map("adherence_score")
+  adherenceStatus         String    @default("new") @map("adherence_status")
+  lastSignalAt            DateTime? @map("last_signal_at")
+  lastSignalType          String?   @map("last_signal_type")
+  reviewNotes             String?   @map("review_notes")
+  version                 Int       @default(1)
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  operator   User       @relation(fields: [operatorId], references: [id])
+
+  @@index([engagementId])
+  @@index([operatorId])
+  @@index([adherenceStatus])
+  @@map("operator_adherence_profiles")
 }
 
 // ─── Decision Determinism: Snapshot & Replay ────────────────────────────────
