@@ -36,6 +36,14 @@
         "services_created": ["EngagementBusinessProfileService", "ContextGate"],
         "tests_added": 10,
         "acceptance_criteria_met": ["#12: Recommendations require reality context or explicit low-data warning"]
+      },
+      {
+        "name": "Slice 2: Integration Wiring",
+        "description": "Wire ContextGate into recommendation.create() path - proven ACTIVE at runtime",
+        "services_modified": ["recommendation.ts"],
+        "integration_points": ["createRecommendation() loads businessProfile and evaluates ContextGate before Phase 0 contract"],
+        "tests_added": 14,
+        "acceptance_criteria_met": ["#12: Recommendations require reality context or explicit low-data warning (PROVEN ACTIVE)"]
       }
     ],
     "acceptance_criteria": {
@@ -57,11 +65,17 @@
       "src/services/engagement-business-profile.ts",
       "src/services/context-gate.ts",
       "src/__tests__/phase-2-context-gate.test.ts",
+      "src/__tests__/phase-2-context-gate-integration.test.ts",
       "prisma/migrations/20260507_phase_2_engagement_business_profile/migration.sql"
     ],
-    "files_modified": ["prisma/schema.prisma"],
+    "files_modified": [
+      "prisma/schema.prisma",
+      "src/services/recommendation.ts"
+    ],
     "tests_status": {
       "phase_2_context_gate": "10/10 passing",
+      "phase_2_context_gate_integration": "14/14 passing",
+      "phase_2_total": "24/24 passing",
       "phase_0_mvp": "32/32 passing (no regression)",
       "phase_1_integration": "14/14 passing (no regression)"
     },
@@ -70,8 +84,8 @@
       "schema_validation": "PASS",
       "tests": "PASS"
     },
-    "commit_hash": "b118568",
-    "next_slice": "Slice 2: Wire ContextGate into recommendation.create() path"
+    "commit_hash": "2b242a9",
+    "next_slice": "Slice 3: Constraint profiles (Financial, Customer, Local, Capacity, Compliance)"
   },
   "phase_1_reclassification_rationale": {
     "previous_status": "IN_PROGRESS",
