@@ -39,6 +39,7 @@ model User {
   complianceFlagVerifications     ComplianceFlag[]
   approvedRecommendationLifecycles RecommendationLifecycle[] @relation("ApprovedRecommendations")
   rejectedRecommendationLifecycles RecommendationLifecycle[] @relation("RejectedRecommendations")
+  budgetReviews                   ResourceBudget[]
 
   @@map("users")
 }
@@ -255,6 +256,7 @@ model Engagement {
   localMarketProfile             LocalMarketProfile?
   complianceFlags                ComplianceFlag[]
   recommendationLifecycles       RecommendationLifecycle[]  @relation("RecommendationLifecycles")
+  resourceBudgets                ResourceBudget[]
   conditionProfiles              BusinessConditionProfile[]
   memberships                    EngagementMembership[]
   leads             LeadRecord[]
@@ -683,6 +685,35 @@ model Action {
   @@index([recommendationId])
   @@index([assignedTo])
   @@map("actions")
+}
+
+model ResourceBudget {
+  id                String    @id @default(uuid()) @db.Uuid
+  engagementId      String    @map("engagement_id") @db.Uuid
+  resourceType      String    @map("resource_type") // "team_hours", "consultant_hours", "infrastructure_spend", "training_budget", "tooling_budget", "contingency_reserve"
+  description       String?   @map("description")
+  totalBudget       Float     @map("total_budget") // hours or dollars
+  allocatedAmount   Float     @default(0) @map("allocated_amount")
+  committedAmount   Float     @default(0) @map("committed_amount")
+  consumedAmount    Float     @default(0) @map("consumed_amount")
+  unit              String    @map("unit") // "hours", "dollars", "days"
+  warningThreshold  Float     @default(80) @map("warning_threshold") // percentage
+  status            String    @default("available") @map("status") // "available", "allocated", "committed", "exhausted"
+  isBlocking        Boolean   @default(false) @map("is_blocking") // if true, blocks recommendations when exhausted
+  notes             String?   @map("notes")
+  reviewedAt        DateTime? @map("reviewed_at")
+  reviewedBy        String?   @map("reviewed_by") @db.Uuid
+  version           Int       @default(1)
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  reviewer   User?      @relation(fields: [reviewedBy], references: [id])
+
+  @@index([engagementId])
+  @@index([resourceType])
+  @@index([status])
+  @@map("resource_budgets")
 }
 
 // ─── Decision Determinism: Snapshot & Replay ────────────────────────────────
