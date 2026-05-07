@@ -230,6 +230,38 @@ jobs:
             exit 1
           fi
 
+      # === GATE 11: CI Guard - Quarantined Tests Excluded ===
+      - name: 'Gate 11: Verify quarantined tests excluded from active scope'
+        run: |
+          echo "Verifying quarantined tests are NOT compiled..."
+
+          # Check that tsconfig.json excludes __ignored_tests__
+          if grep -q "__ignored_tests__" tsconfig.json; then
+            echo "✓ tsconfig.json excludes __ignored_tests__"
+          else
+            echo "✗ tsconfig.json does NOT exclude __ignored_tests__"
+            exit 1
+          fi
+
+          # Check that vitest.config.ts excludes __ignored_tests__
+          if grep -q "__ignored_tests__" vitest.config.ts; then
+            echo "✓ vitest.config.ts excludes __ignored_tests__"
+          else
+            echo "✗ vitest.config.ts does NOT exclude __ignored_tests__"
+            exit 1
+          fi
+
+          # Verify src/__ignored_tests__/ directory exists
+          if [ -d "src/__ignored_tests__" ]; then
+            IGNORED_COUNT=$(find src/__ignored_tests__ -name "*.test.ts" -o -name "*.test.tsx" | wc -l)
+            echo "✓ Found $IGNORED_COUNT quarantined test files in src/__ignored_tests__/"
+          else
+            echo "⚠ src/__ignored_tests__/ directory not found (optional)"
+          fi
+
+          echo "✓ Quarantined tests properly excluded from active scope"
+        continue-on-error: false
+
       # === SUMMARY ===
       - name: Report Gate Results
         if: always()
@@ -247,6 +279,7 @@ jobs:
           echo "- Gate 8: EventEmitterService Runtime Integration" >> $GITHUB_STEP_SUMMARY
           echo "- Gate 9: PARKED Systems Remain Unwired" >> $GITHUB_STEP_SUMMARY
           echo "- Gate 10: Honest Phase Classification" >> $GITHUB_STEP_SUMMARY
+          echo "- Gate 11: CI Guard - Quarantined Tests Excluded" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ job.status }}" == "success" ]; then
             echo "**Overall Status**: ✅ ALL GATES PASSED" >> $GITHUB_STEP_SUMMARY
