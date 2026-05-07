@@ -70,7 +70,7 @@ jobs:
 
       # === GATE 2: Database Migration ===
       - name: 'Gate 2: Prisma migration deploy'
-        run: npx prisma migrate deploy --skip-generate
+        run: npx prisma migrate deploy
         continue-on-error: false
 
       # === GATE 3: TypeScript Compilation ===
