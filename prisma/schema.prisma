@@ -28,10 +28,11 @@ model User {
   validatedEvidence          Evidence[]             @relation("ValidatedEvidence")
   recommendationApprovals    Recommendation[]
   recommendationsCreated     Recommendation[]       @relation("RecommendationCreator")
-  assignedActions            Action[]               @relation("AssignedActions")
-  completedActions           Action[]               @relation("CompletedActions")
-  verifiedActions            Action[]               @relation("VerifiedActions")
-  engagementBusinessProfiles EngagementBusinessProfile[]
+  assignedActions                 Action[]               @relation("AssignedActions")
+  completedActions                Action[]               @relation("CompletedActions")
+  verifiedActions                 Action[]               @relation("VerifiedActions")
+  engagementBusinessProfiles      EngagementBusinessProfile[]
+  financialConstraintAssessments  FinancialConstraintProfile[]
 
   @@map("users")
 }
@@ -236,13 +237,14 @@ model Engagement {
   createdAt             DateTime  @default(now()) @map("created_at")
   updatedAt             DateTime  @updatedAt @map("updated_at")
 
-  workspace                  Workspace                     @relation(fields: [workspaceId], references: [id])
-  client                     ClientAccount                 @relation(fields: [clientId], references: [id])
-  parent                     Engagement?                   @relation("EngagementLineage", fields: [parentEngagementId], references: [id])
-  children                   Engagement[]                  @relation("EngagementLineage")
-  engagementBusinessProfile  EngagementBusinessProfile?
-  conditionProfiles          BusinessConditionProfile[]
-  memberships                EngagementMembership[]
+  workspace                      Workspace                        @relation(fields: [workspaceId], references: [id])
+  client                         ClientAccount                    @relation(fields: [clientId], references: [id])
+  parent                         Engagement?                      @relation("EngagementLineage", fields: [parentEngagementId], references: [id])
+  children                       Engagement[]                     @relation("EngagementLineage")
+  engagementBusinessProfile      EngagementBusinessProfile?
+  financialConstraintProfile     FinancialConstraintProfile?
+  conditionProfiles              BusinessConditionProfile[]
+  memberships                    EngagementMembership[]
   leads             LeadRecord[]
   stages            Stage[]
   findings          Finding[]
@@ -328,6 +330,43 @@ model EngagementBusinessProfile {
 
   @@index([engagementId])
   @@map("engagement_business_profiles")
+}
+
+model FinancialConstraintProfile {
+  id                           String    @id @default(uuid()) @db.Uuid
+  engagementId                 String    @unique @map("engagement_id") @db.Uuid
+  monthlyBurnRate              Int?      @map("monthly_burn_rate")
+  monthlyRecurringRevenue      Int?      @map("monthly_recurring_revenue")
+  cashRunwayMonths             Int?      @map("cash_runway_months")
+  totalDebt                    Int?      @map("total_debt")
+  debtServiceMonthly           Int?      @map("debt_service_monthly")
+  debtMaturityMonths           Int?      @map("debt_maturity_months")
+  equityAvailable              Int?      @map("equity_available")
+  workingCapitalDaysOfPayables Int?      @map("working_capital_days_of_payables")
+  workingCapitalDaysOfReceivables Int?   @map("working_capital_days_of_receivables")
+  seasonalityPattern           String?   @map("seasonality_pattern")
+  restrictedCash               Int?      @map("restricted_cash")
+  contingencyReserveMonths     Int?      @map("contingency_reserve_months")
+  majorCapexNeeded             Boolean   @default(false) @map("major_capex_needed")
+  capexEstimatedAmount         Int?      @map("capex_estimated_amount")
+  capexTimelineMonths          Int?      @map("capex_timeline_months")
+  loanCovenantsPresent         Boolean   @default(false) @map("loan_covenants_present")
+  covenantDetails              String?   @map("covenant_details")
+  investorDilutionThreshold    Float?    @map("investor_dilution_threshold")
+  profitabilityTargetMonths    Int?      @map("profitability_target_months")
+  financialHealthStatus        String    @default("adequate") @map("financial_health_status") // "strong", "adequate", "strained", "critical"
+  cashFlowTiming               String    @default("monthly") @map("cash_flow_timing") // "daily", "weekly", "monthly", "quarterly"
+  assessedBy                   String?   @map("assessed_by") @db.Uuid
+  assessedAt                   DateTime? @map("assessed_at")
+  version                      Int       @default(1)
+  createdAt                    DateTime  @default(now()) @map("created_at")
+  updatedAt                    DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  assessor   User?      @relation(fields: [assessedBy], references: [id])
+
+  @@index([engagementId])
+  @@map("financial_constraint_profiles")
 }
 
 // ─── Module: Evidence, Finding, Recommendation, Action ─────────────────────
