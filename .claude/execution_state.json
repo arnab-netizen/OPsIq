@@ -472,10 +472,11 @@
     "outputs_values": false,
     "outputs_only": "Presence/absence and status"
   },
-  "phase_2_critical_service_hardening": {
+  "phase_0_support_hardening": {
+    "classification": "Phase 0 Support Work (NOT Phase 2 Official)",
     "initiated": "2026-05-07T00:50:00Z",
     "status": "COMPLETE",
-    "goal": "Apply ServiceResult<T> canonical error handling to 5 critical Phase 0 services without breaking existing implementation",
+    "goal": "Harden Phase 0 critical services with ServiceResult<T> canonical error handling without breaking existing implementation",
     "scope": [
       "Recommendation service (create, get)",
       "Action service (create, update, get)",
