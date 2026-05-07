@@ -117,6 +117,456 @@
 
 ---
 
+# NON-NEGOTIABLE COMPLETION CONTRACT
+
+## CODE EXISTS ≠ IMPLEMENTED
+
+Claude MUST NEVER classify a system as implemented merely because:
+- files exist,
+- functions exist,
+- schemas exist,
+- tables exist,
+- tests exist,
+- services compile,
+- events persist.
+
+Implementation requires:
+1. runtime wiring,
+2. active invocation,
+3. output consumption,
+4. fail-closed behavior,
+5. integration proof,
+6. production path execution.
+
+If code exists but is not actively used in runtime:
+- classify as SCAFFOLD,
+- PARKED,
+- or PARTIAL.
+
+NEVER classify as COMPLETE.
+
+---
+
+## ACTIVE Means Runtime-Wired
+
+A system is ACTIVE only when:
+
+1. The code exists.
+2. It is imported by a real runtime path.
+3. It is called by a real runtime function.
+4. It receives real runtime inputs.
+5. It produces an output consumed by another runtime path.
+6. It has fail-closed behavior.
+7. It enforces workspace/tenant scope where applicable.
+8. It emits or records audit/event evidence where required.
+9. It has integration tests proving the runtime path.
+10. The exact caller file, caller function, callee function, input, output, failure behavior, and test file are documented.
+
+If any item above is missing, the system is NOT ACTIVE.
+
+---
+
+## NO ORPHAN SERVICES
+
+Every service/engine/module created MUST have:
+
+1. at least one runtime caller,
+2. at least one integration test,
+3. at least one persistence/output effect,
+4. at least one fail-closed path,
+5. at least one audit/event proof if material.
+
+If not:
+- build MUST fail,
+- service classified ORPHANED,
+- phase cannot be COMPLETE.
+
+---
+
+## PARKED / PARTIAL / SCAFFOLD Rules
+
+Claude MUST NOT park, skip, defer, scaffold, or leave partial any required phase system unless the user explicitly approves that exact system by name.
+
+Definitions:
+
+- SCAFFOLD: code exists but is not wired.
+- PARKED: code exists but intentionally not used.
+- PARTIAL: some runtime behavior exists but not all acceptance criteria are satisfied.
+- ACTIVE: runtime-wired, tested, fail-closed, and proven.
+- COMPLETE: every required system in the phase is ACTIVE and all acceptance criteria pass.
+
+A phase with even one required SCAFFOLD, PARKED, or PARTIAL system is IN_PROGRESS, not COMPLETE.
+
+---
+
+## MANDATORY DEPENDENCY GRAPH
+
+Before implementing or completing any phase:
+
+Claude MUST map:
+
+INPUT
+→ VALIDATION
+→ DOMAIN LOGIC
+→ CONSTRAINTS
+→ EVENTS
+→ PROJECTIONS
+→ OUTPUTS
+→ AUDIT
+→ TESTS
+
+for every material runtime path.
+
+Claude MUST generate:
+
+/reports/runtime-dependency-graph.md
+
+showing:
+- caller chains,
+- service dependencies,
+- runtime flows,
+- unwired gaps,
+- dead paths,
+- orphan systems,
+- blocked integrations.
+
+No phase may be marked COMPLETE without dependency graph verification.
+
+---
+
+## NO HIDDEN FUTURE WORK
+
+Claude MUST NOT:
+- silently defer work,
+- imply future implementation,
+- leave TODOs for required systems,
+- create placeholder engines,
+- create empty runtime contracts,
+- create dead APIs,
+- create inactive event systems.
+
+All deferred work MUST be explicitly documented in:
+
+/reports/deferred-work.md
+
+Each entry MUST include:
+- exact missing behavior,
+- exact blocker,
+- affected runtime path,
+- affected phase,
+- impact severity,
+- why implementation stopped.
+
+Undocumented deferral = HARD FAILURE.
+
+---
+
+## EVENT SOURCING TRUTH RULE
+
+Persisting events alone DOES NOT qualify as event sourcing.
+
+Phase 3 requires ALL:
+
+1. canonical event persistence,
+2. replay engine,
+3. projection engine,
+4. aggregate reconstruction,
+5. snapshot support,
+6. deterministic replay,
+7. replay integration tests,
+8. projection invalidation,
+9. version-safe event handling.
+
+If any component missing:
+- classify as PARTIAL,
+- phase cannot be COMPLETE.
+
+---
+
+## PRE-FLIGHT FAILURE SCAN REQUIRED
+
+Before ANY workflow execution Claude MUST:
+
+1. run TypeScript compile,
+2. run lint,
+3. run prisma validate,
+4. run migration validation,
+5. run grep for forbidden any,
+6. run grep for TODO/FIXME/HACK,
+7. run orphan-service scan,
+8. run runtime wiring scan,
+9. run integration test existence scan,
+10. run execution_state consistency check.
+
+Claude MUST fix ALL detected failures BEFORE triggering CI.
+
+CI must validate work,
+NOT discover predictable failures.
+
+---
+
+## GREEN GATES DO NOT EQUAL COMPLETION
+
+Passing:
+- TypeScript,
+- lint,
+- tests,
+- build,
+- CI
+
+DOES NOT prove implementation completeness.
+
+A phase is COMPLETE only if:
+- all required runtime systems are ACTIVE,
+- all required integrations exist,
+- all required runtime paths are wired,
+- all required engines are operational,
+- all required proofs exist.
+
+Compilation success alone is insufficient.
+
+---
+
+## RUNTIME PATH COVERAGE REQUIREMENT
+
+For every material business action, Claude MUST verify:
+
+REQUEST
+→ VALIDATION
+→ AUTH
+→ RBAC
+→ DOMAIN LOGIC
+→ CONSTRAINTS
+→ EVENTS
+→ AUDIT
+→ PROJECTION
+→ RESPONSE
+
+If any layer skipped:
+- runtime path incomplete,
+- ACTIVE denied,
+- phase remains IN_PROGRESS.
+
+---
+
+## NO SILENT FAIL-OPEN BEHAVIOR
+
+Claude MUST reject any implementation that:
+- silently ignores parameters,
+- silently bypasses constraints,
+- silently skips events,
+- silently skips audit,
+- silently defaults unsafe values,
+- silently returns partial outputs.
+
+All unsafe or incomplete states MUST fail closed with:
+- NEED_MORE_DATA
+- CANNOT_DETERMINE
+- DANGER_DO_NOT_ACT
+- BLOCKED
+- INVALID_STATE
+
+---
+
+## PHASE EXIT CRITERIA
+
+Claude MUST define BEFORE implementation:
+
+1. required engines,
+2. required runtime paths,
+3. required persistence,
+4. required integrations,
+5. required projections,
+6. required events,
+7. required tests,
+8. required fail-closed behavior,
+9. required audit behavior,
+10. required CI proofs.
+
+If exit criteria not fully satisfied:
+phase remains IN_PROGRESS.
+
+---
+
+## PARTIAL IMPLEMENTATION REQUIRES USER APPROVAL
+
+Claude MUST NEVER:
+- stop at PARTIAL,
+- leave PARKED systems,
+- leave unwired services,
+- leave inactive engines,
+- reduce scope,
+- defer mandatory systems
+
+unless the user explicitly approves.
+
+Default behavior:
+IMPLEMENT FULLY.
+
+---
+
+## ROOT CAUSE FIRST
+
+Claude MUST:
+1. identify root cause,
+2. identify all affected systems,
+3. identify all similar failure patterns repo-wide,
+4. implement systemic fix,
+5. add prevention gates,
+6. verify no recurrence.
+
+Claude MUST NOT:
+- patch isolated files,
+- fix single occurrences only,
+- stop after symptom disappears.
+
+Every fix MUST include:
+- root cause,
+- blast radius,
+- prevention mechanism,
+- regression guard.
+
+---
+
+## ACTIVE SYSTEM REGISTRY
+
+Claude MUST maintain:
+
+/reports/active-systems.md
+
+For every engine/service/system:
+- ACTIVE/PARTIAL/PARKED/SCAFFOLD
+- runtime caller
+- runtime consumer
+- integration proof
+- audit proof
+- fail-closed proof
+- CI proof
+- phase ownership
+
+This registry is source-of-truth for completion claims.
+
+---
+
+## Unit Tests Are Not Completion Proof
+
+Unit tests prove logic only.
+
+They do NOT prove implementation completeness.
+
+Completion requires integration/runtime proof showing the system is used by the real application path.
+
+A test is valid for completion only if it proves at least one of:
+
+1. real service-to-service call,
+2. real API/request path,
+3. real database persistence,
+4. real event emission,
+5. real projection/replay/snapshot behavior,
+6. real fail-closed behavior,
+7. real tenant isolation behavior.
+
+---
+
+## Runtime Wiring Proof Format
+
+For every claimed ACTIVE system, Claude MUST provide:
+
+### Runtime Proof: <SystemName>
+
+- Status: ACTIVE
+- Caller file:
+- Caller function:
+- Callee file:
+- Callee function:
+- Runtime trigger:
+- Input source:
+- Output consumer:
+- Database table/model touched:
+- Event/audit emitted:
+- Fail-closed behavior:
+- Tenant/workspace enforcement:
+- Integration test file:
+- Test command:
+- Passing result:
+
+If this block cannot be completed, the system is not ACTIVE.
+
+---
+
+## Phase Completion Proof Format
+
+## Phase <N> Completion Proof
+
+- Phase name:
+- Required systems:
+- ACTIVE systems:
+- PARKED systems: MUST be []
+- PARTIAL systems: MUST be []
+- SCAFFOLD systems: MUST be []
+- Acceptance criteria passed:
+- Runtime wiring proofs completed:
+- Integration tests passed:
+- Tenant isolation tests passed:
+- Fail-closed tests passed:
+- Audit/event tests passed:
+- Migration/schema tests passed:
+- CI gates passed:
+- Remaining blockers: MUST be []
+- SAFE_TO_MERGE: YES/NO
+
+If PARKED, PARTIAL, SCAFFOLD, or blockers are not empty, the phase is not COMPLETE.
+
+---
+
+## AUTOMATIC MERGE BLOCKERS
+
+SAFE_TO_MERGE = NO if ANY:
+- orphan services exist,
+- runtime gaps exist,
+- PARTIAL systems exist,
+- PARKED required systems exist,
+- required projections missing,
+- required replay missing,
+- runtime proofs missing,
+- integration proofs missing,
+- fail-closed proofs missing,
+- audit proofs missing,
+- TODO/FIXME in required runtime path,
+- CI discovers preventable failures.
+
+---
+
+## False Completion Is a Blocking Failure
+
+If Claude marks a phase COMPLETE while any required system is unwired, untested, scaffolded, parked, or partial, that is a HARD FAILURE.
+
+Required correction:
+
+1. Reclassify the phase honestly.
+2. Update execution_state.json.
+3. Add missing runtime wiring.
+4. Add missing integration tests.
+5. Re-run gates.
+6. Do not proceed to the next phase until corrected.
+
+---
+
+## Merge Rule
+
+Claude MUST merge a completed phase only after:
+
+1. all required systems are ACTIVE,
+2. all completion proof blocks exist,
+3. all gates pass,
+4. CI passes,
+5. no false COMPLETE claims remain,
+6. execution_state.json matches actual repo state.
+
+Claude MUST NOT merge incomplete phases as COMPLETE.
+
+---
+
 ## IMPLEMENTATION PROOF + MERGE DISCIPLINE
 
 ### Terminology (Strict Definitions)
