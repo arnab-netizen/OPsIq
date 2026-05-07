@@ -235,6 +235,41 @@ recommendation.create(input)
 
 ---
 
+## STRICT PHASE GOVERNANCE (All Phases)
+
+**CRITICAL RULE: No PARKED/PARTIAL systems inside the current phase unless explicitly deferred by user.**
+
+### Policy
+- Claude must implement, wire, test, and runtime-prove **every required system** for the active phase
+- If any required system is missing, unwired, untested, or only unit-tested → phase status = IN_PROGRESS, **never COMPLETE**
+- "PARKED" is allowed **only when user explicitly approves** that exact system to defer to next phase
+- "PARTIAL" is not a completion status; it means "incomplete work remains"
+- "COMPLETE" means: all required systems ACTIVE, runtime-wired, integration-tested, failure-modes proven
+
+### Definition: ACTIVE (for phase completion)
+- [x] Code implemented
+- [x] Integration test exists (not unit test alone)
+- [x] Wired into production caller (recommendation.create, action.create, etc.)
+- [x] Input source verified (where does data enter?)
+- [x] Output consumer verified (where does data go?)
+- [x] Failure mode tested (what happens on error?)
+- [x] Tenant isolation proven (cross-tenant data separation)
+- [x] Caller file + function name documented
+- [x] No duplicate implementations
+- [x] No fake COMPLETE claims
+
+### Phase Status Rules
+- IN_PROGRESS: Some systems ACTIVE, some PARKED/SCAFFOLD
+- COMPLETE: All required systems ACTIVE with proof
+- SCAFFOLD: No runtime wiring, code-only, for future phases only
+
+### Enforcement
+- Every PARKED system must cite user approval (PR comment, issue) deferring that exact system
+- Every COMPLETE claim triggers hostile audit (grep runtime imports, verify test integration, check wiring)
+- False COMPLETE claim blocks merge (broken trust)
+
+---
+
 ## CI/WORKFLOW PREFLIGHT RULES (Phase 3+)
 
 **Before running any GitHub Actions workflow, Claude must execute local preflight verification:**
