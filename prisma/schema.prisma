@@ -33,6 +33,7 @@ model User {
   verifiedActions                 Action[]               @relation("VerifiedActions")
   engagementBusinessProfiles      EngagementBusinessProfile[]
   financialConstraintAssessments  FinancialConstraintProfile[]
+  customerProfileAssessments      CustomerProfile[]
 
   @@map("users")
 }
@@ -243,6 +244,7 @@ model Engagement {
   children                       Engagement[]                     @relation("EngagementLineage")
   engagementBusinessProfile      EngagementBusinessProfile?
   financialConstraintProfile     FinancialConstraintProfile?
+  customerProfile                CustomerProfile?
   conditionProfiles              BusinessConditionProfile[]
   memberships                    EngagementMembership[]
   leads             LeadRecord[]
@@ -367,6 +369,41 @@ model FinancialConstraintProfile {
 
   @@index([engagementId])
   @@map("financial_constraint_profiles")
+}
+
+model CustomerProfile {
+  id                              String    @id @default(uuid()) @db.Uuid
+  engagementId                    String    @unique @map("engagement_id") @db.Uuid
+  totalCustomers                  Int?      @map("total_customers")
+  activeCustomers                 Int?      @map("active_customers")
+  topCustomerPercentOfRevenue     Int?      @map("top_customer_percent_of_revenue")
+  top3CustomersPercentOfRevenue   Int?      @map("top_3_customers_percent_of_revenue")
+  top10CustomersPercentOfRevenue  Int?      @map("top_10_customers_percent_of_revenue")
+  customerConcentrationRisk       String    @default("medium") @map("customer_concentration_risk") // "low", "medium", "high", "critical"
+  averageCustomerLifetimeMonths   Int?      @map("average_customer_lifetime_months")
+  averageCustomerLTV              Int?      @map("average_customer_ltv")
+  customerChurnRateMonthly        Float?    @map("customer_churn_rate_monthly")
+  customerAcquisitionCostMonths   Int?      @map("customer_acquisition_cost_months")
+  customerSatisfactionScore       Int?      @map("customer_satisfaction_score")
+  npsScore                        Int?      @map("nps_score")
+  customerHealthStatus            String    @default("healthy") @map("customer_health_status") // "strong", "healthy", "at_risk", "critical"
+  highRiskCustomerCount           Int?      @map("high_risk_customer_count")
+  contractualCommitmentMonths     Int?      @map("contractual_commitment_months")
+  recurringVsOneTimePercentage    Int?      @map("recurring_vs_one_time_percentage")
+  keyCustomerDependency           Boolean   @default(false) @map("key_customer_dependency")
+  keyCustomerNames                String?   @map("key_customer_names")
+  customerSegmentationPresent     Boolean   @default(false) @map("customer_segmentation_present")
+  assessedBy                      String?   @map("assessed_by") @db.Uuid
+  assessedAt                      DateTime? @map("assessed_at")
+  version                         Int       @default(1)
+  createdAt                       DateTime  @default(now()) @map("created_at")
+  updatedAt                       DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  assessor   User?      @relation(fields: [assessedBy], references: [id])
+
+  @@index([engagementId])
+  @@map("customer_profiles")
 }
 
 // ─── Module: Evidence, Finding, Recommendation, Action ─────────────────────
