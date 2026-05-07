@@ -78,16 +78,10 @@ jobs:
         run: npx tsc --noEmit
         continue-on-error: false
 
-      # === GATE 3b: Verify __ignored_tests__ excluded ===
-      - name: 'Gate 3b: Verify __ignored_tests__ excluded from compilation'
+      # === GATE 3b: Verify __ignored_tests__ excluded from active scope ===
+      - name: 'Gate 3b: Verify __ignored_tests__ excluded from compilation scope'
         run: |
-          echo "Verifying __ignored_tests__ are properly excluded..."
-          if grep -r "src/__ignored_tests__" tsconfig.json > /dev/null && grep -r "__ignored_tests__" vitest.config.ts > /dev/null; then
-            echo "✓ __ignored_tests__ properly excluded in both tsconfig.json and vitest.config.ts"
-          else
-            echo "✗ __ignored_tests__ not properly excluded"
-            exit 1
-          fi
+          bash scripts/verify-ignored-tests-excluded.sh
         continue-on-error: false
 
       # === GATE 4: Build ===
