@@ -395,6 +395,7 @@ model Finding {
 model Recommendation {
   id                         String    @id @default(uuid()) @db.Uuid
   engagementId               String    @map("engagement_id") @db.Uuid
+  workspaceId                String    @map("workspace_id") @db.Uuid
   findingId                  String?   @map("finding_id") @db.Uuid
   title                      String
   description                String?

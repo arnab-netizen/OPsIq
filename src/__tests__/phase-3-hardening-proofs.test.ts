@@ -10,9 +10,12 @@ import { SnapshotOptimizationEngine } from "@/services/snapshot-optimization-eng
  * No claims. Only measurable, reproducible verification.
  */
 describe("HARDENING: Phase 3 Critical Properties", () => {
-  const workspaceId = "hardening-test-ws";
-  const workspaceId2 = "hardening-test-ws-2";
-  const recommendationId = "hardening-rec-1";
+  const workspaceId = "550e8400-e29b-41d4-a716-446655440001";
+  const workspaceId2 = "550e8400-e29b-41d4-a716-446655440002";
+  const recommendationId = "550e8400-e29b-41d4-a716-446655440003";
+  const engagementId = "550e8400-e29b-41d4-a716-446655440010";
+  const engagementId2 = "550e8400-e29b-41d4-a716-446655440011";
+  const userId = "550e8400-e29b-41d4-a716-446655440020";
 
   beforeAll(async () => {
     await getDbInstance();
@@ -21,26 +24,26 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
   beforeEach(async () => {
     // Setup workspaces
     await db.workspace.create({
-      data: { id: workspaceId, name: "WS1", slug: "ws1", createdBy: "test" },
+      data: { id: workspaceId, name: "WS1", slug: `ws1-${Date.now()}`, createdBy: userId },
     });
     await db.workspace.create({
-      data: { id: workspaceId2, name: "WS2", slug: "ws2", createdBy: "test" },
+      data: { id: workspaceId2, name: "WS2", slug: `ws2-${Date.now()}`, createdBy: userId },
     });
 
     // Setup engagements
     await db.engagement.create({
       data: {
-        id: "eng-1",
+        id: engagementId,
         workspaceId,
-        createdBy: "test",
+        createdBy: userId,
         name: "Engagement 1",
       },
     });
     await db.engagement.create({
       data: {
-        id: "eng-2",
+        id: engagementId2,
         workspaceId: workspaceId2,
-        createdBy: "test",
+        createdBy: userId,
         name: "Engagement 2",
       },
     });
