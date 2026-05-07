@@ -43,6 +43,8 @@ model User {
   adherenceProfiles               OperatorAdherenceProfile[]
   onboardingSessionsOperator      OnboardingSession[]
   onboardingSessionsPreparer      OnboardingSession[] @relation("OnboardingSessionPreparer")
+  businessModelReviews            BusinessModelProfile[]
+  canonicalEventsAsActor          CanonicalEvent[]
 
   @@map("users")
 }
@@ -94,10 +96,11 @@ model Workspace {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  memberships        WorkspaceMembership[]
-  idempotencyRecords IdempotencyRecord[]
-  engagements        Engagement[]
-  kpiRegistries      KPIRegistry[]
+  memberships         WorkspaceMembership[]
+  idempotencyRecords  IdempotencyRecord[]
+  engagements         Engagement[]
+  kpiRegistries       KPIRegistry[]
+  canonicalEvents     CanonicalEvent[]
 
   @@map("workspaces")
 }
@@ -861,6 +864,42 @@ model ShockEvent {
   @@index([type])
   @@index([severity])
   @@map("shock_events")
+}
+
+// ─── Phase 3: Canonical Event — Append-Only Event Store ───────────────────
+
+model CanonicalEvent {
+  id               String   @id @default(uuid()) @db.Uuid
+  workspaceId      String   @map("workspace_id") @db.Uuid // Tenant isolation
+  eventType        String   @map("event_type") // e.g., recommendation_created, action_started, etc.
+  aggregateType    String   @map("aggregate_type") // e.g., recommendation, action, evidence, etc.
+  aggregateId      String   @map("aggregate_id") @db.Uuid // ID of the entity this event describes
+  idempotencyKey   String   @map("idempotency_key") // Prevent duplicate event emission
+  eventNumber      Int      @map("event_number") // Sequence number per aggregate
+  payload          Json     // Event data (must be JSON-serializable)
+  actorId          String?  @map("actor_id") @db.Uuid // Who caused this event
+  actorType        String?  @map("actor_type") // 'user', 'system', 'ai'
+  correlationId    String?  @map("correlation_id") // Trace across related events
+  causedBy         String?  @map("caused_by") @db.Uuid // Parent event ID (causal dependency)
+  isImmutable      Boolean  @default(true) @map("is_immutable") // Append-only enforcement
+  occurredAt       DateTime @map("occurred_at") // When event actually happened
+  recordedAt       DateTime @default(now()) @map("recorded_at") // When event entered system
+  version          Int      @default(1) // Schema version
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at") // Should not change after creation
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actor     User?     @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@unique([workspaceId, aggregateId, eventNumber])
+  @@index([workspaceId])
+  @@index([workspaceId, aggregateId])
+  @@index([workspaceId, aggregateType])
+  @@index([workspaceId, eventType])
+  @@index([idempotencyKey, workspaceId])
+  @@index([correlationId])
+  @@index([occurredAt])
+  @@map("canonical_events")
 }
 
 // ─── Foundation: Audit ──────────────────────────────────────────────────────
