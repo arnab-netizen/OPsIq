@@ -306,6 +306,52 @@ grep -h ":\s*any\|as any" src/services/{event-emitter,recommendation}.ts | grep 
 
 ---
 
+## EXPECTED-FAILURE GATE RULES (Phase 3+)
+
+**Gates that test error conditions (e.g., append-only enforcement) must handle set -e correctly:**
+
+### Rule
+- Expected-failure gates: Tests that EXPECT commands to fail with specific error messages
+- GitHub Actions runs bash with `set -e` (exit on first non-zero exit code)
+- **CRITICAL**: Non-zero exit from expected-fail command will terminate workflow BEFORE assertion check
+- Solution: Use `set +e` block for expected-fail commands, capture exit code + output, then `set -e` to resume strict error handling
+- PASS criterion: exit code != 0 **AND** output contains expected error message (e.g., "append-only")
+- FAIL criterion: exit code == 0 (command unexpectedly succeeded) OR exit code != 0 but no expected error message
+
+### Pattern
+```bash
+set +e
+RESULT=$(psql -c "UPDATE table..." 2>&1)
+EXIT=$?
+set -e
+
+if [ $EXIT -ne 0 ]; then
+  if echo "$RESULT" | grep -q "expected-error-string"; then
+    echo "✓ Expected failure verified"
+  else
+    echo "✗ Failed but without expected error: $RESULT"
+    exit 1
+  fi
+else
+  echo "✗ Should have failed but succeeded"
+  exit 1
+fi
+```
+
+### Violation Examples
+- ❌ Not using `set +e`: Non-zero exit terminates script before we can assert error message
+- ❌ Checking only exit code: Fails on any error, not just the expected trigger error
+- ❌ Checking only grep output: Doesn't verify the command actually failed
+- ❌ Using `|| true` after command: Masks the failure, can't distinguish expected vs unexpected errors
+
+### Gate 7 Example (Append-Only Enforcement)
+- Test row INSERT: must succeed (exit 0)
+- Test row UPDATE: must fail (exit != 0) with "append-only" in stderr
+- Test row DELETE: must fail (exit != 0) with "append-only" in stderr
+- Both UPDATE/DELETE wrapped in `set +e...set -e` blocks
+
+---
+
 ## NEXT STEPS (FUTURE SLICES)
 1. Phase 3 Slice 3-5: Wire EventReplayEngine, ProjectionEngine, SnapshotEngine
 2. Phase 4 Slice 1: Wire FinancialHealthGate into recommendation creation
