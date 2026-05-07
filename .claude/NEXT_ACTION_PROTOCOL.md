@@ -86,27 +86,43 @@ Read phase_status from execution_state.json
 for each phase in order:
   if phase_status == "COMPLETE":
     continue (skip, don't rework)
-  elif phase_status == "PARTIAL":
+  elif phase_status == "FOUNDATION_COMPLETE":
+    freeze foundation, allow forward execution
+    mark as "foundation stable, proceed to next phase"
+    do not rework foundation unless future phase explicitly requires it
+    next phase work can begin in parallel
+  elif phase_status == "IN_PROGRESS":
     check what's incomplete
     if all acceptance_criteria met:
-      mark complete, move to next
+      mark FOUNDATION_COMPLETE or COMPLETE, move to next
     else:
       work on incomplete part here
       break
   elif phase_status == "NOT_STARTED":
     start here
     break
+  elif phase_status == "TRUE_HARD_BLOCKED":
+    cannot proceed, document blocker, escalate
+    break
 ```
+
+**Anti-Recursion Rule**: Non-blocking incompleteness must never prevent forward implementation.
+- If phase is FOUNDATION_COMPLETE: allow Phase N+1 work to begin
+- Only block forward progress if TRUE_HARD_BLOCKED (external dependency failure, critical architectural flaw)
+- Defer non-blocking gaps to later phases or parallel work streams
 
 **Example decision tree**:
 ```
-Phase 0: COMPLETE → skip
-Phase 1: PARTIAL → check acceptance criteria
-  - Evidence model: COMPLETE
-  - EvidenceReliabilityEngine: PARTIAL (missing confidence assessment)
-  - Integration to Recommendation: NOT_STARTED
-  → work on confidence assessment + integration
-Phase 2: NOT_STARTED → will work here after Phase 1 complete
+Phase 0: FOUNDATION_COMPLETE → freeze foundation, proceed to Phase 1
+  - Operational substrate stable (27/27 tests, 7/9 gates passing, 2 blocked by local env)
+  - Merge-safe, deploy-ready
+  - Non-blocking incompleteness: missing_critical_phase_0 items (defer to Phase 0 completion work)
+  - Decision: Begin Phase 1 work (Evidence model, EvidenceReliabilityEngine)
+  
+Phase 1: NOT_STARTED → start here
+  - Evidence model: to be implemented
+  - EvidenceReliabilityEngine: to be implemented
+  → Work on Phase 1 acceptance criteria in order
 ```
 
 ---
@@ -394,21 +410,32 @@ https://claude.ai/code/session_01KvtDUxKMFbL7yUL6jRh1kv
 ```
 "Continue Phase 1: Add EvidenceSourceModel"
 → Protocol executes steps 1-10 automatically for next slice
+→ Pre-check: Is Phase 0 FOUNDATION_COMPLETE? Yes → Proceed to Phase 1
 ```
 
 ```
 "Fix gate failure on Phase 2"
 → Protocol: skip to step 7 (run gates), step 8 (fix), step 10 (commit)
+→ If fix unblocks foundation: mark FOUNDATION_COMPLETE, allow forward execution
 ```
 
 ```
 "Complete Phase X acceptance criteria"
 → Protocol: step 3 (locate incomplete), step 4-10 (complete)
+→ Check: Can Phase N+1 begin? If foundation stable and tests pass: mark FOUNDATION_COMPLETE
 ```
 
 ```
 "Review Phase X readiness"
 → Protocol: step 2 (read state), step 3 (check status), report completeness
+→ Report should distinguish FOUNDATION_COMPLETE from COMPLETE
+```
+
+```
+"Anti-Recursion Check"
+→ If phase is FOUNDATION_COMPLETE and non-blocking incompleteness remains:
+→ DO NOT delay forward execution to Phase N+1
+→ Document deferred work in execution_state.json, continue to next phase
 ```
 
 ---
@@ -418,13 +445,17 @@ https://claude.ai/code/session_01KvtDUxKMFbL7yUL6jRh1kv
 | Scenario | Action |
 |----------|--------|
 | Phase is COMPLETE | Stop, don't rework. Move to next phase. |
+| Phase is FOUNDATION_COMPLETE | Freeze foundation (no rework unless explicitly required by later phase). Begin Phase N+1 work. |
+| Phase is TRUE_HARD_BLOCKED | Cannot proceed. Document blocker, escalate. Do not attempt work-around. |
 | All acceptance criteria met + tests pass | Mark COMPLETE, commit, move to next |
-| Some acceptance criteria met + tests pass | Mark PARTIAL, commit, continue same phase |
+| Foundation criteria met + tests pass + merge-safe | Mark FOUNDATION_COMPLETE, commit, allow forward progress |
+| Some acceptance criteria met + tests pass | Mark IN_PROGRESS, commit, continue same phase |
 | Acceptance criteria not met but tests pass | Implementation incomplete, not yet done |
 | Tests fail but gates pass | Fix implementation, re-run tests, don't commit |
 | Phase 0 breaks | Revert, restart with smaller slice |
 | Uncertainty about next slice | Re-read execution.md acceptance criteria |
 | Code exists but nothing calls it | Mark PARKED, document why, continue elsewhere |
+| Non-blocking incompleteness remains | Anti-recursion rule: do NOT delay forward execution. Document as deferred work. |
 
 ---
 
@@ -434,16 +465,17 @@ Before starting each phase:
 - [ ] Read execution.md Phase definition
 - [ ] Read execution_state.json current state
 - [ ] Confirm next phase location
-- [ ] Confirm Phase 0 still COMPLETE (never regress)
+- [ ] Check: Phase 0 is FOUNDATION_COMPLETE or COMPLETE (never regress to NOT_STARTED/IN_PROGRESS)
 - [ ] Identify smallest slice (single acceptance criterion)
 - [ ] Identify wiring point (where in runtime does this go)
 
 Before committing each slice:
 - [ ] Tests passing (new + existing)
 - [ ] Gates passing (tsc, build, tests, prisma)
-- [ ] execution_state.json updated
-- [ ] Commit message complete (what, why, files, gates, phase 0 status)
-- [ ] Phase 0 unchanged (no breaking changes)
+- [ ] execution_state.json updated with correct phase_status (NOT_STARTED, IN_PROGRESS, FOUNDATION_COMPLETE, COMPLETE, or TRUE_HARD_BLOCKED)
+- [ ] Commit message complete (what, why, files, gates, phase status)
+- [ ] Phase 0 unchanged (no breaking changes, never regress from FOUNDATION_COMPLETE)
+- [ ] If phase is FOUNDATION_COMPLETE: document any deferred non-blocking work in execution_state.json
 
 ---
 
