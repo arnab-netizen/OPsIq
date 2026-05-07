@@ -41,6 +41,8 @@ model User {
   rejectedRecommendationLifecycles RecommendationLifecycle[] @relation("RejectedRecommendations")
   budgetReviews                   ResourceBudget[]
   adherenceProfiles               OperatorAdherenceProfile[]
+  onboardingSessionsOperator      OnboardingSession[]
+  onboardingSessionsPreparer      OnboardingSession[] @relation("OnboardingSessionPreparer")
 
   @@map("users")
 }
@@ -256,6 +258,7 @@ model Engagement {
   capacityProfile                CapacityProfile?
   localMarketProfile             LocalMarketProfile?
   businessModelProfile           BusinessModelProfile?
+  onboardingSessions             OnboardingSession[]
   complianceFlags                ComplianceFlag[]
   recommendationLifecycles       RecommendationLifecycle[]  @relation("RecommendationLifecycles")
   resourceBudgets                ResourceBudget[]
@@ -551,6 +554,37 @@ model BusinessModelProfile {
 
   @@index([engagementId])
   @@map("business_model_profiles")
+}
+
+model OnboardingSession {
+  id                          String    @id @default(uuid()) @db.Uuid
+  engagementId                String    @map("engagement_id") @db.Uuid
+  operatorId                  String    @map("operator_id") @db.Uuid
+  contextType                 String    @map("context_type") // full_context, constraint_snapshot, kpi_summary, health_digest
+  status                      String    @default("draft") @map("status") // draft, prepared, delivered, completed, expired
+  quickStartContextSnapshot   Json      @map("quick_start_context_snapshot") // Serialized QuickStartContext
+  preparedContext             String?   @map("prepared_context") // HTML/markdown summary
+  keyRecommendationPointers   String[]  @default([]) @map("key_recommendation_pointers") // Recommendation IDs or topics
+  emergencyItems              String[]  @default([]) @map("emergency_items") // Critical issues
+  deliveredAt                 DateTime? @map("delivered_at")
+  viewedAt                    DateTime? @map("viewed_at")
+  expiresAt                   DateTime? @map("expires_at")
+  notes                       String?   @map("notes")
+  preparedBy                  String?   @map("prepared_by") @db.Uuid
+  preparedAt                  DateTime? @map("prepared_at")
+  version                     Int       @default(1)
+  createdAt                   DateTime  @default(now()) @map("created_at")
+  updatedAt                   DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  operator   User       @relation(fields: [operatorId], references: [id])
+  preparer   User?      @relation("OnboardingSessionPreparer", fields: [preparedBy], references: [id])
+
+  @@index([engagementId])
+  @@index([operatorId])
+  @@index([status])
+  @@index([expiresAt])
+  @@map("onboarding_sessions")
 }
 
 // ─── Module: Evidence, Finding, Recommendation, Action ─────────────────────
