@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from "@jest/globals";
-import { db } from "@/lib/db";
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from "@jest/globals";
+import { db, getDbInstance } from "@/lib/db";
 import { EventEmitterService } from "@/services/event-emitter";
 import { EventReplayEngine } from "@/services/event-replay-engine";
 import { ProjectionRebuildEngine } from "@/services/projection-rebuild-engine";
@@ -13,6 +13,10 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
   const workspaceId = "hardening-test-ws";
   const workspaceId2 = "hardening-test-ws-2";
   const recommendationId = "hardening-rec-1";
+
+  beforeAll(async () => {
+    await getDbInstance();
+  });
 
   beforeEach(async () => {
     // Setup workspaces
