@@ -4,7 +4,6 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError, ValidationError, PlanLimitError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
-import { triggerReEvaluation } from "@/services/re-evaluation";
 import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
@@ -14,6 +13,12 @@ import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
+
+interface TransactionClient {
+  recommendation: {
+    create: (params: { data: Record<string, unknown> }) => Promise<{ id: string }>;
+  };
+}
 
 export interface CreateRecommendationInput {
   engagementId: string;
@@ -240,7 +245,7 @@ export async function createRecommendation(
       idempotencyKey,
       "recommendation.create",
       async () => {
-        return await db.$transaction(async (tx: any) => {
+        return await db.$transaction(async (tx: TransactionClient) => {
           let derivedPriority = input.priority;
           let scoreValue: number | null = null;
           let scoreBreakdown: ScoreBreakdown | null = null;
@@ -735,7 +740,7 @@ export async function reRankRecommendationsInEngagement(
         });
         updateCount++;
       }
-    } catch (error) {
+    } catch {
       // Skip recommendations with invalid scoring metrics
       continue;
     }
@@ -828,7 +833,7 @@ export async function createRecommendationsFromInterventions(
   authContext: AuthContext,
   workspaceId: string
 ) {
-  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
+  const [, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   if (!interventions || interventions.length === 0) {
     return [];

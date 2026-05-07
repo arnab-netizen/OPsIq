@@ -2,12 +2,14 @@ import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { v4 as uuidv4 } from "uuid";
 
+export type EventPayload = Record<string, string | undefined>;
+
 export interface EmitEventRequest {
   aggregateId: string;
   aggregateType: string;
   eventType: string;
   eventVersion: number;
-  payload: Record<string, any>;
+  payload: EventPayload;
   actorId: string;
   workspaceId: string;
   causationId?: string;
@@ -24,7 +26,7 @@ export interface EmittedEvent {
   eventType: string;
   eventVersion: number;
   eventNumber: number;
-  payload: Record<string, any>;
+  payload: EventPayload;
   actorId: string;
   workspaceId: string;
   causationId: string;
@@ -82,6 +84,11 @@ export class EventEmitterService {
           aggregateId: existing.aggregateId,
         });
 
+        const payloadData = existing.payload as unknown;
+        if (!isEventPayload(payloadData)) {
+          throw new Error("Invalid payload structure in idempotent event");
+        }
+
         return {
           id: existing.id,
           aggregateId: existing.aggregateId,
@@ -89,7 +96,7 @@ export class EventEmitterService {
           eventType: existing.eventType,
           eventVersion: existing.eventVersion,
           eventNumber: existing.eventNumber,
-          payload: existing.payload as Record<string, any>,
+          payload: payloadData,
           actorId: existing.actorId,
           workspaceId: existing.workspaceId,
           causationId: existing.causationId,
@@ -145,6 +152,11 @@ export class EventEmitterService {
       workspaceId: event.workspaceId,
     });
 
+    const payloadData = event.payload as unknown;
+    if (!isEventPayload(payloadData)) {
+      throw new Error("Invalid payload structure in emitted event");
+    }
+
     return {
       id: event.id,
       aggregateId: event.aggregateId,
@@ -152,7 +164,7 @@ export class EventEmitterService {
       eventType: event.eventType,
       eventVersion: event.eventVersion,
       eventNumber: event.eventNumber,
-      payload: event.payload as Record<string, any>,
+      payload: payloadData,
       actorId: event.actorId,
       workspaceId: event.workspaceId,
       causationId: event.causationId,
@@ -182,23 +194,46 @@ export class EventEmitterService {
       orderBy: { eventNumber: "asc" },
     });
 
-    return events.map((e: typeof events[number]) => ({
-      id: e.id,
-      aggregateId: e.aggregateId,
-      aggregateType: e.aggregateType,
-      eventType: e.eventType,
-      eventVersion: e.eventVersion,
-      eventNumber: e.eventNumber,
-      payload: e.payload as Record<string, any>,
-      actorId: e.actorId,
-      workspaceId: e.workspaceId,
-      causationId: e.causationId,
-      correlationId: e.correlationId,
-      idempotencyKey: e.idempotencyKey || undefined,
-      visibilityScope: e.visibilityScope,
-      sensitivityClassification: e.sensitivityClassification,
-      occurredAt: e.occurredAt,
-      recordedAt: e.recordedAt,
-    }));
+    return events.map((e: typeof events[number]) => {
+      const payloadData = e.payload as unknown;
+      if (!isEventPayload(payloadData)) {
+        throw new Error(`Invalid payload structure in event ${e.id}`);
+      }
+
+      return {
+        id: e.id,
+        aggregateId: e.aggregateId,
+        aggregateType: e.aggregateType,
+        eventType: e.eventType,
+        eventVersion: e.eventVersion,
+        eventNumber: e.eventNumber,
+        payload: payloadData,
+        actorId: e.actorId,
+        workspaceId: e.workspaceId,
+        causationId: e.causationId,
+        correlationId: e.correlationId,
+        idempotencyKey: e.idempotencyKey || undefined,
+        visibilityScope: e.visibilityScope,
+        sensitivityClassification: e.sensitivityClassification,
+        occurredAt: e.occurredAt,
+        recordedAt: e.recordedAt,
+      };
+    });
   }
+}
+
+function isEventPayload(data: unknown): data is EventPayload {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return false;
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  for (const val of Object.values(obj)) {
+    if (val !== undefined && typeof val !== "string") {
+      return false;
+    }
+  }
+
+  return true;
 }
