@@ -60,13 +60,21 @@
         "services_created": ["CustomerProfileService"],
         "tests_added": 31,
         "acceptance_criteria_met": ["#3: Customer constraints are captured"]
+      },
+      {
+        "name": "Slice 5: LocalMarketProfile",
+        "description": "Capture geographic, competitive, and regulatory market constraints",
+        "models_created": ["LocalMarketProfile"],
+        "services_created": ["LocalMarketProfileService"],
+        "tests_added": 20,
+        "acceptance_criteria_met": ["#4: Local context is captured"]
       }
     ],
     "acceptance_criteria": {
       "#1 - Hybrid business models supported": "NOT_STARTED",
       "#2 - Financial constraints captured": "COMPLETE",
       "#3 - Customer constraints captured": "COMPLETE",
-      "#4 - Local context captured": "NOT_STARTED",
+      "#4 - Local context captured": "COMPLETE",
       "#5 - Capacity constraints captured": "NOT_STARTED",
       "#6 - Compliance flags captured": "NOT_STARTED",
       "#7 - KPI formulas canonicalized": "NOT_STARTED",
@@ -101,19 +109,20 @@
       "phase_2_context_gate_integration": "14/14 passing",
       "phase_2_financial_constraint": "27/27 passing",
       "phase_2_customer_profile": "31/31 passing",
-      "phase_2_total": "82/82 passing",
+      "phase_2_local_market": "20/20 passing",
+      "phase_2_total": "102/102 passing",
       "phase_0_mvp": "32/32 passing (no regression)",
       "phase_1_integration": "14/14 passing (no regression)",
-      "cumulative_total": "128/128 passing"
+      "cumulative_total": "148/148 passing"
     },
     "gates_status": {
       "typescript": "PASS",
       "schema_validation": "PASS",
       "tests": "PASS"
     },
-    "commit_hash": "5e4f21e",
-    "next_slice": "Slice 5: LocalMarketProfile, CapacityProfile, ComplianceFlag",
-    "progress_summary": "4 slices complete. 3/12 acceptance criteria satisfied (Financial, Customer, Context). 82/82 Phase 2 tests passing. 128/128 cumulative. Phase 2 halfway through constraint profiles."
+    "commit_hash": "eff3f8b",
+    "next_slice": "Slice 6: CapacityProfile, ComplianceFlag (remaining constraint profiles)",
+    "progress_summary": "5 slices complete. 4/12 acceptance criteria satisfied (Financial, Customer, Local, Context). 102/102 Phase 2 tests. 148/148 cumulative. Phase 2 core constraint profiles implemented."
   },
   "phase_1_reclassification_rationale": {
     "previous_status": "IN_PROGRESS",
