@@ -27,6 +27,7 @@ model User {
   submittedEvidence       Evidence[]             @relation("SubmittedEvidence")
   validatedEvidence       Evidence[]             @relation("ValidatedEvidence")
   recommendationApprovals Recommendation[]
+  createdRecommendations  Recommendation[]       @relation("RecommendationCreator")
   assignedActions         Action[]               @relation("AssignedActions")
   completedActions        Action[]               @relation("CompletedActions")
   verifiedActions         Action[]               @relation("VerifiedActions")

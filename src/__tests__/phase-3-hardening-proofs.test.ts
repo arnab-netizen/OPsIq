@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll } from "@jest/globals";
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
 import { db, getDbInstance } from "@/lib/db";
 import { EventEmitterService } from "@/services/event-emitter";
 import { EventReplayEngine } from "@/services/event-replay-engine";
