@@ -52,12 +52,20 @@
         "services_created": ["FinancialConstraintProfileService"],
         "tests_added": 27,
         "acceptance_criteria_met": ["#2: Financial constraints are captured"]
+      },
+      {
+        "name": "Slice 4: CustomerProfile",
+        "description": "Capture customer concentration, churn, satisfaction, and health constraints",
+        "models_created": ["CustomerProfile"],
+        "services_created": ["CustomerProfileService"],
+        "tests_added": 31,
+        "acceptance_criteria_met": ["#3: Customer constraints are captured"]
       }
     ],
     "acceptance_criteria": {
       "#1 - Hybrid business models supported": "NOT_STARTED",
       "#2 - Financial constraints captured": "COMPLETE",
-      "#3 - Customer constraints captured": "NOT_STARTED",
+      "#3 - Customer constraints captured": "COMPLETE",
       "#4 - Local context captured": "NOT_STARTED",
       "#5 - Capacity constraints captured": "NOT_STARTED",
       "#6 - Compliance flags captured": "NOT_STARTED",
@@ -77,8 +85,12 @@
       "src/domain/financial-constraint-profile.ts",
       "src/services/financial-constraint-profile.ts",
       "src/__tests__/phase-2-financial-constraint.test.ts",
+      "src/domain/customer-profile.ts",
+      "src/services/customer-profile.ts",
+      "src/__tests__/phase-2-customer-profile.test.ts",
       "prisma/migrations/20260507_phase_2_engagement_business_profile/migration.sql",
-      "prisma/migrations/20260507_phase_2_financial_constraint_profile/migration.sql"
+      "prisma/migrations/20260507_phase_2_financial_constraint_profile/migration.sql",
+      "prisma/migrations/20260507_phase_2_customer_profile/migration.sql"
     ],
     "files_modified": [
       "prisma/schema.prisma",
@@ -88,19 +100,20 @@
       "phase_2_context_gate": "10/10 passing",
       "phase_2_context_gate_integration": "14/14 passing",
       "phase_2_financial_constraint": "27/27 passing",
-      "phase_2_total": "51/51 passing",
+      "phase_2_customer_profile": "31/31 passing",
+      "phase_2_total": "82/82 passing",
       "phase_0_mvp": "32/32 passing (no regression)",
       "phase_1_integration": "14/14 passing (no regression)",
-      "cumulative_total": "97/97 passing"
+      "cumulative_total": "128/128 passing"
     },
     "gates_status": {
       "typescript": "PASS",
       "schema_validation": "PASS",
       "tests": "PASS"
     },
-    "commit_hash": "7cbeb23",
-    "next_slice": "Slice 4: Additional constraint profiles (Customer, Local, Capacity, Compliance)",
-    "progress_summary": "3 slices complete. 2/12 acceptance criteria satisfied. 51/51 Phase 2 tests passing. Phase ready for constraint profile consolidation."
+    "commit_hash": "5e4f21e",
+    "next_slice": "Slice 5: LocalMarketProfile, CapacityProfile, ComplianceFlag",
+    "progress_summary": "4 slices complete. 3/12 acceptance criteria satisfied (Financial, Customer, Context). 82/82 Phase 2 tests passing. 128/128 cumulative. Phase 2 halfway through constraint profiles."
   },
   "phase_1_reclassification_rationale": {
     "previous_status": "IN_PROGRESS",
