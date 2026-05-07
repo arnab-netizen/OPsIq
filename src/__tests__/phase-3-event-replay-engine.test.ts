@@ -111,8 +111,9 @@ describe("Phase 3 Slice 3 — EventReplayEngine: Aggregate State Reconstruction"
       );
 
       expect(Array.isArray(replayed.state.events)).toBe(true);
-      expect(replayed.state.events.length).toBe(1);
-      expect(replayed.state.events[0].eventType).toBe("recommendation.created");
+      const events = replayed.state.events as unknown[];
+      expect(events.length).toBe(1);
+      expect((events[0] as any).eventType).toBe("recommendation.created");
     });
   });
 
