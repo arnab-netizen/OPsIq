@@ -306,6 +306,40 @@ grep -h ":\s*any\|as any" src/services/{event-emitter,recommendation}.ts | grep 
 
 ---
 
+## TRUTH GATE RULES (Phase 3+)
+
+**Gates that verify honest classification validate correctness, not completion:**
+
+### Rule
+- Truth gates verify that system claims match reality (ACTIVE vs PARKED vs SCAFFOLD)
+- **NOT** gates that verify COMPLETE status (PARTIAL is correct/honest)
+- PASS if:
+  - Phase 3 marked PARTIAL (has both ACTIVE EventEmitterService + PARKED engines)
+  - EventEmitterService marked ACTIVE (wired + tested)
+  - Replay/Projection/Snapshot marked PARKED (code only, zero runtime)
+  - Phase 4 marked SCAFFOLD (code only, zero runtime wiring)
+  - Zero false COMPLETE claims (no "ACTIVE" for PARKED services)
+- FAIL only if:
+  - Phases falsely marked COMPLETE
+  - ACTIVE claims on PARKED-only services
+  - Classification does not match runtime reality
+
+### Distinction
+- ❌ **False claim**: "Phase 3 COMPLETE" (wrong - has PARKED systems)
+- ✅ **Honest claim**: "Phase 3 PARTIAL" (correct - has ACTIVE + PARKED)
+- ✅ **Honest claim**: "Phase 4 SCAFFOLD" (correct - zero runtime wiring)
+
+### Gate 10 Example (execution.md honesty)
+- PASS: Phase 3 marked PARTIAL ✓
+- PASS: EventEmitterService marked ACTIVE ✓
+- PASS: Replay/Projection/Snapshot marked PARKED ✓
+- PASS: Phase 4 marked SCAFFOLD ✓
+- PASS: Zero false COMPLETE claims ✓
+- FAIL example: Phase 3 marked COMPLETE (invalid - would be false claim)
+- FAIL example: EventReplayEngine incorrectly marked ACTIVE (invalid - zero runtime)
+
+---
+
 ## EXPECTED-FAILURE GATE RULES (Phase 3+)
 
 **Gates that test error conditions (e.g., append-only enforcement) must handle set -e correctly:**
