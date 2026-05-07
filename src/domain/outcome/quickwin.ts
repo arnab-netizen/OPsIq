@@ -2,6 +2,6 @@
 // This file re-exports for backward compatibility only.
 // NEW CODE: import from @/contracts
 
-export { Action, ExecutionPlanStep, QuickWinValidationInput, QuickWinValidationResult } from "@/contracts";
+export type { Action, ExecutionPlanStep, QuickWinValidationInput, QuickWinValidationResult } from "@/contracts";
 
 export const QUICK_WIN_MAX_DAYS = 7;

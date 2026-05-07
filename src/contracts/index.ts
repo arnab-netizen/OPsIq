@@ -51,8 +51,14 @@ export enum FeedbackAction {
 }
 
 export interface VarianceResult {
+  action_id: string;
   variance_pct: number;
-  variance_amount: number;
+  trigger_replan: boolean;
+  trigger_rollback: boolean;
+  trigger_halt: boolean;
+  replan_action: string; // ReplanTrigger enum: CONTINUE | REPLAN | ROLLBACK | HALT
+  reason: string;
+  is_repeated_failure: boolean;
 }
 
 export interface FeedbackLoopInput {
@@ -171,4 +177,39 @@ export interface MockResponse extends Response {
   status: number;
   statusText: string;
   headers: Headers;
+}
+
+// ─── CANONICAL ERROR TAXONOMY ────────────────────────────────────────────
+
+export enum ServiceErrorType {
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  AUTH_ERROR = "AUTH_ERROR",
+  POLICY_ERROR = "POLICY_ERROR",
+  PERSISTENCE_ERROR = "PERSISTENCE_ERROR",
+  EXTERNAL_DEPENDENCY_ERROR = "EXTERNAL_DEPENDENCY_ERROR",
+  DETERMINISM_VIOLATION = "DETERMINISM_VIOLATION",
+  UNKNOWN_ERROR = "UNKNOWN_ERROR",
+}
+
+export interface ServiceError {
+  type: ServiceErrorType;
+  message: string;
+  code?: string;
+  retryable: boolean;
+  context?: Record<string, unknown>;
+}
+
+// ─── CANONICAL SERVICE RESULT TYPE ──────────────────────────────────────
+
+export interface ServiceResult<T = unknown> {
+  ok: boolean;
+  data?: T;
+  error?: ServiceError;
+  warnings?: string[];
+  auditMetadata?: {
+    executedAt: Date;
+    idempotencyKey?: string;
+    actorId?: string;
+    workspaceId?: string;
+  };
 }

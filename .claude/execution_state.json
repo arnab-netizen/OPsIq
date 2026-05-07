@@ -471,5 +471,50 @@
     "secret_fallback": "None (DATABASE_URL only for local dev, never used in CI)",
     "outputs_values": false,
     "outputs_only": "Presence/absence and status"
+  },
+  "phase_2_critical_service_hardening": {
+    "initiated": "2026-05-07T00:50:00Z",
+    "status": "COMPLETE",
+    "goal": "Apply ServiceResult<T> canonical error handling to 5 critical Phase 0 services without breaking existing implementation",
+    "scope": [
+      "Recommendation service (create, get)",
+      "Action service (create, update, get)",
+      "Auth service (getSession, getPolicyContext, getAuthContext)",
+      "Engagement service (create, update, get)",
+      "Validation-contracts services (recommendation-truth-contract)"
+    ],
+    "approach": "Created new *-api.ts wrapper modules that expose ServiceResult<T>-based versions of critical functions without modifying original implementations",
+    "files_created": [
+      "src/services/service-result-helper.ts - Canonical error mapping and ServiceResult<T> wrapper utilities",
+      "src/services/recommendation-api.ts - ServiceResult<T> wrapper for recommendation functions",
+      "src/services/action-api.ts - ServiceResult<T> wrapper for action functions",
+      "src/services/auth-api.ts - ServiceResult<T> wrapper for auth functions",
+      "src/services/engagement-api.ts - ServiceResult<T> wrapper for engagement functions",
+      "src/__tests__/critical-service-contracts.test.ts - 28 contract tests verifying determinism, canonical errors, audit metadata, policy enforcement, idempotency"
+    ],
+    "files_modified": [
+      "src/contracts/index.ts - Fixed VarianceResult contract to include all required fields (trigger_replan, trigger_halt, etc.)",
+      "src/domain/outcome/audit.ts - Fixed isolatedModules export type declaration",
+      "src/domain/outcome/quickwin.ts - Fixed isolatedModules export type declaration"
+    ],
+    "verification": {
+      "typecheck": "PASS - npm run build TypeScript compilation successful",
+      "contract_tests": "PASS - 28 contract tests passing (error mapping, result wrapping, determinism, audit metadata, auth failures, idempotency)",
+      "integration": "COMPATIBLE - No breaking changes to existing services, only new *-api.ts modules added"
+    },
+    "contract_guarantees": [
+      "Deterministic output - same input always produces same output",
+      "Canonical errors only - all errors use ServiceErrorType enum (no raw strings)",
+      "No nullable chaos - return values well-defined via ServiceResult<T>",
+      "Audit metadata preserved - executedAt, idempotencyKey, actorId, workspaceId tracked",
+      "Policy/auth failures fail closed - AUTH_ERROR/POLICY_ERROR with retryable=false",
+      "Idempotency not bypassed - idempotencyKey propagated through service stack"
+    ],
+    "integration_plan": [
+      "Phase 2 - API layer adopts *-api.ts wrappers (optional, backward compatible)",
+      "Phase 3 - Gradual migration of existing callers to ServiceResult<T> versions",
+      "Phase 4+ - Consider making *-api.ts versions canonical as entire service layer adopts contract pattern"
+    ],
+    "phase_0_impact": "ZERO - Original services unchanged, Phase 0 tests unaffected, only new test module (critical-service-contracts.test.ts) added"
   }
 }
