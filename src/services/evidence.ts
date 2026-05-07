@@ -16,6 +16,7 @@ import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { AuthContext } from "@/lib/auth-guard";
+import { EventEmitterService } from "@/services/event-emitter";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -131,6 +132,30 @@ export async function createEvidence(
           workspaceId: validatedWorkspaceId,
         },
       });
+
+      // Emit event sourcing event (non-blocking)
+      try {
+        await EventEmitterService.emit({
+          aggregateId: evidence.id,
+          aggregateType: "evidence",
+          eventType: "evidence.submitted",
+          eventVersion: 1,
+          payload: {
+            title,
+            evidenceType,
+            severity: input.severity || "medium",
+            sourceReference: sourceReference || "",
+          },
+          actorId: userId,
+          workspaceId: validatedWorkspaceId,
+        });
+      } catch (error) {
+        logger.error("Evidence event emission failed", {
+          evidenceId: evidence.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
       return { id: evidence.id };
     }
   );
@@ -231,6 +256,28 @@ export async function updateEvidence(
   });
 
   if (statusChanged && input.status === "validated") {
+    // Emit event sourcing event for validation (non-blocking)
+    try {
+      await EventEmitterService.emit({
+        aggregateId: evidenceId,
+        aggregateType: "evidence",
+        eventType: "evidence.validated",
+        eventVersion: 1,
+        payload: {
+          previousStatus: evidence.status,
+          title: evidence.title,
+          evidenceType: evidence.evidenceType,
+        },
+        actorId: userId,
+        workspaceId: validatedWorkspaceId,
+      });
+    } catch (error) {
+      logger.error("Evidence validation event emission failed", {
+        evidenceId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.EVIDENCE_VALIDATED,
       actorId: userId,
