@@ -392,21 +392,25 @@ model Finding {
 }
 
 model Recommendation {
-  id              String    @id @default(uuid()) @db.Uuid
-  engagementId    String    @map("engagement_id") @db.Uuid
-  findingId       String?   @map("finding_id") @db.Uuid
-  title           String
-  description     String?
-  rationale       String?
-  priority        String // "low" | "medium" | "high" | "critical"
-  estimatedImpact String?   @map("estimated_impact") // "low" | "medium" | "high"
-  status          String    @default("pending") // "pending" | "approved" | "rejected" | "superseded"
-  approvedBy      String?   @map("approved_by") @db.Uuid
-  approvedAt      DateTime? @map("approved_at")
-  version         Int       @default(1)
-  visibility      String    @default("internal") // "internal" | "client_visible"
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  id                         String    @id @default(uuid()) @db.Uuid
+  engagementId               String    @map("engagement_id") @db.Uuid
+  findingId                  String?   @map("finding_id") @db.Uuid
+  title                      String
+  description                String?
+  rationale                  String?
+  priority                   String // "low" | "medium" | "high" | "critical"
+  estimatedImpact            String?   @map("estimated_impact") // "low" | "medium" | "high"
+  status                     String    @default("pending") // "pending" | "approved" | "rejected" | "superseded"
+  approvedBy                 String?   @map("approved_by") @db.Uuid
+  approvedAt                 DateTime? @map("approved_at")
+  evidenceValidationScore    Int?      @map("evidence_validation_score") // 0-100
+  reliabilityLevel           String?   @map("reliability_level") // "low" | "medium" | "high"
+  kpiHealthScore             Int?      @map("kpi_health_score") // 0-100
+  kpiRiskLevel               String?   @map("kpi_risk_level") // "low" | "medium" | "high"
+  version                    Int       @default(1)
+  visibility                 String    @default("internal") // "internal" | "client_visible"
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
 
   engagement Engagement @relation(fields: [engagementId], references: [id])
   finding    Finding?   @relation(fields: [findingId], references: [id])

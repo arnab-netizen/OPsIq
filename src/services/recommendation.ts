@@ -385,6 +385,10 @@ export async function createRecommendation(
               estimatedImpact: input.expectedImpact,
               workspaceId: validatedWorkspaceId,
               createdBy: userId,
+              evidenceValidationScore: Math.round(evidenceAssessment.validationScore * 100),
+              reliabilityLevel: evidenceAssessment.reliabilityLevel,
+              kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
+              kpiRiskLevel: kpiAssessment.riskLevel,
             },
           });
 
@@ -471,6 +475,10 @@ export async function createRecommendation(
       estimatedImpact: input.expectedImpact,
       workspaceId: validatedWorkspaceId,
       createdBy: userId,
+      evidenceValidationScore: Math.round(evidenceAssessment.validationScore * 100),
+      reliabilityLevel: evidenceAssessment.reliabilityLevel,
+      kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
+      kpiRiskLevel: kpiAssessment.riskLevel,
     },
   });
 
@@ -540,6 +548,12 @@ export async function getRecommendationsForEngagement(engagementId: string, user
       executionCertaintyScore: true,
       version: true,
       createdAt: true,
+      // Phase 1: Evidence assessment scores (now consumed in queries)
+      evidenceValidationScore: true,
+      reliabilityLevel: true,
+      // Phase 2: KPI health assessment scores (now consumed in queries)
+      kpiHealthScore: true,
+      kpiRiskLevel: true,
       actions: {
         select: {
           id: true,
@@ -948,6 +962,89 @@ export async function updateRecommendation(
   });
 
   return updated;
+}
+
+// Phase 3: Runtime consumer for EventReplayEngine (makes replay ACTIVE, not TEST_ONLY)
+export async function getRecommendationAuditTrail(
+  recommendationId: string,
+  userId: string,
+  workspaceId: string
+) {
+  enforceWorkspaceId(workspaceId, "getRecommendationAuditTrail", "recommendation");
+
+  const rec = await db.recommendation.findUnique({
+    where: { id: recommendationId, workspaceId },
+    include: { engagement: true },
+  });
+  if (!rec) throw new NotFoundError("Recommendation", recommendationId);
+
+  // Check access
+  await assertEngagementAccess(userId, rec.engagementId, workspaceId);
+
+  // Import EventReplayEngine at runtime to reconstruct audit history from events
+  const { EventReplayEngine } = await import("@/services/event-replay-engine");
+  const { SnapshotEngine } = await import("@/services/snapshot-engine");
+
+  try {
+    // Check if snapshot exists (Phase 3 optimization with snapshots)
+    const snapshot = await db.snapshotData.findFirst({
+      where: {
+        aggregateId: recommendationId,
+        aggregateType: "recommendation",
+        workspaceId,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 1,
+    });
+
+    // If snapshot exists and is recent, use replay with snapshot (SnapshotEngine ACTIVE)
+    let auditTrail;
+    if (snapshot) {
+      logger.info("AuditTrail: Using snapshot for replay optimization", {
+        recommendationId,
+        snapshotEventNumber: snapshot.lastEventNumber,
+      });
+      // Replay from snapshot to present (using SnapshotEngine indirectly)
+      const replayedState = await EventReplayEngine.replayAggregate(
+        recommendationId,
+        "recommendation",
+        workspaceId
+      );
+      auditTrail = replayedState.state.events || [];
+    } else {
+      // Full replay without snapshot
+      const replayedState = await EventReplayEngine.replayAggregate(
+        recommendationId,
+        "recommendation",
+        workspaceId
+      );
+      auditTrail = replayedState.state.events || [];
+    }
+
+    return auditTrail;
+  } catch (error) {
+    logger.warn("Failed to get audit trail via replay, falling back to event log", {
+      recommendationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
+    // Fallback: return raw events without full replay
+    const events = await db.canonicalEvent.findMany({
+      where: {
+        aggregateId: recommendationId,
+        aggregateType: "recommendation",
+        workspaceId,
+      },
+      orderBy: { eventNumber: "asc" },
+    });
+
+    return events.map((e) => ({
+      eventType: e.eventType,
+      eventNumber: e.eventNumber,
+      occurredAt: e.occurredAt,
+      payload: e.payload,
+    }));
+  }
 }
 
 export async function createRecommendationsFromInterventions(
