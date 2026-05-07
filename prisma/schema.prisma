@@ -36,6 +36,7 @@ model User {
   customerProfileAssessments      CustomerProfile[]
   capacityProfileAssessments      CapacityProfile[]
   localMarketProfileAssessments   LocalMarketProfile[]
+  complianceFlagVerifications     ComplianceFlag[]
 
   @@map("users")
 }
@@ -249,6 +250,7 @@ model Engagement {
   customerProfile                CustomerProfile?
   capacityProfile                CapacityProfile?
   localMarketProfile             LocalMarketProfile?
+  complianceFlags                ComplianceFlag[]
   conditionProfiles              BusinessConditionProfile[]
   memberships                    EngagementMembership[]
   leads             LeadRecord[]
@@ -477,6 +479,32 @@ model CustomerProfile {
 
   @@index([engagementId])
   @@map("customer_profiles")
+}
+
+model ComplianceFlag {
+  id                    String    @id @default(uuid()) @db.Uuid
+  engagementId          String    @map("engagement_id") @db.Uuid
+  complianceName        String    @map("compliance_name") // e.g., "GDPR", "SOC2", "HIPAA", "PCI-DSS"
+  description           String?   @map("description")
+  status                String    @default("unknown") @map("status") // "compliant", "non_compliant", "partial", "at_risk", "unknown"
+  severity              String    @default("medium") @map("severity") // "low", "medium", "high", "critical"
+  remediationRequired   Boolean   @default(false) @map("remediation_required")
+  remediationDeadline   DateTime? @map("remediation_deadline")
+  remedialActionsTaken  String?   @map("remedial_actions_taken")
+  verifiedBy            String?   @map("verified_by") @db.Uuid
+  lastVerifiedAt        DateTime? @map("last_verified_at")
+  impactOnOperations    String?   @map("impact_on_operations")
+  version               Int       @default(1)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  verifier   User?      @relation(fields: [verifiedBy], references: [id])
+
+  @@index([engagementId])
+  @@index([status])
+  @@index([severity])
+  @@map("compliance_flags")
 }
 
 // ─── Module: Evidence, Finding, Recommendation, Action ─────────────────────
