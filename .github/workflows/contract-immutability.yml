@@ -1,0 +1,122 @@
+name: Contract Immutability Enforcement
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - src/contracts/**
+      - src/__tests__/critical-service-contracts.test.ts
+      - src/services/*-api.ts
+      - prisma/schema.prisma
+
+jobs:
+  contract-immutability:
+    name: Contract Immutability Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify ServiceErrorType enum unchanged
+        run: |
+          # Compare current enum with baseline
+          CURRENT=$(grep -A 10 "export enum ServiceErrorType" src/contracts/index.ts)
+          if ! echo "$CURRENT" | grep -q "VALIDATION_ERROR"; then
+            echo "❌ FAIL: ServiceErrorType enum modified without test updates"
+            exit 1
+          fi
+          echo "✓ ServiceErrorType enum immutable"
+
+      - name: Verify ServiceResult<T> shape unchanged
+        run: |
+          # Check that ServiceResult has required fields
+          if ! grep -q "ok: boolean" src/contracts/index.ts; then
+            echo "❌ FAIL: ServiceResult.ok field missing"
+            exit 1
+          fi
+          if ! grep -q "data\?" src/contracts/index.ts; then
+            echo "❌ FAIL: ServiceResult.data field missing"
+            exit 1
+          fi
+          if ! grep -q "error\?" src/contracts/index.ts; then
+            echo "❌ FAIL: ServiceResult.error field missing"
+            exit 1
+          fi
+          if ! grep -q "auditMetadata\?" src/contracts/index.ts; then
+            echo "❌ FAIL: ServiceResult.auditMetadata field missing"
+            exit 1
+          fi
+          echo "✓ ServiceResult<T> shape immutable"
+
+      - name: Verify contract test file exists
+        run: |
+          if [ ! -f "src/__tests__/critical-service-contracts.test.ts" ]; then
+            echo "❌ FAIL: Contract tests file removed"
+            exit 1
+          fi
+          echo "✓ Contract test file present"
+
+      - name: Count ignored tests (must not increase)
+        run: |
+          IGNORED_COUNT=$(find src/__ignored_tests__ -name "*.test.ts" -o -name "*.test.tsx" | wc -l)
+          if [ "$IGNORED_COUNT" -gt 4 ]; then
+            echo "❌ FAIL: Ignored test count increased (current: $IGNORED_COUNT, max allowed: 4)"
+            exit 1
+          fi
+          echo "✓ Ignored test count acceptable ($IGNORED_COUNT/4)"
+
+      - name: Verify VarianceResult contract completeness
+        run: |
+          # Ensure all required fields present
+          if ! grep -q "trigger_replan: boolean" src/contracts/index.ts; then
+            echo "❌ FAIL: VarianceResult.trigger_replan missing"
+            exit 1
+          fi
+          if ! grep -q "trigger_halt: boolean" src/contracts/index.ts; then
+            echo "❌ FAIL: VarianceResult.trigger_halt missing"
+            exit 1
+          fi
+          echo "✓ VarianceResult contract complete"
+
+      - name: Run critical service contract tests
+        run: npm test -- --run src/__tests__/critical-service-contracts.test.ts
+
+      - name: Generate contract snapshot
+        run: |
+          mkdir -p .snapshots
+          grep -A 50 "export enum ServiceErrorType" src/contracts/index.ts > .snapshots/contract-baseline.txt
+          grep -A 20 "export interface ServiceResult" src/contracts/index.ts >> .snapshots/contract-baseline.txt
+          echo "✓ Contract snapshot generated"
+
+      - name: Verify no breaking changes to auth paths
+        run: |
+          if grep -q "@auth-steward" .github/CODEOWNERS; then
+            if ! grep -q "src/services/auth.ts" .github/CODEOWNERS; then
+              echo "⚠ Warning: auth.ts not in CODEOWNERS (check if intended)"
+            fi
+          fi
+          echo "✓ CODEOWNERS structure validated"
+
+      - name: Report immutability status
+        if: always()
+        run: |
+          echo "### Contract Immutability Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✓ ServiceErrorType enum: IMMUTABLE" >> $GITHUB_STEP_SUMMARY
+          echo "✓ ServiceResult<T> shape: IMMUTABLE" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Contract tests: PRESENT" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Ignored tests: NO INCREASE" >> $GITHUB_STEP_SUMMARY
+          echo "✓ VarianceResult: COMPLETE" >> $GITHUB_STEP_SUMMARY

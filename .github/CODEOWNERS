@@ -1,0 +1,22 @@
+# Phase 0 Canonical Contracts - Immutable
+src/contracts/                          @phase-0-steward
+src/__tests__/critical-service-contracts.test.ts @phase-0-steward
+
+# Authentication & Authorization - Security Critical
+src/services/auth.ts                    @auth-steward
+src/services/auth-api.ts                @auth-steward
+src/lib/auth-guard.ts                   @auth-steward
+src/lib/service-auth.ts                 @auth-steward
+src/policies/                           @auth-steward
+
+# Database & Schema - Backward Compatibility Required
+prisma/schema.prisma                    @db-steward
+prisma/migrations/                      @db-steward
+.env.example                            @db-steward
+prisma.config.ts                        @db-steward
+
+# CI & Deployment - Operational Safety
+.github/workflows/                      @ops-steward
+scripts/                                @ops-steward
+.github/CODEOWNERS                      @ops-steward
+BRANCH_PROTECTION.md                    @ops-steward
