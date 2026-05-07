@@ -34,6 +34,7 @@ model User {
   engagementBusinessProfiles      EngagementBusinessProfile[]
   financialConstraintAssessments  FinancialConstraintProfile[]
   customerProfileAssessments      CustomerProfile[]
+  capacityProfileAssessments      CapacityProfile[]
   localMarketProfileAssessments   LocalMarketProfile[]
 
   @@map("users")
@@ -246,6 +247,7 @@ model Engagement {
   engagementBusinessProfile      EngagementBusinessProfile?
   financialConstraintProfile     FinancialConstraintProfile?
   customerProfile                CustomerProfile?
+  capacityProfile                CapacityProfile?
   localMarketProfile             LocalMarketProfile?
   conditionProfiles              BusinessConditionProfile[]
   memberships                    EngagementMembership[]
@@ -371,6 +373,40 @@ model FinancialConstraintProfile {
 
   @@index([engagementId])
   @@map("financial_constraint_profiles")
+}
+
+model CapacityProfile {
+  id                            String    @id @default(uuid()) @db.Uuid
+  engagementId                  String    @unique @map("engagement_id") @db.Uuid
+  totalTeamSize                 Int?      @map("total_team_size")
+  keyPersonCount                Int?      @map("key_person_count")
+  averageExperienceYears        Float?    @map("average_experience_years")
+  turnoverRateAnnual            Float?    @map("turnover_rate_annual")
+  managerialCapacityLevel       String?   @map("managerial_capacity_level")
+  trainingCapacityLevel         String?   @map("training_capacity_level")
+  systemsAvailableCapacity      Int?      @map("systems_available_capacity")
+  infrastructureAgeYears        Int?      @map("infrastructure_age_years")
+  hardwareRefreshCycleMonths    Int?      @map("hardware_refresh_cycle_months")
+  cloudVsOnPremisePercentage    Float?    @map("cloud_vs_on_premise_percentage")
+  uptime99Count                 Int?      @map("uptime_99_count")
+  dataCenterRedundancyLevel     String?   @map("data_center_redundancy_level")
+  apiRateLimitHeadroom          Float?    @map("api_rate_limit_headroom")
+  securityComplianceGaps        Int?      @map("security_compliance_gaps")
+  capabilityGapsIdentified      Int?      @map("capability_gaps_identified")
+  projectCapacityUtilization    Float?    @map("project_capacity_utilization")
+  overallCapacityStatus         String    @default("adequate") @map("overall_capacity_status")
+  criticalCapacityBottleneck    String?   @map("critical_capacity_bottleneck")
+  assessedBy                    String?   @map("assessed_by") @db.Uuid
+  assessedAt                    DateTime? @map("assessed_at")
+  version                       Int       @default(1)
+  createdAt                     DateTime  @default(now()) @map("created_at")
+  updatedAt                     DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  assessor   User?      @relation(fields: [assessedBy], references: [id])
+
+  @@index([engagementId])
+  @@map("capacity_profiles")
 }
 
 model LocalMarketProfile {
