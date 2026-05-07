@@ -92,6 +92,14 @@
         "services_created": ["KPIRegistryService"],
         "tests_added": 21,
         "acceptance_criteria_met": ["#7: KPI formulas are canonicalized"]
+      },
+      {
+        "name": "Slice 9: RecommendationLifecycle",
+        "description": "Implement recommendation expiration policy - prevents stale recommendations from being actionable",
+        "models_created": ["RecommendationLifecycle"],
+        "services_created": ["RecommendationLifecycleService"],
+        "tests_added": 26,
+        "acceptance_criteria_met": ["#8: Recommendation expiration exists"]
       }
     ],
     "acceptance_criteria": {
@@ -102,7 +110,7 @@
       "#5 - Capacity constraints captured": "COMPLETE",
       "#6 - Compliance flags captured": "COMPLETE",
       "#7 - KPI formulas canonicalized": "COMPLETE",
-      "#8 - Recommendation expiration exists": "NOT_STARTED",
+      "#8 - Recommendation expiration exists": "COMPLETE",
       "#9 - Resource budgets enforced": "NOT_STARTED",
       "#10 - Operator adherence tracked": "NOT_STARTED",
       "#11 - Quick-start context path": "NOT_STARTED",
@@ -132,13 +140,17 @@
       "src/domain/kpi-registry.ts",
       "src/services/kpi-registry.ts",
       "src/__tests__/phase-2-kpi-registry.test.ts",
+      "src/domain/recommendation-lifecycle.ts",
+      "src/services/recommendation-lifecycle.ts",
+      "src/__tests__/phase-2-recommendation-lifecycle.test.ts",
       "prisma/migrations/20260507_phase_2_engagement_business_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_financial_constraint_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_customer_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_local_market_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_capacity_profile/migration.sql",
       "prisma/migrations/20260507_phase_2_compliance_flag/migration.sql",
-      "prisma/migrations/20260507_phase_2_kpi_registry/migration.sql"
+      "prisma/migrations/20260507_phase_2_kpi_registry/migration.sql",
+      "prisma/migrations/20260507_phase_2_recommendation_lifecycle/migration.sql"
     ],
     "files_modified": [
       "prisma/schema.prisma",
@@ -154,18 +166,19 @@
       "phase_2_capacity": "15/15 passing",
       "phase_2_compliance_flag": "18/18 passing",
       "phase_2_kpi_registry": "21/21 passing",
-      "phase_2_total": "156/156 passing",
+      "phase_2_recommendation_lifecycle": "26/26 passing",
+      "phase_2_total": "182/182 passing",
       "phase_0_mvp": "32/32 passing (no regression)",
       "phase_1_integration": "14/14 passing (no regression)",
-      "cumulative_total": "202/202 passing"
+      "cumulative_total": "228/228 passing"
     },
     "gates_status": {
       "typescript": "PASS",
       "schema_validation": "PASS",
       "tests": "PASS"
     },
-    "next_slice": "Slice 9: RecommendationLifecycle (expiration policy - criterion #8)",
-    "progress_summary": "8 slices complete. 7/12 acceptance criteria satisfied (Financial, Customer, Local, Capacity, Compliance, KPI, Context). 156/156 Phase 2 tests. 202/202 cumulative. Core constraints + canonical KPI formulas complete."
+    "next_slice": "Slice 10: ResourceBudget (resource enforcement - criterion #9)",
+    "progress_summary": "9 slices complete. 8/12 acceptance criteria satisfied (Financial, Customer, Local, Capacity, Compliance, KPI, Expiration, Context). 182/182 Phase 2 tests. 228/228 cumulative. Reality backbone functional with constraints + formulas + expiration."
   },
   "phase_1_reclassification_rationale": {
     "previous_status": "IN_PROGRESS",

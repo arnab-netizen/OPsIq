@@ -37,6 +37,8 @@ model User {
   capacityProfileAssessments      CapacityProfile[]
   localMarketProfileAssessments   LocalMarketProfile[]
   complianceFlagVerifications     ComplianceFlag[]
+  approvedRecommendationLifecycles RecommendationLifecycle[] @relation("ApprovedRecommendations")
+  rejectedRecommendationLifecycles RecommendationLifecycle[] @relation("RejectedRecommendations")
 
   @@map("users")
 }
@@ -252,6 +254,7 @@ model Engagement {
   capacityProfile                CapacityProfile?
   localMarketProfile             LocalMarketProfile?
   complianceFlags                ComplianceFlag[]
+  recommendationLifecycles       RecommendationLifecycle[]  @relation("RecommendationLifecycles")
   conditionProfiles              BusinessConditionProfile[]
   memberships                    EngagementMembership[]
   leads             LeadRecord[]
@@ -637,6 +640,7 @@ model Recommendation {
   approver   User?      @relation(fields: [approvedBy], references: [id])
   creator    User?      @relation("RecommendationCreator", fields: [createdBy], references: [id])
   actions    Action[]
+  lifecycle  RecommendationLifecycle?
 
   @@unique([findingId, title])
   @@index([engagementId])
@@ -840,6 +844,42 @@ model KPI {
 
   @@index([engagementId])
   @@map("kpis")
+}
+
+model RecommendationLifecycle {
+  id                String    @id @default(uuid()) @db.Uuid
+  recommendationId  String    @unique @map("recommendation_id") @db.Uuid
+  engagementId      String    @map("engagement_id") @db.Uuid
+  status            String    @map("status") // "pending_review", "approved", "rejected", "accepted", "in_progress", "completed", "expired", "cancelled"
+  createdAt         DateTime  @default(now()) @map("created_at")
+  expiresAt         DateTime? @map("expires_at") // When this recommendation becomes non-actionable
+  expiredAt         DateTime? @map("expired_at")
+  expiryReason      String?   @map("expiry_reason") // Why it expired
+  approvedAt        DateTime? @map("approved_at")
+  approvedBy        String?   @map("approved_by") @db.Uuid
+  rejectedAt        DateTime? @map("rejected_at")
+  rejectedBy        String?   @map("rejected_by") @db.Uuid
+  rejectionReason   String?   @map("rejection_reason")
+  acceptedAt        DateTime? @map("accepted_at")
+  acceptedBy        String?   @map("accepted_by") @db.Uuid
+  activatedAt       DateTime? @map("activated_at")
+  completedAt       DateTime? @map("completed_at")
+  completedBy       String?   @map("completed_by") @db.Uuid
+  isActive          Boolean   @default(true) @map("is_active")
+  version           Int       @default(1)
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  recommendation Recommendation @relation(fields: [recommendationId], references: [id])
+  engagement     Engagement     @relation("RecommendationLifecycles", fields: [engagementId], references: [id])
+  approver       User?          @relation("ApprovedRecommendations", fields: [approvedBy], references: [id])
+  rejector       User?          @relation("RejectedRecommendations", fields: [rejectedBy], references: [id])
+
+  @@index([recommendationId])
+  @@index([engagementId])
+  @@index([status])
+  @@index([expiresAt])
+  @@index([isActive])
+  @@map("recommendation_lifecycles")
 }
 
 model KPISnapshot {
