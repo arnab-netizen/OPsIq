@@ -255,6 +255,7 @@ model Engagement {
   customerProfile                CustomerProfile?
   capacityProfile                CapacityProfile?
   localMarketProfile             LocalMarketProfile?
+  businessModelProfile           BusinessModelProfile?
   complianceFlags                ComplianceFlag[]
   recommendationLifecycles       RecommendationLifecycle[]  @relation("RecommendationLifecycles")
   resourceBudgets                ResourceBudget[]
@@ -513,6 +514,43 @@ model ComplianceFlag {
   @@index([status])
   @@index([severity])
   @@map("compliance_flags")
+}
+
+model BusinessModelProfile {
+  id                             String    @id @default(uuid()) @db.Uuid
+  engagementId                   String    @unique @map("engagement_id") @db.Uuid
+  primaryModel                   String    @map("primary_model") // saas, marketplace, subscription, freemium, licensing, services, product_sales, hybrid, other
+  secondaryModels                String[]  @default([]) @map("secondary_models") // JSON array of secondary model types
+  description                    String?   @map("description")
+  // Revenue composition (percentages, should sum to ~100)
+  subscriptionRevenueMix         Float?    @map("subscription_revenue_mix")
+  oneTimeRevenueMix              Float?    @map("one_time_revenue_mix")
+  servicesRevenueMix             Float?    @map("services_revenue_mix")
+  otherRevenueMix                Float?    @map("other_revenue_mix")
+  // Margin composition by stream
+  subscriptionMarginMix          Float?    @map("subscription_margin_mix")
+  oneTimeMarginMix               Float?    @map("one_time_margin_mix")
+  servicesMarginMix              Float?    @map("services_margin_mix")
+  // How customers access product/service
+  deliveryModes                  String[]  @default(["self_service"]) @map("delivery_modes") // JSON array of delivery modes
+  // Ratio of recurring vs one-time revenue
+  recurringVsOneTimePercentage   Float?    @map("recurring_vs_one_time_percentage")
+  // Business model complexity (1-10)
+  operationalComplexityScore     Int       @default(5) @map("operational_complexity_score")
+  // Maturity state of the business
+  maturityState                  String    @default("SURVIVAL") @map("maturity_state") // SURVIVAL, STABILIZE, GROWTH, SCALE
+  notes                          String?   @map("notes")
+  reviewedAt                     DateTime? @map("reviewed_at")
+  reviewedBy                     String?   @map("reviewed_by") @db.Uuid
+  version                        Int       @default(1)
+  createdAt                      DateTime  @default(now()) @map("created_at")
+  updatedAt                      DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  reviewer   User?      @relation(fields: [reviewedBy], references: [id])
+
+  @@index([engagementId])
+  @@map("business_model_profiles")
 }
 
 // ─── Module: Evidence, Finding, Recommendation, Action ─────────────────────
