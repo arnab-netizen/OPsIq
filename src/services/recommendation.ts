@@ -13,6 +13,7 @@ import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
+import { listEvidence } from "@/services/evidence";
 
 interface TransactionClient {
   recommendation: {
@@ -221,6 +222,49 @@ export function mapScoreToPriority(score: number): string {
   return "low";
 }
 
+// Phase 1: Evidence evaluation
+interface EvidenceAssessment {
+  evidenceCount: number;
+  validatedCount: number;
+  rejectedCount: number;
+  validationScore: number;
+  reliabilityLevel: "low" | "medium" | "high" | "critical";
+}
+
+async function evaluateEngagementEvidence(
+  engagementId: string,
+  workspaceId: string
+): Promise<EvidenceAssessment> {
+  const evidence = await listEvidence(workspaceId, { engagementId });
+
+  const validatedCount = evidence.filter((e: Record<string, unknown>) => e.status === "validated").length;
+  const rejectedCount = evidence.filter((e: Record<string, unknown>) => e.status === "rejected").length;
+  const totalCount = evidence.length;
+
+  // Calculate validation score: validated count / total count
+  const validationScore = totalCount > 0 ? validatedCount / totalCount : 0;
+
+  // Map to reliability level
+  let reliabilityLevel: "low" | "medium" | "high" | "critical";
+  if (validationScore >= 0.8) {
+    reliabilityLevel = "critical";
+  } else if (validationScore >= 0.6) {
+    reliabilityLevel = "high";
+  } else if (validationScore >= 0.4) {
+    reliabilityLevel = "medium";
+  } else {
+    reliabilityLevel = "low";
+  }
+
+  return {
+    evidenceCount: totalCount,
+    validatedCount,
+    rejectedCount,
+    validationScore,
+    reliabilityLevel,
+  };
+}
+
 export async function createRecommendation(
   input: CreateRecommendationInput,
   authContext: AuthContext,
@@ -239,6 +283,9 @@ export async function createRecommendation(
     where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
+
+  // Phase 1: Evaluate evidence for this engagement (ACTIVE wiring)
+  const evidenceAssessment = await evaluateEngagementEvidence(input.engagementId, validatedWorkspaceId);
 
   if (idempotencyKey) {
     const result = await withIdempotency(
@@ -281,7 +328,7 @@ export async function createRecommendation(
             visibility: "internal",
           });
 
-          // Emit canonical event
+          // Emit canonical event (Phase 1 + Phase 3 integration)
           await EventEmitterService.emit({
             aggregateId: recommendation.id,
             aggregateType: "recommendation",
@@ -292,6 +339,8 @@ export async function createRecommendation(
               priority: derivedPriority,
               title: input.title,
               description: input.description,
+              evidenceValidationScore: String(evidenceAssessment.validationScore),
+              reliabilityLevel: evidenceAssessment.reliabilityLevel,
             },
             actorId: userId,
             workspaceId: validatedWorkspaceId,
