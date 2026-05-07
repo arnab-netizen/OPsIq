@@ -73,9 +73,7 @@ export class ProjectionRebuildEngine {
 
       // Step 4: Persist rebuilt projection
       await db.recommendation.create({
-        data: {
-          ...(projectionState as Parameters<typeof db.recommendation.create>[0]['data']),
-        },
+        data: projectionState as any,
       });
 
       logger.info("ProjectionRebuild: Rebuilt projection from events", {

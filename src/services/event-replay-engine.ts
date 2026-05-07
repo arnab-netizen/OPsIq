@@ -204,31 +204,6 @@ export class EventReplayEngine {
     };
   }
 
-    for (const event of events) {
-      // Apply event to state
-      EventReplayEngine.applyEvent(state, event);
-    }
-
-    const lastEvent = events[events.length - 1];
-
-    logger.info("EventReplayEngine: Aggregate replayed", {
-      aggregateId,
-      aggregateType,
-      eventCount: events.length,
-      lastEventNumber: lastEvent.eventNumber,
-    });
-
-    return {
-      aggregateId,
-      aggregateType,
-      version: events.length,
-      eventCount: events.length,
-      state,
-      lastEventNumber: lastEvent.eventNumber,
-      lastEventTimestamp: lastEvent.recordedAt,
-    };
-  }
-
   /**
    * Apply an event to aggregate state
    * Implements event sourcing fold logic
