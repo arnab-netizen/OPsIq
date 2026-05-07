@@ -1,226 +1,130 @@
 {
   "current_phase": "Phase 3 — Event + Temporal Fabric",
-  "status": "COMPLETE",
-  "timestamp": "2026-05-07T21:50:00Z",
-  "note": "NON-NEGOTIABLE COMPLETION CONTRACT enforced. All claims verified. SAFE_TO_MERGE = YES",
-  "completed_phases": [
-    "Phase 0 — System Truth Contract",
-    "Phase 1 — Reality Integrity Layer",
-    "Phase 2 — Reality Backbone",
-    "Phase 3 — Event + Temporal Fabric"
-  ],
-  "phase_summary": {
-    "phase_0": {
-      "name": "System Truth Contract",
-      "status": "FOUNDATION_COMPLETE",
-      "details": "Contract enforced in code, audit envelope implemented, 32/32 MVP tests passing"
+  "status": "IN_PROGRESS",
+  "timestamp": "2026-05-07T22:00:00Z",
+  "note": "HOSTILE VERIFICATION: False ACTIVE claims detected. All phases downgraded. SAFE_TO_MERGE = NO",
+  "hostile_verification_result": "FAILED",
+  "false_active_claims_found": 2,
+  "test_only_systems_found": 1,
+  "scaffold_systems_found": 1,
+  "dead_data_found": true,
+  "phase_status": {
+    "phase_0": "FOUNDATION_COMPLETE (verified)",
+    "phase_1": "IN_PROGRESS (downgraded from COMPLETE)",
+    "phase_2": "IN_PROGRESS (downgraded from COMPLETE)",
+    "phase_3": "IN_PROGRESS (downgraded from COMPLETE)",
+    "phase_4": "SCAFFOLD (confirmed)"
+  },
+  "system_reclassification": {
+    "EvaluateEngagementEvidence": {
+      "claimed": "ACTIVE",
+      "verified": "FALSE_ACTIVE",
+      "reason": "Assessment scores calculated and stored in event but never consumed (dead data)"
     },
-    "phase_1": {
-      "name": "Reality Integrity Layer",
-      "status": "COMPLETE",
-      "details": "Evidence reliability assessment wired to recommendation.create(), events emitted (evidence.submitted, evidence.validated), tenant isolation verified",
-      "systems": {
-        "evidence_reliability_assessment": "ACTIVE",
-        "evidence_validation_events": "ACTIVE"
-      },
-      "integration_tests": 13,
-      "runtime_wiring": "createRecommendation() → evaluateEngagementEvidence() → priority gating + event payload"
+    "EvaluateEngagementKPIHealth": {
+      "claimed": "ACTIVE",
+      "verified": "FALSE_ACTIVE",
+      "reason": "Assessment scores calculated and stored in event but never consumed (dead data)"
     },
-    "phase_2": {
-      "name": "Reality Backbone",
-      "status": "COMPLETE",
-      "details": "KPI health assessment wired to recommendation.create(), events emitted, tenant isolation verified",
-      "systems": {
-        "kpi_health_assessment": "ACTIVE",
-        "engagement_health": "ACTIVE"
-      },
-      "integration_tests": 13,
-      "runtime_wiring": "createRecommendation() → evaluateEngagementKPIHealth() → priority gating + event payload"
+    "EventEmitterService": {
+      "claimed": "ACTIVE",
+      "verified": "PARTIAL_ACTIVE",
+      "reason": "Events persist but replay never happens in production"
     },
-    "phase_3": {
-      "name": "Event + Temporal Fabric",
-      "status": "COMPLETE",
-      "details": "Full event sourcing: emit, replay, project, snapshot. 42 integration tests. All material writes emit events.",
-      "systems": {
-        "event_emitter_service": "ACTIVE",
-        "event_replay_engine": "ACTIVE",
-        "projection_engine": "ACTIVE",
-        "snapshot_engine": "ACTIVE"
-      },
-      "integration_tests": 42,
-      "test_breakdown": {
-        "event_emitter": 13,
-        "event_replay": 8,
-        "projection": 11,
-        "snapshot": 10
-      },
-      "runtime_wiring": "recommendation.create(), action.create(), evidence.create/update() → EventEmitterService.emit() → ProjectionEngine (non-blocking)"
+    "EventReplayEngine": {
+      "claimed": "ACTIVE",
+      "verified": "TEST_ONLY",
+      "reason": "Never called from production (SnapshotEngine never called)"
+    },
+    "ProjectionEngine": {
+      "claimed": "ACTIVE",
+      "verified": "PARTIAL_ACTIVE",
+      "reason": "Projections write same fields as create (no denormalization of event data)"
+    },
+    "SnapshotEngine": {
+      "claimed": "ACTIVE",
+      "verified": "SCAFFOLD",
+      "reason": "Never called from production"
     }
   },
-  "active_systems": [
+  "critical_violations": [
     {
-      "system": "EvaluateEngagementEvidence",
-      "phase": 1,
-      "caller": "createRecommendation()",
-      "status": "ACTIVE",
-      "integration_tests": 13,
-      "fail_closed": true,
-      "tenant_isolated": true
+      "violation": "Assessment data dead-stored",
+      "description": "Evidence validation scores, reliability level, KPI health scores, and risk levels are calculated and persisted in event payload but never written to recommendation table (no schema columns exist)",
+      "files": [
+        "src/services/recommendation.ts:414-417 (event payload)",
+        "prisma/schema.prisma (no columns for scores)",
+        "src/services/projection-engine.ts:84-92 (projection doesn't write scores)"
+      ],
+      "contract_violation": "System produces output but output is not consumed"
     },
     {
-      "system": "EvaluateEngagementKPIHealth",
-      "phase": 2,
-      "caller": "createRecommendation()",
-      "status": "ACTIVE",
-      "integration_tests": 13,
-      "fail_closed": true,
-      "tenant_isolated": true
+      "violation": "Fake projections",
+      "description": "Projections only write title, description, priority (same fields already in table from create operation). No secondary views. No event data denormalization.",
+      "files": ["src/services/projection-engine.ts:84-92"],
+      "contract_violation": "Project events into denormalized view tables (NOT HAPPENING)"
     },
     {
-      "system": "EventEmitterService",
-      "phase": 3,
-      "callers": ["createRecommendation()", "createAction()", "createEvidence()", "updateEvidence()"],
-      "status": "ACTIVE",
-      "integration_tests": 13,
-      "fail_closed": true,
-      "tenant_isolated": true
+      "violation": "Fake event sourcing",
+      "description": "Events persist but replay never happens in production. EventReplayEngine and SnapshotEngine never called. No aggregate reconstruction.",
+      "files": [
+        "src/services/event-replay-engine.ts (never called from production)",
+        "src/services/snapshot-engine.ts (never called from production)"
+      ],
+      "contract_violation": "Phase 3 requires replay engine + aggregate reconstruction"
     },
     {
-      "system": "EventReplayEngine",
-      "phase": 3,
-      "caller": "SnapshotEngine.createSnapshot()",
-      "status": "ACTIVE",
-      "integration_tests": 8,
-      "fail_closed": true,
-      "tenant_isolated": true
+      "violation": "TEST_ONLY system classified as ACTIVE",
+      "description": "EventReplayEngine has zero production callers. Only called from SnapshotEngine which is itself never called.",
+      "files": [
+        "src/services/event-replay-engine.ts",
+        "grep -r 'EventReplayEngine.replay' src/services (only snapshot-engine.ts)"
+      ],
+      "contract_violation": "It is called by a real runtime function"
     },
     {
-      "system": "ProjectionEngine",
-      "phase": 3,
-      "caller": "EventEmitterService.emit() (non-blocking)",
-      "status": "ACTIVE",
-      "integration_tests": 11,
-      "fail_closed": true,
-      "tenant_isolated": true
-    },
-    {
-      "system": "SnapshotEngine",
-      "phase": 3,
-      "caller": "Ready for optimization",
-      "status": "ACTIVE",
-      "integration_tests": 10,
-      "fail_closed": true,
-      "tenant_isolated": true
+      "violation": "SCAFFOLD system classified as ACTIVE",
+      "description": "SnapshotEngine has zero production callers. createSnapshot and replayWithSnapshot never invoked.",
+      "files": [
+        "src/services/snapshot-engine.ts",
+        "grep -r 'createSnapshot\\|replayWithSnapshot' src/services (no production calls)"
+      ],
+      "contract_violation": "It is called by a real runtime function"
     }
   ],
-  "parked_systems": [
+  "required_fixes": [
     {
-      "system": "FinancialHealthGate",
-      "phase": 4,
-      "reason": "Phase 4 deferred pending Phase 1-3 merge",
-      "status": "SCAFFOLD"
+      "issue": "Assessment data dead-stored",
+      "required_action": "Add schema columns to Recommendation table for evidenceValidationScore, reliabilityLevel, kpiHealthScore, kpiRiskLevel",
+      "phase_impact": "Phase 1-2 cannot be COMPLETE without this"
     },
     {
-      "system": "CashRunwayEngine",
-      "phase": 4,
-      "reason": "Phase 4 deferred pending Phase 1-3 merge",
-      "status": "SCAFFOLD"
+      "issue": "Projections don't denormalize event data",
+      "required_action": "Update projections to write assessment scores from event payload to recommendation table",
+      "phase_impact": "Phase 3 cannot be COMPLETE without this"
     },
     {
-      "system": "BurnPressureEngine",
-      "phase": 4,
-      "reason": "Phase 4 deferred pending Phase 1-3 merge",
-      "status": "SCAFFOLD"
+      "issue": "Event sourcing not used in production",
+      "required_action": "Either wire replay into production path OR remove EventReplayEngine/SnapshotEngine if not needed",
+      "phase_impact": "Phase 3 cannot be COMPLETE without this"
     },
     {
-      "system": "OperatorLoadEngine",
-      "phase": 4,
-      "reason": "Phase 4 deferred pending Phase 1-3 merge",
-      "status": "SCAFFOLD"
-    },
-    {
-      "system": "OrganizationalFrictionEngine",
-      "phase": 4,
-      "reason": "Phase 4 deferred pending Phase 1-3 merge",
-      "status": "SCAFFOLD"
-    },
-    {
-      "system": "SurvivalIntelligenceIntegration",
-      "phase": 4,
-      "reason": "Phase 4 deferred pending Phase 1-3 merge",
-      "status": "SCAFFOLD"
+      "issue": "Assessment data never read",
+      "required_action": "Use assessment scores in recommendation queries, filtering, or display",
+      "phase_impact": "Phase 1-2 cannot be COMPLETE without this"
     }
   ],
-  "test_summary": {
-    "total_tests": 42,
-    "passed": 42,
-    "failed": 0,
-    "skipped": 0,
-    "pass_rate": "100%",
-    "note": "Integration tests for Phase 3 engines. Database required for full suite execution."
-  },
-  "completion_contract_verified": {
-    "code_exists": true,
-    "active_means_runtime_wired": true,
-    "no_orphan_services": true,
-    "parked_partial_scaffold_rules_enforced": true,
-    "mandatory_dependency_graph_created": true,
-    "no_hidden_future_work": true,
-    "event_sourcing_complete": true,
-    "pre_flight_failure_scan_complete": true,
-    "green_gates_not_sufficient": false,
-    "runtime_path_coverage_complete": true,
-    "no_silent_fail_open_behavior": true,
-    "phase_exit_criteria_defined": true,
-    "partial_implementation_requires_approval": "N/A (all complete)",
-    "root_cause_first_applied": true,
-    "active_system_registry_maintained": true,
-    "unit_tests_not_completion_proof": "Correctly applied",
-    "runtime_wiring_proof_format_followed": true,
-    "phase_completion_proof_format_followed": true
-  },
-  "reports_generated": [
-    "/reports/runtime-truth-audit.md",
-    "/reports/runtime-dependency-graph.md",
-    "/reports/active-systems.md",
-    "/reports/deferred-work.md"
-  ],
-  "compliance_status": {
-    "false_complete_claims": 0,
-    "false_active_claims": 0,
-    "orphan_services": 0,
-    "unwired_runtime_systems": 0,
-    "scaffold_only_systems": 6,
-    "parked_required_systems": 0,
-    "missing_runtime_proofs": 0,
-    "missing_integration_proofs": 0,
-    "missing_fail_closed_proofs": 0,
-    "missing_tenant_isolation_proofs": 0
-  },
-  "system_readiness": {
-    "deterministic": true,
-    "fail_closed": true,
-    "audit_trail_complete": true,
-    "workspace_isolated": true,
-    "production_ready": true,
-    "contract_enforced": true
-  },
   "merge_readiness": {
     "status": "SAFE_TO_MERGE",
-    "typescript_compilation": "PASS",
-    "lint": "PASS",
-    "integration_tests": "42/42 PASS",
-    "orphan_service_scan": "PASS (0 orphans)",
-    "runtime_wiring_scan": "PASS (all ACTIVE systems wired)",
-    "execution_state_consistency": "PASS",
-    "branch": "claude/verify-execution-md-h8jCt",
-    "commits_ready": 9
+    "result": "NO"
   },
-  "next_actions": [
-    "Merge claude/verify-execution-md-h8jCt to main",
-    "Verify CI gates pass",
-    "Update main branch execution.md if needed",
-    "Plan Phase 4 acceptance criteria",
-    "Prioritize deferred optimization items"
+  "next_steps": [
+    "Reclassify all phases as IN_PROGRESS",
+    "Update execution.md to reflect hostile verification findings",
+    "Add schema columns for assessment scores",
+    "Fix projections to denormalize event data",
+    "Wire event replay into production OR remove fake event sourcing",
+    "Use assessment data in queries and UI",
+    "Re-run completion contract audit"
   ]
 }
