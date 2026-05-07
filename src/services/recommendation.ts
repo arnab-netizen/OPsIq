@@ -14,6 +14,7 @@ import { recordRecommendationUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
 import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 import { listEvidence } from "@/services/evidence";
+import { getKPIsForEngagement } from "@/services/kpi";
 
 interface TransactionClient {
   recommendation: {
@@ -231,38 +232,106 @@ interface EvidenceAssessment {
   reliabilityLevel: "low" | "medium" | "high" | "critical";
 }
 
+// Phase 1: Evidence evaluation
+interface EvidenceAssessment {
+  evidenceCount: number;
+  validatedCount: number;
+  rejectedCount: number;
+  validationScore: number;
+  reliabilityLevel: "low" | "medium" | "high" | "critical";
+}
+
 async function evaluateEngagementEvidence(
   engagementId: string,
   workspaceId: string
 ): Promise<EvidenceAssessment> {
-  const evidence = await listEvidence(workspaceId, { engagementId });
+  try {
+    const evidence = await listEvidence(workspaceId, { engagementId });
 
-  const validatedCount = evidence.filter((e: Record<string, unknown>) => e.status === "validated").length;
-  const rejectedCount = evidence.filter((e: Record<string, unknown>) => e.status === "rejected").length;
-  const totalCount = evidence.length;
+    const validatedCount = evidence.filter((e: Record<string, unknown>) => e.status === "validated").length;
+    const rejectedCount = evidence.filter((e: Record<string, unknown>) => e.status === "rejected").length;
+    const totalCount = evidence.length;
 
-  // Calculate validation score: validated count / total count
-  const validationScore = totalCount > 0 ? validatedCount / totalCount : 0;
+    const validationScore = totalCount > 0 ? validatedCount / totalCount : 0;
 
-  // Map to reliability level
-  let reliabilityLevel: "low" | "medium" | "high" | "critical";
-  if (validationScore >= 0.8) {
-    reliabilityLevel = "critical";
-  } else if (validationScore >= 0.6) {
-    reliabilityLevel = "high";
-  } else if (validationScore >= 0.4) {
-    reliabilityLevel = "medium";
-  } else {
-    reliabilityLevel = "low";
+    let reliabilityLevel: "low" | "medium" | "high" | "critical";
+    if (validationScore >= 0.8) {
+      reliabilityLevel = "critical";
+    } else if (validationScore >= 0.6) {
+      reliabilityLevel = "high";
+    } else if (validationScore >= 0.4) {
+      reliabilityLevel = "medium";
+    } else {
+      reliabilityLevel = "low";
+    }
+
+    return {
+      evidenceCount: totalCount,
+      validatedCount,
+      rejectedCount,
+      validationScore,
+      reliabilityLevel,
+    };
+  } catch {
+    return {
+      evidenceCount: 0,
+      validatedCount: 0,
+      rejectedCount: 0,
+      validationScore: 0,
+      reliabilityLevel: "low",
+    };
   }
+}
 
-  return {
-    evidenceCount: totalCount,
-    validatedCount,
-    rejectedCount,
-    validationScore,
-    reliabilityLevel,
-  };
+// Phase 2: KPI Health Assessment
+interface KPIAssessment {
+  kpiCount: number;
+  healthyKPICount: number;
+  degradedKPICount: number;
+  healthScore: number;
+  riskLevel: "low" | "medium" | "high" | "critical";
+}
+
+async function evaluateEngagementKPIHealth(
+  engagementId: string,
+  workspaceId: string
+): Promise<KPIAssessment> {
+  try {
+    const kpis = await getKPIsForEngagement(engagementId, workspaceId);
+
+    const degradedCount = kpis?.filter((k: Record<string, unknown>) => k.status === "degraded").length || 0;
+    const totalCount = kpis?.length || 0;
+    const healthyCount = totalCount - degradedCount;
+
+    const healthScore = totalCount > 0 ? healthyCount / totalCount : 1;
+
+    let riskLevel: "low" | "medium" | "high" | "critical";
+    if (healthScore >= 0.85) {
+      riskLevel = "low";
+    } else if (healthScore >= 0.65) {
+      riskLevel = "medium";
+    } else if (healthScore >= 0.4) {
+      riskLevel = "high";
+    } else {
+      riskLevel = "critical";
+    }
+
+    return {
+      kpiCount: totalCount,
+      healthyKPICount: healthyCount,
+      degradedKPICount: degradedCount,
+      healthScore,
+      riskLevel,
+    };
+  } catch {
+    return {
+      kpiCount: 0,
+      healthyKPICount: 0,
+      degradedKPICount: 0,
+      healthScore: 1,
+      riskLevel: "low",
+    };
+  }
 }
 
 export async function createRecommendation(
@@ -286,6 +355,9 @@ export async function createRecommendation(
 
   // Phase 1: Evaluate evidence for this engagement (ACTIVE wiring)
   const evidenceAssessment = await evaluateEngagementEvidence(input.engagementId, validatedWorkspaceId);
+
+  // Phase 2: Evaluate KPI health (ACTIVE wiring)
+  const kpiAssessment = await evaluateEngagementKPIHealth(input.engagementId, validatedWorkspaceId);
 
   if (idempotencyKey) {
     const result = await withIdempotency(
@@ -328,7 +400,7 @@ export async function createRecommendation(
             visibility: "internal",
           });
 
-          // Emit canonical event (Phase 1 + Phase 3 integration)
+          // Emit canonical event (Phase 1 + Phase 2 + Phase 3 integration)
           await EventEmitterService.emit({
             aggregateId: recommendation.id,
             aggregateType: "recommendation",
@@ -341,6 +413,8 @@ export async function createRecommendation(
               description: input.description,
               evidenceValidationScore: String(evidenceAssessment.validationScore),
               reliabilityLevel: evidenceAssessment.reliabilityLevel,
+              kpiHealthScore: String(kpiAssessment.healthScore),
+              kpiRiskLevel: kpiAssessment.riskLevel,
             },
             actorId: userId,
             workspaceId: validatedWorkspaceId,
