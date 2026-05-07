@@ -34,6 +34,7 @@ model User {
   engagementBusinessProfiles      EngagementBusinessProfile[]
   financialConstraintAssessments  FinancialConstraintProfile[]
   customerProfileAssessments      CustomerProfile[]
+  localMarketProfileAssessments   LocalMarketProfile[]
 
   @@map("users")
 }
@@ -245,6 +246,7 @@ model Engagement {
   engagementBusinessProfile      EngagementBusinessProfile?
   financialConstraintProfile     FinancialConstraintProfile?
   customerProfile                CustomerProfile?
+  localMarketProfile             LocalMarketProfile?
   conditionProfiles              BusinessConditionProfile[]
   memberships                    EngagementMembership[]
   leads             LeadRecord[]
@@ -369,6 +371,41 @@ model FinancialConstraintProfile {
 
   @@index([engagementId])
   @@map("financial_constraint_profiles")
+}
+
+model LocalMarketProfile {
+  id                              String    @id @default(uuid()) @db.Uuid
+  engagementId                    String    @unique @map("engagement_id") @db.Uuid
+  primaryGeography                String?   @map("primary_geography")
+  secondaryGeographies            String?   @map("secondary_geographies")
+  marketSizeMillions              Int?      @map("market_size_millions")
+  marketGrowthPercentage          Float?    @map("market_growth_percentage")
+  marketShare                     Float?    @map("market_share")
+  competitorCount                 Int?      @map("competitor_count")
+  competitiveness                 String    @default("moderate") @map("competitiveness")
+  barriersToEntry                 String?   @map("barriers_to_entry")
+  customerConcentrationGeographic Float?    @map("customer_concentration_geographic")
+  priceCompression                Boolean   @default(false) @map("price_compression")
+  priceCompressionRate            Float?    @map("price_compression_rate")
+  demandTrend                     String?   @map("demand_trend")
+  regulatoryEnvironment           String    @default("stable") @map("regulatory_environment")
+  regulatoryRisks                 String?   @map("regulatory_risks")
+  complianceBurden                String    @default("moderate") @map("compliance_burden")
+  laborMarketTightness            String?   @map("labor_market_tightness")
+  supplyChainVulnerabilities      String?   @map("supply_chain_vulnerabilities")
+  taxEnvironmentRating            Int?      @map("tax_environment_rating")
+  skillsAvailability              String?   @map("skills_availability")
+  assessedBy                      String?   @map("assessed_by") @db.Uuid
+  assessedAt                      DateTime? @map("assessed_at")
+  version                         Int       @default(1)
+  createdAt                       DateTime  @default(now()) @map("created_at")
+  updatedAt                       DateTime  @updatedAt @map("updated_at")
+
+  engagement Engagement @relation(fields: [engagementId], references: [id])
+  assessor   User?      @relation(fields: [assessedBy], references: [id])
+
+  @@index([engagementId])
+  @@map("local_market_profiles")
 }
 
 model CustomerProfile {
