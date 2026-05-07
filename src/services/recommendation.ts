@@ -527,6 +527,118 @@ export async function createRecommendation(
   return recommendation;
 }
 
+// Phase 3: Operational replay verification (not just audit)
+// Verifies recommendation state before critical operations
+export async function verifyRecommendationState(
+  recommendationId: string,
+  userId: string,
+  workspaceId: string
+): Promise<{
+  verified: boolean;
+  live: Record<string, unknown>;
+  replayed: Record<string, unknown>;
+  parityOk: boolean;
+  operationMode: "fully_trusted" | "snapshot_backed" | "uncertain";
+}> {
+  enforceWorkspaceId(workspaceId, "verifyRecommendationState", "recommendation");
+
+  // Get live state from database
+  const liveRec = await db.recommendation.findUnique({
+    where: { id: recommendationId, workspaceId },
+  });
+
+  if (!liveRec) {
+    throw new NotFoundError("Recommendation", recommendationId);
+  }
+
+  const { EventReplayEngine } = await import("@/services/event-replay-engine");
+  const { ReplayFailureHandler } = await import("@/services/replay-failure-handler");
+
+  try {
+    // Replay events to reconstruct state
+    const replayed = await EventReplayEngine.replayAggregate(
+      recommendationId,
+      "recommendation",
+      workspaceId
+    );
+
+    // Validate replay result
+    const validation = await EventReplayEngine.validateReplayResult(
+      replayed,
+      recommendationId,
+      "recommendation"
+    );
+
+    if (!validation.valid) {
+      logger.error(
+        "VerifyRecommendationState: Replay validation failed (corruption detected)",
+        {
+          recommendationId,
+          errors: validation.errors,
+        }
+      );
+      throw new Error(
+        `Replay validation failed: ${validation.errors.join("; ")}`
+      );
+    }
+
+    // Check parity: live state should match replayed state
+    const parityOk =
+      liveRec.title === (replayed.state.title as string) &&
+      liveRec.priority === (replayed.state.priority as string) &&
+      liveRec.evidenceValidationScore ===
+        (replayed.state.evidenceValidationScore as number);
+
+    if (!parityOk) {
+      logger.warn("VerifyRecommendationState: Parity mismatch detected", {
+        recommendationId,
+        liveTitle: liveRec.title,
+        replayedTitle: replayed.state.title,
+      });
+    }
+
+    const operationMode = ReplayFailureHandler.getSafeOperationMode({
+      usedSnapshot: replayed.usedSnapshot,
+      eventCount: replayed.eventCount,
+      state: replayed.state,
+    });
+
+    return {
+      verified: validation.valid,
+      live: {
+        id: liveRec.id,
+        title: liveRec.title,
+        priority: liveRec.priority,
+        evidenceValidationScore: liveRec.evidenceValidationScore,
+      },
+      replayed: {
+        title: replayed.state.title,
+        priority: replayed.state.priority,
+        evidenceValidationScore: replayed.state.evidenceValidationScore,
+      },
+      parityOk,
+      operationMode,
+    };
+  } catch (error) {
+    const replayError = error instanceof Error ? error : new Error(String(error));
+
+    ReplayFailureHandler.handleReplayFailure(
+      {
+        aggregateId: recommendationId,
+        aggregateType: "recommendation",
+        operation: "verify",
+        error: replayError,
+      },
+      {
+        allowFallback: true, // Fallback allowed for read operation
+        blockUpdateOperations: false,
+      }
+    );
+
+    throw error;
+  }
+}
+
 export async function getRecommendationsForEngagement(engagementId: string, userId: string, workspaceId: string) {
   enforceWorkspaceId(workspaceId, "getRecommendationsForEngagement", "recommendation");
 
@@ -591,6 +703,45 @@ export async function updateRecommendationStatus(
 
   // Enforce execution certainty gate for approval
   if (input.status === "approved") {
+    // Phase 3: Verify recommendation state via replay before approval (critical operation)
+    try {
+      const stateVerification = await verifyRecommendationState(
+        recommendationId,
+        userId,
+        validatedWorkspaceId
+      );
+
+      if (!stateVerification.parityOk) {
+        logger.error(
+          "UpdateRecommendationStatus: Replay parity mismatch on approval (blocking unsafe decision)",
+          {
+            recommendationId,
+            operationMode: stateVerification.operationMode,
+          }
+        );
+        throw new Error(
+          "Cannot approve recommendation: Event sourcing parity check failed. " +
+            "Replay state does not match database state. This may indicate event corruption."
+        );
+      }
+
+      logger.info(
+        "UpdateRecommendationStatus: Recommendation state verified before approval",
+        {
+          recommendationId,
+          parityOk: stateVerification.parityOk,
+          operationMode: stateVerification.operationMode,
+        }
+      );
+    } catch (error) {
+      // Replay verification failed - block approval (fail closed)
+      logger.error("UpdateRecommendationStatus: State verification failed", {
+        recommendationId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+
     try {
       const [findings, recommendations, actions] = await Promise.all([
         db.finding.findMany({
