@@ -1,8 +1,8 @@
 {
-  "phase": "Phase 0-3",
-  "mode": "STRICT_ROOT_CAUSE_REPAIR_MODE + STRUCTURAL_TEST_GOVERNANCE_REFACTOR + FINAL_GOVERNANCE_HARDENING",
-  "date": "2026-05-08T00:36:00Z",
-  "status": "COMPLETE",
+  "phase": "Phase 4 - Week 1 (Partial)",
+  "mode": "STRICT_PHASE_4_BUILD_MODE",
+  "date": "2026-05-08T01:08:00Z",
+  "status": "IN_PROGRESS",
   "verdicts": {
     "SAFE_TO_BUILD_PHASE_4": "YES",
     "SAFE_TO_DEPLOY_PROD": "NO",
@@ -11,150 +11,67 @@
     "KNOWN_ROOT_CAUSES_REMAINING": 0,
     "PHASE_0_3_FROZEN": "YES"
   },
-  "build_readiness": {
-    "status": "APPROVED",
-    "architecture_invariants": "YES",
-    "hardening_pass": "YES",
-    "known_defects": 0,
-    "timeline": "IMMEDIATE"
-  },
-  "deployment_readiness": {
-    "status": "BLOCKED",
-    "blocking_conditions": [
-      "CRITICAL_SECURITY_PASS = PARTIAL (need RBAC, Audit, Auth enforcement)",
-      "FULL_REGRESSION_PASS = PARTIAL (22 tests not verified)"
-    ],
-    "timeline": "AFTER PHASE_4_END (estimated 3-4 weeks)",
-    "unblock_path": [
-      "Phase 4 Week 1: Activate HIGH-risk security tests (3 tests)",
-      "Phase 4 Week 2-3: Activate control/decision tests",
-      "Phase 4 Week 3-4: Fix regression test isolation",
-      "Phase 4 END: Verify CRITICAL_SECURITY_PASS=YES, FULL_REGRESSION_PASS=YES"
-    ]
-  },
-  "security_assessment": {
+  "phase_4_week_1": {
     "status": "PARTIAL",
-    "verified": [
-      "Workspace isolation (via ARCHITECTURE_INVARIANTS)"
-    ],
-    "not_verified": [
-      "RBAC enforcement (blocked by rbac-enforcement.test.ts)",
-      "Audit integrity (blocked by audit-blocked-paths.test.ts)",
-      "Auth enforcement (in __ignored_tests__)",
-      "Permission boundaries (in __ignored_tests__)",
-      "DTO leakage (in __ignored_tests__)"
-    ],
-    "high_risk_tests": 3,
-    "activation_priority": "PHASE_4_WEEK_1"
-  },
-  "regression_risk": {
-    "status": "MEDIUM",
-    "reason": "11/33 active tests verified; 22 not verified; 97 dormant (intentional)",
-    "test_coverage": "33% verified, 67% not verified",
-    "risk_factors": {
-      "test_gap": "MEDIUM (fixture issues, not prod defects)",
-      "feature_interaction": "MEDIUM (mitigated by frozen architecture)",
-      "security": "HIGH (mitigated by activation plan)",
-      "data_integrity": "LOW (event sourcing proven)"
-    },
-    "mitigation": [
-      "Activate HIGH-risk tests Phase 4 Week 1",
-      "Fix regression test isolation by Phase 4 Week 3",
-      "Verify FULL_REGRESSION_PASS=YES before deployment"
-    ]
-  },
-  "root_causes": {
-    "production_defects_fixed": 10,
-    "schema_infrastructure": 1,
-    "production_bugs": 5,
-    "test_fixtures": 3,
-    "invalid_assertions": 2,
-    "remaining_known": 0,
-    "scope": "Phase 0-3 frozen infrastructure only"
-  },
-  "test_results": {
-    "architecture_invariants": {
-      "total": 11,
-      "passed": 11,
-      "failed": 0,
-      "pass_rate": "100%",
-      "status": "YES"
-    },
-    "critical_security": {
-      "verified": ["Workspace isolation"],
-      "not_verified": 5,
-      "status": "PARTIAL",
-      "blocks_deployment": true
-    },
-    "phase_hardening": {
-      "total": 11,
-      "passed": 11,
-      "failed": 0,
-      "pass_rate": "100%",
-      "properties_proven": 9,
-      "status": "YES"
-    },
-    "full_regression": {
-      "total_active": 33,
-      "verified": 11,
-      "not_verified": 22,
-      "dormant": 97,
-      "pass_rate": "PARTIAL",
-      "status": "PARTIAL"
+    "objective": "Activate critical security tests",
+    "total_critical_tests": 3,
+    "activated_passing": 2,
+    "activated_failing": 1,
+    "tests": {
+      "rbac_enforcement": {
+        "file": "src/__tests__/api/rbac-enforcement.test.ts",
+        "tests_total": 34,
+        "tests_passing": 34,
+        "tests_failing": 0,
+        "status": "ACTIVATED_PASSING",
+        "location": "moved from __ignored_tests__",
+        "verification": "✓ All tests pass in active suite"
+      },
+      "audit_blocked_paths": {
+        "file": "src/__ignored_tests__/app/api/__tests__/audit-blocked-paths.test.ts",
+        "tests_total": 17,
+        "tests_passing": 0,
+        "tests_failing": 17,
+        "status": "BLOCKED",
+        "root_cause": "Schema mismatch - test expects before/after/role/metadata fields but schema uses payload",
+        "production_fix": "audit-log.ts updated to match AuditEvent schema",
+        "remaining_work": "Test refactoring needed (~60 lines) to use payload field",
+        "estimated_effort": "MEDIUM"
+      },
+      "phase8_api_hardening": {
+        "file": "src/__tests__/api/phase8-api-hardening.test.ts",
+        "tests_total": 29,
+        "tests_passing": 29,
+        "tests_failing": 0,
+        "status": "ACTIVATED_PASSING",
+        "location": "moved from __ignored_tests__",
+        "verification": "✓ All tests pass in active suite",
+        "fix_applied": "Added getDbInstance to mock definition"
+      }
     }
   },
-  "frozen_properties": [
-    "Event sourcing from CanonicalEvent only",
-    "Projection parity (replayed == live)",
-    "Fail-closed snapshot validation",
-    "Deterministic replay",
-    "Idempotent deduplication",
-    "Event ordering enforcement",
-    "Tenant isolation",
-    "Projection rebuild from events",
-    "Approval fail-closed"
+  "production_bugs_fixed_this_session": {
+    "audit_log_service": {
+      "issue": "Using wrong field names (actorId, role, before, after, metadata) not matching schema",
+      "fix": "Updated to use payload field and correct schema fields",
+      "file": "src/services/audit/audit-log.ts",
+      "changes": [
+        "Changed interface params to match AuditEvent schema",
+        "Updated create call to use correct field mapping",
+        "Added return type Promise<string> returning event ID"
+      ]
+    }
+  },
+  "gates": {
+    "typecheck": "PASS (with phase4 config)",
+    "build": "PENDING",
+    "hardening_proofs": "PASS (11/11)",
+    "critical_security": "PARTIAL (2/3 tests passing)"
+  },
+  "blockers": [
+    "audit-blocked-paths.test.ts requires test refactoring to use payload field structure"
   ],
-  "files_modified": [
-    "prisma/schema.prisma",
-    "src/services/event-replay-engine.ts",
-    "src/services/projection-engine.ts",
-    "src/services/projection-rebuild-engine.ts",
-    "src/__tests__/phase-3-hardening-proofs.test.ts",
-    "src/services/validation-contracts/recommendation-truth-contract.ts"
-  ],
-  "reports_generated": [
-    "/reports/root-cause-repair-log.md",
-    "/reports/test-failure-truth-map.md",
-    "/reports/phase-0-3-freeze-certificate-final.md",
-    "/reports/test-governance-matrix.md",
-    "/reports/freeze-dependency-graph.md",
-    "/reports/deployment-readiness-contract.md",
-    "/reports/ignored-test-governance.md",
-    "src/__ignored_tests__/README.md",
-    "execution.md",
-    ".claude/execution_state.json"
-  ],
-  "phase_4_activation": {
-    "week_1": [
-      "Activate rbac-enforcement.test.ts (HIGH risk)",
-      "Activate audit-blocked-paths.test.ts (HIGH risk)",
-      "Fix RBAC infrastructure",
-      "Fix audit event infrastructure"
-    ],
-    "week_2_3": [
-      "Activate control tests (5 tests)",
-      "Activate decision/evidence tests",
-      "Verify CRITICAL_SECURITY_PASS=PARTIAL"
-    ],
-    "week_3_4": [
-      "Activate API endpoint tests (feature-by-feature)",
-      "Fix test isolation in regression suite",
-      "Target FULL_REGRESSION_PASS>95%"
-    ],
-    "phase_end": [
-      "CRITICAL_SECURITY_PASS=YES",
-      "FULL_REGRESSION_PASS=YES",
-      "SAFE_TO_DEPLOY_PROD=YES"
-    ]
-  }
+  "next_slice": "PHASE_4_WEEK_1_CONTINUED: Complete audit-blocked-paths.test.ts refactoring",
+  "safe_to_deploy_prod": "NO",
+  "notes": "PHASE_4_WEEK_1 partially complete. 2/3 critical security tests activated and passing. Audit test blocked by test refactoring need (production code fix already applied). Ready to proceed with audit test fix or Week 2 control/decision tests after approval."
 }
