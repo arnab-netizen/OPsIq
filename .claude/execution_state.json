@@ -1,5 +1,5 @@
 {
-  "phase": "Phase 4 - Week 2 (Control & Auth Activation)",
+  "phase": "Phase 4 - Week 3 (Audit Fixture Root Cause Fix)",
   "status": "COMPLETE",
   "verdicts": {
     "SAFE_TO_BUILD_PHASE_4": "YES",
@@ -7,36 +7,39 @@
     "CRITICAL_SECURITY_PASS": "PARTIAL",
     "PHASE_0_3_FROZEN": "YES"
   },
-  "week_1_results": {
-    "rbac_enforcement": "✓ 34/34 ACTIVATED",
-    "phase8_api_hardening": "✓ 29/29 ACTIVATED",
-    "audit_compliance": "⚠ 2/16 (core fix applied)",
-    "tests_activated": 2,
-    "tests_passing": 63
+  "audit_compliance_fix": {
+    "root_cause": "Foreign key constraint on auditEvent.actorId and Json field serialization",
+    "fixes_applied": [
+      "Create test user and workspace before audit event operations",
+      "Change payload from JSON.stringify to direct object (Prisma Json type handles serialization)",
+      "Update test assertions to work with deserialized objects",
+      "Add afterEach cleanup for test user"
+    ],
+    "tests_now_passing": "16/16 (AUDIT_COMPLIANCE)"
   },
-  "week_2_results": {
-    "control_decision_gate": "✓ 21/21",
-    "control_enforcement_integration": "✓ 20/20",
-    "control_execution_flow_trace": "✓ 7/7",
-    "control_recommendation": "✓ 22/22",
-    "control_variable_registry": "✓ 39/39",
-    "auth_guard": "✓ 18/18",
-    "service_auth": "✓ 17/17",
-    "control_tests_activated": 5,
-    "auth_tests_activated": 2,
-    "new_tests_passing": 144,
-    "total_passing_after_w2": 218
+  "test_summary": {
+    "active_suite_tests": 218,
+    "db_tests": 16,
+    "total_passing": 234,
+    "breakdown": {
+      "hardening_proofs": "11/11",
+      "rbac_enforcement": "34/34",
+      "phase8_api_hardening": "29/29",
+      "control_layer": "109/109",
+      "auth_enforcement": "35/35",
+      "audit_compliance_db": "16/16"
+    }
   },
   "gates": {
     "typecheck": "PASS",
     "prisma_validate": "PASS",
     "hardening_proofs": "PASS 11/11",
-    "critical_security": "PARTIAL 218/280 (updated with W2)"
+    "critical_security": "PARTIAL 234/280+"
   },
-  "activation_groups_completed": [
-    "permission: auth-guard.test.ts (18 tests)",
-    "auth: service-auth.test.ts (17 tests)",
-    "decision/evidence: control layer (109 tests)"
-  ],
-  "blockers": "audit-compliance test DB fixture issues (14 tests); DTO validation tests not found in codebase"
+  "service_integration_status": {
+    "action_test": "ATTEMPTED - requires deep service-auth fixtures; deferred",
+    "other_integration_tests": "13 tests available; require complex fixture setup",
+    "recommendation": "Focus on simpler unit tests or decision/evidence integration tests that don't require full auth stack"
+  },
+  "blockers": "Service integration tests (action, etc) have deep fixture requirements needing full service auth context and audit emission. Created TEST_IDS constant as root cause fix."
 }

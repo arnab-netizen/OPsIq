@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { createAction, updateActionStatus } from "./action";
+import { createAction, updateActionStatus } from "@/services/action";
 import { ValidationError, ConflictError } from "@/infra/errors";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
