@@ -36,16 +36,48 @@ vi.mock("@/services/auth/server-role", () => ({
 
 describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
   const testWorkspaceId = randomUUID();
-  const testUserId = randomUUID();
+  let testUserId: string;
 
   beforeEach(async () => {
-    // Clean up any previous test data (skip cleanup to avoid workspace FK issues)
+    // Create test workspace
+    try {
+      await db.workspace.create({
+        data: {
+          id: testWorkspaceId,
+          name: "Test Workspace",
+          slug: `test-${Date.now()}`,
+        },
+      });
+    } catch {
+      // Workspace may already exist
+    }
+
+    // Create test user for FK constraint
+    const testUser = await db.user.create({
+      data: {
+        email: `test-user-${randomUUID()}@example.com`,
+        name: "Test User",
+        isActive: true,
+      },
+    });
+    testUserId = testUser.id;
+
+    // Clean up any previous test audit events
     try {
       await db.auditEvent.deleteMany({
         where: { workspaceId: testWorkspaceId },
       });
     } catch {
-      // Workspace may not exist yet, that's OK
+      // No events yet, that's OK
+    }
+  });
+
+  afterEach(async () => {
+    // Clean up test user
+    try {
+      await db.user.delete({ where: { id: testUserId } });
+    } catch {
+      // User may not exist
     }
   });
 
@@ -103,9 +135,7 @@ describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
 
       expect(events.length).toBeGreaterThan(0);
       const event = events[0];
-      const storedPayload = event.payload
-        ? JSON.parse(event.payload as string)
-        : null;
+      const storedPayload = event.payload;
       expect(storedPayload.decision_id).toBe("dec-123");
       expect(storedPayload.stage).toBe("approval");
     });
@@ -176,7 +206,7 @@ describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
 
       expect(events.length).toBeGreaterThan(0);
       const event = events[0];
-      const stored = JSON.parse(event.payload as string);
+      const stored = event.payload;
       expect(stored.violation_type).toBe("missing_dependency");
       expect(stored.severity).toBe("critical");
     });
@@ -206,7 +236,7 @@ describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
       });
 
       expect(events.length).toBeGreaterThan(0);
-      const stored = JSON.parse(events[0].payload as string);
+      const stored = events[0].payload;
       expect(stored.current_confidence).toBe(0.45);
       expect(stored.required_confidence).toBe(0.7);
     });
@@ -237,7 +267,7 @@ describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
       });
 
       expect(events.length).toBeGreaterThan(0);
-      const stored = JSON.parse(events[0].payload as string);
+      const stored = events[0].payload;
       expect(stored.violated_rules).toContain("max_investment_limit");
       expect(stored.investment_amount).toBe(500000);
     });
@@ -266,7 +296,7 @@ describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
       });
 
       expect(events.length).toBeGreaterThan(0);
-      const stored = JSON.parse(events[0].payload as string);
+      const stored = events[0].payload;
       expect(stored.missing_fields).toContain("KPI");
     });
 
@@ -319,7 +349,7 @@ describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
       });
 
       expect(events.length).toBeGreaterThan(0);
-      const stored = JSON.parse(events[0].payload as string);
+      const stored = events[0].payload;
       expect(stored.required_capability).toBe("RECOMMENDATION_APPROVE");
     });
 
@@ -351,7 +381,7 @@ describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
       expect(events.length).toBeGreaterThan(0);
       const event = events[0];
       expect(event.visibility).toBe("client_visible");
-      const stored = JSON.parse(event.payload as string);
+      const stored = event.payload;
       expect(stored.confidence).toBe(0.92);
     });
 
@@ -436,7 +466,7 @@ describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
 
       expect(events.length).toBeGreaterThan(0);
       const event = events[0];
-      const stored = JSON.parse(event.payload as string);
+      const stored = event.payload;
       expect(stored.before_state.action).toBe("pending");
       expect(stored.after_state.action).toBe("approved");
       expect(stored.transition).toBe("pending_to_approved");
@@ -469,13 +499,20 @@ describe("PHASE 4 CRITICAL 3: Audit Compliance [db]", () => {
     });
 
     it("should reject null workspaceId", async () => {
+      // Override mock to not provide workspace
+      vi.mocked(
+        (await import("@/services/workspace/context")).requireWorkspaceContext
+      ).mockResolvedValueOnce({
+        workspaceId: undefined as any,
+      });
+
       try {
         await logAuditEvent({
           eventName: "NO_WORKSPACE_TEST",
           entityType: "Decision",
           entityId: randomUUID(),
           actorId: testUserId,
-          // workspaceId intentionally omitted and context mock won't provide it
+          // workspaceId intentionally omitted
         });
         expect.fail("Should have thrown error");
       } catch (error) {

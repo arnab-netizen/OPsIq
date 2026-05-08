@@ -38,7 +38,7 @@ export async function logAuditEvent(params: AuditEventParams): Promise<string> {
         entityId: params.entityId,
         actorId: params.actorId,
         actorType: params.actorType || "user",
-        payload: params.payload ? JSON.stringify(params.payload) : null,
+        payload: params.payload || null,
         correlationId: params.correlationId,
         visibility: params.visibility || "internal",
         occurredAt: new Date(),
