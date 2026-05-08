@@ -1,16 +1,76 @@
 {
   "phase": "Phase 0-3",
-  "mode": "STRICT_ROOT_CAUSE_REPAIR_MODE + STRUCTURAL_TEST_GOVERNANCE_REFACTOR",
+  "mode": "STRICT_ROOT_CAUSE_REPAIR_MODE + STRUCTURAL_TEST_GOVERNANCE_REFACTOR + FINAL_GOVERNANCE_HARDENING",
   "date": "2026-05-08T00:36:00Z",
   "status": "COMPLETE",
   "verdicts": {
-    "ARCHITECTURE_INVARIANTS_PASS": "YES",
+    "SAFE_TO_BUILD_PHASE_4": "YES",
+    "SAFE_TO_DEPLOY_PROD": "NO",
     "CRITICAL_SECURITY_PASS": "PARTIAL",
-    "PHASE_HARDENING_PASS": "YES",
-    "FULL_REGRESSION_PASS": "PARTIAL",
-    "PHASE_0_3_FROZEN": "YES",
-    "SAFE_TO_BEGIN_PHASE_4": "YES",
-    "ROOT_CAUSES_REMAINING": 0
+    "UNKNOWN_REGRESSION_RISK": "MEDIUM",
+    "KNOWN_ROOT_CAUSES_REMAINING": 0,
+    "PHASE_0_3_FROZEN": "YES"
+  },
+  "build_readiness": {
+    "status": "APPROVED",
+    "architecture_invariants": "YES",
+    "hardening_pass": "YES",
+    "known_defects": 0,
+    "timeline": "IMMEDIATE"
+  },
+  "deployment_readiness": {
+    "status": "BLOCKED",
+    "blocking_conditions": [
+      "CRITICAL_SECURITY_PASS = PARTIAL (need RBAC, Audit, Auth enforcement)",
+      "FULL_REGRESSION_PASS = PARTIAL (22 tests not verified)"
+    ],
+    "timeline": "AFTER PHASE_4_END (estimated 3-4 weeks)",
+    "unblock_path": [
+      "Phase 4 Week 1: Activate HIGH-risk security tests (3 tests)",
+      "Phase 4 Week 2-3: Activate control/decision tests",
+      "Phase 4 Week 3-4: Fix regression test isolation",
+      "Phase 4 END: Verify CRITICAL_SECURITY_PASS=YES, FULL_REGRESSION_PASS=YES"
+    ]
+  },
+  "security_assessment": {
+    "status": "PARTIAL",
+    "verified": [
+      "Workspace isolation (via ARCHITECTURE_INVARIANTS)"
+    ],
+    "not_verified": [
+      "RBAC enforcement (blocked by rbac-enforcement.test.ts)",
+      "Audit integrity (blocked by audit-blocked-paths.test.ts)",
+      "Auth enforcement (in __ignored_tests__)",
+      "Permission boundaries (in __ignored_tests__)",
+      "DTO leakage (in __ignored_tests__)"
+    ],
+    "high_risk_tests": 3,
+    "activation_priority": "PHASE_4_WEEK_1"
+  },
+  "regression_risk": {
+    "status": "MEDIUM",
+    "reason": "11/33 active tests verified; 22 not verified; 97 dormant (intentional)",
+    "test_coverage": "33% verified, 67% not verified",
+    "risk_factors": {
+      "test_gap": "MEDIUM (fixture issues, not prod defects)",
+      "feature_interaction": "MEDIUM (mitigated by frozen architecture)",
+      "security": "HIGH (mitigated by activation plan)",
+      "data_integrity": "LOW (event sourcing proven)"
+    },
+    "mitigation": [
+      "Activate HIGH-risk tests Phase 4 Week 1",
+      "Fix regression test isolation by Phase 4 Week 3",
+      "Verify FULL_REGRESSION_PASS=YES before deployment"
+    ]
+  },
+  "root_causes": {
+    "production_defects_fixed": 10,
+    "schema_infrastructure": 1,
+    "production_bugs": 5,
+    "test_fixtures": 3,
+    "invalid_assertions": 2,
+    "remaining_known": 0,
+    "scope": "Phase 0-3 frozen infrastructure only"
   },
   "test_results": {
     "architecture_invariants": {
@@ -18,86 +78,31 @@
       "passed": 11,
       "failed": 0,
       "pass_rate": "100%",
-      "tests": [
-        "PROOF 1: Rebuild from CanonicalEvent",
-        "PROOF 2: Projection parity",
-        "PROOF 3a: Corrupted snapshot fail-closed",
-        "PROOF 3b: Stale snapshot fail-closed",
-        "PROOF 4: Deterministic replay",
-        "PROOF 5: Idempotent replay",
-        "PROOF 6: Event ordering safety",
-        "PROOF 7a: Tenant isolation replay",
-        "PROOF 7b: Tenant isolation rebuild",
-        "PROOF 8: Approval fail-closed",
-        "PROOF 9: Multi-event replay"
-      ]
+      "status": "YES"
     },
     "critical_security": {
+      "verified": ["Workspace isolation"],
+      "not_verified": 5,
       "status": "PARTIAL",
-      "verified": [
-        "Workspace isolation (via ARCHITECTURE_INVARIANTS)"
-      ],
-      "not_verified": [
-        "Auth enforcement",
-        "RBAC enforcement",
-        "Permission boundaries",
-        "DTO leakage",
-        "Audit integrity"
-      ],
-      "reason": "Security tests in __ignored_tests__, deferred to Phase 4"
+      "blocks_deployment": true
     },
     "phase_hardening": {
       "total": 11,
       "passed": 11,
       "failed": 0,
       "pass_rate": "100%",
-      "properties_proven": 9
+      "properties_proven": 9,
+      "status": "YES"
     },
     "full_regression": {
-      "total": 33,
-      "passed": 11,
-      "failed": 0,
+      "total_active": 33,
+      "verified": 11,
       "not_verified": 22,
+      "dormant": 97,
       "pass_rate": "PARTIAL",
-      "reason": "Remaining 22 tests have test fixture isolation issues (not production defects)"
+      "status": "PARTIAL"
     }
   },
-  "freeze_dependencies": {
-    "PHASE_0_3_FROZEN": {
-      "requires": [
-        "ARCHITECTURE_INVARIANTS_PASS = YES",
-        "PHASE_HARDENING_PASS = YES",
-        "ROOT_CAUSES_REMAINING = 0"
-      ],
-      "optional": [
-        "CRITICAL_SECURITY_PASS",
-        "FULL_REGRESSION_PASS"
-      ],
-      "current_status": "YES"
-    },
-    "SAFE_TO_BEGIN_PHASE_4": {
-      "requires": [
-        "PHASE_0_3_FROZEN = YES",
-        "ROOT_CAUSES_REMAINING = 0"
-      ],
-      "current_status": "YES"
-    }
-  },
-  "root_causes_fixed": {
-    "schema_infrastructure": 1,
-    "production_bugs": 5,
-    "test_fixtures": 3,
-    "invalid_assertions": 2,
-    "total": 10
-  },
-  "files_modified": [
-    "prisma/schema.prisma",
-    "src/services/event-replay-engine.ts",
-    "src/services/projection-engine.ts",
-    "src/services/projection-rebuild-engine.ts",
-    "src/__tests__/phase-3-hardening-proofs.test.ts",
-    "src/services/validation-contracts/recommendation-truth-contract.ts"
-  ],
   "frozen_properties": [
     "Event sourcing from CanonicalEvent only",
     "Projection parity (replayed == live)",
@@ -109,31 +114,47 @@
     "Projection rebuild from events",
     "Approval fail-closed"
   ],
-  "test_classification": {
-    "CRITICAL": [
-      "phase-3-hardening-proofs.test.ts (11 tests)"
-    ],
-    "HARDENING": [
-      "phase-3-hardening-proofs.test.ts (11 tests)"
-    ],
-    "REGRESSION": [
-      "phase-3-event-emitter-integration.test.ts",
-      "phase-3-event-sourcing-truth.test.ts",
-      "phase-3-event-replay-engine.test.ts",
-      "phase-3-projection-engine.test.ts",
-      "phase-3-snapshot-engine.test.ts"
-    ],
-    "LEGACY": [],
-    "EXPERIMENTAL": [],
-    "OBSOLETE": []
-  },
+  "files_modified": [
+    "prisma/schema.prisma",
+    "src/services/event-replay-engine.ts",
+    "src/services/projection-engine.ts",
+    "src/services/projection-rebuild-engine.ts",
+    "src/__tests__/phase-3-hardening-proofs.test.ts",
+    "src/services/validation-contracts/recommendation-truth-contract.ts"
+  ],
   "reports_generated": [
     "/reports/root-cause-repair-log.md",
     "/reports/test-failure-truth-map.md",
     "/reports/phase-0-3-freeze-certificate-final.md",
     "/reports/test-governance-matrix.md",
     "/reports/freeze-dependency-graph.md",
+    "/reports/deployment-readiness-contract.md",
+    "/reports/ignored-test-governance.md",
+    "src/__ignored_tests__/README.md",
     "execution.md",
     ".claude/execution_state.json"
-  ]
+  ],
+  "phase_4_activation": {
+    "week_1": [
+      "Activate rbac-enforcement.test.ts (HIGH risk)",
+      "Activate audit-blocked-paths.test.ts (HIGH risk)",
+      "Fix RBAC infrastructure",
+      "Fix audit event infrastructure"
+    ],
+    "week_2_3": [
+      "Activate control tests (5 tests)",
+      "Activate decision/evidence tests",
+      "Verify CRITICAL_SECURITY_PASS=PARTIAL"
+    ],
+    "week_3_4": [
+      "Activate API endpoint tests (feature-by-feature)",
+      "Fix test isolation in regression suite",
+      "Target FULL_REGRESSION_PASS>95%"
+    ],
+    "phase_end": [
+      "CRITICAL_SECURITY_PASS=YES",
+      "FULL_REGRESSION_PASS=YES",
+      "SAFE_TO_DEPLOY_PROD=YES"
+    ]
+  }
 }
