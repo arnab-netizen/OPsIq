@@ -114,7 +114,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
 
-      const result = await queryAuditEvents({
+      const result = await queryAuditEvents({workspaceId: "ws-1",
         engagementId: "eng-1",
         limit: 50,
         offset: 0,
@@ -129,7 +129,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
 
-      await queryAuditEvents({
+      await queryAuditEvents({workspaceId: "ws-1",
         entityType: "action",
         limit: 50,
         offset: 0,
@@ -142,7 +142,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
 
-      await queryAuditEvents({
+      await queryAuditEvents({workspaceId: "ws-1",
         eventName: "action.created",
         limit: 50,
         offset: 0,
@@ -155,7 +155,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
       const { db } = await import("@/lib/db");
       const mockDb = db as any;
 
-      await queryAuditEvents({
+      await queryAuditEvents({workspaceId: "ws-1",
         startDate: "2024-01-01T00:00:00Z",
         endDate: "2024-12-31T23:59:59Z",
         limit: 50,
@@ -166,7 +166,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
     });
 
     it("should format audit event responses correctly", async () => {
-      const result = await queryAuditEvents({ limit: 50, offset: 0 });
+      const result = await queryAuditEvents({workspaceId: "ws-1", limit: 50, offset: 0 });
 
       expect(result.events[0]).toHaveProperty("id");
       expect(result.events[0]).toHaveProperty("eventName");
@@ -286,21 +286,21 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
       const { db } = await import("@/lib/db");
       vi.mocked(db.auditEvent.count).mockResolvedValue(5);
 
-      const result = await queryAuditEvents({ limit: 25, offset: 0 });
+      const result = await queryAuditEvents({workspaceId: "ws-1", limit: 25, offset: 0 });
 
       expect(result).toHaveProperty("events");
       expect(result).toHaveProperty("total", 5);
     });
 
     it("should parse JSON payload in audit events", async () => {
-      const result = await queryAuditEvents({ limit: 50, offset: 0 });
+      const result = await queryAuditEvents({workspaceId: "ws-1", limit: 50, offset: 0 });
 
       expect(typeof result.events[0].payload).toBe("object");
       expect(result.events[0].payload).toHaveProperty("title");
     });
 
     it("should format createdAt as ISO string", async () => {
-      const result = await queryAuditEvents({ limit: 50, offset: 0 });
+      const result = await queryAuditEvents({workspaceId: "ws-1", limit: 50, offset: 0 });
 
       expect(result.events[0].occurredAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
     });
