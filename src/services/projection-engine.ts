@@ -90,9 +90,9 @@ export class ProjectionEngine {
       // Denormalize Phase 1 evidence assessment scores
       if (payload.evidenceValidationScore) {
         updateData.evidenceValidationScore = Math.round(
-          (typeof payload.evidenceValidationScore === 'string'
+          typeof payload.evidenceValidationScore === 'string'
             ? parseFloat(payload.evidenceValidationScore)
-            : (payload.evidenceValidationScore as number)) * 100
+            : (payload.evidenceValidationScore as number)
         );
       }
       if (payload.reliabilityLevel) {
@@ -102,9 +102,9 @@ export class ProjectionEngine {
       // Denormalize Phase 2 KPI health assessment scores
       if (payload.kpiHealthScore) {
         updateData.kpiHealthScore = Math.round(
-          (typeof payload.kpiHealthScore === 'string'
+          typeof payload.kpiHealthScore === 'string'
             ? parseFloat(payload.kpiHealthScore)
-            : (payload.kpiHealthScore as number)) * 100
+            : (payload.kpiHealthScore as number)
         );
       }
       if (payload.kpiRiskLevel) {

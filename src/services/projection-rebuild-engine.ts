@@ -44,14 +44,20 @@ export class ProjectionRebuildEngine {
         };
       }
 
-      // Step 2: Delete existing projection (clear it)
-      await db.recommendation.delete({
-        where: { id: recommendationId },
-      });
-
-      logger.info("ProjectionRebuild: Deleted existing projection", {
-        recommendationId,
-      });
+      // Step 2: Delete existing projection (clear it) - skip if not found
+      try {
+        await db.recommendation.delete({
+          where: { id: recommendationId },
+        });
+        logger.info("ProjectionRebuild: Deleted existing projection", {
+          recommendationId,
+        });
+      } catch (err) {
+        // Projection may not exist yet - continue to create
+        logger.info("ProjectionRebuild: Projection not found, will create new", {
+          recommendationId,
+        });
+      }
 
       // Step 3: Rebuild projection solely from events
       let projectionState: Record<string, unknown> = {
@@ -127,17 +133,17 @@ export class ProjectionRebuildEngine {
         priority: event.payload.priority as string,
         evidenceValidationScore: event.payload.evidenceValidationScore
           ? Math.round(
-              (typeof event.payload.evidenceValidationScore === "string"
+              typeof event.payload.evidenceValidationScore === "string"
                 ? parseFloat(event.payload.evidenceValidationScore)
-                : (event.payload.evidenceValidationScore as number)) * 100
+                : (event.payload.evidenceValidationScore as number)
             )
           : undefined,
         reliabilityLevel: event.payload.reliabilityLevel as string | undefined,
         kpiHealthScore: event.payload.kpiHealthScore
           ? Math.round(
-              (typeof event.payload.kpiHealthScore === "string"
+              typeof event.payload.kpiHealthScore === "string"
                 ? parseFloat(event.payload.kpiHealthScore)
-                : (event.payload.kpiHealthScore as number)) * 100
+                : (event.payload.kpiHealthScore as number)
             )
           : undefined,
         kpiRiskLevel: event.payload.kpiRiskLevel as string | undefined,
@@ -218,6 +224,7 @@ export class ProjectionRebuildEngine {
   /**
    * Rebuild all recommendation projections for a workspace
    * Used for disaster recovery or corruption repair
+   * Rebuilds from canonical_events (source of truth)
    */
   static async rebuildAllProjections(
     workspaceId: string
@@ -227,11 +234,17 @@ export class ProjectionRebuildEngine {
     failed: number;
     errors: Array<{ recommendationId: string; error: string }>;
   }> {
-    const recommendationIds = await db.recommendation.findMany({
-      where: { workspaceId },
-      select: { id: true },
+    // Get all distinct recommendation aggregate IDs from event store (source of truth)
+    const events = await db.canonicalEvent.findMany({
+      where: {
+        aggregateType: "recommendation",
+        workspaceId,
+      },
+      select: { aggregateId: true },
+      distinct: ["aggregateId"],
     });
 
+    const recommendationIds = events.map((e: { aggregateId: string }) => ({ id: e.aggregateId }));
     const errors: Array<{ recommendationId: string; error: string }> = [];
     let successful = 0;
     let failed = 0;
