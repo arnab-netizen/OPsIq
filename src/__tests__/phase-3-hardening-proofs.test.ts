@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
+import { v4 as uuidv4 } from "uuid";
 import { db, getDbInstance } from "@/lib/db";
 import { EventEmitterService } from "@/services/event-emitter";
 import { EventReplayEngine } from "@/services/event-replay-engine";
@@ -10,18 +11,54 @@ import { SnapshotOptimizationEngine } from "@/services/snapshot-optimization-eng
  * No claims. Only measurable, reproducible verification.
  */
 describe("HARDENING: Phase 3 Critical Properties", () => {
-  const workspaceId = "550e8400-e29b-41d4-a716-446655440001";
-  const workspaceId2 = "550e8400-e29b-41d4-a716-446655440002";
-  const recommendationId = "550e8400-e29b-41d4-a716-446655440003";
-  const engagementId = "550e8400-e29b-41d4-a716-446655440010";
-  const engagementId2 = "550e8400-e29b-41d4-a716-446655440011";
-  const userId = "550e8400-e29b-41d4-a716-446655440020";
+  let workspaceId: string;
+  let workspaceId2: string;
+  let userId: string;
+  let clientId: string;
+  let clientId2: string;
+  let recommendationId: string;
+  let engagementId: string;
+  let engagementId2: string;
 
   beforeAll(async () => {
     await getDbInstance();
   });
 
   beforeEach(async () => {
+    // Generate unique IDs for each test run
+    workspaceId = uuidv4();
+    workspaceId2 = uuidv4();
+    userId = uuidv4();
+    clientId = uuidv4();
+    clientId2 = uuidv4();
+    recommendationId = uuidv4();
+    engagementId = uuidv4();
+    engagementId2 = uuidv4();
+
+    // Setup users first
+    await db.user.create({
+      data: {
+        id: userId,
+        email: `test-${Date.now()}@example.com`,
+        name: "Test User",
+        hashedPassword: "mock",
+      },
+    }).catch(() => {
+      // User might already exist, ignore error
+    });
+
+    // Setup client accounts
+    await db.clientAccount.create({
+      data: { id: clientId, name: "Test Client 1" },
+    }).catch(() => {
+      // Client might already exist, ignore error
+    });
+    await db.clientAccount.create({
+      data: { id: clientId2, name: "Test Client 2" },
+    }).catch(() => {
+      // Client might already exist, ignore error
+    });
+
     // Setup workspaces
     await db.workspace.create({
       data: { id: workspaceId, name: "WS1", slug: `ws1-${Date.now()}`, createdBy: userId },
@@ -34,17 +71,25 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
     await db.engagement.create({
       data: {
         id: engagementId,
+        code: `ENG-${engagementId.substring(0, 8)}`,
+        title: "Engagement 1",
+        clientId,
         workspaceId,
+        serviceTier: "standard",
+        engagementMode: "beginner",
         createdBy: userId,
-        name: "Engagement 1",
       },
     });
     await db.engagement.create({
       data: {
         id: engagementId2,
+        code: `ENG-${engagementId2.substring(0, 8)}`,
+        title: "Engagement 2",
+        clientId: clientId2,
         workspaceId: workspaceId2,
+        serviceTier: "standard",
+        engagementMode: "beginner",
         createdBy: userId,
-        name: "Engagement 2",
       },
     });
   });
@@ -60,6 +105,8 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
     await db.engagement.deleteMany({ where: { workspaceId: workspaceId2 } });
     await db.workspace.deleteMany({ where: { id: workspaceId } });
     await db.workspace.deleteMany({ where: { id: workspaceId2 } });
+    await db.clientAccount.deleteMany({ where: { id: { in: [clientId, clientId2] } } });
+    await db.user.deleteMany({ where: { id: userId } });
   });
 
   describe("PROOF 1: Rebuild aggregate from CanonicalEvent only", () => {
@@ -68,7 +115,7 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
       const rec = await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "eng-1",
+          engagementId,
           workspaceId,
           title: "Test Rec",
           priority: "high",
@@ -77,7 +124,7 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
           reliabilityLevel: "high",
           kpiHealthScore: 72,
           kpiRiskLevel: "medium",
-          createdBy: "test",
+          createdBy: userId,
         },
       });
 
@@ -88,16 +135,16 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "eng-1",
+          engagementId,
           title: "Test Rec",
           priority: "high",
           description: "Test desc",
-          evidenceValidationScore: "0.85",
+          evidenceValidationScore: "85",
           reliabilityLevel: "high",
-          kpiHealthScore: "0.72",
+          kpiHealthScore: "72",
           kpiRiskLevel: "medium",
         },
-        actorId: "test",
+        actorId: userId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -147,7 +194,7 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "eng-1",
+          engagementId: engagementId,
           workspaceId,
           title: "Parity Test",
           priority: "critical",
@@ -156,7 +203,7 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
           reliabilityLevel: "high",
           kpiHealthScore: 88,
           kpiRiskLevel: "low",
-          createdBy: "test",
+          createdBy: userId,
         },
       });
 
@@ -167,7 +214,7 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "eng-1",
+          engagementId: engagementId,
           title: "Parity Test",
           priority: "critical",
           description: "Testing parity",
@@ -176,7 +223,7 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
           kpiHealthScore: "0.88",
           kpiRiskLevel: "low",
         },
-        actorId: "test",
+        actorId: userId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -277,12 +324,12 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "eng-1",
+          engagementId: engagementId,
           workspaceId,
           title: "Deterministic Test",
           priority: "high",
           evidenceValidationScore: 75,
-          createdBy: "test",
+          createdBy: userId,
         },
       });
 
@@ -293,13 +340,13 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "eng-1",
+          engagementId: engagementId,
           title: "Deterministic Test",
           priority: "high",
           evidenceValidationScore: "0.75",
           reliabilityLevel: "high",
         },
-        actorId: "test",
+        actorId: userId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -336,11 +383,11 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "eng-1",
+          engagementId: engagementId,
           workspaceId,
           title: "Idempotent Test",
           priority: "medium",
-          createdBy: "test",
+          createdBy: userId,
         },
       });
 
@@ -352,11 +399,11 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "eng-1",
+          engagementId: engagementId,
           title: "Idempotent Test",
           priority: "medium",
         },
-        actorId: "test",
+        actorId: userId,
         workspaceId,
         idempotencyKey,
         visibilityScope: "internal",
@@ -376,11 +423,11 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "eng-1",
+          engagementId: engagementId,
           title: "Idempotent Test",
           priority: "medium",
         },
-        actorId: "test",
+        actorId: userId,
         workspaceId,
         idempotencyKey, // Same key
         visibilityScope: "internal",
@@ -401,11 +448,11 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "eng-1",
+          engagementId: engagementId,
           workspaceId,
           title: "Initial",
           priority: "low",
-          createdBy: "test",
+          createdBy: userId,
         },
       });
 
@@ -416,11 +463,11 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "eng-1",
+          engagementId: engagementId,
           title: "Initial",
           priority: "low",
         },
-        actorId: "test",
+        actorId: userId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -447,11 +494,11 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "eng-1",
+          engagementId: engagementId,
           workspaceId,
           title: "WS1 Rec",
           priority: "high",
-          createdBy: "test",
+          createdBy: userId,
         },
       });
 
@@ -462,11 +509,11 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "eng-1",
+          engagementId: engagementId,
           title: "WS1 Rec",
           priority: "high",
         },
-        actorId: "test",
+        actorId: userId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -488,22 +535,22 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
       await db.recommendation.create({
         data: {
           id: "rec-ws1",
-          engagementId: "eng-1",
+          engagementId: engagementId,
           workspaceId,
           title: "WS1 Rec",
           priority: "high",
-          createdBy: "test",
+          createdBy: userId,
         },
       });
 
       await db.recommendation.create({
         data: {
           id: "rec-ws2",
-          engagementId: "eng-2",
+          engagementId: engagementId2,
           workspaceId: workspaceId2,
           title: "WS2 Rec",
           priority: "low",
-          createdBy: "test",
+          createdBy: userId,
         },
       });
 
@@ -514,11 +561,11 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "eng-1",
+          engagementId: engagementId,
           title: "WS1 Rec",
           priority: "high",
         },
-        actorId: "test",
+        actorId: userId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -530,11 +577,11 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "eng-2",
+          engagementId: engagementId2,
           title: "WS2 Rec",
           priority: "low",
         },
-        actorId: "test",
+        actorId: userId,
         workspaceId: workspaceId2,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -568,11 +615,11 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "eng-1",
+          engagementId: engagementId,
           workspaceId,
           title: "No Events",
           priority: "high",
-          createdBy: "test",
+          createdBy: userId,
         },
       });
 
@@ -594,12 +641,12 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
       const rec = await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "eng-1",
+          engagementId: engagementId,
           workspaceId,
           title: "Multi Event",
           priority: "low",
           evidenceValidationScore: 50,
-          createdBy: "test",
+          createdBy: userId,
         },
       });
 
@@ -610,13 +657,13 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "eng-1",
+          engagementId: engagementId,
           title: "Multi Event",
           priority: "low",
           evidenceValidationScore: "0.50",
           reliabilityLevel: "low",
         },
-        actorId: "test",
+        actorId: userId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
