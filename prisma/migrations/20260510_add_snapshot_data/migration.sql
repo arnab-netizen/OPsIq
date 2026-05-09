@@ -1,7 +1,7 @@
 -- Create SnapshotData table for Phase 3 snapshot optimization
 -- Snapshots store the aggregate state at a specific event number
 -- Used to optimize event replay (avoid replaying entire event stream)
-CREATE TABLE "snapshot_data" (
+CREATE TABLE IF NOT EXISTS "snapshot_data" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "aggregate_id" TEXT NOT NULL,
     "aggregate_type" TEXT NOT NULL,
@@ -16,7 +16,7 @@ CREATE TABLE "snapshot_data" (
 );
 
 -- Unique constraint: only one snapshot per aggregate per workspace
-CREATE UNIQUE INDEX "snapshot_data_aggregate_id_aggregate_type_workspace_id_key" ON "snapshot_data"("aggregate_id", "aggregate_type", "workspace_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "snapshot_data_aggregate_id_aggregate_type_workspace_id_key" ON "snapshot_data"("aggregate_id", "aggregate_type", "workspace_id");
 
 -- Index for workspace-scoped queries
-CREATE INDEX "snapshot_data_workspace_id_created_at_idx" ON "snapshot_data"("workspace_id", "created_at");
+CREATE INDEX IF NOT EXISTS "snapshot_data_workspace_id_created_at_idx" ON "snapshot_data"("workspace_id", "created_at");
