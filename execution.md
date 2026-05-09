@@ -251,8 +251,8 @@ No stage is complete unless verification passes or blocker is formally documente
 The following must never regress:
 
 1. unauthenticated users cannot access protected routes,
-2. users cannot access another workspace’s data,
-3. users cannot mutate another workspace’s data,
+2. users cannot access another workspace's data,
+3. users cannot mutate another workspace's data,
 4. viewers cannot perform privileged mutations,
 5. public users cannot see owner/internal fields,
 6. owner/admin APIs are separated from public APIs,
@@ -948,7 +948,18 @@ If deploy fails with `relation "workspaces" does not exist`, do not patch depend
 
 # EVENT REPLAY / GATE 9 CONTRACT
 
-If `EventReplayEngine` is PARKED for active runtime:
+## Current Status: EventReplayEngine is ACTIVE (Phase 3)
+
+`EventReplayEngine` is now a core Phase 3 system and is ACTIVE in production paths:
+- Imported by `ProjectionRebuildEngine` for event replay with snapshot optimization
+- Imported by `SnapshotEngine` for snapshot creation and validation
+- Wired into event sourcing path for recommendation, action, and evidence lifecycle
+
+Gate 9 is no longer applicable. These references are correct and required.
+
+## Legacy Rule (if EventReplayEngine were PARKED):
+
+If in future a system is PARKED for active runtime:
 
 1. It must not be directly imported by production services.
 2. It must not appear in production code if CI raw grep forbids the string.

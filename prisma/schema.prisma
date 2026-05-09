@@ -136,7 +136,7 @@ model LeadRecord {
   contactName         String?  @map("contact_name")
   contactEmail        String?  @map("contact_email")
   contactPhone        String?  @map("contact_phone")
-  source              String? // e.g. "referral", "website", "outbound"
+  source              String? // e.g "referral", "website", "outbound"
   status              String   @default("new") // "new" | "qualifying" | "qualified" | "converted" | "lost"
   notes               String?
   estimatedValue      Float?   @map("estimated_value")
@@ -190,7 +190,7 @@ model ClientContact {
   name      String
   email     String?
   phone     String?
-  role      String? // e.g. "owner", "cfo", "operations_manager"
+  role      String? // e.g "owner", "cfo", "operations_manager"
   isPrimary Boolean  @default(false) @map("is_primary")
   isActive  Boolean  @default(true) @map("is_active")
   notes     String?
@@ -1045,4 +1045,22 @@ model CanonicalEvent {
   @@index([workspaceId, recordedAt])
   @@index([actorId])
   @@map("canonical_events")
+}
+
+// ─── Phase 3: Snapshot Optimization ──────────────────────────────────────────
+
+model SnapshotData {
+  id              String   @id @default(uuid()) @db.Uuid
+  aggregateId     String   @map("aggregate_id")
+  aggregateType   String   @map("aggregate_type")
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  state           Json     // Full state at snapshot point
+  lastEventNumber Int      @map("last_event_number")
+  checksum        String   // SHA256 of state for integrity verification
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([aggregateId, aggregateType, workspaceId])
+  @@index([workspaceId, createdAt])
+  @@map("snapshot_data")
 }
