@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
-import { EventReplayEngine } from "@/services/event-replay-engine";
 
 /**
  * ProjectionRebuildEngine: Rebuild projections solely from CanonicalEvent
@@ -49,12 +48,12 @@ export class ProjectionRebuildEngine {
         await db.recommendation.delete({
           where: { id: recommendationId },
         });
-        logger.info("ProjectionRebuild: Deleted existing projection", {
+        <logger.info>("ProjectionRebuild: Deleted existing projection", {
           recommendationId,
         });
       } catch (err) {
         // Projection may not exist yet - continue to create
-        logger.info("ProjectionRebuild: Projection not found, will create new", {
+        <logger.info>("ProjectionRebuild: Projection not found, will create new", {
           recommendationId,
         });
       }
@@ -82,7 +81,7 @@ export class ProjectionRebuildEngine {
         data: projectionState as any,
       });
 
-      logger.info("ProjectionRebuild: Rebuilt projection from events", {
+      <logger.info>("ProjectionRebuild: Rebuilt projection from events", {
         recommendationId,
         eventsProcessed: events.length,
       });
@@ -174,7 +173,8 @@ export class ProjectionRebuildEngine {
         return false;
       }
 
-      // Get replayed state
+      // Get replayed state (lazy-load to isolate from active runtime graph)
+      const { EventReplayEngine } = await import("@/services/event-replay-engine");
       const replayed = await EventReplayEngine.replayAggregate(
         recommendationId,
         "recommendation",
