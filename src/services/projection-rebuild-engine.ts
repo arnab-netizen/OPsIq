@@ -2,15 +2,15 @@ import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 
 /**
- * ProjectionRebuildEngine: Rebuild projections solely from CanonicalEvent
- * Truth source: CanonicalEvent only
- * No other sources of truth used during rebuild
+ * ProjectionRebuildEngine: Rebuild projections solely from CanonicalEvent.
+ * Truth source: CanonicalEvent only.
+ * No other sources of truth are used during rebuild.
  */
 export class ProjectionRebuildEngine {
   /**
-   * Rebuild recommendation projection from event stream
-   * Deletes existing projection and rebuilds from scratch
-   * Returns parity check result
+   * Rebuild recommendation projection from event stream.
+   * Deletes existing projection and rebuilds from scratch.
+   * Returns parity check result.
    */
   static async rebuildRecommendationProjection(
     recommendationId: string,
@@ -24,7 +24,6 @@ export class ProjectionRebuildEngine {
     const errors: string[] = [];
 
     try {
-      // Step 1: Fetch all events for this recommendation (truth source: CanonicalEvent only)
       const events = await db.canonicalEvent.findMany({
         where: {
           aggregateId: recommendationId,
@@ -43,22 +42,20 @@ export class ProjectionRebuildEngine {
         };
       }
 
-      // Step 2: Delete existing projection (clear it) - skip if not found
       try {
         await db.recommendation.delete({
           where: { id: recommendationId },
         });
-        <logger.info>("ProjectionRebuild: Deleted existing projection", {
+
+        logger.info("ProjectionRebuild: Deleted existing projection", {
           recommendationId,
         });
-      } catch (err) {
-        // Projection may not exist yet - continue to create
-        <logger.info>("ProjectionRebuild: Projection not found, will create new", {
+      } catch {
+        logger.info("ProjectionRebuild: Projection not found, will create new", {
           recommendationId,
         });
       }
 
-      // Step 3: Rebuild projection solely from events
       let projectionState: Record<string, unknown> = {
         id: recommendationId,
         workspaceId,
@@ -66,7 +63,6 @@ export class ProjectionRebuildEngine {
 
       for (const event of events) {
         try {
-          // Apply event to projection state
           projectionState = ProjectionRebuildEngine.applyEventToProjection(
             projectionState,
             event
@@ -76,17 +72,15 @@ export class ProjectionRebuildEngine {
         }
       }
 
-      // Step 4: Persist rebuilt projection
       await db.recommendation.create({
         data: projectionState as any,
       });
 
-      <logger.info>("ProjectionRebuild: Rebuilt projection from events", {
+      logger.info("ProjectionRebuild: Rebuilt projection from events", {
         recommendationId,
         eventsProcessed: events.length,
       });
 
-      // Step 5: Verify parity - replay should equal projection
       const rebuildSuccess = await this.verifyProjectionParity(
         recommendationId,
         workspaceId
@@ -102,6 +96,7 @@ export class ProjectionRebuildEngine {
       errors.push(
         `Rebuild failed: ${error instanceof Error ? error.message : String(error)}`
       );
+
       return {
         success: false,
         eventsProcessed: 0,
@@ -112,7 +107,7 @@ export class ProjectionRebuildEngine {
   }
 
   /**
-   * Apply event to projection state (fold logic)
+   * Apply event to projection state.
    */
   private static applyEventToProjection(
     state: Record<string, unknown>,
@@ -122,7 +117,6 @@ export class ProjectionRebuildEngine {
       eventNumber: number;
     }
   ): Record<string, unknown> {
-    // projection.created event
     if (event.eventType === "recommendation.created") {
       return {
         ...state,
@@ -153,15 +147,14 @@ export class ProjectionRebuildEngine {
   }
 
   /**
-   * Verify projection parity: replay equals live projection
-   * Truth check: Replayed state matches database projection
+   * Verify projection parity: replay equals live projection.
+   * EventReplayEngine is lazy-loaded to avoid active runtime wiring.
    */
   private static async verifyProjectionParity(
     recommendationId: string,
     workspaceId: string
   ): Promise<boolean> {
     try {
-      // Get live projection from database
       const liveProjection = await db.recommendation.findUnique({
         where: { id: recommendationId },
       });
@@ -173,16 +166,16 @@ export class ProjectionRebuildEngine {
         return false;
       }
 
-      // Get replayed state (lazy-load to isolate from active runtime graph)
       const { EventReplayEngine } = await import("@/services/event-replay-engine");
+
       const replayed = await EventReplayEngine.replayAggregate(
         recommendationId,
         "recommendation",
         workspaceId
       );
 
-      // Compare critical fields
       const replayedPayload = replayed.state;
+
       const parityChecks = {
         engagementId:
           liveProjection.engagementId ===
@@ -202,7 +195,7 @@ export class ProjectionRebuildEngine {
           (replayedPayload.payload_kpiHealthScore as number),
       };
 
-      const allMatch = Object.values(parityChecks).every((v) => v);
+      const allMatch = Object.values(parityChecks).every(Boolean);
 
       if (!allMatch) {
         logger.warn("ProjectionParity: Mismatch detected", {
@@ -217,14 +210,15 @@ export class ProjectionRebuildEngine {
         recommendationId,
         error: error instanceof Error ? error.message : String(error),
       });
+
       return false;
     }
   }
 
   /**
-   * Rebuild all recommendation projections for a workspace
-   * Used for disaster recovery or corruption repair
-   * Rebuilds from canonical_events (source of truth)
+   * Rebuild all recommendation projections for a workspace.
+   * Used for disaster recovery or corruption repair.
+   * Rebuilds from canonical_events source of truth.
    */
   static async rebuildAllProjections(
     workspaceId: string
@@ -234,7 +228,6 @@ export class ProjectionRebuildEngine {
     failed: number;
     errors: Array<{ recommendationId: string; error: string }>;
   }> {
-    // Get all distinct recommendation aggregate IDs from event store (source of truth)
     const events = await db.canonicalEvent.findMany({
       where: {
         aggregateType: "recommendation",
@@ -244,19 +237,27 @@ export class ProjectionRebuildEngine {
       distinct: ["aggregateId"],
     });
 
-    const recommendationIds = events.map((e: { aggregateId: string }) => ({ id: e.aggregateId }));
+    const recommendationIds = events.map(
+      (event: { aggregateId: string }) => event.aggregateId
+    );
+
     const errors: Array<{ recommendationId: string; error: string }> = [];
+
     let successful = 0;
     let failed = 0;
 
-    for (const { id } of recommendationIds) {
-      const result = await this.rebuildRecommendationProjection(id, workspaceId);
+    for (const recommendationId of recommendationIds) {
+      const result = await this.rebuildRecommendationProjection(
+        recommendationId,
+        workspaceId
+      );
+
       if (result.success && result.parityCheckPassed) {
         successful++;
       } else {
         failed++;
         errors.push({
-          recommendationId: id,
+          recommendationId,
           error: result.errors.join("; "),
         });
       }
