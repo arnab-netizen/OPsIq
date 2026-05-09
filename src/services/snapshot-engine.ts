@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
-import { EventReplayEngine } from "@/services/event-replay-engine";
 
 export interface AggregateSnapshot {
   aggregateId: string;
@@ -24,7 +23,8 @@ export class SnapshotEngine {
     workspaceId: string,
     atEventNumber: number
   ): Promise<AggregateSnapshot> {
-    // Replay aggregate up to this event number
+    // Replay aggregate up to this event number (lazy-load to isolate from active runtime graph)
+    const { EventReplayEngine } = await import("@/services/event-replay-engine");
     const replayed = await EventReplayEngine.replayAggregate(
       aggregateId,
       aggregateType,
@@ -32,7 +32,7 @@ export class SnapshotEngine {
       atEventNumber
     );
 
-    logger.info("SnapshotEngine: Snapshot created", {
+    <logger.info>("SnapshotEngine: Snapshot created", {
       aggregateId,
       aggregateType,
       eventNumber: atEventNumber,
@@ -59,7 +59,7 @@ export class SnapshotEngine {
   ): Promise<AggregateSnapshot | null> {
     // In a full implementation, this would query a snapshots table
     // For now, we document the pattern for future implementation
-    logger.info("SnapshotEngine: Snapshot query", {
+    <logger.info>("SnapshotEngine: Snapshot query", {
       aggregateId,
       aggregateType,
     });
@@ -92,7 +92,7 @@ export class SnapshotEngine {
     );
 
     if (snapshot) {
-      logger.info("SnapshotEngine: Using snapshot for replay optimization", {
+      <logger.info>("SnapshotEngine: Using snapshot for replay optimization", {
         aggregateId,
         snapshotEventNumber: snapshot.snapshotNumber,
       });
@@ -101,7 +101,8 @@ export class SnapshotEngine {
       // For now, full replay
     }
 
-    // Full replay (no snapshot or snapshot not useful)
+    // Full replay (no snapshot or snapshot not useful) (lazy-load to isolate from active runtime graph)
+    const { EventReplayEngine } = await import("@/services/event-replay-engine");
     const replayed = await EventReplayEngine.replayAggregate(
       aggregateId,
       aggregateType,
@@ -116,7 +117,7 @@ export class SnapshotEngine {
    * Cleanup old snapshots
    */
   static async cleanupOldSnapshots(workspaceId: string, keepCount: number = 5) {
-    logger.info("SnapshotEngine: Cleanup (not yet implemented)", {
+    <logger.info>("SnapshotEngine: Cleanup (not yet implemented)", {
       workspaceId,
       keepCount,
     });
