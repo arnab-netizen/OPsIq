@@ -1,9 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 
-type RecommendationCreateData = Parameters<
-  typeof db.recommendation.create
->[0]["data"];
+type RecommendationCreateData = Prisma.RecommendationUncheckedCreateInput;
 
 type CanonicalRecommendationEvent = {
   eventType: string;
