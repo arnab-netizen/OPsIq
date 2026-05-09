@@ -2,10 +2,10 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
-  NotFoundError,
   ConflictError,
-  ValidationError,
+  NotFoundError,
   PlanLimitError,
+  ValidationError,
 } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
@@ -21,10 +21,35 @@ import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 import { listEvidence } from "@/services/evidence";
 import { getKPIsForEngagement } from "@/services/kpi";
 
+type RecommendationStatus = "blocked" | "in_progress" | "completed";
+type ActionStatus = "blocked" | "pending" | "in_progress" | "completed" | "verified";
+type PriorityLevel = "critical" | "high" | "medium" | "low";
+type EngagementHealthStatus = "critical" | "at_risk" | "stable" | "healthy";
+type VerificationMode = "fully_trusted" | "snapshot_backed" | "uncertain";
+
 interface TransactionClient {
   recommendation: {
     create: (params: { data: Record<string, unknown> }) => Promise<{ id: string }>;
   };
+}
+
+interface EvidenceItemLike {
+  status?: string | null;
+}
+
+interface KPIItemLike {
+  status?: string | null;
+}
+
+interface CanonicalEventLike {
+  eventType: string;
+  eventNumber: number;
+  occurredAt: Date;
+  payload: unknown;
+}
+
+interface ScoredRecommendationLike {
+  scoringMetrics?: unknown;
 }
 
 export interface CreateRecommendationInput {
@@ -64,6 +89,19 @@ export interface RecommendationScoringInput {
 
 export type RecommendationClass = "containment" | "stabilization" | "growth";
 
+interface ScoringWeights {
+  impact: number;
+  urgency: number;
+  confidence: number;
+  riskReduction: number;
+  strategicAlignment: number;
+  effort: number;
+  cost: number;
+  timeToImpact: number;
+  reversibility: number;
+  dependency: number;
+}
+
 export interface ScoreBreakdown {
   class?: RecommendationClass;
   weights: ScoringWeights;
@@ -94,19 +132,6 @@ export interface ScoreBreakdown {
   finalScore: number;
 }
 
-interface ScoringWeights {
-  impact: number;
-  urgency: number;
-  confidence: number;
-  riskReduction: number;
-  strategicAlignment: number;
-  effort: number;
-  cost: number;
-  timeToImpact: number;
-  reversibility: number;
-  dependency: number;
-}
-
 interface EvidenceAssessment {
   evidenceCount: number;
   validatedCount: number;
@@ -123,12 +148,13 @@ interface KPIAssessment {
   riskLevel: "low" | "medium" | "high" | "critical";
 }
 
-type AuditTrailEvent = {
-  eventType: string;
-  eventNumber: number;
-  occurredAt: Date;
-  payload: unknown;
-};
+export interface RecommendationStateVerification {
+  verified: boolean;
+  live: Record<string, unknown>;
+  replayed: Record<string, unknown>;
+  parityOk: boolean;
+  operationMode: VerificationMode;
+}
 
 function normalizeValue(value: number, min: number, max: number): number {
   if (value < min) return 0;
@@ -136,9 +162,7 @@ function normalizeValue(value: number, min: number, max: number): number {
   return (value - min) / (max - min);
 }
 
-function getWeightsByClass(
-  recommendationClass?: RecommendationClass
-): ScoringWeights {
+function getWeightsByClass(recommendationClass?: RecommendationClass): ScoringWeights {
   const baseWeights: ScoringWeights = {
     impact: 0.2,
     urgency: 0.15,
@@ -169,7 +193,9 @@ function getWeightsByClass(
     weights.timeToImpact = 0.04;
     weights.reversibility = 0.03;
     weights.dependency = 0.02;
-  } else if (recommendationClass === "stabilization") {
+  }
+
+  if (recommendationClass === "stabilization") {
     weights.effort = 0.18;
     weights.dependency = 0.12;
     weights.impact = 0.15;
@@ -180,7 +206,9 @@ function getWeightsByClass(
     weights.cost = 0.03;
     weights.timeToImpact = 0.03;
     weights.reversibility = 0.03;
-  } else if (recommendationClass === "growth") {
+  }
+
+  if (recommendationClass === "growth") {
     weights.impact = 0.28;
     weights.strategicAlignment = 0.22;
     weights.confidence = 0.12;
@@ -220,8 +248,7 @@ export function calculateRecommendationScoreBreakdown(
     urgency: normalized.urgency * weights.urgency,
     confidence: normalized.confidence * weights.confidence,
     riskReduction: normalized.riskReduction * weights.riskReduction,
-    strategicAlignment:
-      normalized.strategicAlignment * weights.strategicAlignment,
+    strategicAlignment: normalized.strategicAlignment * weights.strategicAlignment,
     effort: (1 - normalized.effort) * weights.effort,
     cost: (1 - normalized.cost) * weights.cost,
     timeToImpact: (1 - normalized.timeToImpact) * weights.timeToImpact,
@@ -230,7 +257,10 @@ export function calculateRecommendationScoreBreakdown(
   };
 
   const finalScore = Math.min(
-    Math.max(Object.values(contributions).reduce((a, b) => a + b, 0), 0),
+    Math.max(
+      Object.values(contributions).reduce((sum, contribution) => sum + contribution, 0),
+      0
+    ),
     1
   );
 
@@ -247,11 +277,7 @@ export function calculateRecommendationScore(
   input: RecommendationScoringInput,
   recommendationClass?: RecommendationClass
 ): number {
-  const breakdown = calculateRecommendationScoreBreakdown(
-    input,
-    recommendationClass
-  );
-  return breakdown.finalScore;
+  return calculateRecommendationScoreBreakdown(input, recommendationClass).finalScore;
 }
 
 export function mapScoreToPriority(score: number): string {
@@ -265,20 +291,14 @@ async function evaluateEngagementEvidence(
   workspaceId: string
 ): Promise<EvidenceAssessment> {
   try {
-    const evidence = await listEvidence(workspaceId, { engagementId });
+    const evidence = (await listEvidence(workspaceId, { engagementId })) as EvidenceItemLike[];
 
-    const validatedCount = evidence.filter(
-      (item: Record<string, unknown>) => item.status === "validated"
-    ).length;
-
-    const rejectedCount = evidence.filter(
-      (item: Record<string, unknown>) => item.status === "rejected"
-    ).length;
-
+    const validatedCount = evidence.filter((item) => item.status === "validated").length;
+    const rejectedCount = evidence.filter((item) => item.status === "rejected").length;
     const totalCount = evidence.length;
     const validationScore = totalCount > 0 ? validatedCount / totalCount : 0;
 
-    let reliabilityLevel: EvidenceAssessment["reliabilityLevel"];
+    let reliabilityLevel: EvidenceAssessment["reliabilityLevel"] = "low";
 
     if (validationScore >= 0.8) {
       reliabilityLevel = "critical";
@@ -286,8 +306,6 @@ async function evaluateEngagementEvidence(
       reliabilityLevel = "high";
     } else if (validationScore >= 0.4) {
       reliabilityLevel = "medium";
-    } else {
-      reliabilityLevel = "low";
     }
 
     return {
@@ -297,7 +315,13 @@ async function evaluateEngagementEvidence(
       validationScore,
       reliabilityLevel,
     };
-  } catch {
+  } catch (error) {
+    logger.warn("Recommendation evidence assessment failed; defaulting to low reliability", {
+      engagementId,
+      workspaceId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     return {
       evidenceCount: 0,
       validatedCount: 0,
@@ -313,17 +337,14 @@ async function evaluateEngagementKPIHealth(
   workspaceId: string
 ): Promise<KPIAssessment> {
   try {
-    const kpis = await getKPIsForEngagement(engagementId, workspaceId);
+    const kpis = (await getKPIsForEngagement(engagementId, workspaceId)) as KPIItemLike[];
 
-    const degradedCount =
-      kpis?.filter((kpi: Record<string, unknown>) => kpi.status === "degraded")
-        .length || 0;
-
-    const totalCount = kpis?.length || 0;
+    const degradedCount = kpis.filter((item) => item.status === "degraded").length;
+    const totalCount = kpis.length;
     const healthyCount = totalCount - degradedCount;
     const healthScore = totalCount > 0 ? healthyCount / totalCount : 1;
 
-    let riskLevel: KPIAssessment["riskLevel"];
+    let riskLevel: KPIAssessment["riskLevel"] = "critical";
 
     if (healthScore >= 0.85) {
       riskLevel = "low";
@@ -331,8 +352,6 @@ async function evaluateEngagementKPIHealth(
       riskLevel = "medium";
     } else if (healthScore >= 0.4) {
       riskLevel = "high";
-    } else {
-      riskLevel = "critical";
     }
 
     return {
@@ -342,7 +361,13 @@ async function evaluateEngagementKPIHealth(
       healthScore,
       riskLevel,
     };
-  } catch {
+  } catch (error) {
+    logger.warn("Recommendation KPI assessment failed; defaulting to low KPI risk", {
+      engagementId,
+      workspaceId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+
     return {
       kpiCount: 0,
       healthyKPICount: 0,
@@ -353,16 +378,135 @@ async function evaluateEngagementKPIHealth(
   }
 }
 
+function buildRecommendationPayload(
+  input: CreateRecommendationInput,
+  userId: string,
+  validatedWorkspaceId: string,
+  evidenceAssessment: EvidenceAssessment,
+  kpiAssessment: KPIAssessment
+): {
+  createData: Record<string, unknown>;
+  derivedPriority: string;
+} {
+  let derivedPriority = input.priority;
+
+  if (input.scoringInput) {
+    const scoreBreakdown = calculateRecommendationScoreBreakdown(
+      input.scoringInput,
+      input.class
+    );
+    derivedPriority = mapScoreToPriority(scoreBreakdown.finalScore);
+  }
+
+  return {
+    derivedPriority,
+    createData: {
+      engagementId: input.engagementId,
+      findingId: input.findingId,
+      priority: derivedPriority,
+      title: input.title,
+      description: input.description,
+      estimatedImpact: input.expectedImpact,
+      workspaceId: validatedWorkspaceId,
+      createdBy: userId,
+      evidenceValidationScore: Math.round(evidenceAssessment.validationScore * 100),
+      reliabilityLevel: evidenceAssessment.reliabilityLevel,
+      kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
+      kpiRiskLevel: kpiAssessment.riskLevel,
+    },
+  };
+}
+
+async function emitRecommendationCreatedEvents(
+  recommendationId: string,
+  input: CreateRecommendationInput,
+  userId: string,
+  validatedWorkspaceId: string,
+  derivedPriority: string,
+  evidenceAssessment: EvidenceAssessment,
+  kpiAssessment: KPIAssessment,
+  idempotencyKey?: string
+): Promise<void> {
+  await emitAuditEvent({
+    eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
+    actorId: userId,
+    entityType: "recommendation",
+    entityId: recommendationId,
+    payload: {
+      engagementId: input.engagementId,
+      priority: derivedPriority,
+    },
+    visibility: "internal",
+  });
+
+  await EventEmitterService.emit({
+    aggregateId: recommendationId,
+    aggregateType: "recommendation",
+    eventType: "recommendation.created",
+    eventVersion: 1,
+    payload: {
+      engagementId: input.engagementId,
+      priority: derivedPriority,
+      title: input.title,
+      description: input.description,
+      evidenceValidationScore: String(evidenceAssessment.validationScore),
+      reliabilityLevel: evidenceAssessment.reliabilityLevel,
+      kpiHealthScore: String(kpiAssessment.healthScore),
+      kpiRiskLevel: kpiAssessment.riskLevel,
+    },
+    actorId: userId,
+    workspaceId: validatedWorkspaceId,
+    idempotencyKey,
+    visibilityScope: "internal",
+    sensitivityClassification: "standard",
+  });
+}
+
+async function createRecommendationRecord(
+  input: CreateRecommendationInput,
+  userId: string,
+  validatedWorkspaceId: string,
+  evidenceAssessment: EvidenceAssessment,
+  kpiAssessment: KPIAssessment,
+  idempotencyKey?: string,
+  tx?: TransactionClient
+): Promise<{ id: string; derivedPriority: string }> {
+  const { createData, derivedPriority } = buildRecommendationPayload(
+    input,
+    userId,
+    validatedWorkspaceId,
+    evidenceAssessment,
+    kpiAssessment
+  );
+
+  const recommendation = tx
+    ? await tx.recommendation.create({ data: createData })
+    : await db.recommendation.create({ data: createData });
+
+  await emitRecommendationCreatedEvents(
+    recommendation.id,
+    input,
+    userId,
+    validatedWorkspaceId,
+    derivedPriority,
+    evidenceAssessment,
+    kpiAssessment,
+    idempotencyKey
+  );
+
+  return {
+    id: recommendation.id,
+    derivedPriority,
+  };
+}
+
 export async function createRecommendation(
   input: CreateRecommendationInput,
   authContext: AuthContext,
   workspaceId: string,
   idempotencyKey?: string
 ) {
-  const capabilityCheck = await assertCapability(
-    workspaceId,
-    "generate_recommendation"
-  );
+  const capabilityCheck = await assertCapability(workspaceId, "generate_recommendation");
 
   if (!capabilityCheck.allowed) {
     throw new PlanLimitError(
@@ -371,10 +515,7 @@ export async function createRecommendation(
     );
   }
 
-  const [userId, validatedWorkspaceId] = requireServiceContext(
-    authContext,
-    workspaceId
-  );
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
@@ -384,29 +525,10 @@ export async function createRecommendation(
     throw new NotFoundError("Engagement", input.engagementId);
   }
 
-  const evidenceAssessment = await evaluateEngagementEvidence(
-    input.engagementId,
-    validatedWorkspaceId
-  );
-
-  const kpiAssessment = await evaluateEngagementKPIHealth(
-    input.engagementId,
-    validatedWorkspaceId
-  );
-
-  const buildRecommendationPayload = () => {
-    let derivedPriority = input.priority;
-
-    if (input.scoringInput) {
-      const scoreBreakdown = calculateRecommendationScoreBreakdown(
-        input.scoringInput,
-        input.class
-      );
-      derivedPriority = mapScoreToPriority(scoreBreakdown.finalScore);
-    }
-
-    return { derivedPriority };
-  };
+  const [evidenceAssessment, kpiAssessment] = await Promise.all([
+    evaluateEngagementEvidence(input.engagementId, validatedWorkspaceId),
+    evaluateEngagementKPIHealth(input.engagementId, validatedWorkspaceId),
+  ]);
 
   if (idempotencyKey) {
     const result = await withIdempotency(
@@ -414,62 +536,15 @@ export async function createRecommendation(
       "recommendation.create",
       async () => {
         return db.$transaction(async (tx: TransactionClient) => {
-          const { derivedPriority } = buildRecommendationPayload();
-
-          const recommendation = await tx.recommendation.create({
-            data: {
-              engagementId: input.engagementId,
-              findingId: input.findingId,
-              priority: derivedPriority,
-              title: input.title,
-              description: input.description,
-              estimatedImpact: input.expectedImpact,
-              workspaceId: validatedWorkspaceId,
-              createdBy: userId,
-              evidenceValidationScore: Math.round(
-                evidenceAssessment.validationScore * 100
-              ),
-              reliabilityLevel: evidenceAssessment.reliabilityLevel,
-              kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
-              kpiRiskLevel: kpiAssessment.riskLevel,
-            },
-          });
-
-          await emitAuditEvent({
-            eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
-            actorId: userId,
-            entityType: "recommendation",
-            entityId: recommendation.id,
-            payload: {
-              engagementId: input.engagementId,
-              priority: input.priority,
-            },
-            visibility: "internal",
-          });
-
-          await EventEmitterService.emit({
-            aggregateId: recommendation.id,
-            aggregateType: "recommendation",
-            eventType: "recommendation.created",
-            eventVersion: 1,
-            payload: {
-              engagementId: input.engagementId,
-              priority: derivedPriority,
-              title: input.title,
-              description: input.description,
-              evidenceValidationScore: String(evidenceAssessment.validationScore),
-              reliabilityLevel: evidenceAssessment.reliabilityLevel,
-              kpiHealthScore: String(kpiAssessment.healthScore),
-              kpiRiskLevel: kpiAssessment.riskLevel,
-            },
-            actorId: userId,
-            workspaceId: validatedWorkspaceId,
+          return createRecommendationRecord(
+            input,
+            userId,
+            validatedWorkspaceId,
+            evidenceAssessment,
+            kpiAssessment,
             idempotencyKey,
-            visibilityScope: "internal",
-            sensitivityClassification: "standard",
-          });
-
-          return recommendation;
+            tx
+          );
         });
       },
       input,
@@ -477,7 +552,7 @@ export async function createRecommendation(
     );
 
     if (!result.isNew) {
-      logger.info("Recommendation creation - idempotency replay", {
+      logger.info("Recommendation creation idempotency replay", {
         recommendationId: result.result.id,
         engagementId: input.engagementId,
       });
@@ -496,56 +571,14 @@ export async function createRecommendation(
     return result.result;
   }
 
-  const { derivedPriority } = buildRecommendationPayload();
-
-  const recommendation = await db.recommendation.create({
-    data: {
-      engagementId: input.engagementId,
-      findingId: input.findingId,
-      priority: derivedPriority,
-      title: input.title,
-      description: input.description,
-      estimatedImpact: input.expectedImpact,
-      workspaceId: validatedWorkspaceId,
-      createdBy: userId,
-      evidenceValidationScore: Math.round(
-        evidenceAssessment.validationScore * 100
-      ),
-      reliabilityLevel: evidenceAssessment.reliabilityLevel,
-      kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
-      kpiRiskLevel: kpiAssessment.riskLevel,
-    },
-  });
-
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
-    actorId: userId,
-    entityType: "recommendation",
-    entityId: recommendation.id,
-    payload: {
-      engagementId: input.engagementId,
-      priority: input.priority,
-    },
-    visibility: "internal",
-  });
-
-  await EventEmitterService.emit({
-    aggregateId: recommendation.id,
-    aggregateType: "recommendation",
-    eventType: "recommendation.created",
-    eventVersion: 1,
-    payload: {
-      engagementId: input.engagementId,
-      priority: derivedPriority,
-      title: input.title,
-      description: input.description,
-    },
-    actorId: userId,
-    workspaceId: validatedWorkspaceId,
-    idempotencyKey,
-    visibilityScope: "internal",
-    sensitivityClassification: "standard",
-  });
+  const recommendation = await createRecommendationRecord(
+    input,
+    userId,
+    validatedWorkspaceId,
+    evidenceAssessment,
+    kpiAssessment,
+    idempotencyKey
+  );
 
   await recordRecommendationUsage(validatedWorkspaceId, 1, {
     recommendationId: recommendation.id,
@@ -562,15 +595,9 @@ export async function createRecommendation(
 
 export async function verifyRecommendationState(
   recommendationId: string,
-  userId: string,
+  _userId: string,
   workspaceId: string
-): Promise<{
-  verified: boolean;
-  live: Record<string, unknown>;
-  replayed: Record<string, unknown>;
-  parityOk: boolean;
-  operationMode: "fully_trusted" | "snapshot_backed" | "uncertain";
-}> {
+): Promise<RecommendationStateVerification> {
   enforceWorkspaceId(workspaceId, "verifyRecommendationState", "recommendation");
 
   const liveRec = await db.recommendation.findUnique({
@@ -581,9 +608,8 @@ export async function verifyRecommendationState(
     throw new NotFoundError("Recommendation", recommendationId);
   }
 
-  logger.warn("Recommendation state replay verification is parked", {
+  logger.warn("Recommendation state verification unavailable because replay engine is parked", {
     recommendationId,
-    userId,
     workspaceId,
   });
 
@@ -606,11 +632,7 @@ export async function getRecommendationsForEngagement(
   userId: string,
   workspaceId: string
 ) {
-  enforceWorkspaceId(
-    workspaceId,
-    "getRecommendationsForEngagement",
-    "recommendation"
-  );
+  enforceWorkspaceId(workspaceId, "getRecommendationsForEngagement", "recommendation");
 
   await assertEngagementAccess(userId, engagementId, workspaceId);
 
@@ -652,10 +674,7 @@ export async function updateRecommendationStatus(
   authContext: AuthContext,
   workspaceId: string
 ) {
-  const [userId, validatedWorkspaceId] = requireServiceContext(
-    authContext,
-    workspaceId
-  );
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId, workspaceId: validatedWorkspaceId },
@@ -668,8 +687,7 @@ export async function updateRecommendationStatus(
 
   if (rec.version !== input.version) {
     throw new ConflictError(
-      "Recommendation has been modified by another process. Current version: " +
-        rec.version,
+      `Recommendation has been modified by another process. Current version: ${rec.version}`,
       { code: "STALE_VERSION" }
     );
   }
@@ -682,16 +700,13 @@ export async function updateRecommendationStatus(
     );
 
     if (!stateVerification.parityOk) {
-      logger.error(
-        "UpdateRecommendationStatus: State verification unavailable on approval",
-        {
-          recommendationId,
-          operationMode: stateVerification.operationMode,
-        }
-      );
+      logger.error("Recommendation approval blocked because state verification is unavailable", {
+        recommendationId,
+        operationMode: stateVerification.operationMode,
+      });
 
       throw new ValidationError(
-        "Cannot approve recommendation because state verification is unavailable.",
+        "Recommendation cannot be approved because state verification is unavailable.",
         {
           recommendationId,
           operationMode: stateVerification.operationMode,
@@ -702,22 +717,13 @@ export async function updateRecommendationStatus(
     try {
       const [findings, recommendations, actions] = await Promise.all([
         db.finding.findMany({
-          where: {
-            engagementId: rec.engagementId,
-            workspaceId: validatedWorkspaceId,
-          },
+          where: { engagementId: rec.engagementId, workspaceId: validatedWorkspaceId },
         }),
         db.recommendation.findMany({
-          where: {
-            engagementId: rec.engagementId,
-            workspaceId: validatedWorkspaceId,
-          },
+          where: { engagementId: rec.engagementId, workspaceId: validatedWorkspaceId },
         }),
         db.action.findMany({
-          where: {
-            engagementId: rec.engagementId,
-            workspaceId: validatedWorkspaceId,
-          },
+          where: { engagementId: rec.engagementId, workspaceId: validatedWorkspaceId },
         }),
       ]);
 
@@ -726,50 +732,24 @@ export async function updateRecommendationStatus(
       });
 
       if (engagement) {
-        const findingsForCertainty = findings.map(
-          (finding: (typeof findings)[number]) => ({
-            id: finding.id,
-            severity:
-              (finding.severity as "critical" | "high" | "medium" | "low") ||
-              "low",
-            resolved:
-              finding.status === "resolved" || finding.status === "closed",
-            verified: finding.verified ?? false,
-          })
-        );
+        const findingsForCertainty = findings.map((finding) => ({
+          id: finding.id,
+          severity: (finding.severity as PriorityLevel) || "low",
+          resolved: finding.status === "resolved" || finding.status === "closed",
+          verified: finding.verified ?? false,
+        }));
 
-        const recommendationsForCertainty = recommendations.map(
-          (recommendationItem: (typeof recommendations)[number]) => ({
-            id: recommendationItem.id,
-            priority:
-              (recommendationItem.priority as
-                | "critical"
-                | "high"
-                | "medium"
-                | "low") || "medium",
-            status:
-              (recommendationItem.status as
-                | "blocked"
-                | "in_progress"
-                | "completed") || "in_progress",
-          })
-        );
+        const recommendationsForCertainty = recommendations.map((recommendation) => ({
+          id: recommendation.id,
+          priority: (recommendation.priority as PriorityLevel) || "medium",
+          status: (recommendation.status as RecommendationStatus) || "in_progress",
+        }));
 
-        const actionsForCertainty = actions.map(
-          (action: (typeof actions)[number]) => ({
-            id: action.id,
-            priority:
-              (action.priority as "critical" | "high" | "medium" | "low") ||
-              "medium",
-            status:
-              (action.status as
-                | "blocked"
-                | "pending"
-                | "in_progress"
-                | "completed"
-                | "verified") || "pending",
-          })
-        );
+        const actionsForCertainty = actions.map((action) => ({
+          id: action.id,
+          priority: (action.priority as PriorityLevel) || "medium",
+          status: (action.status as ActionStatus) || "pending",
+        }));
 
         const certaintyResult = calculateExecutionCertainty(
           rec.engagementId,
@@ -779,28 +759,21 @@ export async function updateRecommendationStatus(
           [],
           {
             overallStatus:
-              (engagement.healthStatus as
-                | "critical"
-                | "at_risk"
-                | "stable"
-                | "healthy") || "stable",
+              (engagement.healthStatus as EngagementHealthStatus) || "stable",
             kpiTrend: "flat" as const,
           }
         );
 
         if (certaintyResult.level === "blocked" || certaintyResult.score < 40) {
           if (input.overrideExecutionCertainty) {
-            logger.warn(
-              "Execution certainty gate overridden for recommendation approval",
-              {
-                recommendationId,
-                engagementId: rec.engagementId,
-                score: certaintyResult.score,
-                level: certaintyResult.level,
-                overrideReason: input.overrideExecutionCertainty.reason,
-                overriddenBy: input.overrideExecutionCertainty.approvedBy,
-              }
-            );
+            logger.warn("Execution certainty gate overridden for recommendation approval", {
+              recommendationId,
+              engagementId: rec.engagementId,
+              score: certaintyResult.score,
+              level: certaintyResult.level,
+              overrideReason: input.overrideExecutionCertainty.reason,
+              overriddenBy: input.overrideExecutionCertainty.approvedBy,
+            });
 
             await emitAuditEvent({
               eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_OVERRIDE,
@@ -819,17 +792,14 @@ export async function updateRecommendationStatus(
               visibility: "internal",
             });
           } else {
-            logger.warn(
-              "Execution certainty gate blocking recommendation approval",
-              {
-                recommendationId,
-                engagementId: rec.engagementId,
-                score: certaintyResult.score,
-                level: certaintyResult.level,
-                blockers: certaintyResult.blockers,
-                risks: certaintyResult.risks,
-              }
-            );
+            logger.warn("Execution certainty gate blocking recommendation approval", {
+              recommendationId,
+              engagementId: rec.engagementId,
+              score: certaintyResult.score,
+              level: certaintyResult.level,
+              blockers: certaintyResult.blockers,
+              risks: certaintyResult.risks,
+            });
 
             await emitAuditEvent({
               eventName: AUDIT_EVENTS.EXECUTION_CERTAINTY_WARNING,
@@ -893,10 +863,9 @@ export async function updateRecommendationStatus(
   });
 
   if (updateResult.count === 0) {
-    throw new ConflictError(
-      "Recommendation has been modified by another process",
-      { code: "OPTIMISTIC_LOCK_FAILED" }
-    );
+    throw new ConflictError("Recommendation has been modified by another process", {
+      code: "OPTIMISTIC_LOCK_FAILED",
+    });
   }
 
   const updated = await db.recommendation.findUnique({
@@ -928,10 +897,7 @@ export async function updateRecommendationPriorityFromScore(
   workspaceId: string,
   recommendationClass?: RecommendationClass
 ): Promise<{ id: string; score: number; priority: string }> {
-  const [userId, validatedWorkspaceId] = requireServiceContext(
-    authContext,
-    workspaceId
-  );
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId, workspaceId: validatedWorkspaceId },
@@ -944,20 +910,16 @@ export async function updateRecommendationPriorityFromScore(
   const score = calculateRecommendationScore(scoringInput, recommendationClass);
   const newPriority = mapScoreToPriority(score);
 
-  const updated = await db.recommendation.update({
+  await db.recommendation.update({
     where: { id: recommendationId, workspaceId: validatedWorkspaceId },
     data: {
       priority: newPriority,
       version: { increment: 1 },
     },
-    select: {
-      id: true,
-      priority: true,
-    },
   });
 
   await emitAuditEvent({
-    eventName: AUDIT_EVENTS.RECOMMENDATION_APPROVED,
+    eventName: AUDIT_EVENTS.RECOMMENDATION_UPDATED,
     actorId: userId,
     entityType: "recommendation",
     entityId: recommendationId,
@@ -976,9 +938,9 @@ export async function updateRecommendationPriorityFromScore(
   });
 
   return {
-    id: updated.id,
-    priority: updated.priority,
+    id: recommendationId,
     score,
+    priority: newPriority,
   };
 }
 
@@ -995,10 +957,7 @@ export async function reRankRecommendationsInEngagement(
     score: number;
   }>;
 }> {
-  const [userId, validatedWorkspaceId] = requireServiceContext(
-    authContext,
-    workspaceId
-  );
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const recommendations = await db.recommendation.findMany({
     where: { engagementId, workspaceId: validatedWorkspaceId },
@@ -1011,10 +970,8 @@ export async function reRankRecommendationsInEngagement(
     score: number;
   }> = [];
 
-  let updateCount = 0;
-
   for (const rec of recommendations) {
-    const scoringMetrics = (rec as { scoringMetrics?: unknown }).scoringMetrics;
+    const scoringMetrics = (rec as ScoredRecommendationLike).scoringMetrics;
 
     if (!scoringMetrics) {
       continue;
@@ -1022,14 +979,11 @@ export async function reRankRecommendationsInEngagement(
 
     try {
       const metrics =
-        typeof scoringMetrics === "string"
-          ? JSON.parse(scoringMetrics)
-          : scoringMetrics;
+        typeof scoringMetrics === "string" ? JSON.parse(scoringMetrics) : scoringMetrics;
 
       const newScore = calculateRecommendationScore(
         metrics as RecommendationScoringInput
       );
-
       const newPriority = mapScoreToPriority(newScore);
       const oldPriority = rec.priority;
 
@@ -1061,21 +1015,22 @@ export async function reRankRecommendationsInEngagement(
           newPriority,
           score: newScore,
         });
-
-        updateCount++;
       }
-    } catch {
-      continue;
+    } catch (error) {
+      logger.warn("Skipping recommendation rerank because scoring metrics are invalid", {
+        recommendationId: rec.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
-  return { updated: updateCount, recommendations: updated };
+  return {
+    updated: updated.length,
+    recommendations: updated,
+  };
 }
 
-export async function getRecommendation(
-  recommendationId: string,
-  workspaceId: string
-) {
+export async function getRecommendation(recommendationId: string, workspaceId: string) {
   enforceWorkspaceId(workspaceId, "getRecommendation", "recommendation");
 
   const rec = await db.recommendation.findUnique({
@@ -1124,10 +1079,7 @@ export async function updateRecommendation(
   authContext: AuthContext,
   workspaceId: string
 ) {
-  const [userId, validatedWorkspaceId] = requireServiceContext(
-    authContext,
-    workspaceId
-  );
+  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const rec = await db.recommendation.findUnique({
     where: { id: recommendationId, workspaceId: validatedWorkspaceId },
@@ -1138,10 +1090,14 @@ export async function updateRecommendation(
   }
 
   if (rec.version !== input.version) {
-    throw new Error("Recommendation was modified. Please refresh and try again.");
+    throw new ConflictError("Recommendation was modified. Please refresh and try again.", {
+      code: "STALE_VERSION",
+    });
   }
 
-  const updates: Record<string, unknown> = { version: { increment: 1 } };
+  const updates: Record<string, unknown> = {
+    version: { increment: 1 },
+  };
 
   if (input.status) {
     updates.status = input.status;
@@ -1157,7 +1113,7 @@ export async function updateRecommendation(
   });
 
   await emitAuditEvent({
-    eventName: "recommendation.updated",
+    eventName: AUDIT_EVENTS.RECOMMENDATION_UPDATED,
     actorId: userId,
     entityType: "recommendation",
     entityId: recommendationId,
@@ -1173,7 +1129,7 @@ export async function getRecommendationAuditTrail(
   recommendationId: string,
   userId: string,
   workspaceId: string
-): Promise<AuditTrailEvent[]> {
+): Promise<CanonicalEventLike[]> {
   enforceWorkspaceId(workspaceId, "getRecommendationAuditTrail", "recommendation");
 
   const rec = await db.recommendation.findUnique({
@@ -1210,10 +1166,7 @@ export async function createRecommendationsFromInterventions(
   authContext: AuthContext,
   workspaceId: string
 ) {
-  const [, validatedWorkspaceId] = requireServiceContext(
-    authContext,
-    workspaceId
-  );
+  const [, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   if (!interventions || interventions.length === 0) {
     return [];
@@ -1221,22 +1174,22 @@ export async function createRecommendationsFromInterventions(
 
   const recommendations = [];
 
+  const mapClassToRecommendationClass = (
+    interventionClass: string
+  ): RecommendationClass => {
+    const mapping: Record<string, RecommendationClass> = {
+      CONTAINMENT: "containment",
+      STABILIZATION: "stabilization",
+      STRUCTURAL_REPAIR: "growth",
+      GROWTH_ENABLEMENT: "growth",
+      RESILIENCE_PROTECTION: "stabilization",
+    };
+
+    return mapping[interventionClass] || "stabilization";
+  };
+
   for (const priIntervention of interventions) {
     const intervention = priIntervention.intervention;
-
-    const mapClassToRecommendationClass = (
-      interventionClass: string
-    ): RecommendationClass => {
-      const mapping: Record<string, RecommendationClass> = {
-        CONTAINMENT: "containment",
-        STABILIZATION: "stabilization",
-        STRUCTURAL_REPAIR: "growth",
-        GROWTH_ENABLEMENT: "growth",
-        RESILIENCE_PROTECTION: "stabilization",
-      };
-
-      return mapping[interventionClass] || "stabilization";
-    };
 
     const input: CreateRecommendationInput = {
       engagementId,

@@ -230,12 +230,22 @@ export class EventReplayEngine {
     // Apply event-specific transformations
     switch (event.eventType) {
       case "recommendation.created": {
-        state.recommendationId = event.payload.engagementId;
-        state.priority = event.payload.priority;
+        state.engagementId = event.payload.engagementId;
         state.title = event.payload.title;
-        state.status = "active";
-        state.evidenceReliability = event.payload.reliabilityLevel;
-        state.kpiHealth = event.payload.kpiRiskLevel;
+        state.description = event.payload.description;
+        state.priority = event.payload.priority;
+        state.reliabilityLevel = event.payload.reliabilityLevel;
+        state.kpiRiskLevel = event.payload.kpiRiskLevel;
+        state.evidenceValidationScore = event.payload.evidenceValidationScore
+          ? typeof event.payload.evidenceValidationScore === "string"
+            ? Math.round(parseFloat(event.payload.evidenceValidationScore))
+            : Math.round(event.payload.evidenceValidationScore as number)
+          : undefined;
+        state.kpiHealthScore = event.payload.kpiHealthScore
+          ? typeof event.payload.kpiHealthScore === "string"
+            ? Math.round(parseFloat(event.payload.kpiHealthScore))
+            : Math.round(event.payload.kpiHealthScore as number)
+          : undefined;
         break;
       }
       case "action.completed": {

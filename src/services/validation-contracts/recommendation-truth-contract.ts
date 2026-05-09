@@ -211,7 +211,7 @@ export class RecommendationTruthContract {
     errors.push(...this.validateAIProposalContainment(input));
     errors.push(...this.validateExpirationEnforcement(input));
     errors.push(...this.validateExplainability(input));
-    errors.push(...this.validateEvidenceRequired(input));
+    errors.push(...this.validateEvidenceRequired());
 
     const violations = errors.filter((e) => e.severity === "ERROR");
     const warnings = errors.filter((e) => e.severity === "WARNING");

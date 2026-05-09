@@ -1,6 +1,4 @@
-import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
-import { EventReplayEngine } from "@/services/event-replay-engine";
 
 export interface AggregateSnapshot {
   aggregateId: string;
@@ -11,12 +9,11 @@ export interface AggregateSnapshot {
 }
 
 export class SnapshotEngine {
-  // Snapshot every N events for performance optimization
   private static readonly SNAPSHOT_INTERVAL = 50;
 
   /**
-   * Create a snapshot of aggregate state
-   * Used to optimize replay performance (skip earlier events)
+   * Snapshot creation is currently unavailable because replay is parked
+   * and must not be wired into active runtime services.
    */
   static async createSnapshot(
     aggregateId: string,
@@ -24,59 +21,44 @@ export class SnapshotEngine {
     workspaceId: string,
     atEventNumber: number
   ): Promise<AggregateSnapshot> {
-    // Replay aggregate up to this event number
-    const replayed = await EventReplayEngine.replayAggregate(
+    logger.warn("SnapshotEngine: Snapshot creation unavailable because replay is parked", {
       aggregateId,
       aggregateType,
       workspaceId,
-      atEventNumber
-    );
-
-    logger.info("SnapshotEngine: Snapshot created", {
-      aggregateId,
-      aggregateType,
-      eventNumber: atEventNumber,
-      stateSize: JSON.stringify(replayed.state).length,
+      atEventNumber,
     });
 
-    return {
-      aggregateId,
-      aggregateType,
-      snapshotNumber: atEventNumber,
-      state: replayed.state,
-      createdAt: new Date(),
-    };
+    throw new Error("SnapshotEngine.createSnapshot unavailable because replay is parked");
   }
 
   /**
-   * Get snapshot for aggregate
-   * Returns most recent snapshot before given event number
+   * Get snapshot for aggregate.
+   * Returns the most recent snapshot before a given event number.
    */
   static async getSnapshot(
     aggregateId: string,
     aggregateType: string,
     workspaceId: string
   ): Promise<AggregateSnapshot | null> {
-    // In a full implementation, this would query a snapshots table
-    // For now, we document the pattern for future implementation
     logger.info("SnapshotEngine: Snapshot query", {
       aggregateId,
       aggregateType,
+      workspaceId,
     });
 
-    return null; // No persistent snapshots yet
+    return null;
   }
 
   /**
-   * Check if snapshot should be created
+   * Check if snapshot should be created.
    */
   static shouldCreateSnapshot(eventsSinceLastSnapshot: number): boolean {
     return eventsSinceLastSnapshot >= SnapshotEngine.SNAPSHOT_INTERVAL;
   }
 
   /**
-   * Replay aggregate using snapshot if available
-   * Falls back to full replay if no snapshot exists
+   * Snapshot-backed replay is currently unavailable because replay is parked
+   * and must not be wired into active runtime services.
    */
   static async replayWithSnapshot(
     aggregateId: string,
@@ -84,44 +66,26 @@ export class SnapshotEngine {
     workspaceId: string,
     upToEventNumber?: number
   ): Promise<Record<string, unknown>> {
-    // Check for snapshot
-    const snapshot = await SnapshotEngine.getSnapshot(
-      aggregateId,
-      aggregateType,
-      workspaceId
-    );
-
-    if (snapshot) {
-      logger.info("SnapshotEngine: Using snapshot for replay optimization", {
-        aggregateId,
-        snapshotEventNumber: snapshot.snapshotNumber,
-      });
-
-      // TODO: Replay only events after snapshot
-      // For now, full replay
-    }
-
-    // Full replay (no snapshot or snapshot not useful)
-    const replayed = await EventReplayEngine.replayAggregate(
+    logger.warn("SnapshotEngine: Snapshot-backed replay unavailable because replay is parked", {
       aggregateId,
       aggregateType,
       workspaceId,
-      upToEventNumber
-    );
+      upToEventNumber,
+    });
 
-    return replayed.state;
+    throw new Error("SnapshotEngine.replayWithSnapshot unavailable because replay is parked");
   }
 
   /**
-   * Cleanup old snapshots
+   * Cleanup old snapshots.
    */
-  static async cleanupOldSnapshots(workspaceId: string, keepCount: number = 5) {
-    logger.info("SnapshotEngine: Cleanup (not yet implemented)", {
+  static async cleanupOldSnapshots(
+    workspaceId: string,
+    keepCount: number = 5
+  ): Promise<void> {
+    logger.info("SnapshotEngine: Cleanup not yet implemented", {
       workspaceId,
       keepCount,
     });
-
-    // TODO: Implement snapshot cleanup logic
-    // Remove snapshots older than N days or keep only last N snapshots
   }
 }
