@@ -1196,7 +1196,7 @@ export async function getRecommendationAuditTrail(
     orderBy: { eventNumber: "asc" },
   });
 
-  return events.map((event) => ({
+  return events.map((event: typeof events[0]) => ({
     eventType: event.eventType,
     eventNumber: event.eventNumber,
     occurredAt: event.occurredAt,
