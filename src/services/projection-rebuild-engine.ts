@@ -1,128 +1,272 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 
-export interface AggregateSnapshot {
-  aggregateId: string;
-  aggregateType: string;
-  snapshotNumber: number;
-  state: Record<string, unknown>;
-  createdAt: Date;
-}
-
-export class SnapshotEngine {
-  // Snapshot every N events for performance optimization
-  private static readonly SNAPSHOT_INTERVAL = 50;
-
+/**
+ * ProjectionRebuildEngine: Rebuild projections solely from CanonicalEvent
+ * Truth source: CanonicalEvent only
+ * No other sources of truth used during rebuild
+ */
+export class ProjectionRebuildEngine {
   /**
-   * Create a snapshot of aggregate state
-   * Used to optimize replay performance (skip earlier events)
+   * Rebuild recommendation projection from event stream
+   * Deletes existing projection and rebuilds from scratch
+   * Returns parity check result
    */
-  static async createSnapshot(
-    aggregateId: string,
-    aggregateType: string,
-    workspaceId: string,
-    atEventNumber: number
-  ): Promise<AggregateSnapshot> {
-    // Replay aggregate up to this event number (lazy-load to isolate from active runtime graph)
-    const { EventReplayEngine } = await import("@/services/event-replay-engine");
-    const replayed = await EventReplayEngine.replayAggregate(
-      aggregateId,
-      aggregateType,
-      workspaceId,
-      atEventNumber
-    );
-
-    <logger.info>("SnapshotEngine: Snapshot created", {
-      aggregateId,
-      aggregateType,
-      eventNumber: atEventNumber,
-      stateSize: JSON.stringify(replayed.state).length,
-    });
-
-    return {
-      aggregateId,
-      aggregateType,
-      snapshotNumber: atEventNumber,
-      state: replayed.state,
-      createdAt: new Date(),
-    };
-  }
-
-  /**
-   * Get snapshot for aggregate
-   * Returns most recent snapshot before given event number
-   */
-  static async getSnapshot(
-    aggregateId: string,
-    aggregateType: string,
+  static async rebuildRecommendationProjection(
+    recommendationId: string,
     workspaceId: string
-  ): Promise<AggregateSnapshot | null> {
-    // In a full implementation, this would query a snapshots table
-    // For now, we document the pattern for future implementation
-    <logger.info>("SnapshotEngine: Snapshot query", {
-      aggregateId,
-      aggregateType,
-    });
+  ): Promise<{
+    success: boolean;
+    eventsProcessed: number;
+    parityCheckPassed: boolean;
+    errors: string[];
+  }> {
+    const errors: string[] = [];
 
-    return null; // No persistent snapshots yet
-  }
-
-  /**
-   * Check if snapshot should be created
-   */
-  static shouldCreateSnapshot(eventsSinceLastSnapshot: number): boolean {
-    return eventsSinceLastSnapshot >= SnapshotEngine.SNAPSHOT_INTERVAL;
-  }
-
-  /**
-   * Replay aggregate using snapshot if available
-   * Falls back to full replay if no snapshot exists
-   */
-  static async replayWithSnapshot(
-    aggregateId: string,
-    aggregateType: string,
-    workspaceId: string,
-    upToEventNumber?: number
-  ): Promise<Record<string, unknown>> {
-    // Check for snapshot
-    const snapshot = await SnapshotEngine.getSnapshot(
-      aggregateId,
-      aggregateType,
-      workspaceId
-    );
-
-    if (snapshot) {
-      <logger.info>("SnapshotEngine: Using snapshot for replay optimization", {
-        aggregateId,
-        snapshotEventNumber: snapshot.snapshotNumber,
+    try {
+      // Step 1: Fetch all events for this recommendation (truth source: CanonicalEvent only)
+      const events = await db.canonicalEvent.findMany({
+        where: {
+          aggregateId: recommendationId,
+          aggregateType: "recommendation",
+          workspaceId,
+        },
+        orderBy: { eventNumber: "asc" },
       });
 
-      // TODO: Replay only events after snapshot
-      // For now, full replay
+      if (events.length === 0) {
+        return {
+          success: false,
+          eventsProcessed: 0,
+          parityCheckPassed: false,
+          errors: ["No events found for recommendation"],
+        };
+      }
+
+      // Step 2: Delete existing projection (clear it) - skip if not found
+      try {
+        await db.recommendation.delete({
+          where: { id: recommendationId },
+        });
+        <logger.info>("ProjectionRebuild: Deleted existing projection", {
+          recommendationId,
+        });
+      } catch (err) {
+        // Projection may not exist yet - continue to create
+        <logger.info>("ProjectionRebuild: Projection not found, will create new", {
+          recommendationId,
+        });
+      }
+
+      // Step 3: Rebuild projection solely from events
+      let projectionState: Record<string, unknown> = {
+        id: recommendationId,
+        workspaceId,
+      };
+
+      for (const event of events) {
+        try {
+          // Apply event to projection state
+          projectionState = ProjectionRebuildEngine.applyEventToProjection(
+            projectionState,
+            event
+          );
+        } catch (err) {
+          errors.push(`Error applying event ${event.eventNumber}: ${err}`);
+        }
+      }
+
+      // Step 4: Persist rebuilt projection
+      await db.recommendation.create({
+        data: projectionState as any,
+      });
+
+      <logger.info>("ProjectionRebuild: Rebuilt projection from events", {
+        recommendationId,
+        eventsProcessed: events.length,
+      });
+
+      // Step 5: Verify parity - replay should equal projection
+      const rebuildSuccess = await this.verifyProjectionParity(
+        recommendationId,
+        workspaceId
+      );
+
+      return {
+        success: errors.length === 0,
+        eventsProcessed: events.length,
+        parityCheckPassed: rebuildSuccess,
+        errors,
+      };
+    } catch (error) {
+      errors.push(
+        `Rebuild failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return {
+        success: false,
+        eventsProcessed: 0,
+        parityCheckPassed: false,
+        errors,
+      };
     }
-
-    // Full replay (no snapshot or snapshot not useful) (lazy-load to isolate from active runtime graph)
-    const { EventReplayEngine } = await import("@/services/event-replay-engine");
-    const replayed = await EventReplayEngine.replayAggregate(
-      aggregateId,
-      aggregateType,
-      workspaceId,
-      upToEventNumber
-    );
-
-    return replayed.state;
   }
 
   /**
-   * Cleanup old snapshots
+   * Apply event to projection state (fold logic)
    */
-  static async cleanupOldSnapshots(workspaceId: string, keepCount: number = 5) {
-    <logger.info>("SnapshotEngine: Cleanup (not yet implemented)", {
-      workspaceId,
-      keepCount,
+  private static applyEventToProjection(
+    state: Record<string, unknown>,
+    event: {
+      eventType: string;
+      payload: Record<string, unknown>;
+      eventNumber: number;
+    }
+  ): Record<string, unknown> {
+    // projection.created event
+    if (event.eventType === "recommendation.created") {
+      return {
+        ...state,
+        engagementId: event.payload.engagementId as string,
+        title: event.payload.title as string,
+        description: event.payload.description as string,
+        priority: event.payload.priority as string,
+        evidenceValidationScore: event.payload.evidenceValidationScore
+          ? Math.round(
+              typeof event.payload.evidenceValidationScore === "string"
+                ? parseFloat(event.payload.evidenceValidationScore)
+                : (event.payload.evidenceValidationScore as number)
+            )
+          : undefined,
+        reliabilityLevel: event.payload.reliabilityLevel as string | undefined,
+        kpiHealthScore: event.payload.kpiHealthScore
+          ? Math.round(
+              typeof event.payload.kpiHealthScore === "string"
+                ? parseFloat(event.payload.kpiHealthScore)
+                : (event.payload.kpiHealthScore as number)
+            )
+          : undefined,
+        kpiRiskLevel: event.payload.kpiRiskLevel as string | undefined,
+      };
+    }
+
+    return state;
+  }
+
+  /**
+   * Verify projection parity: replay equals live projection
+   * Truth check: Replayed state matches database projection
+   */
+  private static async verifyProjectionParity(
+    recommendationId: string,
+    workspaceId: string
+  ): Promise<boolean> {
+    try {
+      // Get live projection from database
+      const liveProjection = await db.recommendation.findUnique({
+        where: { id: recommendationId },
+      });
+
+      if (!liveProjection) {
+        logger.error("ProjectionParity: Live projection not found", {
+          recommendationId,
+        });
+        return false;
+      }
+
+      // Get replayed state (lazy-load to isolate from active runtime graph)
+      const { EventReplayEngine } = await import("@/services/event-replay-engine");
+      const replayed = await EventReplayEngine.replayAggregate(
+        recommendationId,
+        "recommendation",
+        workspaceId
+      );
+
+      // Compare critical fields
+      const replayedPayload = replayed.state;
+      const parityChecks = {
+        engagementId:
+          liveProjection.engagementId ===
+          (replayedPayload.engagementId as string),
+        title:
+          liveProjection.title === (replayedPayload.payload_title as string),
+        description:
+          liveProjection.description ===
+          (replayedPayload.payload_description as string),
+        priority:
+          liveProjection.priority === (replayedPayload.payload_priority as string),
+        evidenceValidationScore:
+          liveProjection.evidenceValidationScore ===
+          (replayedPayload.payload_evidenceValidationScore as number),
+        kpiHealthScore:
+          liveProjection.kpiHealthScore ===
+          (replayedPayload.payload_kpiHealthScore as number),
+      };
+
+      const allMatch = Object.values(parityChecks).every((v) => v);
+
+      if (!allMatch) {
+        logger.warn("ProjectionParity: Mismatch detected", {
+          recommendationId,
+          parityChecks,
+        });
+      }
+
+      return allMatch;
+    } catch (error) {
+      logger.error("ProjectionParity: Check failed", {
+        recommendationId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Rebuild all recommendation projections for a workspace
+   * Used for disaster recovery or corruption repair
+   * Rebuilds from canonical_events (source of truth)
+   */
+  static async rebuildAllProjections(
+    workspaceId: string
+  ): Promise<{
+    totalRecommendations: number;
+    successful: number;
+    failed: number;
+    errors: Array<{ recommendationId: string; error: string }>;
+  }> {
+    // Get all distinct recommendation aggregate IDs from event store (source of truth)
+    const events = await db.canonicalEvent.findMany({
+      where: {
+        aggregateType: "recommendation",
+        workspaceId,
+      },
+      select: { aggregateId: true },
+      distinct: ["aggregateId"],
     });
 
-    // TODO: Implement snapshot cleanup logic
-    // Remove snapshots older than N days or keep only last N snapshots
+    const recommendationIds = events.map((e: { aggregateId: string }) => ({ id: e.aggregateId }));
+    const errors: Array<{ recommendationId: string; error: string }> = [];
+    let successful = 0;
+    let failed = 0;
+
+    for (const { id } of recommendationIds) {
+      const result = await this.rebuildRecommendationProjection(id, workspaceId);
+      if (result.success && result.parityCheckPassed) {
+        successful++;
+      } else {
+        failed++;
+        errors.push({
+          recommendationId: id,
+          error: result.errors.join("; "),
+        });
+      }
+    }
+
+    return {
+      totalRecommendations: recommendationIds.length,
+      successful,
+      failed,
+      errors,
+    };
   }
 }
