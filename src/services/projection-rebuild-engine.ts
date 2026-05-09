@@ -1,6 +1,16 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 
+type RecommendationCreateData = Parameters<
+  typeof db.recommendation.create
+>[0]["data"];
+
+type CanonicalRecommendationEvent = {
+  eventType: string;
+  payload: Record<string, unknown>;
+  eventNumber: number;
+};
+
 /**
  * ProjectionRebuildEngine: Rebuild projections solely from CanonicalEvent.
  * Truth source: CanonicalEvent only.
@@ -65,7 +75,11 @@ export class ProjectionRebuildEngine {
         try {
           projectionState = ProjectionRebuildEngine.applyEventToProjection(
             projectionState,
-            event
+            {
+              eventType: event.eventType,
+              payload: event.payload as Record<string, unknown>,
+              eventNumber: event.eventNumber,
+            }
           );
         } catch (err) {
           errors.push(`Error applying event ${event.eventNumber}: ${err}`);
@@ -73,7 +87,7 @@ export class ProjectionRebuildEngine {
       }
 
       await db.recommendation.create({
-        data: projectionState as any,
+        data: projectionState as RecommendationCreateData,
       });
 
       logger.info("ProjectionRebuild: Rebuilt projection from events", {
@@ -111,11 +125,7 @@ export class ProjectionRebuildEngine {
    */
   private static applyEventToProjection(
     state: Record<string, unknown>,
-    event: {
-      eventType: string;
-      payload: Record<string, unknown>;
-      eventNumber: number;
-    }
+    event: CanonicalRecommendationEvent
   ): Record<string, unknown> {
     if (event.eventType === "recommendation.created") {
       return {
@@ -147,72 +157,32 @@ export class ProjectionRebuildEngine {
   }
 
   /**
-   * Verify projection parity: replay equals live projection.
-   * EventReplayEngine is lazy-loaded to avoid active runtime wiring.
+   * Verify projection parity.
+   * Replay is parked, so parity verification is unavailable in active runtime.
    */
   private static async verifyProjectionParity(
     recommendationId: string,
     workspaceId: string
   ): Promise<boolean> {
-    try {
-      const liveProjection = await db.recommendation.findUnique({
-        where: { id: recommendationId },
-      });
+    const liveProjection = await db.recommendation.findUnique({
+      where: { id: recommendationId, workspaceId },
+    });
 
-      if (!liveProjection) {
-        logger.error("ProjectionParity: Live projection not found", {
-          recommendationId,
-        });
-        return false;
-      }
-
-      const { EventReplayEngine } = await import("@/services/event-replay-engine");
-
-      const replayed = await EventReplayEngine.replayAggregate(
+    if (!liveProjection) {
+      logger.error("ProjectionParity: Live projection not found", {
         recommendationId,
-        "recommendation",
-        workspaceId
-      );
-
-      const replayedPayload = replayed.state;
-
-      const parityChecks = {
-        engagementId:
-          liveProjection.engagementId ===
-          (replayedPayload.engagementId as string),
-        title:
-          liveProjection.title === (replayedPayload.payload_title as string),
-        description:
-          liveProjection.description ===
-          (replayedPayload.payload_description as string),
-        priority:
-          liveProjection.priority === (replayedPayload.payload_priority as string),
-        evidenceValidationScore:
-          liveProjection.evidenceValidationScore ===
-          (replayedPayload.payload_evidenceValidationScore as number),
-        kpiHealthScore:
-          liveProjection.kpiHealthScore ===
-          (replayedPayload.payload_kpiHealthScore as number),
-      };
-
-      const allMatch = Object.values(parityChecks).every(Boolean);
-
-      if (!allMatch) {
-        logger.warn("ProjectionParity: Mismatch detected", {
-          recommendationId,
-          parityChecks,
-        });
-      }
-
-      return allMatch;
-    } catch (error) {
-      logger.error("ProjectionParity: Check failed", {
-        recommendationId,
-        error: error instanceof Error ? error.message : String(error),
+        workspaceId,
       });
 
       return false;
     }
+
+    logger.warn("ProjectionParity: Parity check unavailable because replay is parked", {
+      recommendationId,
+      workspaceId,
+    });
+
+    return false;
   }
 
   /**
