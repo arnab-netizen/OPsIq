@@ -138,7 +138,8 @@ if [[ -n "${DATABASE_URL:-}" ]]; then
     if timeout 30 npx prisma migrate deploy > /dev/null 2>&1; then
       pass "Migrations deployed"
     else
-      warn "Migration deploy skipped"
+      fail "Migration deploy failed"
+      DB_READY=false
     fi
 
     echo -e "${BLUE}→${NC} Running database execution test"
@@ -187,7 +188,7 @@ elif [[ "$DB_READY" == true ]]; then
   echo ""
   echo "MVP is ready for production deployment."
   echo ""
-  exit 1
+  exit 0
 else
   echo -e "${GREEN}═══════════════════════════════════════════════════════════${NC}"
   echo -e "${GREEN}VERDICT: STATIC_READY${NC}"
