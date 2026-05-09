@@ -1,2049 +1,1062 @@
-# OPSIQ EXECUTION ROADMAP
-# EXECUTION.MD v3.1
-# FINAL CONSOLIDATED PHASE 0–13 IMPLEMENTATION CONTRACT
-# REALITY-BASED GROWTH + SURVIVAL OPERATING SYSTEM
+# OPSIQ EXECUTION CONTRACT
+# NON-NEGOTIABLE BUILD, RECOVERY, MERGE, AND DEPLOYABILITY STANDARD
+
+This file is the highest-priority implementation contract for OpsIQ.
+
+Claude, Cursor, Copilot, or any coding agent working in this repo must obey this file over chat memory, assumptions, previous plans, or inferred intent.
+
+No feature, phase, branch merge, refactor, schema change, UI change, engine, test, or migration is complete unless it satisfies this contract.
 
 ---
 
-## 0. PURPOSE
+# 0. PRIME DIRECTIVE
 
-OPSIQ must become a deterministic, reality-based Growth + Survival Operating System.
+OpsIQ must become a deterministic, tenant-safe, evidence-based Growth + Survival Operating System.
 
-The system must help operators:
+The system must help business operators:
 
 1. understand real business condition,
-2. identify survival risks,
+2. detect survival risk,
 3. identify growth opportunities,
-4. select the safest highest-impact action,
+4. select the safest highest-impact next action,
 5. execute step-by-step,
 6. measure outcomes,
 7. learn only from verified results,
-8. reduce operator entropy,
-9. avoid unsafe or unaffordable decisions,
+8. reduce operator confusion,
+9. avoid unsafe or unaffordable advice,
 10. avoid fake confidence,
-11. avoid irreversible damage,
-12. maintain explainable operational reasoning,
-13. deliver visible value within 10 minutes when sufficient minimum data exists,
-14. remain usable under low bandwidth, mobile-first, and interrupted-work conditions,
-15. preserve tenant isolation, replay safety, and export safety under all operating modes.
+11. remain auditable,
+12. remain deployable after every completed stage.
 
-OPSIQ must NOT become:
+The system must not become:
 
-- generic AI advice,
-- dashboard theatre,
-- pseudo-strategic software,
-- hallucinated business intelligence,
-- isolated backend engines,
-- duplicate architecture,
-- fake localization,
-- fake enterprise readiness,
-- high-entropy operator software,
-- simulation-heavy unusable software,
-- opaque recommendation software,
-- manually intensive data-entry software,
-- impressive but operationally unused software,
-- adoption-fragile software,
-- tenant-leaky multi-tenant software,
-- stale-projection decision software,
-- export-unsafe reporting software.
+- a generic AI chatbot,
+- a dashboard-only app,
+- a recommendation toy,
+- a non-deterministic advice engine,
+- a branch pile-up,
+- a duplicate architecture mess,
+- an unverified codebase.
 
 ---
 
-## DIRECT MAIN TRANSITION RULE
+# 1. ABSOLUTE RULES
 
-**Context:** Early in execution, commits were created directly on main before branch-enforcement rules were established.
+## 1.1 No back-and-forth implementation
 
-**One-time transition allowance:**
-- Legacy commits created on main before this rule may be pushed once for repository consistency
-- These are classified as LEGACY_TRANSITION_COMMITS
-- No additional implementation may continue on main after transition
+Do not repeatedly rebuild the same module.
 
-**Permanent branch strategy:**
+Before creating anything:
 
-All future work must use feature branches:
+1. search current branch,
+2. search main,
+3. search all local branches,
+4. detect existing implementation,
+5. classify existing implementation,
+6. reuse if valid,
+7. repair if partial,
+8. park if obsolete,
+9. create new only if missing.
 
+## 1.2 No skipped branch work
+
+Before any new stage implementation, inspect all branches.
+
+Required command group:
+
+```bash
+git branch --all
+git status --short
+git log --oneline --decorate --graph --all --max-count=80
 ```
-phase/<phase-number>-<phase-name>
-```
 
-Examples:
-- `phase/0-system-truth-contract`
-- `phase/0-runtime-verification-fix`
-- `phase/1-reality-integrity-layer`
-- `phase/2-reality-backbone`
+For each branch, classify:
 
-**Main becomes merge-only:**
-- Main receives only completed phase merges
-- All implementation work is isolated to phase branches
-- CI/testing occurs on branches before main merge
-- Main always reflects integration-verified, COMPLETE phase state
-
----
-
-## 1. ABSOLUTE EXECUTION MODE
-
-Claude must obey this execution.md over all previous roadmap language.
-
-Legacy roadmap names are forbidden unless explicitly archived:
-
-- Phase A
-- Phase B
-- Phase C
-- Phase D
-- Phase E
-- Phase F
-- Phase C-CONSTRAINT
-- old Phase 0–F variants
-- any undefined roadmap alias
-
-Only valid roadmap phases:
-
-- Phase 0 — System Truth Contract
-- Phase 1 — Reality Integrity Layer
-- Phase 2 — Reality Backbone
-- Phase 3 — Event + Temporal Fabric
-- Phase 4 — Survival Intelligence
-- Phase 5 — Growth Operating Engines
-- Phase 6 — Execution Reality
-- Phase 7 — Experimentation + Validation
-- Phase 8 — Decision + Priority System
-- Phase 9 — Guided Operating System
-- Phase 10 — Adaptive Learning
-- Phase 11 — Owner Mode Full OS
-- Phase 12 — Public SMB Shell
-- Phase 13 — Enterprise Hardening
-
-No invented phases.
-No silent scope changes.
-No hidden architecture forks.
-No handwaving.
-No claims without runtime proof.
-No skipped gates.
-
----
-
-## 2. EXECUTION PHILOSOPHY
-
-OPSIQ is an operational loop system.
-
-Every engine must strengthen this loop:
-
-Observe Reality
-→ Detect Constraint
-→ Detect Highest Leverage Action
-→ Validate Feasibility
-→ Execute Safely
-→ Measure Outcome
-→ Verify Impact
-→ Adjust Confidence
-→ Simplify Next Decision
-→ Repeat
-
-Any engine that does not materially strengthen this loop is complexity debt.
-
-Any feature that improves safety but degrades daily usability must include a compensating usability path.
-
-Any feature that improves usability but weakens truth, replay safety, export safety, or tenant isolation must be rejected.
-
----
-
-## 3. REPO BASELINE RULE
-
-Existing implementation is NOT automatically complete.
-
-Existing code must be classified:
-
-- REUSABLE
-- PARTIALLY_REUSABLE
-- PARKED
+- MERGED_CONFIRMED
+- USEFUL_UNMERGED
+- DUPLICATE
 - OBSOLETE
-- DUPLICATE_RISK
-- MISSING
+- CONFLICTING
+- UNKNOWN_NEEDS_INSPECTION
 
-No implementation may be assumed valid without runtime verification.
+No stage may start if any branch is UNKNOWN_NEEDS_INSPECTION.
 
-No phase may be marked COMPLETE solely because legacy code exists.
+## 1.3 No duplicate systems
 
-No phase may be marked COMPLETE if runtime wiring is unproven.
+Do not create a second version of any existing domain system.
 
----
+The following domains must have one canonical owner each:
 
-## 4. GLOBAL EXECUTION RULES
-
-### 4.1 Read before writing
-
-Before modifying code:
-
-1. Pull latest main.
-2. Create phase branch.
-3. Read execution.md.
-4. Scan repo fully.
-5. Inspect:
-   - schema
-   - migrations
-   - services
-   - routes
-   - DTOs
-   - engines
-   - jobs
-   - events
-   - audit
-   - RBAC
-   - billing
-   - entitlement
-   - quotas
-   - UI surfaces
-   - tests
-   - cache keys
-   - exports
-   - storage paths
-   - replay handlers
-   - projection consumers
-   - notification systems
-   - integration adapters
-   - AI proposal paths
-6. Reuse valid implementation.
-7. Upgrade partial implementation.
-8. Create only if missing.
-9. Prevent duplication.
-
----
-
-### 4.2 Branching rules
-
-Never work directly on main.
-
-Required branch pattern:
-
-phase/<phase-number>-<phase-name>
-
-Example:
-
-phase/8-decision-priority-system
-
----
-
-### 4.3 No duplicate architecture
-
-Before creating any:
-
-- model
-- engine
-- DTO
-- service
-- migration
-- route
-- event
-- queue
-- registry
-- utility
-- projection
-- cache namespace
-- export formatter
-- notification handler
-- integration adapter
-
-Claude must:
-
-1. search repo,
-2. identify equivalent implementation,
-3. reuse or upgrade if valid,
-4. consolidate duplicates,
-5. reject redundant systems.
-
-If new implementation is created, document why reuse was impossible.
-
----
-
-### 4.4 Runtime classification
-
-Every major system must be classified:
-
-- ACTIVE
-- PARKED
-- REJECTED
-
-ACTIVE requires:
-
-- runtime wiring proof,
-- tests,
-- real execution path,
-- failure handling proof,
-- tenant scope proof if stateful,
-- replay safety proof if event-driven.
-
-PARKED systems may NOT be claimed operational.
-
----
-
-### 4.5 Backend-first order
-
-Required implementation order:
-
-1. domain contract
-2. state machine
-3. schema/model
-4. migration
-5. validation
-6. service/engine
-7. event integration
-8. replay/projection integration
-9. jobs/recompute
-10. API
-11. DTO
-12. tests
-13. UI
-14. notifications
-15. integrations/adapters
-
-No UX shortcut may bypass missing backend truth contracts.
-
----
-
-### 4.6 Fail-closed behavior
-
-If information is:
-
-- missing,
-- contradictory,
-- stale,
-- unsafe,
-- unverifiable,
-- computationally uncertain,
-
-system must return one of:
-
-- NEED_MORE_DATA
-- CANNOT_DETERMINE
-- DANGER_DO_NOT_ACT
-
-Never fake certainty.
-
-Fail-closed must still provide the minimum safe utility path when possible:
-
-- evidence collection task,
-- observation task,
-- reversible micro-action,
-- human review request,
-- low-risk monitoring step.
-
----
-
-### 4.7 No generic recommendations
-
-Every recommendation MUST include:
-
-- action
-- reason
-- evidence_refs
-- constraints_considered
-- expected_impact
-- estimated_roi
-- cost
-- time_required
-- difficulty
-- risk
-- rollback_cost
-- rollback_time
-- reversibility
-- blast_radius
-- confidence_state
-- confidence_reason
-- uncertainty_drivers
-- first_step
-- stop_condition
-- review_date
-- expiration_date
-- why_now
-- why_not_alternatives
-- freshness_status
-- data_recency_basis
-- acting_preconditions
-
-Missing required fields = invalid recommendation.
-
-Expired recommendations are non-actionable by default.
-
----
-
-### 4.8 Confidence states
-
-Only valid states:
-
-- HIGH_CONFIDENCE
-- MEDIUM_CONFIDENCE
-- LOW_CONFIDENCE
-- NEED_MORE_DATA
-- CANNOT_DETERMINE
-- DANGER_DO_NOT_ACT
-
-No hidden or interpolated UI synonym may bypass these states.
-
----
-
-### 4.9 Security invariants
-
-Every read/write must enforce:
-
-- authenticated actor
-- workspace scope
-- capability
-- tenant isolation
-- DTO visibility separation
-- audit trail
-- event traceability
-- actor-to-tenant binding
-- export visibility policy
-- cache-key tenant scoping
-- storage-path tenant scoping
-
-Forbidden:
-
-- unscoped query
-- fetch-then-filter tenancy
-- DTO leakage
-- direct billing mutation
-- AI mutating canonical state
-- unscoped cache read
-- shared export path
-- replay without tenant guard
-
-Database-level tenant isolation is required as defense in depth where technically feasible.
-
-Application filters alone are insufficient for enterprise posture.
-
----
-
-### 4.10 Mutation safety rules
-
-All material mutations must support:
-
-- idempotency
-- optimistic locking
-- retry safety
-- replay safety
-- duplicate prevention
-- partial failure handling
-- side-effect isolation
-- compensating action path where applicable
-
-No mutation may silently double-apply.
-
----
-
-### 4.11 Deterministic temporal governance
-
-System must define:
-
-- canonical timezone policy
-- event ordering rules
-- replay timestamp policy
-- delayed event handling
-- stale evaluation windows
-- snapshot cadence
-- replay boundaries
-- replay queue isolation
-- replay side-effect suppression
-- replay audit logging
-
-No temporal logic may trust client clock.
-
----
-
-### 4.12 Graceful degradation rules
-
-System must safely degrade during:
-
-- AI outage
-- integration outage
-- stale projections
-- replay lag
-- job backlog
-- quota exhaustion
-- delayed recompute
-- partial corruption
-- notification outage
-- export failure
-
-Canonical state integrity must survive degradation.
-
-System must expose operating mode:
-
-- NORMAL
-- DEGRADED
-- PARTIAL
-- UNSAFE
-
-UNSAFE mode must restrict actionable recommendations and surface provisional status clearly.
-
----
-
-### 4.13 Computational containment
-
-System must enforce:
-
-HOT:
-- current operational state
-
-WARM:
-- near-term projections
-
-COLD:
-- historical immutable events
-
-Execution tiers:
-
-Tier 0:
-- auth
-- workspace
-- permissions
-- quotas
-- contradiction gates
-
-Tier 1:
-- priorities
-- KPI drift
-- recommendation updates
-
-Tier 2:
-- projections
-- causal analysis
-- learning
-- pattern mining
-
-Tier 2 workloads may not block Tier 0 or Tier 1 user actions.
-
----
-
-### 4.14 Causal graph constraints
-
-Allowed causal domains:
-
-- revenue
-- margin
-- cashflow
-- churn
-- conversion
-- delivery
-- capacity
-- complaints
-- retention
-- lead flow
-
-Maximum causal depth: 5.
-
-Every causal edge requires at least one:
-
-- verified logic,
-- repeat observation,
-- correlation,
-- intervention evidence.
-
-Confidence decays with depth.
-
-Causal edges must store evidence basis and freshness.
-
-No causal explanation may be shown if underlying edge freshness exceeds domain staleness threshold.
-
----
-
-### 4.15 Graduated utility rule
-
-Even under uncertainty, system must still provide:
-
-- reversible actions,
-- observation tasks,
-- evidence collection tasks,
-- low-risk next steps.
-
-Fail-closed must NOT dead-end the operator unnecessarily.
-
----
-
-### 4.16 Cognitive compression rule
-
-Public UX must NEVER expose:
-
-- confidence math
-- causal graphs
-- attribution math
-- projection internals
-- strategic debt internals
-- calibration internals
-- event fabric internals
-
-Public UX should expose only:
-
-- what
-- why
-- urgency
-- expected outcome
-- risk
-- next action
-- what is missing if confidence is low
-- what changes the recommendation
-
----
-
-### 4.17 First-10-minute success rule
-
-System must produce value within 10 minutes when minimum viable evidence exists:
-
-- one validated business problem,
-- one actionable recommendation,
-- one measurable opportunity,
-- one safe next step.
-
-Public mode must support quick-start fallback:
-
-- CSV upload,
-- minimal manual input,
-- skip-setup mode with reduced-confidence output,
-- instant explanation of what extra data improves accuracy.
-
----
-
-### 4.18 Notification governance
-
-Notifications must support:
-
-- escalation thresholds
-- cooldowns
-- suppression
-- digesting
-- critical-only routing
-- actionability enforcement
-- quiet hours
-- channel preference
-- deduplication
-- stale-notification invalidation
-
-Notification spam is forbidden.
-
----
-
-### 4.19 Learning isolation rules
-
-Learning must distinguish:
-
-- correlation
-- coincidence
-- seasonality
-- market shift
-- operator variance
-- exogenous shocks
-- data quality drift
-
-Cross-workspace learning leakage is forbidden.
-
-Only anonymized aggregate learning is allowed.
-
-No workspace-specific recommendation may use another workspace’s identifiable facts.
-
----
-
-### 4.20 Resource budgeting
-
-Per workspace enforce:
-
-- recompute budget
-- projection budget
-- event throughput budget
-- AI usage budget
-- job execution budget
-- export budget
-- notification budget
-
-Noisy tenants must not destabilize platform.
-
-When limits are reached, system must degrade predictably and preserve the core operational loop.
-
----
-
-### 4.21 Projection freshness governance
-
-Each projection must define:
-
-- freshness SLA
-- stale_after
-- hard_expire_after
-- blocking_behavior_if_stale
-- fallback_behavior_if_stale
-
-Recommendations may not be generated from projections beyond hard_expire_after.
-
-User-visible freshness status is mandatory for recommendation-producing views.
-
----
-
-### 4.22 Tenant context propagation
-
-Every request, event, job, projection, cache key, export packet, file path, webhook handler, and AI proposal must carry verified workspace_id.
-
-Missing, forged, or mismatched tenant context is a hard failure.
-
-Tenant context must be derived from authenticated context, not client-provided body fields alone.
-
----
-
-### 4.23 Export safety and portability
-
-All exports must define:
-
-- allowed actor roles
-- field-level redaction
-- tenant scope
-- retention period
-- audit emission
-- watermarking if sensitive
-- data portability format
-
-Platform must support one-click workspace export for lock-in resistance.
-
-Portability may not bypass role restrictions.
-
----
-
-### 4.24 Adoption integrity rule
-
-Adoption features are allowed only when they strengthen the operational loop and do not bypass truth contracts.
-
-Allowed adoption features:
-
-- low-friction onboarding,
-- mobile-first execution,
-- offline-safe action capture,
-- reminder routing,
-- embedded action surfaces,
-- one-tap scripts,
-- ROI feedback loops.
-
-Forbidden adoption shortcuts:
-
-- actionable advice without truth gating,
-- hidden confidence downgrades,
-- canned recommendations presented as specific advice,
-- unverified ROI claims,
-- push spam used to simulate engagement.
-
----
-
-## 5. SYSTEM NORTH STAR
-
-Primary optimization target:
-
-MINIMUM_OPERATOR_ENTROPY
-
-System should reduce:
-
-- ambiguity
-- unnecessary decisions
-- execution confusion
-- operational overload
-- tool fatigue
-- adoption friction
-
-Every feature must improve at least one:
-
-- survival
-- cashflow
-- revenue
-- margin
-- execution reliability
-- operator clarity
-- scalability
-- decision quality
-- daily usability
-
-Otherwise reject feature.
-
----
-
-## 6. GLOBAL DOMAIN OBJECTS
-
-Required canonical objects:
-
-- Workspace
-- Organization
-- User
-- Role
-- Capability
-- BusinessProfile
-- BusinessModelProfile
-- BusinessMaturityState
-- OwnerConstraintProfile
-- FinancialConstraintProfile
-- CustomerProfile
-- LocalMarketProfile
-- CapacityProfile
-- ComplianceFlag
-- ConstraintRegistry
+- Auth
+- Workspace/Tenant isolation
+- RBAC/Capabilities
+- Idempotency
 - Evidence
-- EvidenceSource
-- EvidenceReliabilityScore
-- Contradiction
+- Finding
 - Recommendation
-- RecommendationLifecycle
 - Decision
-- DecisionRecord
 - Action
-- ActionCorrection
-- KPI
-- KPIRegistry
-- Outcome
-- OutcomeVerification
-- Experiment
-- AttributionRecord
+- Business condition
+- Financial constraint
+- Owner constraint
+- Capacity
+- Audit
 - Event
-- Projection
-- Snapshot
-- Report
-- ExportPacket
-- Plan
-- Subscription
-- UsageEvent
-- AuditEvent
-- Notification
-- NotificationPolicy
-- Job
-- FileAsset
-- AiProposal
-- AIProposalSandbox
-- BenchmarkRegistry
-- ResourceBudget
-- EvidenceRetentionPolicy
-- IntegrationConnection
-- IntegrationSyncJob
-- IntegrationConflict
-- StateTransitionRule
-- ProjectionFreshnessPolicy
-- TenantContextEnvelope
-- PortabilityRequest
-- IncidentModeState
-- OperatorAdherenceProfile
-- OnboardingSession
-- OfflineActionBuffer
-- EmbeddedSurfaceRegistration
+- Billing
+- Entitlement
+- Usage
+- Public DTO
+- Owner DTO
+- Admin DTO
 
-Every object must define:
+If duplicates exist, create/update `docs/CANONICAL_ARCHITECTURE.md`.
 
-- workspace scope
-- lifecycle
-- state transitions
-- permissions
-- audit behavior
-- event behavior
-- retention behavior
-- export behavior
-- owner/public visibility
-- billing impact if applicable
-- indexes if persisted
-- foreign keys if persisted
-- replay behavior if event-driven
+Each duplicate must be classified:
 
-## GLOBAL OBJECT IMPLEMENTATION RULE
+- ACTIVE_CANONICAL
+- READ_MODEL_ONLY
+- LEGACY_PARKED
+- OBSOLETE_DO_NOT_USE
+- DUPLICATE_RISK_NEEDS_FIX
 
-The Global Domain Objects list is a contract inventory, not permission to create every table immediately.
+## 1.4 No phase completion by file existence
 
-For each phase, Claude must:
-- map relevant objects
-- reuse existing objects
-- create only objects required for that phase
-- avoid mass schema creation
-- avoid speculative unused tables
-- mark future objects as MISSING or PARKED until their phase requires them
+A file existing does not mean the module is complete.
 
-No global object may be persisted unless:
-- required by the current phase
-- wired into runtime
-- covered by tests
-- migration validated
+A module is complete only when:
+
+1. domain contract exists,
+2. schema/model exists if persistence is needed,
+3. migration exists if schema changed,
+4. validator exists,
+5. service/engine exists,
+6. API or internal caller is wired,
+7. audit/event logging is wired if material,
+8. permission/tenant enforcement exists,
+9. tests exist,
+10. tests pass,
+11. build passes,
+12. typecheck passes,
+13. Prisma validates,
+14. execution_state is updated,
+15. proof summary is written.
+
+## 1.5 No unsafe shortcuts
+
+Never:
+
+- bypass tests,
+- comment out failing tests,
+- mark broken tests as skipped unless explicitly recorded as environmental blocker,
+- remove enforcement to make build green,
+- weaken tenant isolation,
+- weaken permission checks,
+- bypass DTO redaction,
+- add unaudited write paths,
+- add public APIs before DTO safety exists,
+- add billing features without entitlement enforcement exists.
 
 ---
 
-## 7. EXECUTION STATE FILE
+# 2. EXECUTION STATE CONTROL
 
-Claude must maintain:
+Maintain:
 
 `.claude/execution_state.json`
 
-Required schema:
+Required structure:
 
-~~~json
+```json
 {
-  "roadmap": "EXECUTION_MD_V3_1_FINAL_PHASE_0_13_GROWTH_SURVIVAL_OS",
+  "current_stage": "",
   "current_phase": "",
-  "completed_phases": [],
-  "phase_status": {},
-  "reused_systems": [],
-  "upgraded_systems": [],
-  "created_systems": [],
-  "parked_systems": [],
-  "rejected_duplicates": [],
-  "obsolete_systems": [],
-  "runtime_wiring_verified": [],
-  "tests_added": [],
-  "commands_run": [],
-  "gate_results": [],
+  "completed_stages": [],
+  "blocked_stages": [],
+  "active_branch": "",
+  "main_branch": "main",
+  "branch_inventory_completed": false,
+  "branch_inventory_last_updated": "",
+  "canonical_architecture_locked": false,
   "last_green_commit": "",
-  "blockers": [],
-  "next_phase": ""
+  "commands_last_run": [],
+  "failing_commands": [],
+  "environment_blockers": [],
+  "completed_modules": [],
+  "pending_modules": [],
+  "parked_modules": [],
+  "known_duplicate_risks": [],
+  "invariants_verified": [],
+  "next_required_stage": ""
 }
-~~~
+```
 
-Do not use legacy phase names in this file.
-
----
-
-# PHASE 0 — SYSTEM TRUTH CONTRACT
-
-## Goal
-
-Create root laws for:
-
-- recommendations
-- confidence
-- rollback
-- truth validation
-- anti-generic behavior
-- explainability
-- AI containment
-- stale-data refusal
-- expiration enforcement
-
-## Required systems
-
-- RecommendationTruthContract
-- RecommendationExplanationContract
-- DangerousActionGate
-- RollbackRequirementPolicy
-- AIProposalSandbox
-- RecommendationExpiryPolicy
-- MinimumUsefulOutputPolicy
-
-## Must wire into
-
-- recommendation generation
-- decision generation
-- action creation
-- AI suggestion acceptance
-- DTO serialization
-- stale-view rendering
-
-## Acceptance criteria
-
-- Generic recommendations fail validation.
-- Missing evidence fails validation.
-- Missing rollback fails validation.
-- Missing constraints fail validation.
-- Expired recommendation becomes non-actionable.
-- AI cannot bypass validation.
-- Minimum useful output exists under low confidence.
-- Runtime wiring is proven.
-- Tests pass.
+Update this file after every completed stage or failed verification.
 
 ---
 
-# PHASE 1 — REALITY INTEGRITY LAYER
+# 3. BRANCH RECOVERY PROTOCOL
 
-## Goal
+Before new implementation, run branch recovery.
 
-Prevent fake certainty.
+## 3.1 Branch inventory
 
-## Required engines
+Run:
 
-- EvidenceReliabilityEngine
-- EvidenceSufficiencyEngine
-- ContradictionEngine
-- DataQualityScoreEngine
-- ConfidenceGate
-- BenchmarkProvenanceRegistry
-- OutcomeVerificationContract
-- ManipulationRiskEngine
-- EvidenceAnomalyDetector
+```bash
+git fetch --all --prune
+git branch --all
+git status --short
+git log --oneline --decorate --graph --all --max-count=120
+```
 
-## Required evidence fields
+Create/update:
 
-- source_type
-- reliability_score
-- freshness_score
-- completeness_score
-- contradiction_score
-- manipulation_risk
-- lineage_refs
-- workspace_id
-- observed_at
-- ingested_at
+`docs/BRANCH_INVENTORY.md`
 
-## Must wire into
+Required table:
 
-- diagnosis
-- recommendations
-- decisions
-- priority scoring
-- AI proposal acceptance
-- adaptive learning
-- benchmark usage
-- outcome verification
+| Branch | Last commit | Merged into main? | Unique files | Unique modules | Status | Action |
+|---|---|---|---|---|---|---|
 
-## Acceptance criteria
+Status must be one of:
 
-- Evidence is weighted.
-- Contradictions downgrade confidence.
-- Weak evidence blocks high confidence.
-- Benchmarks contain provenance.
-- Claimed outcomes and verified outcomes are separated.
-- Weak verification downgrades learning.
-- Manipulation anomalies are surfaced.
-- Contradiction fail-closed tests pass.
+- MERGED_CONFIRMED
+- USEFUL_UNMERGED
+- DUPLICATE
+- OBSOLETE
+- CONFLICTING
+- UNKNOWN_NEEDS_INSPECTION
+
+No branch may remain UNKNOWN.
 
 ---
 
-# PHASE 2 — REALITY BACKBONE
+# 4. DEPLOYABILITY GATE
 
-## Goal
+After every stage, run:
 
-Model real business context before advice.
+```bash
+npm run build
+npx tsc --noEmit
+npx prisma validate
+npm test
+```
 
-## Required objects
-
-- BusinessProfile
-- BusinessModelProfile
-- BusinessMaturityState
-- OwnerConstraintProfile
-- FinancialConstraintProfile
-- CustomerProfile
-- LocalMarketProfile
-- CapacityProfile
-- ComplianceFlag
-- ConstraintRegistry
-- KPIRegistry
-- RecommendationLifecycle
-- ResourceBudget
-- OperatorAdherenceProfile
-- OnboardingSession
-
-## BusinessModelProfile must support
-
-- primary_model
-- secondary_models
-- revenue_mix
-- margin_mix
-- delivery_modes
-- recurring_vs_one_time
-- operational_complexity_score
-
-## Business maturity states
-
-- SURVIVAL
-- STABILIZE
-- GROWTH
-- SCALE
-
-## Must wire into
-
-- diagnosis
-- recommendation generation
-- survival engine
-- growth engine
-- execution feasibility
-- onboarding
-- public SMB shell
-- KPI interpretation
-- resource budgeting
-
-## Acceptance criteria
-
-- Hybrid business models are supported.
-- Financial constraints are captured.
-- Customer constraints are captured.
-- Local context is captured.
-- Capacity constraints are captured.
-- Compliance flags are captured.
-- KPI formulas are canonicalized.
-- Recommendation expiration exists.
-- Resource budgets are enforced.
-- Operator adherence is tracked using observable operational signals only.
-- Quick-start context path is defined.
-- Recommendations require reality context or explicit low-data warning.
+No stage is complete unless verification passes or blocker is formally documented.
 
 ---
 
-# PHASE 3 — EVENT + TEMPORAL FABRIC
+# 5. SECURITY INVARIANTS
 
-## Goal
+The following must never regress:
 
-Make system replayable, stateful, temporally safe, and projection-aware.
+1. unauthenticated users cannot access protected routes,
+2. users cannot access another workspace’s data,
+3. users cannot mutate another workspace’s data,
+4. viewers cannot perform privileged mutations,
+5. public users cannot see owner/internal fields,
+6. owner/admin APIs are separated from public APIs,
+7. missing entitlement fails closed,
+8. missing workspace context fails closed.
 
-## Required systems
+Required tests:
 
-- append-only event store
-- event schema registry
-- event versioning
-- replay engine
-- projection engine
-- snapshot system
-- deterministic replay boundaries
-- partition/archive strategy
-- schema evolution registry
-- replay queue isolation
-- replay audit log
-- projection freshness policy
-- event side-effect suppression policy
-
-## Required event fields
-
-- causation_id
-- correlation_id
-- aggregate_id
-- aggregate_type
-- actor_id
-- workspace_id
-- event_type
-- event_version
-- occurred_at
-- recorded_at
-- deterministic_payload
-- visibility_scope
-- sensitivity_classification
-
-## Required event types
-
-- business_profile_updated
-- financial_constraint_changed
-- local_assumption_changed
-- evidence_uploaded
-- contradiction_detected
-- recommendation_generated
-- recommendation_expired
-- recommendation_accepted
-- recommendation_rejected
-- decision_created
-- decision_frozen
-- action_started
-- action_blocked
-- action_completed
-- action_failed
-- kpi_changed
-- survival_status_changed
-- growth_opportunity_detected
-- outcome_claimed
-- outcome_verified
-- confidence_changed
-- experiment_started
-- experiment_completed
-- projection_refreshed
-- projection_stale
-- export_generated
-- replay_started
-- replay_completed
-- degradation_mode_changed
-
-## Must wire into
-
-- material writes
-- recommendations
-- decisions
-- actions
-- KPI updates
-- outcomes
-- experiments
-- projections
-- exports
-- replay jobs
-- degradation mode transitions
-
-## Acceptance criteria
-
-- Material state changes emit events.
-- Events are workspace-scoped.
-- Events can be replayed deterministically.
-- Projection tests exist.
-- Snapshot cadence is defined.
-- Replay boundaries are enforced.
-- Archive strategy exists.
-- Event evolution/versioning is tested.
-- Replay suppresses side effects.
-- Replay is tenant-guarded.
-- Sensitive payload leakage is prevented.
+```bash
+npm test -- workspace-isolation
+npm test -- permission-matrix
+npm test -- dto-leakage
+npm test -- entitlement
+```
 
 ---
 
-# PHASE 4 — SURVIVAL INTELLIGENCE
+# 6. CANONICAL IMPLEMENTATION ORDER
 
-## Goal
+## STAGE 0 — Freeze + Build Truth
+Goal:
+Prove repo can run verification.
 
-Prevent reckless growth when unstable.
+## STAGE 1 — Branch Inventory + Recovery
+Goal:
+Ensure no implemented work is skipped.
 
-## Required engines
+## STAGE 2 — Canonical Architecture Lock
+Goal:
+Stop duplicate systems.
 
-- FinancialHealthGate
-- CashRunwayEngine
-- BurnPressureEngine
-- DebtPressureEngine
-- MarginRiskEngine
-- RevenueConcentrationEngine
-- SurvivalPriorityEngine
-- OperatorLoadEngine
-- OrganizationalFrictionSignals
+## STAGE 3 — Tenant Safety Backbone
+Goal:
+Make SaaS data isolation non-bypassable.
 
-## Financial health states
+## STAGE 4 — Phase 0 System Truth Contract
+Goal:
+Prevent generic, unsafe, fake-confident recommendations.
 
-- SURVIVAL_CRITICAL
-- SURVIVAL_RISK
-- STABILIZE_FIRST
-- GROWTH_ALLOWED
-- SCALE_READY
+## STAGE 5 — Phase 1 Reality Integrity
+Goal:
+Make evidence reliability, sufficiency, contradiction, and confidence gates real.
 
-## Must wire into
+## STAGE 6 — Phase 2 Reality Backbone
+Goal:
+Model business maturity, owner constraints, financial constraints, capacity, customer, local market, and KPI registry.
 
-- growth engine
-- priority engine
-- recommendation generation
-- decision safety
-- execution feasibility
-- public/owner dashboards
-- escalation engine
+## STAGE 7 — Minimal Event + Audit Fabric
+Goal:
+Create canonical event/audit trail for critical state only.
 
-## Acceptance criteria
+## STAGE 8 — Billing + Entitlement Enforcement
+Goal:
+Turn billing from tables into route-level monetization enforcement.
 
-- Growth is blocked or downgraded during survival risk.
-- Runway affects priorities.
-- Cash pressure affects recommendations.
-- Debt and margin risks affect recommendations.
-- Operator overload affects feasibility.
-- Organizational friction affects execution scoring.
-- Survival state is explainable.
-- Tests prove survival-before-growth gating.
+## STAGE 9 — Survival Intelligence
+Goal:
+Cash runway, financial health, debt/margin pressure, survival gating.
 
----
+## STAGE 10 — Business Impact + Priority Engine
+Goal:
+Select one best next action using deterministic priority.
 
-# PHASE 5 — GROWTH OPERATING ENGINES
+Formula:
 
-## Goal
-
-Identify practical revenue and profit growth actions.
-
-## Required engines
-
-- RevenueGrowthEngine
-- CustomerAcquisitionEngine
-- SalesPipelineEngine
-- OfferStrengthEngine
-- PricingEngine
-- UnitEconomicsEngine
-- RetentionEngine
-- CustomerSegmentProfitabilityEngine
-- ValueAttributionLedger
-- ExecutiveImpactPacketEngine
-
-## Required outputs
-
-- top_growth_blocker
-- fastest_revenue_move
-- highest_margin_opportunity
-- best_customer_segment
-- worst_customer_segment
-- offer_gap
-- pricing_gap
-- acquisition_channel_priority
-- expected_impact
-- estimated_roi
-- confidence_state
-
-## Must wire into
-
-- recommendation generation
-- priority engine
-- guided operating system
-- ROI validation
-- owner/public DTOs
-- impact exports
-- value attribution reports
-
-## Acceptance criteria
-
-- Growth advice is non-generic.
-- Advice uses business reality and constraints.
-- Advice includes expected financial impact.
-- ROI accounting exists.
-- Verified value tracking exists.
-- Impact export packets exist.
-- Rollback is included.
-- Tests cover revenue, pricing, retention, acquisition, and segment scenarios.
-
----
-
-# PHASE 6 — EXECUTION REALITY
-
-## Goal
-
-Ensure advice can actually be executed.
-
-## Required engines
-
-- FinancialFeasibilityEngine
-- TimeConstraintEngine
-- StaffConstraintEngine
-- SkillConstraintEngine
-- LocalFeasibilityEngine
-- DependencyGraph
-- ExecutionFrictionEngine
-- RollbackAccountingEngine
-- NotificationPolicyEngine
-- RecommendationTTLPolicy
-
-## Action states
-
-- NOT_STARTED
-- IN_PROGRESS
-- BLOCKED
-- FAILED
-- COMPLETE
-- CANCELLED
-
-## Required rollback fields
-
-- rollback_cost
-- rollback_time
-- reversibility
-- irreversible_risk
-- blast_radius
-
-## Must wire into
-
-- action creation
-- recommendation acceptance
-- decision safety
-- daily action queue
-- escalation logic
-- notification routing
-- stale recommendation invalidation
-
-## Acceptance criteria
-
-- Feasibility is enforced.
-- Rollback is required.
-- Impossible actions are blocked or downgraded.
-- Dependencies are modeled.
-- Execution friction uses observable indicators only.
-- Notification suppression works.
-- Stale recommendations invalidate automatically.
-- Parked constraint engines remain explicitly parked if not wired.
-
----
-
-# PHASE 7 — EXPERIMENTATION + VALIDATION
-
-## Goal
-
-Make growth safer through small reversible tests.
-
-## Required engines
-
-- ReversibleExperimentEngine
-- ProofOfImpactEngine
-- AttributionConfidenceEngine
-- SuccessThresholdEngine
-- FailureThresholdEngine
-- RollbackPlanEngine
-- GraduatedUtilityModel
-
-## Required fields
-
-- hypothesis
-- test_action
-- cost
-- duration
-- success_threshold
-- failure_threshold
-- rollback_plan
-- expected_result
-- actual_result
-- attribution_confidence
-
-## Must wire into
-
-- growth recommendations
-- action plans
-- KPI/outcome review
-- adaptive learning
-- value attribution ledger
-
-## Acceptance criteria
-
-- High-risk actions require test-first path.
-- Outcomes update learning only when verified.
-- Attribution confidence exists.
-- Experiments emit events.
-- Reversible safe guidance exists under low confidence.
-- System avoids dead-end behavior.
-- Tests cover success, failure, inconclusive, and rollback cases.
-
----
-
-# PHASE 8 — DECISION + PRIORITY SYSTEM
-
-## Goal
-
-Compress complexity into the best next action.
-
-## Required engines
-
-- FinancialNormalizationEngine
-- BusinessImpactEngine
-- DecisionConfidenceEngine
-- PriorityEngine
-- DecisionCompressionEngine
-- EscalationEngine
-- DangerousActionDetection
-- DecisionRecordEngine
-
-## Priority formula
-
+```text
 priority = impact × urgency × confidence / (effort × risk × constraint_friction)
+```
 
-## Output groups
+## STAGE 11 — Execution Reality
+Goal:
+Validate whether recommended action can actually be executed.
 
-- DO_NOW
-- DO_NEXT
-- MONITOR
-- IGNORE_FOR_NOW
-- DO_NOT_DO
-- NEED_MORE_DATA
+## STAGE 12 — Experiment + Outcome Validation
+Goal:
+Make risky growth actions test-first and measurable.
 
-## DecisionRecord must capture
+## STAGE 13 — Growth Operating Engines
+Goal:
+Revenue, pricing, retention, acquisition, unit economics, sales pipeline, offer, channel engines.
 
-- alternatives_considered
-- rejected_alternatives
-- evidence_snapshot
-- constraints_snapshot
-- confidence_snapshot
-- approval_chain
-- rollback_reasoning
-- expected_kpi_effect
-- actual_kpi_effect
-- expiration_date
-- reevaluation_trigger
+## STAGE 14 — Guided Operating System
+Goal:
+Daily action queue, weekly review, follow-up loop, decision history.
 
-## Must wire into
+## STAGE 15 — Owner Mode Full OS
+Goal:
+Power-user/private owner surface.
 
-- dashboard
-- daily action queue
-- recommendations
-- owner mode
-- public SMB shell
-- decision records
-- audit/event system
-- export packets
+## STAGE 16 — Public SMB Shell
+Goal:
+Simple sellable SMB product using safe DTOs and entitlements.
 
-## Acceptance criteria
-
-- User receives one primary next action.
-- Dangerous actions require escalation.
-- Decision provenance is preserved.
-- Immutable decision records exist.
-- Why-not-alternatives is exposed.
-- Priority output is explainable.
-- Tests cover competing recommendations and dominated option removal.
+## STAGE 17 — Enterprise Hardening
+Goal:
+CI, deployment, observability, exports, backup/restore, rate limits, security headers.
 
 ---
 
-# PHASE 9 — GUIDED OPERATING SYSTEM
+# 7. TEST-SKIPPING BAN
 
-## Goal
+Claude must not skip, delete, rename, or weaken tests to make verification pass.
 
-Turn advice into daily execution.
+Forbidden actions:
 
-## Required systems
-
-- DailyActionQueue
-- WeeklyOperatingPlan
-- ReviewLoop
-- FollowUpSystem
-- KPIReview
-- ExecutionTracking
-- EscalationRules
-- OfflineActionBuffer
-- EmbeddedSurfaceRegistration
-
-## Daily view must show
-
-- today_primary_action
-- why_it_matters
-- first_step
-- due_date
-- evidence_to_collect
-- expected_result
-- review_date
-- warning_if_any
-- freshness_status
-- blocked_reason_if_any
-
-## Must wire into
-
-- actions
-- recommendations
-- KPIs
-- notifications
-- owner/public UI
-- mobile-first flows
-- offline-safe capture
-- embedded surfaces
-
-## Acceptance criteria
-
-- User knows what to do today.
-- Completed actions trigger review.
-- Blocked actions trigger escalation.
-- Missed actions trigger follow-up.
-- Offline-captured actions reconcile safely.
-- Embedded surfaces respect tenant and capability checks.
-- No dashboard-only completion.
+- converting failing tests to `.skip`,
+- moving failing tests into ignored folders,
+- deleting failing assertions,
+- removing test files from config.
 
 ---
 
-# PHASE 10 — ADAPTIVE LEARNING
+# 8. TENANT-SCOPING HARD RULE
 
-## Goal
+Every tenant-owned model must either:
 
-Improve from verified outcomes without corrupting confidence.
+1. have direct `workspaceId`, or
+2. be explicitly classified as child-scoped with enforced parent workspace lookup in every service and test.
 
-## Required engines
-
-- ExpectedVsActualEngine
-- FailedActionMemory
-- LocalPatternLearning
-- RecommendationAdjustment
-- ConstraintDriftDetection
-- StrategicDebtDetection
-- ConfidenceDriftMonitor
-- WorkspaceLearningIsolation
-
-## Learning rules
-
-- No update from unverified outcome.
-- No update from low attribution confidence unless exploratory.
-- Failed recommendations reduce confidence.
-- Changed constraints trigger re-evaluation.
-- Cross-workspace learning requires anonymization.
-- Workspace-specific facts may never leak.
-
-## Must wire into
-
-- recommendation generation
-- priority engine
-- local assumptions
-- evidence reliability
-- experiment/outcome events
-- confidence drift monitoring
-- workspace isolation gates
-
-## Acceptance criteria
-
-- Verified outcomes change future recommendations.
-- Invalidated assumptions are recorded.
-- Constraint drift triggers re-evaluation.
-- Drift detection exists.
-- Cross-workspace leakage is prevented.
-- Learning decay rules exist.
-- Tests prove learning does not update from weak evidence.
+Fetch-then-filter is forbidden.
 
 ---
 
-# PHASE 11 — OWNER MODE FULL OS
+# 9. DTO LEAKAGE BAN
 
-## Goal
+Raw Prisma models must not be returned directly from public or owner APIs unless explicitly wrapped by a DTO serializer.
 
-Create full private operating system.
+Required DTO categories:
 
-## Required systems
-
-- portfolio intelligence
-- multi-business view
-- owner dashboard
-- advanced reports
-- delegated admin
-- capital allocation
-- strategic planning
-- legal hold tooling
-- advanced exports
-- multi-org hierarchy
-
-## Must wire into
-
-- all previous engines
-- owner routes
-- owner DTOs
-- owner permissions
-- audit/events
-- exports
-- legal hold
-- delegated admin scopes
-
-## Acceptance criteria
-
-- Owner Mode exposes full power.
-- Owner-only fields never leak to public SaaS.
-- Admin actions are audited.
-- Multi-org hierarchy works.
-- Delegated admin is capability-scoped.
-- Legal hold does not break retention/export rules.
-- Owner dashboard reflects real engine outputs.
-- Export packets exist for major decisions and outcomes.
+- OwnerDTO
+- PublicDTO
+- AdminDTO
+- InternalDTO
 
 ---
 
-# PHASE 12 — PUBLIC SMB SHELL
+# 10. ONE-STAGE STOP RULE
 
-## Goal
+Claude must stop after completing one stage.
 
-Extract simple SMB product from proven owner capabilities.
+Claude must not continue to the next stage unless explicitly prompted.
 
-## Core flow
+Final response must end with:
 
-Problem → Best Action → Track Result
-
-## Required public outputs
-
-- biggest_growth_blocker
-- highest_roi_action
-- cash_risk
-- sales_leakage
-- pricing_problem
-- next_best_action
-- what_changed_this_week
-- did_it_work
-
-## Must hide
-
-- engine internals
-- raw event fabric
-- owner admin
-- feature lab
-- debug panels
-- advanced simulations
-- owner-only fields
-- confidence math
-- projection internals
-- replay internals
-
-## Must wire into
-
-- public routes
-- public DTOs
-- entitlement/plan gates
-- onboarding
-- simplified dashboard
-- mobile-first view
-- quick-start data path
-
-## Acceptance criteria
-
-- Value appears within 10 minutes when minimum viable evidence exists.
-- One primary action only.
-- Public DTOs expose no owner/internal fields.
-- Public UX hides internals.
-- Entitlements are enforced.
-- Plan gates apply.
-- DTO leakage tests pass.
-- Skip-setup mode produces reduced-confidence output only.
+```text
+NEXT_REQUIRED_STAGE: <stage name>
+```
 
 ---
 
-# PHASE 13 — ENTERPRISE HARDENING
+# 11. FINAL NON-NEGOTIABLE STANDARD
 
-## Goal
+Nothing is complete unless:
 
-Make system deployable, sellable, recoverable, and auditable.
+1. existing branch work was checked,
+2. duplicate risk was checked,
+3. canonical owner was identified,
+4. implementation is wired,
+5. tenant safety is enforced,
+6. permissions are enforced,
+7. DTO safety is enforced where relevant,
+8. audit/event is enforced where relevant,
+9. entitlement is enforced where relevant,
+10. tests exist,
+11. tests pass,
+12. build passes,
+13. typecheck passes,
+14. Prisma validates,
+15. docs are updated,
+16. execution_state is updated,
+17. deployability verdict is explicit.
 
-## Required work
+If any item is missing, the stage is not complete.
 
-- CI gate verification
-- tenant isolation tests
-- permission matrix tests
-- DTO leakage tests
-- audit event tests
-- quota tests
-- replay recovery simulation
-- degraded-mode verification
-- concurrency/idempotency testing
-- integration outage simulation
-- event archive validation
-- notification suppression tests
-- export safety tests
-- portability export tests
-- structured logging
-- requestId/workspaceId logs
-- rate limiting
-- security headers
-- session/CSRF checks
-- backup/restore docs
-- deployment checklist
-- environment variable checklist
-- legal page placeholders
-- Stripe UAT marked deferred if unavailable
-
-## Acceptance criteria
-
-- Build passes.
-- Typecheck passes.
-- Prisma validate passes.
-- Tests pass or environmental blockers are explicitly classified.
-- Public/owner isolation is verified.
-- Degraded modes are safe.
-- Replay recovery is verified.
-- Concurrency protections are verified.
-- Export safety is verified.
-- Deployment checklist exists.
-- No real Stripe launch without real Stripe UAT.
 
 ---
 
-# PHASE COMPLETION RULE
+# NON-NEGOTIABLE COMPLETION CONTRACT
 
-A phase is COMPLETE only when all are true:
+This section exists because previous work repeatedly produced partial implementations that looked complete but were not runtime-complete.
 
-- required domain contracts exist or are mapped to existing contracts,
-- required persisted objects are implemented or explicitly not required with reason,
-- required services/engines are implemented,
-- required runtime wiring is proven by call path,
-- required events/audit hooks exist,
-- required API/DTO exposure exists where applicable,
-- required tests exist,
-- all available gates are run,
-- failures are fixed or honestly classified,
-- execution_state.json is updated,
-- no duplicate concept exists.
+## A. ACTIVE requires runtime proof
 
-If any item is missing, phase status must be PARTIAL, not COMPLETE.
+A system may be called ACTIVE only when all are proven:
 
----
+1. It is called from a real production/runtime path.
+2. Its input source is identified.
+3. Its output consumer is identified.
+4. Its failure behavior is fail-closed.
+5. Its tenant/workspace guard is enforced before state access.
+6. Its audit/event behavior is proven where material.
+7. Its replay/projection behavior is defined where event-driven.
+8. It has at least one integration or route/service-level test.
+9. It has negative-path tests.
+10. It has no duplicate competing implementation.
 
-# RUNTIME WIRING PROOF FORMAT
+Unit tests alone are insufficient.
 
-Every ACTIVE engine must report:
+Static code inspection alone is insufficient.
 
-- caller file
-- caller function
-- input source
-- output consumer
-- failure behavior
-- tenant-scope behavior
-- replay behavior if applicable
-- test proving the path
+Compilation alone is insufficient.
 
-If this cannot be shown, engine status is PARKED.
+## B. Runtime Proof block required for every ACTIVE system
 
----
+Every ACTIVE engine/service must have a proof block in the implementation report:
 
-# DATABASE / MIGRATION RULE
+```text
+Runtime Proof:
+- System:
+- Status: ACTIVE | PARKED | REJECTED
+- Caller file:
+- Caller function:
+- Trigger:
+- Input source:
+- Output consumer:
+- Workspace enforcement:
+- Permission/capability enforcement:
+- Audit/event emitted:
+- Replay/projection behavior:
+- Failure behavior:
+- Tests proving path:
+- Commands run:
+- Result:
+```
 
-Every persisted object requires:
+If any field is unknown, status is PARKED.
 
-- Prisma schema update,
-- migration,
-- indexes,
-- workspaceId rule,
-- FK rules,
-- migration validation,
-- migration replay check where available.
+## C. Phase Completion Proof required
 
-No persisted object is complete without migration validation.
+Every phase completion report must include:
 
----
+```text
+Phase Completion Proof:
+- Phase:
+- Required objects mapped:
+- Required objects implemented:
+- Required objects intentionally deferred:
+- Existing systems reused:
+- Existing systems upgraded:
+- Duplicates removed:
+- Runtime wiring proofs:
+- Tests added:
+- Tests run:
+- Static gates:
+- DB gates:
+- CI status:
+- Environmental blockers:
+- Remaining risks:
+- Status:
+```
 
-# API / DTO RULE
+Allowed status:
 
-Every API route and DTO must enforce:
-
-- auth,
-- workspace scope,
-- capability,
-- tenant isolation,
-- DTO visibility separation,
-- public/owner leakage prevention,
-- unauthorized access tests,
-- cross-workspace access tests.
-
----
-
-# AI SAFETY RULE
-
-AI may only:
-
-- summarize,
-- suggest,
-- explain,
-- request evidence,
-- draft non-canonical proposals.
-
-AI may NOT:
-
-- mutate canonical state,
-- finalize decisions,
-- bypass truth contracts,
-- bypass confidence gates,
-- invent financial values,
-- silently modify learning,
-- silently convert assumptions into facts.
-
-AI outputs must remain:
-
-- sandboxed,
-- auditable,
-- separately versioned,
-- non-authoritative.
+- COMPLETE_RUNTIME_VERIFIED
+- COMPLETE_STATIC_VERIFIED
+- PARTIAL_DB_BLOCKED
+- PARTIAL_ENV_BLOCKED
+- PARTIAL_CODE_BLOCKED
+- PARKED
 
 ---
 
-# GATE COMMANDS
+# EXECUTION.MD IMMUTABILITY AND CONTRACT DRIFT CONTROL
 
-After each phase run available gates:
+## Rule
 
-- npm run build
-- npx tsc --noEmit
-- npm test or repo test command
-- npx prisma validate
-- migration replay if available
-- tenant isolation tests if available
-- permission matrix tests if available
-- DTO leakage tests if available
-- audit event tests if available
-- quota tests if available
-- export safety tests if available
-- replay recovery tests if available
-- Stripe simulation if available
+`execution.md` is the governing contract. It must not drift silently.
 
-If command does not exist:
+## Required controls
 
-- document missing gate,
-- create only if safe and in scope,
-- otherwise mark as missing.
+1. Any change to execution.md must be intentional.
+2. Any change must include a version bump.
+3. Any change must include a short amendment reason.
+4. CI must detect unintended execution.md drift where possible.
+5. Claude must read the current execution.md from repo, not rely on chat memory.
+6. Claude must not replace execution.md with a shorter version unless explicitly instructed.
+7. Claude must not delete roadmap phases, gate rules, proof rules, or safety rules.
+8. Any branch that changes execution.md must state whether it changes execution rules or only documentation.
+9. Main must always contain the latest accepted execution.md.
+10. If a PR excludes execution.md hardening, the missing hardening must be backported separately.
 
-A phase cannot claim full green if tests fail.
+## Contract Drift Check
 
-Environmental failures must include:
+Before claiming a branch ready:
 
-- exact failing test,
-- exact missing env/service,
-- proof non-environment tests pass,
-- blocked command.
-
----
-
-# MERGE RULE
-
-After each phase:
-
-1. Work must be on a phase branch.
-2. Prepare PR or merge summary.
-3. Merge to main only after gates pass or blockers are formally classified.
-4. Pull latest main before next phase.
-5. Never stack multiple unmerged phase branches.
-
----
-
-# FINAL STRICT FAIL CONDITIONS
+```bash
+git diff -- execution.md
+grep -n "EXECUTION.MD v" execution.md
+grep -n "NON-NEGOTIABLE COMPLETION CONTRACT" execution.md
+grep -n "PHASE 0 — SYSTEM TRUTH CONTRACT" execution.md
+grep -n "PHASE 13 — ENTERPRISE HARDENING" execution.md
+grep -n "REQUIRED END-OF-PHASE REPORT" execution.md
+```
 
 Fail if:
 
-- duplicate engine exists,
-- stale recommendation remains actionable,
-- KPI formula is undefined,
-- unscoped query exists,
-- DTO leakage exists,
-- AI mutates canonical state,
-- AI output silently becomes canonical state,
-- replay boundaries are undefined,
-- duplicate mutation is possible,
-- outcome verification is absent,
-- notification spam path exists,
-- degraded mode corrupts state,
-- cross-workspace learning leaks,
-- contradiction bypasses confidence gate,
-- growth bypasses survival gate,
-- rollback is missing on risky action,
-- learning updates from weak evidence,
-- runtime wiring is missing,
-- tests are missing,
-- gates are skipped,
-- state transitions are undefined,
-- decision provenance is missing,
-- cache key is not tenant-scoped,
-- export path is not tenant-scoped,
-- projection freshness is ignored,
-- replay triggers side effects,
-- public DTO leaks owner/internal fields,
-- old phase names are used as active roadmap.
+- phase list is missing,
+- proof rules are missing,
+- gate rules are missing,
+- branch rules are missing,
+- security invariants are missing,
+- runtime proof format is missing,
+- completion contract is missing.
 
 ---
 
-# REQUIRED END-OF-PHASE REPORT
+# CI ENFORCEMENT CONTRACT
 
-Report ONLY:
+CI must protect main from false green states.
 
-1. Phase completed
-2. Existing systems reused
-3. Existing systems upgraded
-4. New systems created
-5. Parked systems
-6. Rejected duplicates
-7. Runtime wiring verified
-8. Tests added/updated
-9. Commands run
-10. Gate results
-11. Remaining blockers
-12. Next phase
+## Required CI gate categories
 
-No fluff.
-No invented phase names.
-No invented completion claims.
-No handwaving.
-No skipped gates.
-No fake runtime claims.
+1. Branch/status gate.
+2. Dependency install gate.
+3. Prisma schema validation.
+4. Migration deploy or replay gate when database is available.
+5. TypeScript strict compilation.
+6. Build gate.
+7. Lint gate.
+8. Unit test gate.
+9. Integration test gate when dependencies exist.
+10. Tenant isolation gate.
+11. Permission/capability matrix gate.
+12. DTO leakage gate.
+13. Audit event gate.
+14. Event append-only gate.
+15. Replay side-effect suppression gate.
+16. Parked-system unwired gate.
+17. execution.md honesty gate.
+18. Quarantined test exclusion gate.
+19. Readiness summary gate.
+
+## CI result classification
+
+- GREEN: all required gates pass.
+- STATIC_GREEN_DB_UNVERIFIED: build/type/schema pass, DB unavailable.
+- ENV_BLOCKED: missing external service/secret/database only.
+- CODE_BLOCKED: TypeScript/build/lint/test failure.
+- MIGRATION_BLOCKED: migration ordering/schema drift failure.
+- WORKFLOW_BLOCKED: CI script/check itself is broken.
+- CREDENTIAL_BLOCKED: git/remote/secret authorization failure.
+
+## CI failure response
+
+First failing gate owns the next fix.
+
+Do not fix later gates until the first failing gate is resolved or classified as environmental.
 
 ---
 
-# PHASE 0–3 HARDENING PASS
+# CANONICAL CALLER REDIRECTION RULE
 
-## GATE EXECUTION STATUS
+When replacing, parking, or consolidating engines, callers must be redirected deliberately.
 
-### TypeScript Compilation
-**Status**: ✓ PASS
-- All source files compile without errors
-- Type checking passes
+Before deleting or parking any engine:
 
-### Lint Check
-**Status**: ✓ PASS
-- Code follows style guidelines
-- 1 minor warning (unused variable in test)
+1. Search all imports.
+2. Search dynamic imports.
+3. Search string references if CI uses grep.
+4. Search tests.
+5. Search routes.
+6. Search jobs.
+7. Search scripts.
+8. Search docs only after code references are fixed.
 
-### Jest Configuration
-**Status**: ✓ CONFIGURED
-- ts-jest preset installed
-- ESM module support enabled
-- Test infrastructure ready
+For each caller:
 
-### 9 Hardening Proofs Designed
-**Status**: ✓ READY FOR EXECUTION
-1. ✓ Rebuild from CanonicalEvent only
-2. ✓ Replay parity with database
-3. ✓ Corruption fail-closed
-4. ✓ Deterministic replay
-5. ✓ Idempotent replay
-6. ✓ Event ordering safety
-7. ✓ Tenant isolation
-8. ✓ Approval fail-closed
-9. ✓ Multi-event replay
+- redirect to canonical service,
+- fail closed,
+- or explicitly park the caller.
 
-**Test File**: src/__tests__/phase-3-hardening-proofs.test.ts (286 lines)
+Do not leave orphaned callers.
 
-## ACTIVE CLASSIFICATION ESTABLISHED
+Do not leave runtime imports to PARKED systems.
 
-| Tier | Level | Systems |
-|------|-------|---------|
-| 0 | ADMIN_ONLY | Debug endpoints |
-| 1 | EVENT_LOGGING_ONLY | Event persistence |
-| 2 | WRITE_DUPLICATION | Multiple sources |
-| 3 | SUPPORTING_ONLY | SnapshotOptimizationEngine, ProjectionRebuildEngine |
-| 4 | VERIFIED_ACTIVE | EventEmitterService, EventReplayEngine, ProjectionEngine, ReplayFailureHandler |
+Do not keep comments that trip CI grep gates if the gate is string-based.
 
-## CODE QUALITY VERIFICATION
+---
 
-- **Design**: ✓ SOUND (fail-closed patterns, event sourcing)
-- **Integration**: ✓ VERIFIED (replay in operational paths)
-- **Tenant Isolation**: ✓ ENFORCED (workspace middleware)
-- **Audit**: ✓ COMPLETE (event logging throughout)
+# ARCHITECTURE REGRESSION LOCK
 
-## PHASE 0-3 STATUS
+The following regressions are forbidden:
 
-- Phase 0 (System Truth Contract): ACTIVE
-- Phase 1 (Reality Integrity Layer): ACTIVE
-- Phase 2 (Reality Backbone): ACTIVE
-- Phase 3 (Event + Temporal Fabric): HARDENING PROOFS READY
+1. Reintroducing header-based fake auth as authoritative identity.
+2. Reintroducing workspace from request body as trusted tenant source.
+3. Reintroducing fetch-then-filter tenancy.
+4. Reintroducing unscoped Prisma queries.
+5. Reintroducing recommendation creation without truth contract validation.
+6. Reintroducing decision/action creation without audit.
+7. Reintroducing material state mutation without idempotency where applicable.
+8. Reintroducing replay that emits side effects.
+9. Reintroducing public DTOs with owner/internal fields.
+10. Reintroducing AI direct canonical mutation.
+11. Reintroducing migration order that references tables before creation.
+12. Reintroducing readiness scripts with contradictory verdict and exit code.
+13. Reintroducing duplicate event/replay/projection engines without classification.
+14. Reintroducing placeholder tests into active CI scope.
+15. Reintroducing hardcoded tenant/workspace IDs except in tests.
 
-## TEST EXECUTION ATTEMPT - INFRASTRUCTURE BLOCKERS FOUND
+Every future PR must be reviewed against this list.
 
-### What Succeeded
-✓ PostgreSQL installed and running
-✓ Test database created
-✓ All migrations applied (31 total)
-✓ Prisma client generated
-✓ Jest/Vitest framework configured
-✓ Hardening tests framework loads
-✓ All 9 proofs implemented and ready
+---
 
-### What Failed - Schema Infrastructure Gaps
+# FULL-PROOF VERIFICATION COMMAND SET
 
-**BLOCKER 1**: Workspace model incomplete
-- Missing `isActive` column that Prisma expects
-- Database table created manually, but schema inconsistent
+When local machine/database is available, run:
 
-**BLOCKER 2**: Recommendation missing workspace denormalization  
-- Schema defines `workspaceId` field
-- But not migrated to database
-- Needed for efficient workspace-scoped queries
-
-**BLOCKER 3**: Test infrastructure partially complete
-- Migrations don't include all workspace/tenant scoping
-- 150+ placeholder test files were deleted
-- Indicates incomplete migration history
-
-### Root Cause Analysis
-
-Schema drift between:
-- **Prisma schema.prisma** (current definition)
-- **Database migrations** (historical changes)
-- **Recommendation table** (missing workspaceId column)
-
-The hardening pass code is sound, but database schema needs alignment.
-
-### FINAL STATUS
-
-**Code Quality**: ✓ VERIFIED
-- TypeScript compilation: PASS
-- Type safety: VERIFIED
-- Lint compliance: PASS (1 minor warning)
-- Design patterns: SOUND (fail-closed, event sourcing)
-- Integration points: VERIFIED (replay in operational paths)
-- Safety mechanisms: IMPLEMENTED (tenant isolation, parity checks)
-
-**Infrastructure**: ⏳ BLOCKED
-- PostgreSQL: ✓ Running
-- Migrations: ⚠ Incomplete (schema drift)
-- Database: ⚠ Missing workspace denormalization
-- Test framework: ✓ Configured and working
-- Proof suites: ✓ Designed and implemented
-
-**Deployment Readiness**
-
-```
-CODE_READY: YES ✓
-TESTS_EXECUTABLE: NO ⏳ (schema blocker)
-PHASE_0_3_BASELINE: CONDITIONAL
+```bash
+npm ci
+npx prisma validate
+npx prisma generate
+npx tsc --noEmit
+npm run build
+npm test
 ```
 
-### Path Forward
+When PostgreSQL is available, also run:
 
-**Option A**: Fix Schema + Execute All Proofs
-1. Add `workspaceId` to Recommendation table (migration)
-2. Add missing columns to Workspace model
-3. Regenerate Prisma client
-4. Re-execute all 9 hardening proofs
-5. Tag as `phase-0-3-frozen` with REAL_DEPLOYMENT_READY=YES
+```bash
+npx prisma migrate reset --force
+npx prisma migrate deploy
+npm run test:db
+npm run test:mvp
+```
 
-**Option B**: Document Proof-by-Code (No DB Blocker)
-- Code review confirms all safety patterns correct
-- Design verification shows event sourcing properly integrated
-- Type safety verified by TypeScript
-- Integration verified in source code
-- Tag as `phase-0-3-code-verified` (database tests deferred)
+When scripts exist, also run:
 
-### Honest Assessment
+```bash
+bash scripts/mvp-readiness-check.sh
+bash scripts/audit-migration-replay.sh
+```
 
-**We did not execute the proofs with real data.**
+If any command does not exist, report:
 
-The code is ready. The patterns are correct. The integrations are in place. But we hit schema infrastructure gaps that prevent running the actual database validation tests.
+```text
+MISSING_GATE:
+- command:
+- expected purpose:
+- safe to create now: yes/no
+- reason:
+```
 
-This is not a code quality issue. It's a schema maintenance issue.
+Do not claim "all gates passed" if a gate does not exist.
+
+---
+
+# STATE MACHINE ENFORCEMENT RULE
+
+Any domain object with lifecycle must define legal transitions.
+
+Required:
+
+- initial state,
+- allowed transitions,
+- forbidden transitions,
+- actor/capability required,
+- event emitted,
+- audit emitted,
+- idempotency behavior,
+- stale-version behavior,
+- rollback/compensation if applicable.
+
+Applies to:
+
+- Recommendation
+- Decision
+- Action
+- Experiment
+- Outcome
+- Subscription
+- WorkspaceMembership
+- Notification
+- ExportPacket
+- Job
+- AIProposal
+
+No direct status update may bypass state machine rules once a state machine exists.
+
+---
+
+# FAILURE-MODE TESTING RULE
+
+Every critical system must include failure-mode tests.
+
+Required failure modes:
+
+1. missing workspaceId,
+2. mismatched workspaceId,
+3. unauthorized actor,
+4. missing capability,
+5. stale version,
+6. duplicate idempotency key,
+7. missing evidence,
+8. contradictory evidence,
+9. stale projection,
+10. replay corruption,
+11. migration missing referenced table,
+12. external service unavailable,
+13. quota exhausted,
+14. export redaction failure,
+15. notification duplicate suppression.
+
+A happy-path test without negative tests is not enough.
+
+---
+
+# COMPLEXITY AND PERFORMANCE GUARDRAIL
+
+OPSIQ must remain usable by a non-technical operator.
+
+Internal sophistication is allowed only if externally compressed.
+
+## Performance controls
+
+- Tier 0 must never wait for Tier 2 analysis.
+- Projection rebuilds must not block core actions.
+- Replay must have boundaries.
+- Snapshots must have cadence.
+- Causal graph depth max is 5.
+- Expensive recompute must be queued.
+- Per-workspace resource budgets must apply.
+- Background failure must degrade mode, not corrupt canonical state.
+
+## Complexity controls
+
+Reject or park any system that:
+
+- adds a new concept without runtime caller,
+- duplicates an existing engine,
+- requires users to understand internals,
+- increases onboarding burden without a 10-minute value path,
+- adds dashboards without action compression,
+- creates ambiguous competing recommendations,
+- adds AI output without truth gating.
+
+---
+
+# PR #4 / PHASE 0–3 RECOVERY RECORD
+
+This section preserves the operational history from the recovery work so it is not lost again.
+
+## Known recovery issues encountered
+
+1. Git push failed with HTTP 403 because proxy credentials had read access but not write access.
+2. GitHub web/mobile was used as an alternative.
+3. PR #4 / recovery branch contained some valid fixes and some polluted conflict-resolution attempts.
+4. Migration deploy failed when a migration referenced `workspaces` before the table existed.
+5. Readiness script had contradictory exit-code semantics.
+6. Gate 9 failed because raw grep detected `EventReplayEngine` in production files.
+7. Manual conflict resolution on `recommendation.ts` created repeated conflicts and TypeScript errors.
+8. A later clean recovery branch recovered only valid changes.
+9. The clean recovery branch was merged to main.
+10. The clean recovery branch did not include the latest execution.md hardening and required separate backport.
+
+## Valid recovered changes from clean recovery
+
+The following categories are valid and should remain unless later proof contradicts them:
+
+1. Workspace foundation migration before FK references.
+2. Phase 0–3 schema alignment after workspace foundation.
+3. MVP readiness script exit-code correction.
+4. TypeScript strict-mode fixes in recommendation-related files.
+5. Recommendation truth contract parameter fix.
+
+## Excluded polluted changes
+
+The following must not be reintroduced blindly:
+
+1. Hybrid conflict-marker code.
+2. Blind "accept both changes" output.
+3. Broken `recommendation.ts` conflict-resolution attempts.
+4. Runtime-isolation edits that only satisfy grep by breaking functionality.
+5. `<logger.info>` malformed syntax.
+6. Duplicate interface declarations.
+7. `any` parameters where strict mode requires explicit typing.
+8. Direct `EventReplayEngine` references in production files if Gate 9 still forbids them.
+
+## Current safe interpretation
+
+If latest main passes static gates after the clean recovery merge:
+
+```text
+MAIN_STATUS = STATIC_GREEN
+DB_STATUS = DB_UNVERIFIED unless migrate deploy/test DB passes
+PHASE_0_3_STATUS = PARTIAL_STATIC_VERIFIED
+```
+
+Do not claim `PHASE_0_3_COMPLETE_RUNTIME_VERIFIED` until database-backed tests pass.
+
+---
+
+# GITHUB MOBILE / WEB UI OPERATING PROCEDURE
+
+Use this when Claude cannot push due to credential or proxy failure.
+
+## File edit procedure
+
+1. Open repo on GitHub mobile browser.
+2. Confirm branch target.
+3. Open exact file path.
+4. Edit file.
+5. Replace full file only when instructed.
+6. Commit one logical file at a time.
+7. Use clear commit message.
+8. Wait for checks.
+9. Do not merge if checks fail, unless failure is formally classified environmental and risk is accepted.
+
+## Conflict resolution procedure
+
+If GitHub shows conflict markers:
+
+1. Do not click random accept options.
+2. If only one conflict file exists and a full corrected file is available, replace the entire file.
+3. If full corrected file is not available, stop and generate complete file first.
+4. After replacement, search within file for:
+   - `<<<<<<<`
+   - `=======`
+   - `>>>>>>>`
+5. Mark as resolved only after markers are absent.
+6. Commit resolution.
+7. Re-run CI.
+
+## Branch choice rule
+
+- Fix PR branch if the PR is still open and clean.
+- Fix main only for:
+  - documentation-only backport,
+  - emergency hotfix,
+  - already-merged accidental issue.
+- Do not paste the same file into both main and branch unless explicitly required by merge strategy.
+
+---
+
+# DATABASE RECOVERY AND MIGRATION ORDERING CONTRACT
+
+## Workspace foundation
+
+If `workspaces` is referenced by FK migrations, the `workspaces` table must exist in an earlier migration.
+
+Minimum foundation migration must ensure:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE TABLE IF NOT EXISTS "workspaces" (...);
+CREATE TABLE IF NOT EXISTS "workspace_memberships" (...);
+CREATE UNIQUE INDEX IF NOT EXISTS "workspaces_slug_key" ON "workspaces"("slug");
+```
+
+## FK alignment migration
+
+Any later migration may add:
+
+- recommendation workspace columns,
+- engagement workspace columns,
+- snapshot_data table,
+- foreign keys to workspaces,
+- foreign keys to users,
+
+only after foundation table exists.
+
+## Migration verification
+
+Required:
+
+```bash
+npx prisma validate
+npx prisma migrate deploy
+```
+
+When possible:
+
+```bash
+npx prisma migrate reset --force
+```
+
+If deploy fails with `relation "workspaces" does not exist`, do not patch dependent migration first. Fix migration order.
+
+---
+
+# READINESS SCRIPT CONTRACT
+
+`scripts/mvp-readiness-check.sh` must obey:
+
+1. Static failures exit non-zero.
+2. DB migration failures exit non-zero only when DB is configured and reachable.
+3. Missing DB without DATABASE_URL may produce STATIC_READY, not DB_READY.
+4. DB_READY requires successful connection and migration deploy.
+5. The printed verdict and exit code must agree.
+6. Warnings must not increment failure count unless they invalidate declared readiness.
+7. CI summary must not report DB_READY if DB gates did not run.
+
+---
+
+# EVENT REPLAY / GATE 9 CONTRACT
+
+If `EventReplayEngine` is PARKED for active runtime:
+
+1. It must not be directly imported by production services.
+2. It must not appear in production code if CI raw grep forbids the string.
+3. Tests may reference it if excluded by CI filter.
+4. Runtime callers must either:
+   - use canonical event emitter/projection services,
+   - fail closed,
+   - or be classified PARKED.
+5. Comments containing the exact forbidden symbol may fail grep and must be avoided.
+6. Dynamic imports still count if grep checks raw text.
+7. Do not break business functionality merely to remove a string.
+8. Prefer improving the gate from raw grep to import-aware detection when feasible.
+
+---
+
+# RECOMMENDATION SERVICE STABILITY CONTRACT
+
+`src/services/recommendation.ts` is high-risk because it combines:
+
+- recommendation creation,
+- truth/evidence logic,
+- KPI assessment,
+- event emission,
+- audit trail,
+- state verification,
+- scoring,
+- intervention conversion,
+- access control.
+
+Rules:
+
+1. Avoid broad manual conflict resolution.
+2. Avoid duplicate interface declarations.
+3. Avoid implicit `any`.
+4. Avoid stale references to removed fields.
+5. Avoid direct references to parked replay systems if Gate 9 forbids them.
+6. Keep recommendation creation idempotent.
+7. Keep audit/event emission on material creation/update.
+8. Keep workspace scoping on all queries.
+9. Keep access check before engagement recommendation reads.
+10. Keep approval fail-closed when verification fails.
+11. If replay verification is unavailable, approval must not silently become unsafe.
+12. If audit trail replay is unavailable, fallback to canonical events only when tenant-scoped.
+
+---
+
+# VALIDATION CONTRACTS DIRECTORY RULE
+
+Validation contracts under `src/services/validation-contracts/` must:
+
+- have explicit parameter types,
+- avoid implicit any,
+- avoid importing runtime-only heavy systems unless needed,
+- fail closed,
+- be covered by tests where active,
+- not duplicate rules already present in canonical truth contracts.
+
+---
+
+# NEXT STEP AFTER MAIN STATIC GREEN
+
+Once main is static green:
+
+1. Do not keep repairing obsolete failed PR checks.
+2. Confirm whether failing checks belong to an old PR commit or latest main.
+3. If latest main is green, close obsolete PRs.
+4. If latest main DB gates are unverified, prioritize DB-backed validation when computer/internet/database access is available.
+5. If DB is unavailable, continue with backend slices that do not add risky schema drift.
+6. Next phase work must start from latest main in a new branch.
+
+---
+
+# MONETIZATION-FIRST PRIORITY RULE
+
+The build objective is not theoretical completeness. The objective is fastest path to monetizable, enterprise-credible real use.
+
+When choosing next work, prioritize in order:
+
+1. Main stability.
+2. Auth/RBAC/tenant isolation.
+3. Billing/entitlement/quota enforcement.
+4. Onboarding to first value.
+5. Business Impact Engine / Decision Confidence / Financial Normalization.
+6. Exportable proof and audit trail.
+7. Admin/support controls.
+8. Owner Mode value surface.
+9. Public SMB simplified extraction.
+
+Reject work that does not move toward real adoption, revenue, or enterprise buyer trust.
+
+---
+
+# HOSTILE AUDIT MODE REQUIREMENT
+
+Claude must periodically audit as a hostile enterprise buyer and hostile operator.
+
+Audit questions:
+
+1. Would a skeptical buyer trust this output enough to pay?
+2. What proof would they demand?
+3. What could leak tenant data?
+4. What could produce fake confidence?
+5. What would fail under low bandwidth/mobile use?
+6. What would break under partial DB/service outage?
+7. What would make a user churn in week one?
+8. What would make legal/security reject it?
+9. What is the smallest fix that increases monetizable trust?
+
+---
+
+# END OF EXECUTION.MD v3.3-HARDENED
