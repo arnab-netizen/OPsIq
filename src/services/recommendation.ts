@@ -240,7 +240,10 @@ export function calculateRecommendationScoreBreakdown(
   };
 
   const finalScore = Math.min(
-    Math.max(Object.values(contributions).reduce((sum, value) => sum + value, 0), 0),
+    Math.max(
+      Object.values(contributions).reduce((sum, value) => sum + value, 0),
+      0
+    ),
     1
   );
 
@@ -1172,12 +1175,19 @@ export async function getRecommendationAuditTrail(
     orderBy: { eventNumber: "asc" },
   });
 
-  return events.map((event) => ({
-    eventType: event.eventType,
-    eventNumber: event.eventNumber,
-    occurredAt: event.occurredAt,
-    payload: event.payload,
-  }));
+  return events.map(
+    (event: {
+      eventType: string;
+      eventNumber: number;
+      occurredAt: Date;
+      payload: unknown;
+    }): AuditTrailEvent => ({
+      eventType: event.eventType,
+      eventNumber: event.eventNumber,
+      occurredAt: event.occurredAt,
+      payload: event.payload,
+    })
+  );
 }
 
 export async function createRecommendationsFromInterventions(
