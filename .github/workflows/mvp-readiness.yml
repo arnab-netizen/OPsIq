@@ -16,11 +16,12 @@ jobs:
     name: MVP Readiness Validation
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: test
 
     env:
       NODE_ENV: test
-      # Use NEON_DATABASE_URL if available, otherwise skip DB checks
-      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL || '' }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
 
     steps:
       - name: Checkout code
