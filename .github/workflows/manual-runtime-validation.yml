@@ -12,6 +12,12 @@ jobs:
   runtime-validation:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: test
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
+      NODE_ENV: test
 
     steps:
       - name: Checkout code
@@ -33,13 +39,9 @@ jobs:
         run: npx prisma generate
 
       - name: Deploy migrations
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: npx prisma migrate deploy
 
       - name: Check for schema drift
-        env:
-          DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
         run: npx prisma migrate diff --from-migrations prisma/migrations --to-schema-datamodel prisma/schema.prisma --exit-code
 
       - name: Build application
