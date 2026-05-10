@@ -1,249 +1,262 @@
 # CONTINUE BUILD: Autonomous Enterprise-Grade Execution Loop
 # Phases 4–13 Progressive Vertical Slices (Non-DB Code-Only Tasks)
 
-**Framework**: Read execution.md + execution_state.json → Auto-detect phase → Pick next slice → Scan → Implement → Gate → Commit → Report → Loop
+**Framework**: Read execution.md (only phase roadmap) → Audit all prior work for runtime wiring → Auto-detect gaps → Select next slice or wiring task → Implement → Gate → Commit → Report → Loop
+
+**CRITICAL**: execution.md is ONLY source for phase roadmap. Never wait for CLAUDE.md definitions.
 
 ---
 
 ## EXECUTION LOOP (Automatic per /continue-build invocation)
 
-### PHASE DETECTION
+### PHASE DETECTION & AUDIT
 
-1. Read `execution.md` (contract truth)
+1. Read `execution.md` (ONLY phase roadmap — never wait for CLAUDE.md)
 2. Read `.claude/execution_state.json` (current progress)
-3. Determine current phase from `execution_state.current_phase`
-4. Determine phase completion % and blockers
+3. **AUDIT ALL PREVIOUSLY IMPLEMENTED PHASES/SLICES** for runtime wiring proof
+4. Reclassify any system lacking production caller as COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE or WIRED_NOT_CALLED
+5. Auto-detect next work: highest-priority wiring gap OR next non-DB code slice
 
 **Decision Rule**:
-- If Phase 3 db_gates_status = BLOCKED → Skip Phase 3 DB work, start Phase 4 code
-- If Phase N is code-complete (completion_percentage = 100) → Proceed to Phase N+1
-- Otherwise → Continue Phase N with next pending slice
+- If any implemented slice has NO caller proof → Prioritize wiring that gap first
+- If Phase N is code-complete (100%) but not API/runtime wired → Classify as COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE, then wire it
+- If Phase N fully wired and tested → Proceed to Phase N+1 non-DB slices
+- If Phase N has pending non-DB slices → Continue with next slice
+- **NEVER wait for CLAUDE.md definitions** — execution.md is the only roadmap
 
 ---
 
-## PHASE PRIORITY ORDER (Non-DB Code Slices Only)
+## WIRING VERIFICATION AUDIT (Before Selecting New Work)
 
-When DB is blocked, execute non-DB slices in this priority:
+For each implemented system, verify:
 
-1. **Phase 4: Survival Intelligence** (current)
-   - Slice 2: Shock Detection Engine
-   - Slice 3: Org Resilience Scorer
-   - Slice 4: Survival Gating Policy
-   - Slice 5: Survival Factor Assessment Interface
+### Caller Proof Checklist
+- [ ] **Caller file**: Where is this system called? (service, API route, GraphQL resolver, etc.)
+- [ ] **Caller function**: What function imports and uses this system?
+- [ ] **Input source**: What provides inputs to the caller?
+- [ ] **Output consumer**: Who consumes the output?
 
-2. **Phase 5: Financial Normalization** (when ready)
-   - Revenue model definition
-   - Unit economics calculator
-   - Financial health scorer
-   - Cash runway modeler
+### Safety & Boundaries
+- [ ] **Tenant/workspace enforcement**: Does caller validate workspaceId before accessing?
+- [ ] **Capability/auth checks**: Does caller verify user permissions?
+- [ ] **DTO boundary**: Does output go through DTO conversion before exposure?
+- [ ] **Audit/event behavior**: Are material mutations logged?
 
-3. **Phase 6–13**: Continue sequentially, non-DB code only
+### Test Evidence
+- [ ] **Integration test**: Do tests prove the full path (caller → system → output)?
+- [ ] **Tenant isolation test**: Do tests verify workspaceId is enforced?
+
+### Classification Guide
+```
+DOMAIN_CONTRACT_ONLY
+  → Pure TypeScript types/interfaces
+  → No service implementation
+  → Tests validate types only
+
+WIRED_NOT_CALLED  
+  → Service/engine implemented + fully tested
+  → Caller not yet built OR reserved for future
+  → No production caller proof
+  → Next: Build the caller
+
+COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE
+  → Service + Caller implemented
+  → Static gates pass (tsc, tests, prisma)
+  → NO production path proof (API endpoint, service integration, etc.)
+  → Next: Wire into production API/route
+
+RUNTIME_ACTIVE_WIRED_TESTED
+  → Service fully integrated into production path
+  → Caller has live API endpoint/GraphQL resolver/service method
+  → Integration tests prove full path
+  → Tenant/auth/audit verified
+  → Ready for deployment
+```
 
 ---
 
-## STEP 1: PRE-SLICE SETUP (Automatic)
+## STEP 1: AUDIT ALL PRIOR WORK (Automatic)
 
 ### 1a. Repository Health
 ```bash
-git status                              # Confirm clean or 1-2 committed
+git status                              # Confirm clean state
 git branch                              # Note current branch
-git log --oneline -n 3                  # Confirm recent history
 ```
-**STOP IF**: Uncommitted work unrelated to current phase → Commit or stash first
+**STOP IF**: Uncommitted work unrelated to current task → Commit or stash first
 
-### 1b. Baseline Gates
+### 1b. Scan Each Implemented System
 ```bash
-npm ci 2>&1 | tail -5
-npx prisma validate 2>&1 | tail -3
-npx tsc --noEmit 2>&1 | grep -c "error TS" | head -1
-npm run build 2>&1 | tail -10
+# For Phase 6 Slice 2 (RecommendationGeneratorEngine):
+grep -r "RecommendationGeneratorEngine" src/ --include="*.ts" \
+  | grep -E "(import|from)" | grep -v test | grep -v ".test.ts"
+# Look for: service.ts importing, routes/mutations using, integration tests
+
+# Count production references (not test files):
+grep -r "RecommendationGeneratorEngine" src/ --include="*.ts" \
+  | grep -v "\.test\.ts" | grep -v "src/__tests__" | wc -l
 ```
-**STOP IF**: Any gate fails → Fix error, re-run gate, confirm pass
 
-### 1c. Read Execution State
+Record per system:
+- **File**: src/services/recommendation-generator.ts
+- **Methods**: generateSurvivalRecommendations(), generateGrowthRecommendations(), generateOperationalRecommendations()
+- **Production callers found**: Count them; if 0, classify as WIRED_NOT_CALLED
+- **Tests prove path**: Integration tests exist? If only unit tests, incomplete wiring
+- **Reclassification**: Update in execution_state.json
+
+### 1c. Update execution_state.json with Reclassification
 ```bash
-cat .claude/execution_state.json | jq '.current_phase, .phase_4_status, .blockers'
+# Reclassify WIRED_NOT_CALLED systems with 0 production callers
+jq '.phase_N_systems_status.implemented_slices[] |= 
+  (if .classification == "WIRED_NOT_CALLED" and .production_caller_count == 0
+   then .classification = "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE" |
+        .wiring_status = "No production caller found. Ready for wiring phase."
+   else . end)' \
+  .claude/execution_state.json > /tmp/state.json && \
+mv /tmp/state.json .claude/execution_state.json
 ```
-Extract:
-- Current phase
-- Phase completion %
-- Pending slices
-- Known blockers
 
-### 1d. Branch Selection
+### 1d. Select Next Work
 ```bash
-# If on main and next slice requires new branch:
-git checkout -b claude/phase-N-[feature-name]-XXXXX
+# Priority 1: Any COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE → Wire it
+echo "=== Wiring gaps needing implementation ==="
+jq '.phase_N_systems_status.implemented_slices[] | 
+  select(.classification == "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE") |
+  {slice, wiring_status}' \
+  .claude/execution_state.json
 
-# If already on feature branch for current phase:
-git status  # Confirm correct branch
+# Priority 2: Next non-DB code slice from pending_slices
+echo "=== Next code slice ==="
+jq '.phase_N_systems_status.pending_slices[0]' .claude/execution_state.json
 ```
 
 ---
 
-## STEP 2: SLICE SELECTION & PRE-TASK AUDIT
+## STEP 2: TASK SELECTION
 
-### 2a. Select Next Slice (Automatic)
-From `execution_state.json` → `phase_N_systems_status.pending_slices`, pick:
-- First non-DB slice
-- No existing implementation
-- Clear integration path
-- No conflicting parked claim
+### 2a. Wiring Gap or New Slice?
+- **If wiring gap found**: Wire that system first (don't build new phase)
+- **If all prior phases wired**: Build next non-DB slice from execution.md
 
-Example detection:
-```bash
-grep -A 20 "pending_slices" .claude/execution_state.json
-grep -r "ShockDetectionEngine" src/services/ src/domain/  # Check if exists
-```
-
-### 2b. Pre-Task Audit (Before Writing)
-
-For the selected slice [SYSTEM_NAME]:
-
-**Check 1: No Duplicate**
-```bash
-find src -name "*[system-name-lowercase]*" -type f
-grep -r "class [SYSTEM_NAME]" src/
-grep -r "export.*[SYSTEM_NAME]" src/services/
-```
-**Stop if**: Implementation already exists → Reuse/upgrade, don't duplicate
-
-**Check 2: Integration Path Clear**
-```bash
-# For Shock Detection (Phase 4 Slice 2):
-grep -r "SurvivalFactor" src/services/  # Depends on Phase 4 Slice 1
-grep -r "decision\|action\|recommendation" src/graphql/mutations/ | head -3
-grep -r "ShockDetectionEngine" src/
-```
-**Stop if**: Caller not yet built → Skip this slice, pick another
-
-**Check 3: Honest Classification**
-```bash
-grep "ShockDetectionEngine\|shock" .claude/execution_state.json
-# Verify: status = PARKED or not mentioned (not already ACTIVE)
-```
-**Stop if**: Already marked ACTIVE → Skip, move to next slice
-
-**Check 4: Scan Existing Domain**
-```bash
-cat src/domain/reality/survival-factors.ts | head -50
-# Understand: what's available for this slice to use
-```
+### 2b. Pre-Task Audit (for new slices)
+- [ ] No duplicate: `grep -r "ClassName" src/services src/domain`
+- [ ] Integration path clear: What caller will use this?
+- [ ] Not already ACTIVE: Check execution_state.json classification
 
 ---
 
-## STEP 3: IMPLEMENTATION (Minimal, Single Slice)
+## STEP 3: IMPLEMENTATION (One Task = One Slice OR One Wiring Gap)
 
-### 3a. Code Audit (Read Before Write)
-```bash
-# For Shock Detection Engine caller example:
-cat src/services/survival-factor-validator.ts | head -40
-cat src/__tests__/services/survival-factor-validator.test.ts | head -30
-```
-Record:
-- Current state of dependencies
-- Test patterns
-- No duplication
-
-### 3b. Implement Slice (ONE SYSTEM ONLY)
-
-**Rules**:
+### For NEW NON-DB SLICE:
 - Create ONE service/engine per slice
-- Add ONE domain contract file if needed
-- Wire into ONE caller (existing production path or reserved future caller)
-- Add ONE test file with 10-20 focused tests
-- NO refactoring, NO cleanup beyond scope
+- Add ONE domain contract if needed
+- Add ONE test file (10-20 focused tests)
+- **No production caller yet** → Classify as WIRED_NOT_CALLED
+- **No database changes**
 
-**Fail-Closed Pattern**:
-- Validation methods throw on invalid input
-- Missing data → UNKNOWN/default state, not assumed safe
-- Tenant checks before state access
-- Audit trails for material mutations
+### For WIRING/INTEGRATION:
+- Build ONE caller (API route, GraphQL resolver, service integration)
+- Import and wire system into caller
+- Add integration tests proving full path (caller → system → DTO → consumer)
+- Verify tenant/auth/audit enforcement
+- Reclassify to COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE (ready for deploy)
 
-**Example Slice: Shock Detection Engine (Phase 4 Slice 2)**
+### File Structure for Wiring
 
-File 1: `src/services/shock-detection-engine.ts`
+**Example: Wire RecommendationGeneratorEngine into GraphQL**
+
+File: `src/graphql/resolvers/recommendation.resolver.ts`
 ```typescript
-// Detect when survival factors cross critical thresholds
-export class ShockDetectionEngine {
-  static detectShock(assessments: SurvivalFactorAssessment[]): ShockEvent[] {
-    const critical = assessments.filter(a => a.health === SurvivalFactorHealth.CRITICAL);
-    return critical.length > 0 ? this.buildShockEvents(critical) : [];
-  }
-  
-  private static buildShockEvents(critical: SurvivalFactorAssessment[]): ShockEvent[] {
-    return critical.map(a => ({
-      id: crypto.randomUUID(),
-      type: this.classifyShock(a.category),
-      severity: 'CRITICAL',
-      triggeredBy: [a.factor],
-      detectedAt: new Date(),
-      recommended_action: this.recommendAction(a.category),
-    }));
-  }
-  
-  private static classifyShock(category: SurvivalFactorCategory): ShockType {
-    // Map survival category → shock type
-    switch(category) {
-      case 'financial': return 'FINANCIAL_SHOCK';
-      case 'operational': return 'OPERATIONAL_SHOCK';
-      case 'market': return 'MARKET_SHOCK';
-      case 'strategic': return 'STRATEGIC_SHOCK';
+import { RecommendationGeneratorEngine } from "@/services/recommendation-generator";
+import { validateWorkspaceId, checkCapability } from "@/lib/auth";
+
+export const recommendationResolver = {
+  Query: {
+    recommendations: async (_, { engagementId }, { userId, workspaceId }) => {
+      // Auth: Validate workspace
+      validateWorkspaceId(workspaceId);
+      
+      // Capability: Check user can access
+      await checkCapability(userId, "read_recommendations", workspaceId);
+      
+      // Load engagement context from DB
+      const engagement = await db.engagement.findUnique({
+        where: { id: engagementId, workspaceId }
+      });
+      if (!engagement) throw new NotFoundError("Engagement");
+      
+      // Generate recommendations (Slice 2)
+      const recs = RecommendationGeneratorEngine.generateSurvivalRecommendations({
+        workspaceId,
+        userId,
+        survival_health: engagement.survivalHealth,
+        // ... other context
+      });
+      
+      // Score recommendations (Slice 3)
+      const scored = recs.map(r => ({
+        ...r,
+        priority_score: RecommendationPriorityScorerEngine.scoreRecommendation(r)
+      }));
+      
+      // Emit audit event for access
+      await EventEmitterService.emit({
+        type: 'RECOMMENDATIONS_ACCESSED',
+        userId,
+        workspaceId,
+        engagementId,
+        count: scored.length
+      });
+      
+      // Convert to DTO (boundary enforcement)
+      return scored.map(toRecommendationDTO);
     }
   }
-  
-  private static recommendAction(category: SurvivalFactorCategory): string {
-    // Recommend action for each shock type
-    return `Immediate review needed: ${category} survival factor critical`;
-  }
-}
+};
 ```
 
-File 2: `src/domain/survival/shock-events.ts`
+File: `src/__tests__/graphql/recommendation.resolver.test.ts`
 ```typescript
-export enum ShockType {
-  FINANCIAL_SHOCK = 'FINANCIAL_SHOCK',
-  OPERATIONAL_SHOCK = 'OPERATIONAL_SHOCK',
-  MARKET_SHOCK = 'MARKET_SHOCK',
-  STRATEGIC_SHOCK = 'STRATEGIC_SHOCK',
-}
-
-export interface ShockEvent {
-  id: string;
-  type: ShockType;
-  severity: 'CRITICAL' | 'HIGH';
-  triggeredBy: SurvivalFactor[];
-  detectedAt: Date;
-  recommended_action: string;
-  workspaceId?: string; // Tenant scoping
-}
-```
-
-File 3: `src/__tests__/services/shock-detection-engine.test.ts`
-```typescript
-describe('ShockDetectionEngine', () => {
-  it('should detect financial shock when cash_runway < 3 months', () => {
-    const assessments = [{
-      factor: 'cash_runway_months',
-      category: 'financial',
-      health: SurvivalFactorHealth.CRITICAL,
-      // ... other fields
-    }];
-    const shocks = ShockDetectionEngine.detectShock(assessments);
-    expect(shocks).toHaveLength(1);
-    expect(shocks[0].type).toBe('FINANCIAL_SHOCK');
+describe("Recommendation Resolver (Wiring Test)", () => {
+  it("should integrate generator → scorer → DTO end-to-end", async () => {
+    const resolver = recommendationResolver.Query.recommendations;
+    
+    // Full path test
+    const recs = await resolver(null, 
+      { engagementId: "eng-1" },
+      { userId: "user-1", workspaceId: "ws-1" }
+    );
+    
+    // Prove full path: generator → scorer → DTO
+    expect(recs).toHaveLength(2);
+    expect(recs[0]).toHaveProperty("priority");
+    expect(recs[0]).not.toHaveProperty("internal_debug"); // DTO boundary
   });
   
-  // 10-15 more tests...
+  it("should enforce workspace isolation in resolver", async () => {
+    const resolver = recommendationResolver.Query.recommendations;
+    expect(() => 
+      resolver(null, 
+        { engagementId: "eng-1" }, 
+        { userId: "user-1", workspaceId: "" }
+      )
+    ).toThrow("workspaceId");
+  });
+  
+  it("should emit audit event on access", async () => {
+    const emitSpy = jest.spyOn(EventEmitterService, 'emit');
+    
+    const resolver = recommendationResolver.Query.recommendations;
+    await resolver(null, 
+      { engagementId: "eng-1" },
+      { userId: "user-1", workspaceId: "ws-1" }
+    );
+    
+    expect(emitSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'RECOMMENDATIONS_ACCESSED' })
+    );
+  });
 });
 ```
-
-### 3c. No Database Changes
-- ❌ DO NOT add migrations
-- ❌ DO NOT modify prisma/schema.prisma
-- ❌ DO NOT change DATABASE_URL or .env.local
-- ✓ DO use existing Prisma models if needed (read-only queries only)
-- ✓ DO define domain contracts (pure TypeScript types)
 
 ---
 
@@ -251,193 +264,186 @@ describe('ShockDetectionEngine', () => {
 
 ### 4a. Static Gates
 ```bash
-echo "=== GATE 1: prisma validate ===" && \
-npx prisma validate 2>&1 | grep -E "(valid|error)" && echo "✓ PASS" || echo "✗ FAIL"
+echo "=== prisma validate ===" && \
+npx prisma validate 2>&1 | grep -i "valid" && echo "✓" || echo "✗"
 
-echo "=== GATE 2: tsc --noEmit ===" && \
-npx tsc --noEmit 2>&1 | grep "[SYSTEM_NAME]" && echo "✗ FAIL: New TypeScript errors" || echo "✓ PASS (0 new errors)"
+echo "=== tsc --noEmit ===" && \
+npx tsc --noEmit 2>&1 | grep -c "error TS" | head -1
 
-echo "=== GATE 3: npm run build ===" && \
-npm run build 2>&1 | grep "[SYSTEM_NAME]" && echo "✗ FAIL: Build error in new code" || echo "✓ PASS"
-
-echo "=== GATE 4: npm test ===" && \
-npm test -- src/__tests__/services/[slice-test].test.ts 2>&1 | tail -20
+echo "=== npm test ===" && \
+npm test -- src/__tests__/{domain,services,graphql}/[name].test.ts 2>&1 | tail -5
 ```
 
 **Acceptable**:
 - ✓ All gates pass
 - ⚠ Pre-existing errors in seed/db (allowed, document count)
-- ✗ STOP if: Any new error in implemented code
+- ✗ STOP if: Any new error in implemented/wired code
 
 ---
 
 ## STEP 5: COMMIT & STATE UPDATE
 
-### 5a. Verify Clean State
+### 5a. Update execution_state.json
+
+For NEW SLICE:
 ```bash
-git status --short
-git diff --stat
+jq '.phase_N_systems_status.implemented_slices += [{
+  "slice": "Phase N Slice X: [NAME]",
+  "status": "COMPLETE",
+  "classification": "WIRED_NOT_CALLED",
+  "files": ["src/services/[name].ts", "src/__tests__/services/[name].test.ts"],
+  "committed": "[sha]",
+  "tests_passing": "N/N",
+  "production_caller_count": 0,
+  "wiring_status": "Awaiting caller implementation"
+}] | .phase_N_completion_progress.completion_percentage = [%]' \
+  .claude/execution_state.json > /tmp/state.json && \
+mv /tmp/state.json .claude/execution_state.json
 ```
-**Must show**: Only new slice files + execution_state.json update
 
-### 5b. Commit Code
+For WIRING FIX:
 ```bash
-git add src/services/[system].ts src/domain/[domain]/[system].ts \
-         src/__tests__/services/[system].test.ts
+jq '.phase_N_systems_status.implemented_slices[] |= 
+  (if .slice == "Phase N Slice X: [NAME]" 
+   then .classification = "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE" |
+        .production_caller = "src/graphql/resolvers/[name].resolver.ts:L42" |
+        .integration_test_file = "src/__tests__/graphql/[name].resolver.test.ts" |
+        .wiring_status = "Wired into production path (GraphQL resolver). Integration tests pass."
+   else . end)' \
+  .claude/execution_state.json > /tmp/state.json && \
+mv /tmp/state.json .claude/execution_state.json
+```
 
-git commit -m "Phase 4 Slice N: [SYSTEM_NAME] (non-DB foundation)
+### 5b. Commit
+```bash
+git add -A .claude/execution_state.json src/
+git commit -m "Phase N Slice X: [NAME] or [NAME] wiring
 
-- [Brief description of what system does]
-- Implementation: [key methods/features]
-- Integration: Called from [future caller or reserved path]
-- Tests: [test file] (N tests, all passing)
-- No DB changes: Pure TypeScript types and validators
-- Tenant safety: [validation method] enforces workspaceId + userId
+[Brief description of implementation or wiring]
+- Classification: [WIRED_NOT_CALLED | COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE]
+- Files: [list]
+- Tests: [count and integration proof]
+- Caller: [resolver/route/service if wiring]
+- Tenant safety: [enforced where]
+- Audit event: [type emitted]
 
 Static gates:
 - prisma validate: ✓
 - tsc --noEmit: ✓ (0 new errors)
-- npm run build: ✓
-- npm test: ✓ (N/N tests passing)
+- npm test: ✓ (N/N passing, integration tests included)
 
 https://claude.ai/code/[SESSION_ID]"
-```
 
-### 5c. Update execution_state.json
-```bash
-jq '.phase_4_systems_status.implemented_slices += [{
-  "slice": "Phase 4 Slice N: [SYSTEM_NAME]",
-  "status": "COMPLETE",
-  "files": ["src/services/[system].ts", "src/domain/[domain]/[system].ts", "src/__tests__/services/[system].test.ts"],
-  "committed": "[commit-sha]"
-}] | .phase_4_completion_progress.completion_percentage = [new %] | .last_update = "[ISO timestamp]"' \
-  .claude/execution_state.json > /tmp/state.json && \
-mv /tmp/state.json .claude/execution_state.json
-
-git add .claude/execution_state.json
-git commit -m "Update execution_state: Phase 4 Slice N complete"
-```
-
-### 5d. Push
-```bash
 git push -u origin $(git branch --show-current)
-# or if main: git push -u origin main
-# or if HTTP 403: Use GitHub API (mcp__github__push_files)
 ```
 
 ---
 
-## STEP 6: REPORT (Concise Facts Only)
+## STEP 6: REPORT (Facts Only)
 
-**Output Format** (No explanations, no commentary):
-
+### For NEW SLICE:
 ```
-PHASE 4 SLICE N: [SYSTEM_NAME]
+PHASE N SLICE X: [SYSTEM_NAME]
 
 Files:
-- src/services/[system].ts (X lines)
-- src/domain/[domain]/[system].ts (Y lines)
-- src/__tests__/services/[system].test.ts (Z tests)
+- src/services/[name].ts (X lines)
+- src/__tests__/services/[name].test.ts (N tests)
 
 Wiring Proof:
-- Domain contract: [file.ts:line-range] defines [Interface/Enum]
-- Service: [file.ts:line-range] exports ShockDetectionEngine class
-- Methods: [list key methods]
-- Future caller: [ShockDetectionEngine will be called from decision.ts once Phase N is ready]
-- Tenant safety: validateShock() enforces workspaceId scoping
+- Status: WIRED_NOT_CALLED (implementation complete, no production caller yet)
+- Next step: Build caller in next /continue-build iteration
+- Tests: N unit tests, 0 integration tests
 
 Static Gates:
 - prisma validate: ✓
-- tsc --noEmit: ✓ (28 pre-existing in seed/db, 0 new)
-- npm run build: ✓
-- npm test: ✓ (N tests passing)
+- tsc --noEmit: ✓ (0 new errors)
+- npm test: ✓ (N/N passing)
 
-Committed: [sha] to branch [branch]
-Pushed: ✓ to remote
+Committed: [sha]
+Pushed: ✓
 
 Blockers: None
 
-Next: [Auto-detect from execution_state] → Phase 4 Slice N+1 on next /continue-build
+Next: Auto-detect → [wire this system OR next slice]
 ```
 
----
+### For WIRING FIX:
+```
+PHASE N SLICE X: [SYSTEM_NAME] WIRING
 
-## SAFETY ENFORCEMENT (Always)
+Files:
+- src/graphql/resolvers/[name].resolver.ts (caller, X lines)
+- src/__tests__/graphql/[name].resolver.test.ts (integration tests, N tests)
 
-### Authentication & Authorization
-- All mutation paths must check user.workspaceId
-- All services must validate capability before action
-- No public API without DTO redaction
+Wiring Proof:
+- Caller: src/graphql/resolvers/[name].resolver.ts:L42 (Query.recommendations)
+- Input: Engagement context from DB query, validated workspaceId
+- Output: DTO with no internal fields exposed
+- Tenant: validateWorkspaceId enforced before DB access (L45)
+- Auth: checkCapability verified before generation (L46)
+- Audit: EventEmitterService.emit('RECOMMENDATIONS_ACCESSED') on access (L60)
+- Path: RecommendationGeneratorEngine → RecommendationPriorityScorerEngine → toRecommendationDTO
+- Tests: 3 integration tests proving full path
 
-### Tenant Isolation
-- Every tenant-owned model scopes by workspaceId
-- Fetch-then-filter forbidden
-- Workspace validation before state access
+Classification: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE
 
-### Audit & Events
-- Material mutations emit CanonicalEvent
-- Critical system decisions emit AuditEvent
-- Tenant ID always included in audit trail
+Static Gates:
+- prisma validate: ✓
+- tsc --noEmit: ✓ (0 new errors)
+- npm test: ✓ (N/N passing, all integration tests included)
 
-### DTO Safety
-- Public APIs return wrapped DTOs, never raw Prisma
-- Owner/admin fields stripped for non-admin users
-- Test DTO leakage before merge
+Committed: [sha]
+Pushed: ✓
 
-### Idempotency
-- Critical mutations protected against duplicate submission
-- Idempotency key validation where applicable
+Blockers: None
+
+Next: Auto-detect → [next wiring gap OR next slice]
+```
 
 ---
 
 ## RULES (Non-Negotiable)
 
 ✓ DO:
-- Read execution.md rules before implementing
-- Scan for duplicates before writing
-- Add tests that prove wiring (not just unit tests)
-- Update execution_state after every slice
-- Commit to feature branch unless on main
-- Push automatically after commit
-- Report facts only (no narrative)
+- Audit ALL prior work before selecting next task
+- Reclassify systems without production callers
+- Never mark ACTIVE without caller file proof
+- Use execution.md as ONLY phase roadmap (never wait for CLAUDE.md)
+- One run = one deploy-ready slice OR one wiring fix
+- Wire before building new phase (fix COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE first)
+- Update execution_state with classifications and caller proof
+- Prove wiring path in integration tests (caller → system → DTO → consumer)
+- Emit audit events for material mutations/access
+- Enforce tenant/auth at caller boundary
 
 ✗ DON'T:
-- Skip baseline gates
-- Claim ACTIVE without runtime proof
-- Change database config while blocked
-- Claim DB runtime verification while DATABASE_URL unavailable
-- Comment out failing tests
-- Weaken tenant isolation or permission checks
-- Ask user for confirmation
-
----
-
-## PHASE 4 SLICE ROADMAP (Non-DB)
-
-- [x] **Slice 1**: Survival Factor Taxonomy + Validator (COMPLETE)
-- [ ] **Slice 2**: Shock Detection Engine (detect critical threats)
-- [ ] **Slice 3**: Org Resilience Scorer (calc survival strength)
-- [ ] **Slice 4**: Survival Gating Policy (block unsafe growth)
-- [ ] **Slice 5**: Survival Assessment Interface (domain contract)
+- Wait for CLAUDE.md phase definitions
+- Build new phase if prior phases not wired
+- Mark ACTIVE without production caller proof
+- Skip audit before selecting work
+- Change DB config or migrations
+- Commit without updating execution_state
+- Report without wiring proof or reclassification
+- Skip integration tests for wiring tasks
+- Expose internal fields (use DTO boundary)
 
 ---
 
 ## ENTRY POINT: /continue-build
 
-When user invokes `/continue-build`:
+1. Audit all implemented slices for runtime wiring
+2. Reclassify based on caller proof
+3. Select: highest-priority wiring gap OR next non-DB slice
+4. Implement (new slice) or wire (integration)
+5. Update execution_state with classification/caller
+6. Run gates, commit, push
+7. Report with wiring proof
+8. Exit (loop ready for next /continue-build)
 
-1. Detect current phase from execution_state.json
-2. List pending non-DB slices
-3. Pick highest-priority unimplemented slice
-4. Follow STEP 1–6 above automatically
-5. Commit and push
-6. Report slice completion
-7. Exit (user can invoke /continue-build again for next slice)
-
-**Never ask "proceed?". Just build.**
+**Never ask "proceed?". Just build and wire.**
 
 ---
 
-**Last Updated**: 2026-05-11
-**Model**: Autonomous continuous execution loop with enterprise-grade safety enforcement
-**Status**: Ready for Phase 4 Slice 2 on next /continue-build invocation
+**Last Updated**: 2026-05-11  
+**Model**: Audit-first execution loop with mandatory wiring verification before new work  
+**Status**: Ready for audit → wire → slice cycle
