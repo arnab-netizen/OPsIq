@@ -377,7 +377,8 @@
         "tests_passing": "37/37",
         "production_caller": "src/graphql/resolvers/recommendations.resolver.ts:L236",
         "integration_test_file": "src/__tests__/graphql/recommendations.resolver.test.ts",
-        "wiring_status": "Wired into Query.recommendationsAssessment resolver. Calls generateSurvivalRecommendations, generateGrowthRecommendations, generateOperationalRecommendations. 26 integration tests prove full path."
+        "wiring_status": "Wired into Query.recommendationsAssessment resolver. Calls generateSurvivalRecommendations, generateGrowthRecommendations, generateOperationalRecommendations. 26 integration tests prove full path.",
+        "integration_notes": "Receives business context from Phase 4 businessConditionAssessment resolver. Survival health and financial metrics derived from shock detection + resilience scoring."
       },
       {
         "slice": "Phase 6 Slice 3: Recommendation Priority Scorer",
