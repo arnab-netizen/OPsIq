@@ -54,11 +54,13 @@
       ],
     },
     "Slice 3: Pricing Engine Service": {
-      "status": "WIRED_NOT_CALLED",
-      "classification": "SERVICE_IMPLEMENTATION",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_WIRING",
       "files": [
         "src/services/growth/pricing-engine.ts",
-        "src/__tests__/services/growth/pricing-engine.test.ts"
+        "src/__tests__/services/growth/pricing-engine.test.ts",
+        "src/app/api/growth/pricing-tiers/route.ts",
+        "src/__tests__/api/growth/pricing-tiers.test.ts"
       ],
       "methods": [
         "createPriceTier(workspaceId, data)",
@@ -68,10 +70,15 @@
         "recommendStrategy(workspaceId, competitorAvgPrice, targetMargin, costOfGoods)",
         "calculateBundleValue(tier, featurePrices)"
       ],
-      "test_coverage": "26 unit tests covering all 6 methods",
-      "workspace_enforcement": "✓ All methods enforce workspaceId parameter, fail-closed on mismatch",
+      "api_endpoints": [
+        "POST /api/growth/pricing-tiers (create tier)"
+      ],
+      "test_coverage": "26 unit tests + 13 integration tests covering all methods and route",
+      "workspace_enforcement": "✓ All methods enforce workspaceId, route enforces x-workspace-id header",
+      "auth_enforced": "✓ CAPABILITIES.ENGAGEMENT_UPDATE",
+      "DTO_boundary": "✓ No internal fields exposed in response",
       "compilation": "✓ TypeScript compiles without errors",
-      "committed": "pending"
+      "committed": "e90a2ea (service), pending (wiring)"
       "methods": [
         "createRevenueStream(workspaceId, data)",
         "calculateBlendedMetric(workspaceId, streams, metricName)",
