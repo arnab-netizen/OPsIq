@@ -81,10 +81,10 @@
   ],
   "next_phase_3_steps": [
     {
-      "step": "Task 2 - Wire SnapshotOptimizationEngine into EventReplayEngine path",
-      "prerequisite": "Code-only, no DB needed",
+      "step": "Task 2: Wire SnapshotOptimizationEngine into EventReplayEngine path",
+      "prerequisite": "Task 1 complete (EventReplayEngine ACTIVE)",
       "priority": "HIGH",
-      "reason": "Complete Phase 3 PARKED system integration; enable snapshot persistence"
+      "reason": "Completes Phase 3 PARKED systems integration"
     },
     {
       "step": "Event ordering guarantee (DB-level)",
@@ -96,7 +96,7 @@
       "step": "Run Phase 3 integration tests",
       "prerequisite": "DATABASE_URL + npx prisma migrate deploy",
       "priority": "HIGH",
-      "reason": "Verify EventEmitterService → CanonicalEvent → Projection rebuild path runtime"
+      "reason": "Verify EventEmitterService → CanonicalEvent path runtime"
     },
     {
       "step": "Phase 3 runtime verification (54/54 tests passing)",
@@ -106,22 +106,17 @@
     }
   ],
   "completed_work_this_session": [
-    "Phase 3: Add SnapshotData model for event replay optimization",
-    "Fix CI DB env wiring: explicit secrets and test environment",
-    "Fix stale Gate 9 documentation: EventReplayEngine is ACTIVE (Phase 3)",
-    "Fix migration idempotency: add IF NOT EXISTS clauses",
-    "Implement AuditEventHashChainValidator service",
-    "Implement EventNumberingValidator service",
-    "Phase 3 closure audit: correct false ACTIVE claims",
-    "Implement Neon serverless adapter: @neondatabase/serverless + @prisma/adapter-neon",
-    "Task 1 - Wire EventReplayEngine into production paths: integrated into ProjectionRebuildEngine"
+    "Phase 3: Wire EventReplayEngine into ProjectionRebuildEngine (Task 1)",
+    "Add unit test verifying EventReplayEngine integration",
+    "Update continue-build.md with phase-by-phase execution framework",
+    "Classify EventReplayEngine as ACTIVE (wired into production paths)"
   ],
   "blockers": {
     "environment": {
       "DATABASE_URL": "Not set - blocks migration deploy and DB-backed tests",
       "DATABASE_URL_TEST": "Not set - blocks Phase 3 integration tests"
     },
-    "code_level": "NONE - all critical Phase 3 code now implemented"
+    "code_level": "NONE - all critical Phase 3 code now implemented and wired"
   },
   "safety_status": {
     "tenant_isolation": "VERIFIED (workspaceId in all event models)",
@@ -131,16 +126,16 @@
   "phase_3_honest_classification": {
     "ACTIVE_SYSTEMS": [
       "EventEmitterService (critical path: recommendation, action, evidence mutations)",
-      "EventReplayEngine (production path: called from ProjectionRebuildEngine.rebuildRecommendationProjection)"
+      "EventReplayEngine (wired into projection rebuild path)"
     ],
     "PARKED_SYSTEMS": [
-      "SnapshotOptimizationEngine (schema backing exists, runtime integration deferred)"
+      "SnapshotOptimizationEngine (schema backing exists, runtime integration pending)"
     ],
     "SCHEMA_READY_SYSTEMS": [
       "CanonicalEvent (append-only protection via DB triggers)",
       "AuditEvent (hash chain validation via AuditEventHashChainValidator)"
     ]
   },
-  "one_stage_stop_rule": "Phase 3 code-level backbone complete. EventReplayEngine wired into production. Database gates blocked by network connectivity to Neon endpoint.",
-  "next_required_action": "Task 2 - Wire SnapshotOptimizationEngine into EventReplayEngine path. When DATABASE_URL available: npx prisma migrate deploy && npx prisma generate && npm test -- phase-3 (expect 54/54 passing)."
+  "one_stage_stop_rule": "Phase 3 code-level backbone complete. Task 1 (EventReplayEngine wiring) done. Task 2 (SnapshotOptimizationEngine) pending. Database gates blocked by no DATABASE_URL.",
+  "next_required_action": "Task 2: Wire SnapshotOptimizationEngine into EventReplayEngine path. After: When DATABASE_URL available, npx prisma migrate deploy && npm test -- phase-3. If 54/54 tests pass, Phase 3 COMPLETE_RUNTIME_VERIFIED."
 }
