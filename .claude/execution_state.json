@@ -140,9 +140,9 @@
   },
   "phase_5_completion_progress": {
     "phase_goal": "Financial Normalization: Revenue model, unit economics, financial health, cash runway modeling",
-    "completion_percentage": 25,
+    "completion_percentage": 50,
     "static_gates_status": "ALL_PASSING",
-    "code_level_status": "SLICES_1_COMPLETE",
+    "code_level_status": "SLICES_1_2_COMPLETE",
     "db_gates_status": "N/A (non-DB foundation slices)"
   },
   "phase_5_systems_status": {
@@ -157,6 +157,17 @@
         ],
         "committed": "d135b10",
         "tests_passing": "40/40"
+      },
+      {
+        "slice": "Phase 5 Slice 2: Unit Economics Calculator",
+        "status": "COMPLETE",
+        "classification": "DOMAIN_CONTRACT_ONLY (input for Slice 3)",
+        "files": [
+          "src/domain/financial/unit-economics.ts",
+          "src/__tests__/domain/financial/unit-economics.test.ts"
+        ],
+        "committed": "0136133",
+        "tests_passing": "51/51"
       }
     ],
     "active_production_systems": [],
