@@ -22,13 +22,16 @@ import {
   type RecommendationAssessmentDTO,
 } from "@/domain/recommendation/recommendation-assessment";
 import type { Recommendation } from "@/domain/recommendation/recommendation";
+import { businessConditionResolver, type BusinessConditionAssessmentDTO } from "./business-condition.resolver";
 
 /**
- * Load engagement context for recommendation generation
+ * Load engagement context from Phase 4 business condition assessment
+ * Wires Phase 4 → Phase 6: Business Condition informs Recommendation Context
  */
 async function loadEngagementContext(
   engagementId: string,
-  workspaceId: string
+  workspaceId: string,
+  userId: string
 ): Promise<{
   engagementId: string;
   survivalHealth?: string;
@@ -39,24 +42,54 @@ async function loadEngagementContext(
   teamRetentionRisk?: number;
   marketOpportunity?: number;
   competitivePressure?: number;
+  businessCondition?: BusinessConditionAssessmentDTO;
 }> {
-  // In production, load from DB:
-  // const engagement = await db.engagement.findUnique({
-  //   where: { id: engagementId, workspaceId },
-  //   include: { metrics: true }
-  // });
+  // Phase 4 Integration: Get real business condition assessment
+  const businessCondition = await businessConditionResolver.Query.businessConditionAssessment(null, {
+    engagementId,
+  }, {
+    userId,
+    workspaceId,
+  });
 
-  // For now, return mock context
+  // Map business condition assessment to engagement context
+  // Survival health determination based on shock detection and resilience
+  let survivalHealth = "HEALTHY";
+  if (businessCondition.shock_detected) {
+    survivalHealth = businessCondition.shock_severity || "CRITICAL";
+  } else if (businessCondition.resilience_score < 40) {
+    survivalHealth = "CRITICAL";
+  } else if (businessCondition.resilience_score < 60) {
+    survivalHealth = "WARNING";
+  }
+
+  // Financial health determination based on critical gaps
+  let financialHealth = "HEALTHY";
+  const hasFinancialCritical = businessCondition.critical_gaps.some((gap) =>
+    gap.toLowerCase().includes("financial") || gap.toLowerCase().includes("cash") || gap.toLowerCase().includes("burn")
+  );
+  if (hasFinancialCritical) {
+    financialHealth = "CRITICAL";
+  } else if (businessCondition.critical_gaps.length > 0) {
+    financialHealth = "WARNING";
+  }
+
+  // For now, estimate financial metrics from resilience score
+  // In production, would load from DB or Phase 5 financial assessment
+  const estimatedCashRunway = Math.max(1, Math.round((businessCondition.resilience_score / 100) * 12));
+  const estimatedBurnRate = 50000 - (businessCondition.resilience_score * 400); // 50k when resilience=0, 10k when resilience=100
+
   return {
     engagementId,
-    survivalHealth: "CRITICAL",
-    financialHealth: "CRITICAL",
-    currentCashRunway: 2,
-    burnRate: 50000,
-    churnRate: 0.15,
+    survivalHealth,
+    financialHealth,
+    currentCashRunway: estimatedCashRunway,
+    burnRate: estimatedBurnRate,
+    churnRate: 0.15, // Would load from business condition in future
     teamRetentionRisk: 0.6,
-    marketOpportunity: 45,
-    competitivePressure: 65,
+    marketOpportunity: businessCondition.resilience_score > 50 ? 45 : 20,
+    competitivePressure: businessCondition.shock_detected ? 80 : 65,
+    businessCondition,
   };
 }
 
@@ -239,7 +272,8 @@ export const recommendationsResolver = {
       // await checkCapability(userId, "read_recommendations", workspaceId);
 
       // Load engagement context (inputs to recommendation generator)
-      const engagementContext = await loadEngagementContext(engagementId, workspaceId);
+      // Wires Phase 4 → Phase 6: Business condition informs recommendation context
+      const engagementContext = await loadEngagementContext(engagementId, workspaceId, userId);
 
       // Slice 2: Generate recommendations
       const generated = generateRecommendations(engagementContext, userId, workspaceId);
