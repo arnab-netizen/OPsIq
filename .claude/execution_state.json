@@ -189,11 +189,13 @@
       "committed": "pending (wiring)"
     },
     "Slice 7: Offer Engine Service": {
-      "status": "WIRED_NOT_CALLED",
-      "classification": "SERVICE_IMPLEMENTATION",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_WIRING",
       "files": [
         "src/services/growth/offer-engine.ts",
-        "src/__tests__/services/growth/offer-engine.test.ts"
+        "src/__tests__/services/growth/offer-engine.test.ts",
+        "src/app/api/growth/offers/route.ts",
+        "src/__tests__/api/growth/offers.test.ts"
       ],
       "methods": [
         "createOffer(workspaceId, data)",
@@ -204,12 +206,19 @@
         "calculateBundleValue(workspaceId, offer, featurePrices)",
         "generateExpirationAlerts(workspaceId, offers)"
       ],
-      "test_coverage": "28 unit tests covering all methods, workspace isolation, fail-closed behavior",
-      "workspace_enforcement": "✓ All methods enforce workspaceId, fail-closed on missing ID",
+      "api_endpoints": [
+        "POST /api/growth/offers (create offer)",
+        "Handler: calculateEffectivePriceHandler (calculate effective price)",
+        "Handler: recordPerformanceHandler (record performance)",
+        "Handler: compareOffersHandler (compare offers)"
+      ],
+      "test_coverage": "28 unit tests (service) + 14 integration tests (route) covering all methods and API path",
+      "workspace_enforcement": "✓ All methods enforce workspaceId, route enforces x-workspace-id header",
+      "auth_enforced": "✓ CAPABILITIES.ENGAGEMENT_UPDATE (POST)",
+      "DTO_boundary": "✓ No internal fields exposed in response",
       "business_logic": "Offer creation and management, effective price calculation, performance tracking, effectiveness analysis, offer comparison, bundle value calculation, expiration alerts",
       "compilation": "✓ TypeScript compiles without errors",
-      "no_api_caller": "Service implemented, no API endpoint yet (WIRED_NOT_CALLED)",
-      "next": "Build POST /api/growth/offers endpoint to wire this service"
+      "committed": "pending (wiring)"
     }
   },
   "gates_status": {
@@ -237,7 +246,7 @@
     "Phase 8 — Outcomes & Measurement (implementation + wiring verified)"
   ],
   "phase_9_status": {
-    "completion": "PARTIAL - Slices 1-7 complete (Slices 2-6 wired; Slices 1 & 7 not yet called)",
+    "completion": "PARTIAL - Slices 1-7 complete (Slices 2-7 wired; Slice 1 domain only)",
     "slice_summary": {
       "Slice 1 (Domain)": "WIRED_NOT_CALLED - Domain contracts only, foundation for all growth engines",
       "Slice 2 (Revenue)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
@@ -245,9 +254,9 @@
       "Slice 4 (Acquisition)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 5 (Retention)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 6 (Sales Pipeline)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
-      "Slice 7 (Offer)": "WIRED_NOT_CALLED - Service implemented, no API caller yet"
+      "Slice 7 (Offer)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired"
     },
-    "next_work": "Wire Slice 7 to POST /api/growth/offers endpoint OR build Slice 8 (Unit Economics)"
+    "next_work": "Build Slice 8 (Unit Economics) to complete Growth Operating Engines"
   },
   "deployment_readiness": {
     "static_gates": "PASS (tsc, build both succeed for all 5 slices)",
