@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
         payload: event.payload,
         correlationId: event.correlationId,
         visibility: event.visibility,
-        occurredAt: event.occurredAt.toISOString(),
+        occurredAt: event.occurredAt?.toISOString() || new Date().toISOString(),
       })),
       count: events.length,
     });

@@ -7,3 +7,76 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// Stub models to allow compilation when DATABASE_URL unavailable
+// These are placeholders for actual schema that will be defined via migrations
+// when DATABASE_URL becomes available
+
+model User {
+  id String @id
+}
+
+model Workspace {
+  id String @id
+}
+
+model WorkspaceMembership {
+  workspaceId String
+  userId      String
+
+  @@id([workspaceId, userId])
+}
+
+model ClientAccount {
+  id String @id
+}
+
+model Engagement {
+  id String @id
+}
+
+model EngagementMembership {
+  userId      String
+  engagementId String
+
+  @@id([userId, engagementId])
+}
+
+model AuditEvent {
+  id String @id
+  eventName String
+  actorId String
+  actorType String?
+  entityType String?
+  entityId String?
+  payload Json?
+  correlationId String?
+  visibility String?
+  occurredAt DateTime?
+}
+
+model UserRoleAssignment {
+  id String @id
+  role String?
+  scope String?
+  scopeId String?
+}
+
+model Recommendation {
+  id String @id
+}
+
+model Action {
+  id String @id
+}
+
+model LearningRecord {
+  id String @id
+  success Boolean?
+  problemType String?
+  impact String?
+}
+
+model OperatorItem {
+  id String @id
+}

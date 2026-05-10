@@ -105,7 +105,7 @@ export function detectPatternsFromLearning(records: LearningRecord[]): DetectedP
 
     const [problemType, outcomePattern] = key.split(":");
 
-    const impacts = records.map((r) => Math.abs(r.impact));
+    const impacts = records.map((r) => Math.abs(Number(r.impact) || 0));
     const avgImpact = impacts.reduce((a, b) => a + b, 0) / impacts.length;
     const minImpact = Math.min(...impacts);
     const maxImpact = Math.max(...impacts);

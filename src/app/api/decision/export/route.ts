@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       auditTrail: auditEvents.map((event: Prisma.AuditEventGetPayload<{}>) => ({
         eventName: event.eventName,
         actorId: event.actorId,
-        occurredAt: event.occurredAt.toISOString(),
+        occurredAt: event.occurredAt?.toISOString() || new Date().toISOString(),
         payload: event.payload as Record<string, unknown> | null,
       })),
     };
