@@ -14,14 +14,15 @@ async function createPrismaClient() {
   }
 
   try {
-    const { PrismaClient: PgClient } = await import("@/generated/prisma/client");
-    const { PrismaPg } = await import("@prisma/adapter-pg");
+    const { PrismaClient } = await import("@/generated/prisma/client");
+    const { Pool, neonConfig } = await import("@neondatabase/serverless");
+    const { PrismaNeon } = await import("@prisma/adapter-neon");
     const { createWorkspaceEnforcementMiddleware } = await import("@/lib/prisma-workspace-enforcement");
 
-    const adapter = new PrismaPg({
-      connectionString: databaseUrl,
-    });
-    const client = new PgClient({ adapter });
+    const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
+    // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
+    const adapter = new PrismaNeon(pool);
+    const client = new PrismaClient({ adapter });
 
     // Apply workspace isolation enforcement middleware
     const withEnforcement = client.$extends(createWorkspaceEnforcementMiddleware());

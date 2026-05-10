@@ -45,16 +45,17 @@ async function seedTestDb() {
 
     // Dynamically import PrismaClient and adapter to avoid top-level await issues
     const { PrismaClient } = await import("../src/generated/prisma/client");
-    const { PrismaPg } = await import("@prisma/adapter-pg");
+    const { Pool, neonConfig } = await import("@neondatabase/serverless");
+    const { PrismaNeon } = await import("@prisma/adapter-neon");
 
     const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
     if (!databaseUrl) {
       throw new Error("DATABASE_URL or TEST_DATABASE_URL environment variable is not set");
     }
 
-    const adapter = new PrismaPg({
-      connectionString: databaseUrl,
-    });
+    const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
+    // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
+    const adapter = new PrismaNeon(pool);
     const prisma = new PrismaClient({ adapter });
 
     console.log("🌱 Seeding test database...");
