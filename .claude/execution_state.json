@@ -158,11 +158,13 @@
       "committed": "pending (wiring)"
     },
     "Slice 6: Sales Pipeline Engine Service": {
-      "status": "WIRED_NOT_CALLED",
-      "classification": "SERVICE_IMPLEMENTATION",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_WIRING",
       "files": [
         "src/services/growth/sales-pipeline-engine.ts",
-        "src/__tests__/services/growth/sales-pipeline-engine.test.ts"
+        "src/__tests__/services/growth/sales-pipeline-engine.test.ts",
+        "src/app/api/growth/sales-pipeline/route.ts",
+        "src/__tests__/api/growth/sales-pipeline.test.ts"
       ],
       "methods": [
         "recordDeal(workspaceId, data)",
@@ -172,12 +174,19 @@
         "analyzePipelineHealth(workspaceId, pipeline)",
         "identifyOpportunities(workspaceId, deals)"
       ],
-      "test_coverage": "23 unit tests covering all methods, workspace isolation, fail-closed behavior",
-      "workspace_enforcement": "✓ All methods enforce workspaceId, fail-closed on missing ID",
+      "api_endpoints": [
+        "POST /api/growth/sales-pipeline/deals (record deal)",
+        "Handler: progressDealHandler (progress deal)",
+        "Handler: calculateMetricsHandler (calculate metrics)",
+        "Handler: forecastRevenueHandler (forecast revenue)"
+      ],
+      "test_coverage": "23 unit tests (service) + 13 integration tests (route) covering all methods and API path",
+      "workspace_enforcement": "✓ All methods enforce workspaceId, route enforces x-workspace-id header",
+      "auth_enforced": "✓ CAPABILITIES.ENGAGEMENT_UPDATE (POST)",
+      "DTO_boundary": "✓ No internal fields exposed in response",
       "business_logic": "Deal tracking through pipeline stages, pipeline metrics calculation, revenue forecasting, pipeline health analysis, opportunity identification",
       "compilation": "✓ TypeScript compiles without errors",
-      "no_api_caller": "Service implemented, no API endpoint yet (WIRED_NOT_CALLED)",
-      "next": "Build POST /api/growth/sales-pipeline endpoint to wire this service"
+      "committed": "pending (wiring)"
     }
   },
   "gates_status": {
@@ -205,16 +214,16 @@
     "Phase 8 — Outcomes & Measurement (implementation + wiring verified)"
   ],
   "phase_9_status": {
-    "completion": "PARTIAL - Slices 1-6 complete (Slices 2-5 wired; Slices 1 & 6 not yet called)",
+    "completion": "PARTIAL - Slices 1-6 complete (Slices 2-6 wired; Slice 1 domain only)",
     "slice_summary": {
       "Slice 1 (Domain)": "WIRED_NOT_CALLED - Domain contracts only, foundation for all growth engines",
       "Slice 2 (Revenue)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 3 (Pricing)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 4 (Acquisition)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 5 (Retention)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
-      "Slice 6 (Sales Pipeline)": "WIRED_NOT_CALLED - Service implemented, no API caller yet"
+      "Slice 6 (Sales Pipeline)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired"
     },
-    "next_work": "Wire Slice 6 to POST /api/growth/sales-pipeline endpoint OR build Slice 7 (Offer Engine) OR Slice 8 (Unit Economics)"
+    "next_work": "Build Slice 7 (Offer Engine) OR Slice 8 (Unit Economics) to extend growth engines"
   },
   "deployment_readiness": {
     "static_gates": "PASS (tsc, build both succeed for all 5 slices)",
