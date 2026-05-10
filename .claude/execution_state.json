@@ -128,11 +128,13 @@
       "committed": "latest (acquisition-engine)"
     },
     "Slice 5: Retention Engine Service": {
-      "status": "WIRED_NOT_CALLED",
-      "classification": "SERVICE_IMPLEMENTATION",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_WIRING",
       "files": [
         "src/services/growth/retention-engine.ts",
-        "src/__tests__/services/growth/retention-engine.test.ts"
+        "src/__tests__/services/growth/retention-engine.test.ts",
+        "src/app/api/growth/retention-metrics/route.ts",
+        "src/__tests__/api/growth/retention-metrics.test.ts"
       ],
       "methods": [
         "recordMetrics(workspaceId, data)",
@@ -142,12 +144,18 @@
         "calculateLTVImpact(workspaceId, cohortSize, monthlyRetention, avgMonthlyValue)",
         "forecastChurn(workspaceId, monthlyRetention, trendDays)"
       ],
-      "test_coverage": "24 unit tests covering all methods, workspace isolation, fail-closed behavior",
-      "workspace_enforcement": "✓ All methods enforce workspaceId, fail-closed on missing ID",
+      "api_endpoints": [
+        "POST /api/growth/retention-metrics (record metrics)",
+        "Handler: assessChurnRiskHandler (assess churn risk)",
+        "Handler: forecastChurnHandler (forecast churn)"
+      ],
+      "test_coverage": "24 unit tests (service) + 12 integration tests (route) covering all methods and API path",
+      "workspace_enforcement": "✓ All methods enforce workspaceId, route enforces x-workspace-id header",
+      "auth_enforced": "✓ CAPABILITIES.ENGAGEMENT_UPDATE (POST)",
+      "DTO_boundary": "✓ No internal fields exposed in response",
       "business_logic": "Retention curve calculation, churn risk assessment (LOW/MEDIUM/HIGH/CRITICAL), pattern analysis, LTV impact, trend forecasting",
       "compilation": "✓ TypeScript compiles without errors",
-      "no_api_caller": "Service implemented, no API endpoint yet (WIRED_NOT_CALLED)",
-      "next": "Build POST /api/growth/retention-metrics to wire this service"
+      "committed": "pending (wiring)"
     }
   },
   "gates_status": {
@@ -175,15 +183,15 @@
     "Phase 8 — Outcomes & Measurement (implementation + wiring verified)"
   ],
   "phase_9_status": {
-    "completion": "PARTIAL - Slices 1-5 complete (Slices 2-4 wired; Slice 1 & 5 not yet called)",
+    "completion": "PARTIAL - Slices 1-5 complete (Slices 2-5 wired; Slice 1 domain only)",
     "slice_summary": {
       "Slice 1 (Domain)": "WIRED_NOT_CALLED - Domain contracts only, foundation for all growth engines",
       "Slice 2 (Revenue)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 3 (Pricing)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 4 (Acquisition)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
-      "Slice 5 (Retention)": "WIRED_NOT_CALLED - Service implemented, no API caller yet"
+      "Slice 5 (Retention)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired"
     },
-    "next_work": "Wire Slice 5 (Retention Engine) to POST /api/growth/retention-metrics endpoint following Slices 2-4 pattern, OR continue with Slice 6-7"
+    "next_work": "Build Slice 6 (Sales Pipeline Engine) OR Slice 7 (Offer Engine) OR Slice 8 (Unit Economics)"
   },
   "deployment_readiness": {
     "static_gates": "PASS (tsc, build both succeed for all 5 slices)",
