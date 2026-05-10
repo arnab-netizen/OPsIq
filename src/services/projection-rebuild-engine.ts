@@ -25,26 +25,7 @@ export class ProjectionRebuildEngine {
     const errors: string[] = [];
 
     try {
-      // Step 1: Fetch all events for this recommendation (truth source: CanonicalEvent only)
-      const events = await db.canonicalEvent.findMany({
-        where: {
-          aggregateId: recommendationId,
-          aggregateType: "recommendation",
-          workspaceId,
-        },
-        orderBy: { eventNumber: "asc" },
-      });
-
-      if (events.length === 0) {
-        return {
-          success: false,
-          eventsProcessed: 0,
-          parityCheckPassed: false,
-          errors: ["No events found for recommendation"],
-        };
-      }
-
-      // Step 2: Delete existing projection (clear it)
+      // Step 1: Delete existing projection (clear it)
       await db.recommendation.delete({
         where: { id: recommendationId },
       });
@@ -53,35 +34,54 @@ export class ProjectionRebuildEngine {
         recommendationId,
       });
 
-      // Step 3: Rebuild projection solely from events
-      let projectionState: Record<string, unknown> = {
-        id: recommendationId,
-        workspaceId,
-      };
-
-      for (const event of events) {
-        try {
-          // Apply event to projection state
-          projectionState = ProjectionRebuildEngine.applyEventToProjection(
-            projectionState,
-            event
-          );
-        } catch (err) {
-          errors.push(`Error applying event ${event.eventNumber}: ${err}`);
-        }
+      // Step 2: Replay events using EventReplayEngine to reconstruct aggregate state
+      let replayed;
+      try {
+        replayed = await EventReplayEngine.replayAggregate(
+          recommendationId,
+          "recommendation",
+          workspaceId
+        );
+      } catch (replayErr) {
+        throw new Error(
+          `Replay failed: ${replayErr instanceof Error ? replayErr.message : String(replayErr)}`
+        );
       }
 
-      // Step 4: Persist rebuilt projection
+      if (!replayed) {
+        return {
+          success: false,
+          eventsProcessed: 0,
+          parityCheckPassed: false,
+          errors: ["EventReplayEngine returned no state for recommendation"],
+        };
+      }
+
+      // Step 3: Transform replayed state to projection format and persist
+      const projectionState = {
+        id: recommendationId,
+        workspaceId,
+        engagementId: replayed.state.engagementId as string,
+        title: (replayed.state.payload_title || replayed.state.title) as string | undefined,
+        description: (replayed.state.payload_description || replayed.state.description) as string | undefined,
+        priority: (replayed.state.payload_priority || replayed.state.priority) as string | undefined,
+        evidenceValidationScore: replayed.state.payload_evidenceValidationScore as number | undefined,
+        reliabilityLevel: replayed.state.payload_reliabilityLevel as string | undefined,
+        kpiHealthScore: replayed.state.payload_kpiHealthScore as number | undefined,
+        kpiRiskLevel: replayed.state.payload_kpiRiskLevel as string | undefined,
+      };
+
       await db.recommendation.create({
         data: projectionState as any,
       });
 
-      logger.info("ProjectionRebuild: Rebuilt projection from events", {
+      logger.info("ProjectionRebuild: Rebuilt projection from events via EventReplayEngine", {
         recommendationId,
-        eventsProcessed: events.length,
+        eventsProcessed: replayed.eventCount,
+        usedSnapshot: replayed.usedSnapshot,
       });
 
-      // Step 5: Verify parity - replay should equal projection
+      // Step 4: Verify parity - replay should equal projection
       const rebuildSuccess = await this.verifyProjectionParity(
         recommendationId,
         workspaceId
@@ -89,7 +89,7 @@ export class ProjectionRebuildEngine {
 
       return {
         success: errors.length === 0,
-        eventsProcessed: events.length,
+        eventsProcessed: replayed.eventCount,
         parityCheckPassed: rebuildSuccess,
         errors,
       };
