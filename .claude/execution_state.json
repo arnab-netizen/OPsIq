@@ -219,6 +219,29 @@
       "business_logic": "Offer creation and management, effective price calculation, performance tracking, effectiveness analysis, offer comparison, bundle value calculation, expiration alerts",
       "compilation": "✓ TypeScript compiles without errors",
       "committed": "pending (wiring)"
+    },
+    "Slice 8: Unit Economics Engine Service": {
+      "status": "WIRED_NOT_CALLED",
+      "classification": "SERVICE_IMPLEMENTATION",
+      "files": [
+        "src/services/growth/unit-economics-engine.ts",
+        "src/__tests__/services/growth/unit-economics-engine.test.ts"
+      ],
+      "methods": [
+        "calculateCAC(workspaceId, totalAcquisitionSpend, newCustomersAcquired)",
+        "calculateLTV(workspaceId, avgMonthlyRevenue, avgMonthlyChurn, grossMargin)",
+        "calculateCACPayback(workspaceId, cac, monthlyProfit)",
+        "calculateLTVCACRatio(workspaceId, ltv, cac)",
+        "calculateContributionMetrics(workspaceId, revenuePerUnit, variableCostPerUnit, fixedCostsPerMonth, unitsSoldPerMonth)",
+        "assessUnitEconomicsHealth(workspaceId, ltv, cac, paybackMonths, monthlyProfit)",
+        "calculateRetentionValue(workspaceId, cac, monthlyProfit, monthlyChurnRate, retentionImprovementPercent)"
+      ],
+      "test_coverage": "26 unit tests covering all methods, workspace isolation, fail-closed behavior",
+      "workspace_enforcement": "✓ All methods enforce workspaceId, fail-closed on missing ID",
+      "business_logic": "CAC calculation, LTV calculation, payback period analysis, LTV:CAC ratio evaluation, contribution margin analysis, overall unit economics health assessment, retention value optimization",
+      "compilation": "✓ TypeScript compiles without errors",
+      "no_api_caller": "Service implemented, no API endpoint yet (WIRED_NOT_CALLED)",
+      "next": "Build POST /api/growth/unit-economics endpoint to wire this service"
     }
   },
   "gates_status": {
@@ -246,7 +269,7 @@
     "Phase 8 — Outcomes & Measurement (implementation + wiring verified)"
   ],
   "phase_9_status": {
-    "completion": "PARTIAL - Slices 1-7 complete (Slices 2-7 wired; Slice 1 domain only)",
+    "completion": "PARTIAL - Slices 1-8 complete (Slices 2-7 wired; Slices 1 & 8 not yet called)",
     "slice_summary": {
       "Slice 1 (Domain)": "WIRED_NOT_CALLED - Domain contracts only, foundation for all growth engines",
       "Slice 2 (Revenue)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
@@ -254,9 +277,10 @@
       "Slice 4 (Acquisition)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 5 (Retention)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 6 (Sales Pipeline)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
-      "Slice 7 (Offer)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired"
+      "Slice 7 (Offer)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
+      "Slice 8 (Unit Economics)": "WIRED_NOT_CALLED - Service implemented, no API caller yet"
     },
-    "next_work": "Build Slice 8 (Unit Economics) to complete Growth Operating Engines"
+    "next_work": "Wire Slice 8 to POST /api/growth/unit-economics endpoint OR consider Phase 10"
   },
   "deployment_readiness": {
     "static_gates": "PASS (tsc, build both succeed for all 5 slices)",
