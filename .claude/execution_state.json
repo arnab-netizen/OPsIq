@@ -29,38 +29,47 @@
       {
         "slice": "Phase 4 Slice 2: Shock Detection Engine",
         "status": "COMPLETE",
-        "classification": "WIRED_NOT_CALLED (not yet integrated into production API)",
+        "classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
         "files": [
           "src/services/shock-detection-engine.ts",
           "src/domain/survival/shock-events.ts",
           "src/__tests__/services/shock-detection-engine.test.ts"
         ],
         "committed": "fa7e697",
-        "tests_passing": "11/11"
+        "tests_passing": "11/11",
+        "production_caller": "src/graphql/resolvers/business-condition.resolver.ts:L124",
+        "integration_test_file": "src/__tests__/graphql/business-condition.resolver.test.ts",
+        "wiring_status": "Wired into Query.businessConditionAssessment resolver. Called by detectShocks(). 30 integration tests prove full path."
       },
       {
         "slice": "Phase 4 Slice 3: Org Resilience Scorer",
         "status": "COMPLETE",
-        "classification": "WIRED_NOT_CALLED (not yet integrated into production API)",
+        "classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
         "files": [
           "src/services/org-resilience-scorer.ts",
           "src/domain/survival/resilience-assessment.ts",
           "src/__tests__/services/org-resilience-scorer.test.ts"
         ],
         "committed": "5b1e759",
-        "tests_passing": "10/10"
+        "tests_passing": "10/10",
+        "production_caller": "src/graphql/resolvers/business-condition.resolver.ts:L127",
+        "integration_test_file": "src/__tests__/graphql/business-condition.resolver.test.ts",
+        "wiring_status": "Wired into Query.businessConditionAssessment resolver. Called by scoreResilience(). Scores org resilience across all factors."
       },
       {
         "slice": "Phase 4 Slice 4: Survival Gating Policy",
         "status": "COMPLETE",
-        "classification": "WIRED_NOT_CALLED (ready for decision.ts integration)",
+        "classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
         "files": [
           "src/services/survival-gating-engine.ts",
           "src/domain/survival/gating-policy.ts",
           "src/__tests__/services/survival-gating-engine.test.ts"
         ],
         "committed": "22ff68b",
-        "tests_passing": "12/12"
+        "tests_passing": "12/12",
+        "production_caller": "src/graphql/resolvers/business-condition.resolver.ts:L130",
+        "integration_test_file": "src/__tests__/graphql/business-condition.resolver.test.ts",
+        "wiring_status": "Wired into Query.businessConditionAssessment resolver. Called by applySurvivalGate(). Tests growth action feasibility during crisis."
       },
       {
         "slice": "Phase 4 Slice 5: Survival Factor Assessment Interface",
