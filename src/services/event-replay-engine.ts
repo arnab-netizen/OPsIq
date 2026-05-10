@@ -116,7 +116,7 @@ export class EventReplayEngine {
       lastEventNumber: lastEvent?.eventNumber,
     });
 
-    return {
+    const result: ReplayedAggregate = {
       aggregateId,
       aggregateType,
       version: events.length + (usedSnapshot ? startEventNumber : 0),
@@ -126,6 +126,32 @@ export class EventReplayEngine {
       lastEventTimestamp: lastEvent?.recordedAt || new Date(),
       usedSnapshot,
     };
+
+    // Step 4: Create/update snapshot for optimization if replay yielded new events
+    if (events.length > 0 && lastEvent) {
+      try {
+        await SnapshotOptimizationEngine.createSnapshot(
+          aggregateId,
+          aggregateType,
+          state,
+          lastEvent.eventNumber,
+          workspaceId
+        );
+
+        logger.info("EventReplayEngine: Snapshot created after replay", {
+          aggregateId,
+          lastEventNumber: lastEvent.eventNumber,
+        });
+      } catch (snapshotErr) {
+        logger.warn("EventReplayEngine: Failed to create snapshot", {
+          aggregateId,
+          error: snapshotErr instanceof Error ? snapshotErr.message : String(snapshotErr),
+        });
+        // Do not fail replay if snapshot creation fails - logging only
+      }
+    }
+
+    return result;
   }
 
   /**
