@@ -156,6 +156,28 @@
       "business_logic": "Retention curve calculation, churn risk assessment (LOW/MEDIUM/HIGH/CRITICAL), pattern analysis, LTV impact, trend forecasting",
       "compilation": "✓ TypeScript compiles without errors",
       "committed": "pending (wiring)"
+    },
+    "Slice 6: Sales Pipeline Engine Service": {
+      "status": "WIRED_NOT_CALLED",
+      "classification": "SERVICE_IMPLEMENTATION",
+      "files": [
+        "src/services/growth/sales-pipeline-engine.ts",
+        "src/__tests__/services/growth/sales-pipeline-engine.test.ts"
+      ],
+      "methods": [
+        "recordDeal(workspaceId, data)",
+        "progressDeal(workspaceId, dealId, newStage)",
+        "calculatePipelineMetrics(workspaceId, deals)",
+        "forecastPipelineRevenue(workspaceId, deals, months)",
+        "analyzePipelineHealth(workspaceId, pipeline)",
+        "identifyOpportunities(workspaceId, deals)"
+      ],
+      "test_coverage": "23 unit tests covering all methods, workspace isolation, fail-closed behavior",
+      "workspace_enforcement": "✓ All methods enforce workspaceId, fail-closed on missing ID",
+      "business_logic": "Deal tracking through pipeline stages, pipeline metrics calculation, revenue forecasting, pipeline health analysis, opportunity identification",
+      "compilation": "✓ TypeScript compiles without errors",
+      "no_api_caller": "Service implemented, no API endpoint yet (WIRED_NOT_CALLED)",
+      "next": "Build POST /api/growth/sales-pipeline endpoint to wire this service"
     }
   },
   "gates_status": {
@@ -183,15 +205,16 @@
     "Phase 8 — Outcomes & Measurement (implementation + wiring verified)"
   ],
   "phase_9_status": {
-    "completion": "PARTIAL - Slices 1-5 complete (Slices 2-5 wired; Slice 1 domain only)",
+    "completion": "PARTIAL - Slices 1-6 complete (Slices 2-5 wired; Slices 1 & 6 not yet called)",
     "slice_summary": {
       "Slice 1 (Domain)": "WIRED_NOT_CALLED - Domain contracts only, foundation for all growth engines",
       "Slice 2 (Revenue)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 3 (Pricing)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 4 (Acquisition)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
-      "Slice 5 (Retention)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired"
+      "Slice 5 (Retention)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
+      "Slice 6 (Sales Pipeline)": "WIRED_NOT_CALLED - Service implemented, no API caller yet"
     },
-    "next_work": "Build Slice 6 (Sales Pipeline Engine) OR Slice 7 (Offer Engine) OR Slice 8 (Unit Economics)"
+    "next_work": "Wire Slice 6 to POST /api/growth/sales-pipeline endpoint OR build Slice 7 (Offer Engine) OR Slice 8 (Unit Economics)"
   },
   "deployment_readiness": {
     "static_gates": "PASS (tsc, build both succeed for all 5 slices)",
