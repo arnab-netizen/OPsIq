@@ -1,5 +1,5 @@
 {
-  "current_phase": "Phase 6 — Recommendation Engine",
+  "current_phase": "Phase 6 \u2014 Recommendation Engine",
   "current_branch": "claude/phase-6-recommendation-engine-6a3603",
   "status": "PHASE_6_SLICE_1_STARTING",
   "phase_3_status": "COMPLETE_CODE_VERIFIED_STATIC_GREEN",
@@ -130,10 +130,10 @@
     }
   },
   "static_gates_passing": [
-    "npx prisma validate: ✓",
-    "npx tsc --noEmit: ✓ (0 new errors, 28 pre-existing in seed/db unrelated)",
-    "npm run build: ✓ (pre-existing error in seed/db, not in new Phase 4 code)",
-    "npm test -- survival-factor-validator.test.ts: ✓ (27/27 tests passing)"
+    "npx prisma validate: \u2713",
+    "npx tsc --noEmit: \u2713 (0 new errors, 28 pre-existing in seed/db unrelated)",
+    "npm run build: \u2713 (pre-existing error in seed/db, not in new Phase 4 code)",
+    "npm test -- survival-factor-validator.test.ts: \u2713 (27/27 tests passing)"
   ],
   "db_gates_status": "N/A (Phase 4 Slice 1 is non-DB foundation taxonomy)",
   "phase_3_final_status": {
@@ -168,23 +168,23 @@
       }
     },
     "static_gates": {
-      "npm_install": "✓ PASS",
-      "prisma_validate": "✓ PASS (schema valid, deprecation warning noted)",
-      "tsc_noEmit": "✓ PASS (0 new TypeScript errors, Phase 5 code clean)",
-      "npm_run_build": "✓ PASS (Next.js static + dynamic prerendering)",
-      "npm_test_phase5": "✓ PASS (192/192 tests passing: 40 revenue + 51 unit-econ + 58 fin-health + 43 runway)"
+      "npm_install": "\u2713 PASS",
+      "prisma_validate": "\u2713 PASS (schema valid, deprecation warning noted)",
+      "tsc_noEmit": "\u2713 PASS (0 new TypeScript errors, Phase 5 code clean)",
+      "npm_run_build": "\u2713 PASS (Next.js static + dynamic prerendering)",
+      "npm_test_phase5": "\u2713 PASS (192/192 tests passing: 40 revenue + 51 unit-econ + 58 fin-health + 43 runway)"
     },
     "safety_verification": {
-      "tenant_isolation": "✓ PASS (all Phase 5 types support workspaceId scoping)",
-      "dto_safety": "✓ PASS (toDTO functions present for all financial types)",
-      "audit_coverage": "✓ PASS (domain contracts ready for service-layer event emission)",
-      "fail_closed": "✓ PASS (all validators return default/UNKNOWN on invalid input)"
+      "tenant_isolation": "\u2713 PASS (all Phase 5 types support workspaceId scoping)",
+      "dto_safety": "\u2713 PASS (toDTO functions present for all financial types)",
+      "audit_coverage": "\u2713 PASS (domain contracts ready for service-layer event emission)",
+      "fail_closed": "\u2713 PASS (all validators return default/UNKNOWN on invalid input)"
     },
     "anti_patterns": {
-      "conflict_markers": "✓ 0 found",
-      "fake_active_todos": "✓ 0 found",
-      "unscoped_queries": "✓ 0 found (all pure TypeScript, no Prisma calls)",
-      "dto_leaks": "✓ 0 found (all API interfaces properly wrapped)"
+      "conflict_markers": "\u2713 0 found",
+      "fake_active_todos": "\u2713 0 found",
+      "unscoped_queries": "\u2713 0 found (all pure TypeScript, no Prisma calls)",
+      "dto_leaks": "\u2713 0 found (all API interfaces properly wrapped)"
     },
     "mismatches": [],
     "fixes_applied": {
@@ -213,15 +213,19 @@
       {
         "slice": "Phase 5 Slice 2: Unit Economics Calculator",
         "status": "COMPLETE",
-        "classification": "WIRED_NOT_CALLED",
+        "classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
         "files": [
           "src/services/unit-economics-calculator.ts",
-          "src/__tests__/services/unit-economics-calculator.test.ts"
+          "src/__tests__/services/unit-economics-calculator.test.ts",
+          "src/graphql/resolvers/financial-assessment.resolver.ts",
+          "src/__tests__/graphql/financial-assessment.resolver.test.ts"
         ],
         "committed": "218de83",
-        "tests_passing": "18/18",
+        "tests_passing": "18/18 (unit) + 30/30 (integration)",
         "production_caller_count": 0,
-        "wiring_status": "Service implementation complete. Awaiting caller in production resolver."
+        "wiring_status": "Wired into Query.financialAssessment resolver. Called by assessUnitEconomics(). 30 integration tests prove full path.",
+        "production_caller": "src/graphql/resolvers/financial-assessment.resolver.ts:L191",
+        "integration_test_file": "src/__tests__/graphql/financial-assessment.resolver.test.ts"
       },
       {
         "slice": "Phase 5 Slice 3: Financial Health Scorer",
@@ -250,9 +254,9 @@
     "pending_slices": []
   },
   "phase_4_next_slices": {
-    "slice_2_goal": "✓ Shock Event Detection Engine: Identifies when survival is threatened (non-DB)",
-    "slice_3_goal": "✓ Org Resilience Scoring Engine: Calculates org ability to absorb shocks (non-DB)",
-    "slice_4_goal": "✓ Survival Gating Policy: Blocks growth actions during existential risk (non-DB)"
+    "slice_2_goal": "\u2713 Shock Event Detection Engine: Identifies when survival is threatened (non-DB)",
+    "slice_3_goal": "\u2713 Org Resilience Scoring Engine: Calculates org ability to absorb shocks (non-DB)",
+    "slice_4_goal": "\u2713 Survival Gating Policy: Blocks growth actions during existential risk (non-DB)"
   },
   "blockers": {
     "phase_3_database": "DATABASE_URL: Network connectivity blocker (Neon AP-Southeast-1 endpoint unreachable) - deferred to Phase 3 DB completion",
@@ -273,11 +277,11 @@
     "Push phase branch to remote"
   ],
   "phase_4_work_plan": {
-    "slice_1": "✓ COMPLETE - Survival Factor Taxonomy + Validator",
-    "slice_2": "✓ COMPLETE - Shock Detection Engine (identify threats)",
-    "slice_3": "✓ COMPLETE - Resilience Scorer (calc org strength)",
-    "slice_4": "✓ COMPLETE - Survival Gating (block unsafe growth)",
-    "slice_5": "✓ COMPLETE - Survival Assessment Interface (domain contract)"
+    "slice_1": "\u2713 COMPLETE - Survival Factor Taxonomy + Validator",
+    "slice_2": "\u2713 COMPLETE - Shock Detection Engine (identify threats)",
+    "slice_3": "\u2713 COMPLETE - Resilience Scorer (calc org strength)",
+    "slice_4": "\u2713 COMPLETE - Survival Gating (block unsafe growth)",
+    "slice_5": "\u2713 COMPLETE - Survival Assessment Interface (domain contract)"
   },
   "one_stage_stop_rule": "Phase 4 Slice 1 (Survival Factor Taxonomy) 100% COMPLETE. Non-DB foundation taxonomy defined: 24 survival factors across 4 dimensions, SurvivalFactorValidator service created with 10 methods, 27 tests passing. All static gates passing. Phase 4 ready for next slice (Shock Detection Engine) when instructed. Phase 3 database work (event ordering) deferred pending DATABASE_URL availability.",
   "next_required_action": "PHASE 4-5 COMPLETE (100%). Audit CLEAN: Phase 4 (48 tests), Phase 5 (192 tests), combined 240 tests passing across 9 slices. All static gates green (0 tsc errors, passing build + tests). Survival Intelligence + Financial Normalization foundation complete and verified. Next action (user-instructed): (1) When DATABASE_URL available: Phase 3 runtime verification (event systems) + Phase 4/5 integration wiring into API endpoints, OR (2) Phase 6 non-DB slice advancement (next phase goal: Recommendation Engine).",
@@ -299,23 +303,23 @@
       }
     },
     "static_gates": {
-      "npm_ci": "⚠ SKIP (dependency issue, but non-critical)",
-      "prisma_validate": "✓ PASS (schema valid)",
+      "npm_ci": "\u26a0 SKIP (dependency issue, but non-critical)",
+      "prisma_validate": "\u2713 PASS (schema valid)",
       "tsc_noEmit": "175 errors (all DB_BLOCKED in seed-test-db.ts, 0 new in Phase 4 code)",
-      "npm_run_build": "⚠ DB_BLOCKED (seed-test-db errors propagate)",
-      "npm_test_phase4": "✓ PASS (48/48 tests passing: 27 validator + 11 shock-detection + 10 resilience-scorer)"
+      "npm_run_build": "\u26a0 DB_BLOCKED (seed-test-db errors propagate)",
+      "npm_test_phase4": "\u2713 PASS (48/48 tests passing: 27 validator + 11 shock-detection + 10 resilience-scorer)"
     },
     "safety_verification": {
-      "tenant_isolation": "✓ PASS (all Phase 4 services enforce workspaceId)",
-      "dto_safety": "✓ PASS (no direct Prisma leaks)",
-      "audit_coverage": "✓ PASS (domain contracts ready for audit events)",
-      "unscoped_queries": "✓ PASS (no unscoped DB queries in Phase 4)"
+      "tenant_isolation": "\u2713 PASS (all Phase 4 services enforce workspaceId)",
+      "dto_safety": "\u2713 PASS (no direct Prisma leaks)",
+      "audit_coverage": "\u2713 PASS (domain contracts ready for audit events)",
+      "unscoped_queries": "\u2713 PASS (no unscoped DB queries in Phase 4)"
     },
     "anti_patterns": {
-      "conflict_markers": "✓ 0 found",
-      "fake_active_todos": "✓ 0 found",
-      "unscoped_queries": "✓ 0 found",
-      "dto_leaks": "✓ 0 found"
+      "conflict_markers": "\u2713 0 found",
+      "fake_active_todos": "\u2713 0 found",
+      "unscoped_queries": "\u2713 0 found",
+      "dto_leaks": "\u2713 0 found"
     },
     "mismatches": [
       {
@@ -429,10 +433,10 @@
     "pending_slices": []
   },
   "phase_6_next_slices": {
-    "slice_1_goal": "✓ COMPLETE - Recommendation Domain Contract (13 enums, 10 interfaces, validation, DTO)",
-    "slice_2_goal": "✓ COMPLETE - Recommendation Generator Engine (6 recommendation types, 37 tests)",
-    "slice_3_goal": "✓ COMPLETE - Recommendation Priority Scorer (impact/urgency/effort/risk/constraint scoring, 29 tests)",
-    "slice_4_goal": "✓ COMPLETE - Action Selection Engine (capacity constraints, sequencing, execution phases, 18 tests)",
-    "slice_5_goal": "✓ COMPLETE - Unified Assessment Interface (validation, DTO conversion, thresholds, 17 tests)"
+    "slice_1_goal": "\u2713 COMPLETE - Recommendation Domain Contract (13 enums, 10 interfaces, validation, DTO)",
+    "slice_2_goal": "\u2713 COMPLETE - Recommendation Generator Engine (6 recommendation types, 37 tests)",
+    "slice_3_goal": "\u2713 COMPLETE - Recommendation Priority Scorer (impact/urgency/effort/risk/constraint scoring, 29 tests)",
+    "slice_4_goal": "\u2713 COMPLETE - Action Selection Engine (capacity constraints, sequencing, execution phases, 18 tests)",
+    "slice_5_goal": "\u2713 COMPLETE - Unified Assessment Interface (validation, DTO conversion, thresholds, 17 tests)"
   }
 }
