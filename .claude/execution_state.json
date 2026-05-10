@@ -359,35 +359,44 @@
       {
         "slice": "Phase 6 Slice 2: Recommendation Generator Engine",
         "status": "COMPLETE",
-        "classification": "WIRED_NOT_CALLED (service for Slices 3-5 and future API integration)",
+        "classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
         "files": [
           "src/services/recommendation-generator.ts",
           "src/__tests__/services/recommendation-generator.test.ts"
         ],
         "committed": "ac20ab1",
-        "tests_passing": "37/37"
+        "tests_passing": "37/37",
+        "production_caller": "src/graphql/resolvers/recommendations.resolver.ts:L236",
+        "integration_test_file": "src/__tests__/graphql/recommendations.resolver.test.ts",
+        "wiring_status": "Wired into Query.recommendationsAssessment resolver. Calls generateSurvivalRecommendations, generateGrowthRecommendations, generateOperationalRecommendations. 26 integration tests prove full path."
       },
       {
         "slice": "Phase 6 Slice 3: Recommendation Priority Scorer",
         "status": "COMPLETE",
-        "classification": "WIRED_NOT_CALLED (service for Slices 4-5 and future API integration)",
+        "classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
         "files": [
           "src/services/recommendation-priority-scorer.ts",
           "src/__tests__/services/recommendation-priority-scorer.test.ts"
         ],
         "committed": "e6d99eb",
-        "tests_passing": "29/29"
+        "tests_passing": "29/29",
+        "production_caller": "src/graphql/resolvers/recommendations.resolver.ts:L239",
+        "integration_test_file": "src/__tests__/graphql/recommendations.resolver.test.ts",
+        "wiring_status": "Wired into scoreRecommendations() helper. Called by Query.recommendationsAssessment resolver. Scores all generated recommendations."
       },
       {
         "slice": "Phase 6 Slice 4: Action Selection Engine",
         "status": "COMPLETE",
-        "classification": "WIRED_NOT_CALLED (service for Slice 5 and future API integration)",
+        "classification": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
         "files": [
           "src/services/action-selection-engine.ts",
           "src/__tests__/services/action-selection-engine.test.ts"
         ],
         "committed": "1620f0f",
-        "tests_passing": "18/18"
+        "tests_passing": "18/18",
+        "production_caller": "src/graphql/resolvers/recommendations.resolver.ts:L242",
+        "integration_test_file": "src/__tests__/graphql/recommendations.resolver.test.ts",
+        "wiring_status": "Wired into selectActions() helper. Called by Query.recommendationsAssessment resolver. Sequences recommendations by priority, dependencies, and resource constraints."
       },
       {
         "slice": "Phase 6 Slice 5: Unified Recommendation Assessment Interface",
@@ -398,7 +407,10 @@
           "src/__tests__/domain/recommendation/recommendation-assessment.test.ts"
         ],
         "committed": "b0a357c",
-        "tests_passing": "17/17"
+        "tests_passing": "17/17",
+        "production_caller": "src/graphql/resolvers/recommendations.resolver.ts:L245",
+        "integration_test_file": "src/__tests__/graphql/recommendations.resolver.test.ts",
+        "wiring_status": "DTO boundary enforcer. toRecommendationAssessmentDTO() called by resolver. Conversion functions hide internal fields (workspaceId, assessed_by). 26 integration tests verify DTO boundary."
       }
     ],
     "active_production_systems": [],
