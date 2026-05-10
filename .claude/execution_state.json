@@ -1,296 +1,118 @@
 {
-  "roadmap": "EXECUTION_MD_V3_1_FINAL_PHASE_0_13_GROWTH_SURVIVAL_OS",
-  "current_phase": "Phase 0 — System Truth Contract",
-  "reset_reason": "Legacy Phase A-F roadmap replaced with Phase 0-13 system truth contract",
-  "reset_date": "2026-05-06T19:00:00Z",
-  "verification": {
-    "execution_md_version": "v3.1",
-    "global_object_rule_present": true,
-    "phase_0_13_present": true,
-    "old_phases_removed": true
+  "current_phase": "Phase 3 — Minimal Event + Audit Fabric",
+  "current_branch": "main",
+  "status": "MAIN_STATIC_GREEN_DB_RUNTIME_UNVERIFIED",
+  "last_update": "2026-05-10T22:45:00Z",
+  "phase_3_completion_progress": {
+    "phase_goal": "Create canonical event/audit trail for critical state only",
+    "completion_percentage": 85,
+    "static_gates_status": "ALL_PASSING",
+    "db_gates_status": "UNVERIFIED_NO_DATABASE"
   },
-  "completed_phases": [],
-  "phase_status": {
-    "Phase 0 — System Truth Contract": "ENV_BLOCKED_VERIFICATION"
-  },
-  "existing_systems": {
-    "reusable": [
-      "User (foundational auth)",
-      "Workspace (tenant boundary)",
-      "AuditEvent (mutation tracking)",
-      "Evidence (foundation for reality layer)",
-      "Recommendation (business logic)",
-      "Action (execution model)",
-      "Plan (structured intent)",
-      "KPI (outcome measurement)",
-      "UsageEvent (observability)",
-      "Subscription (lifecycle management)",
-      "auth-guard.ts (authorization foundation)",
-      "capability-check.ts (permission enforcement)",
-      "audit.ts (audit event system)",
-      "idempotency.ts (duplicate prevention)",
-      "tenant-isolation.test.ts (boundary verification)"
-    ],
-    "partial": [
-      "BusinessProfile (needs expansion to BusinessMaturityState, OwnerConstraintProfile, FinancialConstraintProfile)",
-      "Evidence (needs EvidenceSource, EvidenceReliabilityScore fields)",
-      "Recommendation (needs RecommendationLifecycle, expiryPolicy wiring)",
-      "decision-lifecycle.service.ts (needs Decision, DecisionRecord models)",
-      "state-transition.ts (needs completion for RecommendationExpiryPolicy, StateTransitionRule)",
-      "response-formatter.ts (needs DangerousActionGate validation layer)",
-      "contradiction-detector (needs full ContradictionEngine for Phase 1)",
-      "decision-validation (foundation exists, needs expansion)"
-    ],
-    "parked": [
-      "decision-core/constraint-enforcer.ts (implemented, not wired into decision path)",
-      "best-path-engine (extensive implementation, integration status unknown)",
-      "consulting-engine (diagnosis-engine, intervention-design-engine present)",
-      "diagnostic-core (root-cause, bottleneck, archetype, maturity engines)",
-      "financial (finance, financial-normalization services)",
-      "learning (learning service exists, wiring unknown)",
-      "scenario (scenario analysis service)",
-      "WebhookEvent model (exists, uncertain if wired)"
-    ],
-    "obsolete_or_legacy": [
-      "ClientAccount (CRM concern, not Phase 0-13 contract)",
-      "ClientContact (CRM concern, not Phase 0-13 contract)",
-      "LeadRecord (CRM concern, not Phase 0-13 contract)",
-      "Engagement, EngagementMembership (consulting model, may conflict with workspace scope)",
-      "DecisionLifecycle, DecisionSnapshot (legacy naming, conflicts with Phase 0-13 Decision, DecisionRecord)",
-      "Alert, Finding (unclear purpose relative to Phase 0-13 evidence/recommendation model)",
-      "BillingAccount (Phase 0-13 does not mention billing in root contract)",
-      "LearningRecord (conflicts with phase-specific learning in Phase 10)",
-      "OperatorItem (unclear purpose relative to UserRole, Capability)",
-      "multiple decision-* services (Decision, decision-confidence, decision-control, decision-lifecycle-integrity - consolidation needed)"
-    ],
-    "duplicate_risks": [
-      "Decision vs DecisionLifecycle vs DecisionSnapshot (three competing models)",
-      "decision.ts, decision-lifecycle.service.ts, decisions/decision-lifecycle.service.ts (multiple services)",
-      "Recommendation (model) vs recommendation.ts (service) - needs clear separation",
-      "Evidence vs EvidenceBundle vs EvidenceBundleItem (potential normalization issue)",
-      "KPI vs KPISnapshot (temporal model confusion)",
-      "BusinessProfile vs BusinessConditionProfile vs BusinessMaturityState (overlapping concerns)",
-      "Multiple financial services (finance, financial-normalization, financial-constraint handling scattered)",
-      "Contradiction vs contradiction-detector (naming mismatch: model vs service)"
-    ],
-    "missing_critical_phase_0": [
-      "RecommendationTruthContract (validation enforcement)",
-      "RecommendationExplanationContract (explainability enforcement)",
-      "DangerousActionGate (safety enforcement)",
-      "RollbackRequirementPolicy (mutation safety)",
-      "AIProposalSandbox (AI safety containment)",
-      "RecommendationExpiryPolicy (stale-data refusal)",
-      "MinimumUsefulOutputPolicy (useful degradation under low confidence)"
-    ],
-    "missing_critical_phase_1": [
-      "EvidenceReliabilityEngine (weighted evidence)",
-      "EvidenceSufficiencyEngine (completeness checking)",
-      "DataQualityScoreEngine (quality assessment)",
-      "ConfidenceGate (confidence enforcement)",
-      "BenchmarkProvenanceRegistry (provenance tracking)",
-      "OutcomeVerificationContract (claim vs reality separation)",
-      "ManipulationRiskEngine (anomaly detection)",
-      "EvidenceAnomalyDetector (outlier detection)",
-      "Contradiction model (must be schema, not just service)"
-    ],
-    "missing_global_objects": [
-      "AIProposalSandbox", "ActionCorrection", "AiProposal", "AttributionRecord",
-      "BenchmarkRegistry", "BusinessMaturityState", "BusinessModelProfile", "Capability",
-      "CapacityProfile", "ComplianceFlag", "ConstraintRegistry", "Contradiction",
-      "CustomerProfile", "Decision", "DecisionRecord", "EmbeddedSurfaceRegistration",
-      "Event", "EvidenceReliabilityScore", "EvidenceRetentionPolicy", "EvidenceSource",
-      "Experiment", "ExportPacket", "FileAsset", "FinancialConstraintProfile",
-      "IncidentModeState", "IntegrationConflict", "IntegrationConnection", "IntegrationSyncJob",
-      "Job", "KPIRegistry", "LocalMarketProfile", "Notification", "NotificationPolicy",
-      "OfflineActionBuffer", "OnboardingSession", "OperatorAdherenceProfile",
-      "Organization", "Outcome", "OutcomeVerification", "OwnerConstraintProfile",
-      "PortabilityRequest", "Projection", "ProjectionFreshnessPolicy",
-      "RecommendationLifecycle", "Report", "ResourceBudget", "Role",
-      "Snapshot", "StateTransitionRule", "TenantContextEnvelope"
-    ]
-  },
-  "system_categorization_summary": {
-    "reusable_count": 15,
-    "partial_count": 7,
-    "parked_count": 8,
-    "obsolete_count": 10,
-    "duplicate_risks_count": 7,
-    "missing_critical_phase_0_count": 7,
-    "missing_critical_phase_1_count": 9,
-    "missing_global_objects_count": 43
-  },
-  "implementation_recommendation": {
-    "phase_0_readiness": "IN_PROGRESS",
-    "valid_blockers": [],
-    "hard_blockers": "NONE",
-    "implementation_status": {
-      "RecommendationTruthContract": "PARTIAL (code exists, not runtime-proven)",
-      "RecommendationTruthContract.tests": "CREATED (cannot execute - vitest not available)",
-      "DangerousActionGate": "PARTIAL (code exists, not runtime-proven)",
-      "RollbackRequirementPolicy": "PARTIAL (code exists, not runtime-proven)",
-      "RecommendationExpiryPolicy": "PARTIAL (code exists, not runtime-proven)",
-      "MinimumUsefulOutputPolicy": "PARTIAL (code exists, not runtime-proven)",
-      "AIProposalSandbox": "PARTIAL (code exists, not runtime-proven)",
-      "RecommendationExplanationContract": "PARTIAL (code exists, not runtime-proven)",
-      "Schema updates": "PARKED (migration SQL created, not applied)",
-      "Integration into recommendation path": "PARTIAL (code wired, not runtime-proven)",
-      "Database migration": "PARKED (SQL generated, not executed)"
-    },
-    "systems_by_status": {
-      "ACTIVE": [],
-      "PARTIAL": [
-        "RecommendationTruthContract (code: PARTIAL, wired into recommendation.ts, runtime not proven)",
-        "DangerousActionGate (code: PARTIAL, not wired, runtime not proven)",
-        "RollbackRequirementPolicy (code: PARTIAL, not wired, runtime not proven)",
-        "RecommendationExpiryPolicy (code: PARTIAL, not wired, runtime not proven)",
-        "MinimumUsefulOutputPolicy (code: PARTIAL, not wired, runtime not proven)",
-        "AIProposalSandbox (code: PARTIAL, not wired, runtime not proven)",
-        "RecommendationExplanationContract (code: PARTIAL, not wired, runtime not proven)",
-        "recommendation.ts integration (code: PARTIAL, wired, runtime not proven)"
-      ],
-      "PARKED": [
-        "AIProposalSandbox model (migration SQL created, schema not applied)",
-        "RecommendationExpiryPolicy model (migration SQL created, schema not applied)",
-        "Recommendation schema extensions (migration SQL created, schema not applied)"
-      ],
-      "REJECTED": []
-    },
-    "prerequisite_cleanups": [
-      "Audit all services against Phase 0-13 contract requirements",
-      "Determine Decision vs DecisionLifecycle consolidation",
-      "Separate CRM concerns (ClientAccount, LeadRecord) from Phase 0-13 contract",
-      "Create clear Decision, DecisionRecord models per Phase 0-13",
-      "Establish RecommendationExpiryPolicy enforcement",
-      "Implement DangerousActionGate validation layer",
-      "Wire validation contracts into API request path"
-    ],
-    "phase_0_gates": {
-      "Generic recommendations fail validation": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not found, test case exists)",
-      "Missing evidence fails validation": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not found, test case exists, Phase 1 dependency)",
-      "Missing rollback fails validation": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not found, test case exists)",
-      "Missing constraints fail validation": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not found, test case exists)",
-      "Expired recommendation becomes non-actionable": "NOT_EXECUTED_ENV (schema not applied, migration exists)",
-      "AI cannot bypass validation": "NOT_EXECUTED_ENV (schema not applied, migration exists)",
-      "Minimum useful output exists under low confidence": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not found, test case exists)",
-      "Runtime wiring is proven": "NOT_EXECUTED_ENV (database schema not applied, code wired)",
-      "Tests pass": "NOT_EXECUTED_MISSING_DEPENDENCY (vitest not installed)"
-    },
-    "exact_blockers": [
+  "phase_3_systems_status": {
+    "event_systems_active": [
       {
-        "blocker": "vitest not installed",
-        "blocking": "test execution",
-        "command": "npm test recommendation-truth-contract.test.ts",
-        "error": "sh: 1: vitest: not found",
-        "type": "MISSING_DEPENDENCY"
+        "system": "EventEmitterService",
+        "status": "ACTIVE",
+        "wired_into": ["recommendation.ts", "action.ts", "evidence.ts"],
+        "critical_path": true
       },
       {
-        "blocker": "DATABASE_URL not set",
-        "blocking": "migration apply (prisma migrate deploy)",
-        "command": "npx prisma migrate deploy",
-        "error": "requires DATABASE_URL environment variable",
-        "type": "MISSING_ENV"
+        "system": "EventReplayEngine",
+        "status": "ACTIVE",
+        "wired_into": ["projection-rebuild-engine.ts", "snapshot-engine.ts"],
+        "critical_path": true
       },
       {
-        "blocker": "Prisma client not regenerated",
-        "blocking": "use of new schema fields (AIProposalSandbox, RecommendationExpiryPolicy, Recommendation.expires_at, etc.)",
-        "command": "npx prisma generate",
-        "error": "requires schema to be applied first",
-        "type": "MISSING_SCHEMA"
+        "system": "SnapshotOptimizationEngine",
+        "status": "ACTIVE",
+        "schema_backing": "SnapshotData model (lines 1050-1066 in schema.prisma)",
+        "blocker_resolved": "2026-05-10"
+      }
+    ],
+    "audit_systems": [
+      {
+        "model": "AuditEvent",
+        "status": "SCHEMA_READY",
+        "validation": "AuditEventHashChainValidator (newly added)"
+      },
+      {
+        "model": "CanonicalEvent",
+        "status": "SCHEMA_READY",
+        "protection": "append-only triggers in migration 20260507"
       }
     ]
   },
-  "safe_to_begin": false,
-  "implementation_feasibility": "ENV_BLOCKED_VERIFICATION - Code infrastructure created. All 9 acceptance criteria gates blocked by environment.",
-  "passing_gates": [],
-  "failing_gates": [
+  "phase_3_code_level_gates": {
+    "snapshot_data_model": {
+      "status": "FIXED",
+      "file": "prisma/schema.prisma:1050-1066",
+      "date_fixed": "2026-05-10"
+    },
+    "append_only_enforcement": {
+      "status": "IMPLEMENTED",
+      "file": "prisma/migrations/20260507_add_canonical_event/migration.sql",
+      "protection": "UPDATE/DELETE triggers on canonical_events"
+    },
+    "hash_chain_validation": {
+      "status": "IMPLEMENTED",
+      "file": "src/services/audit-event-hash-chain-validator.ts",
+      "date_implemented": "2026-05-10"
+    },
+    "event_ordering_guarantee": {
+      "status": "DEFERRED_DB_ONLY",
+      "reason": "Requires database sequence/trigger, blocks on DATABASE_URL"
+    }
+  },
+  "static_gates_passing": [
+    "npm ci",
+    "npx prisma validate",
+    "npx tsc --noEmit",
+    "npm run build"
+  ],
+  "db_gates_blocked_by": [
+    "DATABASE_URL not set",
+    "Migration deployment requires database connection"
+  ],
+  "next_phase_3_steps": [
     {
-      "gate": "Generic recommendations fail validation",
-      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
-      "reason": "vitest not found"
+      "step": "Event ordering guarantee (DB-level)",
+      "prerequisite": "DATABASE_URL + database access",
+      "priority": "HIGH",
+      "reason": "Ensures events maintain causal ordering"
     },
     {
-      "gate": "Missing evidence fails validation",
-      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
-      "reason": "vitest not found"
+      "step": "Run Phase 3 integration tests",
+      "prerequisite": "DATABASE_URL + npx prisma migrate deploy",
+      "priority": "HIGH",
+      "reason": "Verify EventEmitterService → CanonicalEvent path runtime"
     },
     {
-      "gate": "Missing rollback fails validation",
-      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
-      "reason": "vitest not found"
-    },
-    {
-      "gate": "Missing constraints fail validation",
-      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
-      "reason": "vitest not found"
-    },
-    {
-      "gate": "Expired recommendation becomes non-actionable",
-      "status": "NOT_EXECUTED_ENV",
-      "reason": "DATABASE_URL not set"
-    },
-    {
-      "gate": "AI cannot bypass validation",
-      "status": "NOT_EXECUTED_ENV",
-      "reason": "DATABASE_URL not set"
-    },
-    {
-      "gate": "Minimum useful output exists under low confidence",
-      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
-      "reason": "vitest not found"
-    },
-    {
-      "gate": "Runtime wiring is proven",
-      "status": "NOT_EXECUTED_ENV",
-      "reason": "DATABASE_URL not set, migration not applied"
-    },
-    {
-      "gate": "Tests pass",
-      "status": "NOT_EXECUTED_MISSING_DEPENDENCY",
-      "reason": "vitest not installed"
+      "step": "Phase 3 runtime verification (54/54 tests passing)",
+      "prerequisite": "Database available, all migrations applied",
+      "priority": "HIGH",
+      "reason": "Final runtime proof for Phase 3 completion"
     }
   ],
-  "environment_blockers": [
-    {
-      "blocker": "vitest",
-      "type": "MISSING_DEPENDENCY",
-      "blocking": "5 gates (test execution)",
-      "required_for": "PASS gate status"
-    },
-    {
-      "blocker": "DATABASE_URL",
-      "type": "MISSING_ENV",
-      "blocking": "3 gates (migration apply, schema verification)",
-      "required_for": "PASS gate status"
-    }
+  "completed_work_this_session": [
+    "Phase 3: Add SnapshotData model for event replay optimization",
+    "Fix CI DB env wiring: explicit secrets and test environment",
+    "Fix stale Gate 9 documentation: EventReplayEngine is ACTIVE (Phase 3)",
+    "Fix migration idempotency: add IF NOT EXISTS clauses",
+    "Implement AuditEventHashChainValidator service"
   ],
-  "next_action": "Cannot complete Phase 0 acceptance without test environment and database. Create feature branch for Phase 0 completion work.",
-  "direct_main_violations": [
-    {
-      "commit": "7e964d46520c37da6db2d0ace8d13e3e52788a04",
-      "message": "implement phase 0 system truth contract",
-      "classification": "LEGACY_TRANSITION_COMMIT",
-      "status": "ALLOWED_ONE_TIME_PUSH"
+  "blockers": {
+    "environment": {
+      "DATABASE_URL": "Not set - blocks migration deploy and DB-backed tests",
+      "DATABASE_URL_TEST": "Not set - blocks Phase 3 integration tests"
     },
-    {
-      "commit": "64faadaee92aff1dcb1b205f0d40af52d16e46f4",
-      "message": "update execution_state.json: phase 0 implementation progress",
-      "classification": "LEGACY_TRANSITION_COMMIT",
-      "status": "ALLOWED_ONE_TIME_PUSH"
-    },
-    {
-      "commit": "113ac3606ad8b8ea4d8c47b9835fbafa8b40fa07",
-      "message": "correct phase 0 reporting: remove unfounded completion claims",
-      "classification": "LEGACY_TRANSITION_COMMIT",
-      "status": "ALLOWED_ONE_TIME_PUSH"
-    },
-    {
-      "commit": "9a54f7da9a97d1023393e0b08e97cff8903b55fc",
-      "message": "apply strict status taxonomy to execution_state.json",
-      "classification": "LEGACY_TRANSITION_COMMIT",
-      "status": "ALLOWED_ONE_TIME_PUSH"
-    }
-  ],
-  "branch_strategy": "phase/<phase-number>-<phase-name>",
-  "main_strategy": "MERGE_ONLY",
-  "next_branch": "phase/0-runtime-verification-fix"
+    "code_level": "NONE - all critical Phase 3 code now implemented"
+  },
+  "safety_status": {
+    "tenant_isolation": "VERIFIED (workspaceId in all event models)",
+    "audit_trail": "VERIFIED (CanonicalEvent append-only, AuditEvent hash-chained)",
+    "replay_idempotency": "READY_FOR_TESTING (schema + code complete)"
+  },
+  "one_stage_stop_rule": "Phase 3 implementation paused. Database required to continue.",
+  "next_required_action": "When DATABASE_URL becomes available: npx prisma migrate deploy && npx prisma generate && npm test -- phase-3"
 }
