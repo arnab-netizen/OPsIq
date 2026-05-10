@@ -213,13 +213,15 @@
       {
         "slice": "Phase 5 Slice 2: Unit Economics Calculator",
         "status": "COMPLETE",
-        "classification": "DOMAIN_CONTRACT_ONLY (input for Slice 3)",
+        "classification": "WIRED_NOT_CALLED",
         "files": [
-          "src/domain/financial/unit-economics.ts",
-          "src/__tests__/domain/financial/unit-economics.test.ts"
+          "src/services/unit-economics-calculator.ts",
+          "src/__tests__/services/unit-economics-calculator.test.ts"
         ],
-        "committed": "0136133",
-        "tests_passing": "51/51"
+        "committed": "218de83",
+        "tests_passing": "18/18",
+        "production_caller_count": 0,
+        "wiring_status": "Service implementation complete. Awaiting caller in production resolver."
       },
       {
         "slice": "Phase 5 Slice 3: Financial Health Scorer",
