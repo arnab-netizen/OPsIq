@@ -338,9 +338,9 @@
   },
   "phase_6_completion_progress": {
     "phase_goal": "Recommendation Engine: Domain contract, recommendation generator, priority scoring, action selection, unified recommendation assessment",
-    "completion_percentage": 60,
+    "completion_percentage": 100,
     "static_gates_status": "ALL_PASSING",
-    "code_level_status": "SLICES_1_2_3_COMPLETE",
+    "code_level_status": "SLICES_1_2_3_4_5_COMPLETE",
     "db_gates_status": "N/A (non-DB foundation slices)"
   },
   "phase_6_systems_status": {
@@ -377,17 +377,38 @@
         ],
         "committed": "e6d99eb",
         "tests_passing": "29/29"
+      },
+      {
+        "slice": "Phase 6 Slice 4: Action Selection Engine",
+        "status": "COMPLETE",
+        "classification": "WIRED_NOT_CALLED (service for Slice 5 and future API integration)",
+        "files": [
+          "src/services/action-selection-engine.ts",
+          "src/__tests__/services/action-selection-engine.test.ts"
+        ],
+        "committed": "1620f0f",
+        "tests_passing": "18/18"
+      },
+      {
+        "slice": "Phase 6 Slice 5: Unified Recommendation Assessment Interface",
+        "status": "COMPLETE",
+        "classification": "DOMAIN_CONTRACT_ONLY (unified assessment interface for all slices)",
+        "files": [
+          "src/domain/recommendation/recommendation-assessment.ts",
+          "src/__tests__/domain/recommendation/recommendation-assessment.test.ts"
+        ],
+        "committed": "b0a357c",
+        "tests_passing": "17/17"
       }
     ],
     "active_production_systems": [],
-    "pending_slices": [
-      "Phase 6 Slice 4: Action Selection Engine",
-      "Phase 6 Slice 5: Unified Recommendation Assessment Interface"
-    ]
+    "pending_slices": []
   },
   "phase_6_next_slices": {
     "slice_1_goal": "✓ COMPLETE - Recommendation Domain Contract (13 enums, 10 interfaces, validation, DTO)",
     "slice_2_goal": "✓ COMPLETE - Recommendation Generator Engine (6 recommendation types, 37 tests)",
-    "slice_3_goal": "✓ COMPLETE - Recommendation Priority Scorer (impact/urgency/effort/risk/constraint scoring, 29 tests)"
+    "slice_3_goal": "✓ COMPLETE - Recommendation Priority Scorer (impact/urgency/effort/risk/constraint scoring, 29 tests)",
+    "slice_4_goal": "✓ COMPLETE - Action Selection Engine (capacity constraints, sequencing, execution phases, 18 tests)",
+    "slice_5_goal": "✓ COMPLETE - Unified Assessment Interface (validation, DTO conversion, thresholds, 17 tests)"
   }
 }
