@@ -288,11 +288,11 @@
   },
   "one_stage_stop_rule": "Phase 4 Slice 1 (Survival Factor Taxonomy) 100% COMPLETE. Non-DB foundation taxonomy defined: 24 survival factors across 4 dimensions, SurvivalFactorValidator service created with 10 methods, 27 tests passing. All static gates passing. Phase 4 ready for next slice (Shock Detection Engine) when instructed. Phase 3 database work (event ordering) deferred pending DATABASE_URL availability.",
   "phase_9_completion_progress": {
-    "phase_goal": "Growth Operating Engines (Foundation): Domain contracts for revenue, pricing, acquisition, retention, sales pipeline, offers — non-DB foundation for STAGE 13",
+    "phase_goal": "Growth Operating Engines (Foundation + Service): Domain contracts + Revenue Engine service for pricing, acquisition, retention, sales pipeline, offers",
     "completion_percentage": 100,
     "static_gates_status": "ALL_PASSING",
-    "code_level_status": "SLICE_1_COMPLETE",
-    "db_gates_status": "N/A (non-DB domain contracts)"
+    "code_level_status": "SLICES_1_2_COMPLETE",
+    "db_gates_status": "N/A (non-DB code)"
   },
   "phase_9_systems_status": {
     "implemented_slices": [
@@ -304,15 +304,27 @@
           "src/domain/growth/growth-engines.ts",
           "src/__tests__/domain/growth/growth-engines.test.ts"
         ],
-        "committed": "pending",
+        "committed": "f0c0402",
         "tests_passing": "28/28",
         "wiring_status": "Foundation contracts only - no production callers (reserved for Phase 10+ service implementation)"
+      },
+      {
+        "slice": "Phase 9 Slice 2: Revenue Engine Service",
+        "status": "COMPLETE",
+        "classification": "WIRED_NOT_CALLED",
+        "files": [
+          "src/services/growth/revenue-engine.ts",
+          "src/__tests__/services/growth/revenue-engine.test.ts"
+        ],
+        "committed": "pending",
+        "tests_passing": "27/27 (unit tests, no production caller)",
+        "wiring_status": "Service implementation complete. No production API caller yet (awaiting caller implementation in future phase)."
       }
     ],
     "active_production_systems": [],
     "pending_slices": []
   },
-  "next_required_action": "PHASES 4-9 COMPLETE (100%). Wiring audit PASSED: Phases 4-8 all RUNTIME_ACTIVE_WIRED_TESTED. Phase 9 DOMAIN_CONTRACT_ONLY (28 tests passing). All static gates green (0 new tsc errors in new code). Next action: (1) Phase 10+ service implementation for growth engines (when explicitly directed), OR (2) Continue wiring remaining WIRED_NOT_CALLED systems if any exist.",
+  "next_required_action": "PHASES 4-9 COMPLETE (100%). Wiring audit PASSED: Phases 4-8 RUNTIME_ACTIVE_WIRED_TESTED (157 integration tests). Phase 9 has domain contracts + Revenue Engine service (27 unit tests, WIRED_NOT_CALLED). All static gates green (0 new tsc errors). Next action: (1) Wire Revenue Engine into production (create API route or service caller), OR (2) Build Phase 9 Slices 3-8 (Pricing, Acquisition, Retention, Sales, Offer engines).",
   "audit_run_2026_05_11_wiring_complete": {
     "timestamp": "2026-05-11T20:15:00Z",
     "phases_audited": ["Phase 4", "Phase 5", "Phase 6", "Phase 7", "Phase 8"],
