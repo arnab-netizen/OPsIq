@@ -948,14 +948,14 @@ If deploy fails with `relation "workspaces" does not exist`, do not patch depend
 
 # EVENT REPLAY / GATE 9 CONTRACT
 
-## Current Status: EventReplayEngine is ACTIVE (Phase 3)
+## Current Status: EventReplayEngine is PARKED (Phase 3)
 
-`EventReplayEngine` is now a core Phase 3 system and is ACTIVE in production paths:
-- Imported by `ProjectionRebuildEngine` for event replay with snapshot optimization
-- Imported by `SnapshotEngine` for snapshot creation and validation
-- Wired into event sourcing path for recommendation, action, and evidence lifecycle
+`EventReplayEngine` exists in codebase but is PARKED (not wired into production paths):
+- Imported by `ProjectionRebuildEngine` (internal use only)
+- Imported by `SnapshotEngine` (internal use only)
+- NOT called from critical mutation paths (recommendation.ts, action.ts, evidence.ts)
 
-Gate 9 is no longer applicable. These references are correct and required.
+Gate 9 applies: EventReplayEngine must remain PARKED until production wiring is implemented.
 
 ## Legacy Rule (if EventReplayEngine were PARKED):
 
