@@ -130,27 +130,23 @@
     "Phase 8 — Outcomes & Measurement (implementation + wiring verified)"
   ],
   "phase_9_status": {
-    "completion": "PARTIAL - Slice 1-4 implemented (Slice 1,2,3 wired, Slice 4 code complete)",
+    "completion": "PARTIAL - Slice 1-4 complete (Slice 1,2,3,4 wired; ready for Slice 5+)",
     "slices": {
       "Slice 1": {
         "status": "WIRED_NOT_CALLED",
-        "classification": "DOMAIN_CONTRACT_ONLY",
-        "description": "Growth Operating Engines domain contracts (enums, interfaces, validators)"
+        "classification": "DOMAIN_CONTRACT_ONLY"
       },
       "Slice 2": {
         "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
-        "classification": "SERVICE_WITH_WIRING",
-        "description": "Revenue Engine service (revenue streams, forecasting, health analysis)"
+        "classification": "SERVICE_WITH_WIRING"
       },
       "Slice 3": {
         "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
-        "classification": "SERVICE_WITH_WIRING",
-        "description": "Pricing Engine service (tier management, optimization, strategy)"
+        "classification": "SERVICE_WITH_WIRING"
       },
       "Slice 4": {
-        "status": "WIRED_NOT_CALLED",
-        "classification": "SERVICE_IMPLEMENTATION",
-        "description": "Acquisition Engine service (channel analysis, ROI, forecasting)"
+        "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+        "classification": "SERVICE_WITH_WIRING"
       }
     },
     "pending_slices": [
@@ -158,7 +154,7 @@
       "Slice 6: Sales Pipeline Engine Service",
       "Slice 7: Offer Engine Service"
     ],
-    "next_work": "Build Slice 5 (Retention Engine) OR wire Slice 4 into API endpoint"
+    "next_work": "Build Slice 5 (Retention Engine) OR continue with remaining slices"
   },
   "deployment_readiness": {
     "static_gates": "PARTIAL (tsc passes for growth engines, build blocked by env)",
