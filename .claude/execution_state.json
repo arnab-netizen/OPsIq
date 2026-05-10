@@ -173,11 +173,6 @@
     "active_production_systems": [],
     "pending_slices": [
       {
-        "slice": "Phase 5 Slice 2: Unit Economics Calculator",
-        "status": "PENDING",
-        "description": "CAC, LTV, payback period, contribution margin calculations per revenue stream"
-      },
-      {
         "slice": "Phase 5 Slice 3: Financial Health Scorer",
         "status": "PENDING",
         "description": "Profitability score, margin health, burn rate, runway assessments"
@@ -220,7 +215,7 @@
     "slice_5": "✓ COMPLETE - Survival Assessment Interface (domain contract)"
   },
   "one_stage_stop_rule": "Phase 4 Slice 1 (Survival Factor Taxonomy) 100% COMPLETE. Non-DB foundation taxonomy defined: 24 survival factors across 4 dimensions, SurvivalFactorValidator service created with 10 methods, 27 tests passing. All static gates passing. Phase 4 ready for next slice (Shock Detection Engine) when instructed. Phase 3 database work (event ordering) deferred pending DATABASE_URL availability.",
-  "next_required_action": "PHASE 5 SLICE 1 COMPLETE (25% progress). Next action: PHASE 5 SLICE 2: Unit Economics Calculator (CAC, LTV, payback period, contribution margin). Phase 3 database work deferred pending DATABASE_URL availability.",
+  "next_required_action": "PHASE 5 SLICE 2 COMPLETE (50% progress). Audit CLEAN: all claims verified, 91 tests passing. Next action: PHASE 5 SLICE 3: Financial Health Scorer (profitability, margin, burn, runway). Phase 3 database work deferred pending DATABASE_URL availability.",
   "audit_run_2026_05_10": {
     "timestamp": "2026-05-10T08:36:00Z",
     "purpose": "Verify claim honesty, detect false ACTIVE claims, fix non-DB breakage",
