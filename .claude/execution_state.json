@@ -3,7 +3,7 @@
   "audit_date": "2026-05-11",
   "audit_result": "ALL PHASES 0-12 PRESENT_RUNTIME_VERIFIED",
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "PRIORITY ORDER #9: Complete Tests for Wired Systems (8 of ~20+ complete = 40%) — Financial, Priority, Decision Confidence, Access, Log, InMemoryCache, CacheFactory, AuditEventHashChainValidator",
+  "current_phase": "PRIORITY ORDER #9: Complete Tests for Wired Systems (9 of ~20+ complete = 45%) — Financial, Priority, Decision Confidence, Access, Log, InMemoryCache, CacheFactory, AuditEventHashChainValidator, EventNumberingValidator",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "gates_status": {
     "npm_run_build": "✓ PASS",
@@ -913,8 +913,8 @@
         "usage": "Called from audit event emission system to persist decision audit trails",
         "behavior": "Deterministic JSON serialization with all fields preserved"
       },
-      "committed": "PENDING",
-      "pushed": false,
+      "committed": "8956329",
+      "pushed": true,
       "db_dependency": "NONE (pure logging function, 0 DB queries)",
       "notes": "Fulfills PRIORITY ORDER #9 Item 4 (missing tests for wired logging service). Audit log service existed with 0 tests. Added 25+ comprehensive tests covering valid records, field validation, JSON serialization, timestamp/ID handling, determinism, edge cases (unicode, large payloads), multi-record logging, and real-world audit scenarios (decisions, actions, experiments). Service is core audit infrastructure. All tests pass; non-DB gates pass."
     },
@@ -962,8 +962,8 @@
         ],
         "usage": "Core caching layer for briefings, permission sets, computed scores"
       },
-      "committed": "PENDING",
-      "pushed": false,
+      "committed": "ad921f2",
+      "pushed": true,
       "db_dependency": "NONE (pure in-memory caching, 0 DB queries)",
       "notes": "Fulfills PRIORITY ORDER #9 Item 5 (missing tests for wired cache service). In-memory cache service existed with 0 tests. Added 42 comprehensive tests covering get/set/delete, TTL and expiration, cache statistics, flush operations (all/pattern), concurrent operations (sets/gets/mixed), memory management (large values 10K+, many entries 1000+), key handling (special chars, case-sensitivity), cleanup lifecycle, type safety, and real-world scenarios (briefings, permissions, confidence scores). Service is critical for performance. All tests pass; non-DB gates pass."
     },
@@ -1006,10 +1006,58 @@
         ],
         "usage": "Factory pattern for centralized cache management across app"
       },
-      "committed": "PENDING",
-      "pushed": false,
+      "committed": "ac96d85",
+      "pushed": true,
       "db_dependency": "NONE (pure factory/singleton pattern, 0 DB queries)",
       "notes": "Fulfills PRIORITY ORDER #9 Item 6 (missing tests for wired factory service). Cache factory service existed with 0 tests. Added 37 comprehensive tests covering cache creation (default/memory/redis/unknown backends), singleton management (consistent retrieval, lazy init), reset functionality, environment variables, functional operations (persistence, stats), integration scenarios (app state, sessions, results, invalidation), multiple factory calls, backend selection logic, real-world patterns (briefs, perms, scores), lifecycle management, error handling, and consistency. Service is critical infrastructure. All tests pass; non-DB gates pass."
+    },
+    "usage_service": {
+      "name": "Usage Service Tests (PRIORITY ORDER #9)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_COMPREHENSIVE_TESTS",
+      "files": [
+        "src/services/usage.service.ts (existing)",
+        "src/__tests__/services/usage.service.test.ts (new tests)"
+      ],
+      "test_coverage": "69 comprehensive tests covering all usage tracking scenarios",
+      "test_categories": [
+        "recordUsage basic functionality: valid parameters, default value handling, zero/large/negative/fractional values",
+        "Context parameter handling: workspace ID, user ID, endpoint tracking",
+        "Event type validation: string handling, enum validation, special characters",
+        "Batch recording: multiple independent records, concurrent calls, order independence",
+        "Feature-specific tracking: API calls, exports, integrations, webhooks, dashboards, custom metrics",
+        "Quota enforcement: limit checking, over-quota handling, soft/hard limits",
+        "Period tracking: current period detection, period boundaries, timezone handling",
+        "Error handling: invalid workspace IDs, failed tracking, logging on errors",
+        "Integration with entitlement service: entitlement tracking, warning/error emission",
+        "Real-world scenarios: SaaS usage patterns, multi-workspace tracking, burst traffic handling"
+      ],
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npm test (✓ 69/69 pass), npx prisma validate (✓)",
+      "compilation": "✓ TypeScript compiles without errors (mocked entitlement service)",
+      "wiring_proof": {
+        "functions": [
+          "recordUsage(workspaceId, eventType, value?, context?): Promise<void> - Records usage event with optional context",
+          "trackBatch(records[]): Promise<void> - Tracks multiple usage records",
+          "checkQuota(workspaceId, feature): Promise<boolean> - Checks if feature is within quota",
+          "getRemainingQuota(workspaceId, feature): Promise<number> - Returns remaining quota"
+        ],
+        "integration": "src/services/entitlement.service (trackUsage mock for non-DB testing)",
+        "input": "workspaceId (string), eventType (string), optional value (number), optional context (object)",
+        "output": "Promise<void> on success, logs warning/error on quota exceeded or failures",
+        "features": [
+          "Quota enforcement with warn/error behavior",
+          "Feature-specific usage limits",
+          "Batch recording with concurrent safety",
+          "Integration with entitlement system",
+          "Period-based quota calculation",
+          "Comprehensive logging"
+        ],
+        "usage": "Core billing/entitlement enforcement for feature and API quota limits"
+      },
+      "committed": "PENDING",
+      "pushed": false,
+      "db_dependency": "NONE (mocked entitlement service, no DB queries in tests)",
+      "notes": "Fulfills PRIORITY ORDER #9 Item 8 (missing tests for wired usage/billing service). Usage service existed with 0 tests. Added 69 comprehensive tests covering recordUsage with various value types (zero, large, negative, fractional), context parameter handling, batch recording, feature-specific tracking (API calls, exports, integrations, webhooks, dashboards), quota enforcement (limits, over-quota, soft/hard), period tracking, error handling with logging, integration with entitlement service, and real-world SaaS usage patterns. Service is critical for billing/monetization. All tests pass; non-DB gates pass."
     }
   },
   "addendum_g_final_improvement_report": {
