@@ -541,6 +541,59 @@
       "committed": "pending"
     }
   },
+  "phase_11_status": {
+    "name": "Execution Reality",
+    "description": "Validate whether recommended action can actually be executed",
+    "current_work": "Test correction - Execution Certainty API",
+    "slice_1_execution_certainty": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_WIRING",
+      "files": [
+        "src/services/execution-certainty.ts",
+        "src/app/api/engagements/[engagementId]/execution-certainty/route.ts",
+        "src/__tests__/api/execution-certainty.test.ts"
+      ],
+      "methods": [
+        "calculateExecutionCertainty(engagementId, findings, recommendations, actions, evidence, health)"
+      ],
+      "api_endpoint": "GET /api/engagements/[engagementId]/execution-certainty (assess execution feasibility)",
+      "certainty_factors": [
+        "Critical unresolved findings (blockers): -15 points each",
+        "Blocked critical actions (critical blockers): -20 points each, flagged in blockers array",
+        "Blocked non-critical actions (risks): -5 points each",
+        "Unverified evidence (gaps): -0.3 × missing percentage",
+        "Completed actions (positive): +8 points each",
+        "Critical health status (constraint): -25 points",
+        "At-risk health status (constraint): -15 points",
+        "KPI trend deterioration (indicator): increases risk assessment"
+      ],
+      "score_scale": "0-100 (clamped)",
+      "certainty_levels": {
+        "blocked": "0-20 (critical blockers present)",
+        "low": "21-40 (significant concerns)",
+        "medium": "41-60 (moderate feasibility)",
+        "high": "61-80 (good feasibility)",
+        "certain": "81-100 (excellent feasibility)"
+      },
+      "response_fields": [
+        "engagementId: string",
+        "generatedAt: timestamp",
+        "score: 0-100 number",
+        "level: blocked|low|medium|high|certain",
+        "blockers: string[] (critical issues blocking execution)",
+        "risks: string[] (secondary risks/concerns)",
+        "reasons: string[] (rationale for score)"
+      ],
+      "workspace_enforcement": "✓ x-workspace-id header required",
+      "auth_enforced": "✓ ENGAGEMENT_VIEW capability required",
+      "access_check": "✓ assertEngagementAccess validates user access",
+      "db_queries_scoped": "✓ All findings, recommendations, actions, health scoped to workspace + engagement",
+      "DTO_boundary": "✓ No internal fields exposed",
+      "test_coverage_added": "~155 tests covering score calculation, level classification, constraint detection, safety",
+      "compilation": "✓ Next.js build: Compiled successfully in 18.8s",
+      "committed": "pending"
+    }
+  },
   "deployment_readiness": {
     "phase_9_non_db_gates": "PASS",
     "static_gates": "PASS (tsc --noEmit: 0 new errors, npm run build: ✓ Compiled successfully)",
