@@ -755,8 +755,8 @@
         "security": "Prevents cross-workspace access, enforces least privilege, fails closed on missing context",
         "auth": "Depends on getSession() from auth service, validates session availability"
       },
-      "committed": "pending",
-      "pushed": false,
+      "committed": "563e611",
+      "pushed": true,
       "db_dependency": "NONE (pure context extraction from session, no DB access)",
       "notes": "Fulfills PRIORITY ORDER #9 Item 10 (missing tests for wired systems). Workspace context service is fundamental to multi-tenancy and security - used by 15+ API routes. Added 65 comprehensive tests covering all 3 functions with complete parameter variations, error cases, security scenarios (cross-workspace access prevention), concurrency patterns, and type safety. Service architecture is non-DB (pure session-based). All tests pass; all non-DB gates pass (build, typecheck, prisma validate)."
     },
