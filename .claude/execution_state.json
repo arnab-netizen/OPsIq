@@ -722,6 +722,52 @@
     "⏳ Deployment-readiness full audit"
   ],
   "priority_order_9_wired_systems_tests": {
+    "usage_service": {
+      "name": "Usage Service Tests (PRIORITY ORDER #9)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_COMPREHENSIVE_TESTS",
+      "files": [
+        "src/services/usage.service.ts (existing)",
+        "src/__tests__/services/usage.service.test.ts (new tests)"
+      ],
+      "test_coverage": "69 tests covering basic functionality, missing parameters, error handling (fail open), key/workspace variations, concurrent usage, context handling, specialized wrappers, real-world scenarios, type safety",
+      "test_categories": [
+        "Basic functionality: valid parameters, default values, various number types",
+        "Missing parameters: missing workspaceId, missing key, missing both - all log warnings",
+        "Error handling (fail open): trackUsage failures don't throw, errors are logged",
+        "Key variations: standard keys, special characters, numbers, long names",
+        "Workspace variations: UUIDv4, numeric, alphanumeric IDs",
+        "Concurrent usage: multiple concurrent calls, rapid sequential calls",
+        "Context variations: undefined, empty, multiple properties, nested objects, arrays",
+        "Specialized wrappers: recordDecisionEngineUsage, recordRecommendationUsage, recordActionUsage, recordEngagementCreationUsage",
+        "Real-world scenarios: multi-operation workflows, multi-workspace tracking, usage bursts, continued tracking after failures",
+        "Function exports: all public functions exported correctly",
+        "Fail-open behavior: service doesn't throw on entitlement failures, continues functioning",
+        "Type safety: string/number/Record types accepted correctly"
+      ],
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npm test (✓ 69/69 pass), npx prisma validate (✓)",
+      "compilation": "✓ TypeScript compiles without errors",
+      "wiring_proof": {
+        "service": "src/services/usage.service.ts (pure non-DB wrapper around entitlementService.trackUsage)",
+        "callers": [
+          "53+ API routes and services call recordUsage or its specialized variants"
+        ],
+        "functions": [
+          "recordUsage(workspaceId, key, value, context) - Core usage recording with fail-open error handling",
+          "recordDecisionEngineUsage(workspaceId, context) - Decision engine usage wrapper",
+          "recordRecommendationUsage(workspaceId, count, context) - Recommendation generation wrapper",
+          "recordActionUsage(workspaceId, count, context) - Action execution wrapper",
+          "recordEngagementCreationUsage(workspaceId, context) - Engagement creation wrapper"
+        ],
+        "input": "workspaceId (string), key (string), value (number, default 1), context (Record<string, unknown>)",
+        "output": "Promise<void> (always resolves, never throws)",
+        "behavior": "Calls entitlementService.trackUsage; logs errors but doesn't throw; logs warnings for missing params"
+      },
+      "committed": "933b41f",
+      "pushed": true,
+      "db_dependency": "Uses entitlementService.trackUsage (DB-dependent), but service itself is pure and non-DB for testing",
+      "notes": "Fulfills PRIORITY ORDER #9 Item 8 (missing tests for wired systems with 53+ callers). Usage service existed with 0 tests. Added 69 comprehensive tests covering all code paths, error handling (fail-open design), parameter variations, concurrent scenarios, specialized wrappers, real-world workflows, type safety, and consistency. Service is critical infrastructure for usage tracking and billing. All tests pass; non-DB gates pass."
+    },
     "audit_event_hash_chain_validator": {
       "name": "Audit Event Hash Chain Validator Tests (PRIORITY ORDER #9)",
       "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
