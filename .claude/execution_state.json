@@ -400,6 +400,44 @@
       "audit_events": "✓ REVIEW_CYCLE_STARTED emitted with payload",
       "test_coverage_added": "~80 tests covering generation, assessment, classification, safety",
       "compilation": "✓ Next.js build: Compiled successfully in 6.6s",
+      "committed": "c0e3830"
+    },
+    "slice_3_escalation_checks_api": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_WIRING",
+      "files": [
+        "src/services/escalation.ts",
+        "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
+        "src/__tests__/api/escalation-checks.test.ts"
+      ],
+      "methods": [
+        "detectHighPriorityOverdueActions(engagementId, authContext, workspaceId)",
+        "detectKPIDeteriorationPattern(engagementId, authContext, workspaceId)",
+        "POST /api/engagements/[engagementId]/escalation-checks (detect)",
+        "GET /api/engagements/[engagementId]/escalation-checks (status)"
+      ],
+      "escalation_conditions": [
+        "high_priority_overdue - Critical actions past due date (CRITICAL severity)",
+        "kpi_deterioration_pattern - Consecutive KPI value declines (HIGH severity)"
+      ],
+      "detection_logic": {
+        "overdue_actions": "Identifies critical-priority actions with dueDate < now and status not in [completed, verified, cancelled]",
+        "deterioration_pattern": "Analyzes last 3 KPI snapshots to detect consecutive declines, respects KPI direction field"
+      },
+      "workspace_enforcement": "✓ All queries enforce workspaceId parameter",
+      "auth_enforced": "✓ ENGAGEMENT_VIEW capability required (read-only check)",
+      "input_validation": "✓ Zod schema for engagementId UUID validation",
+      "middleware_patterns": "✓ withAuth + enforceWorkspaceScoping + Zod validation",
+      "DTO_boundary": "✓ No internal audit fields exposed in response",
+      "audit_events": "✓ ESCALATION_ALERT_HIGH_PRIORITY_OVERDUE and ESCALATION_ALERT_KPI_DETERIORATION emitted",
+      "response_structure": {
+        "engagementId": "string",
+        "alerts": "array of alert objects",
+        "hasEscalations": "boolean indicator",
+        "checkedAt": "timestamp of check"
+      },
+      "test_coverage_added": "~85 tests covering detection, classification, safety, error handling",
+      "compilation": "✓ Next.js build: Compiled successfully in 17.1s",
       "committed": "pending"
     }
   },
