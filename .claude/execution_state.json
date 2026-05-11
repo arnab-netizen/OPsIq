@@ -739,8 +739,50 @@
       "test_coverage": "50+ test cases: create/approve/start/update/record/learn transitions, validation enforcement, workspace isolation, state machine correctness, outcome analysis, summary generation",
       "compilation": "✓ npm run build succeeds, tsc --noEmit passes",
       "committed": "pending"
+    },
+    "slice_3_experiment_api_routes": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "API_ROUTES_WITH_WIRING",
+      "files": [
+        "src/app/api/engagements/[engagementId]/experiments/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
+        "src/__tests__/api/experiments.test.ts"
+      ],
+      "api_endpoints": [
+        "POST /api/engagements/[engagementId]/experiments (create experiment)",
+        "GET /api/engagements/[engagementId]/experiments (list experiments)",
+        "POST /api/engagements/[engagementId]/experiments/[experimentId]/approve (approve)",
+        "POST /api/engagements/[engagementId]/experiments/[experimentId]/start (start)",
+        "POST /api/engagements/[engagementId]/experiments/[experimentId]/progress (update progress)",
+        "POST /api/engagements/[engagementId]/experiments/[experimentId]/result (record result)",
+        "POST /api/engagements/[engagementId]/experiments/[experimentId]/learning (capture learning)"
+      ],
+      "middleware_stack": "withRequestContext → withAuth(ENGAGEMENT_UPDATE) → enforceWorkspaceScoping → Zod validation → service call",
+      "zod_schemas": [
+        "hypothesisSchema: statement, type, successCriterion, successThreshold, failureRisk, failureThreshold, testDurationWeeks, reviewCadenceWeeks",
+        "experimentPlanSchema: hypothesis, actionDescription, targetAudience, controlGroup, primaryMetric, secondaryMetrics[], confoundingFactors[], cost, effort, capabilities, dependencies, requiredApprovals, riskLevel, rigorLevel",
+        "createExperimentSchema: engagementId, plan, name, description?, linkedDecisionId?, linkedActionId?, linkedRecommendationId?",
+        "executionSchema: percentComplete, daysElapsed, daysRemaining, notes[], stoppedEarly?, stoppingReason?",
+        "resultSchema: classification, successThresholdMet, primaryMetricValue, primaryMetricChange, primaryMetricTrend, secondaryResults{}, actualCost, roi, confidenceLevel?, dataQuality",
+        "learningSchema: keyFinding, implications, confidence, nextAction?, priorityAfterLearning?, howToImproveMetric?"
+      ],
+      "response_dto": "toExperimentDTO() redacts internal fields, exposes: id, workspaceId, engagementId, status, name, plan, execution, result, learning, timestamps",
+      "error_handling": "z.ZodError → 400, ExperimentLifecycleError → 400 with code/message, generic Error → 400, unexpected → 500",
+      "workspace_enforcement": "✓ x-workspace-id header required, enforceWorkspaceScoping middleware, all operations scoped to workspace",
+      "auth_enforced": "✓ CAPABILITIES.ENGAGEMENT_UPDATE required on all endpoints",
+      "audit_events": "✓ Emitted by service (create, approve, start, progress, result, learning)",
+      "test_coverage": "70+ test cases covering: endpoint validation, state machine enforcement, error handling, workspace scoping, auth enforcement, payload validation, response DTOs, audit events, real-world scenarios",
+      "compilation": "✓ npm run build succeeds, tsc --noEmit passes",
+      "committed": "pending"
     }
   },
+  "current_phase": "Phase 12 — Growth Experiments",
+  "phase_12_complete_slice_count": "3 of 3 (Domain, Service, API Routes)",
+  "next_phase_target": "Phase 13 — Outcome Validation & Measurement (when execution.md updated)",
   "deployment_readiness": {
     "phase_9_non_db_gates": "PASS",
     "static_gates": "PASS (tsc --noEmit: 0 new errors, npm run build: ✓ Compiled successfully)",
