@@ -219,6 +219,10 @@ export const AUDIT_EVENTS = {
   SUBSCRIPTION_ACTIVATED: "subscription.activated",
   WEBHOOK_RETRY_THRESHOLD_EXCEEDED: "webhook.retry_threshold_exceeded",
 
+  // Owner Mode
+  OWNER_DASHBOARD_VIEWED: "owner.dashboard_viewed",
+  OWNER_CONFIG_UPDATED: "owner.config_updated",
+
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",
   SYSTEM_ERROR: "system.error",

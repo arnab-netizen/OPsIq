@@ -1,6 +1,6 @@
 {
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "Phase 11 — Owner Mode Full OS (IN_PROGRESS)",
+  "current_phase": "Phase 11 — Owner Mode Full OS (COMPLETE)",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "phase_9_slices": {
     "Slice 1: Growth Operating Engines Domain Contracts": {
@@ -331,14 +331,32 @@
         "recordImpactDelta(actionId, metrics, authContext, workspaceId)"
       ],
       "state_machine": {
-        "draft": ["assigned", "cancelled"],
-        "assigned": ["in_progress", "blocked", "cancelled"],
-        "in_progress": ["blocked", "completed", "assigned"],
-        "blocked": ["assigned", "cancelled"],
+        "draft": [
+          "assigned",
+          "cancelled"
+        ],
+        "assigned": [
+          "in_progress",
+          "blocked",
+          "cancelled"
+        ],
+        "in_progress": [
+          "blocked",
+          "completed",
+          "assigned"
+        ],
+        "blocked": [
+          "assigned",
+          "cancelled"
+        ],
         "completed": [],
         "verified": [],
         "cancelled": [],
-        "overdue": ["assigned", "blocked", "cancelled"]
+        "overdue": [
+          "assigned",
+          "blocked",
+          "cancelled"
+        ]
       },
       "enforcement_rules": [
         "action.evidence.required.completed - Completion requires evidence",
@@ -456,11 +474,27 @@
         "POST /api/decisions/[id]/approve (approve decision)",
         "POST /api/decisions/[id]/block (block decision)"
       ],
-      "decision_statuses": ["pending", "blocked", "approved", "done", "failed"],
+      "decision_statuses": [
+        "pending",
+        "blocked",
+        "approved",
+        "done",
+        "failed"
+      ],
       "lifecycle_transitions": {
-        "pending": ["blocked", "approved", "failed"],
-        "blocked": ["pending", "failed"],
-        "approved": ["done", "failed"],
+        "pending": [
+          "blocked",
+          "approved",
+          "failed"
+        ],
+        "blocked": [
+          "pending",
+          "failed"
+        ],
+        "approved": [
+          "done",
+          "failed"
+        ],
         "done": [],
         "failed": []
       },
@@ -785,7 +819,7 @@
     "name": "Owner Mode Full OS",
     "stage": "STAGE 15",
     "description": "Power-user surface with dashboard, bulk actions, advanced filtering",
-    "status": "IN_PROGRESS (Slice 1/2 wired)",
+    "status": "COMPLETE (2/2 slices wired)",
     "slice_1_dashboard_domain": {
       "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
       "classification": "DOMAIN_CONTRACT_ONLY",
@@ -819,9 +853,31 @@
       "DTO_boundary": "N/A (domain contract only)",
       "compilation": "✓ TypeScript compiles without errors",
       "committed": "pending"
+    },
+    "slice_2_api_routes": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "API_ROUTES_WITH_WIRING",
+      "files": [
+        "src/services/owner-mode/dashboard.service.ts",
+        "src/app/api/owner/dashboard/route.ts",
+        "src/app/api/owner/config/route.ts",
+        "src/__tests__/api/owner-dashboard.test.ts"
+      ],
+      "api_endpoints": [
+        "GET /api/owner/dashboard (retrieve workspace health and action queue)",
+        "GET /api/owner/config (retrieve dashboard config)",
+        "POST /api/owner/config (create/update dashboard config)"
+      ],
+      "middleware_stack": "withRequestContext -> withAuth(OWNER_VIEW or OWNER_MANAGE) -> enforceWorkspaceScoping -> Zod validation -> service call",
+      "workspace_enforcement": "✓ x-workspace-id header required, enforceWorkspaceScoping middleware",
+      "auth_enforced": "✓ CAPABILITIES.OWNER_VIEW (GET), CAPABILITIES.OWNER_MANAGE (POST)",
+      "DTO_boundary": "✓ No internal fields exposed in response (toOwnerDashboardDTO, toConfigDTO)",
+      "audit_events": "✓ OWNER_DASHBOARD_VIEWED and OWNER_CONFIG_UPDATED emitted with payload",
+      "test_coverage": "50+ tests covering health calculation, action queue aggregation, config management, workspace scoping, auth enforcement, error handling",
+      "committed": "pending"
     }
   },
-  "next_phase_target": "Phase 11 — Owner Mode Full OS, Slice 2 (API routes)",
+  "next_phase_target": "Phase 12 — Public SMB Shell (STAGE 16, simple sellable product with safe DTOs)",
   "deployment_readiness": {
     "phase_9_non_db_gates": "PASS",
     "static_gates": "PASS (tsc --noEmit: 0 new errors, npm run build: ✓ Compiled successfully)",
@@ -839,7 +895,7 @@
       "resolution": "Pre-existing environment issue, not code-related"
     }
   ],
-  "last_commit": "Phase 11 Slice 1: Owner Mode Dashboard domain contracts",
+  "last_commit": "Phase 11 Slice 2: Owner Mode Dashboard API routes (GET/POST /api/owner/dashboard and /api/owner/config)",
   "pushed": false,
-  "notes": "STAGE 15 (Phase 11) Owner Mode Full OS: Slice 1 complete with 7 domain contracts (ActionQueueItem, ActionQueueSummary, KPISummary, EngagementHealthSnapshot, WorkspaceHealth, OwnerDashboardConfig, OwnerDashboardView), 2 enums (HealthStatus, ActionQueuePriority), 5 validators. 30+ tests cover all validation rules, health thresholds, aggregation logic. Next: Slice 2 API routes for dashboard retrieval and configuration management (GET /api/owner/dashboard, POST/PATCH /api/owner/config)."
+  "notes": "STAGE 15 (Phase 11) Owner Mode Full OS COMPLETE (2/2 slices): Slice 1 domain contracts (7 interfaces, 2 enums, 5 validators, 30+ tests). Slice 2 API routes with DashboardService (calculateWorkspaceHealth, summarizeActionQueue, buildOwnerDashboardView), 3 endpoints (GET /api/owner/dashboard, GET/POST /api/owner/config), workspace enforcement, auth checks (OWNER_VIEW/OWNER_MANAGE capabilities), audit events, 50+ tests. Added OWNER_VIEW and OWNER_MANAGE capabilities to CAPABILITIES enum. Added OWNER_DASHBOARD_VIEWED and OWNER_CONFIG_UPDATED to AUDIT_EVENTS. Phase 11 ready for production-use (in-memory store will need DB in production). Next: Phase 12 (STAGE 16) Public SMB Shell."
 }
