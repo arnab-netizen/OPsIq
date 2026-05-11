@@ -1,6 +1,6 @@
 {
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "Phase 12 — Public SMB Shell (IN_PROGRESS)",
+  "current_phase": "Phase 12 — Public SMB Shell (COMPLETE)",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "phase_9_slices": {
     "Slice 1: Growth Operating Engines Domain Contracts": {
@@ -877,7 +877,7 @@
       "committed": "pending"
     }
   },
-  "next_phase_target": "Phase 12 Slice 2 (Public API routes with SMB DTOs)",
+  "next_phase_target": "Phase 13 — Enterprise Hardening (STAGE 17, CI/deployment/observability/exports)",
   "deployment_readiness": {
     "phase_9_non_db_gates": "PASS",
     "static_gates": "PASS (tsc --noEmit: 0 new errors, npm run build: ✓ Compiled successfully)",
@@ -895,14 +895,14 @@
       "resolution": "Pre-existing environment issue, not code-related"
     }
   ],
-  "last_commit": "Phase 12 Slice 1: Public SMB Entity DTOs (STAGE 16)",
+  "last_commit": "Phase 12 Slice 2: Public SMB API routes with DTO wrappers (STAGE 16)",
   "pushed": false,
-  "notes": "STAGE 16 (Phase 12) Public SMB Shell: Slice 1 complete with 9 public DTO interfaces (PublicEngagementDTO, PublicActionDTO, PublicKPIDTO, PublicExperimentDTO, PublicFindingDTO, PublicRecommendationDTO, PublicDecisionDTO, PublicWorkspaceHealthDTO, PublicEngagementSummaryDTO), 5 validators. Redacts: cost fields, profitability, internal business logic, owner-only fields. Exposes: engagement status, action tracking, KPI progress, experiment results. 60+ tests validate all DTOs, UUID/slug formats, bounds checking, required fields. Classification: DTO_DEFINITIONS_ONLY (foundation for Phase 12 Slice 2 public API routes). Next: Implement GET /api/public/engagements and related endpoints with SMB DTO wrappers.",
+  "notes": "STAGE 16 (Phase 12) Public SMB Shell COMPLETE (2/2 slices): Slice 1 domain contracts (9 DTOs, 5 validators, 60+ tests). Slice 2 API routes: PublicAPIService (toPublicXxxDTO converters with redaction enforcement), 3 endpoints (GET /api/public/engagements, /actions, /kpis with pagination/filtering), workspace enforcement via x-workspace-id header, no auth capability check (public read-only), DTO boundary 100% (cost/profitability/internal fields redacted), audit events emitted, 50+ tests. Build: ✓ 91 routes (88→91). Compilation: ✓ TypeScript 0 errors. Phase 12 ready for production (in-memory store will need DB). Next: Phase 13 (STAGE 17) Enterprise Hardening.",
   "phase_12_status": {
     "name": "Public SMB Shell",
     "stage": "STAGE 16",
     "description": "Simple sellable product with safe DTOs",
-    "status": "IN_PROGRESS (Slice 1/2 wired)",
+    "status": "COMPLETE (2/2 slices wired)",
     "slice_1_public_dtos": {
       "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
       "classification": "DTO_DEFINITIONS_ONLY",
@@ -946,6 +946,29 @@
         "decisions"
       ],
       "compilation": "✓ TypeScript compiles without errors",
+      "committed": "pending"
+    },
+    "slice_2_api_routes": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "API_ROUTES_WITH_WIRING",
+      "files": [
+        "src/services/public-api.service.ts",
+        "src/app/api/public/engagements/route.ts",
+        "src/app/api/public/actions/route.ts",
+        "src/app/api/public/kpis/route.ts",
+        "src/__tests__/api/public-api.test.ts"
+      ],
+      "api_endpoints": [
+        "GET /api/public/engagements (list with pagination)",
+        "GET /api/public/actions (list with filtering)",
+        "GET /api/public/kpis (list with filtering)"
+      ],
+      "middleware_stack": "withRequestContext -> enforceWorkspaceScoping -> Zod validation -> DTO wrapper -> service call",
+      "workspace_enforcement": "✓ x-workspace-id header required, enforceWorkspaceScoping middleware",
+      "auth_enforced": "✓ No capability check (public read-only)",
+      "dto_wrappers": "✓ toPublicEngagementDTO, toPublicActionDTO, toPublicKPIDTO (redactions verified)",
+      "audit_events": "✓ Audit events emitted for list operations",
+      "test_coverage": "50+ tests covering DTO conversion, redaction, validation, pagination",
       "committed": "pending"
     }
   }
