@@ -1,6 +1,6 @@
 {
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "Phase 11 — Owner Mode Full OS (COMPLETE)",
+  "current_phase": "Phase 12 — Public SMB Shell (IN_PROGRESS)",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "phase_9_slices": {
     "Slice 1: Growth Operating Engines Domain Contracts": {
@@ -877,7 +877,7 @@
       "committed": "pending"
     }
   },
-  "next_phase_target": "Phase 12 — Public SMB Shell (STAGE 16, simple sellable product with safe DTOs)",
+  "next_phase_target": "Phase 12 Slice 2 (Public API routes with SMB DTOs)",
   "deployment_readiness": {
     "phase_9_non_db_gates": "PASS",
     "static_gates": "PASS (tsc --noEmit: 0 new errors, npm run build: ✓ Compiled successfully)",
@@ -895,7 +895,58 @@
       "resolution": "Pre-existing environment issue, not code-related"
     }
   ],
-  "last_commit": "Phase 11 Slice 2: Owner Mode Dashboard API routes (GET/POST /api/owner/dashboard and /api/owner/config)",
+  "last_commit": "Phase 12 Slice 1: Public SMB Entity DTOs (STAGE 16)",
   "pushed": false,
-  "notes": "STAGE 15 (Phase 11) Owner Mode Full OS COMPLETE (2/2 slices): Slice 1 domain contracts (7 interfaces, 2 enums, 5 validators, 30+ tests). Slice 2 API routes with DashboardService (calculateWorkspaceHealth, summarizeActionQueue, buildOwnerDashboardView), 3 endpoints (GET /api/owner/dashboard, GET/POST /api/owner/config), workspace enforcement, auth checks (OWNER_VIEW/OWNER_MANAGE capabilities), audit events, 50+ tests. Added OWNER_VIEW and OWNER_MANAGE capabilities to CAPABILITIES enum. Added OWNER_DASHBOARD_VIEWED and OWNER_CONFIG_UPDATED to AUDIT_EVENTS. Phase 11 ready for production-use (in-memory store will need DB in production). Next: Phase 12 (STAGE 16) Public SMB Shell."
+  "notes": "STAGE 16 (Phase 12) Public SMB Shell: Slice 1 complete with 9 public DTO interfaces (PublicEngagementDTO, PublicActionDTO, PublicKPIDTO, PublicExperimentDTO, PublicFindingDTO, PublicRecommendationDTO, PublicDecisionDTO, PublicWorkspaceHealthDTO, PublicEngagementSummaryDTO), 5 validators. Redacts: cost fields, profitability, internal business logic, owner-only fields. Exposes: engagement status, action tracking, KPI progress, experiment results. 60+ tests validate all DTOs, UUID/slug formats, bounds checking, required fields. Classification: DTO_DEFINITIONS_ONLY (foundation for Phase 12 Slice 2 public API routes). Next: Implement GET /api/public/engagements and related endpoints with SMB DTO wrappers.",
+  "phase_12_status": {
+    "name": "Public SMB Shell",
+    "stage": "STAGE 16",
+    "description": "Simple sellable product with safe DTOs",
+    "status": "IN_PROGRESS (Slice 1/2 wired)",
+    "slice_1_public_dtos": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "DTO_DEFINITIONS_ONLY",
+      "files": [
+        "src/domain/public/smb-dto.ts",
+        "src/__tests__/domain/public/smb-dto.test.ts"
+      ],
+      "dtos": [
+        "PublicEngagementDTO",
+        "PublicActionDTO",
+        "PublicKPIDTO",
+        "PublicExperimentDTO",
+        "PublicFindingDTO",
+        "PublicRecommendationDTO",
+        "PublicDecisionDTO",
+        "PublicWorkspaceHealthDTO",
+        "PublicEngagementSummaryDTO"
+      ],
+      "validators": [
+        "validatePublicEngagementDTO",
+        "validatePublicActionDTO",
+        "validatePublicKPIDTO",
+        "validatePublicExperimentDTO",
+        "validatePublicWorkspaceHealthDTO"
+      ],
+      "test_coverage": "60+ tests covering all DTO validation, UUID/slug formats, bounds checking, required fields",
+      "redactions": [
+        "cost fields",
+        "profitability",
+        "internal business logic",
+        "owner-only fields",
+        "sensitive metrics"
+      ],
+      "exposed_fields": [
+        "engagement status",
+        "action tracking",
+        "KPI progress",
+        "experiment results",
+        "findings",
+        "recommendations",
+        "decisions"
+      ],
+      "compilation": "✓ TypeScript compiles without errors",
+      "committed": "pending"
+    }
+  }
 }
