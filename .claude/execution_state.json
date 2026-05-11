@@ -695,7 +695,7 @@
         "experiment": "UUID id, workspaceId, engagementId required, name >= 5 chars, cascading plan/execution/result validation"
       },
       "compilation": "✓ npm run build succeeds, tsc --noEmit passes (except pre-existing adapter-pg)",
-      "committed": "pending"
+      "committed": "fe543df"
     }
   },
   "deployment_readiness": {
@@ -716,6 +716,6 @@
     }
   ],
   "last_commit": "Phase 12 Slice 1: Experiment Domain Contracts",
-  "pushed": false,
+  "pushed": true,
   "notes": "Phase 12 started: Experiment domain contract defines hypothesis, plan, execution, result, and learning models. 5 validators ensure rigor (hypothesis thresholds, plan metrics/approvals, execution timeline, result classification, experiment cascading validation). 70+ tests verify all validation rules. Domain-only slice (no services/API yet). Proceeding to Slice 2: Experiment Lifecycle Service."
 }
