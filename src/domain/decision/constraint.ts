@@ -16,21 +16,19 @@ export interface ConstraintCheckResult {
 }
 
 export interface CapacityCheckInput {
-  effort_hours: number;
-  available_hours?: number;
-  engagement_id: string;
-  workspace_id: string;
+  availableCapacity: number;
+  requiredCapacity: number;
+  bufferPercentage?: number;
 }
 
 export interface CashCheckInput {
-  capital_required: number;
-  payback_days: number;
-  engagement_id: string;
-  workspace_id: string;
+  monthlyBurn: number;
+  currentCash: number;
+  minRunwayMonths?: number;
 }
 
 export interface ComplianceCheckInput {
-  strategy_type?: string;
-  engagement_id: string;
-  workspace_id: string;
+  riskLevel?: "low" | "medium" | "high" | "critical";
+  requiresApproval?: boolean;
+  approvalStatus?: "pending" | "approved" | "denied";
 }

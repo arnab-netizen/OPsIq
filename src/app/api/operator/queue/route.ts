@@ -68,7 +68,7 @@ export const GET = withRequestContext(async (request) => {
 
     // Emit audit event
     await emitAuditEvent({
-      eventName: AUDIT_EVENTS.QUEUE_VIEWED,
+      eventName: AUDIT_EVENTS.OPERATOR_QUEUE_VIEWED,
       actorId: session.user.id,
       entityType: "OperatorQueue",
       entityId: "queue",

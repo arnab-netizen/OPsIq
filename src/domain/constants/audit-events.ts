@@ -112,6 +112,7 @@ export const AUDIT_EVENTS = {
   OPERATOR_ITEM_UPDATED: "operator_item.updated",
   OPERATOR_ITEM_OVERRIDDEN: "operator_item.overridden",
   OPERATOR_ITEM_BLOCKED: "operator_item.blocked",
+  OPERATOR_QUEUE_VIEWED: "operator.queue_viewed",
 
   // KPI
   KPI_DEFINED: "kpi.defined",
