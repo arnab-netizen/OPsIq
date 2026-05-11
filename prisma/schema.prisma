@@ -7,3 +7,106 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// Stub models to allow compilation when DATABASE_URL unavailable
+// These are placeholders for actual schema that will be defined via migrations
+// when DATABASE_URL becomes available
+
+model User {
+  id String @id
+  email String? @unique
+  name String?
+  createdAt DateTime?
+  updatedAt DateTime?
+}
+
+model Workspace {
+  id String @id
+  slug String? @unique
+  name String?
+  createdAt DateTime?
+  updatedAt DateTime?
+}
+
+model WorkspaceMembership {
+  workspaceId String
+  userId      String
+  role String?
+  createdAt DateTime?
+
+  @@id([workspaceId, userId])
+}
+
+model ClientAccount {
+  id String @id
+  name String?
+  createdAt DateTime?
+  updatedAt DateTime?
+}
+
+model Engagement {
+  id String @id
+  code String? @unique
+  name String?
+  createdAt DateTime?
+  updatedAt DateTime?
+}
+
+model EngagementMembership {
+  userId      String
+  engagementId String
+  role String?
+  createdAt DateTime?
+
+  @@id([userId, engagementId])
+}
+
+model AuditEvent {
+  id String @id
+  eventName String?
+  actorId String?
+  actorType String?
+  entityType String?
+  entityId String?
+  payload Json?
+  correlationId String?
+  visibility String?
+  occurredAt DateTime?
+  createdAt DateTime?
+}
+
+model UserRoleAssignment {
+  id String @id
+  role String?
+  scope String?
+  scopeId String?
+  createdAt DateTime?
+}
+
+model Recommendation {
+  id String @id
+  createdAt DateTime?
+}
+
+model Action {
+  id String @id
+  createdAt DateTime?
+}
+
+model LearningRecord {
+  id String @id
+  success Boolean?
+  problemType String?
+  impact String?
+  createdAt DateTime?
+}
+
+model OperatorItem {
+  id String @id
+  createdAt DateTime?
+}
+
+model SnapshotData {
+  id String @id
+  createdAt DateTime?
+}
