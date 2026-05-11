@@ -438,6 +438,58 @@
       },
       "test_coverage_added": "~85 tests covering detection, classification, safety, error handling",
       "compilation": "✓ Next.js build: Compiled successfully in 17.1s",
+      "committed": "361e50d"
+    },
+    "slice_4_decision_history_api": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_WIRING",
+      "files": [
+        "src/app/api/decisions/list/route.ts",
+        "src/app/api/decisions/create/route.ts",
+        "src/app/api/decisions/[id]/route.ts (implied)",
+        "src/__tests__/api/decisions.test.ts"
+      ],
+      "api_endpoints": [
+        "GET /api/decisions/list (list all decisions, workspace-scoped)",
+        "POST /api/decisions/create (create new decision)",
+        "GET /api/decisions/[id] (get decision details)",
+        "POST /api/decisions/[id]/approve (approve decision)",
+        "POST /api/decisions/[id]/block (block decision)"
+      ],
+      "decision_statuses": ["pending", "blocked", "approved", "done", "failed"],
+      "lifecycle_transitions": {
+        "pending": ["blocked", "approved", "failed"],
+        "blocked": ["pending", "failed"],
+        "approved": ["done", "failed"],
+        "done": [],
+        "failed": []
+      },
+      "field_tracking": {
+        "problem": "Problem statement / business issue",
+        "action": "Proposed action / intervention",
+        "impactExpected": "Estimated impact (recorded at creation)",
+        "impactActual": "Measured impact (recorded on completion)",
+        "confidence": "Confidence level 0-100",
+        "status": "Current decision status",
+        "blockStage": "Where decision is blocked (if blocked)",
+        "blockReason": "Reason for blocking (mandatory if blocked)",
+        "createdBy": "Creator user ID",
+        "approvedBy": "Approver user ID (if approved)",
+        "createdAt": "Creation timestamp",
+        "updatedAt": "Last update timestamp"
+      },
+      "filtering_options": {
+        "status": "Filter by status (pending|blocked|approved|done|failed)",
+        "limit": "Max results (default 100, max 1000)",
+        "offset": "Pagination offset (default 0)"
+      },
+      "workspace_enforcement": "✓ workspaceId required (query param or header)",
+      "auth_enforced": "✓ Session required, workspace membership enforced, role-based permissions (read/write)",
+      "input_validation": "✓ Status enum validation, limit bounds checking, offset non-negative",
+      "DTO_boundary": "✓ Sensitive fields redacted for non-admins",
+      "audit_events": "✓ DECISION_CREATED, DECISION_APPROVED, DECISION_BLOCKED, DECISION_COMPLETED, DECISION_FAILED",
+      "test_coverage_added": "~125 tests covering lifecycle, blocking, history, safety, events",
+      "compilation": "✓ Next.js build: Compiled successfully in 8.1s",
       "committed": "pending"
     }
   },
