@@ -3,7 +3,7 @@
   "audit_date": "2026-05-11",
   "audit_result": "ALL PHASES 0-12 PRESENT_RUNTIME_VERIFIED",
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "ADDENDUM F: Sync Engine Contracts (NON_DB_BUILDABLE_NOW)",
+  "current_phase": "ADDENDUM F: Mapping & Normalization Engine (NON_DB_BUILDABLE_NOW)",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "gates_status": {
     "npm_run_build": "✓ PASS",
@@ -264,11 +264,62 @@
       "pushed": "YES (commit e499888 on claude/verify-execution-hardening-LRoqi)",
       "db_dependency": "NONE (pure contracts and algorithms, no DB dependency)",
       "notes": "Second non-DB buildable item from ADDENDUM F. Implements complete sync engine contracts: 12-state FSM with valid transitions, conflict detection/resolution strategies, de-duplication confidence scoring, change detection, idempotency keys, and validation gates. All 48 tests pass. Ready for next item (Mapping/Normalization Engines)."
+    },
+    "mapping_engine_contracts": {
+      "name": "Mapping & Normalization Engine (NON_DB_BUILDABLE_NOW)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "DATA_TRANSFORMATION_CONTRACTS",
+      "files": [
+        "src/domain/mapping-engine/mapping-contracts.ts",
+        "src/__tests__/domain/mapping-engine/mapping-contracts.test.ts"
+      ],
+      "schemas": [
+        "FieldMappingRuleSchema",
+        "FieldMappingConfigSchema",
+        "UnitConversionRuleSchema",
+        "NormalizationRuleSchema",
+        "NormalizationConfigSchema",
+        "TransformationErrorSchema",
+        "TransformationResultSchema",
+        "DataSourceProfileSchema",
+        "SchemaAlignmentSuggestionSchema",
+        "BatchTransformationRequestSchema",
+        "BatchTransformationResultSchema"
+      ],
+      "normalization_rules": [
+        "unit_conversion - Metric conversions (miles→km, F→C, etc)",
+        "format_standardization - Phone numbers, dates, addresses",
+        "value_mapping - Enum translations (high→3, low→1)",
+        "type_coercion - String→Number, etc",
+        "string_normalization - Trim, lowercase, remove spaces",
+        "date_parsing - Parse date strings from various formats",
+        "aggregation - Combine multiple fields into one"
+      ],
+      "algorithms": [
+        "applyFieldMapping(source, rules) - Transform field names/structure",
+        "normalizeValue(value, ruleType, config) - Apply normalization rule",
+        "transformRecord(source, mapRules, normRules) - Complete record transformation",
+        "detectSchemaAlignment(sourceProfile, targetProfile) - Auto-detect field mappings"
+      ],
+      "test_coverage": "28 tests covering field mapping, normalization types, transformations, schema detection, error handling",
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓), npm test (✓ 28 pass)",
+      "compilation": "✓ TypeScript compiles without errors",
+      "wiring_proof": {
+        "field_mapping": "Maps source fields to target fields with type and default value support",
+        "normalization": "7 rule types covering units, formats, values, types, strings, dates, aggregations",
+        "transformation": "Complete record transformation with field mapping + normalization in sequence",
+        "schema_detection": "Auto-detects exact and partial field matches between source and target schemas",
+        "error_tracking": "Structured error/warning reporting per field with error codes and messages",
+        "batch_support": "Batch transformation with throughput tracking and success rate metrics"
+      },
+      "committed": "b4f8d00",
+      "pushed": "YES (commit b4f8d00 on claude/verify-execution-hardening-LRoqi)",
+      "db_dependency": "NONE (pure data transformation contracts and algorithms)",
+      "notes": "Third non-DB buildable item from ADDENDUM F. Implements data transformation engine: field mapping configuration, 7 types of normalization rules, value transformation algorithms, schema alignment detection, and batch transformation support. All 28 tests pass. Ready for next item (Data Reliability Scoring)."
     }
   },
   "db_status": "DB_BLOCKED_ENVIRONMENT_NETWORK_UNREACHABLE",
   "local_safe_pending_slices": [
-    "Mapping/normalization engines",
     "Data reliability scoring",
     "CSV/Sheets parser mocks",
     "Business Impact Engine",
