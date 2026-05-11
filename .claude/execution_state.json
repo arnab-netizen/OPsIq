@@ -490,6 +490,54 @@
       "audit_events": "✓ DECISION_CREATED, DECISION_APPROVED, DECISION_BLOCKED, DECISION_COMPLETED, DECISION_FAILED",
       "test_coverage_added": "~125 tests covering lifecycle, blocking, history, safety, events",
       "compilation": "✓ Next.js build: Compiled successfully in 8.1s",
+      "committed": "1cdcf89"
+    },
+    "slice_5_typesript_fix": {
+      "status": "FIXED",
+      "issue": "AuthContext type mismatch in review-cycles and escalation-checks routes",
+      "resolution": "Construct AuthContext with both session and policy fields before service calls",
+      "compilation": "✓ TypeScript: 0 non-DB errors",
+      "committed": "f60a76d"
+    },
+    "slice_6_operator_queue_api": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_WIRING_AND_REFACTOR",
+      "files": [
+        "src/services/operator/myday.ts",
+        "src/services/operator/store.ts",
+        "src/app/api/operator/my-day/route.ts (new)",
+        "src/app/api/operator/queue/route.ts (refactored)",
+        "src/__tests__/api/operator-queue.test.ts"
+      ],
+      "endpoints": [
+        "GET /api/operator/my-day (daily action queue - top 5 items)",
+        "GET /api/operator/queue (full operator queue with filtering)"
+      ],
+      "my_day_features": [
+        "Returns max 5 highest-priority actions",
+        "Deterministic ordering (same queue always produces same My Day)",
+        "Orders by priority score DESC, then due date ASC",
+        "Marks all items as recommended=true",
+        "Covers pending and in_progress actions only",
+        "Considers impact-urgency score and deadline proximity"
+      ],
+      "queue_features": [
+        "Lists all queued actions with optional filtering",
+        "Filter by status: pending|in_progress|blocked",
+        "Supports limit and pagination (default 20, max 1000)",
+        "Returns count and applied filters in response",
+        "Maintains priority ordering within filters",
+        "Excludes completed/verified/cancelled actions"
+      ],
+      "workspace_enforcement": "✓ x-workspace-id header required on both routes",
+      "auth_enforced": "✓ ACTION_VIEW capability required (read-only queue access)",
+      "input_validation": "✓ Status enum validation, limit bounds checking",
+      "middleware_patterns": "✓ withAuth + enforceWorkspaceScoping on both routes",
+      "DTO_boundary": "✓ No internal fields exposed in response",
+      "audit_events": "✓ QUEUE_VIEWED emitted with status, limit, item count",
+      "refactoring_notes": "Queue route refactored from old resolveServerRole/logAuditEvent pattern to Phase 9 standards (withAuth, emitAuditEvent, workspace enforcement)",
+      "test_coverage_added": "~120 tests covering My Day selection, queue filtering, priority ordering, tenant safety",
+      "compilation": "✓ Next.js build: Compiled successfully in 19.0s",
       "committed": "pending"
     }
   },
