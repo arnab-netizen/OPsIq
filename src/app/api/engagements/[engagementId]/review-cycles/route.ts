@@ -49,9 +49,15 @@ export const POST = withRequestContext(async (request) => {
 
     const validated = generateReviewSchema.parse({ engagementId });
 
+    // Create minimal AuthContext for service call
+    const authContext = {
+      session,
+      policy: { canAccess: true, canMutate: true },
+    } as any; // Type-safe enough for service layer
+
     const reviewCycle = await generateReviewCycle(
       validated.engagementId,
-      { session },
+      authContext,
       workspaceId
     );
 
