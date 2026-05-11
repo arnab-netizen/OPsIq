@@ -301,8 +301,70 @@
       "Slice 7 (Offer)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired",
       "Slice 8 (Unit Economics)": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE - Service + API endpoint wired"
     },
-    "audit_status": "PASS - Deployment-readiness audit completed; non-DB gates 100%",
-    "next_work": "Move to Phase 10 (Guided Operating System) - Daily action queue, weekly review, follow-up loop, decision history"
+    "audit_status": "PASS - Deployment-readiness audit completed; non-DB gates 100%"
+  },
+  "phase_10_status": {
+    "name": "Guided Operating System",
+    "description": "Daily action queue, weekly review, follow-up loop, decision history",
+    "current_work": "Test correction - Action service + API routes",
+    "slice_1_action_service": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_WIRING",
+      "files": [
+        "src/services/action.ts",
+        "src/services/action-lifecycle.ts",
+        "src/app/api/actions/route.ts",
+        "src/app/api/actions/[actionId]/route.ts",
+        "src/app/api/actions/[actionId]/start/route.ts",
+        "src/app/api/actions/[actionId]/complete/route.ts",
+        "src/app/api/actions/[actionId]/impact-delta/route.ts",
+        "src/app/api/engagements/[engagementId]/actions/route.ts",
+        "src/app/api/engagements/[engagementId]/actions/[actionId]/route.ts"
+      ],
+      "methods": [
+        "createAction(input, authContext, workspaceId, idempotencyKey)",
+        "updateAction(actionId, input, authContext, workspaceId)",
+        "listActions(workspaceId, params)",
+        "getAction(actionId, authContext, workspaceId)",
+        "startAction(actionId, authContext, workspaceId)",
+        "completeAction(actionId, authContext, workspaceId)",
+        "recordImpactDelta(actionId, metrics, authContext, workspaceId)"
+      ],
+      "state_machine": {
+        "draft": ["assigned", "cancelled"],
+        "assigned": ["in_progress", "blocked", "cancelled"],
+        "in_progress": ["blocked", "completed", "assigned"],
+        "blocked": ["assigned", "cancelled"],
+        "completed": [],
+        "verified": [],
+        "cancelled": [],
+        "overdue": ["assigned", "blocked", "cancelled"]
+      },
+      "enforcement_rules": [
+        "action.evidence.required.completed - Completion requires evidence",
+        "action.blocker.required.blocked - Blocked status requires reason",
+        "action.priority.preservation - Critical priority preserved",
+        "action.version.conflict - Optimistic locking prevents concurrent modifications"
+      ],
+      "api_endpoints": [
+        "POST /api/actions (create)",
+        "GET /api/actions (list)",
+        "GET /api/actions/[actionId] (get)",
+        "PATCH /api/actions/[actionId] (update)",
+        "POST /api/actions/[actionId]/start (start)",
+        "POST /api/actions/[actionId]/complete (complete)",
+        "POST /api/actions/[actionId]/impact-delta (record impact)",
+        "GET /api/engagements/[engagementId]/actions (list by engagement)",
+        "PATCH /api/engagements/[engagementId]/actions/[actionId] (update by engagement)"
+      ],
+      "workspace_enforcement": "✓ All methods enforce workspaceId parameter",
+      "auth_enforced": "✓ ACTION_CREATE, ACTION_UPDATE, ACTION_VIEW capabilities",
+      "idempotency": "✓ Idempotency-Key header required on POST",
+      "DTO_boundary": "✓ No internal fields exposed in response",
+      "test_coverage_added": "~95 tests (service + API route integration)",
+      "compilation": "✓ Next.js build: Compiled successfully in 7.4s",
+      "committed": "pending"
+    }
   },
   "deployment_readiness": {
     "phase_9_non_db_gates": "PASS",
