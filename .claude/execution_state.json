@@ -1,6 +1,6 @@
 {
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "Phase 9 — Growth Operating Engines",
+  "current_phase": "Phase 12 — Experiment + Outcome Validation",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "phase_9_slices": {
     "Slice 1: Growth Operating Engines Domain Contracts": {
@@ -654,6 +654,50 @@
       "committed": "f42b35c"
     }
   },
+  "phase_12_status": {
+    "name": "Experiment + Outcome Validation",
+    "description": "Make risky growth actions test-first and measurable",
+    "current_work": "Phase 12 Slice 1: Experiment Domain Contracts - COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "slice_1_experiment_domain": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "DOMAIN_CONTRACT_ONLY",
+      "files": [
+        "src/domain/experiment/experiment.ts",
+        "src/__tests__/domain/experiment/experiment.test.ts"
+      ],
+      "enums": [
+        "ExperimentStatus (draft|approved|active|completed|analyzed|archived)",
+        "HypothesisType (revenue_growth|retention_improvement|cost_reduction|market_expansion|product_pivot|operational_efficiency|risk_mitigation)",
+        "RigorLevel (exploratory|standard|strict|controlled)",
+        "OutcomeClassification (success|partial|failure|inconclusive)"
+      ],
+      "interfaces": [
+        "Hypothesis (statement, type, successCriterion, failureRisk, testDurationWeeks, reviewCadenceWeeks)",
+        "ExperimentPlan (hypothesis, actionDescription, targetAudience, controlGroup, primaryMetric, secondaryMetrics, confoundingFactors, etc.)",
+        "ExperimentExecution (startedAt, targetEndDate, actualEndDate, status, percentComplete, deviations, notes)",
+        "ExperimentResult (classification, primaryMetricValue, primaryMetricChange, secondaryResults, confidenceLevel, roi, paybackPeriodDays)",
+        "ExperimentLearning (keyFinding, implications, confidence, nextAction, howToImproveMetric)",
+        "Experiment (id, workspaceId, engagementId, status, name, plan, execution, result, learning, linkedDecisionId)"
+      ],
+      "validators": [
+        "validateHypothesis(hypothesis) → string[]",
+        "validateExperimentPlan(plan) → string[]",
+        "validateExperimentExecution(execution) → string[]",
+        "validateExperimentResult(result) → string[]",
+        "validateExperiment(experiment) → string[]"
+      ],
+      "test_coverage": "70+ unit tests covering: hypothesis validation (success/failure thresholds, duration), plan validation (metrics, approvals, risk), execution tracking, result measurement, outcome classification, full experiment validation, status lifecycle",
+      "validation_rules": {
+        "hypothesis": "Statement >= 20 chars, positive success threshold, negative failure threshold, testDuration >= 1 week, reviewCadence <= testDuration",
+        "plan": "Action description >= 20 chars, 1+ secondary metrics, 1+ confounding factors identified, non-negative cost, critical-risk requires approvals",
+        "execution": "Non-draft status requires startedAt, percentComplete 0-100, completed status requires actualEndDate",
+        "result": "Primary metric value/change required, successThresholdMet must match classification, confidence 0-100, non-negative cost",
+        "experiment": "UUID id, workspaceId, engagementId required, name >= 5 chars, cascading plan/execution/result validation"
+      },
+      "compilation": "✓ npm run build succeeds, tsc --noEmit passes (except pre-existing adapter-pg)",
+      "committed": "pending"
+    }
+  },
   "deployment_readiness": {
     "phase_9_non_db_gates": "PASS",
     "static_gates": "PASS (tsc --noEmit: 0 new errors, npm run build: ✓ Compiled successfully)",
@@ -671,7 +715,7 @@
       "resolution": "Pre-existing environment issue, not code-related"
     }
   ],
-  "last_commit": "Phase 11 Slice 2: Constraint Enforcement API - Execution Feasibility Gates",
-  "pushed": true,
-  "notes": "Phase 11 complete with both slices wired: Execution Certainty (soft constraint scoring) and Constraint Enforcement (hard blocking gates). All code compiles successfully (except pre-existing DB adapter issue). Ready for Phase 12 (Experiment + Outcome Validation)."
+  "last_commit": "Phase 12 Slice 1: Experiment Domain Contracts",
+  "pushed": false,
+  "notes": "Phase 12 started: Experiment domain contract defines hypothesis, plan, execution, result, and learning models. 5 validators ensure rigor (hypothesis thresholds, plan metrics/approvals, execution timeline, result classification, experiment cascading validation). 70+ tests verify all validation rules. Domain-only slice (no services/API yet). Proceeding to Slice 2: Experiment Lifecycle Service."
 }
