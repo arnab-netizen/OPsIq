@@ -180,6 +180,7 @@
     }
   },
   "ready_for": "Phase 13 Slice 2 (STAGE 17) Database Schema Finalization [DB_BLOCKED_NETWORK] OR continue ADDENDUM F LOCAL_SAFE_PENDING_SLICES",
+  "current_phase": "ADDENDUM F: Self-Serve Onboarding Shell (NON_DB_BUILDABLE_NOW) - 67% Complete",
   "addendum_f_status": {
     "data_intake_contracts": {
       "name": "Data Intake Contracts (NON_DB_BUILDABLE_NOW)",
@@ -489,10 +490,59 @@
         "briefing_comparison": "Tracks metric trends (improving/declining/stable) and status changes (approved decisions, completed actions, new/resolved issues)",
         "mock_data": "generateMockOwnerBriefing() produces realistic data with 4 key metrics, 2 critical issues, 2+ action items, decision with ROI, opportunities, and risks"
       },
-      "committed": "pending",
-      "pushed": false,
+      "committed": "34ff2cb",
+      "pushed": true,
       "db_dependency": "NONE (pure aggregation logic, no persistence or DB queries)",
       "notes": "Seventh non-DB buildable item from ADDENDUM F. Implements comprehensive owner briefing engine: metric aggregation with trend and target tracking, critical issue identification with severity/impact classification, action prioritization by urgency/impact, risk summarization, and comprehensive briefing generation with comparison across periods. All 35 tests pass. LOCAL_SAFE_PENDING_SLICES progress: 7 of 12 complete (58%)."
+    },
+    "audit_export_packet_generator": {
+      "name": "Audit Export Packet Generator (NON_DB_BUILDABLE_NOW)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "AUDIT_EXPORT_WITH_PACKET_GENERATION",
+      "files": [
+        "src/domain/audit-export/audit-export-packet.ts",
+        "src/__tests__/domain/audit-export/audit-export-packet.test.ts"
+      ],
+      "schemas": [
+        "AuditEventSchema",
+        "ExportFormatSchema",
+        "ExportPacketMetadataSchema",
+        "ExportPacketSchema",
+        "BatchExportResultSchema"
+      ],
+      "algorithms": [
+        "generatePacketId() - Unique packet ID generation",
+        "calculateChecksum(content) - SHA256 checksum calculation",
+        "generateSignature(content, secretKey) - HMAC-SHA256 signature generation",
+        "redactAuditEvent(event) - Redact personal data (IP, email, sensitive details)",
+        "anonymizeAuditEvent(event) - Anonymize user IDs with MD5 hash",
+        "formatEventsAsJSON/CSV/JSONL(events) - Event formatting in 3 formats",
+        "simulateCompression(content, type) - Compression simulation (gzip/brotli)",
+        "generateExportPacket(events, config, secretKey?) - Single packet generation",
+        "generatePaginatedPackets(events, config, secretKey?) - Paginated export generation",
+        "generateBatchExportResult(packets) - Batch result aggregation",
+        "verifyPacketIntegrity(packet) - Integrity verification via checksum",
+        "verifyPacketSignature(packet, secretKey) - Signature verification"
+      ],
+      "test_coverage": "37 tests covering audit events, export formats, packet generation, redaction, anonymization, formatting (JSON/CSV/JSONL), compression, pagination, batch export, integrity verification, signature verification, mock data generation",
+      "gates_run": "npm run build (✓ PASS), npx tsc --noEmit (✓ PASS), npx prisma validate (✓ PASS), npm test (✓ 37 pass)",
+      "compilation": "✓ TypeScript compiles without errors (fixed Zod z.record() arity, defaultExportFormat helper for test objects)",
+      "wiring_proof": {
+        "audit_events": "9 required fields + 5 optional fields (details, ipAddress, userAgent, changesBefore, changesAfter)",
+        "export_formats": "Supports json/csv/jsonl, redaction, anonymization, compression (none/gzip/brotli), pagination, time range filtering",
+        "packet_generation": "Single packet generation with metadata, checksums, optional signatures, and integrity checks",
+        "pagination": "Configurable page sizes with correct total packet counts in metadata",
+        "redaction": "Masks IP addresses, redacts email/phone fields, truncates user agents",
+        "anonymization": "MD5-based user ID anonymization with consistency (same ID → same hash)",
+        "formatting": "JSON (pretty-printed), CSV (with quote escaping), JSONL (newline-delimited)",
+        "compression": "Simulated compression with configurable ratios (gzip 60-70%, brotli 65-75%)",
+        "verification": "SHA256 checksum and HMAC-SHA256 signature verification with secret key support",
+        "mock_data": "generateMockAuditEvents(count), generateMockExportWithConfig(format)"
+      },
+      "committed": "1388229",
+      "pushed": true,
+      "db_dependency": "NONE (pure packet generation and mock data, no DB persistence)",
+      "notes": "Eighth non-DB buildable item from ADDENDUM F (Item 9). Implements complete audit export packet generator: audit event schemas with optional personal data fields, export format configuration with redaction/anonymization options, packet generation with checksums and signatures, 3 export formats (JSON/CSV/JSONL), compression simulation, pagination support, and integrity verification. All 37 tests pass, TypeScript compiles without errors. LOCAL_SAFE_PENDING_SLICES progress: 8 of 12 complete (67%)."
     }
   },
   "db_status": "DB_BLOCKED_ENVIRONMENT_NETWORK_UNREACHABLE",
