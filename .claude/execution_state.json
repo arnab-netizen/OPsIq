@@ -3,7 +3,7 @@
   "audit_date": "2026-05-11",
   "audit_result": "ALL PHASES 0-12 PRESENT_RUNTIME_VERIFIED",
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "PRIORITY ORDER #9: Complete Tests for Wired Systems (7 of ~20+ complete = 35%) — Financial, Priority, Decision Confidence, Access, Log, InMemoryCache, CacheFactory",
+  "current_phase": "PRIORITY ORDER #9: Complete Tests for Wired Systems (8 of ~20+ complete = 40%) — Financial, Priority, Decision Confidence, Access, Log, InMemoryCache, CacheFactory, AuditEventHashChainValidator",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "gates_status": {
     "npm_run_build": "✓ PASS",
@@ -722,6 +722,46 @@
     "⏳ Deployment-readiness full audit"
   ],
   "priority_order_9_wired_systems_tests": {
+    "audit_event_hash_chain_validator": {
+      "name": "Audit Event Hash Chain Validator Tests (PRIORITY ORDER #9)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_COMPREHENSIVE_TESTS",
+      "files": [
+        "src/services/audit-event-hash-chain-validator.ts (existing)",
+        "src/__tests__/services/audit-event-hash-chain-validator.test.ts (new tests)"
+      ],
+      "test_coverage": "32 tests covering hash computation, single event validation, chain validation, integrity violations, payloads, error messages, real-world scenarios, consistency, and edge cases",
+      "test_categories": [
+        "Hash computation: deterministic SHA256, different payloads/eventTypes/timestamps/previousHash",
+        "Single event validation: valid/invalid hashes, return values",
+        "Empty and single-event chains",
+        "Valid multi-event chains: 2-event, 5-event, 20-event sequences",
+        "Chain integrity violations: broken chains, corrupted hashes, detected corruption",
+        "Payload handling: complex nested, changes, special characters, unicode",
+        "Error messages: detailed chain/hash mismatch messages",
+        "Real-world scenarios: decision lifecycle, action execution, multi-event sequences",
+        "Consistency & determinism: identical hashes on repeated calls",
+        "Edge cases: empty payloads, long event types, large payloads, old/future timestamps",
+        "Hash collision resistance: different inputs produce different hashes"
+      ],
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npm test (✓ 32/32 pass), npx prisma validate (✓)",
+      "compilation": "✓ TypeScript compiles without errors (added AuditEvent type alias)",
+      "wiring_proof": {
+        "class": "AuditEventHashChainValidator (static methods)",
+        "methods": [
+          "validateChain(events[]): Validates immutable hash chain integrity",
+          "computeHash(previousHash, eventType, payload, recordedAt): SHA256 hash computation",
+          "validateEventHash(event): Single event hash validation for real-time inserts"
+        ],
+        "usage": "Core audit infrastructure for ensuring immutable audit trails and chain integrity validation",
+        "input": "Array of audit events with id, previousHash, hash, eventType, payload, recordedAt",
+        "output": "Boolean true on valid chain, throws detailed error on corruption"
+      },
+      "committed": "0ebbe86",
+      "pushed": true,
+      "db_dependency": "NONE (pure cryptographic validation logic, 0 DB queries)",
+      "notes": "Fulfills PRIORITY ORDER #9 Item 7 (missing tests for wired cryptographic service). AuditEventHashChainValidator existed with 0 tests. Added 32 comprehensive tests covering hash computation (deterministic SHA256), chain validation (empty/single/multi-event), integrity violation detection, payload handling (nested/special chars/unicode), real-world scenarios (decision/action lifecycles), consistency/determinism checks, and edge cases. Service is critical for audit immutability. All 32 tests pass; non-DB gates pass; TypeScript compiles without errors."
+    },
     "priority_engine_service": {
       "name": "Priority Engine Service Tests (PRIORITY ORDER #9)",
       "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
