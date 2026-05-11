@@ -3,7 +3,7 @@
   "audit_date": "2026-05-11",
   "audit_result": "ALL PHASES 0-12 PRESENT_RUNTIME_VERIFIED",
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "PRIORITY ORDER #9: Add Tests for Wired Systems - Priority Engine Tests Complete (46 tests)",
+  "current_phase": "PRIORITY ORDER #9: Complete Tests for Wired Systems (4 of ~20+ complete = 20%) — Financial, Priority, Decision Confidence, Access",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "gates_status": {
     "npm_run_build": "✓ PASS",
@@ -800,6 +800,47 @@
       "pushed": true,
       "db_dependency": "NONE (pure calculation logic, 0 DB queries)",
       "notes": "Fulfills PRIORITY ORDER #9 (missing tests for wired systems <20 tests). Financial normalization service existed with 0 tests. Added 49 comprehensive tests covering all calculation pathways, edge cases, boundary conditions, real-world scenarios, and consistency checks. Service is wired to owner-dashboard and decision-evidence services. All tests pass; non-DB gates pass."
+    },
+    "access_control_service": {
+      "name": "Access Control Service Tests (PRIORITY ORDER #9)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_COMPREHENSIVE_TESTS",
+      "files": [
+        "src/services/auth/access.ts (existing)",
+        "src/__tests__/services/auth/access.test.ts (new tests)"
+      ],
+      "test_coverage": "51 tests covering all functions and edge cases",
+      "test_categories": [
+        "canEdit() function: permission matrix for admin/operator/viewer, role-based access",
+        "canView() function: universal view access across all roles",
+        "canApprove() function: admin-only approval capability",
+        "Permission matrix: complete authorization hierarchy (admin > operator > viewer)",
+        "Role-based checks: edit capability, view capability, approval capability, restricted roles",
+        "Determinism: consistency across multiple calls, no state mutation, rapid sequential calls",
+        "Edge cases: boolean return values (not truthy/falsy), type strictness",
+        "Real-world scenarios: superuser, power user, read-only user, workflow patterns, least privilege, authorization hierarchy"
+      ],
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npm test (✓ 51/51 pass)",
+      "compilation": "✓ TypeScript compiles without errors",
+      "wiring_proof": {
+        "functions": [
+          "canEdit(role: UserRole): boolean - Checks if user can edit (admin, operator)",
+          "canView(role: UserRole): boolean - Checks if user can view (all roles)",
+          "canApprove(role: UserRole): boolean - Checks if user can approve (admin only)"
+        ],
+        "roles": [
+          "admin: full permissions (view, edit, approve)",
+          "operator: edit permissions (view, edit)",
+          "viewer: view-only permissions (view)"
+        ],
+        "input": "UserRole union type: 'admin' | 'operator' | 'viewer'",
+        "output": "Boolean true/false for permission checks",
+        "authorization_hierarchy": "Admin (3 perms) > Operator (2 perms) > Viewer (1 perm)"
+      },
+      "committed": "PENDING",
+      "pushed": false,
+      "db_dependency": "NONE (pure permission checking logic, 0 DB queries)",
+      "notes": "Fulfills PRIORITY ORDER #9 Item 3 (missing tests for wired RBAC service). Access control service existed with 0 tests. Added 51 comprehensive tests covering all 3 permission functions across all 3 roles, permission matrix validation, role-based access control, deterministic behavior, edge cases with strict boolean returns, and real-world authorization scenarios. Service is core to security enforcement. All tests pass; non-DB gates pass."
     }
   },
   "blocked_recovery_queue": [
