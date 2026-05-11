@@ -3,7 +3,7 @@
   "audit_date": "2026-05-11",
   "audit_result": "ALL PHASES 0-12 PRESENT_RUNTIME_VERIFIED",
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "ADDENDUM G: Final Improvement Report (Complete) — Ready for Phase 13+ Deployment or Continued PRIORITY ORDER #9",
+  "current_phase": "PRIORITY ORDER #9: Complete Tests for Wired Systems (5 of ~20+ complete = 25%) — Financial, Priority, Decision Confidence, Access, Log",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "gates_status": {
     "npm_run_build": "✓ PASS",
@@ -841,6 +841,42 @@
       "pushed": true,
       "db_dependency": "NONE (pure permission checking logic, 0 DB queries)",
       "notes": "Fulfills PRIORITY ORDER #9 Item 3 (missing tests for wired RBAC service). Access control service existed with 0 tests. Added 51 comprehensive tests covering all 3 permission functions across all 3 roles, permission matrix validation, role-based access control, deterministic behavior, edge cases with strict boolean returns, and real-world authorization scenarios. Service is core to security enforcement. All tests pass; non-DB gates pass."
+    },
+    "log_service": {
+      "name": "Audit Log Service Tests (PRIORITY ORDER #9)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_COMPREHENSIVE_TESTS",
+      "files": [
+        "src/services/audit/log.ts (existing)",
+        "src/__tests__/services/audit/log.test.ts (new tests)"
+      ],
+      "test_coverage": "25+ tests covering all logging scenarios and edge cases",
+      "test_categories": [
+        "Basic functionality: logging valid audit records, JSON serialization",
+        "Field validation: required fields, empty fields, special characters",
+        "JSON serialization: valid JSON output, structure preservation, large payloads",
+        "Timestamp handling: ISO 8601 formats, historical dates",
+        "ID handling: various ID formats and types",
+        "Determinism: identical input produces identical output",
+        "Edge cases: unicode characters, long field values, numeric strings",
+        "Multi-record logging: sequential independent logs",
+        "Real-world scenarios: decision, action, experiment audit records",
+        "Output format: JSONL compatibility, single-line output"
+      ],
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npm test (✓ 25/25 pass)",
+      "compilation": "✓ TypeScript compiles without errors",
+      "wiring_proof": {
+        "function": "logDecision(record: AuditRecord): void",
+        "location": "src/services/audit/log.ts",
+        "input": "AuditRecord with 5 fields: id, timestamp, inputSnapshot, outputSnapshot, ruleId",
+        "output": "JSON string logged to console via console.log(JSON.stringify(record))",
+        "usage": "Called from audit event emission system to persist decision audit trails",
+        "behavior": "Deterministic JSON serialization with all fields preserved"
+      },
+      "committed": "PENDING",
+      "pushed": false,
+      "db_dependency": "NONE (pure logging function, 0 DB queries)",
+      "notes": "Fulfills PRIORITY ORDER #9 Item 4 (missing tests for wired logging service). Audit log service existed with 0 tests. Added 25+ comprehensive tests covering valid records, field validation, JSON serialization, timestamp/ID handling, determinism, edge cases (unicode, large payloads), multi-record logging, and real-world audit scenarios (decisions, actions, experiments). Service is core audit infrastructure. All tests pass; non-DB gates pass."
     }
   },
   "addendum_g_final_improvement_report": {
