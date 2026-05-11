@@ -693,8 +693,8 @@
         "PortfolioViewSchema (aggregated portfolio with 7 fields and 2 arrays)",
         "TabType (overview/engagements/risks/actions)"
       ],
-      "committed": "PENDING",
-      "pushed": false,
+      "committed": "fd34dbc",
+      "pushed": true,
       "db_dependency": "NONE (pure UI shell with mock data, no DB calls)",
       "notes": "ADDENDUM F Item 17 (Portfolio Command Center mock-backed shell). Implements tabbed portfolio management UI with mock engagement data (5 engagements with varied statuses, health scores, impact levels). Features: overview with aggregate metrics, engagement list with filtering/sorting, top risks with mitigation, and action items by engagement. All 48 tests pass comprehensive mock data generation, schema validation, edge case handling, and real-world scenario checks. Ready for real data source integration."
     }
