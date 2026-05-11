@@ -46,14 +46,29 @@
     "slice_name": "Error Tracking + Monitoring (non-DB components)",
     "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "classification": "ERROR_TRACKING_INFRASTRUCTURE (non-DB, environment-agnostic)",
-    "files": [
-      "src/infra/error-tracking.ts",
-      "src/__tests__/infra/error-tracking.test.ts",
-      "src/app/api/health/route.ts (enhanced)"
+    "components": [
+      {
+        "name": "Error Classification Service (classifyError)",
+        "files": [
+          "src/infra/error-tracking.ts",
+          "src/__tests__/infra/error-tracking.test.ts"
+        ],
+        "test_coverage": "35+ tests covering error classification, context extraction, logging, config validation",
+        "committed": "a262f6d",
+        "pushed": "PUSH_BLOCKED_ENVIRONMENT (GitHub PAT lacks workflow scope)"
+      },
+      {
+        "name": "Error Handler Wrapper (withErrorHandling)",
+        "files": [
+          "src/infra/error-handler.ts",
+          "src/__tests__/infra/error-handler.test.ts"
+        ],
+        "test_coverage": "38 comprehensive tests covering handler success, error catching/classification, auth/workspace checks, error types, response format, concurrent requests",
+        "committed": "8a35410",
+        "pushed": true,
+        "description": "High-order function wrapper that integrates error tracking into route handlers. Pre-checks auth/workspace, catches errors, classifies them, reports to tracking, and returns formatted error responses."
+      }
     ],
-    "test_coverage": "35+ tests covering error classification, context extraction, logging, config validation",
-    "gates_run": "npm run build (✓ PASS), npx tsc --noEmit (✓ PASS), npx prisma validate (✓ PASS)",
-    "compilation": "✓ TypeScript compiles without errors",
     "error_categories": [
       "AUTH_ERROR (401/403)",
       "VALIDATION_ERROR (400)",
@@ -62,21 +77,11 @@
       "WORKSPACE_ERROR (403)",
       "INTERNAL_ERROR (500)"
     ],
-    "wiring_proof": {
-      "service": "src/infra/error-tracking.ts",
-      "integration": "src/app/api/health/route.ts uses reportError() on failures",
-      "exported_functions": [
-        "classifyError(error, context) → ClassifiedError",
-        "formatErrorForLog(classified) → string (JSON)",
-        "reportError(classified) → void (console/Sentry)",
-        "extractErrorContext(error) → Record<string, unknown>",
-        "getErrorTrackingConfig() → config"
-      ]
-    },
-    "committed": "a262f6d",
-    "pushed": "PUSH_BLOCKED_ENVIRONMENT (GitHub PAT lacks workflow scope)",
+    "gates_run": "npm run build (✓ PASS), npx tsc --noEmit (✓ PASS), npx prisma validate (✓ PASS)",
+    "compilation": "✓ TypeScript compiles without errors",
+    "test_summary": "73+ total tests (35 classification + 38 wrapper handling)",
     "db_dependency": "NONE (non-DB infrastructure, no DATABASE_URL required)",
-    "notes": "Implemented Slice 4 (non-DB) while waiting for DATABASE_URL. Sentry integration stub documented but requires @sentry/nextjs installation + SENTRY_DSN env var. Health check endpoint enhanced with memory/uptime monitoring and integrated error tracking."
+    "notes": "Phase 13 Slice 4 now includes both error classification service and error handler wrapper. Wrapper provides consistent error handling across routes with pre-checks for auth/workspace enforcement and formatted error responses. Both components are non-DB and all gates pass."
   },
   "phase_13_slice_8_status": {
     "slice_name": "Readiness + Deployment Validation",
