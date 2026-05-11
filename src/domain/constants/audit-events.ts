@@ -112,6 +112,7 @@ export const AUDIT_EVENTS = {
   OPERATOR_ITEM_UPDATED: "operator_item.updated",
   OPERATOR_ITEM_OVERRIDDEN: "operator_item.overridden",
   OPERATOR_ITEM_BLOCKED: "operator_item.blocked",
+  OPERATOR_QUEUE_VIEWED: "operator.queue_viewed",
 
   // KPI
   KPI_DEFINED: "kpi.defined",
@@ -206,9 +207,21 @@ export const AUDIT_EVENTS = {
   // Learning
   LEARNING_RECORDED: "learning.recorded",
 
+  // Experiment
+  EXPERIMENT_CREATED: "experiment.created",
+  EXPERIMENT_APPROVED: "experiment.approved",
+  EXPERIMENT_STARTED: "experiment.started",
+  EXPERIMENT_PROGRESS_UPDATED: "experiment.progress_updated",
+  EXPERIMENT_RESULT_RECORDED: "experiment.result_recorded",
+  EXPERIMENT_LEARNING_RECORDED: "experiment.learning_recorded",
+
   // Billing/Subscription
   SUBSCRIPTION_ACTIVATED: "subscription.activated",
   WEBHOOK_RETRY_THRESHOLD_EXCEEDED: "webhook.retry_threshold_exceeded",
+
+  // Owner Mode
+  OWNER_DASHBOARD_VIEWED: "owner.dashboard_viewed",
+  OWNER_CONFIG_UPDATED: "owner.config_updated",
 
   // System
   SYSTEM_HEALTH_CHECK: "system.health_check",

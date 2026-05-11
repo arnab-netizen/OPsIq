@@ -109,6 +109,10 @@ export const CAPABILITIES = {
   FILE_UPLOAD: "file:upload",
   FILE_VIEW: "file:view",
   FILE_DELETE: "file:delete",
+
+  // Owner Mode
+  OWNER_VIEW: "owner:view",
+  OWNER_MANAGE: "owner:manage",
 } as const;
 
 export type CapabilityName =

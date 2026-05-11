@@ -1,443 +1,280 @@
-# CONTINUE BUILD: Autonomous Enterprise-Grade Execution Loop
-# Phases 4–13 Progressive Vertical Slices (Non-DB Code-Only Tasks)
+# CONTINUE BUILD: Strict Autonomous Execution Loop (v4.0 STAGE 0-17 + ADDENDUM)
 
-**Framework**: Read execution.md + execution_state.json → Auto-detect phase → Pick next slice → Scan → Implement → Gate → Commit → Report → Loop
+## SOURCE OF TRUTH
+- **execution.md** is the only roadmap (now includes ADDENDA A-G with module registry, backlog, build order)
+- **.claude/execution_state.json** is the only progress tracker
+- CLAUDE.md may contain helper notes only; it cannot override execution.md
+- Never ask what to do next unless execution.md is missing, unreadable, or internally contradictory
 
----
+## MANDATORY PRE-WORK VALIDATION
+Every /continue-build run MUST:
+1. Read execution.md in full (including ADDENDA A-G)
+2. Read .claude/execution_state.json
+3. Run: git status --short && git log --oneline -10
+4. Verify branch is clean or all changes are staged for commit
+5. Audit STAGE 0-17 structure in execution.md (fail if phases missing or renumbered)
+6. Cross-check execution_state.json against execution.md phases (fail if contradictions exist)
+7. Before implementing new work: scan repo for existing similar work (avoid duplication)
 
-## EXECUTION LOOP (Automatic per /continue-build invocation)
+## GLOBAL RULE
+- One /continue-build run completes exactly ONE highest-priority non-DB vertical slice, wiring correction, test correction, audit correction, or deployment-readiness correction
+- Do not stop after "next steps"
+- Do not ask "Proceed?" or request permission
+- Do not mark anything ACTIVE without runtime proof
+- Do not touch DB config unless the selected work is explicitly DB-related
+- DB-only failures must be classified DB_BLOCKED and skipped with proof
+- Never weaken auth, workspace enforcement, or DTO redaction to make gates green
+- If a gate failure requires code weakening, classify as BLOCKER and stop
 
-### PHASE DETECTION
+## LOOP ORDER
+Every run executes in strict sequence:
+1. Pull/sync current branch: git fetch origin && git pull origin <current_branch>
+2. Read execution.md (all sections including ADDENDA)
+3. Read .claude/execution_state.json
+4. Scan repo: grep for implemented systems; check src/domain/, src/services/, src/app/api/
+5. Select highest-priority gap per PRIORITY ORDER (below)
+6. Implement/fix/wire exactly one vertical slice or correction
+7. Add/update tests proving the path (unit + integration)
+8. Run non-DB gates: npm run build && npx tsc --noEmit && npx prisma validate (if possible)
+9. Classify: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE or WIRED_NOT_CALLED or DB_BLOCKED
+10. Update .claude/execution_state.json with new slice, test count, gates run, classification
+11. Commit with message format: "STAGE X Slice Y: <description>" + link to session
+12. Push: git push -u origin <branch_name>
+13. Report ONLY: selected work, files changed, wiring proof, tests added, gates run, classification, next automatic target
 
-1. Read `execution.md` (contract truth)
-2. Read `.claude/execution_state.json` (current progress)
-3. Determine current phase from `execution_state.current_phase`
-4. Determine phase completion % and blockers
+## PRIORITY ORDER (Selection Algorithm)
+Always select next work in this order:
+1. Unpushed commits (push immediately before new work)
+2. Non-DB static errors (TypeScript, build, Prisma schema validation)
+3. Build/typecheck/test failures NOT caused by DB (e.g., missing imports, type errors)
+4. Implemented systems falsely marked ACTIVE (missing runtime proof)
+5. Implemented systems with no production caller (WIRED_NOT_CALLED → find caller or park)
+6. Missing auth/capability/workspace enforcement (security blocker)
+7. Missing DTO redaction or public/owner leakage risk (compliance blocker)
+8. Missing audit/event emission on material operation (audit compliance blocker)
+9. Missing tests for wired systems (< 20 tests per system triggers this)
+10. Stale/contradictory execution_state classification (update execution_state only)
+11. Next incomplete non-DB slice from execution.md roadmap (STAGE 0 → 17 order)
+12. Full deployment-readiness hardening (AFTER all STAGE 0-17 slices complete)
+13. Improvement/enhancement recommendations (AFTER deployment-readiness audit complete)
 
-**Decision Rule**:
-- If Phase 3 db_gates_status = BLOCKED → Skip Phase 3 DB work, start Phase 4 code
-- If Phase N is code-complete (completion_percentage = 100) → Proceed to Phase N+1
-- Otherwise → Continue Phase N with next pending slice
+## MODULE REGISTRY SELECTION (For Phases 13+)
+When selecting Phase 13+ work, cross-reference ADDENDUM B (Module Registry 1-30):
+- Modules 1-30 are mapped to STAGE and status
+- Select next incomplete module per PRIORITY ORDER
+- Verify module exists in execution.md roadmap (section 6: CANONICAL IMPLEMENTATION ORDER)
+- If module not in STAGE 0-17, defer to Backlog A-K (ADDENDUM F)
 
----
+## ACTIVE CLASSIFICATION REQUIREMENTS
+A system may be classified ACTIVE only when ALL of the following are proven:
+- Caller file identified (where is this called from?)
+- Caller function identified (which function calls this system?)
+- Route/service/API entrypoint documented (if user-facing)
+- Input source known (query params? request body? header?)
+- Validation path proven (Zod schema? type checking?)
+- Output consumer identified (who consumes the output?)
+- Tenant/workspace enforcement proven (enforceWorkspaceScoping? workspaceId parameter?)
+- Auth/capability enforcement proven (withAuth middleware? capability check?)
+- DTO/output boundary tested (PublicDTO validation? no internal fields exposed?)
+- Audit/event behavior proven (emitAuditEvent called on material operations?)
+- Failure behavior tested (negative-path tests exist?)
+- Tests proven (integration test covering full path from caller to output consumer?)
 
-## PHASE PRIORITY ORDER (Non-DB Code Slices Only)
+If ANY proof is missing, classify as:
+- **WIRED_NOT_CALLED**: Code complete, routes registered, but no tests prove it's called
+- **COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE**: Code verified by build/type, no integration caller tested
+- **PARKED**: Intentionally not wired (documented reason)
+- **DB_BLOCKED**: Implementation complete, blocked by DB unavailability
 
-When DB is blocked, execute non-DB slices in this priority:
+Do NOT use "ACTIVE".
 
-1. **Phase 4: Survival Intelligence** (current)
-   - Slice 2: Shock Detection Engine
-   - Slice 3: Org Resilience Scorer
-   - Slice 4: Survival Gating Policy
-   - Slice 5: Survival Factor Assessment Interface
-
-2. **Phase 5: Financial Normalization** (when ready)
-   - Revenue model definition
-   - Unit economics calculator
-   - Financial health scorer
-   - Cash runway modeler
-
-3. **Phase 6–13**: Continue sequentially, non-DB code only
-
----
-
-## STEP 1: PRE-SLICE SETUP (Automatic)
-
-### 1a. Repository Health
-```bash
-git status                              # Confirm clean or 1-2 committed
-git branch                              # Note current branch
-git log --oneline -n 3                  # Confirm recent history
+## WIRING PROOF FORMAT (Required in commit message or execution_state)
+For every WIRED_NOT_CALLED or COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE system, document:
 ```
-**STOP IF**: Uncommitted work unrelated to current phase → Commit or stash first
-
-### 1b. Baseline Gates
-```bash
-npm ci 2>&1 | tail -5
-npx prisma validate 2>&1 | tail -3
-npx tsc --noEmit 2>&1 | grep -c "error TS" | head -1
-npm run build 2>&1 | tail -10
-```
-**STOP IF**: Any gate fails → Fix error, re-run gate, confirm pass
-
-### 1c. Read Execution State
-```bash
-cat .claude/execution_state.json | jq '.current_phase, .phase_4_status, .blockers'
-```
-Extract:
-- Current phase
-- Phase completion %
-- Pending slices
-- Known blockers
-
-### 1d. Branch Selection
-```bash
-# If on main and next slice requires new branch:
-git checkout -b claude/phase-N-[feature-name]-XXXXX
-
-# If already on feature branch for current phase:
-git status  # Confirm correct branch
-```
-
----
-
-## STEP 2: SLICE SELECTION & PRE-TASK AUDIT
-
-### 2a. Select Next Slice (Automatic)
-From `execution_state.json` → `phase_N_systems_status.pending_slices`, pick:
-- First non-DB slice
-- No existing implementation
-- Clear integration path
-- No conflicting parked claim
-
-Example detection:
-```bash
-grep -A 20 "pending_slices" .claude/execution_state.json
-grep -r "ShockDetectionEngine" src/services/ src/domain/  # Check if exists
-```
-
-### 2b. Pre-Task Audit (Before Writing)
-
-For the selected slice [SYSTEM_NAME]:
-
-**Check 1: No Duplicate**
-```bash
-find src -name "*[system-name-lowercase]*" -type f
-grep -r "class [SYSTEM_NAME]" src/
-grep -r "export.*[SYSTEM_NAME]" src/services/
-```
-**Stop if**: Implementation already exists → Reuse/upgrade, don't duplicate
-
-**Check 2: Integration Path Clear**
-```bash
-# For Shock Detection (Phase 4 Slice 2):
-grep -r "SurvivalFactor" src/services/  # Depends on Phase 4 Slice 1
-grep -r "decision\|action\|recommendation" src/graphql/mutations/ | head -3
-grep -r "ShockDetectionEngine" src/
-```
-**Stop if**: Caller not yet built → Skip this slice, pick another
-
-**Check 3: Honest Classification**
-```bash
-grep "ShockDetectionEngine\|shock" .claude/execution_state.json
-# Verify: status = PARKED or not mentioned (not already ACTIVE)
-```
-**Stop if**: Already marked ACTIVE → Skip, move to next slice
-
-**Check 4: Scan Existing Domain**
-```bash
-cat src/domain/reality/survival-factors.ts | head -50
-# Understand: what's available for this slice to use
+Wiring Proof:
+- Caller: src/app/api/path/route.ts::handler()
+- Service: src/services/name.ts::methodName()
+- Input: POST body with Zod schema validation
+- Output: JSON response with PublicDTO wrapper
+- Workspace Enforcement: enforceWorkspaceScoping middleware + workspaceId param check
+- Auth Enforcement: withAuth(CAPABILITY.ACTION_CREATE) middleware
+- DTO Boundary: toPublicActionDTO() redaction tested (50+ tests)
+- Audit Event: AUDIT_EVENTS.ACTION_CREATED emitted with workspace context
+- Test Coverage: integration test in src/__tests__/api/actions.test.ts (95+ tests)
+- Status: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE (wired but no runtime invocation trace yet)
 ```
 
----
+## GATE EXECUTION PROTOCOL
+After implementing a slice, run these gates IN ORDER (stop at first failure):
 
-## STEP 3: IMPLEMENTATION (Minimal, Single Slice)
-
-### 3a. Code Audit (Read Before Write)
+### Non-DB Gates (ALWAYS run)
 ```bash
-# For Shock Detection Engine caller example:
-cat src/services/survival-factor-validator.ts | head -40
-cat src/__tests__/services/survival-factor-validator.test.ts | head -30
+npm run build
+npx tsc --noEmit
+npx prisma validate
 ```
-Record:
-- Current state of dependencies
-- Test patterns
-- No duplication
 
-### 3b. Implement Slice (ONE SYSTEM ONLY)
+### DB Gates (Run only if DATABASE_URL configured)
+```bash
+npx prisma migrate deploy
+npm run test:db
+```
 
-**Rules**:
-- Create ONE service/engine per slice
-- Add ONE domain contract file if needed
-- Wire into ONE caller (existing production path or reserved future caller)
-- Add ONE test file with 10-20 focused tests
-- NO refactoring, NO cleanup beyond scope
+### CI/Lint Gates (Run if available)
+```bash
+npm run lint
+npm test
+```
 
-**Fail-Closed Pattern**:
-- Validation methods throw on invalid input
-- Missing data → UNKNOWN/default state, not assumed safe
-- Tenant checks before state access
-- Audit trails for material mutations
+### Classification Rules
+- If all non-DB gates PASS → slice status: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE
+- If build/typecheck PASS but Prisma validate FAILS → slice status: PARTIAL_SCHEMA_ISSUE (fix + re-run)
+- If DB gates unavailable but non-DB gates PASS → slice status: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE + DB_BLOCKED notation
+- If any non-DB gate FAILS → BLOCKER (do not commit, diagnose and fix)
 
-**Example Slice: Shock Detection Engine (Phase 4 Slice 2)**
+## BLOCKERS AND STOP RULES
+Stop immediately and report BLOCKER if:
+1. TypeScript compilation fails with non-DB errors (import errors, type mismatches)
+2. npm build fails with non-DB errors
+3. Zod schema syntax error or arity mismatch
+4. A gate failure requires weakening auth, workspace enforcement, or DTO redaction
+5. An existing test is broken by new code and cannot be fixed without weakening rules
+6. A DB blocker prevents validating critical schema dependencies
 
-File 1: `src/services/shock-detection-engine.ts`
-```typescript
-// Detect when survival factors cross critical thresholds
-export class ShockDetectionEngine {
-  static detectShock(assessments: SurvivalFactorAssessment[]): ShockEvent[] {
-    const critical = assessments.filter(a => a.health === SurvivalFactorHealth.CRITICAL);
-    return critical.length > 0 ? this.buildShockEvents(critical) : [];
-  }
-  
-  private static buildShockEvents(critical: SurvivalFactorAssessment[]): ShockEvent[] {
-    return critical.map(a => ({
-      id: crypto.randomUUID(),
-      type: this.classifyShock(a.category),
-      severity: 'CRITICAL',
-      triggeredBy: [a.factor],
-      detectedAt: new Date(),
-      recommended_action: this.recommendAction(a.category),
-    }));
-  }
-  
-  private static classifyShock(category: SurvivalFactorCategory): ShockType {
-    // Map survival category → shock type
-    switch(category) {
-      case 'financial': return 'FINANCIAL_SHOCK';
-      case 'operational': return 'OPERATIONAL_SHOCK';
-      case 'market': return 'MARKET_SHOCK';
-      case 'strategic': return 'STRATEGIC_SHOCK';
+For BLOCKERs:
+- Do not commit
+- Report: blocker name, root cause, which gate failed, why it cannot be fixed without breaking rules
+- Example: "BLOCKER: z.record() arity error in src/app/api/path/route.ts - Zod requires 2 args (key type, value type)"
+
+## EXECUTION STATE UPDATE PROTOCOL
+After every slice (successful or BLOCKER), update .claude/execution_state.json:
+```json
+{
+  "current_phase": "Phase X — Name (STAGE Y)",
+  "current_branch": "git branch name",
+  "completed_stages": ["STAGE 0", "STAGE 1", ...],
+  "phase_X_status": {
+    "slice_N": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE | WIRED_NOT_CALLED | DB_BLOCKED | BLOCKER",
+      "classification": "SERVICE_WITH_WIRING | DOMAIN_CONTRACT_ONLY | API_ROUTES_WITH_WIRING",
+      "files": ["src/path/file.ts", ...],
+      "workspace_enforcement": "✓ All methods enforce workspaceId parameter",
+      "auth_enforced": "✓ CAPABILITIES.XXX required",
+      "DTO_boundary": "✓ No internal fields exposed",
+      "test_coverage": "95+ tests covering state machine, workspace scoping, auth",
+      "gates_run": "npm run build (✓), npx tsc (✓), npx prisma validate (✓)",
+      "compilation": "✓ TypeScript compiles without errors",
+      "committed": "commit_sha"
     }
-  }
-  
-  private static recommendAction(category: SurvivalFactorCategory): string {
-    // Recommend action for each shock type
-    return `Immediate review needed: ${category} survival factor critical`;
-  }
+  },
+  "gates_status": {
+    "build": "PASS",
+    "typecheck": "PASS",
+    "prisma_validate": "PASS or DB_BLOCKED",
+    "tests": "DB_BLOCKED or PASS"
+  },
+  "last_commit": "commit message",
+  "pushed": false,
+  "next_automatic_target": "STAGE X Slice Y: description"
 }
 ```
 
-File 2: `src/domain/survival/shock-events.ts`
-```typescript
-export enum ShockType {
-  FINANCIAL_SHOCK = 'FINANCIAL_SHOCK',
-  OPERATIONAL_SHOCK = 'OPERATIONAL_SHOCK',
-  MARKET_SHOCK = 'MARKET_SHOCK',
-  STRATEGIC_SHOCK = 'STRATEGIC_SHOCK',
-}
+## DEPLOYMENT READINESS REQUIREMENTS
+When ALL STAGE 0-17 slices are implemented, run full deployment-readiness audit BEFORE declaring complete:
+- npm ci ✓
+- npx prisma validate ✓ (or DB_BLOCKED with reason)
+- npx tsc --noEmit ✓
+- npm run build ✓
+- npm test ✓ (or DB_BLOCKED)
+- npm run lint ✓ (if available)
+- npm run test:db ✓ (if DB available)
+- **Security audit**: workspace isolation 100%, auth 100%, DTO redaction 100%, audit events 100%
+- **Tenant isolation tests**: npm test -- workspace-isolation (if available)
+- **Permission matrix tests**: npm test -- permission-matrix (if available)
+- **DTO leakage tests**: npm test -- dto-leakage (if available)
+- **Audit/event tests**: npm test -- audit-events (if available)
+- **Workflow/CI gate review**: Document which gates are DB_BLOCKED and why
+- **Env var checklist**: All required env vars documented in .env.example
+- **Deployment checklist**: SSL, backups, monitoring, runbooks, team training
 
-export interface ShockEvent {
-  id: string;
-  type: ShockType;
-  severity: 'CRITICAL' | 'HIGH';
-  triggeredBy: SurvivalFactor[];
-  detectedAt: Date;
-  recommended_action: string;
-  workspaceId?: string; // Tenant scoping
-}
+If DATABASE_URL or DB access unavailable:
+- Classify DB gates as DB_BLOCKED in report
+- Do NOT weaken code
+- Do NOT modify DB config
+- Continue all non-DB deployment readiness gates
+- Document: "DB gates deferred until database available"
+
+## FINAL SYSTEM COMPLETION RULE
+Do NOT declare FULLY_DEPLOYMENT_READY unless ALL are true:
+1. Every STAGE 0-17 phase is complete or honestly classified (not skipped)
+2. Every module in ADDENDUM B (Module Registry 1-30) has correct status with proof
+3. Every ADDENDUM F (Backlog A-K) item is either implemented or explicitly deferred
+4. Every implemented system has correct classification: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE | WIRED_NOT_CALLED | PARKED | DB_BLOCKED
+5. Every COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE system has wiring proof documented
+6. All non-DB gates pass
+7. All DB blockers explicitly isolated with reason
+8. No known non-DB blocker remains
+9. execution_state.json is current
+10. Branch is pushed
+11. Version bumped in execution.md
+12. Final improvement report created
+
+## FINAL IMPROVEMENT PASS (After Deployment Readiness)
+After all phases implemented and deployment-readiness audit complete, create .claude/final-improvement-report.md:
+- Monetization gaps (subscription tiers, rate limiting, quota enforcement)
+- Enterprise buyer objections (audit trail exports, SSO, compliance)
+- UX/adoption gaps (notification system, search, mobile)
+- Operational reliability gaps (monitoring, alerting, runbooks)
+- Security/compliance gaps (encryption, data retention, GDPR export)
+- Performance/scaling gaps (index strategy, caching, async job queue)
+- Support/admin gaps (admin dashboard, bulk operations, escalation)
+- Analytics/reporting gaps (metrics, KPI reporting, ROI tracking)
+- Highest-ROI enhancements (top 5 features that unlock next revenue tier)
+- Recommended next 10 build slices (Addendum G order + new items)
+
+Do NOT implement enhancements unless required to remove deployment blockers.
+
+## REPORT FORMAT (End of every /continue-build run)
+Report ONLY:
 ```
-
-File 3: `src/__tests__/services/shock-detection-engine.test.ts`
-```typescript
-describe('ShockDetectionEngine', () => {
-  it('should detect financial shock when cash_runway < 3 months', () => {
-    const assessments = [{
-      factor: 'cash_runway_months',
-      category: 'financial',
-      health: SurvivalFactorHealth.CRITICAL,
-      // ... other fields
-    }];
-    const shocks = ShockDetectionEngine.detectShock(assessments);
-    expect(shocks).toHaveLength(1);
-    expect(shocks[0].type).toBe('FINANCIAL_SHOCK');
-  });
-  
-  // 10-15 more tests...
-});
-```
-
-### 3c. No Database Changes
-- ❌ DO NOT add migrations
-- ❌ DO NOT modify prisma/schema.prisma
-- ❌ DO NOT change DATABASE_URL or .env.local
-- ✓ DO use existing Prisma models if needed (read-only queries only)
-- ✓ DO define domain contracts (pure TypeScript types)
-
+STAGE X SLICE Y: [description]
 ---
-
-## STEP 4: GATE VALIDATION (Sequential, Stop on First Fail)
-
-### 4a. Static Gates
-```bash
-echo "=== GATE 1: prisma validate ===" && \
-npx prisma validate 2>&1 | grep -E "(valid|error)" && echo "✓ PASS" || echo "✗ FAIL"
-
-echo "=== GATE 2: tsc --noEmit ===" && \
-npx tsc --noEmit 2>&1 | grep "[SYSTEM_NAME]" && echo "✗ FAIL: New TypeScript errors" || echo "✓ PASS (0 new errors)"
-
-echo "=== GATE 3: npm run build ===" && \
-npm run build 2>&1 | grep "[SYSTEM_NAME]" && echo "✗ FAIL: Build error in new code" || echo "✓ PASS"
-
-echo "=== GATE 4: npm test ===" && \
-npm test -- src/__tests__/services/[slice-test].test.ts 2>&1 | tail -20
-```
-
-**Acceptable**:
-- ✓ All gates pass
-- ⚠ Pre-existing errors in seed/db (allowed, document count)
-- ✗ STOP if: Any new error in implemented code
-
----
-
-## STEP 5: COMMIT & STATE UPDATE
-
-### 5a. Verify Clean State
-```bash
-git status --short
-git diff --stat
-```
-**Must show**: Only new slice files + execution_state.json update
-
-### 5b. Commit Code
-```bash
-git add src/services/[system].ts src/domain/[domain]/[system].ts \
-         src/__tests__/services/[system].test.ts
-
-git commit -m "Phase 4 Slice N: [SYSTEM_NAME] (non-DB foundation)
-
-- [Brief description of what system does]
-- Implementation: [key methods/features]
-- Integration: Called from [future caller or reserved path]
-- Tests: [test file] (N tests, all passing)
-- No DB changes: Pure TypeScript types and validators
-- Tenant safety: [validation method] enforces workspaceId + userId
-
-Static gates:
-- prisma validate: ✓
-- tsc --noEmit: ✓ (0 new errors)
-- npm run build: ✓
-- npm test: ✓ (N/N tests passing)
-
-https://claude.ai/code/[SESSION_ID]"
-```
-
-### 5c. Update execution_state.json
-```bash
-jq '.phase_4_systems_status.implemented_slices += [{
-  "slice": "Phase 4 Slice N: [SYSTEM_NAME]",
-  "status": "COMPLETE",
-  "files": ["src/services/[system].ts", "src/domain/[domain]/[system].ts", "src/__tests__/services/[system].test.ts"],
-  "committed": "[commit-sha]"
-}] | .phase_4_completion_progress.completion_percentage = [new %] | .last_update = "[ISO timestamp]"' \
-  .claude/execution_state.json > /tmp/state.json && \
-mv /tmp/state.json .claude/execution_state.json
-
-git add .claude/execution_state.json
-git commit -m "Update execution_state: Phase 4 Slice N complete"
-```
-
-### 5d. Push
-```bash
-git push -u origin $(git branch --show-current)
-# or if main: git push -u origin main
-# or if HTTP 403: Use GitHub API (mcp__github__push_files)
-```
-
----
-
-## STEP 6: REPORT (Concise Facts Only)
-
-**Output Format** (No explanations, no commentary):
-
-```
-PHASE 4 SLICE N: [SYSTEM_NAME]
-
-Files:
-- src/services/[system].ts (X lines)
-- src/domain/[domain]/[system].ts (Y lines)
-- src/__tests__/services/[system].test.ts (Z tests)
+Files Changed:
+- src/path/file1.ts (new/modified)
+- src/path/file2.ts (new/modified)
 
 Wiring Proof:
-- Domain contract: [file.ts:line-range] defines [Interface/Enum]
-- Service: [file.ts:line-range] exports ShockDetectionEngine class
-- Methods: [list key methods]
-- Future caller: [ShockDetectionEngine will be called from decision.ts once Phase N is ready]
-- Tenant safety: validateShock() enforces workspaceId scoping
+- Caller: src/app/api/path/route.ts::handler()
+- Service: src/services/name.ts::method()
+- Workspace Enforcement: ✓
+- Auth Enforcement: ✓ CAPABILITY.XXX
+- DTO Boundary: ✓
+- Audit Events: ✓ EVENT_NAME emitted
 
-Static Gates:
-- prisma validate: ✓
-- tsc --noEmit: ✓ (28 pre-existing in seed/db, 0 new)
+Tests Added:
+- src/__tests__/api/path.test.ts: 95+ tests
+
+Gates Run:
 - npm run build: ✓
-- npm test: ✓ (N tests passing)
+- npx tsc --noEmit: ✓
+- npx prisma validate: ✓
 
-Committed: [sha] to branch [branch]
-Pushed: ✓ to remote
+Classification: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE
 
-Blockers: None
+DB Status: DB_BLOCKED (@prisma/adapter-pg missing)
 
-Next: [Auto-detect from execution_state] → Phase 4 Slice N+1 on next /continue-build
+Non-DB Blockers: None
+
+Branch Pushed: Yes (commit SHA: abc123)
+
+Next Automatic Target: STAGE X+1 SLICE Y: [description]
 ```
 
----
-
-## SAFETY ENFORCEMENT (Always)
-
-### Authentication & Authorization
-- All mutation paths must check user.workspaceId
-- All services must validate capability before action
-- No public API without DTO redaction
-
-### Tenant Isolation
-- Every tenant-owned model scopes by workspaceId
-- Fetch-then-filter forbidden
-- Workspace validation before state access
-
-### Audit & Events
-- Material mutations emit CanonicalEvent
-- Critical system decisions emit AuditEvent
-- Tenant ID always included in audit trail
-
-### DTO Safety
-- Public APIs return wrapped DTOs, never raw Prisma
-- Owner/admin fields stripped for non-admin users
-- Test DTO leakage before merge
-
-### Idempotency
-- Critical mutations protected against duplicate submission
-- Idempotency key validation where applicable
-
----
-
-## RULES (Non-Negotiable)
-
-✓ DO:
-- Read execution.md rules before implementing
-- Scan for duplicates before writing
-- Add tests that prove wiring (not just unit tests)
-- Update execution_state after every slice
-- Commit to feature branch unless on main
-- Push automatically after commit
-- Report facts only (no narrative)
-
-✗ DON'T:
-- Skip baseline gates
-- Claim ACTIVE without runtime proof
-- Change database config while blocked
-- Claim DB runtime verification while DATABASE_URL unavailable
-- Comment out failing tests
-- Weaken tenant isolation or permission checks
-- Ask user for confirmation
-
----
-
-## PHASE 4 SLICE ROADMAP (Non-DB)
-
-- [x] **Slice 1**: Survival Factor Taxonomy + Validator (COMPLETE)
-- [ ] **Slice 2**: Shock Detection Engine (detect critical threats)
-- [ ] **Slice 3**: Org Resilience Scorer (calc survival strength)
-- [ ] **Slice 4**: Survival Gating Policy (block unsafe growth)
-- [ ] **Slice 5**: Survival Assessment Interface (domain contract)
-
----
-
-## ENTRY POINT: /continue-build
-
-When user invokes `/continue-build`:
-
-1. Detect current phase from execution_state.json
-2. List pending non-DB slices
-3. Pick highest-priority unimplemented slice
-4. Follow STEP 1–6 above automatically
-5. Commit and push
-6. Report slice completion
-7. Exit (user can invoke /continue-build again for next slice)
-
-**Never ask "proceed?". Just build.**
-
----
-
-**Last Updated**: 2026-05-11
-**Model**: Autonomous continuous execution loop with enterprise-grade safety enforcement
-**Status**: Ready for Phase 4 Slice 2 on next /continue-build invocation
+## KEY RULES FOR PHASE 13+ HARDENING
+- Slice 1 (CI/CD Foundations) must come before any other Phase 13 slices
+- Slice 2 (Database Schema Finalization) must come immediately after CI/CD
+- All public API expansion slices must include entitlement checks + rate limiting
+- All notification slices must include audit logging + muting support
+- All export slices must include redaction verification (50+ tests)
+- All integration slices must include webhook delivery retry + signature validation
+- No slice is complete without at least 25+ new tests and passing non-DB gates

@@ -1,30 +1,64 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withRequestContext } from "@/lib/api-handler";
+import { withAuth } from "@/lib/auth-guard";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getQueuedItems } from "@/services/operator/store";
-import { resolveServerRole } from "@/services/auth/server-role";
-import { getSession } from "@/services/auth";
-import { logAuditEvent } from "@/services/audit/audit-log";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { z } from "zod/v4";
+import type { NextRequest } from "next/server";
 
-export async function GET(request: NextRequest) {
+const queueParamsSchema = z.object({
+  status: z.enum(["pending", "in_progress", "blocked"]).optional(),
+  limit: z.number().min(1).max(1000).default(20),
+});
+
+/**
+ * GET /api/operator/queue
+ *
+ * Retrieve operator action queue (all queued items with filtering)
+ * Wire: operator/store.getQueuedItems()
+ * Supports: status filtering, pagination
+ */
+export const GET = withRequestContext(async (request) => {
+  const { session } = await withAuth({
+    capability: CAPABILITIES.ACTION_VIEW,
+  });
+
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
+
+  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  if (!membership) {
+    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
   try {
-    // Enforce server-side auth (fail-closed)
-    const role = await resolveServerRole();
-    if (!role) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
+    // Parse query parameters
+    const status = nextRequest.nextUrl.searchParams.get("status") || undefined;
+    const limitParam = nextRequest.nextUrl.searchParams.get("limit") || "20";
+    const limit = Math.min(Math.max(parseInt(limitParam, 10), 1), 1000);
+
+    // Validate limit
+    if (isNaN(limit)) {
+      return Response.json(
+        { error: "Invalid limit: must be a number between 1 and 1000" },
+        { status: 400 }
       );
     }
 
-    // Parse query parameters
-    const searchParams = request.nextUrl.searchParams;
-    const status = searchParams.get("status") || undefined;
-    const limitParam = searchParams.get("limit");
-    const limit = limitParam ? parseInt(limitParam, 10) : 20;
-
-    // Validate limit
-    if (isNaN(limit) || limit < 1 || limit > 1000) {
-      return NextResponse.json(
-        { error: "Invalid limit: must be between 1 and 1000" },
+    // Validate status if provided
+    if (status && !["pending", "in_progress", "blocked"].includes(status)) {
+      return Response.json(
+        {
+          error: "Invalid status: must be one of pending, in_progress, blocked",
+        },
         { status: 400 }
       );
     }
@@ -32,28 +66,38 @@ export async function GET(request: NextRequest) {
     // Fetch queued items
     const items = await getQueuedItems(status, limit);
 
-    // Get actor ID for audit
-    const session = await getSession();
-    const actorId = session?.user.id ?? null;
-
     // Emit audit event
-    await logAuditEvent({
-      eventName: "QUEUE_VIEWED",
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.OPERATOR_QUEUE_VIEWED,
+      actorId: session.user.id,
       entityType: "OperatorQueue",
       entityId: "queue",
-      actorId,
-      role,
-      before: null,
-      after: {
+      workspaceId,
+      payload: {
         itemCount: items.length,
-        status,
+        status: status || "all",
         limit,
       },
     });
 
-    return NextResponse.json({ items });
+    return Response.json(
+      {
+        workspaceId,
+        items,
+        count: items.length,
+        status: status || "all",
+        limit,
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 400 });
+    if (error instanceof Error) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
+
+    return Response.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
   }
-}
+});
