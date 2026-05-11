@@ -270,6 +270,77 @@ Branch Pushed: Yes (commit SHA: abc123)
 Next Automatic Target: STAGE X+1 SLICE Y: [description]
 ```
 
+## LOCAL-SAFE MODE (For Network/Push-Blocked Environments)
+
+**Activation condition:** git push fails due to HTTP 403, proxy auth failure, or network isolation.
+
+**Mode behavior:** Continue building locally without remote push until infrastructure resolves.
+
+### Rules
+1. **Push classification:**
+   - If push fails due to HTTP 403 / proxy / network → classify result as `PUSH_BLOCKED_ENVIRONMENT`
+   - Do NOT stop all build work because push failed
+   - Continue local-only work if working tree is clean and non-DB gates pass
+
+2. **Next-slice selection:**
+   - If selected slice requires DATABASE_URL and unavailable → classify `DB_BLOCKED` and auto-select next non-DB slice from execution.md/ADDENDUM G
+   - Missing dependencies (npm packages, Prisma adapters) → classify `NON_DB_STATIC_BLOCKER`, not DB_BLOCKED
+   - Continue one non-DB slice per /continue-build run
+
+3. **Gates and verification:**
+   - Still run available gates: `npm ci`, `npx prisma validate`, `npx tsc --noEmit`, `npm run build`
+   - Run targeted tests for the slice
+   - Update execution_state.json after every slice
+   - Commit locally after every successful slice
+
+4. **Recovery artifacts (after every local commit):**
+   - Create/update: `docs/LOCAL_ONLY_RECOVERY_LEDGER.md` (commit log + recovery instructions)
+   - Create/update: `docs/opsiq-main-sync-latest.patch` (unified diff of unpushed commits)
+   - Create/update: `docs/opsiq-main-sync-latest.bundle` (git binary bundle of unpushed commits)
+   - Ensure: `docs/manual-main-sync-summary.md` exists with merge instructions
+
+5. **Push attempt protocol:**
+   - Attempt push once per /continue-build run
+   - If push succeeds: mark `Branch Pushed: Yes (commit SHA: xxx)` in report
+   - If push fails: create recovery artifacts, mark `PUSH_BLOCKED_ENVIRONMENT`, proceed to next slice in LOCAL-SAFE mode
+
+6. **Reporting requirements:**
+   - Always report `Branch Pushed: Yes` or `PUSH_BLOCKED_ENVIRONMENT` (never silent on push failure)
+   - Never claim `REMOTE_SYNCED`, `DEPLOYMENT_READY`, or "main updated on GitHub" until push succeeds
+   - Include recovery artifact paths in report if push blocked
+   - Never ask for next step unless execution.md is missing or contradictory
+
+7. **Code safety:**
+   - Do not edit app code to work around blockers
+   - Do not touch DB config
+   - Do not weaken auth, workspace enforcement, or DTO redaction
+   - Do not skip tests or gates
+
+### Example LOCAL-SAFE Mode Report
+
+```
+PUSH_BLOCKED_ENVIRONMENT
+═══════════════════════════════════════════════════════════
+
+Work Completed: STAGE X SLICE Y (local commit only)
+Files Changed: [list]
+Tests Added: [count+]
+Gates Run: npm run build (✓), npx tsc (✓), npx prisma validate (✓)
+Classification: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE
+
+Local Commit: abc1234def
+Push Attempted: Yes — FAILED (HTTP 403 proxy auth)
+
+Recovery Artifacts Created:
+- docs/LOCAL_ONLY_RECOVERY_LEDGER.md (contains commit log + merge instructions)
+- docs/opsiq-main-sync-latest.patch (unified diff, apply with: git apply < patch)
+- docs/opsiq-main-sync-latest.bundle (git binary format, apply with: git bundle unbundle)
+
+Next Automatic Target: STAGE X+1 SLICE Y (non-DB, selected for LOCAL-SAFE continuation)
+Environment Status: DATABASE_URL unavailable, network push blocked
+Recommendation: (1) Configure DATABASE_URL to resume STAGE X+2, (2) Resolve proxy auth to push to remote
+```
+
 ## KEY RULES FOR PHASE 13+ HARDENING
 - Slice 1 (CI/CD Foundations) must come before any other Phase 13 slices
 - Slice 2 (Database Schema Finalization) must come immediately after CI/CD
