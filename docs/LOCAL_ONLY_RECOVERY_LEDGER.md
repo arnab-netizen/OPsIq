@@ -8,15 +8,18 @@
 ## Unpushed Commits (origin/main..HEAD)
 
 ```
+0b450d6 Update execution_state: Phase 13 Slice 8 complete (Readiness + Deployment Validation)
+b4a5c9e STAGE 17 Slice 8: Readiness + Deployment Validation (non-DB slice, completed in LOCAL-SAFE mode)
+9a4ea2f Create LOCAL-SAFE recovery artifacts for unpushed commits
 2caf835 Add LOCAL-SAFE MODE to continue-build.md for network/push-blocked environments
 cd4dbc7 Enrich Phase 13 Slice 1 execution_state documentation
 2e7edaa Update execution_state: Phase 13 Slice 1 complete, classify Slice 2 as DB_BLOCKED
 e6a639d STAGE 17 Slice 1: CI/CD Foundations - GitHub Actions workflow
 ```
 
-**Total unpushed:** 4 commits  
-**Total files changed:** 7 files  
-**Insertions:** 649  
+**Total unpushed:** 7 commits  
+**Total files changed:** 11 files  
+**Insertions:** 1781  
 **Deletions:** 4
 
 ## What Was Done
@@ -26,6 +29,12 @@ e6a639d STAGE 17 Slice 1: CI/CD Foundations - GitHub Actions workflow
 - `src/__tests__/workflows/ci-cd-foundations.test.ts`: 31+ comprehensive workflow validation tests
 - `package.json` + `package-lock.json`: Added js-yaml, @types/js-yaml devDependencies
 - `.claude/execution_state.json`: Updated with Phase 13 Slice 1 status and wiring proof
+
+### Phase 13 Slice 8: Readiness + Deployment Validation (COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE)
+- `scripts/phase-13-deployment-readiness.sh`: Deployment readiness script verifying CI/CD, non-DB gates, artifacts, execution state
+- `docs/DEPLOYMENT_CHECKLIST.md`: Production deployment checklist (pre-deployment, staging, production, rollback reference)
+- `docs/ROLLBACK_PLAN.md`: Comprehensive rollback procedures (code, database, full environment, testing)
+- `src/__tests__/scripts/phase-13-deployment-readiness.test.ts`: 25+ tests for readiness script
 
 ### Documentation: LOCAL-SAFE MODE
 - `.claude/commands/continue-build.md`: Added LOCAL-SAFE MODE section for push-blocked environments
