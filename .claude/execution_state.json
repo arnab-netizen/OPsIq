@@ -722,6 +722,44 @@
     "⏳ Deployment-readiness full audit"
   ],
   "priority_order_9_wired_systems_tests": {
+    "workspace_context_service": {
+      "name": "Workspace Context Service Tests (PRIORITY ORDER #9 Item 10)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_COMPREHENSIVE_TESTS",
+      "files": [
+        "src/services/workspace/context.ts (existing)",
+        "src/__tests__/services/workspace/context.test.ts (new tests)"
+      ],
+      "test_coverage": "65 comprehensive tests covering getWorkspaceContext(), requireWorkspaceContext(), validateWorkspaceAccess() with all edge cases, real-world scenarios, type safety, and consistency checks",
+      "test_categories": [
+        "getWorkspaceContext: valid session, null session, missing user, missing user.id, various ID types (UUID, numeric, alphanumeric, special characters, long, short), error handling, type safety",
+        "requireWorkspaceContext: valid session, session unavailable, error handling, fail-closed behavior, multiple calls, concurrent calls, type safety",
+        "validateWorkspaceAccess: matching IDs allowed, mismatched IDs denied, empty IDs, case-sensitive matching, special characters, UUID IDs, fail-closed, rapid sequential calls, real-world workflows",
+        "Real-world scenarios: typical API request flow, multi-workspace organizations, failed authentication, session timeout, privilege escalation prevention",
+        "Type safety: typed WorkspaceContext returns, Promise return types",
+        "Edge cases: undefined/null properties, special characters, unicode, whitespace-only IDs, very long IDs",
+        "Consistency: deterministic results, no mutations across calls, consistent behavior"
+      ],
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓), npm test (✓ 65/65 pass)",
+      "compilation": "✓ TypeScript compiles without errors",
+      "wiring_proof": {
+        "service": "src/services/workspace/context.ts (non-DB context extraction)",
+        "callers": [
+          "15+ API routes and services depend on workspace context functions"
+        ],
+        "functions": [
+          "getWorkspaceContext() - Extracts workspace context from session, fails closed (null on unavailable)",
+          "requireWorkspaceContext() - Same as above, throws UnauthorizedError if unavailable",
+          "validateWorkspaceAccess(requiredWorkspaceId) - Validates current workspace matches required, throws on mismatch"
+        ],
+        "security": "Prevents cross-workspace access, enforces least privilege, fails closed on missing context",
+        "auth": "Depends on getSession() from auth service, validates session availability"
+      },
+      "committed": "pending",
+      "pushed": false,
+      "db_dependency": "NONE (pure context extraction from session, no DB access)",
+      "notes": "Fulfills PRIORITY ORDER #9 Item 10 (missing tests for wired systems). Workspace context service is fundamental to multi-tenancy and security - used by 15+ API routes. Added 65 comprehensive tests covering all 3 functions with complete parameter variations, error cases, security scenarios (cross-workspace access prevention), concurrency patterns, and type safety. Service architecture is non-DB (pure session-based). All tests pass; all non-DB gates pass (build, typecheck, prisma validate)."
+    },
     "usage_service": {
       "name": "Usage Service Tests (PRIORITY ORDER #9)",
       "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
