@@ -3,7 +3,7 @@
   "audit_date": "2026-05-11",
   "audit_result": "ALL PHASES 0-12 PRESENT_RUNTIME_VERIFIED",
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "PRIORITY ORDER #9: Add Tests for Wired Systems - Financial Normalization Tests Complete (49 tests)",
+  "current_phase": "PRIORITY ORDER #9: Add Tests for Wired Systems - Priority Engine Tests Complete (46 tests)",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "gates_status": {
     "npm_run_build": "✓ PASS",
@@ -681,6 +681,45 @@
     "⏳ Deployment-readiness full audit"
   ],
   "priority_order_9_wired_systems_tests": {
+    "priority_engine_service": {
+      "name": "Priority Engine Service Tests (PRIORITY ORDER #9)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_COMPREHENSIVE_TESTS",
+      "files": [
+        "src/services/operator/priority.ts (existing)",
+        "src/__tests__/services/operator/priority.test.ts (new tests)"
+      ],
+      "test_coverage": "46 tests covering all functions and edge cases",
+      "test_categories": [
+        "Recency weight calculation: decay over time, formula verification, boundary conditions",
+        "Calibration multiplier: accuracy bands (< 0.5, 0.5-0.8, > 0.8), scaling linearity, null handling",
+        "Priority score calculation: impact*confidence*recency formula, clamping to 10000, rounding to 2 decimals",
+        "Legacy calculatePriority function: OperatorItem integration, impact validation",
+        "Real-world scenarios: high-priority items, aged items, accuracy-based adjustments",
+        "Consistency: determinism, edge cases, no priority explosion",
+        "Weighting and formula: recency as multiplicative factor, confidence decay"
+      ],
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npm test (✓ 46/46 pass)",
+      "compilation": "✓ TypeScript compiles without errors",
+      "wiring_proof": {
+        "functions": [
+          "getRecencyWeight(ageInDays): Calculates 1/(1+ageInDays) with 4 decimal rounding",
+          "getCalibrationMultiplier(accuracy): Scales multiplier based on accuracy (0.5-1.5 range)",
+          "calculatePriorityScore(input): Computes impact*confidence*recency, clamped to 10000",
+          "calculatePriority(item): Legacy wrapper for OperatorItem inputs"
+        ],
+        "callers": [
+          "src/services/decisions/decision-creation-service.ts (calculatePriorityScore usage)"
+        ],
+        "input": "PriorityScoreInput: impactExpected, confidence, optional dueAt, optional historicalAccuracy, optional ageInDays",
+        "output": "Priority score (0-10000) as number with 2 decimal precision",
+        "formula": "priority = impactExpected * confidence * recencyWeight, where recencyWeight = 1/(1+ageInDays)"
+      },
+      "committed": "PENDING",
+      "pushed": false,
+      "db_dependency": "NONE (pure calculation logic, 0 DB queries)",
+      "notes": "Fulfills PRIORITY ORDER #9 Item 2 (missing tests for wired systems). Priority engine service existed with 0 tests. Added 46 comprehensive tests covering all calculation pathways, recency decay formula, calibration multiplier scaling, edge cases, boundary conditions, real-world scenarios, and consistency checks. Service is wired to decision-creation-service. All tests pass; non-DB gates pass."
+    },
     "financial_normalization_service": {
       "name": "Financial Normalization Service Tests (PRIORITY ORDER #9)",
       "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
