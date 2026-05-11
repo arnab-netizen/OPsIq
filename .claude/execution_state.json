@@ -180,7 +180,7 @@
     }
   },
   "ready_for": "DATABASE CONNECTION (to resume Phase 13 Slice 2 onwards) OR Final Improvement Report (ADDENDUM G recommendations)",
-  "current_phase": "ADDENDUM F: All LOCAL_SAFE_PENDING_SLICES Complete (13 of 13 = 100%) — Ready for DB or Deployment-Readiness Hardening",
+  "current_phase": "PRIORITY ORDER #9: Complete Tests for 3+ Wired Systems (3 of ~20+ complete = 15%) — Financial, Priority, Decision Confidence",
   "addendum_f_status": {
     "data_intake_contracts": {
       "name": "Data Intake Contracts (NON_DB_BUILDABLE_NOW)",
@@ -652,10 +652,51 @@
         "confidence_interval": "Margin adapts to dataset size: wider for small datasets (max ±25%), narrower for large (min ±5%)",
         "batch_analysis": "Distribution across 5 confidence levels, risk summary (critical/high/moderate counts), average confidence calculation"
       },
+      "committed": "6509c0e",
+      "pushed": true,
+      "db_dependency": "NONE (pure calculation logic with mock data, no persistence)",
+      "notes": "Thirteenth non-DB buildable item from ADDENDUM F (Item 7 per original list). Implements comprehensive decision confidence engine: multi-factor data quality scoring, historical accuracy calculation with variance penalty, execution certainty scoring with dependency/risk/timeline/resource adjustments, overall confidence combination with signal-based adjustments, confidence level/recommendation strength/risk classification determination, key risk identification, adaptive confidence intervals, and batch analysis with risk distribution. All 60 tests pass, TypeScript compiles without errors."
+    },
+    "portfolio_command_center_shell": {
+      "name": "Portfolio Command Center Mock-Backed Shell (ADDENDUM F Item 17)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "UX_SHELL_WITH_MOCK_DATA",
+      "files": [
+        "src/app/components/portfolio-command-center-shell.tsx (new)",
+        "src/__tests__/app/components/portfolio-command-center-shell.test.ts (new tests)"
+      ],
+      "test_coverage": "48 comprehensive tests covering mock data generation, engagement metrics validation, risk analysis, portfolio health, data consistency, edge cases, real-world scenarios, and filtering/sorting logic",
+      "test_categories": [
+        "Mock data generation: valid portfolio structure, engagement counts, health calculations",
+        "Engagement metrics: IDs, statuses, health scores, impact levels, actions, revenue at risk",
+        "Risk analysis: risk types, severity levels, mitigation strategies",
+        "Portfolio health: total revenue at risk, portfolio risk classification, engagement distribution",
+        "Data consistency: deterministic generation, schema validation, reference integrity",
+        "Edge cases: at-risk engagements, completed engagements, completion percentages",
+        "Real-world scenarios: healthy portfolio, critical blockers, owner accountability, review dates",
+        "Filtering & sorting: by status, health, impact, risk count, name"
+      ],
+      "gates_run": "npm run build (✓ PASS), npx tsc --noEmit (✓ PASS), npx prisma validate (✓ PASS), npm test (✓ 48/48 pass)",
+      "compilation": "✓ TypeScript compiles without errors",
+      "wiring_proof": {
+        "component": "PortfolioCommandCenterShell (React client component)",
+        "mock_data": "generateMockPortfolioView() produces 5 mock engagements with varied statuses, health scores, impact levels, and risks",
+        "features": "4 tabs (overview, engagements, risks, actions), filtering by status, sorting by health/impact/risk/name",
+        "engagement_display": "Health score color-coding, status badges, action progress, revenue at risk tracking",
+        "portfolio_summary": "Total engagements, active count, average health, critical count, portfolio risk level",
+        "risk_summary": "Top 5 at-risk engagements with severity, risk type, and mitigation recommendations",
+        "action_tracking": "Recommended actions per engagement with completion percentage"
+      },
+      "schemas": [
+        "EngagementStatusSchema (active/paused/completed/at_risk/blocked)",
+        "EngagementMetricsSchema (engagement data with 12 fields)",
+        "PortfolioViewSchema (aggregated portfolio with 7 fields and 2 arrays)",
+        "TabType (overview/engagements/risks/actions)"
+      ],
       "committed": "PENDING",
       "pushed": false,
-      "db_dependency": "NONE (pure calculation logic with mock data, no persistence)",
-      "notes": "Thirteenth non-DB buildable item from ADDENDUM F (Item 7 per original list). Implements comprehensive decision confidence engine: multi-factor data quality scoring, historical accuracy calculation with variance penalty, execution certainty scoring with dependency/risk/timeline/resource adjustments, overall confidence combination with signal-based adjustments, confidence level/recommendation strength/risk classification determination, key risk identification, adaptive confidence intervals, and batch analysis with risk distribution. All 60 tests pass, TypeScript compiles without errors. LOCAL_SAFE_PENDING_SLICES progress: 13 of 19 (68%)."
+      "db_dependency": "NONE (pure UI shell with mock data, no DB calls)",
+      "notes": "ADDENDUM F Item 17 (Portfolio Command Center mock-backed shell). Implements tabbed portfolio management UI with mock engagement data (5 engagements with varied statuses, health scores, impact levels). Features: overview with aggregate metrics, engagement list with filtering/sorting, top risks with mitigation, and action items by engagement. All 48 tests pass comprehensive mock data generation, schema validation, edge case handling, and real-world scenario checks. Ready for real data source integration."
     }
   },
   "db_status": "DB_BLOCKED_ENVIRONMENT_NETWORK_UNREACHABLE",
@@ -674,9 +715,9 @@
     "✓ Trust benchmarks",
     "✓ Mocked load tests",
     "✓ Decision Confidence Engine",
-    "⏳ Financial Normalization Engine (has implementation but needs tests)",
-    "⏳ Priority Engine (has implementation but needs tests)",
-    "⏳ Portfolio Command Center mock-backed shell",
+    "✓ Financial Normalization Engine (49 tests added)",
+    "✓ Priority Engine (46 tests added)",
+    "✓ Portfolio Command Center mock-backed shell (48 tests)",
     "⏳ ADDENDUM G Final Improvement Report",
     "⏳ Deployment-readiness full audit"
   ],
@@ -715,8 +756,8 @@
         "output": "Priority score (0-10000) as number with 2 decimal precision",
         "formula": "priority = impactExpected * confidence * recencyWeight, where recencyWeight = 1/(1+ageInDays)"
       },
-      "committed": "PENDING",
-      "pushed": false,
+      "committed": "28e591a",
+      "pushed": true,
       "db_dependency": "NONE (pure calculation logic, 0 DB queries)",
       "notes": "Fulfills PRIORITY ORDER #9 Item 2 (missing tests for wired systems). Priority engine service existed with 0 tests. Added 46 comprehensive tests covering all calculation pathways, recency decay formula, calibration multiplier scaling, edge cases, boundary conditions, real-world scenarios, and consistency checks. Service is wired to decision-creation-service. All tests pass; non-DB gates pass."
     },
@@ -755,8 +796,8 @@
         "output": "FinancialImpactNormalized with 6 fields (revenueAtRiskPct, monthlyImpact, marginImpactPct, burnRateImpact, normalizedLevel, reasons)",
         "classification_logic": "Revenue at risk determines 5 levels: >=30%→critical, >=15%→high, >=5%→medium, <5%→low, missing→unknown"
       },
-      "committed": "PENDING",
-      "pushed": false,
+      "committed": "ce1aeb7",
+      "pushed": true,
       "db_dependency": "NONE (pure calculation logic, 0 DB queries)",
       "notes": "Fulfills PRIORITY ORDER #9 (missing tests for wired systems <20 tests). Financial normalization service existed with 0 tests. Added 49 comprehensive tests covering all calculation pathways, edge cases, boundary conditions, real-world scenarios, and consistency checks. Service is wired to owner-dashboard and decision-evidence services. All tests pass; non-DB gates pass."
     }
