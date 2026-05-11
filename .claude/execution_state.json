@@ -3,7 +3,7 @@
   "audit_date": "2026-05-11",
   "audit_result": "ALL PHASES 0-12 PRESENT_RUNTIME_VERIFIED",
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "ADDENDUM F: 14 of 19 LOCAL_SAFE_PENDING_SLICES Complete (74%) - Decision Confidence Engine Added",
+  "current_phase": "PRIORITY ORDER #9: Add Tests for Wired Systems - Financial Normalization Tests Complete (49 tests)",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "gates_status": {
     "npm_run_build": "✓ PASS",
@@ -680,6 +680,48 @@
     "⏳ ADDENDUM G Final Improvement Report",
     "⏳ Deployment-readiness full audit"
   ],
+  "priority_order_9_wired_systems_tests": {
+    "financial_normalization_service": {
+      "name": "Financial Normalization Service Tests (PRIORITY ORDER #9)",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_COMPREHENSIVE_TESTS",
+      "files": [
+        "src/services/financial-normalization/financial-normalization.service.ts (existing)",
+        "src/__tests__/services/financial-normalization/financial-normalization.test.ts (new tests)"
+      ],
+      "test_coverage": "49 tests covering",
+      "test_scenarios": [
+        "Basic functionality: normalization with full data, schema validation",
+        "Missing/invalid estimated loss: undefined, null, zero, negative values",
+        "Missing/invalid revenue: undefined, null, zero, negative values",
+        "Monthly impact calculation: division by 3, rounding to 2 decimals, without revenue",
+        "Revenue at risk calculation: percentage accuracy, rounding, small/large percentages",
+        "Margin impact calculation: 60% of revenue at risk, rounding, null when revenue missing",
+        "Burn rate impact calculation: 40% with revenue (0.4), 50% without revenue (0.5), rounding",
+        "Impact level classification: all 5 levels (critical/high/medium/low/unknown), boundary conditions",
+        "Reasons generation: revenue at risk, monthly impact, missing data messages",
+        "Edge cases: very small loss/large revenue, loss==revenue, loss>revenue, fractional values",
+        "Consistency: determinism, same input = same output",
+        "Real-world scenarios: startup cash runway, enterprise manageable loss, partial data, pre-revenue startup"
+      ],
+      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npm test (✓ 49/49 pass)",
+      "compilation": "✓ TypeScript compiles without errors",
+      "wiring_proof": {
+        "function": "normalizeFinancialImpact(input: { estimatedLoss?, revenue? })",
+        "callers": [
+          "src/services/owner-dashboard.service.ts",
+          "src/services/decision-evidence/decision-evidence.service.ts"
+        ],
+        "input": "Optional estimatedLoss and revenue amounts",
+        "output": "FinancialImpactNormalized with 6 fields (revenueAtRiskPct, monthlyImpact, marginImpactPct, burnRateImpact, normalizedLevel, reasons)",
+        "classification_logic": "Revenue at risk determines 5 levels: >=30%→critical, >=15%→high, >=5%→medium, <5%→low, missing→unknown"
+      },
+      "committed": "PENDING",
+      "pushed": false,
+      "db_dependency": "NONE (pure calculation logic, 0 DB queries)",
+      "notes": "Fulfills PRIORITY ORDER #9 (missing tests for wired systems <20 tests). Financial normalization service existed with 0 tests. Added 49 comprehensive tests covering all calculation pathways, edge cases, boundary conditions, real-world scenarios, and consistency checks. Service is wired to owner-dashboard and decision-evidence services. All tests pass; non-DB gates pass."
+    }
+  },
   "blocked_recovery_queue": [
     "Phase 13 Slice 2: Database Schema Finalization",
     "Phase 13 Slice 3: Audit Trail Queryability",
