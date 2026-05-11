@@ -39,7 +39,44 @@
     "phase_11_owner_mode": "PRESENT_RUNTIME_VERIFIED",
     "phase_12_public_smb": "PRESENT_RUNTIME_VERIFIED",
     "phase_13_enterprise_hardening_slice_1": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "phase_13_enterprise_hardening_slice_4": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "phase_13_enterprise_hardening_slice_8": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE"
+  },
+  "phase_13_slice_4_status": {
+    "slice_name": "Error Tracking + Monitoring (non-DB components)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "ERROR_TRACKING_INFRASTRUCTURE (non-DB, environment-agnostic)",
+    "files": [
+      "src/infra/error-tracking.ts",
+      "src/__tests__/infra/error-tracking.test.ts",
+      "src/app/api/health/route.ts (enhanced)"
+    ],
+    "test_coverage": "35+ tests covering error classification, context extraction, logging, config validation",
+    "gates_run": "npm run build (✓ PASS), npx tsc --noEmit (✓ PASS), npx prisma validate (✓ PASS)",
+    "compilation": "✓ TypeScript compiles without errors",
+    "error_categories": [
+      "AUTH_ERROR (401/403)",
+      "VALIDATION_ERROR (400)",
+      "DATABASE_ERROR (503)",
+      "EXTERNAL_API_ERROR (502)",
+      "WORKSPACE_ERROR (403)",
+      "INTERNAL_ERROR (500)"
+    ],
+    "wiring_proof": {
+      "service": "src/infra/error-tracking.ts",
+      "integration": "src/app/api/health/route.ts uses reportError() on failures",
+      "exported_functions": [
+        "classifyError(error, context) → ClassifiedError",
+        "formatErrorForLog(classified) → string (JSON)",
+        "reportError(classified) → void (console/Sentry)",
+        "extractErrorContext(error) → Record<string, unknown>",
+        "getErrorTrackingConfig() → config"
+      ]
+    },
+    "committed": "a262f6d",
+    "pushed": "PUSH_BLOCKED_ENVIRONMENT (GitHub PAT lacks workflow scope)",
+    "db_dependency": "NONE (non-DB infrastructure, no DATABASE_URL required)",
+    "notes": "Implemented Slice 4 (non-DB) while waiting for DATABASE_URL. Sentry integration stub documented but requires @sentry/nextjs installation + SENTRY_DSN env var. Health check endpoint enhanced with memory/uptime monitoring and integrated error tracking."
   },
   "phase_13_slice_8_status": {
     "slice_name": "Readiness + Deployment Validation",
