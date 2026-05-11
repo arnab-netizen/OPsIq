@@ -837,8 +837,8 @@
         "output": "Boolean true/false for permission checks",
         "authorization_hierarchy": "Admin (3 perms) > Operator (2 perms) > Viewer (1 perm)"
       },
-      "committed": "PENDING",
-      "pushed": false,
+      "committed": "ac08820",
+      "pushed": true,
       "db_dependency": "NONE (pure permission checking logic, 0 DB queries)",
       "notes": "Fulfills PRIORITY ORDER #9 Item 3 (missing tests for wired RBAC service). Access control service existed with 0 tests. Added 51 comprehensive tests covering all 3 permission functions across all 3 roles, permission matrix validation, role-based access control, deterministic behavior, edge cases with strict boolean returns, and real-world authorization scenarios. Service is core to security enforcement. All tests pass; non-DB gates pass."
     }
