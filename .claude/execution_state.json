@@ -696,6 +696,49 @@
       },
       "compilation": "✓ npm run build succeeds, tsc --noEmit passes (except pre-existing adapter-pg)",
       "committed": "fe543df"
+    },
+    "slice_2_experiment_lifecycle": {
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "classification": "SERVICE_WITH_PARTIAL_WIRING",
+      "files": [
+        "src/services/experiment/experiment-lifecycle.service.ts",
+        "src/__tests__/services/experiment/experiment-lifecycle.service.test.ts",
+        "src/domain/constants/audit-events.ts (6 experiment events added)"
+      ],
+      "methods": [
+        "createExperiment(workspaceId, engagementId, plan, name, description?, linkedDecisionId?, userId?)",
+        "approveExperiment(experiment, workspaceId, userId?)",
+        "startExperiment(experiment, workspaceId, userId?)",
+        "updateExecution(experiment, execution, workspaceId, userId?)",
+        "recordResult(experiment, result, workspaceId, userId?)",
+        "captureLearning(experiment, learning, workspaceId, userId?)",
+        "analyzeOutcome(experiment) → { classification, interpretation, nextSteps }",
+        "generateSummary(experiment) → string"
+      ],
+      "state_machine": "draft → approved → active → [completed|active] → analyzed → archived",
+      "error_class": "ExperimentLifecycleError(code, message, allowedTransitions?)",
+      "audit_events": [
+        "EXPERIMENT_CREATED (emit on createExperiment)",
+        "EXPERIMENT_APPROVED (emit on approveExperiment)",
+        "EXPERIMENT_STARTED (emit on startExperiment)",
+        "EXPERIMENT_PROGRESS_UPDATED (emit on updateExecution)",
+        "EXPERIMENT_RESULT_RECORDED (emit on recordResult)",
+        "EXPERIMENT_LEARNING_RECORDED (emit on captureLearning)"
+      ],
+      "validations": {
+        "createExperiment": "Plan validation, name length >= 5, full experiment cascade validation",
+        "approveExperiment": "Status must be draft, critical-risk requires approvals configured",
+        "startExperiment": "Status must be approved, creates execution with calculated end date",
+        "updateExecution": "Status must be active/completed, supports early stopping transition",
+        "recordResult": "Result validation, transitions status to analyzed",
+        "captureLearning": "Result required first, learning fields >= 10 chars, transitions to archived"
+      },
+      "workspace_enforcement": "✓ All methods validate experiment.workspaceId === provided workspaceId, throw WORKSPACE_MISMATCH on violation",
+      "audit_wiring": "✓ emitAuditEvent called on all material operations with actorId, entityType, workspaceId, payload",
+      "error_handling": "ExperimentLifecycleError thrown with code, message, allowedTransitions[] for state violations",
+      "test_coverage": "50+ test cases: create/approve/start/update/record/learn transitions, validation enforcement, workspace isolation, state machine correctness, outcome analysis, summary generation",
+      "compilation": "✓ npm run build succeeds, tsc --noEmit passes",
+      "committed": "pending"
     }
   },
   "deployment_readiness": {

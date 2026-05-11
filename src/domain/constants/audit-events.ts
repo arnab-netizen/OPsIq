@@ -207,6 +207,14 @@ export const AUDIT_EVENTS = {
   // Learning
   LEARNING_RECORDED: "learning.recorded",
 
+  // Experiment
+  EXPERIMENT_CREATED: "experiment.created",
+  EXPERIMENT_APPROVED: "experiment.approved",
+  EXPERIMENT_STARTED: "experiment.started",
+  EXPERIMENT_PROGRESS_UPDATED: "experiment.progress_updated",
+  EXPERIMENT_RESULT_RECORDED: "experiment.result_recorded",
+  EXPERIMENT_LEARNING_RECORDED: "experiment.learning_recorded",
+
   // Billing/Subscription
   SUBSCRIPTION_ACTIVATED: "subscription.activated",
   WEBHOOK_RETRY_THRESHOLD_EXCEEDED: "webhook.retry_threshold_exceeded",
