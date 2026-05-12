@@ -347,8 +347,9 @@ export function validateSalesDeal(deal: Partial<SalesDeal>): { valid: boolean; e
     errors.push("Company name is required");
   }
 
-  if (!deal.stage) {
-    errors.push("Deal stage is required");
+  // Stage is optional (defaults to PROSPECT in service)
+  if (deal.stage !== undefined && !Object.values(DealStage).includes(deal.stage)) {
+    errors.push("Invalid deal stage");
   }
 
   if (deal.value === undefined || deal.value === null) {

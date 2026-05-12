@@ -270,22 +270,8 @@ export class SalesPipelineEngine {
       dealVelocity: string;
     };
   } {
-    // Fail-closed: return empty if workspace missing or doesn't own data
+    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
-      return {
-        healthScore: 0,
-        bottleneckStage: null,
-        recommendation: "Workspace ID is required",
-        metrics: {
-          pipelineEfficiency: 0,
-          stageConversion: 0,
-          dealVelocity: "UNKNOWN",
-        },
-      };
-    }
-
-    // Verify workspace owns this data
-    if (!this.dealsStore.has(workspaceId)) {
       return {
         healthScore: 0,
         bottleneckStage: null,
@@ -329,7 +315,7 @@ export class SalesPipelineEngine {
     if (healthScore < 50) {
       recommendation = "Pipeline needs growth. Focus on prospecting.";
     } else if (pipeline.winRate < 0.2) {
-      recommendation = "Win rate is low. Review qualification criteria.";
+      recommendation = "Win rate is low. Improve qualification criteria and deal quality.";
     } else if (dealVelocity === "SLOW") {
       recommendation = "Sales cycle is extending. Identify and remove obstacles.";
     }

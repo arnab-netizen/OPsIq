@@ -319,23 +319,8 @@ export class UnitEconomicsEngine {
     };
     recommendations: string[];
   } {
-    // Fail-closed: return empty if workspace missing or doesn't own data
+    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
-      return {
-        overallHealth: "WEAK",
-        score: 0,
-        metrics: {
-          ltvHealth: "",
-          cacHealth: "",
-          paybackHealth: "",
-          profitabilityHealth: "",
-        },
-        recommendations: [],
-      };
-    }
-
-    // Verify workspace owns this data
-    if (!this.metricsStore.has(workspaceId)) {
       return {
         overallHealth: "WEAK",
         score: 0,
@@ -364,10 +349,10 @@ export class UnitEconomicsEngine {
     const recommendations: string[] = [];
 
     // LTV health (25 points)
-    if (ltv > cac * 3) {
+    if (ltv >= cac * 3) {
       score += 25;
       metrics.ltvHealth = "STRONG";
-    } else if (ltv > cac * 1.5) {
+    } else if (ltv >= cac * 1.5) {
       score += 12;
       metrics.ltvHealth = "MODERATE";
     } else {
@@ -375,22 +360,22 @@ export class UnitEconomicsEngine {
     }
 
     // CAC efficiency (25 points)
-    if (cac < 100) {
-      score += 25;
-      metrics.cacHealth = "EFFICIENT";
-    } else if (cac < 300) {
+    if (cac < 500) {
       score += 12;
       metrics.cacHealth = "MODERATE";
+    } else if (cac < 1500) {
+      score += 6;
+      metrics.cacHealth = "INEFFICIENT_BUT_VIABLE";
     } else {
       metrics.cacHealth = "INEFFICIENT";
       recommendations.push("Review acquisition channels and reduce CAC");
     }
 
     // Payback period (25 points)
-    if (paybackMonths < 3) {
+    if (paybackMonths <= 3) {
       score += 25;
       metrics.paybackHealth = "EXCELLENT";
-    } else if (paybackMonths < 6) {
+    } else if (paybackMonths <= 6) {
       score += 12;
       metrics.paybackHealth = "GOOD";
     } else {

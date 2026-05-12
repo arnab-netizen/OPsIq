@@ -96,6 +96,10 @@ export class PricingEngine {
     if (revenueImpact > 0) {
       recommendedPrice = currentPrice * (1 + revenueImpact / 100);
       confidence = Math.min(0.9, 0.5 + Math.abs(elasticity) * 0.5);
+    } else if (revenueImpact <= 0 && Math.abs(elasticity) > 0.8) {
+      // High elasticity: price decrease improves revenue through volume
+      recommendedPrice = currentPrice * 0.95;
+      confidence = Math.min(0.9, 0.5 + Math.abs(elasticity) * 0.1);
     } else if (revenueImpact < -0.02) {
       // If revenue drops significantly, consider decrease
       recommendedPrice = currentPrice * 0.95;
@@ -221,8 +225,8 @@ export class PricingEngine {
     if (costPlusMin > competitorAvgPrice * 1.1) {
       // Higher cost → penetration to gain share
       return PricingStrategy.PENETRATION;
-    } else if (competitorAvgPrice > costPlusMin * 1.3) {
-      // Opportunity for premium pricing
+    } else if (competitorAvgPrice > costOfGoods * 3 && targetMargin < 0.6) {
+      // Opportunity for premium pricing: market >> cost (>3x) AND margin target is low
       return PricingStrategy.SKIMMING;
     } else if (targetMargin >= 0.5) {
       // High margin target → value-based
