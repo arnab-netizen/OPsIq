@@ -5,6 +5,8 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createRecommendation } from "@/services/recommendation";
 import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
+import { assertCapability } from "@/services/entitlement.service";
+import { PlanLimitError } from "@/infra/errors";
 import { z } from "zod/v4";
 import {
   RECOMMENDATION_PRIORITIES,
@@ -48,6 +50,13 @@ export const POST = withRequestContext(async (request) => {
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  // Check entitlement: decision_create (plan-based quota enforcement)
+  // Recommendations consume decision quota in the permission model
+  const capabilityCheck = await assertCapability(workspaceId, "decision_create");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("decision_create", capabilityCheck.reason || "Plan limit exceeded");
   }
 
   const idempotencyKey = request.headers.get("idempotency-key");

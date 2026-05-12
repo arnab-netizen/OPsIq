@@ -20,6 +20,8 @@ import {
   analyzeOutcome,
   ExperimentLifecycleError,
 } from "@/services/experiment/experiment-lifecycle.service";
+import { assertCapability } from "@/services/entitlement.service";
+import { PlanLimitError } from "@/infra/errors";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
 import type {
@@ -148,6 +150,12 @@ export const POST = withRequestContext(async (request) => {
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  // Check entitlement: experiment_create (plan-based quota enforcement)
+  const capabilityCheck = await assertCapability(workspaceId, "experiment_create");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("experiment_create", capabilityCheck.reason || "Plan limit exceeded");
   }
 
   try {

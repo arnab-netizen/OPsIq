@@ -8,6 +8,8 @@ import {
   parseCSV,
 } from "@/services/decisions/decision-creation-service";
 import { logger } from "@/infra/logger";
+import { assertCapability } from "@/services/entitlement.service";
+import { PlanLimitError } from "@/infra/errors";
 
 export const POST = withRequestContext(async (request) => {
   try {
@@ -27,6 +29,12 @@ export const POST = withRequestContext(async (request) => {
     const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
     if (!membership) {
       return Response.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    // Check entitlement: decision_create (plan-based quota enforcement)
+    const capabilityCheck = await assertCapability(workspaceId, "decision_create");
+    if (!capabilityCheck.allowed) {
+      throw new PlanLimitError("decision_create", capabilityCheck.reason || "Plan limit exceeded");
     }
 
     const contentType = request.headers.get("content-type") || "";
