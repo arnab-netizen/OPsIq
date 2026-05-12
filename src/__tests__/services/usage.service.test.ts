@@ -366,26 +366,26 @@ describe("Usage Service", () => {
     it("should handle usage tracking across multiple operations in workflow", async () => {
       const workspaceId = "workspace-123";
 
-      await usageService.recordDecisionEngineUsage(workspaceId);
-      await usageService.recordRecommendationUsage(workspaceId, 3);
-      await usageService.recordActionUsage(workspaceId, 2);
-      await usageService.recordEngagementCreationUsage(workspaceId);
-
-      // All calls should complete without error
-      expect(true).toBe(true);
+      // All these calls should complete without throwing
+      await expect(usageService.recordDecisionEngineUsage(workspaceId)).resolves.toBeUndefined();
+      await expect(usageService.recordRecommendationUsage(workspaceId, 3)).resolves.toBeUndefined();
+      await expect(usageService.recordActionUsage(workspaceId, 2)).resolves.toBeUndefined();
+      await expect(usageService.recordEngagementCreationUsage(workspaceId)).resolves.toBeUndefined();
     });
 
     it("should track usage for multiple workspaces independently", async () => {
       const ws1 = "workspace-001";
       const ws2 = "workspace-002";
 
-      await usageService.recordDecisionEngineUsage(ws1);
-      await usageService.recordRecommendationUsage(ws1, 5);
-      await usageService.recordDecisionEngineUsage(ws2);
-      await usageService.recordActionUsage(ws2, 10);
+      // Track usage for ws1
+      await expect(usageService.recordDecisionEngineUsage(ws1)).resolves.toBeUndefined();
+      await expect(usageService.recordRecommendationUsage(ws1, 5)).resolves.toBeUndefined();
 
-      // All calls should complete without error
-      expect(true).toBe(true);
+      // Track usage for ws2
+      await expect(usageService.recordDecisionEngineUsage(ws2)).resolves.toBeUndefined();
+      await expect(usageService.recordActionUsage(ws2, 10)).resolves.toBeUndefined();
+
+      // Verify all workspaces tracked independently without errors
     });
 
     it("should handle usage bursts (many operations in quick succession)", async () => {
@@ -458,12 +458,13 @@ describe("Usage Service", () => {
         }
       });
 
-      await usageService.recordUsage("workspace-123", "metric1", 1);
-      await usageService.recordUsage("workspace-123", "metric2", 1);
-      await usageService.recordUsage("workspace-123", "metric3", 1);
+      // All three calls should complete without throwing, even though one fails
+      await expect(usageService.recordUsage("workspace-123", "metric1", 1)).resolves.toBeUndefined();
+      await expect(usageService.recordUsage("workspace-123", "metric2", 1)).resolves.toBeUndefined(); // This fails internally
+      await expect(usageService.recordUsage("workspace-123", "metric3", 1)).resolves.toBeUndefined();
 
-      // All calls should complete
-      expect(true).toBe(true);
+      // Verify that the failure was logged (fail-open behavior)
+      expect(vi.mocked(logger.error)).toHaveBeenCalled();
     });
   });
 
