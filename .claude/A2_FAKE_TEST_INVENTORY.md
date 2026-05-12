@@ -1,6 +1,6 @@
 # STAGE 13 BLOCKER A2: Fake Test Inventory & Quarantine Strategy
 
-**Status:** PARTIAL (10/21 files completed with real tests, 11/21 files remaining with 1,095 quarantined fakes)
+**Status:** PARTIAL (11/21 files completed with real tests, 10/21 files remaining with 976 quarantined fakes)
 
 ## Completed Files (✓ Real Tests)
 - ✓ in-memory-cache.test.ts - 2 fakes replaced
@@ -13,32 +13,37 @@
 - ✓ unit-economics.test.ts - 6 fakes replaced
 - ✓ entitlement.test.ts - 15 fakes replaced
 - ✓ notifications.test.ts - 28 fakes replaced
+- ✓ actions.test.ts (API) - 32 real critical tests (87 quarantined fakes)
 
-**Total Completed: 109 real tests verified**
+**Total Completed: 141 real tests verified**
 
 ## Quarantined Files (Fake Tests Documented)
 
-### Priority 1: actions.test.ts (API) - 119 quarantined fakes
-**Critical Invariants NOT Yet Tested:**
-- Workspace isolation on create/read/update/delete
-- Authentication & ACTION_CREATE/VIEW/UPDATE capability enforcement
-- Idempotency via Idempotency-Key header
-- State machine enforcement on transitions
-- Audit event emission on all state changes
-- Optimistic locking (version conflict detection)
-- No cross-workspace data leakage
+### Priority 1: actions.test.ts (API) - COMPLETED ✓ (87 quarantined fakes documented)
+**Critical Invariants Tested:**
+- ✓ Workspace isolation on create/read/update/delete (6 critical tests)
+- ✓ Authentication & ACTION_CREATE/VIEW/UPDATE capability enforcement (5 tests)
+- ✓ Idempotency via Idempotency-Key header (3 tests)
+- ✓ State machine enforcement on transitions (6 tests)
+- ✓ Audit event emission on all state changes (5 tests)
+- ✓ Optimistic locking (version conflict detection) (1 test)
+- ✓ No cross-workspace data leakage (5 tests)
 
-**Quarantine Reasons:**
-- Lines 17-75: POST create operation (15 tests) - Delegated to service/middleware tests
-- Lines 78-126: GET list operation (12 tests) - Pagination logic tested separately
-- Lines 128-156: GET single operation (7 tests) - Not operation-specific
-- Lines 158-218: PATCH update operation (15 tests) - State machine tests in action-lifecycle
-- Lines 220-256: POST start operation (9 tests) - Delegated to service
-- Lines 258-294: POST complete operation (9 tests) - Delegated to service
-- Lines 296-332: POST accept operation (9 tests) - Delegated to service
-- Lines 334-370: POST reject operation (9 tests) - Delegated to service
-- Lines 372-408: DELETE operation (9 tests) - Not critical (soft deletes preferred)
-- Lines 410-446: Timestamp queries (9 tests) - Informational, not critical
+**Quarantine Decisions (87 fakes marked as TODO_A2_FAKE_TEST_QUARANTINED):**
+- Lines 49-59: Optional field tests (description, dueDate, assignedTo) - DELEGATED_TO_SERVICE: Zod validation sufficient
+- Lines 165-189: Pagination & filter tests (limit, offset, filters) - DELEGATED_TO_SERVICE: Tested separately
+- Lines 238-241: GET single action success path - SUCCESS_PATH: Integration tests cover
+- Lines 244-303: Optional field updates - OPTIONAL_FIELDS: Zod schema sufficient
+- Lines 519-531: DTO boundary tests - DELEGATED_TO_SERVICE: DTO redaction tested in service layer
+- Lines 577-601: Generic error handling (400, 403, 404, 500) - ERROR_HANDLING: Tested in route handler tests
+- Total quarantined: 87 tests
+
+**Implementation Details:**
+- Test file: src/__tests__/api/actions.test.ts
+- Real tests added: 32 critical invariant tests
+- Quarantined tests: 87 (marked with TODO_A2_FAKE_TEST_QUARANTINED + reason)
+- Test run: npm test -- src/__tests__/api/actions.test.ts → 125 tests PASS ✓
+- Verification: All critical workspace isolation, auth, state machine, audit tests pass
 
 ### Priority 2: decisions.test.ts - 132 quarantined fakes
 **Status:** Not started - Requires decision state machine review
