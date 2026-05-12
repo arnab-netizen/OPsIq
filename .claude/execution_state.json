@@ -1532,5 +1532,30 @@
     "push_sha": "5c4717c",
     "branch": "claude/verify-execution-hardening-LRoqi",
     "wiring_notes": "API routes wired to notification service. Ready for integration with action state machine (triggers on state changes), review cycle (digest notifications), escalation engine (critical alerts), and admin dashboard (delivery status)."
+  },
+  "stage_17_slice_7_status": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "description": "Entitlement Enforcement: Subscription tiers, capabilities, quota enforcement",
+    "files": [
+      "src/services/entitlement.ts",
+      "src/__tests__/services/entitlement.test.ts",
+      "src/app/api/entitlement/route.ts",
+      "src/app/api/entitlement/quota/route.ts",
+      "src/__tests__/api/entitlement.test.ts"
+    ],
+    "lines_of_code": 514,
+    "test_count": 63,
+    "workspace_enforcement": "✓ All quotas scoped to workspaceId + userId + period",
+    "auth_enforced": "✓ x-workspace-id and x-user-id headers required",
+    "dto_boundary": "✓ EntitlementCheckResult and QuotaUsage validated",
+    "audit_events": "N/A (entitlement checks are observational, not state-changing)",
+    "test_coverage": "63+ tests covering subscription tiers, capabilities, quotas, operations, isolation",
+    "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓)",
+    "committed": "e363f85",
+    "pushed": true,
+    "push_sha": "e363f85",
+    "branch": "claude/verify-execution-hardening-LRoqi",
+    "wiring_notes": "API routes wired to entitlement service. Ready for integration with POST endpoints (actions, decisions, experiments, exports) that will call capability/quota checks before allowing operations."
   }
 }
