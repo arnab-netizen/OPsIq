@@ -136,17 +136,9 @@ export class SalesPipelineEngine {
       };
     }
 
-    // Verify workspace owns this data
+    // Claim workspace entry if not present
     if (!this.dealsStore.has(workspaceId)) {
-      return {
-        workspaceId: "",
-        month: "",
-        totalPipeline: 0,
-        dealsByStage: {} as Record<DealStage, number>,
-        winRate: 0,
-        avgDealSize: 0,
-        salesCycle: 0,
-      };
+      this.dealsStore.set(workspaceId, []);
     }
 
     // Group deals by stage

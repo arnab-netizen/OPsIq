@@ -171,11 +171,11 @@ export class RetentionEngine {
     } else if (avgChurn >= 0.1) {
       riskLevel = "HIGH"; // 10-15% monthly churn
       interventionUrgency = "URGENT";
-    } else if (avgChurn >= 0.05) {
-      riskLevel = "MEDIUM"; // 5-10% monthly churn
+    } else if (avgChurn > 0.05) {
+      riskLevel = "MEDIUM"; // >5% to <10% monthly churn
       interventionUrgency = "PLANNED";
     } else {
-      riskLevel = "LOW"; // <5% monthly churn
+      riskLevel = "LOW"; // ≤5% monthly churn
       interventionUrgency = "MONITOR";
     }
 

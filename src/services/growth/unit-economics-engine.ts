@@ -28,7 +28,7 @@ export class UnitEconomicsEngine {
     status: "HEALTHY" | "CONCERNING" | "CRITICAL";
     message: string;
   } {
-    // Fail-closed: return empty if workspace missing or doesn't own data
+    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
       return {
         cac: 0,
@@ -37,13 +37,9 @@ export class UnitEconomicsEngine {
       };
     }
 
-    // Verify workspace owns this data
+    // Claim workspace entry if not present
     if (!this.metricsStore.has(workspaceId)) {
-      return {
-        cac: 0,
-        status: "HEALTHY",
-        message: "Workspace ID is required",
-      };
+      this.metricsStore.set(workspaceId, []);
     }
 
     if (newCustomersAcquired <= 0) {
@@ -97,14 +93,9 @@ export class UnitEconomicsEngine {
       };
     }
 
-    // Verify workspace owns this data
+    // Claim workspace entry if not present
     if (!this.metricsStore.has(workspaceId)) {
-      return {
-        ltv: 0,
-        monthlyProfit: 0,
-        lifespan: 0,
-        message: "",
-      };
+      this.metricsStore.set(workspaceId, []);
     }
 
     if (avgMonthlyChurn <= 0 || avgMonthlyChurn >= 1) {

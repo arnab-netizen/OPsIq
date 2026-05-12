@@ -127,9 +127,9 @@ export class PricingEngine {
       return { gaps: [], overlaps: [] };
     }
 
-    // Verify workspace owns this data
+    // Claim workspace entry if not present
     if (!this.tiersStore.has(workspaceId)) {
-      return { gaps: [], overlaps: [] };
+      this.tiersStore.set(workspaceId, []);
     }
 
     // Filter to workspace
