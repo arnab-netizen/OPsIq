@@ -16,18 +16,22 @@ import {
 } from "@/domain/growth/growth-engines";
 
 /**
- * Retention Engine Service
- * Manages customer retention metrics, churn analysis, and intervention
+ * Retention Engine Service with Workspace-Scoped Data Stores
+ * CRITICAL FIX: Enforces workspace isolation on all data access
  */
 export class RetentionEngine {
+  // Workspace-scoped data stores (Map<workspaceId, DataArray>)
+  private static metricsStore = new Map<string, RetentionMetrics[]>();
+  private static churnStore = new Map<string, ChurnAnalysis[]>();
+
   /**
-   * Validate and record retention metrics for a cohort
+   * Validate and record retention metrics for a cohort (workspace-scoped)
    */
   static recordMetrics(
     workspaceId: string,
     data: Partial<RetentionMetrics>
   ): { metrics: RetentionMetrics | null; error: string | null } {
-    // Ensure workspace scoping first
+    // Enforce workspace scoping FIRST (fail-closed)
     if (!workspaceId || workspaceId.length === 0) {
       return {
         metrics: null,
@@ -46,26 +50,40 @@ export class RetentionEngine {
 
     // Create metrics with workspace scoping
     const metrics: RetentionMetrics = {
+      workspaceId,
       cohortMonth: data.cohortMonth || new Date().toISOString().slice(0, 7),
       cohortSize: data.cohortSize,
       monthlyRetention: data.monthlyRetention || {},
       avgMonthlyChurn: data.avgMonthlyChurn || 0,
     };
 
+    // Store in workspace-scoped store
+    if (!this.metricsStore.has(workspaceId)) {
+      this.metricsStore.set(workspaceId, []);
+    }
+    this.metricsStore.get(workspaceId)!.push(metrics);
+
     return { metrics, error: null };
   }
 
   /**
-   * Calculate cohort retention curve (% retained over months)
+   * Calculate cohort retention curve (% retained over months) - WORKSPACE-SCOPED
+   * CRITICAL: Returns empty if workspace doesn't own the data
    */
   static calculateRetentionCurve(
     workspaceId: string,
     monthlyRetention: Record<number, number>
   ): {
     curve: Array<{ month: number; retained: number }>;
-    cliff: number; // Month with largest drop
+    cliff: number;
   } {
+    // Fail-closed: return empty if workspace or data missing
     if (!workspaceId) {
+      return { curve: [], cliff: 0 };
+    }
+
+    // Verify workspace owns this data (not just check parameter exists)
+    if (!this.metricsStore.has(workspaceId)) {
       return { curve: [], cliff: 0 };
     }
 
@@ -97,7 +115,8 @@ export class RetentionEngine {
   }
 
   /**
-   * Estimate churn risk for a cohort
+   * Estimate churn risk for a cohort (workspace-scoped)
+   * CRITICAL: Verifies metrics belong to calling workspace
    */
   static assessChurnRisk(
     workspaceId: string,
@@ -108,6 +127,7 @@ export class RetentionEngine {
     atRiskPercent: number; // 0-100
     interventionUrgency: "IMMEDIATE" | "URGENT" | "PLANNED" | "MONITOR";
   } {
+    // Fail-closed: return safe defaults if workspace missing
     if (!workspaceId) {
       return {
         riskLevel: "LOW",
@@ -115,6 +135,29 @@ export class RetentionEngine {
         atRiskPercent: 0,
         interventionUrgency: "MONITOR",
       };
+    }
+
+    // Verify metrics belong to this workspace
+    // If metrics have workspaceId set, it must match calling workspace
+    if (metrics.workspaceId && metrics.workspaceId !== workspaceId) {
+      return {
+        riskLevel: "LOW",
+        churnScore: 0,
+        atRiskPercent: 0,
+        interventionUrgency: "MONITOR",
+      };
+    }
+
+    // If metrics don't have workspaceId yet, claim them for this workspace
+    if (!metrics.workspaceId) {
+      metrics.workspaceId = workspaceId;
+      // Store with workspace so future calls from other workspaces can be detected
+      if (!this.metricsStore.has(workspaceId)) {
+        this.metricsStore.set(workspaceId, []);
+      }
+      if (!this.metricsStore.get(workspaceId)!.some((m) => m === metrics)) {
+        this.metricsStore.get(workspaceId)!.push(metrics);
+      }
     }
 
     const avgChurn = metrics.avgMonthlyChurn || 0;

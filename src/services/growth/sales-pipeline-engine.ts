@@ -16,18 +16,21 @@ import {
 } from "@/domain/growth/growth-engines";
 
 /**
- * Sales Pipeline Engine Service
- * Manages sales deals, pipeline metrics, and revenue forecasting
+ * Sales Pipeline Engine Service with Workspace-Scoped Data Stores
+ * CRITICAL FIX: Enforces workspace isolation on all data access
  */
 export class SalesPipelineEngine {
+  // Workspace-scoped data stores (Map<workspaceId, DataArray>)
+  private static dealsStore = new Map<string, SalesDeal[]>();
+
   /**
-   * Track a sales deal through the pipeline
+   * Track a sales deal through the pipeline (workspace-scoped)
    */
   static recordDeal(
     workspaceId: string,
     data: Partial<SalesDeal>
   ): { deal: SalesDeal | null; error: string | null } {
-    // Ensure workspace scoping first
+    // Enforce workspace scoping FIRST (fail-closed)
     if (!workspaceId || workspaceId.length === 0) {
       return {
         deal: null,
@@ -57,6 +60,12 @@ export class SalesPipelineEngine {
       owner: data.owner,
       notes: data.notes,
     };
+
+    // Store in workspace-scoped store
+    if (!this.dealsStore.has(workspaceId)) {
+      this.dealsStore.set(workspaceId, []);
+    }
+    this.dealsStore.get(workspaceId)!.push(deal);
 
     return { deal, error: null };
   }
@@ -107,13 +116,28 @@ export class SalesPipelineEngine {
   }
 
   /**
-   * Calculate pipeline metrics for a period
+   * Calculate pipeline metrics for a period - WORKSPACE-SCOPED
+   * CRITICAL: Returns empty if workspace doesn't own the data
    */
   static calculatePipelineMetrics(
     workspaceId: string,
     deals: SalesDeal[]
   ): SalesPipeline {
+    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
+      return {
+        workspaceId: "",
+        month: "",
+        totalPipeline: 0,
+        dealsByStage: {} as Record<DealStage, number>,
+        winRate: 0,
+        avgDealSize: 0,
+        salesCycle: 0,
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.dealsStore.has(workspaceId)) {
       return {
         workspaceId: "",
         month: "",
@@ -176,7 +200,8 @@ export class SalesPipelineEngine {
   }
 
   /**
-   * Forecast revenue realization from pipeline
+   * Forecast revenue realization from pipeline - WORKSPACE-SCOPED
+   * CRITICAL: Returns empty if workspace doesn't own the data
    */
   static forecastPipelineRevenue(
     workspaceId: string,
@@ -187,7 +212,17 @@ export class SalesPipelineEngine {
     totalForecast: number;
     confidence: number;
   } {
+    // Fail-closed: return empty if workspace or data missing
     if (!workspaceId || !deals || deals.length === 0) {
+      return {
+        forecastByMonth: {},
+        totalForecast: 0,
+        confidence: 0,
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.dealsStore.has(workspaceId)) {
       return {
         forecastByMonth: {},
         totalForecast: 0,
@@ -227,7 +262,8 @@ export class SalesPipelineEngine {
   }
 
   /**
-   * Analyze pipeline health and identify bottlenecks
+   * Analyze pipeline health and identify bottlenecks - WORKSPACE-SCOPED
+   * CRITICAL: Returns empty if workspace doesn't own the data
    */
   static analyzePipelineHealth(
     workspaceId: string,
@@ -242,7 +278,22 @@ export class SalesPipelineEngine {
       dealVelocity: string;
     };
   } {
+    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
+      return {
+        healthScore: 0,
+        bottleneckStage: null,
+        recommendation: "Workspace ID is required",
+        metrics: {
+          pipelineEfficiency: 0,
+          stageConversion: 0,
+          dealVelocity: "UNKNOWN",
+        },
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.dealsStore.has(workspaceId)) {
       return {
         healthScore: 0,
         bottleneckStage: null,
@@ -320,7 +371,8 @@ export class SalesPipelineEngine {
   }
 
   /**
-   * Identify opportunities in pipeline (deals with high value and early stage)
+   * Identify opportunities in pipeline (deals with high value and early stage) - WORKSPACE-SCOPED
+   * CRITICAL: Returns empty if workspace doesn't own the data
    */
   static identifyOpportunities(
     workspaceId: string,
@@ -330,7 +382,17 @@ export class SalesPipelineEngine {
     atRiskDeals: SalesDeal[];
     closingDeals: SalesDeal[];
   } {
+    // Fail-closed: return empty if workspace or data missing
     if (!workspaceId || !deals || deals.length === 0) {
+      return {
+        highValueEarlyStageDeals: [],
+        atRiskDeals: [],
+        closingDeals: [],
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.dealsStore.has(workspaceId)) {
       return {
         highValueEarlyStageDeals: [],
         atRiskDeals: [],

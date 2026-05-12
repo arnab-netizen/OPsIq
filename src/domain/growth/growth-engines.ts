@@ -103,6 +103,7 @@ export enum AcquisitionChannel {
 
 // Acquisition Metrics Interfaces
 export interface AcquisitionMetrics {
+  workspaceId?: string;
   channel: AcquisitionChannel;
   month: string; // YYYY-MM format
   leads: number;
@@ -135,6 +136,7 @@ export enum ChurnReason {
 
 // Retention Metrics Interfaces
 export interface RetentionMetrics {
+  workspaceId?: string;
   cohortMonth: string; // YYYY-MM format
   cohortSize?: number;
   monthlyRetention: Record<number, number>; // month -> retention rate (0-1)

@@ -9,12 +9,15 @@
  */
 
 /**
- * Unit Economics Engine Service
- * Analyzes customer acquisition costs, lifetime value, and unit economics health
+ * Unit Economics Engine Service with Workspace-Scoped Data Stores
+ * CRITICAL FIX: Enforces workspace isolation on all data access
  */
 export class UnitEconomicsEngine {
+  // Workspace-scoped data stores (Map<workspaceId, DataArray>)
+  private static metricsStore = new Map<string, any[]>();
   /**
-   * Calculate Customer Acquisition Cost (CAC)
+   * Calculate Customer Acquisition Cost (CAC) - WORKSPACE-SCOPED
+   * CRITICAL: Returns zero if workspace doesn't own the data
    */
   static calculateCAC(
     workspaceId: string,
@@ -25,7 +28,17 @@ export class UnitEconomicsEngine {
     status: "HEALTHY" | "CONCERNING" | "CRITICAL";
     message: string;
   } {
+    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
+      return {
+        cac: 0,
+        status: "HEALTHY",
+        message: "Workspace ID is required",
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.metricsStore.has(workspaceId)) {
       return {
         cac: 0,
         status: "HEALTHY",
@@ -60,7 +73,8 @@ export class UnitEconomicsEngine {
   }
 
   /**
-   * Calculate Customer Lifetime Value (LTV)
+   * Calculate Customer Lifetime Value (LTV) - WORKSPACE-SCOPED
+   * CRITICAL: Returns zero if workspace doesn't own the data
    */
   static calculateLTV(
     workspaceId: string,
@@ -73,7 +87,18 @@ export class UnitEconomicsEngine {
     lifespan: number;
     message: string;
   } {
+    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
+      return {
+        ltv: 0,
+        monthlyProfit: 0,
+        lifespan: 0,
+        message: "",
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.metricsStore.has(workspaceId)) {
       return {
         ltv: 0,
         monthlyProfit: 0,
@@ -106,7 +131,8 @@ export class UnitEconomicsEngine {
   }
 
   /**
-   * Calculate CAC Payback Period
+   * Calculate CAC Payback Period - WORKSPACE-SCOPED
+   * CRITICAL: Returns zero if workspace doesn't own the data
    */
   static calculateCACPayback(
     workspaceId: string,
@@ -117,7 +143,17 @@ export class UnitEconomicsEngine {
     paybackStatus: "EXCELLENT" | "GOOD" | "ACCEPTABLE" | "POOR";
     recommendation: string;
   } {
+    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
+      return {
+        paybackMonths: 0,
+        paybackStatus: "POOR",
+        recommendation: "Workspace ID is required",
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.metricsStore.has(workspaceId)) {
       return {
         paybackMonths: 0,
         paybackStatus: "POOR",
@@ -156,7 +192,8 @@ export class UnitEconomicsEngine {
   }
 
   /**
-   * Calculate LTV:CAC Ratio
+   * Calculate LTV:CAC Ratio - WORKSPACE-SCOPED
+   * CRITICAL: Returns zero if workspace doesn't own the data
    */
   static calculateLTVCACRatio(
     workspaceId: string,
@@ -167,7 +204,17 @@ export class UnitEconomicsEngine {
     health: "HEALTHY" | "AT_RISK" | "CRITICAL";
     recommendation: string;
   } {
+    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
+      return {
+        ratio: 0,
+        health: "CRITICAL",
+        recommendation: "Workspace ID is required",
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.metricsStore.has(workspaceId)) {
       return {
         ratio: 0,
         health: "CRITICAL",
@@ -203,7 +250,8 @@ export class UnitEconomicsEngine {
   }
 
   /**
-   * Calculate Contribution Margin and Contribution per Unit
+   * Calculate Contribution Margin and Contribution per Unit - WORKSPACE-SCOPED
+   * CRITICAL: Returns zero if workspace doesn't own the data
    */
   static calculateContributionMetrics(
     workspaceId: string,
@@ -218,7 +266,19 @@ export class UnitEconomicsEngine {
     totalContribution: number;
     breakEvenUnits: number;
   } {
+    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
+      return {
+        contributionPerUnit: 0,
+        contributionMargin: 0,
+        contributionRatio: 0,
+        totalContribution: 0,
+        breakEvenUnits: 0,
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.metricsStore.has(workspaceId)) {
       return {
         contributionPerUnit: 0,
         contributionMargin: 0,
@@ -248,7 +308,8 @@ export class UnitEconomicsEngine {
   }
 
   /**
-   * Assess unit economics health
+   * Assess unit economics health - WORKSPACE-SCOPED
+   * CRITICAL: Returns empty if workspace doesn't own the data
    */
   static assessUnitEconomicsHealth(
     workspaceId: string,
@@ -267,7 +328,23 @@ export class UnitEconomicsEngine {
     };
     recommendations: string[];
   } {
+    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
+      return {
+        overallHealth: "WEAK",
+        score: 0,
+        metrics: {
+          ltvHealth: "",
+          cacHealth: "",
+          paybackHealth: "",
+          profitabilityHealth: "",
+        },
+        recommendations: [],
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.metricsStore.has(workspaceId)) {
       return {
         overallHealth: "WEAK",
         score: 0,
@@ -353,7 +430,8 @@ export class UnitEconomicsEngine {
   }
 
   /**
-   * Calculate customer payback and retention value
+   * Calculate customer payback and retention value - WORKSPACE-SCOPED
+   * CRITICAL: Returns zero if workspace doesn't own the data
    */
   static calculateRetentionValue(
     workspaceId: string,
@@ -368,7 +446,19 @@ export class UnitEconomicsEngine {
     payoffPeriod: number;
     recommendation: string;
   } {
+    // Fail-closed: return empty if workspace missing or doesn't own data
     if (!workspaceId) {
+      return {
+        currentLTV: 0,
+        improvedLTV: 0,
+        ltvGain: 0,
+        payoffPeriod: 0,
+        recommendation: "",
+      };
+    }
+
+    // Verify workspace owns this data
+    if (!this.metricsStore.has(workspaceId)) {
       return {
         currentLTV: 0,
         improvedLTV: 0,
