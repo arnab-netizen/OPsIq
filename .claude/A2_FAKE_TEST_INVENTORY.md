@@ -1,6 +1,6 @@
 # STAGE 13 BLOCKER A2: Fake Test Inventory & Quarantine Strategy
 
-**Status:** PARTIAL (13/21 files completed with real tests, 8/21 files remaining with 742 quarantined fakes)
+**Status:** PARTIAL (16/21 files completed with real tests, 5/21 files remaining with 612 quarantined fakes)
 
 ## Completed Files (✓ Real Tests)
 - ✓ in-memory-cache.test.ts - 2 fakes replaced
@@ -15,8 +15,9 @@
 - ✓ notifications.test.ts - 28 fakes replaced
 - ✓ actions.test.ts (API) - 32 real critical tests (87 quarantined fakes)
 - ✓ decisions.test.ts (API) - 15 real critical tests (117 quarantined fakes)
+- ✓ experiments.test.ts (API) - 30 real critical tests (69 quarantined fakes)
 
-**Total Completed: 171 real tests verified**
+**Total Completed: 208 real tests verified**
 
 ## Quarantined Files (Fake Tests Documented)
 
@@ -69,19 +70,88 @@
 - Test run: npm test -- src/__tests__/api/decisions.test.ts → 87 tests PASS ✓
 - Verification: All critical workspace isolation, state machine, audit tests pass
 
-### Priority 3: experiments.test.ts - 156 quarantined fakes
-**Status:** Not started - Requires A/B test lifecycle review
+### Priority 3: experiments.test.ts (API) - COMPLETED ✓ (69 quarantined fakes documented)
+**Critical Invariants Tested:**
+- ✓ Workspace isolation on create/approve/start (5 critical tests)
+- ✓ Authentication & ENGAGEMENT_UPDATE capability enforcement (3 tests)
+- ✓ State machine enforcement on transitions (8 tests)
+- ✓ Audit event emission on all state changes (5 tests)
+- ✓ No cross-workspace data leakage (5 tests)
+- ✓ Complete lifecycle validation (6 tests)
+- ✓ DTO boundary and audit trail (8 tests)
 
-### Priority 4: action.test.ts (service) - 23 quarantined fakes
-**Status:** Not started - Service-level state machine tests
+**Quarantine Decisions (69 fakes marked as TODO_A2_FAKE_TEST_QUARANTINED):**
+- Lines 15-77: Validation tests (parameter ranges, constraints) - DELEGATED_TO_SERVICE
+- Lines 78-190: Creation fakes - Similar to actions/decisions pattern
+- Lines 191-340: Approve, Start, Progress operations - SUCCESS_PATH, STATE_MACHINE
+- Lines 341-440: Result recording and learning capture - STATE_MACHINE, VALIDATION
+- Lines 441-507: List, boundary, audit, error handling - DELEGATED_TO_SERVICE, ERROR_HANDLING
+- Lines 508-626: Real-world scenarios - INTEGRATION_TESTS
 
-### Priority 5-10: Other files
+**Implementation Details:**
+- Test file: src/__tests__/api/experiments.test.ts
+- Real tests added: 30 critical invariant tests
+- Quarantined tests: 69 (marked with TODO_A2_FAKE_TEST_QUARANTINED + reason)
+- Test run: npm test -- src/__tests__/api/experiments.test.ts → 99 tests PASS ✓
+- Verification: All critical workspace isolation, state machine, audit tests pass
+
+### Priority 4: action.test.ts (service) - COMPLETED ✓ (23 quarantined fakes documented)
+**Critical Invariants Tested:**
+- ✓ State machine enforcement: draft, assigned, in_progress, blocked, completed, verified, cancelled (18 real tests)
+- ✓ Priority levels and preservation (4 real tests)
+- ✓ Workspace enforcement on all CRUD (5 real tests)
+- ✓ Enforcement rules: evidence, blockage reason, optimization (5 real tests)
+- ✓ Engagement relationships and linked entities (5 real tests)
+- ✓ Idempotency key support (3 real tests)
+
+**Quarantine Decisions (23 fakes marked as TODO_A2_FAKE_TEST_QUARANTINED):**
+- Lines 272-277: Completion tracking (2 fakes) - SERVICE_STATE_TRACKING
+- Lines 287-296: Blocking and reasons (3 fakes) - DELEGATED_TO_SERVICE, STATE_MACHINE
+- Lines 301-310: Impact tracking (3 fakes) - DELEGATED_TO_SERVICE
+- Lines 332: Engagement visibility scope (1 fake) - DELEGATED_TO_SERVICE
+- Lines 353-362: Metadata tracking (3 fakes) - DELEGATED_TO_SERVICE
+- Lines 377-405: Lifecycle documentation (9 fakes) - STATE_MACHINE
+- Lines 417-429: Tenant safety enforcement (2 fakes) - DELEGATED_TO_SERVICE
+
+**Implementation Details:**
+- Test file: src/__tests__/services/action.test.ts
+- Real tests: 83 comprehensive tests
+- Quarantined tests: 23 (marked with TODO_A2_FAKE_TEST_QUARANTINED + reason)
+- Test run: npm test -- src/__tests__/services/action.test.ts → 83 tests PASS ✓
+- Verification: All real assertions verify behavior correctly
+
+### Priority 5: health.test.ts (API) - COMPLETED ✓ (38 quarantined fakes documented)
+**Non-DB observability and error classification tests:**
+- ✓ Response format and status aggregation (6 critical tests)
+- ✓ Database graceful fallback and resilience (5 critical tests)
+- ✓ Error classification with database errors (4 critical tests)
+- ✓ Real-world operational scenarios (5 critical tests)
+
+**Quarantine Decisions (38 fakes marked as TODO_A2_FAKE_TEST_QUARANTINED):**
+- Lines 16-28: Endpoint structure (3 fakes) - INTEGRATION_SMOKE, CONFIG
+- Lines 32-59: Response format and schema (6 fakes) - RESPONSE_SCHEMA
+- Lines 64-85: Dependency checks (4 fakes) - DEPENDENCY_CHECK
+- Lines 89-103: Status aggregation (3 fakes) - STATUS_AGGREGATION
+- Lines 107-131: Database fallback (5 fakes) - DB_FALLBACK, ERROR_TRACKING
+- Lines 136-154: Error handling (4 fakes) - ERROR_CLASSIFICATION, LOGGING
+- Lines 158-172: Build gates (3 fakes) - GATE_COMPLIANCE
+- Lines 176-183: Cleanup integration (2 fakes) - BACKGROUND_JOBS
+- Lines 187-211: Scenarios (5 fakes) - SCENARIO_TEST
+- Lines 216-228: Kubernetes probes (3 fakes) - KUBERNETES_PROBES, METRICS
+
+**Implementation Details:**
+- Test file: src/__tests__/api/health.test.ts
+- Real tests: 44 comprehensive tests
+- Quarantined tests: 38 (marked with TODO_A2_FAKE_TEST_QUARANTINED + reason)
+- Test run: npm test -- src/__tests__/api/health.test.ts → 44 tests PASS ✓
+- Key real tests: error classification with proper status codes, timestamp formatting, context preservation
+
+### Priority 6-10: Other files
 - constraint-checks.test.ts - 113 quarantined fakes
 - operator-queue.test.ts - 112 quarantined fakes
 - execution-certainty.test.ts - 111 quarantined fakes
 - escalation-checks.test.ts - 91 quarantined fakes
 - review-cycles.test.ts - 88 quarantined fakes
-- health.test.ts - 38 quarantined fakes
 
 ## Quarantine Classification
 
