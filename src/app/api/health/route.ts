@@ -24,18 +24,27 @@ export const GET = withRequestContext(async () => {
 
   const checks: Record<string, Record<string, string | number | boolean>> = {};
 
-  // Database check
+  // Database check (graceful fallback if DB unavailable)
   const dbStart = Date.now();
-  try {
-    await db.$queryRawUnsafe("SELECT 1");
-    checks.database = { status: "healthy", latencyMs: Date.now() - dbStart };
-  } catch (error) {
-    const classified = classifyError(error, { check: "database" });
-    reportError(classified);
+  if (process.env.DATABASE_URL) {
+    try {
+      await db.$queryRawUnsafe("SELECT 1");
+      checks.database = { status: "healthy", latencyMs: Date.now() - dbStart };
+    } catch (error) {
+      const classified = classifyError(error, { check: "database" });
+      reportError(classified);
+      checks.database = {
+        status: "unhealthy",
+        latencyMs: Date.now() - dbStart,
+        error: error instanceof Error ? error.message : "Unknown database error",
+      };
+    }
+  } else {
+    // Database not configured
     checks.database = {
-      status: "unhealthy",
+      status: "degraded",
       latencyMs: Date.now() - dbStart,
-      error: error instanceof Error ? error.message : "Unknown database error",
+      note: "DATABASE_URL not configured - database checks skipped",
     };
   }
 

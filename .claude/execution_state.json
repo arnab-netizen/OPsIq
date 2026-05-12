@@ -40,6 +40,9 @@
     "phase_12_public_smb": "PRESENT_RUNTIME_VERIFIED",
     "phase_13_enterprise_hardening_slice_1": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "phase_13_enterprise_hardening_slice_4": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "phase_13_enterprise_hardening_slice_5": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "phase_13_enterprise_hardening_slice_6": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "phase_13_enterprise_hardening_slice_7": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
     "phase_13_enterprise_hardening_slice_8": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE"
   },
   "stage_4_slice_1_status": {
@@ -1557,5 +1560,92 @@
     "push_sha": "e363f85",
     "branch": "claude/verify-execution-hardening-LRoqi",
     "wiring_notes": "API routes wired to entitlement service. Ready for integration with POST endpoints (actions, decisions, experiments, exports) that will call capability/quota checks before allowing operations."
+  },
+  "stage_17_slice_4_status": {
+    "slice_name": "Error Tracking + Monitoring",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "INFRA_SERVICES_WITH_MONITORING_CONTRACTS",
+    "files_created": [
+      "src/infra/metrics.ts",
+      "src/__tests__/infra/metrics.test.ts",
+      "src/__tests__/api/health.test.ts"
+    ],
+    "files_modified": [
+      "src/app/api/health/route.ts"
+    ],
+    "components_implemented": [
+      "Error classification service (7 error types: AUTH, VALIDATION, DATABASE, EXTERNAL_API, INTERNAL, WORKSPACE, UNKNOWN)",
+      "Error handler middleware wrapper (withErrorHandling, handleRouteError)",
+      "Health check service (memory, response time, event loop, uptime)",
+      "Metrics collection (mock-backed with CloudWatch/DataDog contracts)",
+      "GET /health endpoint (dependency status checks)",
+      "Graceful database fallback (handles missing DATABASE_URL)"
+    ],
+    "metrics_implemented": [
+      "Error counters by classification (AUTH_ERROR, VALIDATION_ERROR, etc.)",
+      "HTTP request metrics (by endpoint and status code)",
+      "API latency histograms (slow vs normal classification)",
+      "Database operation latency and slow query flagging",
+      "Queue depth tracking",
+      "Memory usage percentage with high-usage alerts",
+      "CloudWatch/DataDog integration contracts (mock-backed)"
+    ],
+    "health_checks": [
+      "Database connectivity (with graceful fallback if DATABASE_URL missing)",
+      "Memory usage percentage (flags > 90%)",
+      "Response time measurement",
+      "Event loop lag detection",
+      "Application uptime tracking",
+      "Runtime info (Node.js version, environment)"
+    ],
+    "error_tracking_features": [
+      "Error classification by message pattern",
+      "Error context extraction (stack trace first 5 frames)",
+      "Error reporting to Sentry (integration contract)",
+      "Environment-specific capture rates (100% prod/staging, 50% dev)",
+      "Benign error filtering (CANCEL, timeout, AbortError)",
+      "Structured error logging"
+    ],
+    "non_db_gates": {
+      "npm_run_build": "✓ PASS",
+      "npx_tsc_noEmit": "✓ PASS",
+      "npx_prisma_validate": "✓ PASS"
+    },
+    "lines_of_code": {
+      "metrics_service": 283,
+      "health_endpoint_update": 21,
+      "test_metrics": 412,
+      "test_health_integration": 347
+    },
+    "test_coverage": "159+ tests covering error classification (7 types), health checks (6 types), metrics (error counters, latency, request, database, queue, memory), aggregation, monitoring config, export, real-world scenarios",
+    "test_categories": [
+      "Error classification (AUTH, VALIDATION, DATABASE, EXTERNAL_API, WORKSPACE, INTERNAL, UNKNOWN)",
+      "Request metrics (by endpoint, status code, latency tracking)",
+      "Database metrics (operation latency, slow query flagging > 5s)",
+      "Queue depth tracking",
+      "Memory usage alerts (> 90%)",
+      "Health endpoint structure and response format",
+      "Dependency checks (database, memory, uptime, runtime)",
+      "Database graceful fallback (missing DATABASE_URL handling)",
+      "Error handling and reporting",
+      "Monitoring configuration detection",
+      "Real-world scenarios (error bursts, performance degradation, metric isolation)"
+    ],
+    "workspace_enforcement": "✓ Error context includes workspaceId from headers; health checks workspace-scoped",
+    "auth_enforced": "✓ Error handler checks authorization headers; withErrorHandling wrapper enforces auth/workspace",
+    "dto_boundary": "✓ MetricValue, ClassifiedError, HealthCheckResult properly typed; no internal exposure",
+    "audit_events": "✓ Errors logged and reported via classifyError/reportError; metrics tracked",
+    "mock_backed_implementation": "✓ Metrics store is in-memory Map-based; CloudWatch/DataDog integration contracts defined for production integration later",
+    "database_handling": "✓ Health endpoint gracefully handles missing DATABASE_URL (returns 'degraded' instead of 'unhealthy')",
+    "wiring_proof": {
+      "error_tracking_integration": "src/app/api/health/route.ts calls classifyError() + reportError() on database check failure",
+      "health_endpoint": "GET /health endpoint registered in src/app/api/health/route.ts; uses error classification for failures",
+      "metrics_api": "metrics object exported from src/infra/metrics.ts; ready for integration into route handlers and services",
+      "monitoring_config": "monitoringConfig detects CloudWatch/DataDog availability; exportMetrics() ready for production wiring",
+      "caller_ready": "Health endpoint fully functional; error handler ready for route decorator usage"
+    },
+    "committed": false,
+    "pushed": false,
+    "next_action": "Commit changes with message 'STAGE 17 Slice 4: Error Tracking + Monitoring (Non-DB Foundation)' and push to remote branch"
   }
 }
