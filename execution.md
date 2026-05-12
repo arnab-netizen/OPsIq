@@ -275,6 +275,38 @@ npm test -- src/__tests__/services/growth
 
 ---
 
+## ⚠️ CI GATE FOR PHASE A3 AND B2 COMPLETION
+
+**CRITICAL:** Phase A3 and B2 cannot be marked COMPLETE_VERIFIED until GitHub Actions proves:
+
+1. **Database Migration Success:** `npx prisma migrate deploy` exits code 0
+2. **Full Test Suite Pass:** `npm test` reports all tests PASS (not just local subset)
+3. **Build Success:** `npm run build` compiles successfully with DATABASE_URL
+4. **Schema Validation:** `npx prisma validate` passes
+
+**CI Workflow Configuration:** `.github/workflows/ci.yml`
+- PostgreSQL 16 service provisioned
+- DATABASE_URL set: `postgresql://postgres:postgres@localhost:5432/opsiq_test`
+- Execution sequence: npm ci → tsc → prisma validate → **prisma migrate deploy** → npm run build → npm test
+- All steps run with continue-on-error: false (strict validation)
+
+**Current Status:**
+- Local non-DB tests: 358/358 PASS ✓ (growth engines only)
+- CI workflow: READY ✓ (PostgreSQL configured)
+- CI test run: **NOT YET EXECUTED** (will run on next push/PR)
+- Expected CI result: 3845/3845 PASS (not claimed until CI proves it)
+
+**Definition of Done (Not Yet Met):**
+- [ ] GitHub Actions runs CI workflow on branch push
+- [ ] `npx prisma migrate deploy` succeeds (modifies database)
+- [ ] All 3845 tests PASS in CI (including Phase 3 event sourcing)
+- [ ] CI logs show: "Tests 0 failed | 3845 passed"
+- [ ] No database errors in test output
+
+**Do NOT Mark A3/B2 Complete Until Above Proven in CI**
+
+---
+
 ## PHASE B: DETERMINISTIC EXECUTION CORE
 
 ### B1: Fix Growth Engine Logic Bugs
@@ -306,24 +338,41 @@ npm test -- growth
 ---
 
 ### B2: Add Database-Backed Stores for Growth Engines
-**Status:** BLOCKER (Dependent on DATABASE_URL)  
-**Root Cause:** In-memory stores don't persist, don't scale, can't support multi-instance.  
-**Implementation Steps:**
+**Status:** BLOCKED_DB_REQUIRED (Dependent on A3 CI Verification)
+**Root Cause:** In-memory stores don't persist, don't scale, can't support multi-instance.
+
+**Prerequisites for B2 Completion:**
+1. ✓ A1: Workspace isolation enforced (COMPLETE)
+2. ✓ B1: Growth engine logic fixed (COMPLETE)
+3. **PENDING:** A3 CI verification: GitHub Actions proves all 3845 tests PASS with `npx prisma migrate deploy`
+
+**Implementation (Pending A3 CI Pass):**
 1. Define Prisma models: RetentionMetrics, AcquisitionMetrics, PricingAnalysis, SalesPipelineData, UnitEconomicsAnalysis
-2. Create migrations
+2. Create migrations (verified by CI: `npx prisma migrate deploy` succeeds)
 3. Update growth engines to query database
-4. Update tests to use database
+4. Update tests to use database (verified by CI: all DB tests PASS)
 
 **Verification Commands:**
 ```bash
-npx prisma validate
-# Output: Schema valid
-
+# Local (no DB): Cannot verify without PostgreSQL
 npm test -- growth
-# Output: All growth tests pass with database-backed stores
+# Output: 358 tests would pass if DB available
+
+# CI (with PostgreSQL): 
+npx prisma validate  # Checks schema
+npx prisma migrate deploy  # Applies migrations to opsiq_test database
+npm test -- growth  # Runs tests against real database
+# Output: All 358 tests PASS with database-backed stores
 ```
 
-**Definition of Done:** Growth engines persist data, support multi-instance, survive restarts
+**Definition of Done (Not Yet Met):**
+- [ ] CI workflow executes `npx prisma migrate deploy` successfully
+- [ ] Growth engine tests query real PostgreSQL (not in-memory)
+- [ ] CI reports all 358 growth tests PASS with DB access
+- [ ] No in-memory fallbacks remain in growth engines
+- [ ] Multi-instance data isolation verified (each workspace scoped to PostgreSQL)
+
+**CI Gate:** B2 cannot be COMPLETE_VERIFIED until GitHub Actions proves migration deploy + full growth test suite pass with database
 
 ---
 
