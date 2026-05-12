@@ -218,8 +218,8 @@ export function assessFinancialHealth(financials: Financials): FinancialHealth {
 
   if (cashRunwayMonths < 1) return FinancialHealth.CRITICAL;
   if (cashRunwayMonths < 3) return FinancialHealth.STRESSED;
-  if (cashRunwayMonths < 6) return FinancialHealth.STABLE;
-  if (cashRunwayMonths < 12) return FinancialHealth.HEALTHY;
+  if (cashRunwayMonths < 12) return FinancialHealth.STABLE;
+  if (cashRunwayMonths < 18) return FinancialHealth.HEALTHY;
   return FinancialHealth.THRIVING;
 }
 
