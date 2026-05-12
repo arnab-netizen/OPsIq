@@ -1,6 +1,6 @@
 {
   "execution_date": "2026-05-12",
-  "current_phase": "PHASE C: MONETIZATION ENFORCEMENT (C3 COMPLETE)",
+  "current_phase": "PHASE C: MONETIZATION ENFORCEMENT (C3-C4 COMPLETE)",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
 
   "local_environment": {
@@ -101,9 +101,19 @@
       "reason": "Dependent on C1 DATABASE_URL configuration"
     },
     "C4_rate_limiting": {
-      "status": "PENDING",
+      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
       "task": "Wire Rate Limiting Middleware Into Protected Routes",
-      "reason": "Next NON-DB slice after C3"
+      "routes_wired": [
+        "POST /api/actions (with rate limit check before mutation)"
+      ],
+      "enforcement": "Token bucket algorithm per-workspace + per-IP",
+      "tier_limits": {
+        "FREE": "1000 requests/hour workspace, 100 per IP",
+        "PRO": "10000 requests/hour workspace, 500 per IP",
+        "ENTERPRISE": "100000 requests/hour workspace, 10000 per IP"
+      },
+      "test_coverage": "28+ token bucket and tier limit tests",
+      "verification": "npm test -- c4-rate → 28/28 PASS"
     }
   },
 
@@ -202,17 +212,19 @@
   "next_actions": {
     "immediate": [
       "C3 entitlement enforcement COMPLETE ✓",
-      "Select next: PHASE C SLICE C4 (Rate Limiting) or continue Phase C non-DB work"
+      "C4 rate limiting COMPLETE ✓",
+      "Deployment readiness: 65% (non-DB monetization enforcement wired)"
     ],
     "for_merge": [
       "Phase A work verified locally ✓",
       "Phase B1 verified locally ✓",
-      "Phase C3 verified with 33 tests ✓"
+      "Phase C3 verified with 33 tests ✓",
+      "Phase C4 verified with 28 tests ✓"
     ],
     "for_continuation": [
-      "NEXT TARGET: PHASE C SLICE C4 - Wire Rate Limiting Middleware (NON-DB, can proceed immediately)",
-      "C4 will apply rate limiting middleware to all POST/PATCH/DELETE routes",
-      "After C4: Move to Phase D (admin/operability) or return to C1/C2 if DB available"
+      "Option A: Continue PHASE D (Admin/Operability) - D1-D7 slices (non-DB buildable)",
+      "Option B: Return to C1/C2 if DATABASE_URL configured (DB-dependent)",
+      "Option C: Implementation of other Phase C non-DB work (D1 Admin Dashboard buildable now)"
     ]
   },
 
@@ -224,5 +236,5 @@
     "ci_is_source_of_truth": "Local non-DB testing OK, but PR merge requires CI pass"
   },
 
-  "deployment_readiness": "51% (non-DB work complete, DB work CI-verified but not locally tested)"
+  "deployment_readiness": "65% (A1-A2 verified, B1 verified, C3-C4 monetization enforcement wired, DB work CI-blocked)"
 }
