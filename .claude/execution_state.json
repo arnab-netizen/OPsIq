@@ -1482,5 +1482,29 @@
     "committed": "c4fb951",
     "pushed": true,
     "notes": "STAGE 17 Slice 3 implements audit trail querying infrastructure. Contracts define filtering, pagination, statistics, export. Service provides mock-backed implementation ready for database layer. API endpoint provides admin-only workspace-scoped audit log query. All 40+ tests pass. All non-DB gates pass. Classification: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE (contracts + mock implementation verified, persistence deferred)."
+  },
+  "stage_17_slice_5_status": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "description": "Rate Limiting: Token bucket with per-workspace and per-IP limits",
+    "files": [
+      "src/domain/rate-limit/rate-limit-contracts.ts",
+      "src/services/rate-limit.ts",
+      "src/middleware/rate-limit-middleware.ts",
+      "src/__tests__/services/rate-limit.test.ts"
+    ],
+    "lines_of_code": 952,
+    "test_count": 40,
+    "workspace_enforcement": "✓ All methods enforce workspaceId parameter",
+    "auth_enforced": "✓ Middleware-level; API-layer enforcement pending",
+    "dto_boundary": "✓ RateLimitCheckResult validated; no internal fields exposed",
+    "audit_events": "N/A (rate limiting is observational, not state-changing)",
+    "test_coverage": "40+ tests covering token costs, quota windows, DDoS patterns, multi-tier quotas, real-world scenarios, edge cases",
+    "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓)",
+    "committed": "b8812dc",
+    "pushed": true,
+    "push_sha": "b8812dc",
+    "branch": "claude/verify-execution-hardening-LRoqi",
+    "wiring_notes": "Mock-backed service ready for Redis/DB persistence. No API route callers proven yet—pending wiring at middleware integration points (rate-limit-middleware.ts applyRateLimit calls will be invoked from API route handlers)."
   }
 }
