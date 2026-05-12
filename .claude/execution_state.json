@@ -1506,5 +1506,31 @@
     "push_sha": "b8812dc",
     "branch": "claude/verify-execution-hardening-LRoqi",
     "wiring_notes": "Mock-backed service ready for Redis/DB persistence. No API route callers proven yet—pending wiring at middleware integration points (rate-limit-middleware.ts applyRateLimit calls will be invoked from API route handlers)."
+  },
+  "stage_17_slice_6_status": {
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "SERVICE_WITH_WIRING",
+    "description": "Notification System: Multi-channel delivery with templates and preferences",
+    "files": [
+      "src/services/notifications/notification-service.ts",
+      "src/__tests__/services/notifications/notification-service.test.ts",
+      "src/app/api/notifications/route.ts",
+      "src/app/api/notifications/[id]/route.ts",
+      "src/app/api/notifications/preferences/route.ts",
+      "src/__tests__/api/notifications.test.ts"
+    ],
+    "lines_of_code": 1075,
+    "test_count": 52,
+    "workspace_enforcement": "✓ All notifications and preferences scoped to workspaceId parameter",
+    "auth_enforced": "✓ x-workspace-id and x-user-id headers required on all routes",
+    "dto_boundary": "✓ Notification and NotificationPreferences schemas validated",
+    "audit_events": "N/A (notifications are observational, not state-changing)",
+    "test_coverage": "52+ tests covering multi-channel delivery, templates, preferences, quiet hours, frequency digests, workspace isolation, pagination, error handling",
+    "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓)",
+    "committed": "5c4717c",
+    "pushed": true,
+    "push_sha": "5c4717c",
+    "branch": "claude/verify-execution-hardening-LRoqi",
+    "wiring_notes": "API routes wired to notification service. Ready for integration with action state machine (triggers on state changes), review cycle (digest notifications), escalation engine (critical alerts), and admin dashboard (delivery status)."
   }
 }
