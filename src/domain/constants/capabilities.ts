@@ -113,6 +113,10 @@ export const CAPABILITIES = {
   // Owner Mode
   OWNER_VIEW: "owner:view",
   OWNER_MANAGE: "owner:manage",
+
+  // Audit Trail
+  AUDIT_VIEW: "audit:view",
+  AUDIT_EXPORT: "audit:export",
 } as const;
 
 export type CapabilityName =
