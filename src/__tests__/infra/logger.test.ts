@@ -24,9 +24,9 @@ describe("Structured Logger", () => {
   beforeEach(() => {
     clearGlobalContext();
     clearLogBuffer();
-    vi.spyOn(console, "log").mockImplementation();
-    vi.spyOn(console, "warn").mockImplementation();
-    vi.spyOn(console, "error").mockImplementation();
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
