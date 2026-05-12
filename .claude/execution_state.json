@@ -1425,5 +1425,62 @@
     "test_coverage": "38 comprehensive tests covering all constraint types, real-world scenarios, and fail-closed semantics",
     "committed": "087194a",
     "pushed": false
+  },
+  "stage_17_slice_3_status": {
+    "slice_name": "Audit Trail Queryability (Non-DB Foundation)",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DOMAIN_CONTRACTS_WITH_SERVICE_AND_API_ROUTES",
+    "files_created": [
+      "src/domain/audit/audit-trail-contracts.ts",
+      "src/services/audit-trail.ts",
+      "src/app/api/admin/audit-log/route.ts",
+      "src/__tests__/services/audit-trail.test.ts",
+      "src/__tests__/api/admin/audit-log.test.ts"
+    ],
+    "files_modified": [
+      "src/domain/constants/capabilities.ts (added AUDIT_VIEW, AUDIT_EXPORT)"
+    ],
+    "features_implemented": [
+      "Filtering by: entityType, entityId, actorId, action, status, date range",
+      "Cursor-based pagination with hasMore flag",
+      "Statistics calculation (total events, success/failure breakdown, date ranges)",
+      "Export to CSV-compatible format",
+      "Workspace scoping (all queries enforce workspaceId)",
+      "Auth enforcement (AUDIT_VIEW capability required)",
+      "Mock-backed in-memory store (ready for database persistence)"
+    ],
+    "api_endpoint": {
+      "route": "GET /api/admin/audit-log",
+      "query_params": "entityType, entityId, actorId, action, status, fromDate, toDate, limit, cursor, includeTotalCount",
+      "auth": "CAPABILITIES.AUDIT_VIEW required",
+      "workspace_scope": "x-workspace-id header enforced",
+      "middleware": "withAuth, enforceWorkspaceScoping, withErrorHandling"
+    },
+    "test_coverage": "40+ comprehensive tests",
+    "test_categories": [
+      "Audit Trail Query (entity type, entity ID, action, status, date range, workspace scope, pagination)",
+      "Entity-Specific Audit Trail (entity and actor trails)",
+      "Audit Statistics (total events, success/failure, date ranges)",
+      "Audit Trail Export (CSV-compatible rows, date filtering)",
+      "Real-World Scenarios (action lifecycle, admin vs user activity)",
+      "Compliance + Edge Cases (empty results, query limits)",
+      "API Route Structure (handler export, async callable)",
+      "Endpoint Features (query parameters, workspace scope, capability enforcement, pagination, filtering, statistics, validation, error handling)",
+      "Workspace Isolation (cross-workspace access prevention, data leakage prevention)",
+      "Authentication + Authorization (header validation, capability requirement, fail-closed pattern)",
+      "Query Filtering (entityType, entityId, actorId, action, status, date range, multi-field)",
+      "Pagination (limit parameter, cursor-based pagination, hasMore flag, nextCursor)",
+      "Response Format (JSON, events array, pagination metadata, statistics)",
+      "Error Handling (missing workspace ID, missing auth, invalid parameters, malformed dates, invalid limits)",
+      "Statistics (calculation when requested, total count, success/failure breakdown)"
+    ],
+    "gates_run": "npm run build (✓ PASS), npx tsc --noEmit (✓ PASS), npx prisma validate (✓ PASS)",
+    "compilation": "✓ TypeScript compiles without errors (0 type errors)",
+    "workspace_enforcement": "✓ All queries enforce workspaceId via filter and x-workspace-id header",
+    "auth_enforced": "✓ CAPABILITIES.AUDIT_VIEW required via withAuth middleware",
+    "db_dependency": "NONE (mock-backed in-memory store, ready for PostgreSQL persistence layer)",
+    "committed": "c4fb951",
+    "pushed": true,
+    "notes": "STAGE 17 Slice 3 implements audit trail querying infrastructure. Contracts define filtering, pagination, statistics, export. Service provides mock-backed implementation ready for database layer. API endpoint provides admin-only workspace-scoped audit log query. All 40+ tests pass. All non-DB gates pass. Classification: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE (contracts + mock implementation verified, persistence deferred)."
   }
 }
