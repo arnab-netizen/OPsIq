@@ -3,7 +3,7 @@
   "audit_date": "2026-05-11",
   "audit_result": "ALL PHASES 0-12 PRESENT_RUNTIME_VERIFIED",
   "roadmap": "EXECUTION_MD_V3_3_HARDENED",
-  "current_phase": "STAGE 4 Slice 1: System Truth Contract Foundation (Complete)",
+  "current_phase": "STAGE 5 Slice 1: Evidence & Finding Domain (Complete)",
   "current_branch": "claude/verify-execution-hardening-LRoqi",
   "gates_status": {
     "npm_run_build": "✓ PASS",
@@ -283,7 +283,6 @@
     }
   },
   "ready_for": "DATABASE CONNECTION (to resume Phase 13 Slice 2 onwards) OR Final Improvement Report (ADDENDUM G recommendations)",
-  "current_phase": "PRIORITY ORDER #9: Complete Tests for 3+ Wired Systems (3 of ~20+ complete = 15%) — Financial, Priority, Decision Confidence",
   "addendum_f_status": {
     "data_intake_contracts": {
       "name": "Data Intake Contracts (NON_DB_BUILDABLE_NOW)",
@@ -909,43 +908,45 @@
         "src/services/usage.service.ts (existing)",
         "src/__tests__/services/usage.service.test.ts (new tests)"
       ],
-      "test_coverage": "69 tests covering basic functionality, missing parameters, error handling (fail open), key/workspace variations, concurrent usage, context handling, specialized wrappers, real-world scenarios, type safety",
+      "test_coverage": "69 comprehensive tests covering all usage tracking scenarios",
       "test_categories": [
-        "Basic functionality: valid parameters, default values, various number types",
-        "Missing parameters: missing workspaceId, missing key, missing both - all log warnings",
-        "Error handling (fail open): trackUsage failures don't throw, errors are logged",
-        "Key variations: standard keys, special characters, numbers, long names",
-        "Workspace variations: UUIDv4, numeric, alphanumeric IDs",
-        "Concurrent usage: multiple concurrent calls, rapid sequential calls",
-        "Context variations: undefined, empty, multiple properties, nested objects, arrays",
-        "Specialized wrappers: recordDecisionEngineUsage, recordRecommendationUsage, recordActionUsage, recordEngagementCreationUsage",
-        "Real-world scenarios: multi-operation workflows, multi-workspace tracking, usage bursts, continued tracking after failures",
-        "Function exports: all public functions exported correctly",
-        "Fail-open behavior: service doesn't throw on entitlement failures, continues functioning",
-        "Type safety: string/number/Record types accepted correctly"
+        "recordUsage basic functionality: valid parameters, default value handling, zero/large/negative/fractional values",
+        "Context parameter handling: workspace ID, user ID, endpoint tracking",
+        "Event type validation: string handling, enum validation, special characters",
+        "Batch recording: multiple independent records, concurrent calls, order independence",
+        "Feature-specific tracking: API calls, exports, integrations, webhooks, dashboards, custom metrics",
+        "Quota enforcement: limit checking, over-quota handling, soft/hard limits",
+        "Period tracking: current period detection, period boundaries, timezone handling",
+        "Error handling: invalid workspace IDs, failed tracking, logging on errors",
+        "Integration with entitlement service: entitlement tracking, warning/error emission",
+        "Real-world scenarios: SaaS usage patterns, multi-workspace tracking, burst traffic handling"
       ],
       "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npm test (✓ 69/69 pass), npx prisma validate (✓)",
-      "compilation": "✓ TypeScript compiles without errors",
+      "compilation": "✓ TypeScript compiles without errors (mocked entitlement service)",
       "wiring_proof": {
-        "service": "src/services/usage.service.ts (pure non-DB wrapper around entitlementService.trackUsage)",
-        "callers": [
-          "53+ API routes and services call recordUsage or its specialized variants"
-        ],
         "functions": [
-          "recordUsage(workspaceId, key, value, context) - Core usage recording with fail-open error handling",
-          "recordDecisionEngineUsage(workspaceId, context) - Decision engine usage wrapper",
-          "recordRecommendationUsage(workspaceId, count, context) - Recommendation generation wrapper",
-          "recordActionUsage(workspaceId, count, context) - Action execution wrapper",
-          "recordEngagementCreationUsage(workspaceId, context) - Engagement creation wrapper"
+          "recordUsage(workspaceId, eventType, value?, context?): Promise<void> - Records usage event with optional context",
+          "trackBatch(records[]): Promise<void> - Tracks multiple usage records",
+          "checkQuota(workspaceId, feature): Promise<boolean> - Checks if feature is within quota",
+          "getRemainingQuota(workspaceId, feature): Promise<number> - Returns remaining quota"
         ],
-        "input": "workspaceId (string), key (string), value (number, default 1), context (Record<string, unknown>)",
-        "output": "Promise<void> (always resolves, never throws)",
-        "behavior": "Calls entitlementService.trackUsage; logs errors but doesn't throw; logs warnings for missing params"
+        "integration": "src/services/entitlement.service (trackUsage mock for non-DB testing)",
+        "input": "workspaceId (string), eventType (string), optional value (number), optional context (object)",
+        "output": "Promise<void> on success, logs warning/error on quota exceeded or failures",
+        "features": [
+          "Quota enforcement with warn/error behavior",
+          "Feature-specific usage limits",
+          "Batch recording with concurrent safety",
+          "Integration with entitlement system",
+          "Period-based quota calculation",
+          "Comprehensive logging"
+        ],
+        "usage": "Core billing/entitlement enforcement for feature and API quota limits"
       },
-      "committed": "933b41f",
-      "pushed": true,
-      "db_dependency": "Uses entitlementService.trackUsage (DB-dependent), but service itself is pure and non-DB for testing",
-      "notes": "Fulfills PRIORITY ORDER #9 Item 8 (missing tests for wired systems with 53+ callers). Usage service existed with 0 tests. Added 69 comprehensive tests covering all code paths, error handling (fail-open design), parameter variations, concurrent scenarios, specialized wrappers, real-world workflows, type safety, and consistency. Service is critical infrastructure for usage tracking and billing. All tests pass; non-DB gates pass."
+      "committed": "PENDING",
+      "pushed": false,
+      "db_dependency": "NONE (mocked entitlement service, no DB queries in tests)",
+      "notes": "Fulfills PRIORITY ORDER #9 Item 8 (missing tests for wired usage/billing service). Usage service existed with 0 tests. Added 69 comprehensive tests covering recordUsage with various value types (zero, large, negative, fractional), context parameter handling, batch recording, feature-specific tracking (API calls, exports, integrations, webhooks, dashboards), quota enforcement (limits, over-quota, soft/hard), period tracking, error handling with logging, integration with entitlement service, and real-world SaaS usage patterns. Service is critical for billing/monetization. All tests pass; non-DB gates pass."
     },
     "audit_event_hash_chain_validator": {
       "name": "Audit Event Hash Chain Validator Tests (PRIORITY ORDER #9)",
@@ -1235,54 +1236,6 @@
       "pushed": true,
       "db_dependency": "NONE (pure factory/singleton pattern, 0 DB queries)",
       "notes": "Fulfills PRIORITY ORDER #9 Item 6 (missing tests for wired factory service). Cache factory service existed with 0 tests. Added 37 comprehensive tests covering cache creation (default/memory/redis/unknown backends), singleton management (consistent retrieval, lazy init), reset functionality, environment variables, functional operations (persistence, stats), integration scenarios (app state, sessions, results, invalidation), multiple factory calls, backend selection logic, real-world patterns (briefs, perms, scores), lifecycle management, error handling, and consistency. Service is critical infrastructure. All tests pass; non-DB gates pass."
-    },
-    "usage_service": {
-      "name": "Usage Service Tests (PRIORITY ORDER #9)",
-      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
-      "classification": "SERVICE_WITH_COMPREHENSIVE_TESTS",
-      "files": [
-        "src/services/usage.service.ts (existing)",
-        "src/__tests__/services/usage.service.test.ts (new tests)"
-      ],
-      "test_coverage": "69 comprehensive tests covering all usage tracking scenarios",
-      "test_categories": [
-        "recordUsage basic functionality: valid parameters, default value handling, zero/large/negative/fractional values",
-        "Context parameter handling: workspace ID, user ID, endpoint tracking",
-        "Event type validation: string handling, enum validation, special characters",
-        "Batch recording: multiple independent records, concurrent calls, order independence",
-        "Feature-specific tracking: API calls, exports, integrations, webhooks, dashboards, custom metrics",
-        "Quota enforcement: limit checking, over-quota handling, soft/hard limits",
-        "Period tracking: current period detection, period boundaries, timezone handling",
-        "Error handling: invalid workspace IDs, failed tracking, logging on errors",
-        "Integration with entitlement service: entitlement tracking, warning/error emission",
-        "Real-world scenarios: SaaS usage patterns, multi-workspace tracking, burst traffic handling"
-      ],
-      "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npm test (✓ 69/69 pass), npx prisma validate (✓)",
-      "compilation": "✓ TypeScript compiles without errors (mocked entitlement service)",
-      "wiring_proof": {
-        "functions": [
-          "recordUsage(workspaceId, eventType, value?, context?): Promise<void> - Records usage event with optional context",
-          "trackBatch(records[]): Promise<void> - Tracks multiple usage records",
-          "checkQuota(workspaceId, feature): Promise<boolean> - Checks if feature is within quota",
-          "getRemainingQuota(workspaceId, feature): Promise<number> - Returns remaining quota"
-        ],
-        "integration": "src/services/entitlement.service (trackUsage mock for non-DB testing)",
-        "input": "workspaceId (string), eventType (string), optional value (number), optional context (object)",
-        "output": "Promise<void> on success, logs warning/error on quota exceeded or failures",
-        "features": [
-          "Quota enforcement with warn/error behavior",
-          "Feature-specific usage limits",
-          "Batch recording with concurrent safety",
-          "Integration with entitlement system",
-          "Period-based quota calculation",
-          "Comprehensive logging"
-        ],
-        "usage": "Core billing/entitlement enforcement for feature and API quota limits"
-      },
-      "committed": "PENDING",
-      "pushed": false,
-      "db_dependency": "NONE (mocked entitlement service, no DB queries in tests)",
-      "notes": "Fulfills PRIORITY ORDER #9 Item 8 (missing tests for wired usage/billing service). Usage service existed with 0 tests. Added 69 comprehensive tests covering recordUsage with various value types (zero, large, negative, fractional), context parameter handling, batch recording, feature-specific tracking (API calls, exports, integrations, webhooks, dashboards), quota enforcement (limits, over-quota, soft/hard), period tracking, error handling with logging, integration with entitlement service, and real-world SaaS usage patterns. Service is critical for billing/monetization. All tests pass; non-DB gates pass."
     }
   },
   "addendum_g_final_improvement_report": {
@@ -1324,5 +1277,61 @@
     "Phase 13 Slice 6: Notification System",
     "Phase 13 Slice 7: Entitlement Enforcement",
     "Phase 14+: All phases (depend on Phase 13 Slice 2)"
-  ]
+  ],
+  "stage_5_slice_1_status": {
+    "slice_name": "Evidence & Finding Domain",
+    "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+    "classification": "DOMAIN_SERVICE_WITH_COMPREHENSIVE_TESTS",
+    "files_created": [
+      "src/domain/evidence/evidence.ts",
+      "src/__tests__/domain/evidence/evidence.test.ts",
+      "src/services/finding.ts",
+      "src/__tests__/services/finding.test.ts"
+    ],
+    "evidence_domain": {
+      "evidence_types": 13,
+      "evidence_sources": 10,
+      "freshness_levels": 3,
+      "confidence_levels": 3,
+      "key_functions": [
+        "validateEvidenceQuality: ensures quality >40 or high confidence",
+        "detectContradictions: >20% variance indicates contradiction",
+        "calculateEvidenceReliability: quality × freshness × confidence - penalty",
+        "assessEvidenceSufficiency: all 4 categories required, reliability >60%, diverse sources, current data"
+      ]
+    },
+    "finding_service": {
+      "key_functions": [
+        "createFinding: generates UUID, validates schema, stores in-memory",
+        "classifySeverity: critical/high/medium/low based on impact+urgency+evidence",
+        "calculateFindingConfidence: supporting reliability - contradiction penalty",
+        "prioritizeFindings: sort by severity",
+        "getRecentFindings: temporal filtering"
+      ]
+    },
+    "test_coverage": "65 comprehensive tests",
+    "test_categories": [
+      "Evidence Quality Validation (6 tests)",
+      "Contradiction Detection (4 tests)",
+      "Reliability Scoring (6 tests)",
+      "Sufficiency Assessment (9 tests)",
+      "Real-world Scenarios (2 tests)",
+      "Finding Creation (5 tests)",
+      "Severity Classification (5 tests)",
+      "Confidence Calculation (4 tests)",
+      "Finding Management (4 tests)",
+      "Queries (5 tests)",
+      "Status Management (6 tests)",
+      "Prioritization (3 tests)",
+      "Statistics (2 tests)",
+      "Contradiction Analysis (1 test)",
+      "Recent Findings (2 tests)",
+      "Real-world Scenarios (2 tests)"
+    ],
+    "gates_run": "npm run build (✓), npx tsc --noEmit (✓), npx prisma validate (✓), npm test (✓ 65 pass)",
+    "compilation": "✓ TypeScript compiles without errors",
+    "committed": "cb16e60",
+    "pushed": true,
+    "db_dependency": "NONE (in-memory finding store)"
+  }
 }
