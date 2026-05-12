@@ -8,34 +8,123 @@
 
 ## Executive Summary
 
-**Current Status:** PHASE D (D1-D4 COMPLETE), PHASE E PENDING
+**Current Status:** PHASE D (D1-D4 CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED), OPERATIONAL CORRECTNESS HARDENING IN PROGRESS
 
-**DB-Dependent Tasks Analysis:**
-- D1: Admin Dashboard - COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE (no persistent queries yet)
-- D2: Audit Trail Queryable - COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE (tests for existing endpoint)
-- D3: Webhook Infrastructure - COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE (no persistence yet)
-- D4: Backup/Restore - COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE (scripts, no code persistence)
-- **D5: Monitoring/Alerting** - NOT_BUILDABLE_EXTERNAL_BLOCKER (requires Sentry/CloudWatch)
-- **D6: Runbooks** - NOT_DB_DEPENDENT (documentation)
-- **D7: Performance Baselines** - NOT_DB_DEPENDENT (load testing infrastructure)
-- **E1: Verification Suite** - BUILDABLE_VIA_CI (depends on D1-D4 complete)
+**Critical Re-evaluation:** D1-D4 code is written, compiles, and passes mock-data tests. However, compilation success ≠ operational correctness. Reclassified per user requirement: separate schema persistence, operational persistence, replay determinism, concurrency safety, queue durability proofs required before OPERATIONAL_VERIFIED classification.
 
-**Conclusion:** No pure DB-dependent code tasks remain pending. D5-D7 are either external-service-dependent or infrastructure/documentation-based. E1 (Verification) is buildable via CI once all previous phases complete.
+**DB-Dependent Tasks Analysis (NEW CLASSIFICATION):**
+- D1: Admin Dashboard - CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED (routes wired, missing: operational persistence proof, concurrency safety proof)
+- D2: Audit Trail Queryable - CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED (tests written, missing: replay determinism proof, concurrency safety proof)
+- D3: Webhook Infrastructure - CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED (service complete, missing: queue durability proof, replay correctness proof)
+- D4: Backup/Restore - CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED (scripts complete, missing: restore snapshot verification, determinism proof)
+- **D5: Monitoring/Alerting** - NOT_BUILDABLE_EXTERNAL_BLOCKER (requires Sentry/CloudWatch API keys; monitoring backbone non-external buildable)
+- **D6: Runbooks** - BUILDABLE_LOCALLY (pure documentation, non-DB, next highest-priority)
+- **D7: Performance Baselines** - BUILDABLE_VIA_CI (requires deployed test environment)
+- **E1: Verification Suite** - BUILDABLE_VIA_CI (awaiting operational proof completion in D1-D4)
+
+**Conclusion:** Code implementation complete for D1-D4. Operational correctness proofs pending. Next non-blocked work: D6 (Runbooks - pure documentation). After D6: Implement operational correctness proofs per PRIORITY 1-3 (replay determinism, concurrency safety, queue durability) when DATABASE_URL available.
 
 ---
 
-## Detailed Buildability Matrix
+## Detailed Buildability Matrix (OPERATIONAL CORRECTNESS MODEL)
 
-| Phase | Task | Type | Status | Reason | CI Buildable | Local Buildable |
-|-------|------|------|--------|--------|--------------|-----------------|
-| D1 | Admin Dashboard | Non-DB Routes | COMPLETE_CODE_VERIFIED | Wired routes, no DB persistence | ✗ (code done) | ✓ (gates pass) |
-| D2 | Audit Trail Queryable | Tests | COMPLETE_CODE_VERIFIED | Tests for existing endpoint | ✓ (35 tests) | ✓ (35 tests pass) |
-| D3 | Webhook Infrastructure | Routes + Service | COMPLETE_CODE_VERIFIED | Routes/service complete, no DB | ✓ (42 tests) | ✓ (42 tests pass) |
-| D4 | Backup/Restore | Scripts | COMPLETE_CODE_VERIFIED | Scripts/docs complete | ✓ (44 tests) | ✓ (44 tests pass) |
-| D5 | Monitoring/Alerting | External Integration | NOT_BUILDABLE | Requires Sentry/CloudWatch API keys | ✗ | ✗ |
-| D6 | Runbooks | Documentation | PENDING | Documentation task | ✓ | ✓ |
-| D7 | Performance Baselines | Load Testing | PENDING | Load test infrastructure | ? (unclear) | ✗ |
-| E1 | Verification Suite | Integration Gate | BUILDABLE_VIA_CI | Runs full test suite with PostgreSQL | ✓ | ✗ (DB blocked) |
+| Phase | Task | Type | Code Status | Operational Proof | Schema | Replay | Concurrency | Queue | Monitoring | Status |
+|-------|------|------|-------------|------------------|--------|--------|-------------|-------|------------|--------|
+| D1 | Admin Dashboard | Routes | ✓ Written | ✗ Missing | ✗ | N/A | ✗ | N/A | ✗ | CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED |
+| D2 | Audit Trail | Tests | ✓ Written | ✗ Missing | ✗ | ✗ | ✗ | N/A | ✗ | CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED |
+| D3 | Webhooks | Service | ✓ Written | ✗ Missing | ✗ | N/A | ✗ | ✗ | ✗ | CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED |
+| D4 | Backup/Restore | Scripts | ✓ Written | ✗ Missing | N/A | ✗ | N/A | ✗ | ✗ | CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED |
+| D5 | Monitoring/Alerting | External | ✗ Blocked | N/A | N/A | N/A | N/A | N/A | ✗ EXTERNAL | BLOCKED_EXTERNAL_SERVICE |
+| D5b | Monitoring Backbone | Non-External | ◐ Partial | ◐ Mock | ◐ Mock | N/A | N/A | N/A | ◐ Mock | BUILDABLE_MOCK_BACKED (health probes, metrics collection without Sentry/CloudWatch) |
+| D6 | Runbooks | Documentation | ◯ Pending | N/A | N/A | N/A | N/A | N/A | N/A | BUILDABLE_LOCALLY (pure docs, non-DB) |
+| D7 | Performance Baselines | Load Test | ◯ Pending | ◐ Pending | N/A | N/A | ◐ Pending | N/A | N/A | BUILDABLE_VIA_CI (requires deployed app) |
+| E1 | Verification Suite | Gate | ✓ Ready | ✗ Blocked | ◐ Partial | ✗ | ✗ | ✗ | ✗ | BUILDABLE_VIA_CI (awaits D1-D4 proofs) |
+
+---
+
+## OPERATIONAL CORRECTNESS TAXONOMY (NEW FRAMEWORK)
+
+### What is Operational Correctness?
+
+**Compilation Success ≠ Operational Correctness**
+- `npm run build` PASS: Code is syntactically correct
+- `npm test` PASS (with mocks): Logic is testable
+- **Missing:** Proof that code survives failures, handles concurrency, replays deterministically, persists durably
+
+### Six Proof Categories
+
+**1. SCHEMA_PERSISTENCE_UNVERIFIED**
+- Prisma models defined ✓, migrations created ✓
+- Missing: Proof that schema survives application restart, migrations are idempotent, rollback/forward sequences work
+- **How to verify:** CI proves with `npx prisma migrate deploy` success
+
+**2. OPERATIONAL_PERSISTENCE_UNVERIFIED**
+- Routes wired ✓, services implement logic ✓, mock tests pass ✓
+- Missing: Proof that real data writes survive process crash, concurrent writes don't corrupt state, recovery is idempotent
+- **How to verify:** INSERT via HTTP → kill process → restart → SELECT shows consistent state
+
+**3. REPLAY_DETERMINISM_UNVERIFIED**
+- Audit/event code written ✓, schemas defined ✓
+- Missing: Proof that replaying event sequence [E1, E2, E3] N times produces identical final state
+- **How to verify:** Replay 100 audit events 3x, snapshot state each time, verify byte-exact equality
+
+**4. CONCURRENCY_SAFETY_UNVERIFIED**
+- Transaction locks coded ✓, single-threaded tests pass ✓
+- Missing: Proof that 1000 concurrent writes don't cause race conditions, row-level locks prevent phantom reads
+- **How to verify:** Spawn 100 threads, each INSERT 100 rows, verify total = 10000, no duplicates
+
+**5. QUEUE_DURABILITY_UNVERIFIED**
+- Webhook retry logic coded ✓, exponential backoff implemented ✓
+- Missing: Proof that job enqueued to DB survives process crash, retry state persists, duplicate delivery prevented
+- **How to verify:** INSERT job → kill process → restart → verify job still queued with correct retry state
+
+**6. MONITORING_BACKBONE_UNVERIFIED (NON-EXTERNAL)**
+- Readiness probes ✗, health checks ✗, metrics collection ✗
+- Missing: Startup probe (DB connectivity), liveness probe (/health endpoint), metrics (response time, error rate)
+- **How to verify:** `/health` responds, readiness checks DB, metrics collection emits to local monitoring
+
+### D1-D4 Current Status
+
+All four tasks have **code implementation** but lack **operational correctness proofs**:
+
+| Task | Code | Schema | Operational | Replay | Concurrency | Queue | Status |
+|------|------|--------|-------------|--------|-------------|-------|--------|
+| D1 | ✓ | ✗ | ✗ | N/A | ✗ | N/A | CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED |
+| D2 | ✓ | ✗ | ✗ | ✗ | ✗ | N/A | CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED |
+| D3 | ✓ | ✗ | ✗ | N/A | ✗ | ✗ | CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED |
+| D4 | ✓ | N/A | ✗ | ✗ | N/A | ✗ | CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED |
+
+---
+
+## PRIORITY REORDER: OPERATIONAL CORRECTNESS PROOFS
+
+### PRIORITY 1: Replay Determinism Proofs (REQUIRES DATABASE)
+Tasks: D2, D3, D4
+- **D2:** Event stream [CREATE workspace, CREATE member, ASSIGN capability] replayed 3x → same audit state
+- **D3:** Webhook delivery [Subscribe, Trigger, Retry] replayed 3x → same delivery attempts
+- **D4:** Backup [Full backup, Restore] → schema checksum matches original, repeated 3x
+
+### PRIORITY 2: Concurrency Safety Proofs (REQUIRES DATABASE)
+Tasks: D1, D2, D3
+- **D1:** 100 concurrent workspace disables → no race conditions, member listing stable
+- **D2:** 1000 concurrent audit events → all persisted, no lost records, pagination stable
+- **D3:** 100 concurrent webhook deliveries → no duplicates, retry state safe
+
+### PRIORITY 3: Queue Durability Proofs (REQUIRES DATABASE)
+Tasks: D3, D4
+- **D3:** Job enqueued, process killed, restart resumes from exact retry state
+- **D4:** Backup interrupted, restart resumes without corruption
+
+### PRIORITY 4: Monitoring Backbone (NON-EXTERNAL)
+- Build `/health` endpoint with database connectivity check
+- Implement readiness probe (DB + async queues healthy)
+- Emit metrics: response time, error rate, queue depth
+- Set alerting thresholds (do not integrate with external services yet)
+
+### PRIORITY 5: Runbooks (PURE DOCUMENTATION)
+- Deployment, rollback, scaling procedures
+- Incident response guides
+- On-call responsibilities
 
 ---
 

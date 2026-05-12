@@ -145,8 +145,28 @@
   },
 
   "phase_d_completion": {
+    "OPERATIONAL_CORRECTNESS_FRAMEWORK": {
+      "classification_model": "CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED",
+      "reason": "Compilation success ≠ operational correctness. D1-D4 code written and tested with mocks, but missing proofs for: schema persistence, operational persistence, replay determinism, concurrency safety, queue durability.",
+      "proof_categories": {
+        "schema_persistence": "Proof that schema survives restart, migrations idempotent, rollback/forward sequences work",
+        "operational_persistence": "Proof that real writes survive process crash, concurrent writes don't corrupt, recovery idempotent",
+        "replay_determinism": "Proof that replaying event sequence N times produces identical final state (byte-exact)",
+        "concurrency_safety": "Proof that concurrent operations don't race, row-level locks prevent phantom reads",
+        "queue_durability": "Proof that enqueued jobs survive process crash, retry state persists, no duplicate delivery",
+        "monitoring_backbone": "Proof that health checks, readiness probes, metrics collection functional (non-external)"
+      },
+      "priority_order": [
+        "PRIORITY 1: Replay Determinism Proofs (D2, D3, D4 - requires DATABASE)",
+        "PRIORITY 2: Concurrency Safety Proofs (D1, D2, D3 - requires DATABASE)",
+        "PRIORITY 3: Queue Durability Proofs (D3, D4 - requires DATABASE)",
+        "PRIORITY 4: Monitoring Backbone (non-external, buildable locally with mocks)",
+        "PRIORITY 5: Runbooks (pure documentation, buildable locally)"
+      ],
+      "ci_first_strategy": "GitHub Actions PostgreSQL 16 is canonical verification environment for all operational proofs. Local DATABASE_URL optional."
+    },
     "D1_admin_dashboard": {
-      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "status": "CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED",
       "task": "Implement Admin Dashboard - Workspace Governance Routes",
       "routes_implemented": [
         "GET /api/admin/workspaces (list all workspaces with pagination)",
@@ -175,7 +195,7 @@
       "pushed_at": "2026-05-12T21:07:31Z"
     },
     "D2_audit_trail_queryable": {
-      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "status": "CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED",
       "task": "Make Audit Trail Queryable - Real Integration Tests",
       "service": "GET /api/admin/audit-log (already implemented)",
       "features": [
@@ -204,8 +224,13 @@
       "pushed_at": "2026-05-12T21:17:00Z"
     },
     "D3_webhook_infrastructure": {
-      "status": "COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE",
+      "status": "CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED",
       "task": "Implement Webhook Infrastructure - Registration, Delivery, HMAC Verification",
+      "operational_proofs_pending": [
+        "Queue durability: Job persisted to DB, survives process restart, retry state consistent",
+        "Replay determinism: Replay 100 webhook deliveries with same input 3x, verify identical delivery sequence",
+        "Concurrency safety: 100 concurrent deliveries do not cause duplicate delivery or race conditions"
+      ],
       "routes_implemented": [
         "POST /api/webhooks/subscribe (register webhook)",
         "POST /api/webhooks/[id]/test (test webhook delivery)"
@@ -348,22 +373,35 @@
   ],
 
   "next_actions": {
+    "CRITICAL_RECLASSIFICATION": {
+      "announcement": "D1-D4 RECLASSIFIED per user requirement: CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED (awaiting operational correctness proofs)",
+      "reason": "Compilation success ≠ operational correctness. Code written and tested with mocks. Missing proofs for: replay determinism, concurrency safety, queue durability, schema persistence, operational persistence.",
+      "priority_order_updated": [
+        "PRIORITY 1: Replay Determinism Proofs (D2, D3, D4 - requires DATABASE)",
+        "PRIORITY 2: Concurrency Safety Proofs (D1, D2, D3 - requires DATABASE)",
+        "PRIORITY 3: Queue Durability Proofs (D3, D4 - requires DATABASE)",
+        "PRIORITY 4: Monitoring Backbone (buildable locally, non-external)",
+        "PRIORITY 5: Runbooks - D6 (NEXT HIGHEST-PRIORITY NON-BLOCKED WORK)"
+      ]
+    },
     "immediate": [
       "✓ C3 entitlement enforcement COMPLETE (33 tests)",
       "✓ C4 rate limiting COMPLETE (28 tests)",
-      "✓ A3-B2 now COMPLETE_VERIFIED_CI_GREEN (CI migrations + tests passed)",
-      "Deployment readiness: 78% (Phase A-B fully verified, C3-C4 monetization wired)"
+      "✓ A3-B2 COMPLETE_VERIFIED_CI_GREEN (CI migrations + tests passed)",
+      "→ D6 Runbooks: BUILDABLE_LOCALLY (next non-DB work, pure documentation)",
+      "Deployment readiness: 65% (A-C complete, D1-D4 code written but operationally unverified)"
     ],
-    "for_merge": [
-      "✓ Phase A work verified (A1 isolation, A2 fake test replacement, A3 full suite CI-verified)",
-      "✓ Phase B work verified (B1 logic fixes, B2 DB stores CI-verified)",
-      "✓ Phase C slices C3-C4 verified with 61 tests (entitlement + rate limiting)",
-      "✓ All non-DB gates pass (build, typecheck, prisma validate)"
+    "for_d_operational_proofs": [
+      "After D6 (Runbooks): Implement PRIORITY 1-3 operational correctness proofs when DATABASE_URL available",
+      "Replay Determinism: Event stream replay 3x, verify byte-exact final state match",
+      "Concurrency Safety: 1000 concurrent operations, verify no corruption or race conditions",
+      "Queue Durability: Job persistence across process restart, idempotent retry logic"
     ],
     "for_continuation": [
-      "Option A: Continue PHASE D (Admin/Operability) - D1-D7 slices (non-DB buildable)",
-      "Option B: Continue PHASE C (Remaining slices: C1-C2, C5-C7)",
-      "Option C: Implement other monetization hardening (C5 usage tracking, C6 quota enforcement at API level)"
+      "→ D6: Create Runbooks (NEXT, non-DB buildable)",
+      "→ D1-D4 Operational Proofs (BLOCKED_ENVIRONMENT until DATABASE_URL available)",
+      "→ D5: Monitoring Backbone + Runbooks (PRIORITY 4-5 after D6)",
+      "→ D7: Performance Baselines (load testing via CI)"
     ]
   },
 
@@ -375,5 +413,5 @@
     "ci_is_source_of_truth": "Local non-DB testing OK, but PR merge requires CI pass"
   },
 
-  "deployment_readiness": "78% (A1-A3 COMPLETE_VERIFIED_CI_GREEN, B1-B2 COMPLETE_VERIFIED_CI_GREEN, C3-C4 COMPLETE_CODE_VERIFIED, non-DB monetization enforcement wired)"
+  "deployment_readiness": "65% (A1-A3 COMPLETE_VERIFIED_CI_GREEN, B1-B2 COMPLETE_VERIFIED_CI_GREEN, C3-C4 COMPLETE_CODE_VERIFIED; D1-D4 CODE_WRITTEN_NOT_OPERATIONALLY_VERIFIED - awaiting replay/concurrency/queue proofs; D6 Runbooks next non-blocked work)"
 }
