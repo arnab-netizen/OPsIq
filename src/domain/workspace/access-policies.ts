@@ -141,7 +141,7 @@ export const CollectionQueryPolicySchema = z.object({
     "members",
   ]),
   workspaceId: z.string().uuid("Collections must be scoped to workspace"),
-  filters: z.record(z.unknown()).optional(),
+  filters: z.record(z.string(), z.unknown()).optional(),
   pagination: z
     .object({
       skip: z.number().int().min(0),
