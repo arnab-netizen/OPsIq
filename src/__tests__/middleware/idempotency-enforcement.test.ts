@@ -21,7 +21,7 @@ describe("Idempotency Enforcement Middleware", () => {
 
   describe("Basic Request Deduplication", () => {
     it("should pass through request without Idempotency-Key", async () => {
-      const handler = vi.fn(async () => {
+      const handler = vi.fn(async (request: NextRequest) => {
         return NextResponse.json({ data: "success" });
       });
 
@@ -210,7 +210,7 @@ describe("Idempotency Enforcement Middleware", () => {
 
       // Resolve first request to clean up
       if (handlerResolve) {
-        handlerResolve();
+        (handlerResolve as () => void)();
       }
       await promise1.catch(() => {});
     });

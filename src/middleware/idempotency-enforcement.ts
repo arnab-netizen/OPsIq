@@ -10,7 +10,7 @@
  * Can be applied to all POST endpoints for duplicate prevention.
  */
 
-import { NextRequest, type NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getIdempotencyStore } from "@/infra/idempotency-store-memory";
 import { createHash } from "crypto";
 
@@ -47,11 +47,11 @@ function computePayloadHash(body: unknown): string {
  *     { ttlMs: 24 * 60 * 60 * 1000 }
  *   );
  */
-export function withIdempotencyEnforcement<T extends (...args: any[]) => Promise<NextResponse>>(
-  handler: T,
+export function withIdempotencyEnforcement(
+  handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>,
   options: IdempotencyOptions = {}
-): T {
-  return (async (request: NextRequest, ...args: any[]) => {
+): (request: NextRequest, ...args: any[]) => Promise<NextResponse> {
+  return (async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
     const store = getIdempotencyStore();
     const idempotencyKey = request.headers.get("Idempotency-Key");
 
@@ -64,12 +64,12 @@ export function withIdempotencyEnforcement<T extends (...args: any[]) => Promise
     if (options.requireWorkspaceId) {
       const workspaceId = request.headers.get("x-workspace-id");
       if (!workspaceId) {
-        return new Response(
-          JSON.stringify({
+        return NextResponse.json(
+          {
             error: "IDEMPOTENCY_ERROR",
             message: "x-workspace-id header required with Idempotency-Key",
-          }),
-          { status: 400, headers: { "content-type": "application/json" } }
+          },
+          { status: 400 }
         );
       }
     }
@@ -102,32 +102,30 @@ export function withIdempotencyEnforcement<T extends (...args: any[]) => Promise
       const existing = await store.get(scopedKey);
       if (!existing) {
         // Record was created but then expired/deleted, treat as not found
-        return new Response(
-          JSON.stringify({
+        return NextResponse.json(
+          {
             error: "IDEMPOTENCY_ERROR",
             message: "Idempotency key record expired",
-          }),
-          { status: 400, headers: { "content-type": "application/json" } }
+          },
+          { status: 400 }
         );
       }
 
       // Payload validation: reject if reused with different payload
       if (payloadHash && existing.payload && existing.payload !== payloadHash) {
-        return new Response(
-          JSON.stringify({
+        return NextResponse.json(
+          {
             error: "IDEMPOTENCY_ERROR",
             message: "Idempotency key reused with different request body",
-          }),
-          { status: 400, headers: { "content-type": "application/json" } }
+          },
+          { status: 400 }
         );
       }
 
       // If completed, return cached response
       if (existing.status === "completed") {
-        const response = new Response(JSON.stringify(existing.response), {
-          status: 200,
-          headers: { "content-type": "application/json", "x-idempotency-replayed": "true" },
-        });
+        const response = NextResponse.json(existing.response, { status: 200 });
+        response.headers.set("x-idempotency-replayed", "true");
         response.headers.set("x-idempotency-key", idempotencyKey);
         return response;
       }
@@ -136,22 +134,17 @@ export function withIdempotencyEnforcement<T extends (...args: any[]) => Promise
       if (existing.status === "pending") {
         try {
           const completed = await store.waitForCompletion(scopedKey, options.timeoutMs ?? 30000);
-          const response = new Response(JSON.stringify(completed.response), {
-            status: 200,
-            headers: {
-              "content-type": "application/json",
-              "x-idempotency-replayed": "true",
-            },
-          });
+          const response = NextResponse.json(completed.response, { status: 200 });
+          response.headers.set("x-idempotency-replayed", "true");
           response.headers.set("x-idempotency-key", idempotencyKey);
           return response;
         } catch (error) {
-          return new Response(
-            JSON.stringify({
+          return NextResponse.json(
+            {
               error: "IDEMPOTENCY_TIMEOUT",
               message: `Concurrent request timeout for ${idempotencyKey}`,
-            }),
-            { status: 504, headers: { "content-type": "application/json" } }
+            },
+            { status: 504 }
           );
         }
       }
@@ -172,12 +165,12 @@ export function withIdempotencyEnforcement<T extends (...args: any[]) => Promise
       if (payloadHash && existing.payload && existing.payload !== payloadHash) {
         resolveCreation!();
         creationInProgress.delete(scopedKey);
-        return new Response(
-          JSON.stringify({
+        return NextResponse.json(
+          {
             error: "IDEMPOTENCY_ERROR",
             message: "Idempotency key reused with different request body",
-          }),
-          { status: 400, headers: { "content-type": "application/json" } }
+          },
+          { status: 400 }
         );
       }
 
@@ -185,10 +178,8 @@ export function withIdempotencyEnforcement<T extends (...args: any[]) => Promise
       if (existing.status === "completed") {
         resolveCreation!();
         creationInProgress.delete(scopedKey);
-        const response = new Response(JSON.stringify(existing.response), {
-          status: 200,
-          headers: { "content-type": "application/json", "x-idempotency-replayed": "true" },
-        });
+        const response = NextResponse.json(existing.response, { status: 200 });
+        response.headers.set("x-idempotency-replayed", "true");
         response.headers.set("x-idempotency-key", idempotencyKey);
         return response;
       }
@@ -199,22 +190,17 @@ export function withIdempotencyEnforcement<T extends (...args: any[]) => Promise
         creationInProgress.delete(scopedKey);
         try {
           const completed = await store.waitForCompletion(scopedKey, options.timeoutMs ?? 30000);
-          const response = new Response(JSON.stringify(completed.response), {
-            status: 200,
-            headers: {
-              "content-type": "application/json",
-              "x-idempotency-replayed": "true",
-            },
-          });
+          const response = NextResponse.json(completed.response, { status: 200 });
+          response.headers.set("x-idempotency-replayed", "true");
           response.headers.set("x-idempotency-key", idempotencyKey);
           return response;
         } catch (error) {
-          return new Response(
-            JSON.stringify({
+          return NextResponse.json(
+            {
               error: "IDEMPOTENCY_TIMEOUT",
               message: `Concurrent request timeout for ${idempotencyKey}`,
-            }),
-            { status: 504, headers: { "content-type": "application/json" } }
+            },
+            { status: 504 }
           );
         }
       }
@@ -261,14 +247,15 @@ export function withIdempotencyEnforcement<T extends (...args: any[]) => Promise
       pendingOperations.delete(scopedKey);
 
       // Return response with idempotency header
-      const headers = new Headers(response.headers);
-      headers.set("x-idempotency-key", idempotencyKey);
+      const respHeaders = new Headers(response.headers);
+      respHeaders.set("x-idempotency-key", idempotencyKey);
 
-      return new Response(response.body, {
+      const respWithHeaders = new NextResponse(response.body, {
         status: response.status,
         statusText: response.statusText,
-        headers,
-      }) as NextResponse;
+        headers: respHeaders,
+      });
+      return respWithHeaders;
     } catch (error) {
       // Update record with failure
       await store.update(scopedKey, { error: String(error) }, "failed");
@@ -279,7 +266,7 @@ export function withIdempotencyEnforcement<T extends (...args: any[]) => Promise
 
       throw error;
     }
-  }) as T;
+  }) as (request: NextRequest, ...args: any[]) => Promise<NextResponse>;
 }
 
 /**
