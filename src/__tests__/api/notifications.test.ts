@@ -28,7 +28,16 @@ describe("Notifications API Routes (Structural)", () => {
       // Handler: POST export async function POST(request: NextRequest)
       // Validates: SendNotificationSchema
       // Returns: { success: true, notification }
-      expect(true).toBe(true);
+      const result = sendNotification({
+        workspaceId: "ws-1",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Test",
+        body: "Test notification",
+        sendAt: new Date(),
+      });
+      expect(result).toBeDefined();
     });
 
     it("should validate incoming notification payload", () => {
