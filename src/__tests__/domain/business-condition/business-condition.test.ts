@@ -30,7 +30,6 @@ describe("Business Condition Model", () => {
         grossMargin: 60,
         customerConcentration: 30,
         operatingMargin: -20,
-        customerConcentration: 30,
         dataSource: "accounting_software",
         lastUpdated: new Date(),
       });
@@ -464,7 +463,7 @@ describe("Business Condition Model", () => {
           burnRate: 0,
           cashRunwayMonths: 10,
           grossMargin: 75,
-        customerConcentration: 25,
+          customerConcentration: 25,
           operatingMargin: 50,
           dataSource: "accounting_software" as const,
           lastUpdated: new Date(),
@@ -505,6 +504,8 @@ describe("Business Condition Model", () => {
           competitiveAdvantage: ["Better product"],
           lastAssessmentAt: new Date(),
         },
+        riskFactors: [],
+        strengths: [],
       };
 
       const overall = calculateOverallHealth(condition);
@@ -525,7 +526,7 @@ describe("Business Condition Model", () => {
           burnRate: -50000,
           cashRunwayMonths: 24,
           grossMargin: 80,
-        customerConcentration: 20,
+          customerConcentration: 20,
           operatingMargin: 75,
           dataSource: "accounting_software" as const,
           lastUpdated: new Date(),
@@ -566,6 +567,8 @@ describe("Business Condition Model", () => {
           competitiveAdvantage: [],
           lastAssessmentAt: new Date(),
         },
+        riskFactors: [],
+        strengths: [],
       };
 
       const overall = calculateOverallHealth(healthyFinance);
@@ -605,6 +608,7 @@ describe("Business Condition Model", () => {
           burnRate: 20000,
           cashRunwayMonths: 0.5,
           grossMargin: 40,
+          customerConcentration: 30,
           operatingMargin: -200,
           dataSource: "accounting_software" as const,
           lastUpdated: new Date(),
@@ -645,6 +649,8 @@ describe("Business Condition Model", () => {
           competitiveAdvantage: [],
           lastAssessmentAt: new Date(),
         },
+        riskFactors: [],
+        strengths: [],
       };
 
       const risks = identifyRiskFactors(condition);
@@ -666,7 +672,7 @@ describe("Business Condition Model", () => {
           burnRate: 0,
           cashRunwayMonths: 5,
           grossMargin: 70,
-        customerConcentration: 35,
+          customerConcentration: 35,
           operatingMargin: 20,
           dataSource: "accounting_software" as const,
           lastUpdated: new Date(),
@@ -707,6 +713,8 @@ describe("Business Condition Model", () => {
           competitiveAdvantage: ["Reliable"],
           lastAssessmentAt: new Date(),
         },
+        riskFactors: [],
+        strengths: [],
       };
 
       const risks = identifyRiskFactors(condition);
@@ -732,7 +740,7 @@ describe("Business Condition Model", () => {
           burnRate: -200000,
           cashRunwayMonths: 36,
           grossMargin: 85,
-        customerConcentration: 15,
+          customerConcentration: 15,
           operatingMargin: 70,
           dataSource: "accounting_software" as const,
           lastUpdated: new Date(),
@@ -773,6 +781,8 @@ describe("Business Condition Model", () => {
           competitiveAdvantage: ["Innovative", "Market leader", "Superior UX"],
           lastAssessmentAt: new Date(),
         },
+        riskFactors: [],
+        strengths: [],
       };
 
       const strengths = identifyStrengths(condition);
@@ -798,7 +808,7 @@ describe("Business Condition Model", () => {
           burnRate: 0,
           cashRunwayMonths: 12,
           grossMargin: 70,
-        customerConcentration: 35,
+          customerConcentration: 35,
           operatingMargin: 50,
           dataSource: "accounting_software" as const,
           lastUpdated: new Date(),
@@ -839,6 +849,8 @@ describe("Business Condition Model", () => {
           competitiveAdvantage: ["Good support", "Reliable"],
           lastAssessmentAt: new Date(),
         },
+        riskFactors: [],
+        strengths: [],
       };
 
       const strengths = identifyStrengths(condition);
@@ -861,6 +873,7 @@ describe("Business Condition Model", () => {
           burnRate: 30000,
           cashRunwayMonths: 2,
           grossMargin: 0,
+          customerConcentration: 50,
           operatingMargin: -100,
           dataSource: "estimate" as const,
           lastUpdated: new Date(),
@@ -901,6 +914,8 @@ describe("Business Condition Model", () => {
           competitiveAdvantage: [],
           lastAssessmentAt: new Date(),
         },
+        riskFactors: [],
+        strengths: [],
       };
 
       const risks = identifyRiskFactors(earlyStage);
@@ -922,7 +937,7 @@ describe("Business Condition Model", () => {
           burnRate: -50000,
           cashRunwayMonths: 18,
           grossMargin: 80,
-        customerConcentration: 20,
+          customerConcentration: 20,
           operatingMargin: 60,
           dataSource: "accounting_software" as const,
           lastUpdated: new Date(),
@@ -963,6 +978,8 @@ describe("Business Condition Model", () => {
           competitiveAdvantage: ["Scale advantage", "Brand", "Product quality"],
           lastAssessmentAt: new Date(),
         },
+        riskFactors: [],
+        strengths: [],
       };
 
       const overall = calculateOverallHealth(scaleUp);
