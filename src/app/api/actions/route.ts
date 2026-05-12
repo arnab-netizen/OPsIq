@@ -1,5 +1,6 @@
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { checkWorkspaceRateLimit } from "@/middleware/rate-limit";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createAction, listActions } from "@/services/action";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
@@ -11,6 +12,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
+import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
 
 const createActionSchema = z.object({
   engagementId: z.string().uuid(),
@@ -81,6 +83,29 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  // Check rate limiting: workspace requests/hour limit
+  const tier: SubscriptionTier = (request.headers.get("x-tier") as SubscriptionTier) || "free";
+  const rateLimit = checkWorkspaceRateLimit(workspaceId, tier);
+  if (!rateLimit.allowed) {
+    const config = getTierConfig(tier);
+    return NextResponse.json(
+      {
+        error: "Rate limit exceeded",
+        tier,
+        limit: config.limits.requestsPerHour,
+        message: `Workspace rate limit: ${config.limits.requestsPerHour} requests/hour`,
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": (rateLimit.retryAfter || 60).toString(),
+          "X-RateLimit-Limit": config.limits.requestsPerHour.toString(),
+          "X-RateLimit-Remaining": "0",
+        },
+      }
+    );
   }
 
   // Check capability: action_create
