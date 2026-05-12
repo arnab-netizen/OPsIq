@@ -233,7 +233,7 @@ npm test
 ---
 
 ### A3: Run Full Test Suite Until All 3845 Tests Pass
-**Status:** BLOCKED_LOCALLY (CI-Ready with PostgreSQL)
+**Status:** BLOCKED_EXTERNAL_CI_NOT_AVAILABLE
 
 **Local Environment:** BLOCKED_DB_REQUIRED
 - 358/358 growth tests PASS (non-DB tests verified)
@@ -338,7 +338,7 @@ npm test -- growth
 ---
 
 ### B2: Add Database-Backed Stores for Growth Engines
-**Status:** BLOCKED_DB_REQUIRED (Dependent on A3 CI Verification)
+**Status:** BLOCKED_EXTERNAL_CI_NOT_AVAILABLE
 **Root Cause:** In-memory stores don't persist, don't scale, can't support multi-instance.
 
 **Prerequisites for B2 Completion:**
