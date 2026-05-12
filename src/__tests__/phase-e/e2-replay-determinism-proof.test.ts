@@ -125,13 +125,16 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
     it("should detect event corruption with hash mismatch", async () => {
       // HOSTILE TEST: Replay events, then change one event and replay again
       const events = createDeterministicEvents(42, 50);
+
+      // Replay 1: BEFORE corruption
       const replay1 = replayEvents(events);
 
-      // Corrupt one event
-      events[25].data.value = "corrupted"; // Change event data
+      // Deep clone before corruption to avoid mutating original
+      const corruptedEvents = JSON.parse(JSON.stringify(events));
+      corruptedEvents[25].data.value = "corrupted"; // Change event data
 
-      // Replay with corrupted event
-      const replay2 = replayEvents(events);
+      // Replay 2: WITH corrupted event
+      const replay2 = replayEvents(corruptedEvents);
 
       // ASSERTION: Corruption detected via audit log
       expect(replay1.state.auditLog[25].data.value).not.toBe(
@@ -303,12 +306,17 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
     it("should detect modified events in log", async () => {
       // HOSTILE TEST: Modify event in middle of log
       const events = createDeterministicEvents(42, 100);
-      const original = replayEvents(events);
 
-      // Modify event 50
-      const originalValue = events[49].data.value;
-      events[49].data.value = "modified";
-      const modified = replayEvents(events);
+      // Replay 1: BEFORE modification
+      const original = replayEvents(events);
+      const originalValue = original.state.auditLog[49].data.value;
+
+      // Deep clone before modification to avoid mutating original
+      const modifiedEvents = JSON.parse(JSON.stringify(events));
+      modifiedEvents[49].data.value = "modified";
+
+      // Replay 2: WITH modified event
+      const modified = replayEvents(modifiedEvents);
 
       // ASSERTION: Modification detected via audit log
       expect(original.state.auditLog[49].data.value).toBe(originalValue);
