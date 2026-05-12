@@ -358,10 +358,17 @@ describe("InMemoryCache - Basic Operations", () => {
     const testCache = new InMemoryCache(100);
     testCache.destroy();
 
-    // Setting data after destroy should not throw
-    expect(async () => {
+    // Setting data after destroy should not throw (but may be a no-op)
+    // The important thing is it doesn't crash the process
+    let errorOccurred = false;
+    try {
       await testCache.set("after-destroy", "data");
-    }).not.toThrow();
+    } catch (e) {
+      errorOccurred = true;
+    }
+
+    // Operation should complete without throwing
+    expect(errorOccurred).toBe(false);
   });
 
   // ========== Real-World Scenarios ==========
@@ -438,16 +445,21 @@ describe("InMemoryCache - Basic Operations", () => {
 
   it("handles invalid patterns in flush gracefully", async () => {
     await cache.set("key1", "val1");
+    const stats1 = await cache.getStats();
+    expect(stats1.size).toBe(1);
 
-    // Invalid regex should throw or be handled
+    // Invalid regex should either throw or be handled gracefully
+    let errorThrown = false;
     try {
       await cache.flush("[invalid(pattern");
-      // If no error, that's ok
-      expect(true).toBe(true);
-    } catch {
-      // Throwing on invalid regex is also acceptable
-      expect(true).toBe(true);
+    } catch (e) {
+      errorThrown = true;
     }
+
+    // Either it throws (acceptable) or it doesn't but cache still works
+    const stats2 = await cache.getStats();
+    expect(typeof stats2.size).toBe("number");
+    expect(stats2.size >= 0).toBe(true);
   });
 
   // ========== Type Safety ==========
