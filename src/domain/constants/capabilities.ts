@@ -117,6 +117,9 @@ export const CAPABILITIES = {
   // Audit Trail
   AUDIT_VIEW: "audit:view",
   AUDIT_EXPORT: "audit:export",
+
+  // Webhooks
+  WEBHOOK_MANAGE: "webhook:manage",
 } as const;
 
 export type CapabilityName =
