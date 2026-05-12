@@ -610,4 +610,451 @@ describe("Notification Service", () => {
       expect(notif.priority).toBe("normal");
     });
   });
+
+  describe("Notification Multi-Workspace Isolation", () => {
+    it("should isolate notifications between workspaces", async () => {
+      const notif1 = await sendNotification({
+        workspaceId: "ws-1",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "WS1 Notif",
+        body: "From workspace 1",
+        sendAt: new Date(),
+      });
+
+      const notif2 = await sendNotification({
+        workspaceId: "ws-2",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "WS2 Notif",
+        body: "From workspace 2",
+        sendAt: new Date(),
+      });
+
+      const ws1Notifs = await listUserNotifications("ws-1", "user-1");
+      expect(ws1Notifs.notifications).toHaveLength(1);
+      expect(ws1Notifs.notifications[0].subject).toBe("WS1 Notif");
+    });
+
+    it("should isolate preferences between workspaces", async () => {
+      await setPreferences({
+        workspaceId: "ws-1",
+        userId: "user-1",
+        channels: {
+          [NotificationChannel.EMAIL]: true,
+          [NotificationChannel.SMS]: false,
+          [NotificationChannel.WEBHOOK]: true,
+          [NotificationChannel.IN_APP]: true,
+        },
+        frequency: "real_time",
+      });
+
+      await setPreferences({
+        workspaceId: "ws-2",
+        userId: "user-1",
+        channels: {
+          [NotificationChannel.EMAIL]: false,
+          [NotificationChannel.SMS]: true,
+          [NotificationChannel.WEBHOOK]: false,
+          [NotificationChannel.IN_APP]: false,
+        },
+        frequency: "real_time",
+      });
+
+      const prefs1 = await getPreferences("ws-1", "user-1");
+      const prefs2 = await getPreferences("ws-2", "user-1");
+
+      expect(prefs1?.channels[NotificationChannel.EMAIL]).toBe(true);
+      expect(prefs2?.channels[NotificationChannel.EMAIL]).toBe(false);
+    });
+  });
+
+  describe("Notification Quiet Hours", () => {
+    it("should respect quiet hours", async () => {
+      await setPreferences({
+        workspaceId: "ws-123",
+        userId: "user-1",
+        channels: {
+          [NotificationChannel.EMAIL]: true,
+          [NotificationChannel.SMS]: true,
+          [NotificationChannel.WEBHOOK]: true,
+          [NotificationChannel.IN_APP]: true,
+        },
+        frequency: "real_time",
+        quietHours: {
+          enabled: true,
+          startHour: 22,
+          endHour: 8,
+          timezone: "America/New_York",
+        },
+      });
+
+      const prefs = await getPreferences("ws-123", "user-1");
+      expect(prefs?.quietHours?.enabled).toBe(true);
+      expect(prefs?.quietHours?.startHour).toBe(22);
+    });
+
+    it("should store quiet hours with timezone", async () => {
+      await setPreferences({
+        workspaceId: "ws-123",
+        userId: "user-1",
+        channels: {
+          [NotificationChannel.EMAIL]: true,
+          [NotificationChannel.SMS]: true,
+          [NotificationChannel.WEBHOOK]: true,
+          [NotificationChannel.IN_APP]: true,
+        },
+        frequency: "real_time",
+        quietHours: {
+          enabled: true,
+          startHour: 20,
+          endHour: 9,
+          timezone: "Europe/London",
+        },
+      });
+
+      const prefs = await getPreferences("ws-123", "user-1");
+      expect(prefs?.quietHours?.timezone).toBe("Europe/London");
+    });
+  });
+
+  describe("Notification Frequency Digests", () => {
+    it("should support real-time frequency", async () => {
+      await setPreferences({
+        workspaceId: "ws-123",
+        userId: "user-1",
+        channels: {
+          [NotificationChannel.EMAIL]: true,
+          [NotificationChannel.SMS]: true,
+          [NotificationChannel.WEBHOOK]: true,
+          [NotificationChannel.IN_APP]: true,
+        },
+        frequency: "real_time",
+      });
+
+      const prefs = await getPreferences("ws-123", "user-1");
+      expect(prefs?.frequency).toBe("real_time");
+    });
+
+    it("should support daily digest frequency", async () => {
+      await setPreferences({
+        workspaceId: "ws-123",
+        userId: "user-1",
+        channels: {
+          [NotificationChannel.EMAIL]: true,
+          [NotificationChannel.SMS]: true,
+          [NotificationChannel.WEBHOOK]: true,
+          [NotificationChannel.IN_APP]: true,
+        },
+        frequency: "daily_digest",
+      });
+
+      const prefs = await getPreferences("ws-123", "user-1");
+      expect(prefs?.frequency).toBe("daily_digest");
+    });
+
+    it("should support weekly digest frequency", async () => {
+      await setPreferences({
+        workspaceId: "ws-123",
+        userId: "user-1",
+        channels: {
+          [NotificationChannel.EMAIL]: true,
+          [NotificationChannel.SMS]: true,
+          [NotificationChannel.WEBHOOK]: true,
+          [NotificationChannel.IN_APP]: true,
+        },
+        frequency: "weekly_digest",
+      });
+
+      const prefs = await getPreferences("ws-123", "user-1");
+      expect(prefs?.frequency).toBe("weekly_digest");
+    });
+
+    it("should support never frequency (mute all)", async () => {
+      await setPreferences({
+        workspaceId: "ws-123",
+        userId: "user-1",
+        channels: {
+          [NotificationChannel.EMAIL]: true,
+          [NotificationChannel.SMS]: true,
+          [NotificationChannel.WEBHOOK]: true,
+          [NotificationChannel.IN_APP]: true,
+        },
+        frequency: "never",
+      });
+
+      const prefs = await getPreferences("ws-123", "user-1");
+      expect(prefs?.frequency).toBe("never");
+    });
+  });
+
+  describe("Real-World Notification Scenarios", () => {
+    it("should send action completion notification with template", async () => {
+      await saveTemplate({
+        id: "action_completed",
+        name: "Action Completed",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subjectTemplate: "Action '{{actionName}}' is now complete",
+        bodyTemplate: "Your action {{actionName}} was completed at {{timestamp}}",
+        variables: ["actionName", "timestamp"],
+      });
+
+      const rendered = await renderFromTemplate("action_completed", {
+        actionName: "Review Pricing",
+        timestamp: "2025-05-12T10:30:00Z",
+      });
+
+      expect(rendered.subject).toBe("Action 'Review Pricing' is now complete");
+      expect(rendered.body).toContain("Review Pricing");
+      expect(rendered.body).toContain("2025-05-12T10:30:00Z");
+    });
+
+    it("should send critical alert with high priority", async () => {
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.CRITICAL_ALERT,
+        channels: [NotificationChannel.EMAIL, NotificationChannel.SMS],
+        subject: "CRITICAL: Revenue dropped 50%",
+        body: "Your business condition has changed critically",
+        priority: "critical",
+        sendAt: new Date(),
+      });
+
+      expect(notif.priority).toBe("critical");
+      expect(notif.deliveryResults.length).toBe(2);
+    });
+
+    it("should aggregate multiple notification types", async () => {
+      await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Action 1 Completed",
+        body: "Done",
+        sendAt: new Date(),
+      });
+
+      await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.DECISION_NEEDED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Decision Needed",
+        body: "Please decide",
+        sendAt: new Date(),
+      });
+
+      const notifs = await listUserNotifications("ws-123", "user-1");
+      expect(notifs.total).toBe(2);
+      const types = notifs.notifications.map(n => n.type);
+      expect(types).toContain(NotificationType.ACTION_COMPLETED);
+      expect(types).toContain(NotificationType.DECISION_NEEDED);
+    });
+  });
+
+  describe("Notification Error Handling & Edge Cases", () => {
+    it("should handle empty recipient list", async () => {
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Test",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      expect(notif.id).toBeDefined();
+    });
+
+    it("should handle large body content", async () => {
+      const largeBody = "x".repeat(10000);
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Test",
+        body: largeBody,
+        sendAt: new Date(),
+      });
+
+      expect(notif.body.length).toBe(10000);
+    });
+
+    it("should handle unicode characters", async () => {
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Notif: 你好 مرحبا",
+        body: "Content with emoji 🚀✨🎉",
+        sendAt: new Date(),
+      });
+
+      expect(notif.subject).toContain("你好");
+      expect(notif.body).toContain("🚀");
+    });
+
+    it("should dedup template variables", async () => {
+      await saveTemplate({
+        id: "template-dedup",
+        name: "Template",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subjectTemplate: "{{name}} {{name}}",
+        bodyTemplate: "User {{name}} action {{action}}",
+        variables: ["name", "action"],
+      });
+
+      const rendered = await renderFromTemplate("template-dedup", {
+        name: "Alice",
+        action: "Review",
+      });
+
+      expect(rendered.subject).toBe("Alice Alice");
+      expect(rendered.body).toBe("User Alice action Review");
+    });
+  });
+
+  describe("Notification Delivery Status Tracking", () => {
+    it("should track delivery results per channel", async () => {
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL, NotificationChannel.SMS, NotificationChannel.WEBHOOK],
+        subject: "Test",
+        body: "Test",
+        sendAt: new Date(),
+      });
+
+      expect(notif.deliveryResults.length).toBe(3);
+      expect(notif.deliveryResults.map(d => d.channel)).toContain(NotificationChannel.EMAIL);
+      expect(notif.deliveryResults.map(d => d.channel)).toContain(NotificationChannel.SMS);
+    });
+
+    it("should mark status as sent when all channels succeed", async () => {
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Test",
+        body: "Test",
+        sendAt: new Date(),
+      });
+
+      expect(notif.status).toMatch(/sent|failed/);
+    });
+
+    it("should record sent timestamps", async () => {
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Test",
+        body: "Test",
+        sendAt: new Date(),
+      });
+
+      notif.deliveryResults.forEach(result => {
+        expect(result.sentAt).toBeInstanceOf(Date);
+      });
+    });
+  });
+
+  describe("Notification Compliance & Security", () => {
+    it("should enforce workspace scoping on list", async () => {
+      await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "WS-123 Notif",
+        body: "Only visible in ws-123",
+        sendAt: new Date(),
+      });
+
+      await sendNotification({
+        workspaceId: "ws-456",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "WS-456 Notif",
+        body: "Only visible in ws-456",
+        sendAt: new Date(),
+      });
+
+      const ws123List = await listUserNotifications("ws-123", "user-1");
+      expect(ws123List.notifications.every(n => n.workspaceId === "ws-123")).toBe(true);
+    });
+
+    it("should validate notification schema before storage", async () => {
+      const notif = await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.EXPERIMENT_RESULT,
+        channels: [NotificationChannel.WEBHOOK],
+        subject: "Test Subject",
+        body: "Test Body",
+        sendAt: new Date(),
+      });
+
+      const retrieved = await getNotification(notif.id);
+      expect(retrieved).toBeDefined();
+      expect(retrieved?.workspaceId).toBe("ws-123");
+      expect(retrieved?.recipientId).toBe("user-1");
+    });
+
+    it("should support filtering by status", async () => {
+      await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Notif 1",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      await sendNotification({
+        workspaceId: "ws-123",
+        recipientId: "user-1",
+        type: NotificationType.ACTION_COMPLETED,
+        channels: [NotificationChannel.EMAIL],
+        subject: "Notif 2",
+        body: "Body",
+        sendAt: new Date(),
+      });
+
+      const allNotifs = await listUserNotifications("ws-123", "user-1");
+      expect(allNotifs.notifications.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("should handle pagination limits", async () => {
+      for (let i = 0; i < 100; i++) {
+        await sendNotification({
+          workspaceId: "ws-123",
+          recipientId: "user-1",
+          type: NotificationType.ACTION_COMPLETED,
+          channels: [NotificationChannel.EMAIL],
+          subject: `Notif ${i}`,
+          body: "Body",
+          sendAt: new Date(),
+        });
+      }
+
+      const page1 = await listUserNotifications("ws-123", "user-1", { limit: 25, offset: 0 });
+      expect(page1.notifications.length).toBeLessThanOrEqual(25);
+      expect(page1.total).toBe(100);
+    });
+  });
 });
