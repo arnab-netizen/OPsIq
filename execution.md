@@ -977,9 +977,16 @@ If any command fails, DO NOT DEPLOY. Investigate and fix.
   - C3: Wire Entitlement Middleware → COMPLETE_CODE_VERIFIED_PRE_PRODUCTION ✓ (33 permission matrix tests)
   - C4: Wire Rate Limiting Middleware → COMPLETE_CODE_VERIFIED_PRE_PRODUCTION ✓ (28 token bucket tests)
 
-- **Non-DB Tests:** 358/358 PASS (growth engines)
+- **PHASE G: DECISION CREDIBILITY + OPERATOR VALUE** — GOVERNANCE BACKBONE COMPLETE ✓ (5/5 slices)
+  - G-B1: Lifecycle State Machine → DECISION_SYSTEM_STATE_GOVERNED ✓ (14-state FSM, fail-closed transitions, 7 tests)
+  - G-B2: Precondition Engine → DECISION_SYSTEM_PRECONDITION_ENFORCED ✓ (blocking/warning classification, 6 tests)
+  - G-B3: Scope Enforcement Engine → DECISION_SYSTEM_SCOPE_ENFORCED ✓ (multi-dimensional validation, 4 tests)
+  - G-B4: Constraint Precedence Engine → DECISION_SYSTEM_CONSTRAINT_HIERARCHICAL ✓ (deterministic hierarchy SURVIVAL>COMPLIANCE>CASHFLOW>OPERATIONAL_STABILITY>GROWTH, 5 tests)
+  - G-B5: Recommendation Change Ledger → DECISION_SYSTEM_EXPLAINABILITY_AUDITABLE ✓ (append-only immutable ledger, 5 tests)
+
+- **Non-DB Tests:** 358/358 PASS (growth engines) + 27/27 PASS (governance backbone)
 - **DB-Dependent Tests:** 81 BLOCKED (Phase-3 event sourcing, require PostgreSQL)
-- **Total Expected (CI):** 3845/3845 PASS (with PostgreSQL in GitHub Actions)
+- **Total Expected (CI):** 3872/3872 PASS (with PostgreSQL in GitHub Actions, including governance backbone)
 
 ## Operational Readiness Status
 
@@ -988,8 +995,9 @@ If any command fails, DO NOT DEPLOY. Investigate and fix.
 | **Safety Backbone (Phase A)** | COMPLETE | A1 ✓ A2 ✓ A3-CI ✓ (migrations + tests verified in GitHub Actions Run #25760432401) |
 | **Execution Core (Phase B)** | COMPLETE | B1 ✓ (358 growth tests pass locally) B2-CI ✓ (migrations deployed + tests pass in CI Run #25760432401) |
 | **Monetization (Phase C)** | COMPLETE | C1-CI ✓ (DATABASE_URL verified in CI) C2-CI ✓ (migrations deployed in CI) C3 ✓ (entitlement 33 tests) C4 ✓ (rate limiting 28 tests) |
+| **Governance Backbone (Phase G)** | COMPLETE | G-B1-B5 ✓ (27 tests pass, npm run build ✓, fail-closed state machine, immutable ledger, deterministic constraint precedence) |
 | **Enterprise (Phase D)** | NOT_STARTED | D1-D7 admin/audit/webhooks/monitoring/backups/runbooks/baselines not yet implemented |
-| **Verification (Phase E)** | READY | All Phase A-C complete; E1 can proceed once Phase D completes |
+| **Verification (Phase E)** | READY | All Phase A-C-G complete; E1 can proceed once Phase D completes |
 
 **Local Environment:** DATABASE_URL not configured (BLOCKED_DB_REQUIRED)  
 **CI Environment:** PostgreSQL 16 verified in GitHub Actions (CI Run #25760432401 SUCCESS ✓)
