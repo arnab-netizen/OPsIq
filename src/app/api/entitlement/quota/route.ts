@@ -6,6 +6,8 @@
 
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { z } from "zod";
 import {
   getQuotaUsage,
@@ -23,8 +25,22 @@ const IncrementQuotaSchema = z.object({
  * Get quota usage for workspace
  */
 export const GET = withEnforcementFull(async (request: NextRequest) => {
-  const userId = request.headers.get("x-user-id") || "anonymous";
-  const workspaceId = request.headers.get("x-workspace-id") || "default";
+  // Authenticate user (fail-closed)
+  const auth = await withAuth();
+
+  // Get workspace ID from header
+  const workspaceId = request.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    throw new Error("Workspace ID required (x-workspace-id header)");
+  }
+
+  // Verify user is member of workspace (fail-closed)
+  const membership = await enforceWorkspaceScoping(request, workspaceId);
+  if (!membership) {
+    throw new Error("Unauthorized");
+  }
+
+  const userId = auth.session.user.id;
 
   const usage = getQuotaUsage(workspaceId, userId);
   const tier = getSubscriptionTier(workspaceId);
@@ -51,11 +67,25 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
  * Increment quota usage
  */
 export const POST = withEnforcementFull(async (request: NextRequest) => {
+  // Authenticate user (fail-closed)
+  const auth = await withAuth();
+
+  // Get workspace ID from header
+  const workspaceId = request.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    throw new Error("Workspace ID required (x-workspace-id header)");
+  }
+
+  // Verify user is member of workspace (fail-closed)
+  const membership = await enforceWorkspaceScoping(request, workspaceId);
+  if (!membership) {
+    throw new Error("Unauthorized");
+  }
+
+  const userId = auth.session.user.id;
+
   const body = await request.json();
   const parsed = IncrementQuotaSchema.parse(body);
-
-  const userId = request.headers.get("x-user-id") || "anonymous";
-  const workspaceId = request.headers.get("x-workspace-id") || "default";
 
   // Check if quota available before incrementing
   const usage = getQuotaUsage(workspaceId, userId);

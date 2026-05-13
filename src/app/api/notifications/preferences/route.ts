@@ -6,6 +6,7 @@
 
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
 import { z } from "zod";
 import {
   setPreferences,
@@ -34,8 +35,14 @@ const SetPreferencesSchema = z.object({
  * Get user notification preferences
  */
 export const GET = withEnforcementFull(async (request: NextRequest) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "default";
-  const userId = request.headers.get("x-user-id") || "anonymous";
+  const auth = await withAuth();
+
+  const workspaceId = request.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    throw new Error("Workspace ID required (x-workspace-id header)");
+  }
+
+  const userId = auth.session.user.id;
 
   const preferences = await getPreferences(workspaceId, userId);
 
@@ -60,11 +67,17 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
  * Update user notification preferences
  */
 export const PATCH = withEnforcementFull(async (request: NextRequest) => {
+  const auth = await withAuth();
+
+  const workspaceId = request.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    throw new Error("Workspace ID required (x-workspace-id header)");
+  }
+
+  const userId = auth.session.user.id;
+
   const body = await request.json();
   const parsed = SetPreferencesSchema.parse(body);
-
-  const workspaceId = request.headers.get("x-workspace-id") || "default";
-  const userId = request.headers.get("x-user-id") || "anonymous";
 
   const preferences = await setPreferences({
     workspaceId,

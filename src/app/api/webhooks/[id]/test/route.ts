@@ -8,21 +8,18 @@
 
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { WebhookTestRequestSchema } from "@/domain/webhooks/webhook-contracts";
 import { testWebhookDelivery } from "@/services/webhooks.service";
-import { assertCapability } from "@/services/entitlement.service";
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
+  // Authenticate user with capability (fail-closed)
+  await withAuth({ capability: CAPABILITIES.WEBHOOK_MANAGE });
+
   const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
     throw new Error("Workspace ID required");
-  }
-
-  // Check capability
-  const capabilityCheck = await assertCapability(workspaceId, "webhook_manage");
-  if (!capabilityCheck.allowed) {
-    throw new Error("Insufficient permissions for webhook management");
   }
 
   let body: any = {};

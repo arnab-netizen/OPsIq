@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 import { queryAuditEvents } from "@/infra/audit";
@@ -40,6 +42,9 @@ interface DecisionExport {
 }
 
 export const GET = withEnforcementFull(async (request: NextRequest) => {
+  // Authenticate user (fail-closed)
+  await withAuth({ capability: CAPABILITIES.AUDIT_VIEW });
+
   // Get workspace context (fail closed if missing)
   const workspace = await requireWorkspaceContext();
 

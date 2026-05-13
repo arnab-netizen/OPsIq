@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
 import { verifySignature } from "@/services/integrity/sign";
 import {
   generateDecisionHash,
@@ -10,6 +11,8 @@ import { verifyAsymmetricSignature, getPublicKey } from "@/services/integrity/as
 import { createDecisionResult } from "@/services/explanation/generate";
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
+  await withAuth();
+
   const body = await request.json();
   const { inputs, decisionHash, signedHash, signature, timestamp } = body;
 
