@@ -161,10 +161,9 @@ describe("Experiment Lifecycle Service", () => {
 
     it("should require approvals for critical-risk experiments", async () => {
       const criticalPlan = { ...basePlan, riskLevel: "critical" as const, requiredApprovals: [] };
-      const experiment = await createExperiment("ws-123", "eng-456", criticalPlan, "Critical Test", undefined, undefined, undefined, undefined, "user-100");
 
       expect(
-        approveExperiment(experiment, "ws-123", "user-100")
+        createExperiment("ws-123", "eng-456", criticalPlan, "Critical Test", undefined, undefined, undefined, undefined, "user-100")
       ).rejects.toThrow("must have requiredApprovals");
     });
 
@@ -668,7 +667,7 @@ describe("Experiment Lifecycle Service", () => {
 
   describe("State Machine Enforc Transitions", () => {
     it("should enforce draft → approved → active → completed → analyzed → archived", async () => {
-      let exp = await createExperiment("ws-123", "eng-456", basePlan, "Test", undefined, undefined, undefined, undefined, "u-1");
+      let exp = await createExperiment("ws-123", "eng-456", basePlan, "TestExp", undefined, undefined, undefined, undefined, "u-1");
       expect(exp.status).toBe("draft");
 
       exp = await approveExperiment(exp, "ws-123", "u-1");

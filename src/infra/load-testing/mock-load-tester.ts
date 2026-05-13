@@ -103,7 +103,7 @@ export type LoadTestResult = z.infer<typeof LoadTestResultSchema>;
  */
 export function simulateRequest(operationType: string): LoadTestRequest {
   const baseLatency = 10 + Math.random() * 90;
-  const jitter = operationType === 'list' || operationType === 'search' ? 50 : 0;
+  const jitter = operationType === 'list' || operationType === 'search' ? Math.random() * 40 : 0;
   const latency = baseLatency + jitter;
   const simulatedError = Math.random() < 0.05; // 5% error rate
 
