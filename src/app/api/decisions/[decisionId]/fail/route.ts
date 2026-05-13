@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { getSession } from "@/services/auth";
 import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
 import { logger } from "@/infra/logger";
@@ -21,43 +22,31 @@ type FailDecisionInput = z.infer<typeof FailDecisionSchema>;
  * Requires: reason for failure (mandatory)
  * Returns: 409 Conflict if transition not allowed
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ decisionId: string }> }
-) {
-  try {
+export const POST = withEnforcementFull(
+  async (request: NextRequest, ctx, params) => {
     const session = await getSession();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      throw new Error("Unauthorized");
     }
 
     const userId = session.user.id;
-    const { decisionId } = await params;
+    const decisionId = params.decisionId;
 
     // Get workspace ID from query
     const workspaceId = request.nextUrl.searchParams.get("workspaceId");
     if (!workspaceId) {
-      return NextResponse.json(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
+      throw new Error("Workspace ID required");
     }
 
     // Enforce workspace scoping
     const membership = await enforceWorkspaceScoping(request, workspaceId);
     if (!membership) {
-      return NextResponse.json(
-        { error: "Unauthorized or invalid workspace" },
-        { status: 403 }
-      );
+      throw new Error("Unauthorized or invalid workspace");
     }
 
     // Check permission to mark decisions as failed
     if (!hasPermission(membership.role, "fail_decision")) {
-      return NextResponse.json(
-        { error: "Insufficient permissions to mark decision as failed" },
-        { status: 403 }
-      );
+      throw new Error("Insufficient permissions to mark decision as failed");
     }
 
     // Fetch decision to verify it exists
@@ -66,10 +55,7 @@ export async function POST(
     });
 
     if (!decision) {
-      return NextResponse.json(
-        { error: "Decision not found in this workspace" },
-        { status: 404 }
-      );
+      throw new Error("Decision not found in this workspace");
     }
 
     // Parse and validate input
@@ -92,47 +78,17 @@ export async function POST(
         reason: input.reason,
       });
 
-      return NextResponse.json(
-        {
-          decisionId,
-          status: updated.status,
-          message: "Decision marked as failed",
-          reason: input.reason,
-        },
-        { status: 200 }
-      );
+      return {
+        decisionId,
+        status: updated.status,
+        message: "Decision marked as failed",
+        reason: input.reason,
+      };
     } catch (lifecycleError) {
       if (lifecycleError instanceof ValidationError) {
-        return NextResponse.json(
-          { error: lifecycleError.message },
-          { status: 409 } // Conflict - not in EXECUTED state
-        );
+        throw lifecycleError;
       }
       throw lifecycleError;
     }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Invalid input",
-          details: error.issues.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          })),
-        },
-        { status: 400 }
-      );
-    }
-
-    const message = error instanceof Error ? error.message : "Unknown error";
-    logger.error("Decision fail API error", {
-      decisionId: (await params).decisionId,
-      error: message,
-    });
-
-    return NextResponse.json(
-      { error: "Failed to mark decision as failed", details: message },
-      { status: 500 }
-    );
   }
-}
+);

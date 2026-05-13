@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { getSession } from "@/services/auth";
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
@@ -22,138 +23,103 @@ type IntakeInput = z.infer<typeof IntakeSchema>;
  *
  * Future: webhook, email parser, CSV upload will use this.
  */
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
+export const POST = withEnforcementFull(async (request: NextRequest) => {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
 
-    const userId = session.user.id;
+  const userId = session.user.id;
 
-    // Get workspace ID from query param
-    let workspaceId: string;
-    const queryWorkspaceId = request.nextUrl.searchParams.get("workspaceId");
+  // Get workspace ID from query param
+  let workspaceId: string;
+  const queryWorkspaceId = request.nextUrl.searchParams.get("workspaceId");
 
-    // If no workspace specified, use user's first active workspace
-    if (!queryWorkspaceId) {
-      const membership = await db.workspaceMembership.findFirst({
-        where: {
-          userId,
-          isActive: true,
-        },
-      });
-
-      if (!membership) {
-        return NextResponse.json(
-          { error: "No active workspace found" },
-          { status: 400 }
-        );
-      }
-
-      workspaceId = membership.workspaceId;
-    } else {
-      // Verify user is member of specified workspace
-      const membership = await enforceWorkspaceScoping(request, queryWorkspaceId);
-      if (!membership) {
-        return NextResponse.json(
-          { error: "Unauthorized or invalid workspace" },
-          { status: 403 }
-        );
-      }
-      workspaceId = queryWorkspaceId;
-    }
-
-    // Parse and validate input
-    const body = await request.json();
-    const input = IntakeSchema.parse(body);
-
-    // Create decision
-    const decision = await db.operatorItem.create({
-      data: {
-        workspaceId,
-        createdBy: userId,
-        ownerUserId: userId,
-        problem: input.title,
-        action: input.description,
-        confidence: input.confidence,
-        impactExpected: 0,
-        impactLow: 0,
-        impactHigh: 0,
-        status: "pending",
-        blockStage: null,
-        blockReason: null,
-        decisionType: "general",
-        problemType: input.risk === "high" ? "growth_block" : "revenue_leak",
-        inputsSnapshot: {
-          title: input.title,
-          description: input.description,
-          confidence: input.confidence,
-          risk: input.risk,
-          createdAt: new Date().toISOString(),
-        },
-        priorityScore: 0.5,
-        executionStatus: "not_started",
-        engineVersion: "v1.0.0",
+  // If no workspace specified, use user's first active workspace
+  if (!queryWorkspaceId) {
+    const membership = await db.workspaceMembership.findFirst({
+      where: {
+        userId,
+        isActive: true,
       },
     });
 
-    // Log intake event
-    await logAuditEvent({
-      eventName: "DECISION_INTAKE",
-      entityType: "Decision",
-      entityId: decision.id,
-      actorId: userId,
-      role: null,
-      before: null,
-      after: {
-        id: decision.id,
-        status: "pending",
+    if (!membership) {
+      throw new Error("No active workspace found");
+    }
+
+    workspaceId = membership.workspaceId;
+  } else {
+    // Verify user is member of specified workspace
+    const membership = await enforceWorkspaceScoping(request, queryWorkspaceId);
+    if (!membership) {
+      throw new Error("Unauthorized or invalid workspace");
+    }
+    workspaceId = queryWorkspaceId;
+  }
+
+  // Parse and validate input
+  const body = await request.json();
+  const input = IntakeSchema.parse(body);
+
+  // Create decision
+  const decision = await db.operatorItem.create({
+    data: {
+      workspaceId,
+      createdBy: userId,
+      ownerUserId: userId,
+      problem: input.title,
+      action: input.description,
+      confidence: input.confidence,
+      impactExpected: 0,
+      impactLow: 0,
+      impactHigh: 0,
+      status: "pending",
+      blockStage: null,
+      blockReason: null,
+      decisionType: "general",
+      problemType: input.risk === "high" ? "growth_block" : "revenue_leak",
+      inputsSnapshot: {
         title: input.title,
-      },
-      metadata: {
-        action: "intake_decision",
-        source: "api",
+        description: input.description,
         confidence: input.confidence,
         risk: input.risk,
         createdAt: new Date().toISOString(),
       },
-      workspaceId,
-    }).catch((auditError) => {
-      console.error(`Audit logging failed: ${auditError}`);
-    });
+      priorityScore: 0.5,
+      executionStatus: "not_started",
+      engineVersion: "v1.0.0",
+    },
+  });
 
-    return NextResponse.json(
-      {
-        decisionId: decision.id,
-        status: "pending",
-        createdAt: decision.createdAt,
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Invalid input",
-          details: error.issues.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          })),
-        },
-        { status: 400 }
-      );
-    }
+  // Log intake event
+  await logAuditEvent({
+    eventName: "DECISION_INTAKE",
+    entityType: "Decision",
+    entityId: decision.id,
+    actorId: userId,
+    role: null,
+    before: null,
+    after: {
+      id: decision.id,
+      status: "pending",
+      title: input.title,
+    },
+    metadata: {
+      action: "intake_decision",
+      source: "api",
+      confidence: input.confidence,
+      risk: input.risk,
+      createdAt: new Date().toISOString(),
+    },
+    workspaceId,
+  }).catch((auditError) => {
+    console.error(`Audit logging failed: ${auditError}`);
+  });
 
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error(`Intake failed: ${message}`);
-
-    return NextResponse.json(
-      { error: "Intake failed", details: message },
-      { status: 500 }
-    );
-  }
-}
+  return {
+    decisionId: decision.id,
+    status: "pending",
+    createdAt: decision.createdAt,
+  };
+});

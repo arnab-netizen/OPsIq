@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getSession } from "@/services/auth";
@@ -9,43 +10,31 @@ import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-e
  *
  * Evaluate a pending decision using the existing /api/run engine.
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ decisionId: string }> }
-) {
-  try {
+export const POST = withEnforcementFull(
+  async (request: NextRequest, ctx, params) => {
     const session = await getSession();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      throw new Error("Unauthorized");
     }
 
     const userId = session.user.id;
-    const { decisionId } = await params;
+    const decisionId = params.decisionId;
 
     // Get workspace ID from query or body
     const workspaceId = request.nextUrl.searchParams.get("workspaceId");
     if (!workspaceId) {
-      return NextResponse.json(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
+      throw new Error("Workspace ID required");
     }
 
     // Enforce workspace scoping
     const membership = await enforceWorkspaceScoping(request, workspaceId);
     if (!membership) {
-      return NextResponse.json(
-        { error: "Unauthorized or invalid workspace" },
-        { status: 403 }
-      );
+      throw new Error("Unauthorized or invalid workspace");
     }
 
     // Check permission to evaluate decisions
     if (!hasPermission(membership.role, "evaluate")) {
-      return NextResponse.json(
-        { error: "Insufficient permissions to evaluate decisions" },
-        { status: 403 }
-      );
+      throw new Error("Insufficient permissions to evaluate decisions");
     }
 
     // Fetch stored decision with workspace scoping
@@ -54,18 +43,12 @@ export async function POST(
     });
 
     if (!decision) {
-      return NextResponse.json(
-        { error: "Decision not found in this workspace" },
-        { status: 404 }
-      );
+      throw new Error("Decision not found in this workspace");
     }
 
     // Only evaluate pending decisions
     if (decision.status !== "pending") {
-      return NextResponse.json(
-        { error: `Cannot evaluate ${decision.status} decision. Only pending decisions can be evaluated.` },
-        { status: 400 }
-      );
+      throw new Error(`Cannot evaluate ${decision.status} decision. Only pending decisions can be evaluated.`);
     }
 
     // Reconstruct decision input from stored data
@@ -155,26 +138,15 @@ export async function POST(
       console.error(`Audit logging failed: ${auditError}`);
     });
 
-    return NextResponse.json(
-      {
-        decisionId,
-        recommendation: isApproved ? "approved" : "blocked",
-        blockStage,
-        blockReason,
-        controlLayerViolations: evaluationResult.controlLayerViolations,
-        message: isApproved
-          ? "Decision evaluated: System recommends APPROVE"
-          : `Decision evaluated: System recommends BLOCK (${blockStage})`,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error(`Evaluation failed: ${message}`);
-
-    return NextResponse.json(
-      { error: "Evaluation failed", details: message },
-      { status: 500 }
-    );
+    return {
+      decisionId,
+      recommendation: isApproved ? "approved" : "blocked",
+      blockStage,
+      blockReason,
+      controlLayerViolations: evaluationResult.controlLayerViolations,
+      message: isApproved
+        ? "Decision evaluated: System recommends APPROVE"
+        : `Decision evaluated: System recommends BLOCK (${blockStage})`,
+    };
   }
-}
+);

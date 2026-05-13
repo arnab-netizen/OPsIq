@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { getSession } from "@/services/auth";
 import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
 import { logger } from "@/infra/logger";
@@ -13,43 +14,31 @@ import { ValidationError } from "@/infra/errors";
  * Enforces: decision must be in APPROVED state
  * Returns: 409 Conflict if transition not allowed
  */
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ decisionId: string }> }
-) {
-  try {
+export const POST = withEnforcementFull(
+  async (request: NextRequest, ctx, params) => {
     const session = await getSession();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      throw new Error("Unauthorized");
     }
 
     const userId = session.user.id;
-    const { decisionId } = await params;
+    const decisionId = params.decisionId;
 
     // Get workspace ID from query
     const workspaceId = request.nextUrl.searchParams.get("workspaceId");
     if (!workspaceId) {
-      return NextResponse.json(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
+      throw new Error("Workspace ID required");
     }
 
     // Enforce workspace scoping
     const membership = await enforceWorkspaceScoping(request, workspaceId);
     if (!membership) {
-      return NextResponse.json(
-        { error: "Unauthorized or invalid workspace" },
-        { status: 403 }
-      );
+      throw new Error("Unauthorized or invalid workspace");
     }
 
     // Check permission to execute
     if (!hasPermission(membership.role, "execute")) {
-      return NextResponse.json(
-        { error: "Insufficient permissions to execute decision" },
-        { status: 403 }
-      );
+      throw new Error("Insufficient permissions to execute decision");
     }
 
     // Fetch decision to verify it exists
@@ -58,10 +47,7 @@ export async function POST(
     });
 
     if (!decision) {
-      return NextResponse.json(
-        { error: "Decision not found in this workspace" },
-        { status: 404 }
-      );
+      throw new Error("Decision not found in this workspace");
     }
 
     try {
@@ -77,33 +63,16 @@ export async function POST(
         userId,
       });
 
-      return NextResponse.json(
-        {
-          decisionId,
-          status: updated.status,
-          message: "Decision executed successfully",
-        },
-        { status: 200 }
-      );
+      return {
+        decisionId,
+        status: updated.status,
+        message: "Decision executed successfully",
+      };
     } catch (lifecycleError) {
       if (lifecycleError instanceof ValidationError) {
-        return NextResponse.json(
-          { error: lifecycleError.message },
-          { status: 409 } // Conflict - not in APPROVED state
-        );
+        throw lifecycleError;
       }
       throw lifecycleError;
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    logger.error("Decision execute API error", {
-      decisionId: (await params).decisionId,
-      error: message,
-    });
-
-    return NextResponse.json(
-      { error: "Execution failed", details: message },
-      { status: 500 }
-    );
   }
-}
+);

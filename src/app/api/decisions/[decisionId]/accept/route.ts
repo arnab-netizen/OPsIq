@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { requireAuthForCapability } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { acceptDecision } from "@/services/decision-validation/decision-acceptance.service";
@@ -12,29 +13,20 @@ const AcceptDecisionSchema = z.object({
   rationale: z.string().optional(),
 });
 
-export async function POST(
-  request: NextRequest,
-  context: { params: Promise<{ decisionId: string }> }
-) {
-  let decisionId = "";
-
-  try {
-    const params = await context.params;
-    decisionId = params.decisionId;
+export const POST = withEnforcementFull(
+  async (request: NextRequest, ctx, params) => {
+    const decisionId = params.decisionId;
 
     // Extract workspace from header
     const workspaceId = request.headers.get("x-workspace-id");
     if (!workspaceId) {
-      return NextResponse.json(
-        { error: "Workspace ID required (x-workspace-id header)" },
-        { status: 400 }
-      );
+      throw new Error("Workspace ID required (x-workspace-id header)");
     }
 
     // Enforce workspace membership
     const membership = await enforceWorkspaceScoping(request, workspaceId);
     if (!membership) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      throw new Error("Unauthorized");
     }
 
     // Enforce DECISION_ACCEPT capability
@@ -59,26 +51,6 @@ export async function POST(
       userId: auth.session.user.id,
     });
 
-    return NextResponse.json(result, { status: 200 });
-  } catch (error) {
-    if (error instanceof ValidationError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-    if (error instanceof NotFoundError) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
-    }
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
-    }
-
-    logger.error("Error accepting decision", {
-      decisionId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-
-    return NextResponse.json(
-      { error: "Failed to accept decision" },
-      { status: 500 }
-    );
+    return result;
   }
-}
+);

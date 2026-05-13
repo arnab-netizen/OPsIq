@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 import { queryAuditEvents } from "@/infra/audit";
@@ -38,94 +39,74 @@ interface DecisionExport {
   }>;
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    // Get workspace context (fail closed if missing)
-    const workspace = await requireWorkspaceContext();
+export const GET = withEnforcementFull(async (request: NextRequest) => {
+  // Get workspace context (fail closed if missing)
+  const workspace = await requireWorkspaceContext();
 
-    // Parse query parameter for decision ID
-    const searchParams = request.nextUrl.searchParams;
-    const decisionId = searchParams.get("decisionId");
+  // Parse query parameter for decision ID
+  const searchParams = request.nextUrl.searchParams;
+  const decisionId = searchParams.get("decisionId");
 
-    if (!decisionId) {
-      return NextResponse.json(
-        { error: "Missing required parameter: decisionId" },
-        { status: 400 }
-      );
-    }
-
-    // Fetch operator item
-    const item = await db.operatorItem.findFirst({
-      where: {
-        id: decisionId,
-        workspaceId: workspace.workspaceId,
-      },
-    });
-
-    if (!item) {
-      return NextResponse.json(
-        { error: "Decision not found" },
-        { status: 404 }
-      );
-    }
-
-    // Fetch audit trail for this decision
-    const auditEvents = await queryAuditEvents({
-      workspaceId: workspace.workspaceId,
-      entityId: decisionId,
-    });
-
-    // Build export object with deterministic structure
-    const exportData: DecisionExport = {
-      decision: {
-        id: item!.id,
-        workspaceId: item!.workspaceId,
-        problem: item!.problem,
-        action: item!.action,
-        impactExpected: Number(item!.impactExpected),
-        impactLow: Number(item!.impactLow),
-        impactHigh: Number(item!.impactHigh),
-        confidence: Number(item!.confidence),
-        decisionType: item!.decisionType || "general",
-        status: item!.status,
-        createdAt: item!.createdAt.toISOString(),
-        ownerUserId: item!.ownerUserId,
-        createdBy: item!.createdBy,
-      },
-      inputs: item!.inputsSnapshot ? (item!.inputsSnapshot as Record<string, unknown>) : null,
-      outputs: {
-        expectedOutcome: item!.expectedOutcome,
-        actualOutcome: item!.actualOutcome,
-        explanation: item!.explanation ? (item!.explanation as Record<string, unknown>) : undefined,
-      },
-      expectedImpact: Number(item!.impactExpected),
-      actualOutcome: item!.actualOutcome,
-      delta: item!.outcomeDelta ? Number(item!.outcomeDelta) : null,
-      accuracy: item!.decisionAccuracy ? Number(item!.decisionAccuracy) : null,
-      auditTrail: auditEvents.map((event: Prisma.AuditEventGetPayload<{}>) => ({
-        eventName: event.eventName,
-        actorId: event.actorId,
-        occurredAt: event.occurredAt ? event.occurredAt.toISOString() : null,
-        payload: event.payload as Record<string, unknown> | null,
-      })),
-    };
-
-    // Serialize with deterministic JSON (sorted keys)
-    const jsonString = JSON.stringify(exportData, Object.keys(exportData).sort(), 2);
-    const deterministicData = JSON.parse(jsonString);
-
-    return NextResponse.json(deterministicData);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    if (message.includes("Unauthorized")) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  if (!decisionId) {
+    throw new Error("Missing required parameter: decisionId");
   }
-}
+
+  // Fetch operator item
+  const item = await db.operatorItem.findFirst({
+    where: {
+      id: decisionId,
+      workspaceId: workspace.workspaceId,
+    },
+  });
+
+  if (!item) {
+    throw new Error("Decision not found");
+  }
+
+  // Fetch audit trail for this decision
+  const auditEvents = await queryAuditEvents({
+    workspaceId: workspace.workspaceId,
+    entityId: decisionId,
+  });
+
+  // Build export object with deterministic structure
+  const exportData: DecisionExport = {
+    decision: {
+      id: item!.id,
+      workspaceId: item!.workspaceId,
+      problem: item!.problem,
+      action: item!.action,
+      impactExpected: Number(item!.impactExpected),
+      impactLow: Number(item!.impactLow),
+      impactHigh: Number(item!.impactHigh),
+      confidence: Number(item!.confidence),
+      decisionType: item!.decisionType || "general",
+      status: item!.status,
+      createdAt: item!.createdAt.toISOString(),
+      ownerUserId: item!.ownerUserId,
+      createdBy: item!.createdBy,
+    },
+    inputs: item!.inputsSnapshot ? (item!.inputsSnapshot as Record<string, unknown>) : null,
+    outputs: {
+      expectedOutcome: item!.expectedOutcome,
+      actualOutcome: item!.actualOutcome,
+      explanation: item!.explanation ? (item!.explanation as Record<string, unknown>) : undefined,
+    },
+    expectedImpact: Number(item!.impactExpected),
+    actualOutcome: item!.actualOutcome,
+    delta: item!.outcomeDelta ? Number(item!.outcomeDelta) : null,
+    accuracy: item!.decisionAccuracy ? Number(item!.decisionAccuracy) : null,
+    auditTrail: auditEvents.map((event: Prisma.AuditEventGetPayload<{}>) => ({
+      eventName: event.eventName,
+      actorId: event.actorId,
+      occurredAt: event.occurredAt ? event.occurredAt.toISOString() : null,
+      payload: event.payload as Record<string, unknown> | null,
+    })),
+  };
+
+  // Serialize with deterministic JSON (sorted keys)
+  const jsonString = JSON.stringify(exportData, Object.keys(exportData).sort(), 2);
+  const deterministicData = JSON.parse(jsonString);
+
+  return deterministicData;
+});

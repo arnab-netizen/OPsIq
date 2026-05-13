@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { getSession } from "@/services/auth";
 import {
   enforceWorkspaceScoping,
@@ -21,35 +22,26 @@ const UpdateDecisionSchema = z.object({
 
 type UpdateDecisionInput = z.infer<typeof UpdateDecisionSchema>;
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ decisionId: string }> }
-) {
-  try {
+export const PATCH = withEnforcementFull(
+  async (request: NextRequest, ctx, params) => {
     const session = await getSession();
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      throw new Error("Unauthorized");
     }
 
     const userId = session.user.id;
-    const { decisionId } = await params;
+    const decisionId = params.decisionId;
 
     // Get workspace ID from query
     const workspaceId = request.nextUrl.searchParams.get("workspaceId");
     if (!workspaceId) {
-      return NextResponse.json(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
+      throw new Error("Workspace ID required");
     }
 
     // Enforce workspace scoping
     const membership = await enforceWorkspaceScoping(request, workspaceId);
     if (!membership) {
-      return NextResponse.json(
-        { error: "Unauthorized or invalid workspace" },
-        { status: 403 }
-      );
+      throw new Error("Unauthorized or invalid workspace");
     }
 
     // Fetch decision to check current state
@@ -58,10 +50,7 @@ export async function PATCH(
     });
 
     if (!decision) {
-      return NextResponse.json(
-        { error: "Decision not found in this workspace" },
-        { status: 404 }
-      );
+      throw new Error("Decision not found in this workspace");
     }
 
     // Parse input
@@ -70,18 +59,12 @@ export async function PATCH(
 
     // Check permission based on action
     if (!hasPermission(membership.role, input.status === "approved" ? "approve" : "reject")) {
-      return NextResponse.json(
-        { error: `Insufficient permissions to ${input.status} decision` },
-        { status: 403 }
-      );
+      throw new Error(`Insufficient permissions to ${input.status} decision`);
     }
 
     // Check if user can act on this decision
     if (!canActOnDecision(userId, membership.role, decision)) {
-      return NextResponse.json(
-        { error: "Only assigned user can act on this decision" },
-        { status: 403 }
-      );
+      throw new Error("Only assigned user can act on this decision");
     }
 
     try {
@@ -91,10 +74,7 @@ export async function PATCH(
         updated = await approveDecision(decisionId, workspaceId, userId);
       } else {
         if (!input.reason?.trim()) {
-          return NextResponse.json(
-            { error: "Rejection reason is required" },
-            { status: 400 }
-          );
+          throw new Error("Rejection reason is required");
         }
         updated = await rejectDecision(decisionId, workspaceId, input.reason, userId);
       }
@@ -106,46 +86,16 @@ export async function PATCH(
         userId,
       });
 
-      return NextResponse.json(
-        {
-          decisionId,
-          status: updated.status,
-          message: `Decision ${input.status} successfully.`,
-        },
-        { status: 200 }
-      );
+      return {
+        decisionId,
+        status: updated.status,
+        message: `Decision ${input.status} successfully.`,
+      };
     } catch (lifecycleError) {
       if (lifecycleError instanceof ValidationError) {
-        return NextResponse.json(
-          { error: lifecycleError.message },
-          { status: 409 } // Conflict - invalid state transition
-        );
+        throw lifecycleError;
       }
       throw lifecycleError;
     }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Invalid input",
-          details: error.issues.map((e) => ({
-            field: e.path.join("."),
-            message: e.message,
-          })),
-        },
-        { status: 400 }
-      );
-    }
-
-    const message = error instanceof Error ? error.message : "Unknown error";
-    logger.error("Decision update API error", {
-      decisionId: (await params).decisionId,
-      error: message,
-    });
-
-    return NextResponse.json(
-      { error: "Update failed", details: message },
-      { status: 500 }
-    );
   }
-}
+);
