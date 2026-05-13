@@ -25,22 +25,33 @@ export class ProjectionRebuildEngine {
     const errors: string[] = [];
 
     try {
-      // Step 1: Delete existing projection (clear it) - use deleteMany to avoid error if not found
+      // Step 1: Delete existing projection and stale snapshots
       await db.recommendation.deleteMany({
         where: { id: recommendationId },
       });
 
-      logger.info("ProjectionRebuild: Deleted existing projection", {
+      // Also delete snapshots for this aggregate to ensure fresh replay
+      await db.snapshotData.deleteMany({
+        where: {
+          aggregateId: recommendationId,
+          aggregateType: "recommendation",
+          workspaceId,
+        },
+      });
+
+      logger.info("ProjectionRebuild: Deleted existing projection and stale snapshots", {
         recommendationId,
       });
 
       // Step 2: Replay events using EventReplayEngine to reconstruct aggregate state
+      // Note: We already deleted snapshots above, so replay will start fresh
       let replayed;
       try {
         replayed = await EventReplayEngine.replayAggregate(
           recommendationId,
           "recommendation",
-          workspaceId
+          workspaceId,
+          undefined // upToEventNumber - replay all events
         );
       } catch (replayErr) {
         throw new Error(
@@ -197,8 +208,9 @@ export class ProjectionRebuildEngine {
         workspaceId
       );
 
-      // Compare critical fields
+      // Compare critical fields (normalize undefined/null for DB fields)
       const replayedPayload = replayed.state;
+      const normalizeFielder = (val: unknown) => val ?? null;
       const parityChecks = {
         engagementId:
           liveProjection.engagementId ===
@@ -207,7 +219,7 @@ export class ProjectionRebuildEngine {
           liveProjection.title === (replayedPayload.title as string),
         description:
           liveProjection.description ===
-          (replayedPayload.description as string),
+          normalizeFielder(replayedPayload.description),
         priority:
           liveProjection.priority === (replayedPayload.priority as string),
         evidenceValidationScore:
@@ -221,6 +233,26 @@ export class ProjectionRebuildEngine {
       const allMatch = Object.values(parityChecks).every((v) => v);
 
       if (!allMatch) {
+        console.error("[ProjectionParity] MISMATCH DETAILS:", {
+          recommendationId,
+          parityChecks,
+          liveProjection: {
+            engagementId: liveProjection.engagementId,
+            title: liveProjection.title,
+            description: liveProjection.description,
+            priority: liveProjection.priority,
+            evidenceValidationScore: liveProjection.evidenceValidationScore,
+            kpiHealthScore: liveProjection.kpiHealthScore,
+          },
+          replayedPayload: {
+            engagementId: replayedPayload.engagementId,
+            title: replayedPayload.title,
+            description: replayedPayload.description,
+            priority: replayedPayload.priority,
+            evidenceValidationScore: replayedPayload.evidenceValidationScore,
+            kpiHealthScore: replayedPayload.kpiHealthScore,
+          },
+        });
         logger.warn("ProjectionParity: Mismatch detected", {
           recommendationId,
           parityChecks,

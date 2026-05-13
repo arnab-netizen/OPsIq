@@ -271,6 +271,8 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
           priority: "critical",
           evidenceValidationScore: 95,
           reliabilityLevel: "high",
+          kpiHealthScore: 88,
+          kpiRiskLevel: "low",
           createdBy: actorId,
         },
       });
