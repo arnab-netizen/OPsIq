@@ -1,3 +1,4 @@
+import { withAuth } from "@/lib/auth-guard";
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import {
@@ -24,6 +25,7 @@ import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 
 export const GET = withEnforcementFull(async () => {
+  await withAuth();
   const workspace = await requireWorkspaceContext();
   const logger = createEventLogger("api_operator_get", workspace.workspaceId);
 
@@ -35,6 +37,7 @@ export const GET = withEnforcementFull(async () => {
 });
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
+  await withAuth();
   let logger: ReturnType<typeof createEventLogger> | null = null;
   let workspaceId: string | null = null;
   let id: string | null = null;

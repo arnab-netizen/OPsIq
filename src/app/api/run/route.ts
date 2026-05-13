@@ -1,3 +1,4 @@
+import { withAuth } from "@/lib/auth-guard";
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { runSystem } from "@/services/system/run";
@@ -41,6 +42,7 @@ function addIntegrity(
 }
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
+  await withAuth();
   let decisionResult: DecisionResult | null = null;
   let workspace;
   let userId: string | null = null;

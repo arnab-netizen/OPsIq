@@ -4,10 +4,12 @@ import { requireWorkspaceContext } from "@/services/workspace/context";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { evaluateGovernanceAlerts } from "@/services/governance/alerts";
+import { withAuth } from "@/lib/auth-guard";
 import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
 
 export const GET = withEnforcementFull(async (request: NextRequest) => {
+  await withAuth();
   // Get workspace context (fail closed if missing)
   const workspace = await requireWorkspaceContext();
 

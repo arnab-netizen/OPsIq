@@ -1,3 +1,4 @@
+import { withAuth } from "@/lib/auth-guard";
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { requireWorkspaceContext } from "@/services/workspace/context";
@@ -7,6 +8,7 @@ import { getObservabilitySummary } from "@/services/observability/statistics";
 import { createEventLogger } from "@/lib/observability/log";
 
 export const GET = withEnforcementFull(async (request: NextRequest) => {
+  await withAuth();
   // Get workspace context early (fail closed if missing)
   const workspace = await requireWorkspaceContext();
 
