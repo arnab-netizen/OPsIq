@@ -1,3 +1,5 @@
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { checkWorkspaceRateLimit } from "@/middleware/rate-limit";
@@ -5,11 +7,8 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createAction, listActions } from "@/services/action";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { withIdempotency } from "@/infra/idempotency";
-import { withErrorHandling } from "@/infra/error-handler";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
@@ -31,31 +30,28 @@ const listActionsSchema = paginationSchema.extend({
   assignedTo: z.string().uuid().optional(),
 });
 
-export const GET = withErrorHandling(async (request: NextRequest) => {
+export const GET = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
 
   // Validate workspace membership (fail-closed)
   const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
-    return NextResponse.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    throw new Error("Workspace ID required (x-workspace-id header)");
   }
 
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    throw new Error("Unauthorized");
   }
 
   const params = parseSearchParams(request.url, listActionsSchema);
   const result = await listActions(workspaceId, params);
 
-  return NextResponse.json(result);
+  return result;
 });
 
-export const POST = withErrorHandling(async (request: NextRequest) => {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   const authContext = await withAuth({
     capability: CAPABILITIES.ACTION_CREATE,
@@ -65,24 +61,18 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   // Validate workspace membership (fail-closed)
   const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
-    return NextResponse.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    throw new Error("Workspace ID required (x-workspace-id header)");
   }
 
   // Require Idempotency-Key (fail-closed)
   const idempotencyKey = request.headers.get("Idempotency-Key");
   if (!idempotencyKey) {
-    return NextResponse.json(
-      { error: "Idempotency-Key header required" },
-      { status: 400 }
-    );
+    throw new Error("Idempotency-Key header required");
   }
 
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    throw new Error("Unauthorized");
   }
 
   // Check rate limiting: workspace requests/hour limit
@@ -90,22 +80,7 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
   const rateLimit = checkWorkspaceRateLimit(workspaceId, tier);
   if (!rateLimit.allowed) {
     const config = getTierConfig(tier);
-    return NextResponse.json(
-      {
-        error: "Rate limit exceeded",
-        tier,
-        limit: config.limits.requestsPerHour,
-        message: `Workspace rate limit: ${config.limits.requestsPerHour} requests/hour`,
-      },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": (rateLimit.retryAfter || 60).toString(),
-          "X-RateLimit-Limit": config.limits.requestsPerHour.toString(),
-          "X-RateLimit-Remaining": "0",
-        },
-      }
-    );
+    throw new Error(`Rate limit exceeded: ${config.limits.requestsPerHour} requests/hour`);
   }
 
   // Check capability: action_create
@@ -124,5 +99,5 @@ export const POST = withErrorHandling(async (request: NextRequest) => {
     authContext.session.user.id
   );
 
-  return NextResponse.json(result, { status: isNew ? 201 : 200 });
+  return result;
 });

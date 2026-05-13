@@ -6,7 +6,8 @@
  * Soft delete: marks workspace as inactive, no hard deletion.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { z } from "zod";
@@ -16,25 +17,19 @@ const DisableWorkspaceSchema = z.object({
   notifyMembers: z.boolean().optional().default(true),
 });
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
+export const POST = withEnforcementFull(
+  async (request: NextRequest, ctx, params) => {
     // Auth enforcement (ADMIN_SETTINGS capability)
     const { session, policy } = await withAuth({
       capability: CAPABILITIES.SYSTEM_ADMIN,
     });
     if (!session || !policy) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      throw new Error("Unauthorized");
     }
 
-    const { id: workspaceId } = await params;
+    const workspaceId = params.id;
     if (!workspaceId) {
-      return NextResponse.json(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
+      throw new Error("Workspace ID required");
     }
 
     let body: any = {};
@@ -47,13 +42,7 @@ export async function POST(
     // Validate request body
     const validationResult = DisableWorkspaceSchema.safeParse(body);
     if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          error: "Invalid request body",
-          details: validationResult.error.issues,
-        },
-        { status: 400 }
-      );
+      throw new Error(`Invalid request body: ${validationResult.error.issues.map(i => i.message).join(', ')}`);
     }
 
     const { reason, notifyMembers } = validationResult.data;
@@ -63,20 +52,12 @@ export async function POST(
     // Optionally: emit audit event for workspace disable
     // Optionally: notify members if notifyMembers = true
 
-    const response = {
+    return {
       workspaceId,
       status: "disabled",
       reason,
       notifyMembers,
       disabledAt: new Date().toISOString(),
     };
-
-    return NextResponse.json(response, { status: 200 });
-  } catch (error) {
-    console.error("Failed to disable workspace:", error);
-    return NextResponse.json(
-      { error: "Failed to disable workspace" },
-      { status: 500 }
-    );
   }
-}
+);

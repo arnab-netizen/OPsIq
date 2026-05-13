@@ -6,7 +6,8 @@
  * Workspace-scoped: admin must have ADMIN_SETTINGS in their own workspace.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 
@@ -16,25 +17,19 @@ interface WorkspaceMember {
   createdAt?: string;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
+export const GET = withEnforcementFull(
+  async (request: NextRequest, ctx, params) => {
     // Auth enforcement (ADMIN_SETTINGS capability)
     const { session, policy } = await withAuth({
       capability: CAPABILITIES.SYSTEM_ADMIN,
     });
     if (!session || !policy) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      throw new Error("Unauthorized");
     }
 
-    const { id: workspaceId } = await params;
+    const workspaceId = params.id;
     if (!workspaceId) {
-      return NextResponse.json(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
+      throw new Error("Workspace ID required");
     }
 
     // Parse query parameters
@@ -47,7 +42,7 @@ export async function GET(
     // For now, return empty list (will be populated in CI verification via DB)
     const members: WorkspaceMember[] = [];
 
-    const response = {
+    return {
       workspaceId,
       members,
       pagination: {
@@ -56,13 +51,5 @@ export async function GET(
         hasMore: false,
       },
     };
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error("Failed to list workspace members:", error);
-    return NextResponse.json(
-      { error: "Failed to list workspace members" },
-      { status: 500 }
-    );
   }
-}
+);
