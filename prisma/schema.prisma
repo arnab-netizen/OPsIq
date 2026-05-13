@@ -24,6 +24,7 @@ model Workspace {
   id String @id
   slug String? @unique
   name String?
+  createdBy String?
   createdAt DateTime?
   updatedAt DateTime?
 }
@@ -85,7 +86,18 @@ model UserRoleAssignment {
 
 model Recommendation {
   id String @id
+  workspaceId String
+  engagementId String
+  title String?
+  description String?
+  priority String?
+  createdBy String?
+  status String?
   createdAt DateTime?
+  updatedAt DateTime?
+
+  @@index([workspaceId])
+  @@index([engagementId])
 }
 
 model Action {
@@ -106,7 +118,45 @@ model OperatorItem {
   createdAt DateTime?
 }
 
+model CanonicalEvent {
+  id String @id
+  aggregateId String
+  aggregateType String
+  eventType String
+  eventVersion Int
+  eventNumber Int
+  payload Json?
+  actorId String?
+  workspaceId String
+  causationId String?
+  correlationId String?
+  idempotencyKey String? @unique
+  visibilityScope String?
+  sensitivityClassification String?
+  occurredAt DateTime?
+  recordedAt DateTime?
+  checksum String?
+  createdAt DateTime?
+
+  @@index([aggregateId])
+  @@index([aggregateType])
+  @@index([workspaceId])
+  @@index([eventNumber])
+  @@unique([workspaceId, aggregateId, eventNumber])
+}
+
 model SnapshotData {
   id String @id
+  aggregateId String
+  aggregateType String
+  workspaceId String
+  eventNumber Int
+  data Json?
+  checksum String?
   createdAt DateTime?
+  updatedAt DateTime?
+
+  @@index([aggregateId])
+  @@index([workspaceId])
+  @@unique([workspaceId, aggregateId])
 }
