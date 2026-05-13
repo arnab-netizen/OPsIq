@@ -80,7 +80,7 @@ describe("CI/CD Workflow Validation", () => {
       const buildJob = ciWorkflow.jobs["build-and-test"];
       const steps = buildJob.steps;
       const testStep = steps.find(
-        (step: any) => step.name === "Run tests"
+        (step: any) => step.name === "Run full test suite"
       );
       expect(testStep).toBeDefined();
       expect(testStep.run).toContain("npm test");
