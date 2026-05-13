@@ -1,5 +1,5 @@
 // Layer 1: Identity Authentication
-type Layer1ErrorCode =
+export type Layer1ErrorCode =
   | "AUTH_MISSING"
   | "AUTH_MALFORMED"
   | "AUTH_INVALID"
@@ -9,7 +9,7 @@ type Layer1ErrorCode =
   | "AUTH_BACKEND_UNAVAILABLE";
 
 // Layer 2: Tenant Authorization
-type Layer2ErrorCode =
+export type Layer2ErrorCode =
   | "WORKSPACE_MISSING"
   | "WORKSPACE_MALFORMED"
   | "WORKSPACE_NOT_FOUND"
@@ -19,13 +19,13 @@ type Layer2ErrorCode =
   | "WORKSPACE_BACKEND_UNAVAILABLE";
 
 // Layer 3: Capability Authorization
-type Layer3ErrorCode =
+export type Layer3ErrorCode =
   | "CAPABILITY_NOT_GRANTED"
   | "CAPABILITY_REVOKED"
   | "CAPABILITY_BACKEND_UNAVAILABLE";
 
 // Layer 4: Operational Safety
-type Layer4ErrorCode =
+export type Layer4ErrorCode =
   | "RATE_LIMITED"
   | "REPLAY_DETECTED"
   | "CIRCUIT_OPEN"
