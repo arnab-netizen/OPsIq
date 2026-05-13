@@ -61,75 +61,85 @@ type TabType = "overview" | "engagements" | "risks" | "actions";
 // MOCK DATA GENERATORS
 // ============================================================================
 
-const mockEngagements: EngagementMetrics[] = [
-  {
-    engagementId: "eng-001",
-    name: "SaaS Growth Initiative",
-    status: "active",
-    healthScore: 85,
-    impactLevel: "high",
-    recommendedActions: 12,
-    completedActions: 8,
-    atRiskCount: 1,
-    revenueAtRisk: 250000,
-    owner: "Alice Chen",
-    nextReviewDate: "2026-05-18",
-  },
-  {
-    engagementId: "eng-002",
-    name: "Cost Optimization Program",
-    status: "active",
-    healthScore: 72,
-    impactLevel: "medium",
-    recommendedActions: 8,
-    completedActions: 5,
-    atRiskCount: 2,
-    revenueAtRisk: 75000,
-    owner: "Bob Martinez",
-    nextReviewDate: "2026-05-15",
-  },
-  {
-    engagementId: "eng-003",
-    name: "Market Expansion - EMEA",
-    status: "at_risk",
-    healthScore: 45,
-    impactLevel: "critical",
-    recommendedActions: 15,
-    completedActions: 2,
-    atRiskCount: 5,
-    revenueAtRisk: 500000,
-    owner: "Carol Singh",
-    nextReviewDate: "2026-05-12",
-  },
-  {
-    engagementId: "eng-004",
-    name: "Tech Debt Elimination",
-    status: "active",
-    healthScore: 68,
-    impactLevel: "medium",
-    recommendedActions: 10,
-    completedActions: 6,
-    atRiskCount: 1,
-    revenueAtRisk: 100000,
-    owner: "David Park",
-    nextReviewDate: "2026-05-20",
-  },
-  {
-    engagementId: "eng-005",
-    name: "Customer Success Scaling",
-    status: "completed",
-    healthScore: 95,
-    impactLevel: "high",
-    recommendedActions: 5,
-    completedActions: 5,
-    atRiskCount: 0,
-    revenueAtRisk: 0,
-    owner: "Emma Wilson",
-    nextReviewDate: "2026-06-01",
-  },
-];
+function generateMockEngagements(): EngagementMetrics[] {
+  const today = new Date();
+  const getDaysFromNow = (days: number): string => {
+    const date = new Date(today);
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  };
+
+  return [
+    {
+      engagementId: "eng-001",
+      name: "SaaS Growth Initiative",
+      status: "active",
+      healthScore: 85,
+      impactLevel: "high",
+      recommendedActions: 12,
+      completedActions: 8,
+      atRiskCount: 1,
+      revenueAtRisk: 250000,
+      owner: "Alice Chen",
+      nextReviewDate: getDaysFromNow(5),
+    },
+    {
+      engagementId: "eng-002",
+      name: "Cost Optimization Program",
+      status: "active",
+      healthScore: 72,
+      impactLevel: "medium",
+      recommendedActions: 8,
+      completedActions: 5,
+      atRiskCount: 2,
+      revenueAtRisk: 75000,
+      owner: "Bob Martinez",
+      nextReviewDate: getDaysFromNow(2),
+    },
+    {
+      engagementId: "eng-003",
+      name: "Market Expansion - EMEA",
+      status: "at_risk",
+      healthScore: 45,
+      impactLevel: "critical",
+      recommendedActions: 15,
+      completedActions: 2,
+      atRiskCount: 5,
+      revenueAtRisk: 500000,
+      owner: "Carol Singh",
+      nextReviewDate: getDaysFromNow(1),
+    },
+    {
+      engagementId: "eng-004",
+      name: "Tech Debt Elimination",
+      status: "active",
+      healthScore: 68,
+      impactLevel: "medium",
+      recommendedActions: 10,
+      completedActions: 6,
+      atRiskCount: 1,
+      revenueAtRisk: 100000,
+      owner: "David Park",
+      nextReviewDate: getDaysFromNow(7),
+    },
+    {
+      engagementId: "eng-005",
+      name: "Customer Success Scaling",
+      status: "completed",
+      healthScore: 95,
+      impactLevel: "high",
+      recommendedActions: 5,
+      completedActions: 5,
+      atRiskCount: 0,
+      revenueAtRisk: 0,
+      owner: "Emma Wilson",
+      nextReviewDate: getDaysFromNow(19),
+    },
+  ];
+}
 
 export function generateMockPortfolioView(): PortfolioView {
+  const mockEngagements = generateMockEngagements();
   const activeEngagements = mockEngagements.filter(
     (e) => e.status === "active"
   );
@@ -357,13 +367,13 @@ export function PortfolioCommandCenterShell() {
                   <div className="flex justify-between">
                     <span className="text-gray-700">At Risk</span>
                     <span className="font-bold text-red-600">
-                      {mockEngagements.filter((e) => e.status === "at_risk").length}
+                      {portfolio.engagements.filter((e) => e.status === "at_risk").length}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-700">Completed</span>
                     <span className="font-bold text-green-600">
-                      {mockEngagements.filter((e) => e.status === "completed").length}
+                      {portfolio.engagements.filter((e) => e.status === "completed").length}
                     </span>
                   </div>
                 </div>

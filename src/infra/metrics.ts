@@ -264,6 +264,10 @@ export const metrics = {
    */
   recordDatabaseLatency(operation: string, duration: number): void {
     metricsStore.recordHistogram(`db_${operation}_latency`, duration);
+    metricsStore.incrementCounter("db_operations", {
+      operation,
+      speed: duration > 5000 ? "slow" : "normal",
+    });
 
     if (duration > 5000) {
       metricsStore.incrementCounter("db_slow_queries", {
