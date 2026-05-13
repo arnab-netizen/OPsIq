@@ -1209,3 +1209,15 @@ enum evidence_visibility {
   CLIENT_VISIBLE
   RESTRICTED
 }
+
+model AggregateLock {
+  aggregateId   String  @id @map("aggregate_id")
+  aggregateType String  @map("aggregate_type")
+  workspaceId   String  @db.Uuid @map("workspace_id")
+  version       Int     @default(0)
+  lockedAt      DateTime @default(now()) @map("locked_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([aggregateId, aggregateType, workspaceId])
+  @@map("aggregate_locks")
+}
