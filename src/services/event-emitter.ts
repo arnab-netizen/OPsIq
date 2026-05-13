@@ -143,7 +143,7 @@ export class EventEmitterService {
           INSERT INTO aggregate_locks (aggregate_id, aggregate_type, workspace_id, version)
           VALUES (${request.aggregateId}, ${request.aggregateType}, ${request.workspaceId}, 0)
           ON CONFLICT (aggregate_id, aggregate_type, workspace_id)
-          DO UPDATE SET version = version + 1
+          DO UPDATE SET version = aggregate_locks.version + 1
         `;
 
         // Step 2: Within locked transaction, find the last event number
