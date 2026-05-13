@@ -5,7 +5,8 @@
  * Workspace-scoped, requires authentication.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { z } from "zod";
 import {
   getSubscriptionTier,
@@ -34,65 +35,37 @@ const GetQuotaSchema = z.object({
  * GET /api/entitlement/tier
  * Get workspace subscription tier
  */
-export async function GET(request: NextRequest) {
-  try {
-    const workspaceId = request.headers.get("x-workspace-id") || "default";
+export const GET = withEnforcementFull(async (request: NextRequest) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "default";
 
-    const tier = getSubscriptionTier(workspaceId);
-    const config = getTierConfig(tier);
+  const tier = getSubscriptionTier(workspaceId);
+  const config = getTierConfig(tier);
 
-    return NextResponse.json({
-      success: true,
-      tier,
-      config,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to get subscription tier" },
-      { status: 500 }
-    );
-  }
-}
+  return {
+    success: true,
+    tier,
+    config,
+  };
+});
 
 /**
  * POST /api/entitlement/check-capability
  * Check if workspace has a specific capability
  */
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const parsed = CheckCapabilitySchema.parse(body);
+export const POST = withEnforcementFull(async (request: NextRequest) => {
+  const body = await request.json();
+  const parsed = CheckCapabilitySchema.parse(body);
 
-    const workspaceId = request.headers.get("x-workspace-id") || "default";
-    const allowed = hasCapability(workspaceId, parsed.capability);
+  const workspaceId = request.headers.get("x-workspace-id") || "default";
+  const allowed = hasCapability(workspaceId, parsed.capability);
 
-    if (!allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          allowed: false,
-          error: `Capability ${parsed.capability} not available on current tier`,
-        },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      allowed: true,
-      capability: parsed.capability,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid request", details: error.issues },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: "Failed to check capability" },
-      { status: 500 }
-    );
+  if (!allowed) {
+    throw new Error(`Capability ${parsed.capability} not available on current tier`);
   }
-}
+
+  return {
+    success: true,
+    allowed: true,
+    capability: parsed.capability,
+  };
+});

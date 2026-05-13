@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -23,29 +24,25 @@ import {
   type ExportedData,
   type ExportOptions,
 } from "@/services/export";
-import { withErrorHandling } from "@/infra/error-handler";
 
 /**
  * GET /api/export
  * Export workspace data (CSV or JSON)
  */
-export const GET = withErrorHandling(async (request: NextRequest) => {
+export const GET = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate
   const authContext = await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
 
   // Get workspace ID from header
   const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
-    return NextResponse.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    throw new Error("Workspace ID required (x-workspace-id header)");
   }
 
   // Verify workspace membership
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    throw new Error("Unauthorized");
   }
 
   // Get format from query parameters
@@ -55,10 +52,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
     | "csv";
 
   if (format !== "json" && format !== "csv") {
-    return NextResponse.json(
-      { error: "Invalid format. Use 'json' or 'csv'" },
-      { status: 400 }
-    );
+    throw new Error("Invalid format. Use 'json' or 'csv'");
   }
 
   // Build export data (mock - would query database in real implementation)
@@ -111,13 +105,7 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
   // Validate export data
   const errors = validateExportData(exportedData);
   if (errors.length > 0) {
-    return NextResponse.json(
-      {
-        error: "Export validation failed",
-        details: errors,
-      },
-      { status: 500 }
-    );
+    throw new Error(`Export validation failed: ${errors.join(', ')}`);
   }
 
   // Create export package
@@ -140,75 +128,61 @@ export const GET = withErrorHandling(async (request: NextRequest) => {
  * POST /api/export/gdpr
  * Create GDPR data portability export for authenticated user
  */
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  return withErrorHandling(async (req: NextRequest) => {
-    // Authenticate
-    const authContext = await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
+export const POST = withEnforcementFull(async (request: NextRequest) => {
+  // Authenticate
+  const authContext = await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
 
-    // Get workspace ID
-    const workspaceId = req.headers.get("x-workspace-id");
-    if (!workspaceId) {
-      return NextResponse.json(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
-    }
+  // Get workspace ID
+  const workspaceId = request.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    throw new Error("Workspace ID required");
+  }
 
-    // Verify membership
-    const membership = await enforceWorkspaceScoping(req, workspaceId);
-    if (!membership) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+  // Verify membership
+  const membership = await enforceWorkspaceScoping(request, workspaceId);
+  if (!membership) {
+    throw new Error("Unauthorized");
+  }
 
-    // Validate request body
-    const body = await req.json();
-    const format = body.format || "json";
+  // Validate request body
+  const body = await request.json();
+  const format = body.format || "json";
 
-    if (format !== "json" && format !== "csv") {
-      return NextResponse.json(
-        { error: "Invalid format" },
-        { status: 400 }
-      );
-    }
+  if (format !== "json" && format !== "csv") {
+    throw new Error("Invalid format");
+  }
 
-    // Build export (would query database in real implementation)
-    const exportedData: ExportedData = {
-      workspaceId,
-      exportedAt: new Date(),
-      format,
-      tables: [
-        {
-          name: "workspace_data",
-          rowCount: 0,
-          columns: ["id", "type", "data", "createdAt"],
-          data: [],
-        },
-      ],
-    };
-
-    // Validate
-    const errors = validateExportData(exportedData);
-    if (errors.length > 0) {
-      return NextResponse.json(
-        { error: "Export failed", details: errors },
-        { status: 500 }
-      );
-    }
-
-    // Create package
-    const exportPackage = createExportPackage(exportedData);
-
-    // Return response
-    return NextResponse.json(
+  // Build export (would query database in real implementation)
+  const exportedData: ExportedData = {
+    workspaceId,
+    exportedAt: new Date(),
+    format,
+    tables: [
       {
-        success: true,
-        exportId: `export_${Date.now()}`,
-        format,
-        fileName: exportPackage.fileName,
-        createdAt: new Date().toISOString(),
-        downloadUrl: `/api/export/download?id=export_${Date.now()}`,
+        name: "workspace_data",
+        rowCount: 0,
+        columns: ["id", "type", "data", "createdAt"],
+        data: [],
       },
-      { status: 201 }
-    );
-  })(request);
-}
+    ],
+  };
+
+  // Validate
+  const errors = validateExportData(exportedData);
+  if (errors.length > 0) {
+    throw new Error(`Export failed: ${errors.join(', ')}`);
+  }
+
+  // Create package
+  const exportPackage = createExportPackage(exportedData);
+
+  // Return response
+  return {
+    success: true,
+    exportId: `export_${Date.now()}`,
+    format,
+    fileName: exportPackage.fileName,
+    createdAt: new Date().toISOString(),
+    downloadUrl: `/api/export/download?id=export_${Date.now()}`,
+  };
+});
