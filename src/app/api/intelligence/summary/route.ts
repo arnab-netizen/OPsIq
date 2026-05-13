@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
 import { generateRecommendation } from "@/services/intelligence/recommendation";
@@ -10,15 +11,12 @@ import { enforceControlLayer } from "@/services/control/enforcement";
 import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
-export async function GET(request: NextRequest) {
-  let logger: ReturnType<typeof createEventLogger> | null = null;
+export const GET = withEnforcementFull(async (request: NextRequest) => {
+  // Get workspace context (fail closed if missing)
+  const workspace = await requireWorkspaceContext();
 
-  try {
-    // Get workspace context (fail closed if missing)
-    const workspace = await requireWorkspaceContext();
-
-    // Initialize logger
-    logger = createEventLogger("api_intelligence_summary", workspace.workspaceId);
+  // Initialize logger
+  const logger = createEventLogger("api_intelligence_summary", workspace.workspaceId);
 
     // Extract query parameters
     const decisionId = request.nextUrl.searchParams.get("decisionId");
@@ -149,14 +147,7 @@ export async function GET(request: NextRequest) {
         const depValidation = validateDependencies(inputVariables || {});
         if (!depValidation.valid) {
           executedValidations.push("dependency_validation");
-          return NextResponse.json(
-            {
-              error: "Dependency validation failed",
-              details: depValidation.error,
-              recommendation: null,
-            },
-            { status: 422 }
-          );
+          throw new Error(`Dependency validation failed: ${depValidation.error}`);
         }
         executedValidations.push("dependency_validation");
 
@@ -167,14 +158,7 @@ export async function GET(request: NextRequest) {
         });
         if (!gateResult.allowed) {
           executedValidations.push("decision_gate");
-          return NextResponse.json(
-            {
-              error: "Decision gate rejected",
-              reason: gateResult.reason,
-              recommendation: { blocked: true, blockReason: gateResult.reason },
-            },
-            { status: 422 }
-          );
+          throw new Error(`Decision gate rejected: ${gateResult.reason}`);
         }
         executedValidations.push("decision_gate");
 
@@ -194,13 +178,7 @@ export async function GET(request: NextRequest) {
           });
           if (guardrailsResult.blocked) {
             executedValidations.push("guardrails");
-            return NextResponse.json(
-              {
-                error: "Guardrails violation",
-                recommendation: { blocked: true, blockReason: "Guardrails violation" },
-              },
-              { status: 422 }
-            );
+            throw new Error("Guardrails violation");
           }
           executedValidations.push("guardrails");
           recommendationCount = 1;
@@ -238,29 +216,11 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    if (logger) {
-      logger.success({
-        patternsDetected: allPatterns.length,
-        itemsAnalyzed: operatorItems.length,
-        payloadSize: itemCount,
-      });
-    }
+  logger.success({
+    patternsDetected: allPatterns.length,
+    itemsAnalyzed: operatorItems.length,
+    payloadSize: itemCount,
+  });
 
-    return NextResponse.json(response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    if (logger) {
-      logger.error(message);
-    }
-    if (message.includes("Unauthorized")) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+  return response;
+});

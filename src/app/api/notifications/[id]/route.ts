@@ -4,7 +4,8 @@
  * Get individual notification and mark as read.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import {
   getNotification,
   markAsRead,
@@ -14,95 +15,65 @@ import {
  * GET /api/notifications/[id]
  * Get a specific notification
  */
-export async function GET(
+export const GET = withEnforcementFull(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
+  ctx,
+  params
+) => {
+  const { id } = params;
 
-    if (!id) {
-      return NextResponse.json(
-        { error: "Notification ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const notification = await getNotification(id);
-
-    if (!notification) {
-      return NextResponse.json(
-        { error: "Notification not found" },
-        { status: 404 }
-      );
-    }
-
-    // Verify workspace access
-    const requestedWorkspace = request.headers.get("x-workspace-id") || "default";
-    if (notification.workspaceId !== requestedWorkspace) {
-      return NextResponse.json(
-        { error: "Access denied" },
-        { status: 403 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      notification,
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to get notification" },
-      { status: 500 }
-    );
+  if (!id) {
+    throw new Error("Notification ID is required");
   }
-}
+
+  const notification = await getNotification(id);
+
+  if (!notification) {
+    throw new Error("Notification not found");
+  }
+
+  // Verify workspace access
+  const requestedWorkspace = request.headers.get("x-workspace-id") || "default";
+  if (notification.workspaceId !== requestedWorkspace) {
+    throw new Error("Access denied");
+  }
+
+  return {
+    success: true,
+    notification,
+  };
+});
 
 /**
  * PATCH /api/notifications/[id]/read
  * Mark notification as read
  */
-export async function PATCH(
+export const PATCH = withEnforcementFull(async (
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
+  ctx,
+  params
+) => {
+  const { id } = params;
 
-    if (!id) {
-      return NextResponse.json(
-        { error: "Notification ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // Verify notification exists and belongs to workspace
-    const notification = await getNotification(id);
-    if (!notification) {
-      return NextResponse.json(
-        { error: "Notification not found" },
-        { status: 404 }
-      );
-    }
-
-    const requestedWorkspace = request.headers.get("x-workspace-id") || "default";
-    if (notification.workspaceId !== requestedWorkspace) {
-      return NextResponse.json(
-        { error: "Access denied" },
-        { status: 403 }
-      );
-    }
-
-    await markAsRead(id);
-
-    return NextResponse.json({
-      success: true,
-      message: "Notification marked as read",
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to mark notification as read" },
-      { status: 500 }
-    );
+  if (!id) {
+    throw new Error("Notification ID is required");
   }
-}
+
+  // Verify notification exists and belongs to workspace
+  const notification = await getNotification(id);
+  if (!notification) {
+    throw new Error("Notification not found");
+  }
+
+  const requestedWorkspace = request.headers.get("x-workspace-id") || "default";
+  if (notification.workspaceId !== requestedWorkspace) {
+    throw new Error("Access denied");
+  }
+
+  await markAsRead(id);
+
+  return {
+    success: true,
+    message: "Notification marked as read",
+  };
+});
