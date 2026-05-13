@@ -918,6 +918,24 @@ export async function updateRecommendationStatus(
     visibility: "internal",
   });
 
+  // Emit canonical event to maintain event sourcing trail
+  if (input.status) {
+    await EventEmitterService.emit({
+      aggregateId: recommendationId,
+      aggregateType: "recommendation",
+      eventType: "recommendation.status_changed",
+      eventVersion: 1,
+      payload: {
+        status: input.status,
+        previousStatus: rec.status,
+      },
+      actorId: userId,
+      workspaceId: validatedWorkspaceId,
+      visibilityScope: "internal",
+      sensitivityClassification: "standard",
+    });
+  }
+
   return updated;
 }
 
@@ -967,6 +985,24 @@ export async function updateRecommendationPriorityFromScore(
       source: "re-evaluation",
     },
     visibility: "internal",
+  });
+
+  // Emit canonical event to maintain event sourcing trail
+  await EventEmitterService.emit({
+    aggregateId: recommendationId,
+    aggregateType: "recommendation",
+    eventType: "recommendation.priority_updated",
+    eventVersion: 1,
+    payload: {
+      priority: newPriority,
+      previousPriority: rec.priority,
+      score: String(score),
+      source: "re-evaluation",
+    },
+    actorId: userId,
+    workspaceId: validatedWorkspaceId,
+    visibilityScope: "internal",
+    sensitivityClassification: "standard",
   });
 
   logger.info("Recommendation priority updated from score", {
@@ -1165,6 +1201,29 @@ export async function updateRecommendation(
     payload: updates,
     visibility: "internal",
   });
+
+  // Emit canonical event to maintain event sourcing trail
+  const eventPayload: Record<string, string | undefined> = {};
+  if (input.status) {
+    eventPayload.status = input.status;
+  }
+  if (input.priority) {
+    eventPayload.priority = input.priority;
+  }
+
+  if (Object.keys(eventPayload).length > 0) {
+    await EventEmitterService.emit({
+      aggregateId: recommendationId,
+      aggregateType: "recommendation",
+      eventType: "recommendation.updated",
+      eventVersion: 1,
+      payload: eventPayload as Record<string, string>,
+      actorId: userId,
+      workspaceId: validatedWorkspaceId,
+      visibilityScope: "internal",
+      sensitivityClassification: "standard",
+    });
+  }
 
   return updated;
 }
