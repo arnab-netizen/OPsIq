@@ -14,6 +14,12 @@ export type EnforcedHandler = (
   params: Record<string, string>
 ) => Promise<any>;
 
+export type EnforcedHandlerWithRequest = (
+  req: NextRequest,
+  context: EnforcedRequestContext,
+  params: Record<string, string>
+) => Promise<any>;
+
 /**
  * MANDATORY: Wrap all API route handlers with enforceRequest() enforcement.
  *
@@ -42,6 +48,43 @@ export function withEnforcement(
       req,
       async (enforcedCtx) => {
         return await handler(enforcedCtx, params);
+      },
+      options
+    );
+  };
+}
+
+/**
+ * MANDATORY: Wrap route handlers that need access to the full NextRequest.
+ * Most existing routes need this because they access body, headers, search params.
+ *
+ * Usage:
+ * ```
+ * const handler = withEnforcementFull(async (req, ctx, params) => {
+ *   const body = await req.json();
+ *   const searchParams = req.nextUrl.searchParams;
+ *   return { processed: true };
+ * });
+ *
+ * export const GET = handler;
+ * export const POST = handler;
+ * ```
+ */
+export function withEnforcementFull(
+  handler: EnforcedHandlerWithRequest,
+  options?: {
+    require_workspace_id?: boolean;
+    require_execution_id?: boolean;
+    bypass_health_check?: boolean;
+  }
+): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
+  return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
+    const params = await context.params;
+
+    return enforceRequest(
+      req,
+      async (enforcedCtx) => {
+        return await handler(req, enforcedCtx, params);
       },
       options
     );
