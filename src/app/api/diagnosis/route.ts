@@ -34,10 +34,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   const workspaceId = request.headers.get("x-workspace-id") || "";
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {
-    return Response.json(
-      { error: "idempotency-key header required" },
-      { status: 400 }
-    );
+    throw new UnauthorizedError("idempotency-key header required");
   }
 
   const body = await parseRequestBody(request, diagnosisSchema);
@@ -51,23 +48,17 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   });
 
   if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
-      status: idempotencyCheck.cachedResponse.status,
-    });
+    return idempotencyCheck.cachedResponse.body;
   }
 
   try {
     validateBusinessProblem(body);
     const result = await diagnoseBusiness(body, authContext, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>);
-    return Response.json(result, { status: 201 });
+    return result;
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
     await recordIdempotencyError(idempotencyKey, err);
-    const message = err.message || "Diagnosis failed";
-    if (message.includes("required")) {
-      return Response.json({ error: { message } }, { status: 400 });
-    }
     throw error;
   }
 });
