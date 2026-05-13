@@ -5,12 +5,21 @@ import { EventReplayEngine } from "@/services/event-replay-engine";
 import { ProjectionRebuildEngine } from "@/services/projection-rebuild-engine";
 import { SnapshotOptimizationEngine } from "@/services/snapshot-optimization-engine";
 import { ReplayFailureHandler } from "@/services/replay-failure-handler";
+import { v4 as uuidv4 } from "uuid";
 
 describe("Phase 3: Event Sourcing Truth Verification", () => {
-  const workspaceId = "test-workspace";
-  const recommendationId = "test-rec-123";
+  let workspaceId: string;
+  let recommendationId: string;
+  let engagementId: string;
+  let actorId: string;
 
   beforeEach(async () => {
+    // Generate fresh UUIDs for each test
+    workspaceId = uuidv4();
+    recommendationId = uuidv4();
+    engagementId = uuidv4();
+    actorId = uuidv4();
+
     // Pre-cleanup in case prior test failed
     try {
       await db.recommendation.deleteMany({ where: { workspaceId } });
@@ -27,18 +36,34 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
       data: {
         id: workspaceId,
         name: "Test Workspace",
-        slug: "test-ws",
-        createdBy: "test-user",
+        slug: `test-ws-${Date.now()}`,
+        createdBy: actorId,
+      },
+    });
+
+    // Create test client account
+    const clientId = uuidv4();
+    await db.clientAccount.create({
+      data: {
+        id: clientId,
+        name: "Test Client",
+        createdBy: actorId,
+        updatedAt: new Date(),
       },
     });
 
     // Create test engagement
     await db.engagement.create({
       data: {
-        id: "test-engagement",
+        id: engagementId,
         workspaceId,
-        createdBy: "test-user",
-        name: "Test Engagement",
+        createdBy: actorId,
+        title: "Test Engagement",
+        clientId,
+        code: `ENG-${Date.now()}`,
+        serviceTier: "standard",
+        engagementMode: "advisory",
+        updatedAt: new Date(),
       },
     });
   });
@@ -63,12 +88,12 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
       const rec = await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           workspaceId,
           title: "Original Title",
           description: "Original Description",
           priority: "high",
-          createdBy: "test-user",
+          createdBy: actorId,
         },
       });
 
@@ -79,7 +104,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           title: "Original Title",
           description: "Original Description",
           priority: "high",
@@ -88,7 +113,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
           kpiHealthScore: "0.72",
           kpiRiskLevel: "medium",
         },
-        actorId: "test-user",
+        actorId: actorId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -125,12 +150,12 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           workspaceId,
           title: "Test Recommendation",
           description: "Test Description",
           priority: "medium",
-          createdBy: "test-user",
+          createdBy: actorId,
         },
       });
 
@@ -140,7 +165,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           title: "Test Recommendation",
           description: "Test Description",
           priority: "medium",
@@ -149,7 +174,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
           kpiHealthScore: "0.65",
           kpiRiskLevel: "medium",
         },
-        actorId: "test-user",
+        actorId: actorId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -177,7 +202,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
       const rec = await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           workspaceId,
           title: "Parity Test",
           description: "Testing parity",
@@ -186,7 +211,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
           reliabilityLevel: "high",
           kpiHealthScore: 72,
           kpiRiskLevel: "medium",
-          createdBy: "test-user",
+          createdBy: actorId,
         },
       });
 
@@ -197,7 +222,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           title: "Parity Test",
           description: "Testing parity",
           priority: "high",
@@ -206,7 +231,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
           kpiHealthScore: "0.72",
           kpiRiskLevel: "medium",
         },
-        actorId: "test-user",
+        actorId: actorId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -240,13 +265,13 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           workspaceId,
           title: "Original",
           priority: "critical",
           evidenceValidationScore: 95,
           reliabilityLevel: "high",
-          createdBy: "test-user",
+          createdBy: actorId,
         },
       });
 
@@ -256,7 +281,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           title: "Original",
           priority: "critical",
           evidenceValidationScore: "0.95",
@@ -264,7 +289,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
           kpiHealthScore: "0.88",
           kpiRiskLevel: "low",
         },
-        actorId: "test-user",
+        actorId: actorId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -309,11 +334,11 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           workspaceId,
           title: "Test",
           priority: "high",
-          createdBy: "test-user",
+          createdBy: actorId,
         },
       });
 
@@ -324,11 +349,11 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
         eventType: "recommendation.created",
         eventVersion: 1,
         payload: {
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           title: "Test",
           priority: "high",
         },
-        actorId: "test-user",
+        actorId: actorId,
         workspaceId,
         visibilityScope: "internal",
         sensitivityClassification: "standard",
@@ -361,11 +386,11 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           workspaceId,
           title: "Test",
           priority: "high",
-          createdBy: "test-user",
+          createdBy: actorId,
         },
       });
 
@@ -376,7 +401,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
           aggregateId: recommendationId,
           aggregateType: "recommendation",
           state,
-          lastEventNumber: 1,
+          eventNumber: 1,
           checksum: "fake-checksum",
           workspaceId,
           createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000), // 48 hours old
@@ -399,11 +424,11 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           workspaceId,
           title: "Test",
           priority: "high",
-          createdBy: "test-user",
+          createdBy: actorId,
         },
       });
 
@@ -414,7 +439,7 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
           aggregateId: recommendationId,
           aggregateType: "recommendation",
           state,
-          lastEventNumber: 1,
+          eventNumber: 1,
           checksum: "wrong-checksum-123",
           workspaceId,
           createdAt: new Date(),
@@ -439,15 +464,15 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           workspaceId,
           title: "Test",
           priority: "high",
-          createdBy: "test-user",
+          createdBy: actorId,
         },
       });
 
-      // Create event manually with missing required field
+      // Create event manually with minimal payload to test corruption
       const corruptedEvent = await db.canonicalEvent.create({
         data: {
           aggregateId: recommendationId,
@@ -455,11 +480,14 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
           eventType: "recommendation.created",
           eventVersion: 1,
           eventNumber: 1,
-          payload: { title: "Test" }, // Missing required fields
-          actorId: "",
+          payload: { title: "Test" }, // Incomplete payload
+          actorId: actorId,
           workspaceId,
           visibilityScope: "internal",
           sensitivityClassification: "standard",
+          causationId: uuidv4(),
+          correlationId: uuidv4(),
+          occurredAt: new Date(),
         },
       });
 
@@ -480,11 +508,11 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
       await db.recommendation.create({
         data: {
           id: recommendationId,
-          engagementId: "test-engagement",
+          engagementId: engagementId,
           workspaceId,
           title: "Test",
           priority: "high",
-          createdBy: "test-user",
+          createdBy: actorId,
         },
       });
 
