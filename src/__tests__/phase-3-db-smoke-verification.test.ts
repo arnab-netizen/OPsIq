@@ -81,51 +81,51 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
       const event = await db.canonicalEvent.create({
         data: {
           id: uuidv4(),
-          aggregate_id: aggregateId,
-          aggregate_type: "recommendation",
-          event_type: "smoke.test.created",
-          event_version: 1,
-          event_number: 1,
+          aggregateId: aggregateId,
+          aggregateType: "recommendation",
+          eventType: "smoke.test.created",
+          eventVersion: 1,
+          eventNumber: 1,
           payload: { test: "smoke" },
-          actor_id: actorId,
-          workspace_id: testWorkspaceId,
-          causation_id: uuidv4(),
-          correlation_id: uuidv4(),
-          visibility_scope: "internal",
-          sensitivity_classification: "standard",
-          occurred_at: new Date(),
-          recorded_at: new Date(),
+          actorId: actorId,
+          workspaceId: testWorkspaceId,
+          causationId: uuidv4(),
+          correlationId: uuidv4(),
+          visibilityScope: "internal",
+          sensitivityClassification: "standard",
+          occurredAt: new Date(),
+          recordedAt: new Date(),
         },
       });
 
       expect(event.id).toBeDefined();
-      expect(event.aggregate_id).toBe(aggregateId);
-      expect(event.event_number).toBe(1);
+      expect(event.aggregateId).toBe(aggregateId);
+      expect(event.eventNumber).toBe(1);
       console.log("✓ Event append succeeded");
 
       // Verify append-only: next event should have event_number = 2
       const event2 = await db.canonicalEvent.create({
         data: {
           id: uuidv4(),
-          aggregate_id: aggregateId,
-          aggregate_type: "recommendation",
-          event_type: "smoke.test.updated",
-          event_version: 1,
-          event_number: 2,
+          aggregateId: aggregateId,
+          aggregateType: "recommendation",
+          eventType: "smoke.test.updated",
+          eventVersion: 1,
+          eventNumber: 2,
           payload: { test: "smoke2" },
-          actor_id: actorId,
-          workspace_id: testWorkspaceId,
-          causation_id: uuidv4(),
-          correlation_id: uuidv4(),
-          visibility_scope: "internal",
-          sensitivity_classification: "standard",
-          occurred_at: new Date(),
-          recorded_at: new Date(),
+          actorId: actorId,
+          workspaceId: testWorkspaceId,
+          causationId: uuidv4(),
+          correlationId: uuidv4(),
+          visibilityScope: "internal",
+          sensitivityClassification: "standard",
+          occurredAt: new Date(),
+          recordedAt: new Date(),
         },
       });
 
-      expect(event2.event_number).toBe(2);
-      expect(event2.event_number).toBeGreaterThan(event.event_number);
+      expect(event2.eventNumber).toBe(2);
+      expect(event2.eventNumber).toBeGreaterThan(event.eventNumber);
       console.log("✓ Append-only enforcement verified");
     });
 
@@ -138,20 +138,20 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
         await db.canonicalEvent.create({
           data: {
             id: uuidv4(),
-            aggregate_id: aggregateId,
-            aggregate_type: "recommendation",
-            event_type: `smoke.test.${i}`,
-            event_version: 1,
-            event_number: i,
+            aggregateId: aggregateId,
+            aggregateType: "recommendation",
+            eventType: `smoke.test.${i}`,
+            eventVersion: 1,
+            eventNumber: i,
             payload: { index: i },
-            actor_id: actorId,
-            workspace_id: testWorkspaceId,
-            causation_id: uuidv4(),
-            correlation_id: uuidv4(),
-            visibility_scope: "internal",
-            sensitivity_classification: "standard",
-            occurred_at: new Date(),
-            recorded_at: new Date(),
+            actorId: actorId,
+            workspaceId: testWorkspaceId,
+            causationId: uuidv4(),
+            correlationId: uuidv4(),
+            visibilityScope: "internal",
+            sensitivityClassification: "standard",
+            occurredAt: new Date(),
+            recordedAt: new Date(),
           },
         });
       }
@@ -159,48 +159,48 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
       // Query all events in order
       const events = await db.canonicalEvent.findMany({
         where: {
-          aggregate_id: aggregateId,
-          workspace_id: testWorkspaceId,
+          aggregateId: aggregateId,
+          workspaceId: testWorkspaceId,
         },
-        orderBy: { event_number: "asc" },
+        orderBy: { eventNumber: "asc" },
       });
 
       expect(events).toHaveLength(3);
-      expect(events[0].event_number).toBe(1);
-      expect(events[1].event_number).toBe(2);
-      expect(events[2].event_number).toBe(3);
+      expect(events[0].eventNumber).toBe(1);
+      expect(events[1].eventNumber).toBe(2);
+      expect(events[2].eventNumber).toBe(3);
       console.log("✓ Event replay query works (proper ordering)");
     });
 
     it("verifies snapshot storage works", async () => {
       const aggregateId = uuidv4();
       const snapshotData = {
-        aggregate_id: aggregateId,
-        aggregate_type: "recommendation",
+        aggregateId: aggregateId,
+        aggregateType: "recommendation",
         state: { test: "snapshot" },
       };
 
       const snapshot = await db.snapshotData.create({
         data: {
           id: uuidv4(),
-          aggregate_id: aggregateId,
-          aggregate_type: "recommendation",
-          workspace_id: testWorkspaceId,
+          aggregateId: aggregateId,
+          aggregateType: "recommendation",
+          workspaceId: testWorkspaceId,
           state: snapshotData,
-          event_number: 5,
+          eventNumber: 5,
           checksum: "test-checksum-123",
         },
       });
 
       expect(snapshot.id).toBeDefined();
-      expect(snapshot.aggregate_id).toBe(aggregateId);
+      expect(snapshot.aggregateId).toBe(aggregateId);
       console.log("✓ Snapshot storage works");
 
       // Retrieve and verify
       const retrieved = await db.snapshotData.findUnique({
         where: { id: snapshot.id },
       });
-      expect(retrieved?.event_number).toBe(5);
+      expect(retrieved?.eventNumber).toBe(5);
       console.log("✓ Snapshot retrieval works");
     });
   });
@@ -233,65 +233,65 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
       await db.canonicalEvent.create({
         data: {
           id: uuidv4(),
-          aggregate_id: aggregateId,
-          aggregate_type: "recommendation",
-          event_type: "smoke.isolation.1",
-          event_version: 1,
-          event_number: 1,
+          aggregateId: aggregateId,
+          aggregateType: "recommendation",
+          eventType: "smoke.isolation.1",
+          eventVersion: 1,
+          eventNumber: 1,
           payload: { workspace: "1" },
-          actor_id: actorId,
-          workspace_id: workspace1,
-          causation_id: uuidv4(),
-          correlation_id: uuidv4(),
-          visibility_scope: "internal",
-          sensitivity_classification: "standard",
-          occurred_at: new Date(),
-          recorded_at: new Date(),
+          actorId: actorId,
+          workspaceId: workspace1,
+          causationId: uuidv4(),
+          correlationId: uuidv4(),
+          visibilityScope: "internal",
+          sensitivityClassification: "standard",
+          occurredAt: new Date(),
+          recordedAt: new Date(),
         },
       });
 
       await db.canonicalEvent.create({
         data: {
           id: uuidv4(),
-          aggregate_id: aggregateId,
-          aggregate_type: "recommendation",
-          event_type: "smoke.isolation.2",
-          event_version: 1,
-          event_number: 1,
+          aggregateId: aggregateId,
+          aggregateType: "recommendation",
+          eventType: "smoke.isolation.2",
+          eventVersion: 1,
+          eventNumber: 1,
           payload: { workspace: "2" },
-          actor_id: actorId,
-          workspace_id: workspace2,
-          causation_id: uuidv4(),
-          correlation_id: uuidv4(),
-          visibility_scope: "internal",
-          sensitivity_classification: "standard",
-          occurred_at: new Date(),
-          recorded_at: new Date(),
+          actorId: actorId,
+          workspaceId: workspace2,
+          causationId: uuidv4(),
+          correlationId: uuidv4(),
+          visibilityScope: "internal",
+          sensitivityClassification: "standard",
+          occurredAt: new Date(),
+          recordedAt: new Date(),
         },
       });
 
       // Query workspace 1 - should only see workspace1 event
       const events1 = await db.canonicalEvent.findMany({
         where: {
-          aggregate_id: aggregateId,
-          workspace_id: workspace1,
+          aggregateId: aggregateId,
+          workspaceId: workspace1,
         },
       });
 
       expect(events1).toHaveLength(1);
-      expect(events1[0].workspace_id).toBe(workspace1);
+      expect(events1[0].workspaceId).toBe(workspace1);
       console.log("✓ Workspace 1 isolation verified");
 
       // Query workspace 2 - should only see workspace2 event
       const events2 = await db.canonicalEvent.findMany({
         where: {
-          aggregate_id: aggregateId,
-          workspace_id: workspace2,
+          aggregateId: aggregateId,
+          workspaceId: workspace2,
         },
       });
 
       expect(events2).toHaveLength(1);
-      expect(events2[0].workspace_id).toBe(workspace2);
+      expect(events2[0].workspaceId).toBe(workspace2);
       console.log("✓ Workspace 2 isolation verified");
 
       // Cleanup

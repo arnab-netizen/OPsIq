@@ -8,1103 +8,1154 @@ datasource db {
   provider = "postgresql"
 }
 
-model actions {
-  id                String      @id @db.Uuid
-  engagement_id     String      @db.Uuid
-  stage_id          String?     @db.Uuid
-  recommendation_id String?     @db.Uuid
-  title             String
-  description       String?
-  status            String
-  assigned_to       String?     @db.Uuid
-  due_at            DateTime?
-  started_at        DateTime?
-  completed_at      DateTime?
-  verified_at       DateTime?
-  metadata          Json?
-  version           Int         @default(1)
-  created_at        DateTime    @default(now())
-  updated_at        DateTime
-  engagements       engagements @relation(fields: [engagement_id], references: [id])
-  stages            stages?     @relation(fields: [stage_id], references: [id])
-
-  @@index([engagement_id])
-  @@index([recommendation_id])
-  @@index([stage_id])
-  @@index([status])
-}
-
-model ai_proposal_sandboxes {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspace_id      String    @db.Uuid
-  recommendation_id String    @db.Uuid
-  source_model      String
-  confidence_level  String
-  is_approved       Boolean   @default(false)
-  approved_by       String?   @db.Uuid
-  approved_at       DateTime?
-  rejected_reason   String?
-  created_at        DateTime  @default(now())
-  updated_at        DateTime
-
-  @@index([is_approved])
-  @@index([recommendation_id])
-  @@index([source_model])
-  @@index([workspace_id])
-}
-
-model audit_events {
-  id             String   @id @db.Uuid
-  event_name     String
-  actor_id       String?  @db.Uuid
-  actor_type     String   @default("user")
-  entity_type    String?
-  entity_id      String?  @db.Uuid
-  payload        Json?
-  correlation_id String?
-  visibility     String   @default("internal")
-  occurred_at    DateTime @default(now())
-  previous_hash  String?  @db.VarChar(64)
-  workspace_id   String?  @db.Uuid
-  users          users?   @relation(fields: [actor_id], references: [id], onDelete: Restrict)
-
-  @@index([actor_id])
-  @@index([correlation_id])
-  @@index([entity_type, entity_id])
-  @@index([event_name])
-  @@index([occurred_at])
-  @@index([workspace_id, occurred_at], map: "idx_audit_events_workspace_occurred_at")
-}
-
-model billing_accounts {
-  id                   String         @id @db.Uuid
-  workspace_id         String         @unique @db.Uuid
-  provider             String         @default("stripe")
-  provider_customer_id String
-  status               String         @default("active")
-  created_at           DateTime       @default(now())
-  updated_at           DateTime
-  stripe_customer_id   String?        @unique(map: "uk_stripe_customer_id")
-  subscriptions        subscriptions?
-
-  @@index([status])
-}
-
-model business_condition_profiles {
-  id                         String      @id @db.Uuid
-  engagement_id              String      @db.Uuid
-  business_status            String
-  severity_score             Int
-  urgency_level              String
-  cash_pressure_level        String
-  margin_pressure_level      String
-  client_concentration_risk  String
-  owner_dependency_risk      String
-  key_person_dependency_risk String
-  process_maturity_level     String
-  management_maturity_level  String
-  execution_capacity_level   String
-  morale_fragility_level     String
-  resilience_level           String
-  growth_readiness_level     String
-  notes                      String?
-  assessed_by                String?     @db.Uuid
-  version                    Int         @default(1)
-  is_current                 Boolean     @default(true)
-  created_at                 DateTime    @default(now())
-  updated_at                 DateTime
-  engagements                engagements @relation(fields: [engagement_id], references: [id])
-
-  @@index([engagement_id])
-  @@index([engagement_id, is_current])
-}
-
-model calibration_records {
-  id               String         @id @db.Uuid
-  operator_item_id String         @db.Uuid
-  predicted_impact Decimal        @db.Decimal(15, 2)
-  actual_impact    Decimal        @db.Decimal(15, 2)
-  confidence       Decimal        @db.Decimal(3, 2)
-  deviation        Decimal        @db.Decimal(5, 2)
-  created_at       DateTime       @default(now())
-  operator_items   operator_items @relation(fields: [operator_item_id], references: [id], onDelete: Cascade)
-
-  @@unique([operator_item_id, created_at])
-  @@index([created_at])
-  @@index([operator_item_id])
-}
-
-model canonical_events {
-  id                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  aggregate_id               String
-  aggregate_type             String
-  event_type                 String
-  event_version              Int      @default(1)
-  event_number               Int
-  payload                    Json
-  actor_id                   String   @db.Uuid
-  workspace_id               String   @db.Uuid
-  causation_id               String
-  correlation_id             String
-  idempotency_key            String?
-  visibility_scope           String   @default("internal")
-  sensitivity_classification String   @default("standard")
-  occurred_at                DateTime
-  recorded_at                DateTime @default(now())
-  created_at                 DateTime @default(now())
-
-  @@unique([idempotency_key, workspace_id])
-  @@index([actor_id])
-  @@index([aggregate_id, aggregate_type, workspace_id])
-  @@index([workspace_id, event_type])
-  @@index([workspace_id, recorded_at])
-}
-
-model client_accounts {
-  id              String            @id @db.Uuid
-  name            String
-  legal_name      String?
-  industry        String?
-  size            String?
-  status          String            @default("active")
-  website         String?
-  address         String?
-  notes           String?
-  version         Int               @default(1)
-  visibility      String            @default("internal")
-  created_by      String?           @db.Uuid
-  created_at      DateTime          @default(now())
-  updated_at      DateTime
-  archived_at     DateTime?
-  client_contacts client_contacts[]
-  engagements     engagements[]
-  lead_records    lead_records[]
-
-  @@index([status])
-}
-
-model client_contacts {
-  id              String           @id @db.Uuid
-  client_id       String           @db.Uuid
-  name            String
-  email           String?
-  phone           String?
-  role            String?
-  is_primary      Boolean          @default(false)
-  is_active       Boolean          @default(true)
-  notes           String?
-  created_at      DateTime         @default(now())
-  updated_at      DateTime
-  client_accounts client_accounts  @relation(fields: [client_id], references: [id])
-  evidence_items  evidence_items[]
-
-  @@index([client_id, is_active])
-}
-
-model decision_snapshots {
-  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  engagement_id   String      @db.Uuid
-  decision_input  Json
-  decision_output Json
+model Action {
+  id              String      @id @db.Uuid
+  engagementId    String      @db.Uuid @map("engagement_id")
+  stageId         String?     @db.Uuid @map("stage_id")
+  recommendationId String?     @db.Uuid @map("recommendation_id")
+  title           String
+  description     String?
+  status          String
+  assignedTo      String?     @db.Uuid @map("assigned_to")
+  dueAt           DateTime?   @map("due_at")
+  startedAt       DateTime?   @map("started_at")
+  completedAt     DateTime?   @map("completed_at")
+  verifiedAt      DateTime?   @map("verified_at")
+  metadata        Json?
   version         Int         @default(1)
-  created_at      DateTime    @default(now()) @db.Timestamp(6)
-  engagements     engagements @relation(fields: [engagement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @map("updated_at")
+  engagement      Engagement  @relation(fields: [engagementId], references: [id])
+  stage           Stage?      @relation(fields: [stageId], references: [id])
 
-  @@index([created_at], map: "idx_decision_snapshots_created_at")
-  @@index([engagement_id], map: "idx_decision_snapshots_engagement_id")
+  @@index([engagementId])
+  @@index([recommendationId])
+  @@index([stageId])
+  @@index([status])
+  @@map("actions")
 }
 
-model deliverables {
-  id               String      @id @db.Uuid
-  stage_id         String      @db.Uuid
-  engagement_id    String      @db.Uuid
+model AIProposalSandbox {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId     String    @db.Uuid @map("workspace_id")
+  recommendationId String    @db.Uuid @map("recommendation_id")
+  sourceModel     String    @map("source_model")
+  confidenceLevel String    @map("confidence_level")
+  isApproved      Boolean   @default(false) @map("is_approved")
+  approvedBy      String?   @db.Uuid @map("approved_by")
+  approvedAt      DateTime? @map("approved_at")
+  rejectedReason  String?   @map("rejected_reason")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @map("updated_at")
+
+  @@index([isApproved])
+  @@index([recommendationId])
+  @@index([sourceModel])
+  @@index([workspaceId])
+  @@map("ai_proposal_sandboxes")
+}
+
+model AuditEvent {
+  id             String   @id @db.Uuid
+  eventName      String   @map("event_name")
+  actorId        String?  @db.Uuid @map("actor_id")
+  actorType      String   @default("user") @map("actor_type")
+  entityType     String?  @map("entity_type")
+  entityId       String?  @db.Uuid @map("entity_id")
+  payload        Json?
+  correlationId  String?  @map("correlation_id")
+  visibility     String   @default("internal")
+  occurredAt     DateTime @default(now()) @map("occurred_at")
+  previousHash   String?  @db.VarChar(64) @map("previous_hash")
+  workspaceId    String?  @db.Uuid @map("workspace_id")
+  actor          User?    @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([actorId])
+  @@index([correlationId])
+  @@index([entityType, entityId])
+  @@index([eventName])
+  @@index([occurredAt])
+  @@index([workspaceId, occurredAt], map: "idx_audit_events_workspace_occurred_at")
+  @@map("audit_events")
+}
+
+model BillingAccount {
+  id               String        @id @db.Uuid
+  workspaceId      String        @unique @db.Uuid @map("workspace_id")
+  provider         String        @default("stripe")
+  providerCustomerId String       @map("provider_customer_id")
+  status           String        @default("active")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @map("updated_at")
+  stripeCustomerId String?       @unique(map: "uk_stripe_customer_id") @map("stripe_customer_id")
+  subscription     Subscription?
+
+  @@index([status])
+  @@map("billing_accounts")
+}
+
+model BusinessConditionProfile {
+  id                    String     @id @db.Uuid
+  engagementId          String     @db.Uuid @map("engagement_id")
+  businessStatus        String     @map("business_status")
+  severityScore         Int        @map("severity_score")
+  urgencyLevel          String     @map("urgency_level")
+  cashPressureLevel     String     @map("cash_pressure_level")
+  marginPressureLevel   String     @map("margin_pressure_level")
+  clientConcentrationRisk String    @map("client_concentration_risk")
+  ownerDependencyRisk   String     @map("owner_dependency_risk")
+  keyPersonDependencyRisk String    @map("key_person_dependency_risk")
+  processMaturityLevel  String     @map("process_maturity_level")
+  managementMaturityLevel String    @map("management_maturity_level")
+  executionCapacityLevel String     @map("execution_capacity_level")
+  moralFragilityLevel   String     @map("morale_fragility_level")
+  resilienceLevel       String     @map("resilience_level")
+  growthReadinessLevel  String     @map("growth_readiness_level")
+  notes                 String?
+  assessedBy            String?    @db.Uuid @map("assessed_by")
+  version               Int        @default(1)
+  isCurrent             Boolean    @default(true) @map("is_current")
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @map("updated_at")
+  engagement            Engagement @relation(fields: [engagementId], references: [id])
+
+  @@index([engagementId])
+  @@index([engagementId, isCurrent])
+  @@map("business_condition_profiles")
+}
+
+model CalibrationRecord {
+  id              String       @id @db.Uuid
+  operatorItemId  String       @db.Uuid @map("operator_item_id")
+  predictedImpact Decimal      @db.Decimal(15, 2) @map("predicted_impact")
+  actualImpact    Decimal      @db.Decimal(15, 2) @map("actual_impact")
+  confidence      Decimal      @db.Decimal(3, 2)
+  deviation       Decimal      @db.Decimal(5, 2)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  operatorItem    OperatorItem @relation(fields: [operatorItemId], references: [id], onDelete: Cascade)
+
+  @@unique([operatorItemId, createdAt])
+  @@index([createdAt])
+  @@index([operatorItemId])
+  @@map("calibration_records")
+}
+
+model CanonicalEvent {
+  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  aggregateId               String   @map("aggregate_id")
+  aggregateType             String   @map("aggregate_type")
+  eventType                 String   @map("event_type")
+  eventVersion              Int      @default(1) @map("event_version")
+  eventNumber               Int      @map("event_number")
+  payload                   Json
+  actorId                   String   @db.Uuid @map("actor_id")
+  workspaceId               String   @db.Uuid @map("workspace_id")
+  causationId               String   @map("causation_id")
+  correlationId             String   @map("correlation_id")
+  idempotencyKey            String?  @map("idempotency_key")
+  visibilityScope           String   @default("internal") @map("visibility_scope")
+  sensitivityClassification String   @default("standard") @map("sensitivity_classification")
+  occurredAt                DateTime @map("occurred_at")
+  recordedAt                DateTime @default(now()) @map("recorded_at")
+  createdAt                 DateTime @default(now()) @map("created_at")
+
+  @@unique([idempotencyKey, workspaceId])
+  @@index([actorId])
+  @@index([aggregateId, aggregateType, workspaceId])
+  @@index([workspaceId, eventType])
+  @@index([workspaceId, recordedAt])
+  @@map("canonical_events")
+}
+
+model ClientAccount {
+  id             String         @id @db.Uuid
+  name           String
+  legalName      String?        @map("legal_name")
+  industry       String?
+  size           String?
+  status         String         @default("active")
+  website        String?
+  address        String?
+  notes          String?
+  version        Int            @default(1)
+  visibility     String         @default("internal")
+  createdBy      String?        @db.Uuid @map("created_by")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @map("updated_at")
+  archivedAt     DateTime?      @map("archived_at")
+  clientContacts ClientContact[]
+  engagements    Engagement[]
+  leadRecords    LeadRecord[]
+
+  @@index([status])
+  @@map("client_accounts")
+}
+
+model ClientContact {
+  id            String         @id @db.Uuid
+  clientId      String         @db.Uuid @map("client_id")
+  name          String
+  email         String?
+  phone         String?
+  role          String?
+  isPrimary     Boolean        @default(false) @map("is_primary")
+  isActive      Boolean        @default(true) @map("is_active")
+  notes         String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @map("updated_at")
+  clientAccount ClientAccount  @relation(fields: [clientId], references: [id])
+  evidenceItems EvidenceItem[]
+
+  @@index([clientId, isActive])
+  @@map("client_contacts")
+}
+
+model DecisionSnapshot {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  engagementId    String     @db.Uuid @map("engagement_id")
+  decisionInput   Json       @map("decision_input")
+  decisionOutput  Json       @map("decision_output")
+  version         Int        @default(1)
+  createdAt       DateTime   @default(now()) @db.Timestamp(6) @map("created_at")
+  engagement      Engagement @relation(fields: [engagementId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([createdAt], map: "idx_decision_snapshots_created_at")
+  @@index([engagementId], map: "idx_decision_snapshots_engagement_id")
+  @@map("decision_snapshots")
+}
+
+model Deliverable {
+  id               String     @id @db.Uuid
+  stageId          String     @db.Uuid @map("stage_id")
+  engagementId     String     @db.Uuid @map("engagement_id")
   title            String
   description      String?
-  status           String      @default("draft")
-  version          Int         @default(1)
-  submitted_by     String?     @db.Uuid
-  submitted_at     DateTime?
-  approved_by      String?     @db.Uuid
-  approved_at      DateTime?
-  rejection_reason String?
-  created_by       String?     @db.Uuid
-  created_at       DateTime    @default(now())
-  updated_at       DateTime
-  engagements      engagements @relation(fields: [engagement_id], references: [id])
-  stages           stages      @relation(fields: [stage_id], references: [id])
+  status           String     @default("draft")
+  version          Int        @default(1)
+  submittedBy      String?    @db.Uuid @map("submitted_by")
+  submittedAt      DateTime?  @map("submitted_at")
+  approvedBy       String?    @db.Uuid @map("approved_by")
+  approvedAt       DateTime?  @map("approved_at")
+  rejectionReason  String?    @map("rejection_reason")
+  createdBy        String?    @db.Uuid @map("created_by")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @map("updated_at")
+  engagement       Engagement @relation(fields: [engagementId], references: [id])
+  stage            Stage      @relation(fields: [stageId], references: [id])
 
-  @@index([engagement_id])
-  @@index([stage_id])
+  @@index([engagementId])
+  @@index([stageId])
   @@index([status])
+  @@map("deliverables")
 }
 
-model engagement_memberships {
+model EngagementMembership {
   id            String      @id @db.Uuid
-  user_id       String      @db.Uuid
-  engagement_id String      @db.Uuid
+  userId        String      @db.Uuid @map("user_id")
+  engagementId  String      @db.Uuid @map("engagement_id")
   role          String
-  added_by      String?     @db.Uuid
-  added_at      DateTime    @default(now())
-  removed_at    DateTime?
-  is_active     Boolean     @default(true)
-  engagements   engagements @relation(fields: [engagement_id], references: [id])
-  users         users       @relation(fields: [user_id], references: [id])
+  addedBy       String?     @db.Uuid @map("added_by")
+  addedAt       DateTime    @default(now()) @map("added_at")
+  removedAt     DateTime?   @map("removed_at")
+  isActive      Boolean     @default(true) @map("is_active")
+  engagement    Engagement  @relation(fields: [engagementId], references: [id])
+  user          User        @relation(fields: [userId], references: [id])
 
-  @@unique([user_id, engagement_id, role])
-  @@index([engagement_id, is_active])
-  @@index([user_id, is_active])
+  @@unique([userId, engagementId, role])
+  @@index([engagementId, isActive])
+  @@index([userId, isActive])
+  @@map("engagement_memberships")
 }
 
-model engagements {
-  id                          String                        @id @db.Uuid
-  code                        String                        @unique
-  title                       String
-  client_id                   String                        @db.Uuid
-  service_tier                String
-  engagement_mode             String
-  status                      String                        @default("draft")
-  health_status               String                        @default("healthy")
-  intervention_mode           String                        @default("recovery")
-  intervention_phase          String                        @default("triage")
-  description                 String?
-  start_date                  DateTime?
-  target_end_date             DateTime?
-  actual_end_date             DateTime?
-  owner_id                    String?                       @db.Uuid
-  assigned_consultant_id      String?                       @db.Uuid
-  current_scope_version_id    String?                       @db.Uuid
-  parent_engagement_id        String?                       @db.Uuid
-  version                     Int                           @default(1)
-  visibility                  String                        @default("internal")
-  created_by                  String?                       @db.Uuid
-  created_at                  DateTime                      @default(now())
-  updated_at                  DateTime
-  is_blocked                  Boolean                       @default(false)
-  blocker_reason              String?
-  blocked_at                  DateTime?
-  workspace_id                String?                       @db.Uuid
-  actions                     actions[]
-  business_condition_profiles business_condition_profiles[]
-  decision_snapshots          decision_snapshots[]
-  deliverables                deliverables[]
-  engagement_memberships      engagement_memberships[]
-  client_accounts             client_accounts               @relation(fields: [client_id], references: [id])
-  engagements                 engagements?                  @relation("engagementsToengagements", fields: [parent_engagement_id], references: [id], onDelete: Restrict)
-  other_engagements           engagements[]                 @relation("engagementsToengagements")
-  workspaces                  workspaces?                   @relation(fields: [workspace_id], references: [id], onDelete: Restrict)
-  evidence                    evidence[]
-  evidence_bundles            evidence_bundles[]
-  evidence_items              evidence_items[]
-  findings                    findings[]
-  intervention_states         intervention_states?
-  kpis                        kpis[]
-  lead_records                lead_records[]
-  recommendations             recommendations[]
-  risks                       risks[]
-  shock_events                shock_events[]
-  stages                      stages[]
+model Engagement {
+  id                       String                        @id @db.Uuid
+  code                     String                        @unique
+  title                    String
+  clientId                 String                        @db.Uuid @map("client_id")
+  serviceTier              String                        @map("service_tier")
+  engagementMode           String                        @map("engagement_mode")
+  status                   String                        @default("draft")
+  healthStatus             String                        @default("healthy") @map("health_status")
+  interventionMode         String                        @default("recovery") @map("intervention_mode")
+  interventionPhase        String                        @default("triage") @map("intervention_phase")
+  description              String?
+  startDate                DateTime?                     @map("start_date")
+  targetEndDate            DateTime?                     @map("target_end_date")
+  actualEndDate            DateTime?                     @map("actual_end_date")
+  ownerId                  String?                       @db.Uuid @map("owner_id")
+  assignedConsultantId     String?                       @db.Uuid @map("assigned_consultant_id")
+  currentScopeVersionId    String?                       @db.Uuid @map("current_scope_version_id")
+  parentEngagementId       String?                       @db.Uuid @map("parent_engagement_id")
+  version                  Int                           @default(1)
+  visibility               String                        @default("internal")
+  createdBy                String?                       @db.Uuid @map("created_by")
+  createdAt                DateTime                      @default(now()) @map("created_at")
+  updatedAt                DateTime                      @map("updated_at")
+  isBlocked                Boolean                       @default(false) @map("is_blocked")
+  blockerReason            String?                       @map("blocker_reason")
+  blockedAt                DateTime?                     @map("blocked_at")
+  workspaceId              String?                       @db.Uuid @map("workspace_id")
+  actions                  Action[]
+  businessConditionProfiles BusinessConditionProfile[]
+  decisionSnapshots        DecisionSnapshot[]
+  deliverables             Deliverable[]
+  engagementMemberships    EngagementMembership[]
+  clientAccount            ClientAccount                 @relation(fields: [clientId], references: [id])
+  parentEngagement         Engagement?                   @relation("engagementsToengagements", fields: [parentEngagementId], references: [id], onDelete: Restrict)
+  childEngagements         Engagement[]                  @relation("engagementsToengagements")
+  workspace                Workspace?                    @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  evidence                 Evidence[]
+  evidenceBundles          EvidenceBundle[]
+  evidenceItems            EvidenceItem[]
+  findings                 Finding[]
+  interventionStates       InterventionState?
+  kpis                     KPI[]
+  leadRecords              LeadRecord[]
+  recommendations          Recommendation[]
+  risks                    Risk[]
+  shockEvents              ShockEvent[]
+  stages                   Stage[]
 
-  @@index([client_id])
-  @@index([is_blocked])
-  @@index([owner_id])
-  @@index([parent_engagement_id])
+  @@index([clientId])
+  @@index([isBlocked])
+  @@index([ownerId])
+  @@index([parentEngagementId])
   @@index([status])
+  @@map("engagements")
 }
 
-model entities {
-  id           String         @id @db.Uuid
-  name         String
-  type         String
-  external_id  String?
-  created_by   String         @db.Uuid
-  created_at   DateTime       @default(now())
-  updated_at   DateTime
-  users        users          @relation(fields: [created_by], references: [id])
-  entity_links entity_links[]
+model Entity {
+  id         String       @id @db.Uuid
+  name       String
+  type       String
+  externalId String?      @map("external_id")
+  createdBy  String       @db.Uuid @map("created_by")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @map("updated_at")
+  creator    User         @relation(fields: [createdBy], references: [id])
+  entityLinks EntityLink[]
 
-  @@index([created_by])
-  @@index([external_id])
+  @@index([createdBy])
+  @@index([externalId])
   @@index([type])
+  @@map("entities")
 }
 
-model entity_links {
-  id               String         @id @db.Uuid
-  entity_id        String         @db.Uuid
-  operator_item_id String         @db.Uuid
-  linkType         String
-  created_at       DateTime       @default(now())
-  entities         entities       @relation(fields: [entity_id], references: [id], onDelete: Cascade)
-  operator_items   operator_items @relation(fields: [operator_item_id], references: [id], onDelete: Cascade)
+model EntityLink {
+  id            String       @id @db.Uuid
+  entityId      String       @db.Uuid @map("entity_id")
+  operatorItemId String       @db.Uuid @map("operator_item_id")
+  linkType      String
+  createdAt     DateTime     @default(now()) @map("created_at")
+  entity        Entity       @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  operatorItem  OperatorItem @relation(fields: [operatorItemId], references: [id], onDelete: Cascade)
 
-  @@unique([entity_id, operator_item_id])
-  @@index([operator_item_id])
+  @@unique([entityId, operatorItemId])
+  @@index([operatorItemId])
+  @@map("entity_links")
 }
 
-model evidence {
-  id               String      @id @db.Uuid
-  engagement_id    String      @db.Uuid
-  stage_id         String?     @db.Uuid
+model Evidence {
+  id               String       @id @db.Uuid
+  engagementId     String       @db.Uuid @map("engagement_id")
+  stageId          String?      @db.Uuid @map("stage_id")
   title            String
   description      String
   source           String
   status           String
-  evidence_type    String?
-  severity_rating  String?
-  collected_at     DateTime?
-  validated_at     DateTime?
-  rejection_reason String?
+  evidenceType     String?      @map("evidence_type")
+  severityRating   String?      @map("severity_rating")
+  collectedAt      DateTime?    @map("collected_at")
+  validatedAt      DateTime?    @map("validated_at")
+  rejectionReason  String?      @map("rejection_reason")
   metadata         Json?
-  submitted_by     String?     @db.Uuid
-  validated_by     String?     @db.Uuid
-  version          Int         @default(1)
-  created_at       DateTime    @default(now())
-  updated_at       DateTime
-  engagements      engagements @relation(fields: [engagement_id], references: [id])
-  stages           stages?     @relation(fields: [stage_id], references: [id])
-  findings         findings[]
+  submittedBy      String?      @db.Uuid @map("submitted_by")
+  validatedBy      String?      @db.Uuid @map("validated_by")
+  version          Int          @default(1)
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @map("updated_at")
+  engagement       Engagement   @relation(fields: [engagementId], references: [id])
+  stage            Stage?       @relation(fields: [stageId], references: [id])
+  findings         Finding[]
 
-  @@index([engagement_id])
-  @@index([stage_id])
+  @@index([engagementId])
+  @@index([stageId])
   @@index([status])
+  @@map("evidence")
 }
 
-model evidence_bundle_items {
-  id               String           @id @db.Uuid
-  bundle_id        String           @db.Uuid
-  evidence_item_id String           @db.Uuid
-  added_by         String?          @db.Uuid
-  added_at         DateTime         @default(now())
-  removed_at       DateTime?
-  evidence_bundles evidence_bundles @relation(fields: [bundle_id], references: [id])
-  evidence_items   evidence_items   @relation(fields: [evidence_item_id], references: [id])
+model EvidenceBundleItem {
+  id             String         @id @db.Uuid
+  bundleId       String         @db.Uuid @map("bundle_id")
+  evidenceItemId String         @db.Uuid @map("evidence_item_id")
+  addedBy        String?        @db.Uuid @map("added_by")
+  addedAt        DateTime       @default(now()) @map("added_at")
+  removedAt      DateTime?      @map("removed_at")
+  evidenceBundle EvidenceBundle @relation(fields: [bundleId], references: [id])
+  evidenceItem   EvidenceItem   @relation(fields: [evidenceItemId], references: [id])
 
-  @@unique([bundle_id, evidence_item_id])
-  @@index([bundle_id])
-  @@index([evidence_item_id])
+  @@unique([bundleId, evidenceItemId])
+  @@index([bundleId])
+  @@index([evidenceItemId])
+  @@map("evidence_bundle_items")
 }
 
-model evidence_bundles {
-  id                    String                  @id @db.Uuid
-  engagement_id         String                  @db.Uuid
-  title                 String
-  description           String?
-  status                String                  @default("active")
-  created_by            String?                 @db.Uuid
-  version               Int                     @default(1)
-  created_at            DateTime                @default(now())
-  updated_at            DateTime
-  evidence_bundle_items evidence_bundle_items[]
-  engagements           engagements             @relation(fields: [engagement_id], references: [id])
+model EvidenceBundle {
+  id                  String             @id @db.Uuid
+  engagementId        String             @db.Uuid @map("engagement_id")
+  title               String
+  description         String?
+  status              String             @default("active")
+  createdBy           String?            @db.Uuid @map("created_by")
+  version             Int                @default(1)
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @map("updated_at")
+  evidenceBundleItems EvidenceBundleItem[]
+  engagement          Engagement         @relation(fields: [engagementId], references: [id])
 
-  @@index([engagement_id])
+  @@index([engagementId])
   @@index([status])
+  @@map("evidence_bundles")
 }
 
-model evidence_items {
-  id                    String                       @id @db.Uuid
-  engagement_id         String                       @db.Uuid
-  category              evidence_category
-  evidence_type         evidence_type
-  source_type           evidence_source_type
-  source_label          String
-  source_contact_id     String?                      @db.Uuid
-  capture_method        evidence_capture_method
-  title                 String
-  description           String?
-  content               String?
-  validation_status     evidence_validation_status   @default(PENDING)
-  traceability_status   evidence_traceability_status
-  visibility            evidence_visibility          @default(INTERNAL)
-  created_by            String?                      @db.Uuid
-  version               Int                          @default(1)
-  captured_at           DateTime
-  created_at            DateTime                     @default(now())
-  updated_at            DateTime
-  evidence_bundle_items evidence_bundle_items[]
-  engagements           engagements                  @relation(fields: [engagement_id], references: [id])
-  client_contacts       client_contacts?             @relation(fields: [source_contact_id], references: [id])
-  file_blobs            file_blobs?
+model EvidenceItem {
+  id                  String             @id @db.Uuid
+  engagementId        String             @db.Uuid @map("engagement_id")
+  category            evidence_category
+  evidenceType        evidence_type      @map("evidence_type")
+  sourceType          evidence_source_type @map("source_type")
+  sourceLabel         String             @map("source_label")
+  sourceContactId     String?            @db.Uuid @map("source_contact_id")
+  captureMethod       evidence_capture_method @map("capture_method")
+  title               String
+  description         String?
+  content             String?
+  validationStatus    evidence_validation_status @default(PENDING) @map("validation_status")
+  traceabilityStatus  evidence_traceability_status @map("traceability_status")
+  visibility          evidence_visibility @default(INTERNAL)
+  createdBy           String?            @db.Uuid @map("created_by")
+  version             Int                @default(1)
+  capturedAt          DateTime           @map("captured_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @map("updated_at")
+  evidenceBundleItems EvidenceBundleItem[]
+  engagement          Engagement         @relation(fields: [engagementId], references: [id])
+  sourceContact       ClientContact?     @relation(fields: [sourceContactId], references: [id])
+  fileBlob            FileBlob?
 
   @@index([category])
-  @@index([engagement_id])
-  @@index([validation_status])
+  @@index([engagementId])
+  @@index([validationStatus])
   @@index([visibility])
+  @@map("evidence_items")
 }
 
-model file_blobs {
-  id               String         @id @db.Uuid
-  evidence_item_id String         @unique @db.Uuid
-  file_name        String
-  mime_type        String
-  size_bytes       BigInt
-  storage_key      String
-  created_by       String?        @db.Uuid
-  created_at       DateTime       @default(now())
-  evidence_items   evidence_items @relation(fields: [evidence_item_id], references: [id])
+model FileBlob {
+  id            String       @id @db.Uuid
+  evidenceItemId String       @unique @db.Uuid @map("evidence_item_id")
+  fileName      String       @map("file_name")
+  mimeType      String       @map("mime_type")
+  sizeBytes     BigInt       @map("size_bytes")
+  storageKey    String       @map("storage_key")
+  createdBy     String?      @db.Uuid @map("created_by")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  evidenceItem  EvidenceItem @relation(fields: [evidenceItemId], references: [id])
 
-  @@index([evidence_item_id])
+  @@index([evidenceItemId])
+  @@map("file_blobs")
 }
 
-model financial_baselines {
-  id            String    @id @db.Uuid
-  engagement_id String?   @db.Uuid
-  revenue       Decimal   @db.Decimal(15, 2)
-  costs         Decimal   @db.Decimal(15, 2)
-  currency      String    @default("USD")
+model FinancialBaseline {
+  id            String   @id @db.Uuid
+  engagementId  String?  @db.Uuid @map("engagement_id")
+  revenue       Decimal  @db.Decimal(15, 2)
+  costs         Decimal  @db.Decimal(15, 2)
+  currency      String   @default("USD")
   source        String
   assumptions   Json
-  created_by    String    @db.Uuid
-  created_at    DateTime  @default(now())
-  valid_until   DateTime?
-  users         users     @relation(fields: [created_by], references: [id])
+  createdBy     String   @db.Uuid @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  validUntil    DateTime? @map("valid_until")
+  creator       User     @relation(fields: [createdBy], references: [id])
 
-  @@index([engagement_id])
+  @@index([engagementId])
   @@index([source])
+  @@map("financial_baselines")
 }
 
-model findings {
-  id                  String            @id @db.Uuid
-  engagement_id       String            @db.Uuid
-  stage_id            String?           @db.Uuid
-  primary_evidence_id String            @db.Uuid
-  title               String
-  summary             String
-  severity            String
-  impact_area         String
-  status              String            @default("identified")
-  confidence_score    Float?
-  priority_score      Float?
-  hypothesis          String?
-  root_cause          String?
-  consequence         String?
-  owner_id            String?           @db.Uuid
-  due_at              DateTime?
-  validated_at        DateTime?
-  resolved_at         DateTime?
-  dismissed_at        DateTime?
-  metadata            Json?
-  version             Int               @default(1)
-  created_at          DateTime          @default(now())
-  updated_at          DateTime
-  archived_at         DateTime?
-  engagements         engagements       @relation(fields: [engagement_id], references: [id])
-  evidence            evidence          @relation(fields: [primary_evidence_id], references: [id])
-  stages              stages?           @relation(fields: [stage_id], references: [id])
-  recommendations     recommendations[]
+model Finding {
+  id               String         @id @db.Uuid
+  engagementId     String         @db.Uuid @map("engagement_id")
+  stageId          String?        @db.Uuid @map("stage_id")
+  primaryEvidenceId String         @db.Uuid @map("primary_evidence_id")
+  title            String
+  summary          String
+  severity         String
+  impactArea       String         @map("impact_area")
+  status           String         @default("identified")
+  confidenceScore  Float?         @map("confidence_score")
+  priorityScore    Float?         @map("priority_score")
+  hypothesis       String?
+  rootCause        String?        @map("root_cause")
+  consequence      String?
+  ownerId          String?        @db.Uuid @map("owner_id")
+  dueAt            DateTime?      @map("due_at")
+  validatedAt      DateTime?      @map("validated_at")
+  resolvedAt       DateTime?      @map("resolved_at")
+  dismissedAt      DateTime?      @map("dismissed_at")
+  metadata         Json?
+  version          Int            @default(1)
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @map("updated_at")
+  archivedAt       DateTime?      @map("archived_at")
+  engagement       Engagement     @relation(fields: [engagementId], references: [id])
+  evidence         Evidence       @relation(fields: [primaryEvidenceId], references: [id])
+  stage            Stage?         @relation(fields: [stageId], references: [id])
+  recommendations  Recommendation[]
 
-  @@index([archived_at])
-  @@index([engagement_id])
-  @@index([engagement_id, severity])
-  @@index([engagement_id, status])
-  @@index([primary_evidence_id])
+  @@index([archivedAt])
+  @@index([engagementId])
+  @@index([engagementId, severity])
+  @@index([engagementId, status])
+  @@index([primaryEvidenceId])
   @@index([severity])
-  @@index([stage_id])
+  @@index([stageId])
   @@index([status])
+  @@map("findings")
 }
 
-model idempotency_records {
+model IdempotencyRecord {
   id              String    @id @db.Uuid
-  idempotency_key String    @unique
-  operation_name  String
+  idempotencyKey  String    @unique @map("idempotency_key")
+  operationName   String    @map("operation_name")
   status          String    @default("pending")
-  response_code   Int?
-  response_body   Json?
-  created_at      DateTime  @default(now())
-  completed_at    DateTime?
-  expires_at      DateTime
+  responseCode    Int?      @map("response_code")
+  responseBody    Json?     @map("response_body")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  completedAt     DateTime? @map("completed_at")
+  expiresAt       DateTime  @map("expires_at")
   payload         String?
 
-  @@index([expires_at])
-  @@index([idempotency_key])
+  @@index([expiresAt])
+  @@index([idempotencyKey])
+  @@map("idempotency_records")
 }
 
-model intervention_states {
-  id             String      @id @db.Uuid
-  engagement_id  String      @unique @db.Uuid
-  current_phase  String
-  previous_phase String?
-  version        Int         @default(1)
-  created_at     DateTime    @default(now())
-  updated_at     DateTime
-  engagements    engagements @relation(fields: [engagement_id], references: [id])
+model InterventionState {
+  id             String     @id @db.Uuid
+  engagementId   String     @unique @db.Uuid @map("engagement_id")
+  currentPhase   String     @map("current_phase")
+  previousPhase  String?    @map("previous_phase")
+  version        Int        @default(1)
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @map("updated_at")
+  engagement     Engagement @relation(fields: [engagementId], references: [id])
 
-  @@index([engagement_id])
+  @@index([engagementId])
+  @@map("intervention_states")
 }
 
-model kpi_snapshots {
-  id          String   @id @db.Uuid
-  kpi_id      String   @db.Uuid
-  value       Float
-  recorded_at DateTime @default(now())
-  recorded_by String?  @db.Uuid
-  kpis        kpis     @relation(fields: [kpi_id], references: [id])
+model KPISnapshot {
+  id         String   @id @db.Uuid
+  kpiId      String   @db.Uuid @map("kpi_id")
+  value      Float
+  recordedAt DateTime @default(now()) @map("recorded_at")
+  recordedBy String?  @db.Uuid @map("recorded_by")
+  kpi        KPI      @relation(fields: [kpiId], references: [id])
 
-  @@index([kpi_id])
-  @@index([recorded_at])
+  @@index([kpiId])
+  @@index([recordedAt])
+  @@map("kpi_snapshots")
 }
 
-model kpis {
-  id               String          @id @db.Uuid
-  engagement_id    String          @db.Uuid
-  name             String
-  description      String?
-  target           Float?
-  current_value    Float?
-  measurement_date DateTime?
-  direction        String          @default("up")
-  version          Int             @default(1)
-  created_by       String?         @db.Uuid
-  created_at       DateTime        @default(now())
-  updated_at       DateTime
-  kpi_snapshots    kpi_snapshots[]
-  engagements      engagements     @relation(fields: [engagement_id], references: [id])
+model KPI {
+  id              String        @id @db.Uuid
+  engagementId    String        @db.Uuid @map("engagement_id")
+  name            String
+  description     String?
+  target          Float?
+  currentValue    Float?        @map("current_value")
+  measurementDate DateTime?     @map("measurement_date")
+  direction       String        @default("up")
+  version         Int           @default(1)
+  createdBy       String?       @db.Uuid @map("created_by")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @map("updated_at")
+  kpiSnapshots    KPISnapshot[]
+  engagement      Engagement    @relation(fields: [engagementId], references: [id])
 
-  @@index([engagement_id])
+  @@index([engagementId])
+  @@map("kpis")
 }
 
-model lead_records {
-  id                     String           @id @db.Uuid
-  company_name           String
-  contact_name           String?
-  contact_email          String?
-  contact_phone          String?
-  source                 String?
-  status                 String           @default("new")
-  notes                  String?
-  estimated_value        Float?
-  converted_to_client_id String?          @db.Uuid
-  engagement_id          String?          @db.Uuid
-  assigned_to            String?          @db.Uuid
-  created_by             String?          @db.Uuid
-  created_at             DateTime         @default(now())
-  updated_at             DateTime
-  client_accounts        client_accounts? @relation(fields: [converted_to_client_id], references: [id], onDelete: Restrict, map: "lead_records_client_id_fkey")
-  engagements            engagements?     @relation(fields: [engagement_id], references: [id], onDelete: Restrict)
+model LeadRecord {
+  id                  String         @id @db.Uuid
+  companyName         String         @map("company_name")
+  contactName         String?        @map("contact_name")
+  contactEmail        String?        @map("contact_email")
+  contactPhone        String?        @map("contact_phone")
+  source              String?
+  status              String         @default("new")
+  notes               String?
+  estimatedValue      Float?         @map("estimated_value")
+  convertedToClientId String?        @db.Uuid @map("converted_to_client_id")
+  engagementId        String?        @db.Uuid @map("engagement_id")
+  assignedTo          String?        @db.Uuid @map("assigned_to")
+  createdBy           String?        @db.Uuid @map("created_by")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @map("updated_at")
+  clientAccount       ClientAccount? @relation(fields: [convertedToClientId], references: [id], onDelete: Restrict, map: "lead_records_client_id_fkey")
+  engagement          Engagement?    @relation(fields: [engagementId], references: [id], onDelete: Restrict)
 
-  @@index([assigned_to])
-  @@index([converted_to_client_id])
+  @@index([assignedTo])
+  @@index([convertedToClientId])
   @@index([status])
+  @@map("lead_records")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model operator_items {
-  id                                             String                @id @db.Uuid
-  workspace_id                                   String                @db.Uuid
-  owner_user_id                                  String?               @db.Uuid
-  created_by_user_id                             String?               @db.Uuid
-  last_updated_by_user_id                        String?               @db.Uuid
-  assigned_to_user_id                            String?               @db.Uuid
-  reviewed_by_user_id                            String?               @db.Uuid
-  problem                                        String
-  action                                         String
-  impactExpected                                 Float
-  impactLow                                      Float
-  impactHigh                                     Float
-  confidence                                     Float
-  priorityScore                                  Float
-  status                                         String                @default("pending")
-  due_at                                         DateTime?
-  expected_outcome                               String?
-  actual_outcome                                 String?
-  explanation                                    Json?
-  decision_hash                                  String?
-  engine_version                                 String                @default("v1.0.0")
-  created_at                                     DateTime              @default(now())
-  updated_at                                     DateTime
-  signature                                      String?
-  signature_algo                                 String?
-  public_key_id                                  String?
-  blocking_dependencies                          Json?
-  inputs_snapshot                                Json?
-  signed_hash                                    String?
-  actual_outcome_value                           Float?
-  outcome_notes                                  String?
-  started_at                                     DateTime?
-  completed_at                                   DateTime?
-  execution_status                               String                @default("not_started")
-  completed_by                                   String?               @db.Uuid
-  verified_by                                    String?               @db.Uuid
-  block_stage                                    String?
-  block_reason                                   String?
-  control_layer_violations                       Json?
-  gate_result                                    Json?
-  guardrail_result                               Json?
-  calibration_records                            calibration_records[]
-  entity_links                                   entity_links[]
-  users_operator_items_completed_byTousers       users?                @relation("operator_items_completed_byTousers", fields: [completed_by], references: [id])
-  users_operator_items_created_by_user_idTousers users?                @relation("operator_items_created_by_user_idTousers", fields: [created_by_user_id], references: [id], onDelete: Restrict, map: "operator_items_created_by_fkey")
-  users_operator_items_verified_byTousers        users?                @relation("operator_items_verified_byTousers", fields: [verified_by], references: [id])
-  override_records                               override_records[]
-  webhook_deliveries                             webhook_deliveries[]
+model OperatorItem {
+  id                     String              @id @db.Uuid
+  workspaceId            String              @db.Uuid @map("workspace_id")
+  ownerUserId            String?             @db.Uuid @map("owner_user_id")
+  createdByUserId        String?             @db.Uuid @map("created_by_user_id")
+  lastUpdatedByUserId    String?             @db.Uuid @map("last_updated_by_user_id")
+  assignedToUserId       String?             @db.Uuid @map("assigned_to_user_id")
+  reviewedByUserId       String?             @db.Uuid @map("reviewed_by_user_id")
+  problem                String
+  action                 String
+  impactExpected         Float
+  impactLow              Float
+  impactHigh             Float
+  confidence             Float
+  priorityScore          Float
+  status                 String              @default("pending")
+  dueAt                  DateTime?           @map("due_at")
+  expectedOutcome        String?             @map("expected_outcome")
+  actualOutcome          String?             @map("actual_outcome")
+  explanation            Json?
+  decisionHash           String?             @map("decision_hash")
+  engineVersion          String              @default("v1.0.0") @map("engine_version")
+  createdAt              DateTime            @default(now()) @map("created_at")
+  updatedAt              DateTime            @map("updated_at")
+  signature              String?
+  signatureAlgo          String?             @map("signature_algo")
+  publicKeyId            String?             @map("public_key_id")
+  blockingDependencies   Json?               @map("blocking_dependencies")
+  inputsSnapshot         Json?               @map("inputs_snapshot")
+  signedHash             String?             @map("signed_hash")
+  actualOutcomeValue     Float?              @map("actual_outcome_value")
+  outcomeNotes           String?             @map("outcome_notes")
+  startedAt              DateTime?           @map("started_at")
+  completedAt            DateTime?           @map("completed_at")
+  executionStatus        String              @default("not_started") @map("execution_status")
+  completedBy            String?             @db.Uuid @map("completed_by")
+  verifiedBy             String?             @db.Uuid @map("verified_by")
+  blockStage             String?             @map("block_stage")
+  blockReason            String?             @map("block_reason")
+  controlLayerViolations Json?               @map("control_layer_violations")
+  gateResult             Json?               @map("gate_result")
+  guardrailResult        Json?               @map("guardrail_result")
+  calibrationRecords     CalibrationRecord[]
+  entityLinks            EntityLink[]
+  completedByUser        User?               @relation("operator_items_completed_byTousers", fields: [completedBy], references: [id])
+  createdByUser          User?               @relation("operator_items_created_by_user_idTousers", fields: [createdByUserId], references: [id], onDelete: Restrict, map: "operator_items_created_by_fkey")
+  verifiedByUser         User?               @relation("operator_items_verified_byTousers", fields: [verifiedBy], references: [id])
+  overrideRecords        OverrideRecord[]
+  webhookDeliveries      WebhookDelivery[]
 
-  @@index([block_stage])
-  @@index([created_at])
-  @@index([created_by_user_id], map: "operator_items_created_by_idx")
-  @@index([decision_hash])
-  @@index([execution_status])
+  @@index([blockStage])
+  @@index([createdAt])
+  @@index([createdByUserId], map: "operator_items_created_by_idx")
+  @@index([decisionHash])
+  @@index([executionStatus])
   @@index([priorityScore], map: "operator_items_priority_score_idx")
-  @@index([public_key_id])
-  @@index([signed_hash])
+  @@index([publicKeyId])
+  @@index([signedHash])
   @@index([status])
-  @@index([workspace_id, block_stage], map: "operator_items_workspace_block_stage_idx")
+  @@index([workspaceId, blockStage], map: "operator_items_workspace_block_stage_idx")
+  @@map("operator_items")
 }
 
-model override_records {
-  id                String         @id @db.Uuid
-  operator_item_id  String         @db.Uuid
-  original_action   String
-  overridden_action String
-  reason            String
-  overridden_by     String         @db.Uuid
-  created_at        DateTime       @default(now())
-  revoked_at        DateTime?
-  operator_items    operator_items @relation(fields: [operator_item_id], references: [id], onDelete: Cascade)
-  users             users          @relation(fields: [overridden_by], references: [id])
+model OverrideRecord {
+  id              String       @id @db.Uuid
+  operatorItemId  String       @db.Uuid @map("operator_item_id")
+  originalAction  String       @map("original_action")
+  overriddenAction String       @map("overridden_action")
+  reason          String
+  overriddenBy    String       @db.Uuid @map("overridden_by")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  revokedAt       DateTime?    @map("revoked_at")
+  operatorItem    OperatorItem @relation(fields: [operatorItemId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [overriddenBy], references: [id])
 
-  @@index([operator_item_id])
-  @@index([overridden_by])
+  @@index([operatorItemId])
+  @@index([overriddenBy])
+  @@map("override_records")
 }
 
-model plan_capabilities {
-  id          String   @id @db.Uuid
-  plan_id     String   @db.Uuid
-  key         String
-  limit       Int?
+model PlanCapability {
+  id        String   @id @db.Uuid
+  planId    String   @db.Uuid @map("plan_id")
+  key       String
+  limit     Int?
   description String?
-  created_at  DateTime @default(now())
-  plans       plans    @relation(fields: [plan_id], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
 
-  @@unique([plan_id, key])
-  @@index([plan_id])
+  @@unique([planId, key])
+  @@index([planId])
+  @@map("plan_capabilities")
 }
 
-model plans {
-  id                String              @id @db.Uuid
-  name              String              @unique
-  description       String?
-  price_monthly     Float
-  price_yearly      Float
-  active            Boolean             @default(true)
-  created_at        DateTime            @default(now())
-  updated_at        DateTime
-  stripe_price_id   String?
-  plan_capabilities plan_capabilities[]
-  subscriptions     subscriptions[]
+model Plan {
+  id              String           @id @db.Uuid
+  name            String           @unique
+  description     String?
+  priceMonthly    Float            @map("price_monthly")
+  priceYearly     Float            @map("price_yearly")
+  active          Boolean          @default(true)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @map("updated_at")
+  stripePriceId   String?          @map("stripe_price_id")
+  planCapabilities PlanCapability[]
+  subscriptions   Subscription[]
 
   @@index([active])
+  @@map("plans")
 }
 
-model recommendation_expiry_policies {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspace_id      String    @db.Uuid
-  recommendation_id String    @unique @db.Uuid
-  expires_at        DateTime
-  status            String    @default("active")
-  expired_at        DateTime?
-  reason            String?
-  replaced_by_id    String?   @db.Uuid
-  created_at        DateTime  @default(now())
-  updated_at        DateTime
+model RecommendationExpiryPolicy {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId     String    @db.Uuid @map("workspace_id")
+  recommendationId String    @unique @db.Uuid @map("recommendation_id")
+  expiresAt       DateTime  @map("expires_at")
+  status          String    @default("active")
+  expiredAt       DateTime? @map("expired_at")
+  reason          String?
+  replacedById    String?   @db.Uuid @map("replaced_by_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @map("updated_at")
 
-  @@index([expires_at])
+  @@index([expiresAt])
   @@index([status])
-  @@index([workspace_id])
+  @@index([workspaceId])
+  @@map("recommendation_expiry_policies")
 }
 
-model recommendations {
-  id                        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  engagement_id             String      @db.Uuid
-  workspace_id              String      @db.Uuid
-  finding_id                String?     @db.Uuid
-  title                     String
-  description               String?
-  rationale                 String?
-  priority                  String
-  estimated_impact          String?
-  status                    String      @default("pending")
-  approved_by               String?     @db.Uuid
-  approved_at               DateTime?
-  evidence_validation_score Int?
-  reliability_level         String?
-  kpi_health_score          Int?
-  kpi_risk_level            String?
-  version                   Int         @default(1)
-  visibility                String      @default("internal")
-  created_at                DateTime    @default(now())
-  updated_at                DateTime    @default(now())
-  rollback_plan             String?
-  constraints_considered    Json?
-  confidence_level          String?
-  expires_at                DateTime?
-  is_ai_proposal            Boolean     @default(false)
-  created_by                String?     @db.Uuid
-  engagements               engagements @relation(fields: [engagement_id], references: [id])
-  findings                  findings?   @relation(fields: [finding_id], references: [id])
+model Recommendation {
+  id                      String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  engagementId            String      @db.Uuid @map("engagement_id")
+  workspaceId             String      @db.Uuid @map("workspace_id")
+  findingId               String?     @db.Uuid @map("finding_id")
+  title                   String
+  description             String?
+  rationale               String?
+  priority                String
+  estimatedImpact         String?     @map("estimated_impact")
+  status                  String      @default("pending")
+  approvedBy              String?     @db.Uuid @map("approved_by")
+  approvedAt              DateTime?   @map("approved_at")
+  evidenceValidationScore Int?        @map("evidence_validation_score")
+  reliabilityLevel        String?     @map("reliability_level")
+  kpiHealthScore          Int?        @map("kpi_health_score")
+  kpiRiskLevel            String?     @map("kpi_risk_level")
+  version                 Int         @default(1)
+  visibility              String      @default("internal")
+  createdAt               DateTime    @default(now()) @map("created_at")
+  updatedAt               DateTime    @default(now()) @map("updated_at")
+  rollbackPlan            String?     @map("rollback_plan")
+  constraintsConsidered   Json?       @map("constraints_considered")
+  confidenceLevel         String?     @map("confidence_level")
+  expiresAt               DateTime?   @map("expires_at")
+  isAiProposal            Boolean     @default(false) @map("is_ai_proposal")
+  createdBy               String?     @db.Uuid @map("created_by")
+  engagement              Engagement @relation(fields: [engagementId], references: [id])
+  finding                 Finding?   @relation(fields: [findingId], references: [id])
 
-  @@unique([finding_id, title], where: raw("(finding_id IS NOT NULL)"))
-  @@index([engagement_id])
+  @@unique([findingId, title], where: raw("(finding_id IS NOT NULL)"))
+  @@index([engagementId])
   @@index([priority])
   @@index([status])
-  @@index([workspace_id])
+  @@index([workspaceId])
+  @@map("recommendations")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model recommendations_legacy {
-  id                                              String      @db.Uuid
-  engagement_id                                   String      @db.Uuid
-  stage_id                                        String?     @db.Uuid
-  finding_id                                      String      @db.Uuid
-  title                                           String
-  summary                                         String
-  priority                                        String
-  type                                            String
-  status                                          String      @default("proposed")
-  rationale                                       String
-  expected_impact                                 String?
-  estimated_effort                                String?
-  target_metric                                   String?
-  owner_id                                        String?     @db.Uuid
-  due_at                                          DateTime?
-  endorsed_at                                     DateTime?
-  converted_at                                    DateTime?
-  rejected_at                                     DateTime?
-  withdrawn_at                                    DateTime?
-  metadata                                        Json?
-  version                                         Int         @default(1)
-  created_at                                      DateTime    @default(now())
-  updated_at                                      DateTime
-  archived_at                                     DateTime?
-  rollback_plan                                   String?
-  constraints_considered                          Json?
-  confidence_level                                String?
-  expires_at                                      DateTime?
-  is_ai_proposal                                  Boolean     @default(false)
-  created_by                                      String?     @db.Uuid
-  evidence_validation_score                       Int?
-  reliability_level                               String?
-  kpi_health_score                                Int?
-  kpi_risk_level                                  String?
-  description                                     String?
-  approved_by                                     String?     @db.Uuid
-  approved_at                                     DateTime?
-  visibility                                      String      @default("internal")
-  workspace_id                                    String?     @db.Uuid
-  users_recommendations_legacy_approved_byTousers users?      @relation("recommendations_legacy_approved_byTousers", fields: [approved_by], references: [id], map: "recommendations_approved_by_fkey")
-  users_recommendations_legacy_created_byTousers  users?      @relation("recommendations_legacy_created_byTousers", fields: [created_by], references: [id], map: "recommendations_created_by_fkey")
-  workspaces                                      workspaces? @relation(fields: [workspace_id], references: [id], onDelete: Restrict, map: "recommendations_workspace_id_fkey")
+model RecommendationLegacy {
+  id                    String     @db.Uuid
+  engagementId          String     @db.Uuid @map("engagement_id")
+  stageId               String?    @db.Uuid @map("stage_id")
+  findingId             String     @db.Uuid @map("finding_id")
+  title                 String
+  summary               String
+  priority              String
+  type                  String
+  status                String     @default("proposed")
+  rationale             String
+  expectedImpact        String?    @map("expected_impact")
+  estimatedEffort       String?    @map("estimated_effort")
+  targetMetric          String?    @map("target_metric")
+  ownerId               String?    @db.Uuid @map("owner_id")
+  dueAt                 DateTime?  @map("due_at")
+  endorsedAt            DateTime?  @map("endorsed_at")
+  convertedAt           DateTime?  @map("converted_at")
+  rejectedAt            DateTime?  @map("rejected_at")
+  withdrawnAt           DateTime?  @map("withdrawn_at")
+  metadata              Json?
+  version               Int        @default(1)
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @map("updated_at")
+  archivedAt            DateTime?  @map("archived_at")
+  rollbackPlan          String?    @map("rollback_plan")
+  constraintsConsidered Json?      @map("constraints_considered")
+  confidenceLevel       String?    @map("confidence_level")
+  expiresAt             DateTime?  @map("expires_at")
+  isAiProposal          Boolean    @default(false) @map("is_ai_proposal")
+  createdBy             String?    @db.Uuid @map("created_by")
+  evidenceValidationScore Int?     @map("evidence_validation_score")
+  reliabilityLevel      String?    @map("reliability_level")
+  kpiHealthScore        Int?       @map("kpi_health_score")
+  kpiRiskLevel          String?    @map("kpi_risk_level")
+  description           String?
+  approvedBy            String?    @db.Uuid @map("approved_by")
+  approvedAt            DateTime?  @map("approved_at")
+  visibility            String     @default("internal")
+  workspaceId           String?    @db.Uuid @map("workspace_id")
+  approver              User?      @relation("recommendations_legacy_approved_byTousers", fields: [approvedBy], references: [id], map: "recommendations_approved_by_fkey")
+  creator               User?      @relation("recommendations_legacy_created_byTousers", fields: [createdBy], references: [id], map: "recommendations_created_by_fkey")
+  workspace             Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Restrict, map: "recommendations_workspace_id_fkey")
 
-  @@index([evidence_validation_score], map: "recommendations_evidence_validation_score_idx")
-  @@index([expires_at], map: "recommendations_expires_at_idx")
-  @@index([is_ai_proposal], map: "recommendations_is_ai_proposal_idx")
-  @@index([kpi_health_score], map: "recommendations_kpi_health_score_idx")
+  @@index([evidenceValidationScore], map: "recommendations_evidence_validation_score_idx")
+  @@index([expiresAt], map: "recommendations_expires_at_idx")
+  @@index([isAiProposal], map: "recommendations_is_ai_proposal_idx")
+  @@index([kpiHealthScore], map: "recommendations_kpi_health_score_idx")
   @@ignore
+  @@map("recommendations_legacy")
 }
 
-model risks {
-  id                  String      @id @db.Uuid
-  stage_id            String      @db.Uuid
-  engagement_id       String      @db.Uuid
-  title               String
-  description         String?
-  status              String      @default("identified")
-  identified_at       DateTime    @default(now())
-  identified_by       String?     @db.Uuid
-  assessed_at         DateTime?
-  assessed_by         String?     @db.Uuid
-  mitigation_strategy String?
-  created_at          DateTime    @default(now())
-  updated_at          DateTime
-  engagements         engagements @relation(fields: [engagement_id], references: [id])
-  stages              stages      @relation(fields: [stage_id], references: [id])
+model Risk {
+  id                 String     @id @db.Uuid
+  stageId            String     @db.Uuid @map("stage_id")
+  engagementId       String     @db.Uuid @map("engagement_id")
+  title              String
+  description        String?
+  status             String     @default("identified")
+  identifiedAt       DateTime   @default(now()) @map("identified_at")
+  identifiedBy       String?    @db.Uuid @map("identified_by")
+  assessedAt         DateTime?  @map("assessed_at")
+  assessedBy         String?    @db.Uuid @map("assessed_by")
+  mitigationStrategy String?    @map("mitigation_strategy")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @map("updated_at")
+  engagement         Engagement @relation(fields: [engagementId], references: [id])
+  stage              Stage      @relation(fields: [stageId], references: [id])
 
-  @@index([engagement_id])
-  @@index([stage_id])
+  @@index([engagementId])
+  @@index([stageId])
   @@index([status])
+  @@map("risks")
 }
 
-model scheduled_tasks {
-  id            String    @id @db.Uuid
-  task_name     String
-  payload       Json?
-  status        String    @default("pending")
-  attempts      Int       @default(0)
-  max_attempts  Int       @default(3)
-  last_error    String?
-  scheduled_for DateTime
-  started_at    DateTime?
-  completed_at  DateTime?
-  created_at    DateTime  @default(now())
-  updated_at    DateTime
+model ScheduledTask {
+  id           String    @id @db.Uuid
+  taskName     String    @map("task_name")
+  payload      Json?
+  status       String    @default("pending")
+  attempts     Int       @default(0)
+  maxAttempts  Int       @default(3) @map("max_attempts")
+  lastError    String?   @map("last_error")
+  scheduledFor DateTime  @map("scheduled_for")
+  startedAt    DateTime? @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @map("updated_at")
 
-  @@index([status, scheduled_for])
-  @@index([task_name])
+  @@index([status, scheduledFor])
+  @@index([taskName])
+  @@map("scheduled_tasks")
 }
 
-model sessions {
-  id         String    @id @db.Uuid
-  user_id    String    @db.Uuid
-  token      String    @unique
-  expires_at DateTime
-  created_at DateTime  @default(now())
-  revoked_at DateTime?
-  ip_address String?
-  user_agent String?
-  users      users     @relation(fields: [user_id], references: [id])
+model Session {
+  id        String    @id @db.Uuid
+  userId    String    @db.Uuid @map("user_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+  ipAddress String?   @map("ip_address")
+  userAgent String?   @map("user_agent")
+  user      User      @relation(fields: [userId], references: [id])
 
-  @@index([expires_at])
-  @@index([user_id])
+  @@index([expiresAt])
+  @@index([userId])
+  @@map("sessions")
 }
 
-model shock_events {
-  id            String      @id @db.Uuid
-  engagement_id String      @db.Uuid
-  type          String
-  severity      String
-  happened_at   DateTime
-  notes         String?
-  reported_by   String?     @db.Uuid
-  created_by    String?     @db.Uuid
-  created_at    DateTime    @default(now())
-  updated_at    DateTime
-  engagements   engagements @relation(fields: [engagement_id], references: [id])
+model ShockEvent {
+  id           String     @id @db.Uuid
+  engagementId String     @db.Uuid @map("engagement_id")
+  type         String
+  severity     String
+  happenedAt   DateTime   @map("happened_at")
+  notes        String?
+  reportedBy   String?    @db.Uuid @map("reported_by")
+  createdBy    String?    @db.Uuid @map("created_by")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @map("updated_at")
+  engagement   Engagement @relation(fields: [engagementId], references: [id])
 
-  @@index([engagement_id])
+  @@index([engagementId])
   @@index([severity])
   @@index([type])
+  @@map("shock_events")
 }
 
-model snapshot_data {
-  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  aggregate_id     String
-  aggregate_type   String
-  snapshot_version Int        @default(0)
+model SnapshotData {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  aggregateId      String    @map("aggregate_id")
+  aggregateType    String    @map("aggregate_type")
+  snapshotVersion  Int       @default(0) @map("snapshot_version")
   state            Json
   checksum         String
-  event_number     Int
-  created_at       DateTime   @default(now())
-  expires_at       DateTime?
-  workspace_id     String     @db.Uuid
-  workspaces       workspaces @relation(fields: [workspace_id], references: [id])
+  eventNumber      Int       @map("event_number")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  expiresAt        DateTime? @map("expires_at")
+  workspaceId      String    @db.Uuid @map("workspace_id")
+  workspace        Workspace @relation(fields: [workspaceId], references: [id])
 
-  @@unique([aggregate_id, aggregate_type, workspace_id])
-  @@index([created_at])
-  @@index([workspace_id, created_at])
-  @@index([workspace_id, expires_at])
+  @@unique([aggregateId, aggregateType, workspaceId])
+  @@index([createdAt])
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, expiresAt])
+  @@map("snapshot_data")
 }
 
-model stages {
-  id               String         @id @db.Uuid
-  engagement_id    String         @db.Uuid
+model Stage {
+  id               String       @id @db.Uuid
+  engagementId     String       @db.Uuid @map("engagement_id")
   title            String
   description      String?
   status           String
-  is_blocked       Boolean        @default(false)
-  blocker_severity String?
-  blocker_type     String?
-  blocker_reason   String?
-  blocked_at       DateTime?
-  unblocked_at     DateTime?
-  due_at           DateTime?
-  completed_at     DateTime?
-  owner_id         String?        @db.Uuid
-  version          Int            @default(1)
-  created_at       DateTime       @default(now())
-  updated_at       DateTime
-  actions          actions[]
-  deliverables     deliverables[]
-  evidence         evidence[]
-  findings         findings[]
-  risks            risks[]
-  engagements      engagements    @relation(fields: [engagement_id], references: [id])
+  isBlocked        Boolean      @default(false) @map("is_blocked")
+  blockerSeverity  String?      @map("blocker_severity")
+  blockerType      String?      @map("blocker_type")
+  blockerReason    String?      @map("blocker_reason")
+  blockedAt        DateTime?    @map("blocked_at")
+  unblockedAt      DateTime?    @map("unblocked_at")
+  dueAt            DateTime?    @map("due_at")
+  completedAt      DateTime?    @map("completed_at")
+  ownerId          String?      @db.Uuid @map("owner_id")
+  version          Int          @default(1)
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @map("updated_at")
+  actions          Action[]
+  deliverables     Deliverable[]
+  evidence         Evidence[]
+  findings         Finding[]
+  risks            Risk[]
+  engagement       Engagement   @relation(fields: [engagementId], references: [id])
 
-  @@index([engagement_id])
-  @@index([is_blocked])
+  @@index([engagementId])
+  @@index([isBlocked])
   @@index([status])
+  @@map("stages")
 }
 
-model subscriptions {
-  id                     String           @id @db.Uuid
-  billing_account_id     String           @unique @db.Uuid
-  plan_id                String           @db.Uuid
-  status                 String           @default("trialing")
-  current_period_start   DateTime
-  current_period_end     DateTime
-  trial_ends_at          DateTime?
-  canceled_at            DateTime?
-  cancel_reason          String?
-  created_at             DateTime         @default(now())
-  updated_at             DateTime
-  stripe_subscription_id String?
-  last_event_timestamp   DateTime?        @db.Timestamp(6)
-  billing_accounts       billing_accounts @relation(fields: [billing_account_id], references: [id], onDelete: Cascade)
-  plans                  plans            @relation(fields: [plan_id], references: [id])
+model Subscription {
+  id                String        @id @db.Uuid
+  billingAccountId  String        @unique @db.Uuid @map("billing_account_id")
+  planId            String        @db.Uuid @map("plan_id")
+  status            String        @default("trialing")
+  currentPeriodStart DateTime      @map("current_period_start")
+  currentPeriodEnd  DateTime      @map("current_period_end")
+  trialEndsAt       DateTime?     @map("trial_ends_at")
+  canceledAt        DateTime?     @map("canceled_at")
+  cancelReason      String?       @map("cancel_reason")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @map("updated_at")
+  stripeSubscriptionId String?     @map("stripe_subscription_id")
+  lastEventTimestamp DateTime?     @db.Timestamp(6) @map("last_event_timestamp")
+  billingAccount    BillingAccount @relation(fields: [billingAccountId], references: [id], onDelete: Cascade)
+  plan              Plan          @relation(fields: [planId], references: [id])
 
-  @@index([last_event_timestamp], map: "idx_subscriptions_last_event_timestamp")
-  @@index([stripe_subscription_id], map: "idx_subscriptions_stripe_subscription_id")
-  @@index([current_period_end])
-  @@index([plan_id])
+  @@index([lastEventTimestamp], map: "idx_subscriptions_last_event_timestamp")
+  @@index([stripeSubscriptionId], map: "idx_subscriptions_stripe_subscription_id")
+  @@index([currentPeriodEnd])
+  @@index([planId])
   @@index([status])
+  @@map("subscriptions")
 }
 
-model threshold_configs {
-  id                                    String   @id @db.Uuid
-  workspace_id                          String   @unique @db.Uuid
-  confidence_min_threshold              Float    @default(0.65)
-  low_confidence_value_threshold        Float    @default(3000000)
-  low_confidence_failure_rate_threshold Float    @default(0.40)
-  rule_block_value_threshold            Float    @default(5000000)
-  false_positive_rate_threshold         Float    @default(0.25)
-  block_count_threshold                 Int      @default(50)
-  override_failure_rate_threshold       Float    @default(0.30)
-  override_failure_value_threshold      Float    @default(2000000)
-  failure_count_threshold               Int      @default(10)
-  missing_data_value_threshold          Float    @default(4000000)
-  pending_age_threshold                 Int      @default(604800000)
-  field_missing_rate_threshold          Float    @default(0.30)
-  confidence_change_threshold           Float    @default(0.05)
-  approval_rate_change_threshold        Float    @default(0.10)
-  block_rate_change_threshold           Float    @default(0.10)
-  drift_severity_low                    Float    @default(0.02)
-  drift_severity_medium                 Float    @default(0.05)
-  drift_severity_high                   Float    @default(0.10)
-  stalled_pipeline_threshold            Float    @default(10000000)
-  created_by                            String?  @db.Uuid
-  created_at                            DateTime @default(now())
-  updated_at                            DateTime
+model ThresholdConfig {
+  id                              String   @id @db.Uuid
+  workspaceId                     String   @unique @db.Uuid @map("workspace_id")
+  confidenceMinThreshold          Float    @default(0.65) @map("confidence_min_threshold")
+  lowConfidenceValueThreshold     Float    @default(3000000) @map("low_confidence_value_threshold")
+  lowConfidenceFailureRateThreshold Float   @default(0.40) @map("low_confidence_failure_rate_threshold")
+  ruleBlockValueThreshold         Float    @default(5000000) @map("rule_block_value_threshold")
+  falsePositiveRateThreshold      Float    @default(0.25) @map("false_positive_rate_threshold")
+  blockCountThreshold             Int      @default(50) @map("block_count_threshold")
+  overrideFailureRateThreshold    Float    @default(0.30) @map("override_failure_rate_threshold")
+  overrideFailureValueThreshold   Float    @default(2000000) @map("override_failure_value_threshold")
+  failureCountThreshold           Int      @default(10) @map("failure_count_threshold")
+  missingDataValueThreshold       Float    @default(4000000) @map("missing_data_value_threshold")
+  pendingAgeThreshold             Int      @default(604800000) @map("pending_age_threshold")
+  fieldMissingRateThreshold       Float    @default(0.30) @map("field_missing_rate_threshold")
+  confidenceChangeThreshold       Float    @default(0.05) @map("confidence_change_threshold")
+  approvalRateChangeThreshold     Float    @default(0.10) @map("approval_rate_change_threshold")
+  blockRateChangeThreshold        Float    @default(0.10) @map("block_rate_change_threshold")
+  driftSeverityLow                Float    @default(0.02) @map("drift_severity_low")
+  driftSeverityMedium             Float    @default(0.05) @map("drift_severity_medium")
+  driftSeverityHigh               Float    @default(0.10) @map("drift_severity_high")
+  stalledPipelineThreshold        Float    @default(10000000) @map("stalled_pipeline_threshold")
+  createdBy                       String?  @db.Uuid @map("created_by")
+  createdAt                       DateTime @default(now()) @map("created_at")
+  updatedAt                       DateTime @map("updated_at")
 
-  @@index([workspace_id])
+  @@index([workspaceId])
+  @@map("threshold_configs")
 }
 
-model usage_events {
-  id           String   @id @db.Uuid
-  workspace_id String   @db.Uuid
-  key          String
-  value        Int
-  timestamp    DateTime @default(now())
-  created_at   DateTime @default(now())
+model UsageEvent {
+  id        String   @id @db.Uuid
+  workspaceId String   @db.Uuid @map("workspace_id")
+  key       String
+  value     Int
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([timestamp])
-  @@index([workspace_id])
-  @@index([workspace_id, key])
-  @@index([workspace_id, timestamp])
+  @@index([workspaceId])
+  @@index([workspaceId, key])
+  @@index([workspaceId, timestamp])
+  @@map("usage_events")
 }
 
-model user_role_assignments {
-  id         String    @id @db.Uuid
-  user_id    String    @db.Uuid
-  role       String
-  scope      String?
-  scope_id   String?   @db.Uuid
-  granted_by String?   @db.Uuid
-  granted_at DateTime  @default(now())
-  revoked_at DateTime?
-  is_active  Boolean   @default(true)
-  users      users     @relation(fields: [user_id], references: [id])
+model UserRoleAssignment {
+  id        String    @id @db.Uuid
+  userId    String    @db.Uuid @map("user_id")
+  role      String
+  scope     String?
+  scopeId   String?   @db.Uuid @map("scope_id")
+  grantedBy String?   @db.Uuid @map("granted_by")
+  grantedAt DateTime  @default(now()) @map("granted_at")
+  revokedAt DateTime? @map("revoked_at")
+  isActive  Boolean   @default(true) @map("is_active")
+  user      User      @relation(fields: [userId], references: [id])
 
-  @@unique([user_id, role, scope, scope_id])
-  @@index([user_id, is_active])
+  @@unique([userId, role, scope, scopeId])
+  @@index([userId, isActive])
+  @@map("user_role_assignments")
 }
 
-model users {
-  id                                                               String                   @id @db.Uuid
-  email                                                            String                   @unique
-  name                                                             String?
-  hashed_password                                                  String?
-  is_active                                                        Boolean                  @default(true)
-  version                                                          Int                      @default(1)
-  created_at                                                       DateTime                 @default(now())
-  updated_at                                                       DateTime
-  deactivated_at                                                   DateTime?
-  operatorItemsCreated                                             String?
-  operatorItemsCompleted                                           String?
-  operatorItemsVerified                                            String?
-  overrideRecords                                                  String?
-  entitiesCreated                                                  String?
-  financialBaselinesCreated                                        String?
-  audit_events                                                     audit_events[]
-  engagement_memberships                                           engagement_memberships[]
-  entities                                                         entities[]
-  financial_baselines                                              financial_baselines[]
-  operator_items_operator_items_completed_byTousers                operator_items[]         @relation("operator_items_completed_byTousers")
-  operator_items_operator_items_created_by_user_idTousers          operator_items[]         @relation("operator_items_created_by_user_idTousers")
-  operator_items_operator_items_verified_byTousers                 operator_items[]         @relation("operator_items_verified_byTousers")
-  override_records                                                 override_records[]
-  recommendations_legacy_recommendations_legacy_approved_byTousers recommendations_legacy[] @relation("recommendations_legacy_approved_byTousers") @ignore
-  recommendations_legacy_recommendations_legacy_created_byTousers  recommendations_legacy[] @relation("recommendations_legacy_created_byTousers") @ignore
-  sessions                                                         sessions[]
-  user_role_assignments                                            user_role_assignments[]
-  workspace_memberships                                            workspace_memberships[]
+model User {
+  id                                                        String                   @id @db.Uuid
+  email                                                     String                   @unique
+  name                                                      String?
+  hashedPassword                                            String?                  @map("hashed_password")
+  isActive                                                  Boolean                  @default(true) @map("is_active")
+  version                                                   Int                      @default(1)
+  createdAt                                                 DateTime                 @default(now()) @map("created_at")
+  updatedAt                                                 DateTime                 @map("updated_at")
+  deactivatedAt                                             DateTime?                @map("deactivated_at")
+  operatorItemsCreated                                      String?
+  operatorItemsCompleted                                    String?
+  operatorItemsVerified                                     String?
+  overrideRecords                                           String?
+  entitiesCreated                                           String?
+  financialBaselinesCreated                                 String?
+  auditEvents                                               AuditEvent[]
+  engagementMemberships                                     EngagementMembership[]
+  entities                                                  Entity[]
+  financialBaselines                                        FinancialBaseline[]
+  operatorItemsCompletedBy                                  OperatorItem[]         @relation("operator_items_completed_byTousers")
+  operatorItemsCreatedBy                                    OperatorItem[]         @relation("operator_items_created_by_user_idTousers")
+  operatorItemsVerifiedBy                                   OperatorItem[]         @relation("operator_items_verified_byTousers")
+  overrideRecordsCreated                                    OverrideRecord[]
+  recommendationsLegacyApprovedBy                           RecommendationLegacy[] @relation("recommendations_legacy_approved_byTousers") @ignore
+  recommendationsLegacyCreatedBy                            RecommendationLegacy[] @relation("recommendations_legacy_created_byTousers") @ignore
+  sessions                                                  Session[]
+  userRoleAssignments                                       UserRoleAssignment[]
+  workspaceMemberships                                      WorkspaceMembership[]
+
+  @@map("users")
 }
 
-model webhook_deliveries {
-  id               String          @id @db.Uuid
-  event_name       String
-  operator_item_id String?         @db.Uuid
-  url              String
-  payload          Json
-  status           String          @default("pending")
-  response_code    Int?
-  response_body    Json?
-  retry_count      Int             @default(0)
-  next_retry_at    DateTime?
-  created_at       DateTime        @default(now())
-  sent_at          DateTime?
-  operator_items   operator_items? @relation(fields: [operator_item_id], references: [id])
+model WebhookDelivery {
+  id            String       @id @db.Uuid
+  eventName     String       @map("event_name")
+  operatorItemId String?      @db.Uuid @map("operator_item_id")
+  url           String
+  payload       Json
+  status        String       @default("pending")
+  responseCode  Int?         @map("response_code")
+  responseBody  Json?        @map("response_body")
+  retryCount    Int          @default(0) @map("retry_count")
+  nextRetryAt   DateTime?    @map("next_retry_at")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  sentAt        DateTime?    @map("sent_at")
+  operatorItem  OperatorItem? @relation(fields: [operatorItemId], references: [id])
 
-  @@index([event_name, created_at])
-  @@index([status, next_retry_at])
+  @@index([eventName, createdAt])
+  @@index([status, nextRetryAt])
+  @@map("webhook_deliveries")
 }
 
-model webhook_events {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  stripe_event_id  String    @unique
-  type             String
-  processed_at     DateTime? @default(now()) @db.Timestamp(6)
-  created_at       DateTime? @default(now()) @db.Timestamp(6)
-  stripe_timestamp Int?
-  status           String    @default("processing")
-  attempts         Int       @default(0)
-  last_error       String?
-  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+model WebhookEvent {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stripeEventId  String    @unique @map("stripe_event_id")
+  type           String
+  processedAt    DateTime? @default(now()) @db.Timestamp(6) @map("processed_at")
+  createdAt      DateTime? @default(now()) @db.Timestamp(6) @map("created_at")
+  stripeTimestamp Int?     @map("stripe_timestamp")
+  status         String    @default("processing")
+  attempts       Int       @default(0)
+  lastError      String?   @map("last_error")
+  updatedAt      DateTime? @default(now()) @db.Timestamp(6) @map("updated_at")
 
-  @@index([processed_at], map: "idx_webhook_events_processed_at")
+  @@index([processedAt], map: "idx_webhook_events_processed_at")
   @@index([status], map: "idx_webhook_events_status")
   @@index([status, attempts], map: "idx_webhook_events_status_attempts")
-  @@index([stripe_event_id], map: "idx_webhook_events_stripe_event_id")
-  @@index([stripe_timestamp], map: "idx_webhook_events_stripe_timestamp")
+  @@index([stripeEventId], map: "idx_webhook_events_stripe_event_id")
+  @@index([stripeTimestamp], map: "idx_webhook_events_stripe_timestamp")
   @@index([type], map: "idx_webhook_events_type")
+  @@map("webhook_events")
 }
 
-model workspace_memberships {
-  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  workspace_id String     @db.Uuid
-  user_id      String     @db.Uuid
-  role         String
-  added_by     String?    @db.Uuid
-  added_at     DateTime   @default(now())
-  removed_at   DateTime?
-  is_active    Boolean    @default(true)
-  users        users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  workspaces   workspaces @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+model WorkspaceMembership {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspaceId String    @db.Uuid @map("workspace_id")
+  userId      String    @db.Uuid @map("user_id")
+  role        String
+  addedBy     String?   @db.Uuid @map("added_by")
+  addedAt     DateTime  @default(now()) @map("added_at")
+  removedAt   DateTime? @map("removed_at")
+  isActive    Boolean   @default(true) @map("is_active")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@unique([workspace_id, user_id])
-  @@index([user_id, is_active])
-  @@index([workspace_id, is_active])
+  @@unique([workspaceId, userId])
+  @@index([userId, isActive])
+  @@index([workspaceId, isActive])
+  @@map("workspace_memberships")
 }
 
-model workspaces {
-  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                   String
-  slug                   String                   @unique
-  description            String?
-  created_by             String?                  @db.Uuid
-  is_active              Boolean                  @default(true)
-  created_at             DateTime                 @default(now())
-  updated_at             DateTime                 @default(now())
-  engagements            engagements[]
-  recommendations_legacy recommendations_legacy[] @ignore
-  snapshot_data          snapshot_data[]
-  workspace_memberships  workspace_memberships[]
+model Workspace {
+  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String
+  slug                 String                @unique
+  description          String?
+  createdBy            String?               @db.Uuid @map("created_by")
+  isActive             Boolean               @default(true) @map("is_active")
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @default(now()) @map("updated_at")
+  engagements          Engagement[]
+  recommendationsLegacy RecommendationLegacy[] @ignore
+  snapshotDatas        SnapshotData[]
+  workspaceMemberships WorkspaceMembership[]
+
+  @@map("workspaces")
 }
 
 enum evidence_capture_method {

@@ -115,47 +115,7 @@ export async function getDbInstance() {
   return dbInitPromise;
 }
 
-// Export db as a getter that accesses the cached instance from globalForPrisma
-Object.defineProperty(global, '_dbExport', {
-  value: () => globalForPrisma.prisma,
-  configurable: true,
-});
-
-// Map model aliases to actual lowercase model names for backward compatibility
-// Supports both PascalCase (from old schema) and lowercase singular (common usage)
-const modelAliases: Record<string, string> = {
-  // PascalCase to lowercase plurals
-  "User": "users",
-  "Workspace": "workspaces",
-  "WorkspaceMembership": "workspace_memberships",
-  "ClientAccount": "client_accounts",
-  "Engagement": "engagements",
-  "EngagementMembership": "engagement_memberships",
-  "AuditEvent": "audit_events",
-  "UserRoleAssignment": "user_role_assignments",
-  "Recommendation": "recommendations",
-  "Action": "actions",
-  "LearningRecord": "learning_records",
-  "OperatorItem": "operator_items",
-  "CanonicalEvent": "canonical_events",
-  "SnapshotData": "snapshot_data",
-  // Lowercase singular to lowercase plurals (for test compatibility)
-  "user": "users",
-  "workspace": "workspaces",
-  "workspaceMembership": "workspace_memberships",
-  "clientAccount": "client_accounts",
-  "engagement": "engagements",
-  "engagementMembership": "engagement_memberships",
-  "auditEvent": "audit_events",
-  "userRoleAssignment": "user_role_assignments",
-  "recommendation": "recommendations",
-  "action": "actions",
-  "learningRecord": "learning_records",
-  "operatorItem": "operator_items",
-  "canonicalEvent": "canonical_events",
-  "snapshotData": "snapshot_data",
-};
-
+// Export db as a proxy that accesses the cached instance from globalForPrisma
 export const db = new Proxy({} as any, {
   get(target, prop) {
     const instance = globalForPrisma.prisma;
@@ -165,19 +125,6 @@ export const db = new Proxy({} as any, {
         `Ensure vitest global setup completed or call await getDbInstance() in test setup.`
       );
     }
-
-    // Check if this is a PascalCase alias
-    const propStr = String(prop);
-    const mappedProp = modelAliases[propStr] || propStr;
-
-    const result = Reflect.get(instance, mappedProp);
-
-    // If PascalCase mapping was used and result is undefined, try the original prop
-    if (result === undefined && propStr in modelAliases) {
-      // Fallback to original propStr if mapped version not found
-      return Reflect.get(instance, propStr);
-    }
-
-    return result;
+    return Reflect.get(instance, prop);
   },
 });

@@ -1,6 +1,6 @@
 import { OperatorItem } from "@/domain/operator/types";
 import { ProblemType } from "@/domain/decision/types";
-import type { LearningRecord } from "@/generated/prisma/client";
+// import type { LearningRecord } from "@/generated/prisma/client";
 
 export interface DetectedPattern {
   patternId: string;
@@ -76,62 +76,63 @@ function clusterByImpactRange(items: OperatorItem[]): OperatorItem[][] {
   return clusters;
 }
 
-/**
- * Detect patterns from learning records.
- * Learning records are more granular and focused on action outcomes.
- */
-export function detectPatternsFromLearning(records: LearningRecord[]): DetectedPattern[] {
-  if (records.length === 0) return [];
-
-  // Group by problemType and outcome pattern
-  const candidates = new Map<string, LearningRecord[]>();
-
-  for (const record of records) {
-    const outcome = record.success ? "success" : "failure";
-    const key = `${record.problemType}:${outcome}`;
-
-    if (!candidates.has(key)) {
-      candidates.set(key, []);
-    }
-    candidates.get(key)!.push(record);
-  }
-
-  // Generate patterns from learning records
-  const patterns: DetectedPattern[] = [];
-  let patternCounter = 0;
-
-  for (const [key, records] of candidates.entries()) {
-    if (records.length < 3) continue; // Minimum 3 occurrences
-
-    const [problemType, outcomePattern] = key.split(":");
-
-    const impacts = records.map((r) => Math.abs(typeof r.impact === 'string' ? parseInt(r.impact, 10) : r.impact || 0));
-    const avgImpact = impacts.reduce((a, b) => a + b, 0) / impacts.length;
-    const minImpact = Math.min(...impacts);
-    const maxImpact = Math.max(...impacts);
-
-    // Calculate success rate
-    const successCount = records.filter((r) => r.success).length;
-    const successRate = (successCount / records.length) * 100;
-
-    patterns.push({
-      patternId: `pattern-${patternCounter++}`,
-      problemType: problemType as ProblemType,
-      outcomePattern: outcomePattern as "success" | "failure",
-      frequency: records.length,
-      avgImpact: Math.round(avgImpact),
-      impactRange: {
-        min: Math.round(minImpact),
-        max: Math.round(maxImpact),
-      },
-      successRate: Math.round(successRate * 100) / 100,
-      itemIds: records.map((r) => r.id),
-    });
-  }
-
-  // Sort by frequency (descending) and limit to 20
-  return patterns.sort((a, b) => b.frequency - a.frequency).slice(0, 20);
-}
+// TODO: Restore this function once LearningRecord model is created in schema
+// /**
+//  * Detect patterns from learning records.
+//  * Learning records are more granular and focused on action outcomes.
+//  */
+// export function detectPatternsFromLearning(records: LearningRecord[]): DetectedPattern[] {
+//   if (records.length === 0) return [];
+//
+//   // Group by problemType and outcome pattern
+//   const candidates = new Map<string, LearningRecord[]>();
+//
+//   for (const record of records) {
+//     const outcome = record.success ? "success" : "failure";
+//     const key = `${record.problemType}:${outcome}`;
+//
+//     if (!candidates.has(key)) {
+//       candidates.set(key, []);
+//     }
+//     candidates.get(key)!.push(record);
+//   }
+//
+//   // Generate patterns from learning records
+//   const patterns: DetectedPattern[] = [];
+//   let patternCounter = 0;
+//
+//   for (const [key, records] of candidates.entries()) {
+//     if (records.length < 3) continue; // Minimum 3 occurrences
+//
+//     const [problemType, outcomePattern] = key.split(":");
+//
+//     const impacts = records.map((r) => Math.abs(typeof r.impact === 'string' ? parseInt(r.impact, 10) : r.impact || 0));
+//     const avgImpact = impacts.reduce((a, b) => a + b, 0) / impacts.length;
+//     const minImpact = Math.min(...impacts);
+//     const maxImpact = Math.max(...impacts);
+//
+//     // Calculate success rate
+//     const successCount = records.filter((r) => r.success).length;
+//     const successRate = (successCount / records.length) * 100;
+//
+//     patterns.push({
+//       patternId: `pattern-${patternCounter++}`,
+//       problemType: problemType as ProblemType,
+//       outcomePattern: outcomePattern as "success" | "failure",
+//       frequency: records.length,
+//       avgImpact: Math.round(avgImpact),
+//       impactRange: {
+//         min: Math.round(minImpact),
+//         max: Math.round(maxImpact),
+//       },
+//       successRate: Math.round(successRate * 100) / 100,
+//       itemIds: records.map((r) => r.id),
+//     });
+//   }
+//
+//   // Sort by frequency (descending) and limit to 20
+//   return patterns.sort((a, b) => b.frequency - a.frequency).slice(0, 20);
+// }
 
 export function detectPatterns(items: OperatorItem[]): DetectedPattern[] {
   // Filter to completed items only
