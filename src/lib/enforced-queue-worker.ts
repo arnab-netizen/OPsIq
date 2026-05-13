@@ -62,29 +62,7 @@ export async function withEnforcedQueueWorker(
       const ctx = requestContext.getContext()!;
 
       try {
-        // 2. Verify idempotency before processing
-        const existing = queueDurabilityEngine.checkIdempotency(job.idempotency_key);
-        if (existing) {
-          runtimeLogger.log({
-            level: "INFO",
-            category: "QUEUE",
-            message: `Job already processed (idempotent), returning cached result`,
-            correlation_id: ctx.correlation_id,
-            request_id: ctx.request_id,
-            workspace_id: job.workspace_id,
-            execution_id: job.execution_id,
-            context: {
-              job_id: job.job_id,
-              idempotency_key: job.idempotency_key,
-              cached_job_id: existing.job_id,
-            },
-            tags: ["queue_idempotent", "queue_deduplication"],
-          });
-
-          return existing.result;
-        }
-
-        // 3. Emit job started event
+        // 2. Emit job started event
         runtimeLogger.log({
           level: "INFO",
           category: "QUEUE",
@@ -102,7 +80,7 @@ export async function withEnforcedQueueWorker(
           tags: ["queue_job_start"],
         });
 
-        // 4. Execute processor with poison detection
+        // 3. Execute processor with poison detection
         let result: Record<string, unknown>;
         try {
           result = await processor(job);
@@ -159,7 +137,7 @@ export async function withEnforcedQueueWorker(
           throw error;
         }
 
-        // 5. Record completion
+        // 4. Record completion
         const durationMs = Date.now() - startTime;
         runtimeMetricsCollector.recordQueueLatency(durationMs);
 
@@ -179,7 +157,7 @@ export async function withEnforcedQueueWorker(
           tags: ["queue_job_success"],
         });
 
-        // 6. Emit execution completed event if execution_id present
+        // 5. Emit execution completed event if execution_id present
         if (job.execution_id) {
           executionEnforcer.emitExecutionCompleted(
             job.execution_id,
