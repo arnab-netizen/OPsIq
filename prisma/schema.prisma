@@ -160,6 +160,7 @@ model CanonicalEvent {
   createdAt                 DateTime @default(now()) @map("created_at")
 
   @@unique([idempotencyKey, workspaceId])
+  @@unique([aggregateId, aggregateType, workspaceId, eventNumber], map: "unique_event_number_per_aggregate")
   @@index([actorId])
   @@index([aggregateId, aggregateType, workspaceId])
   @@index([workspaceId, eventType])
