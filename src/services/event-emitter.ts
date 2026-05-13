@@ -99,7 +99,7 @@ export class EventEmitterService {
 
     try {
       event = await db.$transaction(
-        async (tx) => {
+        async (tx: any) => {
           // Step 0: Check for idempotent replay (atomic check within transaction)
           // This prevents duplicate events from concurrent requests with same idempotency key
           if (request.idempotencyKey) {
