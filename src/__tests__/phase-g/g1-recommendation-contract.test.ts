@@ -42,6 +42,7 @@ function makeCompleteRecommendation(overrides: Partial<Recommendation> = {}): Re
         timestamp: now,
         quote_or_measurement: "Measurement shows clear trend",
         freshness_days: 0,
+        confidence_weight: 0.9,
       },
     ],
     constraints_considered: [],
@@ -255,6 +256,7 @@ describe("PHASE G1-G2: Recommendation Contract Enforcement & Credibility", () =>
               timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
               quote_or_measurement: "Old measurement",
               freshness_days: 5, // > 1 day for emergency
+              confidence_weight: 0.6,
             },
           ],
         })
@@ -279,6 +281,7 @@ describe("PHASE G1-G2: Recommendation Contract Enforcement & Credibility", () =>
             timestamp: new Date(),
             quote_or_measurement: "p99 latency 250ms → 350ms",
             freshness_days: 1,
+            confidence_weight: 0.95,
           },
         ],
       });
@@ -294,6 +297,7 @@ describe("PHASE G1-G2: Recommendation Contract Enforcement & Credibility", () =>
             timestamp: new Date(),
             quote_or_measurement: "Caching usually helps",
             freshness_days: 0,
+            confidence_weight: 0.3,
           },
         ],
       });
@@ -317,6 +321,7 @@ describe("PHASE G1-G2: Recommendation Contract Enforcement & Credibility", () =>
             timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
             quote_or_measurement: "Data",
             freshness_days: 1,
+            confidence_weight: 0.85,
           },
         ],
       });
@@ -330,6 +335,7 @@ describe("PHASE G1-G2: Recommendation Contract Enforcement & Credibility", () =>
             timestamp: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 60 days ago
             quote_or_measurement: "Data",
             freshness_days: 60,
+            confidence_weight: 0.3,
           },
         ],
       });

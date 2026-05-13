@@ -76,7 +76,7 @@ export const ExecutionOutcomeSchema = z.object({
   ]),
   actual_duration_minutes: z.number().min(0),
   evidence_collected: z.array(z.string()),
-  kpi_movement: z.record(z.number()).optional(),
+  kpi_movement: z.record(z.string(), z.number()).optional(),
   notes: z.string().optional(),
   recorded_at: z.date(),
 });

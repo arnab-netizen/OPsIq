@@ -86,8 +86,18 @@ describe("PHASE H: Operational Execution Reality", () => {
     estimated_duration_minutes: 120,
     execution_complexity: "MODERATE",
     execution_energy_cost: 50,
+    required_tools: [],
+    required_people: [],
+    required_budget: 0,
+    dependencies: [],
+    blockers: [],
+    rollback_cost: 0,
+    rollback_time_minutes: 0,
     verification_method: "KPI measurement",
     success_metric: "Revenue +10%",
+    evidence_required: [],
+    execution_notes: [],
+    execution_attempts: 0,
     immutable: true,
   };
 

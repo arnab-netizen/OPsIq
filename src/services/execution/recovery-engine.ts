@@ -81,7 +81,7 @@ export function assessRecoveryNeeds(
 
     if (!dependencies_available) {
       recommended_recovery = "DEFER";
-      recovery_actions.clear();
+      recovery_actions.splice(0, recovery_actions.length);
       recovery_actions.push("Dependencies unavailable - defer execution");
       recovery_confidence = 0.5;
     }
