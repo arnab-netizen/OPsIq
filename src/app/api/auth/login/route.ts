@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { parseRequestBody } from "@/lib/validation";
 import { emitAuditEvent } from "@/infra/audit";
@@ -19,7 +20,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request) => {
   const { email, password } = await parseRequestBody(request, loginSchema);
 
   // Rate limit by IP + email to prevent brute force

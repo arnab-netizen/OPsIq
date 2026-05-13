@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -14,10 +15,10 @@ import {
 import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
-export const POST = withRequestContext(async (request, context) => {
+export const POST = withEnforcementFull(async (request, context, params) => {
   try {
     const workspaceId = request.headers.get("x-workspace-id") || "";
-    const { bundleId } = await context.params;
+    const { bundleId } = params;
     parseOrThrow(uuidSchema, bundleId);
 
     const authContext = await withAuth({
@@ -76,10 +77,10 @@ export const POST = withRequestContext(async (request, context) => {
   }
 });
 
-export const DELETE = withRequestContext(async (request, context) => {
+export const DELETE = withEnforcementFull(async (request, context, params) => {
   try {
     const workspaceId = request.headers.get("x-workspace-id") || "";
-    const { bundleId } = await context.params;
+    const { bundleId } = params;
     parseOrThrow(uuidSchema, bundleId);
 
     const authContext = await withAuth({

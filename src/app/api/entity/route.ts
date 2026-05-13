@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { createEntity, getEntities } from "@/services/entity/store";
 import { requireAuth } from "@/lib/auth-guard";
@@ -21,7 +23,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
 
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const entities = getEntities();
@@ -32,7 +34,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Enforce server-side auth
   const role = await resolveServerRole();
   if (!role) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   if (!canEdit(role)) {
@@ -60,7 +62,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   };
 
   // Get actor ID for audit
-  const session = await getSession();
+  const { session } = await withAuth();
   const actorId = session?.user.id ?? null;
 
   createEntity(entity);

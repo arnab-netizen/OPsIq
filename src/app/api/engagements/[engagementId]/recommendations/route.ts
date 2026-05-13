@@ -1,11 +1,12 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { getRecommendationsForEngagement } from "@/services/recommendation";
 import { assertEngagementAccess } from "@/lib/visibility";
 
-export const GET = withRequestContext(async (request, context) => {
+export const GET = withEnforcementFull(async (request, context, params) => {
   const workspaceId = request.headers.get("x-workspace-id") || "";
-  const { engagementId } = await context.params;
+  const { engagementId } = params;
   const { session } = await withAuth();
 
   await assertEngagementAccess(session.user.id, engagementId, workspaceId);

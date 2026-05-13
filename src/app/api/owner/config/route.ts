@@ -4,7 +4,8 @@
  * Owner-only access (requires workspace owner capability)
  */
 
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -55,7 +56,7 @@ const defaultConfig = (workspaceId: string, userId: string): OwnerDashboardConfi
 // In-memory store for demo (replace with DB in production)
 const configStore = new Map<string, OwnerDashboardConfig>();
 
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request) => {
   const { session } = await withAuth({
     capability: CAPABILITIES.OWNER_VIEW,
   });
@@ -71,7 +72,7 @@ export const GET = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {
@@ -90,7 +91,7 @@ export const GET = withRequestContext(async (request) => {
   }
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request) => {
   const { session } = await withAuth({
     capability: CAPABILITIES.OWNER_MANAGE,
   });
@@ -106,7 +107,7 @@ export const POST = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {

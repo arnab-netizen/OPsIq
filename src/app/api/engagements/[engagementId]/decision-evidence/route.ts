@@ -1,11 +1,12 @@
 import { getDecisionEvidence } from "@/services/decision-evidence/decision-evidence.service";
-import { withRequestContext } from "@/lib/api-handler";
+import type { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 
-export const GET = withRequestContext(async (request, context) => {
-  const { engagementId } = await context.params;
+export const GET = withEnforcementFull(async (request, context, params) => {
+  const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
 
   await withAuth({

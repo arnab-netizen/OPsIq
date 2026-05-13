@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -32,7 +33,7 @@ const listActionsSchema = paginationSchema.extend({
 
 const handleGet = async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
-  // Database initialization is guaranteed by getSession() in auth.ts
+  // Database initialization is guaranteed by auth middleware
   await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
 
   // Validate workspace membership (fail-closed)
@@ -43,7 +44,7 @@ const handleGet = async (request: NextRequest) => {
 
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const params = parseSearchParams(request.url, listActionsSchema);
@@ -54,7 +55,7 @@ const handleGet = async (request: NextRequest) => {
 
 const handlePost = async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
-  // Database initialization is guaranteed by getSession() in auth.ts
+  // Database initialization is guaranteed by auth middleware
   const authContext = await withAuth({
     capability: CAPABILITIES.ACTION_CREATE,
     internalOnly: true,
@@ -74,7 +75,7 @@ const handlePost = async (request: NextRequest) => {
 
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   // Check rate limiting: workspace requests/hour limit

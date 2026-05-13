@@ -14,7 +14,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   const workspace = await requireWorkspaceContext();
 
   // Get authenticated user for audit
-  const session = await getSession();
+  const { session } = await withAuth();
   const userId = session?.user.id ?? null;
 
   // Get period parameter from query

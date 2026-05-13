@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { runScenario } from "@/services/scenario/engine";
 import { resolveServerRole } from "@/services/auth/server-role";
@@ -10,11 +12,11 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Enforce server-side auth (scenario analysis affects decisions)
   const role = await resolveServerRole();
   if (!role) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   // Get actor ID for audit
-  const session = await getSession();
+  const { session } = await withAuth();
   const actorId = session?.user.id ?? null;
 
   const body = await request.json();

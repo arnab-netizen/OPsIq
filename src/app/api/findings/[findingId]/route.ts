@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -28,7 +29,7 @@ const updateFindingSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (request, context) => {
+export const GET = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   await withAuth({ capability: CAPABILITIES.FINDING_VIEW });
 
@@ -44,17 +45,17 @@ export const GET = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { findingId } = await context.params;
+  const { findingId } = params;
   parseOrThrow(uuidSchema, findingId);
 
   const finding = await getFindingDetail(findingId, undefined, undefined, workspaceId);
   return Response.json(finding);
 });
 
-export const PATCH = withRequestContext(async (request, context) => {
+export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.FINDING_UPDATE,
@@ -73,10 +74,10 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { findingId } = await context.params;
+  const { findingId } = params;
   parseOrThrow(uuidSchema, findingId);
 
   const body = await parseRequestBody(request, updateFindingSchema);

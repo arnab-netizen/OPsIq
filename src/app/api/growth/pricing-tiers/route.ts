@@ -1,6 +1,8 @@
+
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
-import { withRequestContext } from "@/lib/api-handler";
+
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { PricingEngine } from "@/services/growth/pricing-engine";
@@ -22,7 +24,7 @@ const createTierSchema = z.object({
  * Create a new price tier (workspace-scoped)
  * Wire: PricingEngine.createPriceTier()
  */
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request) => {
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
   });
@@ -38,7 +40,7 @@ export const POST = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {

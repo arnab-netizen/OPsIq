@@ -1,4 +1,5 @@
 import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import {
@@ -57,7 +58,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   const role = await resolveServerRole();
 
   if (!role) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   if (!canEdit(role)) {
@@ -69,7 +70,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   }
 
   // Get actor ID from session
-  const session = await getSession();
+  const { session } = await withAuth();
   const actorId = session?.user.id ?? null;
 
   // Check idempotency (need workspace context first)

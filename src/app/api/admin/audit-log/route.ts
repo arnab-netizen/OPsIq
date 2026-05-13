@@ -7,6 +7,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -22,7 +23,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   // Auth enforcement (AUDIT_VIEW capability)
   const { session, policy } = await withAuth({ capability: CAPABILITIES.AUDIT_VIEW });
   if (!session || !policy) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const workspaceId = request.headers.get("x-workspace-id");

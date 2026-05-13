@@ -8,7 +8,7 @@ import type { Prisma } from "@/generated/prisma/client";
 
 const handleGet = async (request: NextRequest, ctx: any, params: any) => {
   // Authenticate and authorize (fail-closed)
-  // Database initialization is guaranteed by getSession() in auth.ts
+  // Database initialization is guaranteed by auth middleware
   await withAuth({ capability: CAPABILITIES.AUDIT_VIEW });
 
   // Get workspace context (fail closed if missing)

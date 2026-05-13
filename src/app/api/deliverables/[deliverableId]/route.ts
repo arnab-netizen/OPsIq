@@ -1,11 +1,11 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { getDeliverableById } from "@/services/deliverable";
 import { NotFoundError } from "@/infra/errors";
 import type { NextRequest } from "next/server";
 
-export const GET = withRequestContext(async (request, context) => {
-  const { deliverableId } = await context.params;
+export const GET = withEnforcementFull(async (request, context, params) => {
+  const { deliverableId } = params;
   await withAuth();
 
   const nextRequest = request as NextRequest;

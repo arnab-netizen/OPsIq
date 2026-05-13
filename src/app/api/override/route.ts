@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { addOverride } from "@/services/override/store";
 import { getItems, applyOverride } from "@/services/operator/store";
 import { resolveServerRole } from "@/services/auth/server-role";
-import { getSession } from "@/services/auth";
 import { canEdit } from "@/services/auth/access";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { randomUUID } from "crypto";
@@ -29,16 +30,17 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       console.error(`Audit logging failed: ${auditError}`);
     });
 
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   if (!canEdit(role)) {
     // Log PERMISSION_DENIED audit event
+    // Note: userId is available from the session if needed, but role is just a string
     await logAuditEvent({
       eventName: "PERMISSION_DENIED",
       entityType: "OperatorItem",
       entityId: "unknown",
-      actorId: (await getSession())?.user.id ?? null,
+      actorId: null, // Would need session context to get actual userId
       role,
       before: null,
       after: null,
@@ -70,7 +72,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   }
 
   // Get actor ID for audit
-  const session = await getSession();
+  const { session } = await withAuth();
   const actorId = session?.user.id ?? null;
 
   // Check if override is allowed

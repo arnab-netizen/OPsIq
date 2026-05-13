@@ -1,4 +1,4 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -22,8 +22,8 @@ const deactivateContactSchema = z.object({
   action: z.literal("deactivate"),
 });
 
-export const PATCH = withRequestContext(async (request, context) => {
-  const { clientId, contactId } = await context.params;
+export const PATCH = withEnforcementFull(async (request, context, params) => {
+  const { clientId, contactId } = params;
   parseOrThrow(uuidSchema, clientId);
   parseOrThrow(uuidSchema, contactId);
   const authContext = await withAuth({
@@ -46,8 +46,8 @@ export const PATCH = withRequestContext(async (request, context) => {
   return Response.json({ status: "updated" });
 });
 
-export const DELETE = withRequestContext(async (request, context) => {
-  const { clientId, contactId } = await context.params;
+export const DELETE = withEnforcementFull(async (request, context, params) => {
+  const { clientId, contactId } = params;
   parseOrThrow(uuidSchema, clientId);
   parseOrThrow(uuidSchema, contactId);
   const authContext = await withAuth({

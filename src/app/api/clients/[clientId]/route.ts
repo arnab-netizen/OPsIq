@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -29,7 +30,7 @@ const archiveSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (request, context) => {
+export const GET = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { policy } = await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
 
@@ -45,17 +46,17 @@ export const GET = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { clientId } = await context.params;
+  const { clientId } = params;
   parseOrThrow(uuidSchema, clientId);
 
   const client = await getClientById(clientId, workspaceId);
   return Response.json(client);
 });
 
-export const PATCH = withRequestContext(async (request, context) => {
+export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_UPDATE,
@@ -74,10 +75,10 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { clientId } = await context.params;
+  const { clientId } = params;
   parseOrThrow(uuidSchema, clientId);
 
   const body = await parseRequestBody(request, updateClientSchema);
@@ -87,7 +88,7 @@ export const PATCH = withRequestContext(async (request, context) => {
   return Response.json(updated);
 });
 
-export const POST = withRequestContext(async (request, context) => {
+export const POST = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_ARCHIVE,
@@ -106,7 +107,7 @@ export const POST = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const idempotencyKey = request.headers.get("idempotency-key");
@@ -117,7 +118,7 @@ export const POST = withRequestContext(async (request, context) => {
     );
   }
 
-  const { clientId } = await context.params;
+  const { clientId } = params;
   parseOrThrow(uuidSchema, clientId);
 
   const body = await parseRequestBody(request, archiveSchema);

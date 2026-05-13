@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { updateActionStatus } from "@/services/action";
 import { parseRequestBody } from "@/lib/validation";
@@ -16,9 +17,9 @@ const updateActionSchema = z.object({
   version: z.number().int(),
 });
 
-export const PATCH = withRequestContext(async (request, context) => {
+export const PATCH = withEnforcementFull(async (request, context, params) => {
   const workspaceId = request.headers.get("x-workspace-id") || "";
-  const { actionId } = await context.params;
+  const { actionId } = params;
   const { session, policy } = await withAuth();
   const body = await parseRequestBody(request, updateActionSchema);
 

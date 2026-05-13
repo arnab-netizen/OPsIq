@@ -1,4 +1,4 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { linkEvidenceToFinding, unlinkEvidenceFromFinding } from "@/services/findings";
@@ -15,8 +15,8 @@ const unlinkEvidenceSchema = z.object({
   evidenceId: z.string().uuid(),
 });
 
-export const POST = withRequestContext(async (request, context) => {
-  const { findingId } = await context.params;
+export const POST = withEnforcementFull(async (request, context, params) => {
+  const { findingId } = params;
   parseOrThrow(uuidSchema, findingId);
 
   const nextRequest = request as NextRequest;
@@ -61,8 +61,8 @@ export const POST = withRequestContext(async (request, context) => {
   }
 });
 
-export const DELETE = withRequestContext(async (request, context) => {
-  const { findingId } = await context.params;
+export const DELETE = withEnforcementFull(async (request, context, params) => {
+  const { findingId } = params;
   parseOrThrow(uuidSchema, findingId);
 
   const nextRequest = request as NextRequest;

@@ -1,4 +1,4 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getOwnerDashboard } from "@/services/owner-dashboard.service";
@@ -6,8 +6,8 @@ import { assertEngagementAccess } from "@/lib/visibility";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import type { NextRequest } from "next/server";
 
-export const GET = withRequestContext(async (request, context) => {
-  const { engagementId } = await context.params;
+export const GET = withEnforcementFull(async (request, context, params) => {
+  const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
   const { session, policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 

@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -25,7 +26,7 @@ const removeMemberSchema = z.object({
   role: z.enum(roleValues),
 });
 
-export const GET = withRequestContext(async (request, context) => {
+export const GET = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true });
 
@@ -41,17 +42,17 @@ export const GET = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { userId } = await context.params;
+  const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
   const memberships = await getMembershipsForUser(userId, workspaceId);
   return Response.json({ memberships });
 });
 
-export const POST = withRequestContext(async (request, context) => {
+export const POST = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
@@ -79,10 +80,10 @@ export const POST = withRequestContext(async (request, context) => {
 
   const membershipCheck = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membershipCheck) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { userId } = await context.params;
+  const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, addMemberSchema);
@@ -115,7 +116,7 @@ export const POST = withRequestContext(async (request, context) => {
   }
 });
 
-export const DELETE = withRequestContext(async (request, context) => {
+export const DELETE = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
@@ -134,10 +135,10 @@ export const DELETE = withRequestContext(async (request, context) => {
 
   const membershipCheck = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membershipCheck) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { userId } = await context.params;
+  const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, removeMemberSchema);

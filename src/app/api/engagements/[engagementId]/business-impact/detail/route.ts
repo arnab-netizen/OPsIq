@@ -1,4 +1,4 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -33,8 +33,8 @@ interface DetailResponse {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export const GET = withRequestContext(async (request, context) => {
-  const { engagementId } = await context.params;
+export const GET = withEnforcementFull(async (request, context, params) => {
+  const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
 
   const { session } = await withAuth({

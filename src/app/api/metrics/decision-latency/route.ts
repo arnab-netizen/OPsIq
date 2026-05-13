@@ -42,7 +42,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   const workspace = await requireWorkspaceContext();
 
   // Get session for audit logging
-  const session = await getSession();
+  const { session } = await withAuth();
   const userId = session?.user?.id ?? null;
 
   // Calculate date range: last N days

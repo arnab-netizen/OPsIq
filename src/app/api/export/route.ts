@@ -14,6 +14,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -42,7 +43,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   // Verify workspace membership
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   // Get format from query parameters
@@ -141,7 +142,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Verify membership
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   // Validate request body

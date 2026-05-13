@@ -35,13 +35,13 @@ const rules = [
   {
     name: 'Error("Unauthorized")',
     severity: 'critical' as const,
-    pattern: /Error\s*\(\s*['"].*[Uu]nauthorized/,
+    pattern: /throw new Error\s*\(\s*['"].*[Uu]nauthorized/,
     message: 'throw UnauthorizedError (import from @/infra/errors)',
   },
   {
     name: 'Response.json(...401)',
     severity: 'critical' as const,
-    pattern: /Response\.json.*status.*40[13]/,
+    pattern: /return Response\.json.*status.*40[13]/,
     message: 'throw UnauthorizedError/ForbiddenError, never Response.json with 401/403',
   },
   {

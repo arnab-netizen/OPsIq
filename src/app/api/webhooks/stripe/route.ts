@@ -1,4 +1,5 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import {
   verifyWebhookSignature,
   checkSignatureTimestamp,
@@ -65,10 +66,7 @@ export const POST = withEnforcementFull(async (request: Request) => {
       logger.warn("Webhook signature verification failed", {
         error: error instanceof Error ? error.message : "unknown error",
       });
-      return Response.json(
-        { error: "Invalid signature" },
-        { status: 401 }
-      );
+      throw new UnauthorizedError("Invalid signature");
     }
 
     // Step 3: Check signature timestamp tolerance (replay protection)
@@ -78,10 +76,7 @@ export const POST = withEnforcementFull(async (request: Request) => {
       logger.warn("Webhook replay protection check failed", {
         error: error instanceof Error ? error.message : "unknown error",
       });
-      return Response.json(
-        { error: "Invalid timestamp" },
-        { status: 401 }
-      );
+      throw new UnauthorizedError("Invalid timestamp");
     }
 
     // Step 4: Validate event structure

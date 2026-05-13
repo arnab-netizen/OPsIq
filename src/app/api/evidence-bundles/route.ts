@@ -38,7 +38,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
     const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
     if (!membership) {
-      return Response.json({ error: "Unauthorized" }, { status: 403 });
+      throw new ForbiddenError("Unauthorized");
     }
 
     const idempotencyKey = request.headers.get("idempotency-key");
@@ -98,7 +98,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
 
     const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
     if (!membership) {
-      return Response.json({ error: "Unauthorized" }, { status: 403 });
+      throw new ForbiddenError("Unauthorized");
     }
 
     const params = parseSearchParams(request.url, listBundlesSchema);

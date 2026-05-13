@@ -7,6 +7,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -24,7 +25,7 @@ export const GET = withEnforcementFull(
       capability: CAPABILITIES.SYSTEM_ADMIN,
     });
     if (!session || !policy) {
-      throw new Error("Unauthorized");
+      throw new UnauthorizedError("Unauthorized");
     }
 
     const workspaceId = params.id;

@@ -1,11 +1,11 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { listFindingsForEngagement } from "@/services/findings";
 import { assertEngagementAccess } from "@/lib/visibility";
 import type { NextRequest } from "next/server";
 
-export const GET = withRequestContext(async (request, context) => {
-  const { engagementId } = await context.params;
+export const GET = withEnforcementFull(async (request, context, params) => {
+  const { engagementId } = params;
   const { session } = await withAuth();
 
   const nextRequest = request as NextRequest;

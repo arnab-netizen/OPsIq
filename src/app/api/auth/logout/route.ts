@@ -1,12 +1,14 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
+import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { getSession, getSessionCookieName, revokeSession } from "@/services/auth";
 import { cookies } from "next/headers";
 
-export const POST = withRequestContext(async () => {
-  const session = await getSession();
+export const POST = withEnforcementFull(async () => {
+  const { session } = await withAuth();
 
   if (session) {
     // Soft-revoke via service layer

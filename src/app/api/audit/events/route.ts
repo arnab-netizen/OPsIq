@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -18,7 +19,7 @@ const auditQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request) => {
   await withAuth({ capability: CAPABILITIES.SYSTEM_VIEW_AUDIT, internalOnly: true });
 
   const nextRequest = request as NextRequest;
@@ -32,7 +33,7 @@ export const GET = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const params = parseSearchParams(request.url, auditQuerySchema);

@@ -6,6 +6,7 @@
  */
 
 import { NextRequest } from "next/server";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -50,7 +51,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   // Verify user is member of workspace (fail-closed)
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const tier = getSubscriptionTier(workspaceId);
@@ -80,7 +81,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Verify user is member of workspace (fail-closed)
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const body = await request.json();

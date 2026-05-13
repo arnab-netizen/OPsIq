@@ -1,4 +1,5 @@
 import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { runSystem } from "@/services/system/run";
@@ -74,7 +75,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     });
 
     // Get session for user identity
-    const session = await getSession();
+    const { session } = await withAuth();
     userId = session?.user.id ?? null;
 
     // Enforce server-side auth
@@ -97,7 +98,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
 
-      throw new Error("Unauthorized");
+      throw new UnauthorizedError("Unauthorized");
     }
 
     if (!canEdit(role)) {

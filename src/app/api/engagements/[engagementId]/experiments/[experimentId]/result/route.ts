@@ -3,7 +3,8 @@
  * Record experiment result and transition to analyzed
  */
 
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -47,8 +48,8 @@ function toExperimentDTO(exp: Experiment) {
   };
 }
 
-export const POST = withRequestContext(async (request, context) => {
-  const { experimentId } = await context.params;
+export const POST = withEnforcementFull(async (request, context, params) => {
+  const { experimentId } = params;
 
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
@@ -65,7 +66,7 @@ export const POST = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {

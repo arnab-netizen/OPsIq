@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { requireAuthForCapability } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -26,7 +27,7 @@ export const POST = withEnforcementFull(
     // Enforce workspace membership
     const membership = await enforceWorkspaceScoping(request, workspaceId);
     if (!membership) {
-      throw new Error("Unauthorized");
+      throw new UnauthorizedError("Unauthorized");
     }
 
     // Enforce DECISION_ACCEPT capability (same as accept - owner decision authority)

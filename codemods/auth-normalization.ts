@@ -18,10 +18,10 @@ export default function transformer(fileInfo: any, api: any) {
   // Transform 1: Replace withRequestContext import
   root
     .find(j.ImportDeclaration)
-    .filter((path) => {
+    .filter((path: any) => {
       return path.value.source.value === '@/lib/api-handler';
     })
-    .forEach((path) => {
+    .forEach((path: any) => {
       path.value.source.value = '@/lib/enforced-route';
       const spec = path.value.specifiers?.[0];
       if (spec && spec.type === 'ImportSpecifier') {
@@ -34,7 +34,7 @@ export default function transformer(fileInfo: any, api: any) {
   // Transform 2: Ensure NextRequest type is imported
   const hasNextRequestImport = root
     .find(j.ImportDeclaration)
-    .some((path) => {
+    .some((path: any) => {
       return (
         path.value.source.value === 'next/server' &&
         path.value.specifiers?.some(
@@ -59,7 +59,7 @@ export default function transformer(fileInfo: any, api: any) {
   // Transform 3: Ensure error imports
   const hasErrorImports = root
     .find(j.ImportDeclaration)
-    .some((path) => {
+    .some((path: any) => {
       return (
         path.value.source.value === '@/infra/errors' &&
         path.value.specifiers?.some(
@@ -88,7 +88,7 @@ export default function transformer(fileInfo: any, api: any) {
   // Transform 4: Replace withRequestContext handlers
   root
     .find(j.ExportNamedDeclaration)
-    .filter((path) => {
+    .filter((path: any) => {
       const declaration = path.value.declaration;
       return (
         declaration &&
@@ -96,7 +96,7 @@ export default function transformer(fileInfo: any, api: any) {
         declaration.declarations[0]?.init?.callee?.name === 'withRequestContext'
       );
     })
-    .forEach((path) => {
+    .forEach((path: any) => {
       const declaration = path.value.declaration as any;
       const varDecl = declaration.declarations[0];
       if (varDecl.init?.callee?.name === 'withRequestContext') {
@@ -134,7 +134,7 @@ export default function transformer(fileInfo: any, api: any) {
   // Transform 5: Replace Response.json with 401/403 with throw statements
   root
     .find(j.CallExpression)
-    .filter((path) => {
+    .filter((path: any) => {
       const callee = path.value.callee;
       if (
         callee.type === 'MemberExpression' &&
@@ -156,7 +156,7 @@ export default function transformer(fileInfo: any, api: any) {
       }
       return false;
     })
-    .replaceWith((path) => {
+    .replaceWith((path: any) => {
       // Get the status code
       const args = path.value.arguments;
       const secondArg = args[1] as any;
@@ -183,11 +183,11 @@ export default function transformer(fileInfo: any, api: any) {
   root
     .find(j.NewExpression)
     .filter(
-      (path) =>
+      (path: any) =>
         path.value.callee.name === 'Error' &&
         path.value.arguments[0]?.value?.includes('nauthorized')
     )
-    .forEach((path) => {
+    .forEach((path: any) => {
       path.value.callee.name = 'UnauthorizedError';
       hasChanges = true;
     });

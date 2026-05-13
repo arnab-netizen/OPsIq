@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { getSession } from "@/services/auth";
 import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
@@ -24,9 +26,9 @@ type FailDecisionInput = z.infer<typeof FailDecisionSchema>;
  */
 export const POST = withEnforcementFull(
   async (request: NextRequest, ctx, params) => {
-    const session = await getSession();
+    const { session } = await withAuth();
     if (!session?.user?.id) {
-      throw new Error("Unauthorized");
+      throw new UnauthorizedError("Unauthorized");
     }
 
     const userId = session.user.id;
@@ -41,7 +43,7 @@ export const POST = withEnforcementFull(
     // Enforce workspace scoping
     const membership = await enforceWorkspaceScoping(request, workspaceId);
     if (!membership) {
-      throw new Error("Unauthorized or invalid workspace");
+      throw new UnauthorizedError("Unauthorized or invalid workspace");
     }
 
     // Check permission to mark decisions as failed

@@ -31,7 +31,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const url = new URL(request.url);
@@ -80,7 +80,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const body = await parseRequestBody(request, createDeliverableSchema);

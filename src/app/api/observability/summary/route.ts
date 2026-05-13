@@ -16,7 +16,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   const logger = createEventLogger("api_observability_summary", workspace.workspaceId);
 
   // Get session for user identity
-  const session = await getSession();
+  const { session } = await withAuth();
   const userId = session?.user.id ?? null;
 
   // Get observability summary from persisted real data only

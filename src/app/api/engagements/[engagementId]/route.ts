@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -32,7 +33,7 @@ const updateEngagementSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (request, context) => {
+export const GET = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
@@ -48,10 +49,10 @@ export const GET = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { engagementId } = await context.params;
+  const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
 
   await assertEngagementAccess(session.user.id, engagementId, workspaceId);
@@ -60,7 +61,7 @@ export const GET = withRequestContext(async (request, context) => {
   return Response.json(engagement);
 });
 
-export const PATCH = withRequestContext(async (request, context) => {
+export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
@@ -79,10 +80,10 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { engagementId } = await context.params;
+  const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
 
   await assertEngagementAccess(session.user.id, engagementId, workspaceId);

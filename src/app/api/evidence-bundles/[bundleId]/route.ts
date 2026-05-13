@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -12,7 +13,7 @@ import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import type { NextRequest } from "next/server";
 
-export const GET = withRequestContext(async (request, context) => {
+export const GET = withEnforcementFull(async (request, context, params) => {
   try {
     // Authenticate + authorize (fail-closed)
     await withAuth({
@@ -31,10 +32,10 @@ export const GET = withRequestContext(async (request, context) => {
 
     const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
     if (!membership) {
-      return Response.json({ error: "Unauthorized" }, { status: 403 });
+      throw new ForbiddenError("Unauthorized");
     }
 
-    const { bundleId } = await context.params;
+    const { bundleId } = params;
     parseOrThrow(uuidSchema, bundleId);
 
     const result = await getEvidenceBundleById(bundleId, workspaceId);
@@ -46,7 +47,7 @@ export const GET = withRequestContext(async (request, context) => {
   }
 });
 
-export const PUT = withRequestContext(async (request, context) => {
+export const PUT = withEnforcementFull(async (request, context, params) => {
   try {
     // Authenticate + authorize (fail-closed)
     const authContext = await withAuth({
@@ -65,10 +66,10 @@ export const PUT = withRequestContext(async (request, context) => {
 
     const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
     if (!membership) {
-      return Response.json({ error: "Unauthorized" }, { status: 403 });
+      throw new ForbiddenError("Unauthorized");
     }
 
-    const { bundleId } = await context.params;
+    const { bundleId } = params;
     parseOrThrow(uuidSchema, bundleId);
 
     const body = await parseRequestBody(request, updateEvidenceBundleSchema);

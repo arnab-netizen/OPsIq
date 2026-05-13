@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { getSession } from "@/services/auth";
 import { db } from "@/lib/db";
@@ -24,9 +26,9 @@ type IntakeInput = z.infer<typeof IntakeSchema>;
  * Future: webhook, email parser, CSV upload will use this.
  */
 export const POST = withEnforcementFull(async (request: NextRequest) => {
-  const session = await getSession();
+  const { session } = await withAuth();
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const userId = session.user.id;
@@ -53,7 +55,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     // Verify user is member of specified workspace
     const membership = await enforceWorkspaceScoping(request, queryWorkspaceId);
     if (!membership) {
-      throw new Error("Unauthorized or invalid workspace");
+      throw new UnauthorizedError("Unauthorized or invalid workspace");
     }
     workspaceId = queryWorkspaceId;
   }

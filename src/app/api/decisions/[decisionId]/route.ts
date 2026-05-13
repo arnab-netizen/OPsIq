@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { getSession } from "@/services/auth";
 import {
@@ -24,9 +26,9 @@ type UpdateDecisionInput = z.infer<typeof UpdateDecisionSchema>;
 
 export const PATCH = withEnforcementFull(
   async (request: NextRequest, ctx, params) => {
-    const session = await getSession();
+    const { session } = await withAuth();
     if (!session?.user?.id) {
-      throw new Error("Unauthorized");
+      throw new UnauthorizedError("Unauthorized");
     }
 
     const userId = session.user.id;
@@ -41,7 +43,7 @@ export const PATCH = withEnforcementFull(
     // Enforce workspace scoping
     const membership = await enforceWorkspaceScoping(request, workspaceId);
     if (!membership) {
-      throw new Error("Unauthorized or invalid workspace");
+      throw new UnauthorizedError("Unauthorized or invalid workspace");
     }
 
     // Fetch decision to check current state

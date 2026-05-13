@@ -1,4 +1,6 @@
 import { withEnforcement } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
 import { getItems } from "@/services/operator/store";
 import { computeCalibration, computeCalibrationBySegment } from "@/services/calibration/engine";
 import { resolveServerRole } from "@/services/auth/server-role";
@@ -11,7 +13,7 @@ export const GET = withEnforcement(async () => {
   const role = await resolveServerRole();
 
   if (!role) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   if (!canView(role)) {
@@ -19,7 +21,7 @@ export const GET = withEnforcement(async () => {
   }
 
   // Get actor ID from session
-  const session = await getSession();
+  const { session } = await withAuth();
   const actorId = session?.user.id ?? null;
 
   // Fetch all items

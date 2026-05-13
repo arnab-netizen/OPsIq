@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { db } from "@/lib/db";
 import { getSession } from "@/services/auth";
@@ -13,9 +15,9 @@ const CreateWorkspaceSchema = z.object({
 type CreateWorkspaceInput = z.infer<typeof CreateWorkspaceSchema>;
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
-  const session = await getSession();
+  const { session } = await withAuth();
   if (!session?.user?.id) {
-    throw new Error("Unauthorized");
+    throw new UnauthorizedError("Unauthorized");
   }
 
   const body = await request.json();
