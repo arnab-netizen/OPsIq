@@ -102,9 +102,11 @@ export type LoadTestResult = z.infer<typeof LoadTestResultSchema>;
  * Simulate a single request with mock latency
  */
 export function simulateRequest(operationType: string): LoadTestRequest {
-  const baseLatency = 10 + Math.random() * 90;
-  const jitter = operationType === 'list' || operationType === 'search' ? Math.random() * 40 : 0;
-  const latency = baseLatency + jitter;
+  // Use normal-ish distribution: base 50ms + jitter ±30ms
+  const baseLatency = 50;
+  const jitter = (Math.random() + Math.random() + Math.random()) * 20 - 30;
+  const operationMultiplier = operationType === 'list' || operationType === 'search' ? 1.2 : 1.0;
+  const latency = (baseLatency + jitter) * operationMultiplier;
   const simulatedError = Math.random() < 0.05; // 5% error rate
 
   return {
