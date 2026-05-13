@@ -1,3 +1,4 @@
+import { withEnforcementFull } from "@/lib/enforced-route";
 import {
   verifyWebhookSignature,
   checkSignatureTimestamp,
@@ -46,7 +47,7 @@ import { logger } from "@/infra/logger";
  * - Dead-letter events return 400 (no more retries)
  * - Alert to ops for manual investigation
  */
-export async function POST(request: Request) {
+export const POST = withEnforcementFull(async (request: Request) => {
   try {
     // Step 1: Get raw body for signature verification
     const body = await request.text();
@@ -220,18 +221,15 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Health check endpoint
  */
-export async function GET(request: Request) {
-  return Response.json(
-    {
-      service: "stripe-webhook",
-      status: "ready",
-      path: "/api/webhooks/stripe",
-    },
-    { status: 200 }
-  );
-}
+export const GET = withEnforcementFull(async (request: Request) => {
+  return {
+    service: "stripe-webhook",
+    status: "ready",
+    path: "/api/webhooks/stripe",
+  };
+});

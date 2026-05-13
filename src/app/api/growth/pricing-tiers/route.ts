@@ -1,3 +1,4 @@
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { withRequestContext } from "@/lib/api-handler";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -71,18 +72,10 @@ export const POST = withRequestContext(async (request) => {
 });
 
 /**
- * POST /api/growth/pricing-tiers/optimize
+ * OPTIONS /api/growth/pricing-tiers
  *
- * Get price optimization recommendation for a tier
- * Wire: PricingEngine.optimizePrice()
+ * CORS preflight for optimize endpoint
  */
-export async function OPTIONS(request: NextRequest) {
-  // Support CORS preflight for optimize endpoint
-  return new Response(null, {
-    status: 200,
-    headers: {
-      "Access-Control-Allow-Methods": "POST",
-      "Access-Control-Allow-Headers": "Content-Type",
-    },
-  });
-}
+export const OPTIONS = withEnforcementFull(async (request: NextRequest) => {
+  return { status: 200 };
+});
