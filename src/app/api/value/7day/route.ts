@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 
@@ -27,6 +29,10 @@ interface SevenDayImpact {
 }
 
 export const GET = withEnforcementFull(async (request: NextRequest) => {
+  // Authenticate and authorize (fail-closed)
+  // Require engagement view permission to see workspace metrics
+  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+
   // Get workspace context (fail closed if missing)
   const workspace = await requireWorkspaceContext();
 

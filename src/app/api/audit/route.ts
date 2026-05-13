@@ -1,10 +1,15 @@
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { queryAuditEvents } from "@/infra/audit";
 import type { Prisma } from "@/generated/prisma/client";
 
 export const GET = withEnforcementFull(async (request, ctx, params) => {
+  // Authenticate and authorize (fail-closed)
+  await withAuth({ capability: CAPABILITIES.AUDIT_VIEW });
+
   // Get workspace context (fail closed if missing)
   const workspace = await requireWorkspaceContext();
 

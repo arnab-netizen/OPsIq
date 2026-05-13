@@ -7,6 +7,7 @@
 
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
 import { z } from "zod";
 import {
   sendNotification,
@@ -39,11 +40,17 @@ const ListNotificationsSchema = z.object({
  * Send a notification
  */
 export const POST = withEnforcementFull(async (request: NextRequest) => {
+  // Authenticate (fail-closed)
+  await withAuth();
+
   const body = await request.json();
   const parsed = SendNotificationSchema.parse(body);
 
-  // Extract workspace from auth context (would be middleware-injected in production)
-  const workspaceId = request.headers.get("x-workspace-id") || "default";
+  // Extract workspace from auth context (fail closed if missing)
+  const workspaceId = request.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    throw new Error("Workspace ID required (x-workspace-id header)");
+  }
 
   const notification = await sendNotification({
     ...parsed,
@@ -61,6 +68,9 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
  * List user notifications
  */
 export const GET = withEnforcementFull(async (request: NextRequest) => {
+  // Authenticate (fail-closed)
+  await withAuth();
+
   const params = {
     limit: request.nextUrl.searchParams.get("limit")
       ? parseInt(request.nextUrl.searchParams.get("limit")!)
@@ -73,8 +83,11 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
 
   const parsed = ListNotificationsSchema.parse(params);
 
-  // Extract workspace and user from auth context
-  const workspaceId = request.headers.get("x-workspace-id") || "default";
+  // Extract workspace and user from auth context (fail closed if missing)
+  const workspaceId = request.headers.get("x-workspace-id");
+  if (!workspaceId) {
+    throw new Error("Workspace ID required (x-workspace-id header)");
+  }
   const userId = request.headers.get("x-user-id") || "anonymous";
 
   const result = await listUserNotifications(workspaceId, userId, parsed);
