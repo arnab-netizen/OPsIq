@@ -93,6 +93,10 @@ model Recommendation {
   priority String?
   createdBy String?
   status String?
+  evidenceValidationScore Int?
+  reliabilityLevel String?
+  kpiHealthScore Int?
+  kpiRiskLevel String?
   createdAt DateTime?
   updatedAt DateTime?
 

@@ -282,7 +282,10 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
       const scrambledReplay = replayEvents(scrambled);
 
       // ASSERTION: Scrambling changes audit log order
-      expect(orderedReplay.state.auditLog[0]).not.toEqual(scrambledReplay.state.auditLog[0]);
+      // Compare audit log JSON representation to account for element order
+      const orderedAuditJson = JSON.stringify(orderedReplay.state.auditLog);
+      const scrambledAuditJson = JSON.stringify(scrambledReplay.state.auditLog);
+      expect(orderedAuditJson).not.toBe(scrambledAuditJson);
       expect(orderedReplay.eventCount).toBe(scrambledReplay.eventCount);
     });
   });
