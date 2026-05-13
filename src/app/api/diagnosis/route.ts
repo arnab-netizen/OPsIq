@@ -1,10 +1,12 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { diagnoseBusiness, validateBusinessProblem } from "@/services/diagnosis";
 import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 const diagnosisSchema = z.object({
   businessName: z.string().min(1, "Business name is required"),
@@ -23,7 +25,7 @@ const diagnosisSchema = z.object({
   customerCount: z.number().min(0).optional(),
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
   const authContext = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_CREATE,
     internalOnly: true,

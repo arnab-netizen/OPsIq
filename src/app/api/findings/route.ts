@@ -1,4 +1,4 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -14,6 +14,7 @@ import {
 import type { NextRequest } from "next/server";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 const createFindingSchema = z.object({
   engagementId: z.string().uuid(),
@@ -31,7 +32,7 @@ const createFindingSchema = z.object({
   dueAt: z.string().optional(),
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.FINDING_CREATE,

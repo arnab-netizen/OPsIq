@@ -1,4 +1,4 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -8,6 +8,7 @@ import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError 
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import type { NextRequest } from "next/server";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 const createEvidenceSchema = z.object({
   engagementId: z.string().uuid(),
@@ -23,7 +24,7 @@ const listEvidenceSchema = paginationSchema.extend({
   status: z.string().optional(),
 });
 
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   await withAuth({ capability: CAPABILITIES.EVIDENCE_VIEW });
 
@@ -48,7 +49,7 @@ export const GET = withRequestContext(async (request) => {
   return Response.json(result);
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   const authContext = await withAuth({
     capability: CAPABILITIES.EVIDENCE_SUBMIT,

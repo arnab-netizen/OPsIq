@@ -1,11 +1,12 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { generateReport } from "@/services/report/engine";
 import type { NextRequest } from "next/server";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request: NextRequest) => {
   try {
     await withAuth({ capability: CAPABILITIES.SYSTEM_VIEW_AUDIT, internalOnly: true });
 
