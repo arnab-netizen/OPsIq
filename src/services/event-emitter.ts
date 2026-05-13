@@ -39,11 +39,30 @@ export interface EmittedEvent {
   recordedAt: Date;
 }
 
+function isEventPayload(data: unknown): data is EventPayload {
+  if (typeof data !== "object" || data === null) {
+    return false;
+  }
+  for (const value of Object.values(data)) {
+    if (value !== undefined && typeof value !== "string") {
+      return false;
+    }
+  }
+  return true;
+}
+
 export class EventEmitterService {
   /**
-   * Emit an event to the canonical event store
-   * Enforces idempotency via idempotencyKey
-   * Returns the emitted event or existing event if idempotent replay
+   * Emit an event to the canonical event store with atomic serialization
+   * CRITICAL: Uses transaction with Serializable isolation to prevent concurrent
+   * eventNumber allocation race conditions
+   *
+   * Guarantees:
+   * - Monotonic eventNumber per aggregate (no gaps, no duplicates)
+   * - Deterministic replay order
+   * - Idempotency via idempotencyKey
+   * - Append-only invariant maintained
+   * - Workspace isolation enforced
    */
   static async emit(request: EmitEventRequest): Promise<EmittedEvent> {
     // Validate workspace is not empty
@@ -111,47 +130,77 @@ export class EventEmitterService {
       }
     }
 
-    // Get next event number for this aggregate
-    const lastEvent = await db.canonicalEvent.findFirst({
-      where: {
-        aggregateId: request.aggregateId,
-        aggregateType: request.aggregateType,
-        workspaceId: request.workspaceId,
+    // ATOMIC SERIALIZED EVENT NUMBER ALLOCATION
+    // Uses transaction with Serializable isolation level to ensure:
+    // - No two concurrent requests calculate the same eventNumber
+    // - No gaps in event sequence
+    // - Deterministic ordering preserved
+    const event = await db.$transaction(
+      async (tx) => {
+        // Step 1: Acquire aggregate lock (serial point)
+        // This ensures only one transaction at a time can allocate eventNumbers for this aggregate
+        await tx.$executeRaw`
+          INSERT INTO aggregate_locks (aggregate_id, aggregate_type, workspace_id, version)
+          VALUES (${request.aggregateId}, ${request.aggregateType}, ${request.workspaceId}, 0)
+          ON CONFLICT (aggregate_id, aggregate_type, workspace_id)
+          DO UPDATE SET version = version + 1
+        `;
+
+        // Step 2: Within locked transaction, find the last event number
+        // No other transaction can modify this aggregate's events until we commit
+        const lastEvent = await tx.canonicalEvent.findFirst({
+          where: {
+            aggregateId: request.aggregateId,
+            aggregateType: request.aggregateType,
+            workspaceId: request.workspaceId,
+          },
+          orderBy: { eventNumber: "desc" },
+          select: { eventNumber: true },
+        });
+
+        const nextEventNumber = (lastEvent?.eventNumber ?? 0) + 1;
+
+        // Step 3: Create event with guaranteed unique eventNumber
+        const newEvent = await tx.canonicalEvent.create({
+          data: {
+            aggregateId: request.aggregateId,
+            aggregateType: request.aggregateType,
+            eventType: request.eventType,
+            eventVersion: request.eventVersion,
+            eventNumber: nextEventNumber,
+            payload: request.payload,
+            actorId: request.actorId,
+            workspaceId: request.workspaceId,
+            causationId,
+            correlationId,
+            idempotencyKey: request.idempotencyKey,
+            visibilityScope: request.visibilityScope || "internal",
+            sensitivityClassification: request.sensitivityClassification || "standard",
+            occurredAt: new Date(),
+            recordedAt: new Date(),
+          },
+        });
+
+        logger.info("EventEmitterService: Event emitted (atomic serialized)", {
+          eventId: newEvent.id,
+          eventNumber: nextEventNumber,
+          aggregateId: request.aggregateId,
+          workspaceId: request.workspaceId,
+        });
+
+        return newEvent;
       },
-      orderBy: { eventNumber: "desc" },
-      select: { eventNumber: true },
-    });
+      {
+        isolationLevel: "Serializable",
+        timeout: 10000, // 10 second timeout for deadlock/contention
+        maxWait: 5000,  // Max 5 seconds waiting for transaction slot
+      }
+    );
 
-    const nextEventNumber = (lastEvent?.eventNumber ?? 0) + 1;
-
-    // Create the event
-    const event = await db.canonicalEvent.create({
-      data: {
-        aggregateId: request.aggregateId,
-        aggregateType: request.aggregateType,
-        eventType: request.eventType,
-        eventVersion: request.eventVersion,
-        eventNumber: nextEventNumber,
-        payload: request.payload,
-        actorId: request.actorId,
-        workspaceId: request.workspaceId,
-        causationId,
-        correlationId,
-        idempotencyKey: request.idempotencyKey,
-        visibilityScope: request.visibilityScope || "internal",
-        sensitivityClassification: request.sensitivityClassification || "standard",
-        occurredAt: new Date(),
-        recordedAt: new Date(),
-      },
-    });
-
-    logger.info("EventEmitterService: Event emitted", {
-      eventId: event.id,
-      eventType: event.eventType,
-      aggregateId: event.aggregateId,
-      eventNumber: event.eventNumber,
-      workspaceId: event.workspaceId,
-    });
+    const payloadData = event.payload as unknown;
+    if (!isEventPayload(payloadData)) {
+      throw new Error("Invalid payload structure in emitted event");
+    }
 
     // Trigger projection (non-blocking)
     try {
@@ -164,15 +213,10 @@ export class EventEmitterService {
         event.workspaceId
       );
     } catch (error) {
-      logger.error("EventEmitterService: Projection failed (non-blocking)", {
+      logger.warn("EventEmitterService: Projection failed (non-blocking)", {
         eventId: event.id,
         error: error instanceof Error ? error.message : String(error),
       });
-    }
-
-    const payloadData = event.payload as unknown;
-    if (!isEventPayload(payloadData)) {
-      throw new Error("Invalid payload structure in emitted event");
     }
 
     return {
@@ -194,64 +238,4 @@ export class EventEmitterService {
       recordedAt: event.recordedAt,
     };
   }
-
-  /**
-   * Retrieve all events for an aggregate in order
-   */
-  static async getAggregateEvents(
-    aggregateId: string,
-    aggregateType: string,
-    workspaceId: string
-  ): Promise<EmittedEvent[]> {
-    const events = await db.canonicalEvent.findMany({
-      where: {
-        aggregateId,
-        aggregateType,
-        workspaceId,
-      },
-      orderBy: { eventNumber: "asc" },
-    });
-
-    return events.map((e: typeof events[number]) => {
-      const payloadData = e.payload as unknown;
-      if (!isEventPayload(payloadData)) {
-        throw new Error(`Invalid payload structure in event ${e.id}`);
-      }
-
-      return {
-        id: e.id,
-        aggregateId: e.aggregateId,
-        aggregateType: e.aggregateType,
-        eventType: e.eventType,
-        eventVersion: e.eventVersion,
-        eventNumber: e.eventNumber,
-        payload: payloadData,
-        actorId: e.actorId,
-        workspaceId: e.workspaceId,
-        causationId: e.causationId,
-        correlationId: e.correlationId,
-        idempotencyKey: e.idempotencyKey || undefined,
-        visibilityScope: e.visibilityScope,
-        sensitivityClassification: e.sensitivityClassification,
-        occurredAt: e.occurredAt,
-        recordedAt: e.recordedAt,
-      };
-    });
-  }
-}
-
-function isEventPayload(data: unknown): data is EventPayload {
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return false;
-  }
-
-  const obj = data as Record<string, unknown>;
-
-  for (const val of Object.values(obj)) {
-    if (val !== undefined && typeof val !== "string") {
-      return false;
-    }
-  }
-
-  return true;
 }
