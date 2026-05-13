@@ -181,6 +181,26 @@ class RequestContextManager {
     }
     return ctx;
   }
+
+  createErrorContext(
+    workspace_id?: string,
+    execution_id?: string,
+    operator_id?: string,
+    endpoint?: string,
+    method?: string,
+  ) {
+    const ctx = this.getContext();
+    return {
+      correlation_id: ctx?.correlation_id || this.generateCorrelationId(),
+      request_id: ctx?.request_id || this.generateRequestId(),
+      workspace_id: workspace_id || ctx?.workspace_id,
+      execution_id: execution_id || ctx?.execution_id,
+      operator_id: operator_id || ctx?.operator_id,
+      user_agent: ctx?.user_agent,
+      endpoint: endpoint || ctx?.endpoint,
+      timestamp: new Date(),
+    };
+  }
 }
 
 export const requestContext = new RequestContextManager();
