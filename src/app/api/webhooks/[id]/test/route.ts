@@ -13,16 +13,7 @@ import { WebhookTestRequestSchema } from "@/domain/webhooks/webhook-contracts";
 import { testWebhookDelivery } from "@/services/webhooks.service";
 import { assertCapability } from "@/services/entitlement.service";
 
-export const POST = withEnforcementFull(async (
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) => {
-  // Auth enforcement (WEBHOOK_MANAGE capability)
-  const { id: webhookId } = await params;
-  if (!webhookId) {
-    throw new Error("Webhook ID required");
-  }
-
+export const POST = withEnforcementFull(async (request: NextRequest) => {
   const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
     throw new Error("Workspace ID required");
@@ -49,11 +40,21 @@ export const POST = withEnforcementFull(async (
 
   const { event, data } = validationResult.data;
 
+  // Extract webhook ID from URL path
+  const url = new URL(request.url);
+  const pathParts = url.pathname.split("/");
+  const webhookIdIndex = pathParts.findIndex((p) => p === "webhooks") + 1;
+  const webhookId = webhookIdIndex > 0 && pathParts[webhookIdIndex] ? pathParts[webhookIdIndex] : null;
+
+  if (!webhookId) {
+    throw new Error("Webhook ID required");
+  }
+
   // Test webhook delivery
   const result = await testWebhookDelivery(webhookId, workspaceId, data);
 
   if (!result.success) {
-    throw new Error(`Webhook test failed: ${result.error || "Unknown error"}`);
+    throw new Error(`Webhook test failed: ${result.message || "Unknown error"}`);
   }
 
   return result;
