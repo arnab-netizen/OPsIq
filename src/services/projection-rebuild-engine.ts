@@ -58,17 +58,18 @@ export class ProjectionRebuildEngine {
       }
 
       // Step 3: Transform replayed state to projection format and persist
+      // Note: applyEvent() sets state fields directly (not prefixed with payload_)
       const projectionState = {
         id: recommendationId,
         workspaceId,
         engagementId: replayed.state.engagementId as string,
-        title: (replayed.state.payload_title || replayed.state.title) as string | undefined,
-        description: (replayed.state.payload_description || replayed.state.description) as string | undefined,
-        priority: (replayed.state.payload_priority || replayed.state.priority) as string | undefined,
-        evidenceValidationScore: replayed.state.payload_evidenceValidationScore as number | undefined,
-        reliabilityLevel: replayed.state.payload_reliabilityLevel as string | undefined,
-        kpiHealthScore: replayed.state.payload_kpiHealthScore as number | undefined,
-        kpiRiskLevel: replayed.state.payload_kpiRiskLevel as string | undefined,
+        title: replayed.state.title as string | undefined,
+        description: replayed.state.description as string | undefined,
+        priority: replayed.state.priority as string | undefined,
+        evidenceValidationScore: replayed.state.evidenceValidationScore as number | undefined,
+        reliabilityLevel: replayed.state.reliabilityLevel as string | undefined,
+        kpiHealthScore: replayed.state.kpiHealthScore as number | undefined,
+        kpiRiskLevel: replayed.state.kpiRiskLevel as string | undefined,
       };
 
       await db.recommendation.create({

@@ -35,7 +35,25 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
     engagementId = uuidv4();
     engagementId2 = uuidv4();
 
-    // Setup users first
+    // Pre-cleanup in case prior test failed (each test uses unique IDs, so this is defensive)
+    // This ensures a clean state before each test
+    try {
+      await db.recommendation.deleteMany({ where: { workspaceId } });
+      await db.recommendation.deleteMany({ where: { workspaceId: workspaceId2 } });
+      await db.canonicalEvent.deleteMany({ where: { workspaceId } });
+      await db.canonicalEvent.deleteMany({ where: { workspaceId: workspaceId2 } });
+      await db.snapshotData.deleteMany({ where: { workspaceId } });
+      await db.snapshotData.deleteMany({ where: { workspaceId: workspaceId2 } });
+      await db.engagement.deleteMany({ where: { workspaceId } });
+      await db.engagement.deleteMany({ where: { workspaceId: workspaceId2 } });
+      await db.workspace.deleteMany({ where: { id: { in: [workspaceId, workspaceId2] } } });
+      await db.user.deleteMany({ where: { id: userId } });
+      await db.clientAccount.deleteMany({ where: { id: { in: [clientId, clientId2] } } });
+    } catch (error) {
+      // Ignore pre-cleanup errors - next operations will fail explicitly if needed
+    }
+
+    // Setup users first (should succeed with unique userId)
     await db.user.create({
       data: {
         id: userId,
@@ -43,20 +61,14 @@ describe("HARDENING: Phase 3 Critical Properties", () => {
         name: "Test User",
         hashedPassword: "mock",
       },
-    }).catch(() => {
-      // User might already exist, ignore error
     });
 
-    // Setup client accounts
+    // Setup client accounts (should succeed with unique IDs)
     await db.clientAccount.create({
       data: { id: clientId, name: "Test Client 1" },
-    }).catch(() => {
-      // Client might already exist, ignore error
     });
     await db.clientAccount.create({
       data: { id: clientId2, name: "Test Client 2" },
-    }).catch(() => {
-      // Client might already exist, ignore error
     });
 
     // Setup workspaces
