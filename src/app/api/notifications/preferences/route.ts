@@ -4,7 +4,8 @@
  * Manage user notification preferences: channels, frequency, quiet hours.
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { z } from "zod";
 import {
   setPreferences,
@@ -32,68 +33,47 @@ const SetPreferencesSchema = z.object({
  * GET /api/notifications/preferences
  * Get user notification preferences
  */
-export async function GET(request: NextRequest) {
-  try {
-    const workspaceId = request.headers.get("x-workspace-id") || "default";
-    const userId = request.headers.get("x-user-id") || "anonymous";
+export const GET = withEnforcementFull(async (request: NextRequest) => {
+  const workspaceId = request.headers.get("x-workspace-id") || "default";
+  const userId = request.headers.get("x-user-id") || "anonymous";
 
-    const preferences = await getPreferences(workspaceId, userId);
+  const preferences = await getPreferences(workspaceId, userId);
 
-    return NextResponse.json({
-      success: true,
-      preferences: preferences || {
-        workspaceId,
-        userId,
-        channels: {
-          [NotificationChannel.EMAIL]: true,
-          [NotificationChannel.SMS]: true,
-          [NotificationChannel.WEBHOOK]: true,
-          [NotificationChannel.IN_APP]: true,
-        },
-        frequency: "real_time",
+  return {
+    success: true,
+    preferences: preferences || {
+      workspaceId,
+      userId,
+      channels: {
+        [NotificationChannel.EMAIL]: true,
+        [NotificationChannel.SMS]: true,
+        [NotificationChannel.WEBHOOK]: true,
+        [NotificationChannel.IN_APP]: true,
       },
-    });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to get preferences" },
-      { status: 500 }
-    );
-  }
-}
+      frequency: "real_time",
+    },
+  };
+});
 
 /**
  * PATCH /api/notifications/preferences
  * Update user notification preferences
  */
-export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const parsed = SetPreferencesSchema.parse(body);
+export const PATCH = withEnforcementFull(async (request: NextRequest) => {
+  const body = await request.json();
+  const parsed = SetPreferencesSchema.parse(body);
 
-    const workspaceId = request.headers.get("x-workspace-id") || "default";
-    const userId = request.headers.get("x-user-id") || "anonymous";
+  const workspaceId = request.headers.get("x-workspace-id") || "default";
+  const userId = request.headers.get("x-user-id") || "anonymous";
 
-    const preferences = await setPreferences({
-      workspaceId,
-      userId,
-      ...parsed,
-    });
+  const preferences = await setPreferences({
+    workspaceId,
+    userId,
+    ...parsed,
+  });
 
-    return NextResponse.json({
-      success: true,
-      preferences,
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Invalid preferences", details: error.issues },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { error: "Failed to update preferences" },
-      { status: 500 }
-    );
-  }
-}
+  return {
+    success: true,
+    preferences,
+  };
+});
