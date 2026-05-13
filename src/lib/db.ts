@@ -3,6 +3,20 @@ const globalForPrisma = globalThis as unknown as {
   prismaPromise: Promise<any> | undefined;
 };
 
+/**
+ * Detect if URL is a Neon endpoint (serverless PostgreSQL)
+ * Neon endpoints have:
+ * - neon.tech or neon.database in hostname
+ * - typically include sslmode=require
+ */
+function isNeonEndpoint(databaseUrl: string): boolean {
+  return (
+    databaseUrl.includes("neon.tech") ||
+    databaseUrl.includes("neon.database") ||
+    (databaseUrl.includes("sslmode=require") && databaseUrl.includes("?"))
+  );
+}
+
 async function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
 
@@ -15,14 +29,37 @@ async function createPrismaClient() {
 
   try {
     const { PrismaClient } = await import("@/generated/prisma/client");
-    const { Pool, neonConfig } = await import("@neondatabase/serverless");
-    const { PrismaNeon } = await import("@prisma/adapter-neon");
     const { createWorkspaceEnforcementMiddleware } = await import("@/lib/prisma-workspace-enforcement");
 
-    const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
-    // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
-    const adapter = new PrismaNeon(pool);
-    const client = new PrismaClient({ adapter });
+    let client;
+    const useNeon = isNeonEndpoint(databaseUrl);
+    const dbType = useNeon ? "Neon (serverless)" : "PostgreSQL (standard)";
+
+    // Log adapter selection (without exposing secrets)
+    const sanitizedUrl = databaseUrl.replace(/:[^@]*@/, ":***@");
+    console.log(`[DB] Initializing Prisma with ${dbType} adapter`);
+    console.log(`[DB] Database: ${sanitizedUrl.split("?")[0].split("/").pop()}`);
+
+    if (useNeon) {
+      // Production/serverless: Use Neon WebSocket adapter
+      console.log("[DB] Using @prisma/adapter-neon");
+      const { Pool, neonConfig } = await import("@neondatabase/serverless");
+      const { PrismaNeon } = await import("@prisma/adapter-neon");
+
+      const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
+      // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
+      const adapter = new PrismaNeon(pool);
+      client = new PrismaClient({ adapter });
+    } else {
+      // Local/CI: Use standard PostgreSQL adapter
+      console.log("[DB] Using @prisma/adapter-pg");
+      const pg = await import("pg");
+      const { PrismaPg } = await import("@prisma/adapter-pg");
+
+      const pool = new pg.Pool({ connectionString: databaseUrl });
+      const adapter = new PrismaPg(pool);
+      client = new PrismaClient({ adapter });
+    }
 
     // Apply workspace isolation enforcement middleware
     const withEnforcement = client.$extends(createWorkspaceEnforcementMiddleware());
