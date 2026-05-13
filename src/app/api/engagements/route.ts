@@ -1,4 +1,4 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -11,7 +11,7 @@ import { paginationSchema } from "@/lib/validation";
 import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES } from "@/domain/constants/statuses";
 import type { NextRequest } from "next/server";
 import { assertCapability } from "@/services/entitlement.service";
-import { PlanLimitError } from "@/infra/errors";
+import { PlanLimitError, UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 const createEngagementSchema = z.object({
   title: z.string().min(1),
@@ -33,32 +33,28 @@ const listEngagementsSchema = paginationSchema.extend({
   search: z.string().optional(),
 });
 
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   const { policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
   // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    throw new UnauthorizedError("Workspace ID required (x-workspace-id header)");
   }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const params = parseSearchParams(request.url, listEngagementsSchema);
   const result = await listEngagements(workspaceId, params, hasInternalAccess(policy));
 
-  return Response.json(result);
+  return result;
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_CREATE,
@@ -66,26 +62,19 @@ export const POST = withRequestContext(async (request) => {
   });
 
   // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    throw new UnauthorizedError("Workspace ID required (x-workspace-id header)");
   }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {
-    return Response.json(
-      { error: "idempotency-key header required" },
-      { status: 400 }
-    );
+    throw new UnauthorizedError("idempotency-key header required");
   }
 
   // Check capability: create_engagement
@@ -106,15 +95,13 @@ export const POST = withRequestContext(async (request) => {
   });
 
   if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
-      status: idempotencyCheck.cachedResponse.status,
-    });
+    return idempotencyCheck.cachedResponse.body;
   }
 
   try {
     const result = await createEngagement(body, { session, policy }, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result, workspaceId);
-    return Response.json(result, { status: 201 });
+    return result;
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
     await recordIdempotencyError(idempotencyKey, err, workspaceId);

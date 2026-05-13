@@ -1,4 +1,4 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -7,6 +7,7 @@ import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { withIdempotency } from "@/infra/idempotency";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import type { NextRequest } from "next/server";
 
 const createUserSchema = z.object({
@@ -22,32 +23,28 @@ const listUsersSchema = paginationSchema.extend({
   search: z.string().optional(),
 });
 
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true });
 
   // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    throw new UnauthorizedError("Workspace ID required (x-workspace-id header)");
   }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const params = parseSearchParams(request.url, listUsersSchema);
   const result = await listUsers(workspaceId, params);
 
-  return Response.json(result);
+  return result;
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   const authContext = await withAuth({
     capability: CAPABILITIES.USER_CREATE,
@@ -55,27 +52,20 @@ export const POST = withRequestContext(async (request) => {
   });
 
   // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    throw new UnauthorizedError("Workspace ID required (x-workspace-id header)");
   }
 
   // Require Idempotency-Key (fail-closed)
-  const idempotencyKey = nextRequest.headers.get("Idempotency-Key");
+  const idempotencyKey = request.headers.get("Idempotency-Key");
   if (!idempotencyKey) {
-    return Response.json(
-      { error: "Idempotency-Key header required" },
-      { status: 400 }
-    );
+    throw new UnauthorizedError("Idempotency-Key header required");
   }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const body = await parseRequestBody(request, createUserSchema);
@@ -88,5 +78,5 @@ export const POST = withRequestContext(async (request) => {
     authContext.session.user.id
   );
 
-  return Response.json(result, { status: isNew ? 201 : 200 });
+  return result;
 });

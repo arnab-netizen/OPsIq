@@ -1,31 +1,30 @@
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { db } from "@/lib/db";
-import { getSession } from "@/services/auth";
+import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 export const GET = withEnforcementFull(async (request: NextRequest) => {
-  const session = await getSession();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
+  // Authenticate (throws UnauthorizedError if no valid session)
+  const { session } = await withAuth();
 
   const userId = session.user.id;
   const workspaceId = request.nextUrl.searchParams.get("workspaceId");
 
   if (!workspaceId) {
-    throw new Error("Workspace ID required");
+    throw new UnauthorizedError("Workspace ID required");
   }
 
   // Enforce workspace scoping
   const membership = await enforceWorkspaceScoping(request, workspaceId);
   if (!membership) {
-    throw new Error("Unauthorized or invalid workspace");
+    throw new UnauthorizedError("Unauthorized or invalid workspace");
   }
 
   // Check permission to read/view decisions
   if (!hasPermission(membership.role, "read")) {
-    throw new Error("Insufficient permissions to view decisions");
+    throw new ForbiddenError("Insufficient permissions to view decisions");
   }
 
   // Get filter from query params
