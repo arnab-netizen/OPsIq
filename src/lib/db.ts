@@ -115,6 +115,14 @@ export async function getDbInstance() {
   return dbInitPromise;
 }
 
+// Start initialization immediately on module load (server startup)
+if (typeof globalThis !== "undefined" && !globalForPrisma.prisma) {
+  // Non-blocking initialization - doesn't throw
+  getDbInstance().catch((error) => {
+    console.error("[DB] Failed to initialize database on module load:", error);
+  });
+}
+
 // Export db as a proxy that accesses the cached instance from globalForPrisma
 export const db = new Proxy({} as any, {
   get(target, prop) {

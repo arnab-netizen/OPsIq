@@ -1,5 +1,5 @@
 import { withEnforcement } from "@/lib/enforced-route";
-import { db } from "@/lib/db";
+import { db, getDbInstance } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { classifyError, reportError } from "@/infra/error-tracking";
 import { cleanupOldRecords } from "@/services/production/retention-cleanup";
@@ -11,6 +11,13 @@ let lastCleanupTime = 0;
 let applicationStartTime = Date.now();
 
 export const GET = withEnforcement(async (ctx) => {
+  // Ensure database is initialized before any operations
+  try {
+    await getDbInstance();
+  } catch (error) {
+    logger.error("Failed to initialize database on health check", { error });
+  }
+
   // Trigger retention cleanup periodically (every 6 hours)
   const now = Date.now();
   if (now - lastCleanupTime > 6 * 60 * 60 * 1000) {
