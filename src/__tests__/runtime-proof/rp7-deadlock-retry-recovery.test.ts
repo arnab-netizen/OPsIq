@@ -370,16 +370,26 @@ describe("Phase RP7: Deadlock & Retry Recovery", () => {
           aggregateType: "recommendation",
           eventType: "recommendation.updated",
           eventVersion: 1,
-          payload: { iteration: i },
+          payload: { iteration: `${i}` },
           actorId: userId,
           workspaceId,
           visibilityScope: "internal",
           sensitivityClassification: "standard",
-        }).catch((e) => ({ error: e.message }));
+        }).catch((e) => {
+          console.error(`Emit failed: ${e.message}`);
+          return { error: e.message, code: (e as any).code };
+        });
       });
 
       const results = await Promise.all(promises);
       const successes = results.filter((r) => !r.error);
+      const failures = results.filter((r) => r.error);
+
+      if (failures.length > 0) {
+        console.log(
+          `Failures (${failures.length}): ${failures.map((f) => `${f.error}[${f.code}]`).join("; ")}`
+        );
+      }
 
       // All should succeed
       expect(successes.length).toBe(50);
@@ -431,16 +441,26 @@ describe("Phase RP7: Deadlock & Retry Recovery", () => {
           aggregateType: "recommendation",
           eventType: "recommendation.updated",
           eventVersion: 1,
-          payload: { iteration: i },
+          payload: { iteration: `${i}` },
           actorId: userId,
           workspaceId,
           visibilityScope: "internal",
           sensitivityClassification: "standard",
-        }).catch((e) => ({ error: e.message }))
+        }).catch((e) => {
+          console.error(`Emit ${i} failed: ${e.message}`);
+          return { error: e.message, code: (e as any).code };
+        })
       );
 
       const results = await Promise.all(promises);
       const successes = results.filter((r) => !r.error);
+      const failures = results.filter((r) => r.error);
+
+      if (failures.length > 0) {
+        console.log(
+          `Failures (${failures.length}): Sample error: ${failures[0]?.error}`
+        );
+      }
 
       // Should have high success rate (most concurrent requests win)
       expect(successes.length).toBeGreaterThan(90);
