@@ -284,6 +284,35 @@ export class EventReplayEngine {
         state.kpiRiskLevel = event.payload.kpiRiskLevel;
         break;
       }
+      case "recommendation.updated": {
+        // Apply generic recommendation update (status, priority, etc.)
+        if (event.payload.status) {
+          state.status = event.payload.status;
+        }
+        if (event.payload.priority) {
+          state.priority = event.payload.priority;
+        }
+        if (event.payload.title) {
+          state.title = event.payload.title;
+        }
+        if (event.payload.description !== undefined) {
+          state.description = event.payload.description;
+        }
+        state.updatedAt = event.occurredAt;
+        break;
+      }
+      case "recommendation.status_changed": {
+        // Status transition event
+        state.status = event.payload.status as string;
+        state.updatedAt = event.occurredAt;
+        break;
+      }
+      case "recommendation.priority_updated": {
+        // Priority recalculation event
+        state.priority = event.payload.priority as string;
+        state.updatedAt = event.occurredAt;
+        break;
+      }
       case "action.completed": {
         state.actionStatus = "completed";
         state.completedAt = event.occurredAt;
