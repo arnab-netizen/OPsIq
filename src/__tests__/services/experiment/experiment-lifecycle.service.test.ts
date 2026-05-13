@@ -164,7 +164,7 @@ describe("Experiment Lifecycle Service", () => {
 
       expect(
         createExperiment("ws-123", "eng-456", criticalPlan, "Critical Test", undefined, undefined, undefined, undefined, "user-100")
-      ).rejects.toThrow("must have requiredApprovals");
+      ).rejects.toThrow("Critical-risk experiments must have required approvals");
     });
 
     it("should emit EXPERIMENT_APPROVED audit event", async () => {
