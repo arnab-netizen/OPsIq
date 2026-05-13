@@ -223,5 +223,7 @@ export function calculateQuotaUsagePercent(
 ): number {
   const monthlyQuota = RATE_LIMIT_QUOTAS[tier].requestsPerMonth;
   const tokensUsed = monthlyQuota - tokensRemaining;
-  return Math.round((tokensUsed / monthlyQuota) * 100);
+  const percent = (tokensUsed / monthlyQuota) * 100;
+  // Ensure any usage shows as >= 1%
+  return tokensUsed > 0 ? Math.max(1, Math.round(percent)) : 0;
 }
