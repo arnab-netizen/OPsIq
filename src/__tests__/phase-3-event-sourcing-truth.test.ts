@@ -11,6 +11,17 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
   const recommendationId = "test-rec-123";
 
   beforeEach(async () => {
+    // Pre-cleanup in case prior test failed
+    try {
+      await db.recommendation.deleteMany({ where: { workspaceId } });
+      await db.canonicalEvent.deleteMany({ where: { workspaceId } });
+      await db.snapshotData.deleteMany({ where: { workspaceId } });
+      await db.engagement.deleteMany({ where: { workspaceId } });
+      await db.workspace.deleteMany({ where: { id: workspaceId } });
+    } catch (error) {
+      // Ignore cleanup errors on first run
+    }
+
     // Create test workspace
     await db.workspace.create({
       data: {
@@ -33,12 +44,17 @@ describe("Phase 3: Event Sourcing Truth Verification", () => {
   });
 
   afterEach(async () => {
-    // Cleanup
-    await db.recommendation.deleteMany({ where: { workspaceId } });
-    await db.canonicalEvent.deleteMany({ where: { workspaceId } });
-    await db.snapshotData.deleteMany({ where: { workspaceId } });
-    await db.engagement.deleteMany({ where: { workspaceId } });
-    await db.workspace.deleteMany({ where: { id: workspaceId } });
+    // Cleanup (required to prevent test data accumulation)
+    try {
+      await db.recommendation.deleteMany({ where: { workspaceId } });
+      await db.canonicalEvent.deleteMany({ where: { workspaceId } });
+      await db.snapshotData.deleteMany({ where: { workspaceId } });
+      await db.engagement.deleteMany({ where: { workspaceId } });
+      await db.workspace.deleteMany({ where: { id: workspaceId } });
+    } catch (error) {
+      console.error("Cleanup error:", error);
+      // Don't fail test on cleanup error
+    }
   });
 
   describe("Requirement 1: Projection rebuilds solely from CanonicalEvent", () => {
