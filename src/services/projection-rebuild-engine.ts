@@ -59,21 +59,41 @@ export class ProjectionRebuildEngine {
 
       // Step 3: Transform replayed state to projection format and persist
       // Note: applyEvent() sets state fields directly (not prefixed with payload_)
+      const convertScoreToInt = (val: unknown): number | undefined => {
+        if (!val) return undefined;
+        const num = typeof val === "string" ? parseFloat(val) : (val as number);
+        return Number.isNaN(num) ? undefined : Math.round(num * 100);
+      };
+
+      const engagementId = replayed.state.engagementId as string | undefined;
+      const title = replayed.state.title as string | undefined;
+      const priority = replayed.state.priority as string | undefined;
+
+      if (!engagementId) {
+        throw new Error("Replayed state missing engagementId");
+      }
+      if (!title) {
+        throw new Error("Replayed state missing title");
+      }
+      if (!priority) {
+        throw new Error("Replayed state missing priority");
+      }
+
       const projectionState = {
         id: recommendationId,
         workspaceId,
-        engagementId: replayed.state.engagementId as string,
-        title: replayed.state.title as string | undefined,
+        engagementId,
+        title,
         description: replayed.state.description as string | undefined,
-        priority: replayed.state.priority as string | undefined,
-        evidenceValidationScore: replayed.state.evidenceValidationScore as number | undefined,
+        priority,
+        evidenceValidationScore: convertScoreToInt(replayed.state.evidenceValidationScore),
         reliabilityLevel: replayed.state.reliabilityLevel as string | undefined,
-        kpiHealthScore: replayed.state.kpiHealthScore as number | undefined,
+        kpiHealthScore: convertScoreToInt(replayed.state.kpiHealthScore),
         kpiRiskLevel: replayed.state.kpiRiskLevel as string | undefined,
       };
 
       await db.recommendation.create({
-        data: projectionState as any,
+        data: projectionState,
       });
 
       logger.info("ProjectionRebuild: Rebuilt projection from events via EventReplayEngine", {
@@ -183,18 +203,18 @@ export class ProjectionRebuildEngine {
           liveProjection.engagementId ===
           (replayedPayload.engagementId as string),
         title:
-          liveProjection.title === (replayedPayload.payload_title as string),
+          liveProjection.title === (replayedPayload.title as string),
         description:
           liveProjection.description ===
-          (replayedPayload.payload_description as string),
+          (replayedPayload.description as string),
         priority:
-          liveProjection.priority === (replayedPayload.payload_priority as string),
+          liveProjection.priority === (replayedPayload.priority as string),
         evidenceValidationScore:
           liveProjection.evidenceValidationScore ===
-          (replayedPayload.payload_evidenceValidationScore as number),
+          (replayedPayload.evidenceValidationScore as number),
         kpiHealthScore:
           liveProjection.kpiHealthScore ===
-          (replayedPayload.payload_kpiHealthScore as number),
+          (replayedPayload.kpiHealthScore as number),
       };
 
       const allMatch = Object.values(parityChecks).every((v) => v);

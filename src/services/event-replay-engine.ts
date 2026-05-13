@@ -177,6 +177,13 @@ export class EventReplayEngine {
       errors.push("Event payload missing or invalid");
     }
 
+    // Check required fields by event type
+    if (event.eventType === "recommendation.created") {
+      if (!event.payload?.title) errors.push("recommendation.created missing title");
+      if (!event.payload?.priority) errors.push("recommendation.created missing priority");
+      if (!event.payload?.engagementId) errors.push("recommendation.created missing engagementId");
+    }
+
     return {
       valid: errors.length === 0,
       errors,
@@ -256,12 +263,21 @@ export class EventReplayEngine {
     // Apply event-specific transformations
     switch (event.eventType) {
       case "recommendation.created": {
-        state.recommendationId = event.payload.engagementId;
+        const convertScoreToInt = (val: unknown): number | undefined => {
+          if (!val) return undefined;
+          const num = typeof val === "string" ? parseFloat(val) : (val as number);
+          return Number.isNaN(num) ? undefined : Math.round(num * 100);
+        };
+
+        state.engagementId = event.payload.engagementId;
         state.priority = event.payload.priority;
         state.title = event.payload.title;
+        state.description = event.payload.description;
         state.status = "active";
-        state.evidenceReliability = event.payload.reliabilityLevel;
-        state.kpiHealth = event.payload.kpiRiskLevel;
+        state.evidenceValidationScore = convertScoreToInt(event.payload.evidenceValidationScore);
+        state.reliabilityLevel = event.payload.reliabilityLevel;
+        state.kpiHealthScore = convertScoreToInt(event.payload.kpiHealthScore);
+        state.kpiRiskLevel = event.payload.kpiRiskLevel;
         break;
       }
       case "action.completed": {

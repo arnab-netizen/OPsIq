@@ -28,10 +28,9 @@ export class SnapshotOptimizationEngine {
         aggregateId,
         aggregateType,
         state,
-        lastEventNumber,
+        eventNumber: lastEventNumber,
         checksum, // Store checksum for validation
         workspaceId,
-        createdAt: new Date(),
       },
     });
 
@@ -112,7 +111,7 @@ export class SnapshotOptimizationEngine {
 
     return {
       state: snapshot.state as Record<string, unknown>,
-      lastEventNumber: snapshot.lastEventNumber,
+      lastEventNumber: snapshot.eventNumber,
       checksum: snapshot.checksum,
     };
   }
