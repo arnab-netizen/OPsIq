@@ -4,9 +4,18 @@ import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { queryAuditEvents } from "@/infra/audit";
+import { getDbInstance } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 
-export const GET = withEnforcementFull(async (request, ctx, params) => {
+const handleGet = async (request: NextRequest, ctx: any, params: any) => {
+  // Ensure database is initialized before any operations (auth needs DB access)
+  try {
+    await getDbInstance();
+  } catch (dbError) {
+    // If DB init fails, continue anyway - auth check will handle properly
+    console.error("[API/audit] DB initialization failed:", dbError);
+  }
+
   // Authenticate and authorize (fail-closed)
   await withAuth({ capability: CAPABILITIES.AUDIT_VIEW });
 
@@ -88,4 +97,6 @@ export const GET = withEnforcementFull(async (request, ctx, params) => {
     })),
     count: events.length,
   };
-})
+};
+
+export const GET = withEnforcementFull(handleGet, { bypass_health_check: true });

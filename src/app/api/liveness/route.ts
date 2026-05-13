@@ -1,10 +1,18 @@
 import { getMonitoringServiceInstance } from "@/middleware/monitoring.middleware";
 import { logger } from "@/infra/logger";
+import { getDbInstance } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const GET = async () => {
+  try {
+    // Ensure database is initialized for monitoring checks
+    await getDbInstance();
+  } catch (error) {
+    logger.debug("Database initialization pending in liveness check", { error });
+  }
+
   try {
     const monitoringService = getMonitoringServiceInstance();
     const livenessCheck = await monitoringService.checkLiveness();

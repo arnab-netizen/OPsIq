@@ -12,6 +12,7 @@ import { paginationSchema } from "@/lib/validation";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
+import { getDbInstance } from "@/lib/db";
 
 const createActionSchema = z.object({
   engagementId: z.string().uuid(),
@@ -30,7 +31,15 @@ const listActionsSchema = paginationSchema.extend({
   assignedTo: z.string().uuid().optional(),
 });
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
+const handleGet = async (request: NextRequest) => {
+  // Ensure database is initialized before any operations (auth needs DB access)
+  try {
+    await getDbInstance();
+  } catch (dbError) {
+    // If DB init fails, continue anyway - auth check will handle properly
+    console.error("[API/actions] DB initialization failed:", dbError);
+  }
+
   // Authenticate + authorize (fail-closed)
   await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
 
@@ -49,9 +58,17 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   const result = await listActions(workspaceId, params);
 
   return result;
-});
+};
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
+const handlePost = async (request: NextRequest) => {
+  // Ensure database is initialized before any operations (auth needs DB access)
+  try {
+    await getDbInstance();
+  } catch (dbError) {
+    // If DB init fails, continue anyway - auth check will handle properly
+    console.error("[API/actions] DB initialization failed:", dbError);
+  }
+
   // Authenticate + authorize (fail-closed)
   const authContext = await withAuth({
     capability: CAPABILITIES.ACTION_CREATE,
@@ -100,4 +117,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   );
 
   return result;
-});
+};
+
+export const GET = withEnforcementFull(handleGet, { bypass_health_check: true });
+export const POST = withEnforcementFull(handlePost, { bypass_health_check: true });
