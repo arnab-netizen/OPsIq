@@ -25,8 +25,8 @@ export class ProjectionRebuildEngine {
     const errors: string[] = [];
 
     try {
-      // Step 1: Delete existing projection (clear it)
-      await db.recommendation.delete({
+      // Step 1: Delete existing projection (clear it) - use deleteMany to avoid error if not found
+      await db.recommendation.deleteMany({
         where: { id: recommendationId },
       });
 
@@ -59,12 +59,7 @@ export class ProjectionRebuildEngine {
 
       // Step 3: Transform replayed state to projection format and persist
       // Note: applyEvent() sets state fields directly (not prefixed with payload_)
-      const convertScoreToInt = (val: unknown): number | undefined => {
-        if (!val) return undefined;
-        const num = typeof val === "string" ? parseFloat(val) : (val as number);
-        return Number.isNaN(num) ? undefined : Math.round(num * 100);
-      };
-
+      // Scores are already converted by applyEvent (string "0.85" → int 85)
       const engagementId = replayed.state.engagementId as string | undefined;
       const title = replayed.state.title as string | undefined;
       const priority = replayed.state.priority as string | undefined;
@@ -86,9 +81,9 @@ export class ProjectionRebuildEngine {
         title,
         description: replayed.state.description as string | undefined,
         priority,
-        evidenceValidationScore: convertScoreToInt(replayed.state.evidenceValidationScore),
+        evidenceValidationScore: replayed.state.evidenceValidationScore as number | undefined,
         reliabilityLevel: replayed.state.reliabilityLevel as string | undefined,
-        kpiHealthScore: convertScoreToInt(replayed.state.kpiHealthScore),
+        kpiHealthScore: replayed.state.kpiHealthScore as number | undefined,
         kpiRiskLevel: replayed.state.kpiRiskLevel as string | undefined,
       };
 
@@ -115,9 +110,15 @@ export class ProjectionRebuildEngine {
         errors,
       };
     } catch (error) {
-      errors.push(
-        `Rebuild failed: ${error instanceof Error ? error.message : String(error)}`
-      );
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : "";
+      console.error("[ProjectionRebuild] CATCH BLOCK TRIGGERED:", {
+        errorMsg,
+        recommendationId,
+        workspaceId,
+        errorStack: errorStack ? errorStack.slice(0, 500) : "N/A",
+      });
+      errors.push(`Rebuild failed: ${errorMsg}`);
       return {
         success: false,
         eventsProcessed: 0,

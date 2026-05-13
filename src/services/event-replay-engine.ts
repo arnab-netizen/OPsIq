@@ -130,10 +130,14 @@ export class EventReplayEngine {
     // Step 4: Create/update snapshot for optimization if replay yielded new events
     if (events.length > 0 && lastEvent) {
       try {
+        // Create snapshot without events array (only derived state)
+        const snapshotState = { ...state };
+        delete snapshotState.events;
+
         await SnapshotOptimizationEngine.createSnapshot(
           aggregateId,
           aggregateType,
-          state,
+          snapshotState,
           lastEvent.eventNumber,
           workspaceId
         );
