@@ -561,7 +561,7 @@ describe("Experiment Lifecycle Service", () => {
       const analysis = analyzeOutcome(experiment);
 
       expect(analysis.classification).toBe("inconclusive");
-      expect(analysis.nextSteps).toContain(expect.stringContaining("Confidence level is low"));
+      expect(analysis.nextSteps).toContainEqual(expect.stringContaining("Confidence level is low"));
     });
   });
 
