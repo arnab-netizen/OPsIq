@@ -27,6 +27,11 @@ import {
   RetryBudget,
   RequestShedding,
 } from "../resilience/circuit-breaker";
+import {
+  UnauthorizedError,
+  ForbiddenError,
+  AppError,
+} from "@/infra/errors";
 
 // Global enforcement state
 const requestCircuitBreaker = new CircuitBreaker({
@@ -196,11 +201,44 @@ export async function enforceRequest<T>(
     const duration_ms = Date.now() - start;
     runtimeMetricsCollector.recordRequestError();
 
-    // Normalize error
+    // Classify and normalize error
     let normalized_error: RuntimeError;
+
+    // IMPORTANT: Check AppError (auth, validation, etc) BEFORE treating as infrastructure
+    if (error instanceof AppError) {
+      // AppError includes: UnauthorizedError, ForbiddenError, ValidationError, etc.
+      // These should NOT be converted to infrastructure errors
+      const status = error.statusCode || 500;
+      runtimeLogger.log({
+        level: status === 401 || status === 403 ? "INFO" : "WARN",
+        category: "FAILURE",
+        message: `Application error: ${error.code}`,
+        correlation_id: correlation_id || requestContext.generateCorrelationId(),
+        context: {
+          error_code: error.code,
+          error_message: error.message,
+          http_status: status,
+          endpoint: enforced_context?.endpoint,
+          method: enforced_context?.method,
+          duration_ms,
+        },
+        tags: ["app_error", `error_${error.code}`],
+      });
+
+      // Return AppError response directly
+      return NextResponse.json(error.toJSON(), {
+        status,
+        headers: {
+          "X-Correlation-ID": correlation_id || "unknown",
+          "X-Error-Code": error.code,
+        },
+      });
+    }
+
     if (error instanceof RuntimeError) {
       normalized_error = error;
     } else {
+      // Only convert unrecognized errors to infrastructure errors
       normalized_error = createInfrastructureError(
         "Unhandled request error",
         requestContext.createErrorContext(
@@ -212,6 +250,23 @@ export async function enforceRequest<T>(
         ),
         true,
       );
+
+      // Log the unhandled error for debugging
+      runtimeLogger.log({
+        level: "CRITICAL",
+        category: "FAILURE",
+        message: "Unhandled error converted to infrastructure error",
+        correlation_id: correlation_id || requestContext.generateCorrelationId(),
+        context: {
+          error_type: error?.constructor?.name || typeof error,
+          error_message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
+          endpoint: enforced_context?.endpoint,
+          method: enforced_context?.method,
+          duration_ms,
+        },
+        tags: ["unhandled_error", "infrastructure_error"],
+      });
     }
 
     // Log failure with full diagnostic

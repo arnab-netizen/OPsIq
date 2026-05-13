@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+import { db, getDbInstance } from "@/lib/db";
 import type { UserRoleAssignment } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
@@ -23,6 +23,10 @@ export interface SessionInfo {
 }
 
 export async function getSession(workspaceId: string = "system"): Promise<SessionInfo | null> {
+  // CRITICAL: Ensure database is initialized before ANY db access
+  // This prevents the db Proxy from throwing "Database not initialized" errors
+  await getDbInstance();
+
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
@@ -73,6 +77,9 @@ export async function requireSession(workspaceId: string = "system"): Promise<Se
 }
 
 export async function getPolicyContext(workspaceId: string = "system"): Promise<PolicyContext | null> {
+  // Ensure database is initialized (getSession does this too, but be explicit)
+  await getDbInstance();
+
   const session = await getSession(workspaceId);
   if (!session) return null;
 

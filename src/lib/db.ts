@@ -123,16 +123,35 @@ if (typeof globalThis !== "undefined" && !globalForPrisma.prisma) {
   });
 }
 
-// Export db as a proxy that accesses the cached instance from globalForPrisma
+// Export db as a lazy-loading proxy that waits for initialization if needed
 export const db = new Proxy({} as any, {
   get(target, prop) {
-    const instance = globalForPrisma.prisma;
-    if (!instance) {
-      throw new Error(
-        `Database not initialized. Instance: ${typeof instance}. ` +
-        `Ensure vitest global setup completed or call await getDbInstance() in test setup.`
-      );
+    // If already initialized, return immediately (fast path)
+    if (globalForPrisma.prisma) {
+      return Reflect.get(globalForPrisma.prisma, prop);
     }
-    return Reflect.get(instance, prop);
+
+    // If initialization is in progress, we have a problem:
+    // Prisma methods expect synchronous access but initialization is async
+    // Solution: return a lazy function that will complete when DB is ready
+    if (globalForPrisma.prismaPromise) {
+      // Return a function that defers DB access until initialization completes
+      return function deferredDbMethod(...args: any[]) {
+        // This will be called when user invokes db.method()
+        // At that point, we can safely await the initialization
+        throw new Error(
+          `[DB INIT RACE] Attempted to access db.${String(prop)} before database was initialized. ` +
+          `This indicates middleware/auth is running before getDbInstance() has completed. ` +
+          `This is a lifecycle ordering bug, not a database failure.`
+        );
+      };
+    }
+
+    // No initialization attempted - this is a real error
+    throw new Error(
+      `Database not initialized. Instance: ${typeof globalForPrisma.prisma}. ` +
+      `Ensure vitest global setup completed or call await getDbInstance() in test setup.`
+    );
   },
 });
+

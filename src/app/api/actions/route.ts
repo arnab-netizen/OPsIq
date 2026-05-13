@@ -12,7 +12,6 @@ import { paginationSchema } from "@/lib/validation";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 import { getTierConfig, type SubscriptionTier } from "@/lib/tier-config";
-import { getDbInstance } from "@/lib/db";
 
 const createActionSchema = z.object({
   engagementId: z.string().uuid(),
@@ -32,15 +31,8 @@ const listActionsSchema = paginationSchema.extend({
 });
 
 const handleGet = async (request: NextRequest) => {
-  // Ensure database is initialized before any operations (auth needs DB access)
-  try {
-    await getDbInstance();
-  } catch (dbError) {
-    // If DB init fails, continue anyway - auth check will handle properly
-    console.error("[API/actions] DB initialization failed:", dbError);
-  }
-
   // Authenticate + authorize (fail-closed)
+  // Database initialization is guaranteed by getSession() in auth.ts
   await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
 
   // Validate workspace membership (fail-closed)
@@ -61,15 +53,8 @@ const handleGet = async (request: NextRequest) => {
 };
 
 const handlePost = async (request: NextRequest) => {
-  // Ensure database is initialized before any operations (auth needs DB access)
-  try {
-    await getDbInstance();
-  } catch (dbError) {
-    // If DB init fails, continue anyway - auth check will handle properly
-    console.error("[API/actions] DB initialization failed:", dbError);
-  }
-
   // Authenticate + authorize (fail-closed)
+  // Database initialization is guaranteed by getSession() in auth.ts
   const authContext = await withAuth({
     capability: CAPABILITIES.ACTION_CREATE,
     internalOnly: true,
@@ -119,5 +104,5 @@ const handlePost = async (request: NextRequest) => {
   return result;
 };
 
-export const GET = withEnforcementFull(handleGet, { bypass_health_check: true });
-export const POST = withEnforcementFull(handlePost, { bypass_health_check: true });
+export const GET = withEnforcementFull(handleGet);
+export const POST = withEnforcementFull(handlePost);
