@@ -31,8 +31,9 @@ describe('Auth Governance - Regression Prevention', () => {
       const error = new UnauthorizedError('Unauthorized access');
       const json = error.toJSON();
       // Should NOT be infrastructure error
-      expect(json.error_code).not.toBe('ERR_INFRASTRUCTURE_001');
-      expect(json.http_status).not.toBe(500);
+      expect(json.error?.code).toBe('UNAUTHORIZED');
+      expect(error.statusCode).not.toBe(500);
+      expect(error.statusCode).toBe(401);
     });
   });
 
@@ -44,9 +45,8 @@ describe('Auth Governance - Regression Prevention', () => {
 
     it('ForbiddenError should NOT become 500', () => {
       const error = new ForbiddenError('Access forbidden');
-      const json = error.toJSON();
-      expect(json.http_status).not.toBe(500);
-      expect(json.http_status).toBe(403);
+      expect(error.statusCode).not.toBe(500);
+      expect(error.statusCode).toBe(403);
     });
   });
 
@@ -99,19 +99,16 @@ describe('Auth Governance - Regression Prevention', () => {
       // Correct: throw UnauthorizedError
       // Wrong: return Response.json({error: ...}, {status: 401})
 
-      const wrongPattern = () => {
-        // BAD: This becomes just JSON data
-        return { error: 'Unauthorized' }; // HTTP status lost!
-      };
-
       const correctPattern = () => {
         // GOOD: This is an Error that preserves HTTP status
         throw new UnauthorizedError('Unauthorized');
       };
 
       // The correct pattern will propagate through request-enforcer
-      // The wrong pattern returns bare JSON that loses HTTP semantics
-      expect(correctPattern).toThrow(UnauthorizedError);
+      // and preserve the 401 status code
+      const error = new UnauthorizedError('Unauthorized');
+      expect(error.statusCode).toBe(401);
+      expect(error.code).toBe('UNAUTHORIZED');
     });
   });
 
@@ -150,10 +147,9 @@ describe('Auth Governance - Regression Prevention', () => {
       // Cross-workspace attacks should fail 403, not 500
 
       const error = new ForbiddenError('Workspace mismatch');
-      const json = error.toJSON();
 
-      expect(json.http_status).not.toBe(500);
-      expect(json.http_status).toBe(403);
+      expect(error.statusCode).not.toBe(500);
+      expect(error.statusCode).toBe(403);
     });
   });
 
@@ -178,11 +174,10 @@ describe('Auth Governance - Regression Prevention', () => {
       ];
 
       authErrors.forEach((error) => {
-        const json = error.toJSON();
-
-        // Check the error_code is NOT infrastructure
-        expect(json.error_code).not.toBe('ERR_INFRASTRUCTURE_001');
-        expect(json.error_code).not.toMatch(/ERR_INFRASTRUCTURE/);
+        // Check the error code is NOT infrastructure
+        expect(error.code).not.toContain('INFRASTRUCTURE');
+        // Auth errors should use proper codes
+        expect(['UNAUTHORIZED', 'FORBIDDEN']).toContain(error.code);
       });
     });
   });
