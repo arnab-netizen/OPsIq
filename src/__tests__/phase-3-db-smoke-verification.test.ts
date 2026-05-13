@@ -21,16 +21,8 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
 
   afterAll(async () => {
     // Cleanup: Remove test data
+    // Note: canonical_events and snapshot_data are append-only, so we don't delete them
     try {
-      await db.canonicalEvent.deleteMany({
-        where: { workspaceId: testWorkspaceId },
-      });
-      await db.snapshotData.deleteMany({
-        where: { workspaceId: testWorkspaceId },
-      });
-      await db.recommendation.deleteMany({
-        where: { workspaceId: testWorkspaceId },
-      });
       await db.engagement.deleteMany({
         where: { id: testEngagementId },
       });
@@ -60,7 +52,6 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
           id: testWorkspaceId,
           name: "Smoke Test Workspace",
           slug: `smoke-test-${Date.now()}`,
-          createdBy: "smoke-test",
         },
       });
       expect(workspace.id).toBe(testWorkspaceId);
@@ -86,54 +77,55 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
     it("verifies canonical event append works", async () => {
       const aggregateId = uuidv4();
 
+      const actorId = uuidv4();
       const event = await db.canonicalEvent.create({
         data: {
           id: uuidv4(),
-          aggregateId,
-          aggregateType: "recommendation",
-          eventType: "smoke.test.created",
-          eventVersion: 1,
-          eventNumber: 1,
+          aggregate_id: aggregateId,
+          aggregate_type: "recommendation",
+          event_type: "smoke.test.created",
+          event_version: 1,
+          event_number: 1,
           payload: { test: "smoke" },
-          actorId: "smoke-test-actor",
-          workspaceId: testWorkspaceId,
-          causationId: uuidv4(),
-          correlationId: uuidv4(),
-          visibilityScope: "internal",
-          sensitivityClassification: "standard",
-          occurredAt: new Date(),
-          recordedAt: new Date(),
+          actor_id: actorId,
+          workspace_id: testWorkspaceId,
+          causation_id: uuidv4(),
+          correlation_id: uuidv4(),
+          visibility_scope: "internal",
+          sensitivity_classification: "standard",
+          occurred_at: new Date(),
+          recorded_at: new Date(),
         },
       });
 
       expect(event.id).toBeDefined();
-      expect(event.aggregateId).toBe(aggregateId);
-      expect(event.eventNumber).toBe(1);
+      expect(event.aggregate_id).toBe(aggregateId);
+      expect(event.event_number).toBe(1);
       console.log("✓ Event append succeeded");
 
-      // Verify append-only: next event should have eventNumber = 2
+      // Verify append-only: next event should have event_number = 2
       const event2 = await db.canonicalEvent.create({
         data: {
           id: uuidv4(),
-          aggregateId,
-          aggregateType: "recommendation",
-          eventType: "smoke.test.updated",
-          eventVersion: 1,
-          eventNumber: 2,
+          aggregate_id: aggregateId,
+          aggregate_type: "recommendation",
+          event_type: "smoke.test.updated",
+          event_version: 1,
+          event_number: 2,
           payload: { test: "smoke2" },
-          actorId: "smoke-test-actor",
-          workspaceId: testWorkspaceId,
-          causationId: uuidv4(),
-          correlationId: uuidv4(),
-          visibilityScope: "internal",
-          sensitivityClassification: "standard",
-          occurredAt: new Date(),
-          recordedAt: new Date(),
+          actor_id: actorId,
+          workspace_id: testWorkspaceId,
+          causation_id: uuidv4(),
+          correlation_id: uuidv4(),
+          visibility_scope: "internal",
+          sensitivity_classification: "standard",
+          occurred_at: new Date(),
+          recorded_at: new Date(),
         },
       });
 
-      expect(event2.eventNumber).toBe(2);
-      expect(event2.eventNumber).toBeGreaterThan(event.eventNumber);
+      expect(event2.event_number).toBe(2);
+      expect(event2.event_number).toBeGreaterThan(event.event_number);
       console.log("✓ Append-only enforcement verified");
     });
 
@@ -141,24 +133,25 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
       const aggregateId = uuidv4();
 
       // Create multiple events
+      const actorId = uuidv4();
       for (let i = 1; i <= 3; i++) {
         await db.canonicalEvent.create({
           data: {
             id: uuidv4(),
-            aggregateId,
-            aggregateType: "recommendation",
-            eventType: `smoke.test.${i}`,
-            eventVersion: 1,
-            eventNumber: i,
+            aggregate_id: aggregateId,
+            aggregate_type: "recommendation",
+            event_type: `smoke.test.${i}`,
+            event_version: 1,
+            event_number: i,
             payload: { index: i },
-            actorId: "smoke-test-actor",
-            workspaceId: testWorkspaceId,
-            causationId: uuidv4(),
-            correlationId: uuidv4(),
-            visibilityScope: "internal",
-            sensitivityClassification: "standard",
-            occurredAt: new Date(),
-            recordedAt: new Date(),
+            actor_id: actorId,
+            workspace_id: testWorkspaceId,
+            causation_id: uuidv4(),
+            correlation_id: uuidv4(),
+            visibility_scope: "internal",
+            sensitivity_classification: "standard",
+            occurred_at: new Date(),
+            recorded_at: new Date(),
           },
         });
       }
@@ -166,50 +159,48 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
       // Query all events in order
       const events = await db.canonicalEvent.findMany({
         where: {
-          aggregateId,
-          workspaceId: testWorkspaceId,
+          aggregate_id: aggregateId,
+          workspace_id: testWorkspaceId,
         },
-        orderBy: { eventNumber: "asc" },
+        orderBy: { event_number: "asc" },
       });
 
       expect(events).toHaveLength(3);
-      expect(events[0].eventNumber).toBe(1);
-      expect(events[1].eventNumber).toBe(2);
-      expect(events[2].eventNumber).toBe(3);
+      expect(events[0].event_number).toBe(1);
+      expect(events[1].event_number).toBe(2);
+      expect(events[2].event_number).toBe(3);
       console.log("✓ Event replay query works (proper ordering)");
     });
 
     it("verifies snapshot storage works", async () => {
       const aggregateId = uuidv4();
       const snapshotData = {
-        aggregateId,
-        aggregateType: "recommendation",
+        aggregate_id: aggregateId,
+        aggregate_type: "recommendation",
         state: { test: "snapshot" },
-        lastEventNumber: 5,
       };
 
       const snapshot = await db.snapshotData.create({
         data: {
           id: uuidv4(),
-          aggregateId,
-          aggregateType: "recommendation",
-          workspaceId: testWorkspaceId,
+          aggregate_id: aggregateId,
+          aggregate_type: "recommendation",
+          workspace_id: testWorkspaceId,
           state: snapshotData,
-          lastEventNumber: 5,
+          event_number: 5,
           checksum: "test-checksum-123",
-          createdAt: new Date(),
         },
       });
 
       expect(snapshot.id).toBeDefined();
-      expect(snapshot.aggregateId).toBe(aggregateId);
+      expect(snapshot.aggregate_id).toBe(aggregateId);
       console.log("✓ Snapshot storage works");
 
       // Retrieve and verify
       const retrieved = await db.snapshotData.findUnique({
         where: { id: snapshot.id },
       });
-      expect(retrieved?.lastEventNumber).toBe(5);
+      expect(retrieved?.event_number).toBe(5);
       console.log("✓ Snapshot retrieval works");
     });
   });
@@ -226,7 +217,6 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
           id: workspace1,
           name: "Workspace 1",
           slug: `iso-test-1-${Date.now()}`,
-          createdBy: "smoke-test",
         },
       });
 
@@ -235,84 +225,88 @@ describe("Phase 3: Database Connectivity & Persistence Smoke Test", () => {
           id: workspace2,
           name: "Workspace 2",
           slug: `iso-test-2-${Date.now()}`,
-          createdBy: "smoke-test",
         },
       });
 
-      // Create events in both workspaces with same aggregateId
+      // Create events in both workspaces with same aggregate_id
+      const actorId = uuidv4();
       await db.canonicalEvent.create({
         data: {
           id: uuidv4(),
-          aggregateId,
-          aggregateType: "recommendation",
-          eventType: "smoke.isolation.1",
-          eventVersion: 1,
-          eventNumber: 1,
+          aggregate_id: aggregateId,
+          aggregate_type: "recommendation",
+          event_type: "smoke.isolation.1",
+          event_version: 1,
+          event_number: 1,
           payload: { workspace: "1" },
-          actorId: "smoke-test",
-          workspaceId: workspace1,
-          causationId: uuidv4(),
-          correlationId: uuidv4(),
-          visibilityScope: "internal",
-          sensitivityClassification: "standard",
-          occurredAt: new Date(),
-          recordedAt: new Date(),
+          actor_id: actorId,
+          workspace_id: workspace1,
+          causation_id: uuidv4(),
+          correlation_id: uuidv4(),
+          visibility_scope: "internal",
+          sensitivity_classification: "standard",
+          occurred_at: new Date(),
+          recorded_at: new Date(),
         },
       });
 
       await db.canonicalEvent.create({
         data: {
           id: uuidv4(),
-          aggregateId,
-          aggregateType: "recommendation",
-          eventType: "smoke.isolation.2",
-          eventVersion: 1,
-          eventNumber: 1,
+          aggregate_id: aggregateId,
+          aggregate_type: "recommendation",
+          event_type: "smoke.isolation.2",
+          event_version: 1,
+          event_number: 1,
           payload: { workspace: "2" },
-          actorId: "smoke-test",
-          workspaceId: workspace2,
-          causationId: uuidv4(),
-          correlationId: uuidv4(),
-          visibilityScope: "internal",
-          sensitivityClassification: "standard",
-          occurredAt: new Date(),
-          recordedAt: new Date(),
+          actor_id: actorId,
+          workspace_id: workspace2,
+          causation_id: uuidv4(),
+          correlation_id: uuidv4(),
+          visibility_scope: "internal",
+          sensitivity_classification: "standard",
+          occurred_at: new Date(),
+          recorded_at: new Date(),
         },
       });
 
       // Query workspace 1 - should only see workspace1 event
       const events1 = await db.canonicalEvent.findMany({
         where: {
-          aggregateId,
-          workspaceId: workspace1,
+          aggregate_id: aggregateId,
+          workspace_id: workspace1,
         },
       });
 
       expect(events1).toHaveLength(1);
-      expect(events1[0].workspaceId).toBe(workspace1);
+      expect(events1[0].workspace_id).toBe(workspace1);
       console.log("✓ Workspace 1 isolation verified");
 
       // Query workspace 2 - should only see workspace2 event
       const events2 = await db.canonicalEvent.findMany({
         where: {
-          aggregateId,
-          workspaceId: workspace2,
+          aggregate_id: aggregateId,
+          workspace_id: workspace2,
         },
       });
 
       expect(events2).toHaveLength(1);
-      expect(events2[0].workspaceId).toBe(workspace2);
+      expect(events2[0].workspace_id).toBe(workspace2);
       console.log("✓ Workspace 2 isolation verified");
 
       // Cleanup
-      await db.canonicalEvent.deleteMany({
-        where: { workspaceId: workspace1 },
-      });
-      await db.canonicalEvent.deleteMany({
-        where: { workspaceId: workspace2 },
-      });
-      await db.workspace.delete({ where: { id: workspace1 } });
-      await db.workspace.delete({ where: { id: workspace2 } });
+      // canonical_events is append-only, so we skip deleting it
+      // Just clean up workspaces
+      try {
+        await db.workspace.delete({ where: { id: workspace1 } });
+      } catch (e) {
+        // May fail due to foreign key constraints - that's OK
+      }
+      try {
+        await db.workspace.delete({ where: { id: workspace2 } });
+      } catch (e) {
+        // May fail due to foreign key constraints - that's OK
+      }
     });
   });
 });

@@ -1,166 +1,1160 @@
 generator client {
   provider        = "prisma-client"
   output          = "../src/generated/prisma"
-  previewFeatures = ["driverAdapters"]
+  previewFeatures = ["driverAdapters", "partialIndexes"]
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-// Stub models to allow compilation when DATABASE_URL unavailable
-// These are placeholders for actual schema that will be defined via migrations
-// when DATABASE_URL becomes available
+model actions {
+  id                String      @id @db.Uuid
+  engagement_id     String      @db.Uuid
+  stage_id          String?     @db.Uuid
+  recommendation_id String?     @db.Uuid
+  title             String
+  description       String?
+  status            String
+  assigned_to       String?     @db.Uuid
+  due_at            DateTime?
+  started_at        DateTime?
+  completed_at      DateTime?
+  verified_at       DateTime?
+  metadata          Json?
+  version           Int         @default(1)
+  created_at        DateTime    @default(now())
+  updated_at        DateTime
+  engagements       engagements @relation(fields: [engagement_id], references: [id])
+  stages            stages?     @relation(fields: [stage_id], references: [id])
 
-model User {
-  id String @id
-  email String? @unique
-  name String?
-  createdAt DateTime?
-  updatedAt DateTime?
+  @@index([engagement_id])
+  @@index([recommendation_id])
+  @@index([stage_id])
+  @@index([status])
 }
 
-model Workspace {
-  id String @id
-  slug String? @unique
-  name String?
-  createdBy String?
-  createdAt DateTime?
-  updatedAt DateTime?
+model ai_proposal_sandboxes {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspace_id      String    @db.Uuid
+  recommendation_id String    @db.Uuid
+  source_model      String
+  confidence_level  String
+  is_approved       Boolean   @default(false)
+  approved_by       String?   @db.Uuid
+  approved_at       DateTime?
+  rejected_reason   String?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime
+
+  @@index([is_approved])
+  @@index([recommendation_id])
+  @@index([source_model])
+  @@index([workspace_id])
 }
 
-model WorkspaceMembership {
-  workspaceId String
-  userId      String
-  role String?
-  createdAt DateTime?
+model audit_events {
+  id             String   @id @db.Uuid
+  event_name     String
+  actor_id       String?  @db.Uuid
+  actor_type     String   @default("user")
+  entity_type    String?
+  entity_id      String?  @db.Uuid
+  payload        Json?
+  correlation_id String?
+  visibility     String   @default("internal")
+  occurred_at    DateTime @default(now())
+  previous_hash  String?  @db.VarChar(64)
+  workspace_id   String?  @db.Uuid
+  users          users?   @relation(fields: [actor_id], references: [id], onDelete: Restrict)
 
-  @@id([workspaceId, userId])
+  @@index([actor_id])
+  @@index([correlation_id])
+  @@index([entity_type, entity_id])
+  @@index([event_name])
+  @@index([occurred_at])
+  @@index([workspace_id, occurred_at], map: "idx_audit_events_workspace_occurred_at")
 }
 
-model ClientAccount {
-  id String @id
-  name String?
-  createdAt DateTime?
-  updatedAt DateTime?
+model billing_accounts {
+  id                   String         @id @db.Uuid
+  workspace_id         String         @unique @db.Uuid
+  provider             String         @default("stripe")
+  provider_customer_id String
+  status               String         @default("active")
+  created_at           DateTime       @default(now())
+  updated_at           DateTime
+  stripe_customer_id   String?        @unique(map: "uk_stripe_customer_id")
+  subscriptions        subscriptions?
+
+  @@index([status])
 }
 
-model Engagement {
-  id String @id
-  code String? @unique
-  name String?
-  createdAt DateTime?
-  updatedAt DateTime?
+model business_condition_profiles {
+  id                         String      @id @db.Uuid
+  engagement_id              String      @db.Uuid
+  business_status            String
+  severity_score             Int
+  urgency_level              String
+  cash_pressure_level        String
+  margin_pressure_level      String
+  client_concentration_risk  String
+  owner_dependency_risk      String
+  key_person_dependency_risk String
+  process_maturity_level     String
+  management_maturity_level  String
+  execution_capacity_level   String
+  morale_fragility_level     String
+  resilience_level           String
+  growth_readiness_level     String
+  notes                      String?
+  assessed_by                String?     @db.Uuid
+  version                    Int         @default(1)
+  is_current                 Boolean     @default(true)
+  created_at                 DateTime    @default(now())
+  updated_at                 DateTime
+  engagements                engagements @relation(fields: [engagement_id], references: [id])
+
+  @@index([engagement_id])
+  @@index([engagement_id, is_current])
 }
 
-model EngagementMembership {
-  userId      String
-  engagementId String
-  role String?
-  createdAt DateTime?
+model calibration_records {
+  id               String         @id @db.Uuid
+  operator_item_id String         @db.Uuid
+  predicted_impact Decimal        @db.Decimal(15, 2)
+  actual_impact    Decimal        @db.Decimal(15, 2)
+  confidence       Decimal        @db.Decimal(3, 2)
+  deviation        Decimal        @db.Decimal(5, 2)
+  created_at       DateTime       @default(now())
+  operator_items   operator_items @relation(fields: [operator_item_id], references: [id], onDelete: Cascade)
 
-  @@id([userId, engagementId])
+  @@unique([operator_item_id, created_at])
+  @@index([created_at])
+  @@index([operator_item_id])
 }
 
-model AuditEvent {
-  id String @id
-  eventName String?
-  actorId String?
-  actorType String?
-  entityType String?
-  entityId String?
-  payload Json?
-  correlationId String?
-  visibility String?
-  occurredAt DateTime?
-  createdAt DateTime?
+model canonical_events {
+  id                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  aggregate_id               String
+  aggregate_type             String
+  event_type                 String
+  event_version              Int      @default(1)
+  event_number               Int
+  payload                    Json
+  actor_id                   String   @db.Uuid
+  workspace_id               String   @db.Uuid
+  causation_id               String
+  correlation_id             String
+  idempotency_key            String?
+  visibility_scope           String   @default("internal")
+  sensitivity_classification String   @default("standard")
+  occurred_at                DateTime
+  recorded_at                DateTime @default(now())
+  created_at                 DateTime @default(now())
+
+  @@unique([idempotency_key, workspace_id])
+  @@index([actor_id])
+  @@index([aggregate_id, aggregate_type, workspace_id])
+  @@index([workspace_id, event_type])
+  @@index([workspace_id, recorded_at])
 }
 
-model UserRoleAssignment {
-  id String @id
-  role String?
-  scope String?
-  scopeId String?
-  createdAt DateTime?
+model client_accounts {
+  id              String            @id @db.Uuid
+  name            String
+  legal_name      String?
+  industry        String?
+  size            String?
+  status          String            @default("active")
+  website         String?
+  address         String?
+  notes           String?
+  version         Int               @default(1)
+  visibility      String            @default("internal")
+  created_by      String?           @db.Uuid
+  created_at      DateTime          @default(now())
+  updated_at      DateTime
+  archived_at     DateTime?
+  client_contacts client_contacts[]
+  engagements     engagements[]
+  lead_records    lead_records[]
+
+  @@index([status])
 }
 
-model Recommendation {
-  id String @id
-  workspaceId String
-  engagementId String
-  title String?
+model client_contacts {
+  id              String           @id @db.Uuid
+  client_id       String           @db.Uuid
+  name            String
+  email           String?
+  phone           String?
+  role            String?
+  is_primary      Boolean          @default(false)
+  is_active       Boolean          @default(true)
+  notes           String?
+  created_at      DateTime         @default(now())
+  updated_at      DateTime
+  client_accounts client_accounts  @relation(fields: [client_id], references: [id])
+  evidence_items  evidence_items[]
+
+  @@index([client_id, is_active])
+}
+
+model decision_snapshots {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  engagement_id   String      @db.Uuid
+  decision_input  Json
+  decision_output Json
+  version         Int         @default(1)
+  created_at      DateTime    @default(now()) @db.Timestamp(6)
+  engagements     engagements @relation(fields: [engagement_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at], map: "idx_decision_snapshots_created_at")
+  @@index([engagement_id], map: "idx_decision_snapshots_engagement_id")
+}
+
+model deliverables {
+  id               String      @id @db.Uuid
+  stage_id         String      @db.Uuid
+  engagement_id    String      @db.Uuid
+  title            String
+  description      String?
+  status           String      @default("draft")
+  version          Int         @default(1)
+  submitted_by     String?     @db.Uuid
+  submitted_at     DateTime?
+  approved_by      String?     @db.Uuid
+  approved_at      DateTime?
+  rejection_reason String?
+  created_by       String?     @db.Uuid
+  created_at       DateTime    @default(now())
+  updated_at       DateTime
+  engagements      engagements @relation(fields: [engagement_id], references: [id])
+  stages           stages      @relation(fields: [stage_id], references: [id])
+
+  @@index([engagement_id])
+  @@index([stage_id])
+  @@index([status])
+}
+
+model engagement_memberships {
+  id            String      @id @db.Uuid
+  user_id       String      @db.Uuid
+  engagement_id String      @db.Uuid
+  role          String
+  added_by      String?     @db.Uuid
+  added_at      DateTime    @default(now())
+  removed_at    DateTime?
+  is_active     Boolean     @default(true)
+  engagements   engagements @relation(fields: [engagement_id], references: [id])
+  users         users       @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, engagement_id, role])
+  @@index([engagement_id, is_active])
+  @@index([user_id, is_active])
+}
+
+model engagements {
+  id                          String                        @id @db.Uuid
+  code                        String                        @unique
+  title                       String
+  client_id                   String                        @db.Uuid
+  service_tier                String
+  engagement_mode             String
+  status                      String                        @default("draft")
+  health_status               String                        @default("healthy")
+  intervention_mode           String                        @default("recovery")
+  intervention_phase          String                        @default("triage")
+  description                 String?
+  start_date                  DateTime?
+  target_end_date             DateTime?
+  actual_end_date             DateTime?
+  owner_id                    String?                       @db.Uuid
+  assigned_consultant_id      String?                       @db.Uuid
+  current_scope_version_id    String?                       @db.Uuid
+  parent_engagement_id        String?                       @db.Uuid
+  version                     Int                           @default(1)
+  visibility                  String                        @default("internal")
+  created_by                  String?                       @db.Uuid
+  created_at                  DateTime                      @default(now())
+  updated_at                  DateTime
+  is_blocked                  Boolean                       @default(false)
+  blocker_reason              String?
+  blocked_at                  DateTime?
+  workspace_id                String?                       @db.Uuid
+  actions                     actions[]
+  business_condition_profiles business_condition_profiles[]
+  decision_snapshots          decision_snapshots[]
+  deliverables                deliverables[]
+  engagement_memberships      engagement_memberships[]
+  client_accounts             client_accounts               @relation(fields: [client_id], references: [id])
+  engagements                 engagements?                  @relation("engagementsToengagements", fields: [parent_engagement_id], references: [id], onDelete: Restrict)
+  other_engagements           engagements[]                 @relation("engagementsToengagements")
+  workspaces                  workspaces?                   @relation(fields: [workspace_id], references: [id], onDelete: Restrict)
+  evidence                    evidence[]
+  evidence_bundles            evidence_bundles[]
+  evidence_items              evidence_items[]
+  findings                    findings[]
+  intervention_states         intervention_states?
+  kpis                        kpis[]
+  lead_records                lead_records[]
+  recommendations             recommendations[]
+  risks                       risks[]
+  shock_events                shock_events[]
+  stages                      stages[]
+
+  @@index([client_id])
+  @@index([is_blocked])
+  @@index([owner_id])
+  @@index([parent_engagement_id])
+  @@index([status])
+}
+
+model entities {
+  id           String         @id @db.Uuid
+  name         String
+  type         String
+  external_id  String?
+  created_by   String         @db.Uuid
+  created_at   DateTime       @default(now())
+  updated_at   DateTime
+  users        users          @relation(fields: [created_by], references: [id])
+  entity_links entity_links[]
+
+  @@index([created_by])
+  @@index([external_id])
+  @@index([type])
+}
+
+model entity_links {
+  id               String         @id @db.Uuid
+  entity_id        String         @db.Uuid
+  operator_item_id String         @db.Uuid
+  linkType         String
+  created_at       DateTime       @default(now())
+  entities         entities       @relation(fields: [entity_id], references: [id], onDelete: Cascade)
+  operator_items   operator_items @relation(fields: [operator_item_id], references: [id], onDelete: Cascade)
+
+  @@unique([entity_id, operator_item_id])
+  @@index([operator_item_id])
+}
+
+model evidence {
+  id               String      @id @db.Uuid
+  engagement_id    String      @db.Uuid
+  stage_id         String?     @db.Uuid
+  title            String
+  description      String
+  source           String
+  status           String
+  evidence_type    String?
+  severity_rating  String?
+  collected_at     DateTime?
+  validated_at     DateTime?
+  rejection_reason String?
+  metadata         Json?
+  submitted_by     String?     @db.Uuid
+  validated_by     String?     @db.Uuid
+  version          Int         @default(1)
+  created_at       DateTime    @default(now())
+  updated_at       DateTime
+  engagements      engagements @relation(fields: [engagement_id], references: [id])
+  stages           stages?     @relation(fields: [stage_id], references: [id])
+  findings         findings[]
+
+  @@index([engagement_id])
+  @@index([stage_id])
+  @@index([status])
+}
+
+model evidence_bundle_items {
+  id               String           @id @db.Uuid
+  bundle_id        String           @db.Uuid
+  evidence_item_id String           @db.Uuid
+  added_by         String?          @db.Uuid
+  added_at         DateTime         @default(now())
+  removed_at       DateTime?
+  evidence_bundles evidence_bundles @relation(fields: [bundle_id], references: [id])
+  evidence_items   evidence_items   @relation(fields: [evidence_item_id], references: [id])
+
+  @@unique([bundle_id, evidence_item_id])
+  @@index([bundle_id])
+  @@index([evidence_item_id])
+}
+
+model evidence_bundles {
+  id                    String                  @id @db.Uuid
+  engagement_id         String                  @db.Uuid
+  title                 String
+  description           String?
+  status                String                  @default("active")
+  created_by            String?                 @db.Uuid
+  version               Int                     @default(1)
+  created_at            DateTime                @default(now())
+  updated_at            DateTime
+  evidence_bundle_items evidence_bundle_items[]
+  engagements           engagements             @relation(fields: [engagement_id], references: [id])
+
+  @@index([engagement_id])
+  @@index([status])
+}
+
+model evidence_items {
+  id                    String                       @id @db.Uuid
+  engagement_id         String                       @db.Uuid
+  category              evidence_category
+  evidence_type         evidence_type
+  source_type           evidence_source_type
+  source_label          String
+  source_contact_id     String?                      @db.Uuid
+  capture_method        evidence_capture_method
+  title                 String
+  description           String?
+  content               String?
+  validation_status     evidence_validation_status   @default(PENDING)
+  traceability_status   evidence_traceability_status
+  visibility            evidence_visibility          @default(INTERNAL)
+  created_by            String?                      @db.Uuid
+  version               Int                          @default(1)
+  captured_at           DateTime
+  created_at            DateTime                     @default(now())
+  updated_at            DateTime
+  evidence_bundle_items evidence_bundle_items[]
+  engagements           engagements                  @relation(fields: [engagement_id], references: [id])
+  client_contacts       client_contacts?             @relation(fields: [source_contact_id], references: [id])
+  file_blobs            file_blobs?
+
+  @@index([category])
+  @@index([engagement_id])
+  @@index([validation_status])
+  @@index([visibility])
+}
+
+model file_blobs {
+  id               String         @id @db.Uuid
+  evidence_item_id String         @unique @db.Uuid
+  file_name        String
+  mime_type        String
+  size_bytes       BigInt
+  storage_key      String
+  created_by       String?        @db.Uuid
+  created_at       DateTime       @default(now())
+  evidence_items   evidence_items @relation(fields: [evidence_item_id], references: [id])
+
+  @@index([evidence_item_id])
+}
+
+model financial_baselines {
+  id            String    @id @db.Uuid
+  engagement_id String?   @db.Uuid
+  revenue       Decimal   @db.Decimal(15, 2)
+  costs         Decimal   @db.Decimal(15, 2)
+  currency      String    @default("USD")
+  source        String
+  assumptions   Json
+  created_by    String    @db.Uuid
+  created_at    DateTime  @default(now())
+  valid_until   DateTime?
+  users         users     @relation(fields: [created_by], references: [id])
+
+  @@index([engagement_id])
+  @@index([source])
+}
+
+model findings {
+  id                  String            @id @db.Uuid
+  engagement_id       String            @db.Uuid
+  stage_id            String?           @db.Uuid
+  primary_evidence_id String            @db.Uuid
+  title               String
+  summary             String
+  severity            String
+  impact_area         String
+  status              String            @default("identified")
+  confidence_score    Float?
+  priority_score      Float?
+  hypothesis          String?
+  root_cause          String?
+  consequence         String?
+  owner_id            String?           @db.Uuid
+  due_at              DateTime?
+  validated_at        DateTime?
+  resolved_at         DateTime?
+  dismissed_at        DateTime?
+  metadata            Json?
+  version             Int               @default(1)
+  created_at          DateTime          @default(now())
+  updated_at          DateTime
+  archived_at         DateTime?
+  engagements         engagements       @relation(fields: [engagement_id], references: [id])
+  evidence            evidence          @relation(fields: [primary_evidence_id], references: [id])
+  stages              stages?           @relation(fields: [stage_id], references: [id])
+  recommendations     recommendations[]
+
+  @@index([archived_at])
+  @@index([engagement_id])
+  @@index([engagement_id, severity])
+  @@index([engagement_id, status])
+  @@index([primary_evidence_id])
+  @@index([severity])
+  @@index([stage_id])
+  @@index([status])
+}
+
+model idempotency_records {
+  id              String    @id @db.Uuid
+  idempotency_key String    @unique
+  operation_name  String
+  status          String    @default("pending")
+  response_code   Int?
+  response_body   Json?
+  created_at      DateTime  @default(now())
+  completed_at    DateTime?
+  expires_at      DateTime
+  payload         String?
+
+  @@index([expires_at])
+  @@index([idempotency_key])
+}
+
+model intervention_states {
+  id             String      @id @db.Uuid
+  engagement_id  String      @unique @db.Uuid
+  current_phase  String
+  previous_phase String?
+  version        Int         @default(1)
+  created_at     DateTime    @default(now())
+  updated_at     DateTime
+  engagements    engagements @relation(fields: [engagement_id], references: [id])
+
+  @@index([engagement_id])
+}
+
+model kpi_snapshots {
+  id          String   @id @db.Uuid
+  kpi_id      String   @db.Uuid
+  value       Float
+  recorded_at DateTime @default(now())
+  recorded_by String?  @db.Uuid
+  kpis        kpis     @relation(fields: [kpi_id], references: [id])
+
+  @@index([kpi_id])
+  @@index([recorded_at])
+}
+
+model kpis {
+  id               String          @id @db.Uuid
+  engagement_id    String          @db.Uuid
+  name             String
+  description      String?
+  target           Float?
+  current_value    Float?
+  measurement_date DateTime?
+  direction        String          @default("up")
+  version          Int             @default(1)
+  created_by       String?         @db.Uuid
+  created_at       DateTime        @default(now())
+  updated_at       DateTime
+  kpi_snapshots    kpi_snapshots[]
+  engagements      engagements     @relation(fields: [engagement_id], references: [id])
+
+  @@index([engagement_id])
+}
+
+model lead_records {
+  id                     String           @id @db.Uuid
+  company_name           String
+  contact_name           String?
+  contact_email          String?
+  contact_phone          String?
+  source                 String?
+  status                 String           @default("new")
+  notes                  String?
+  estimated_value        Float?
+  converted_to_client_id String?          @db.Uuid
+  engagement_id          String?          @db.Uuid
+  assigned_to            String?          @db.Uuid
+  created_by             String?          @db.Uuid
+  created_at             DateTime         @default(now())
+  updated_at             DateTime
+  client_accounts        client_accounts? @relation(fields: [converted_to_client_id], references: [id], onDelete: Restrict, map: "lead_records_client_id_fkey")
+  engagements            engagements?     @relation(fields: [engagement_id], references: [id], onDelete: Restrict)
+
+  @@index([assigned_to])
+  @@index([converted_to_client_id])
+  @@index([status])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model operator_items {
+  id                                             String                @id @db.Uuid
+  workspace_id                                   String                @db.Uuid
+  owner_user_id                                  String?               @db.Uuid
+  created_by_user_id                             String?               @db.Uuid
+  last_updated_by_user_id                        String?               @db.Uuid
+  assigned_to_user_id                            String?               @db.Uuid
+  reviewed_by_user_id                            String?               @db.Uuid
+  problem                                        String
+  action                                         String
+  impactExpected                                 Float
+  impactLow                                      Float
+  impactHigh                                     Float
+  confidence                                     Float
+  priorityScore                                  Float
+  status                                         String                @default("pending")
+  due_at                                         DateTime?
+  expected_outcome                               String?
+  actual_outcome                                 String?
+  explanation                                    Json?
+  decision_hash                                  String?
+  engine_version                                 String                @default("v1.0.0")
+  created_at                                     DateTime              @default(now())
+  updated_at                                     DateTime
+  signature                                      String?
+  signature_algo                                 String?
+  public_key_id                                  String?
+  blocking_dependencies                          Json?
+  inputs_snapshot                                Json?
+  signed_hash                                    String?
+  actual_outcome_value                           Float?
+  outcome_notes                                  String?
+  started_at                                     DateTime?
+  completed_at                                   DateTime?
+  execution_status                               String                @default("not_started")
+  completed_by                                   String?               @db.Uuid
+  verified_by                                    String?               @db.Uuid
+  block_stage                                    String?
+  block_reason                                   String?
+  control_layer_violations                       Json?
+  gate_result                                    Json?
+  guardrail_result                               Json?
+  calibration_records                            calibration_records[]
+  entity_links                                   entity_links[]
+  users_operator_items_completed_byTousers       users?                @relation("operator_items_completed_byTousers", fields: [completed_by], references: [id])
+  users_operator_items_created_by_user_idTousers users?                @relation("operator_items_created_by_user_idTousers", fields: [created_by_user_id], references: [id], onDelete: Restrict, map: "operator_items_created_by_fkey")
+  users_operator_items_verified_byTousers        users?                @relation("operator_items_verified_byTousers", fields: [verified_by], references: [id])
+  override_records                               override_records[]
+  webhook_deliveries                             webhook_deliveries[]
+
+  @@index([block_stage])
+  @@index([created_at])
+  @@index([created_by_user_id], map: "operator_items_created_by_idx")
+  @@index([decision_hash])
+  @@index([execution_status])
+  @@index([priorityScore], map: "operator_items_priority_score_idx")
+  @@index([public_key_id])
+  @@index([signed_hash])
+  @@index([status])
+  @@index([workspace_id, block_stage], map: "operator_items_workspace_block_stage_idx")
+}
+
+model override_records {
+  id                String         @id @db.Uuid
+  operator_item_id  String         @db.Uuid
+  original_action   String
+  overridden_action String
+  reason            String
+  overridden_by     String         @db.Uuid
+  created_at        DateTime       @default(now())
+  revoked_at        DateTime?
+  operator_items    operator_items @relation(fields: [operator_item_id], references: [id], onDelete: Cascade)
+  users             users          @relation(fields: [overridden_by], references: [id])
+
+  @@index([operator_item_id])
+  @@index([overridden_by])
+}
+
+model plan_capabilities {
+  id          String   @id @db.Uuid
+  plan_id     String   @db.Uuid
+  key         String
+  limit       Int?
   description String?
-  priority String?
-  createdBy String?
-  status String?
-  evidenceValidationScore Int?
-  reliabilityLevel String?
-  kpiHealthScore Int?
-  kpiRiskLevel String?
-  createdAt DateTime?
-  updatedAt DateTime?
+  created_at  DateTime @default(now())
+  plans       plans    @relation(fields: [plan_id], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId])
-  @@index([engagementId])
+  @@unique([plan_id, key])
+  @@index([plan_id])
 }
 
-model Action {
-  id String @id
-  createdAt DateTime?
+model plans {
+  id                String              @id @db.Uuid
+  name              String              @unique
+  description       String?
+  price_monthly     Float
+  price_yearly      Float
+  active            Boolean             @default(true)
+  created_at        DateTime            @default(now())
+  updated_at        DateTime
+  stripe_price_id   String?
+  plan_capabilities plan_capabilities[]
+  subscriptions     subscriptions[]
+
+  @@index([active])
 }
 
-model LearningRecord {
-  id String @id
-  success Boolean?
-  problemType String?
-  impact String?
-  createdAt DateTime?
+model recommendation_expiry_policies {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspace_id      String    @db.Uuid
+  recommendation_id String    @unique @db.Uuid
+  expires_at        DateTime
+  status            String    @default("active")
+  expired_at        DateTime?
+  reason            String?
+  replaced_by_id    String?   @db.Uuid
+  created_at        DateTime  @default(now())
+  updated_at        DateTime
+
+  @@index([expires_at])
+  @@index([status])
+  @@index([workspace_id])
 }
 
-model OperatorItem {
-  id String @id
-  createdAt DateTime?
+model recommendations {
+  id                        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  engagement_id             String      @db.Uuid
+  workspace_id              String      @db.Uuid
+  finding_id                String?     @db.Uuid
+  title                     String
+  description               String?
+  rationale                 String?
+  priority                  String
+  estimated_impact          String?
+  status                    String      @default("pending")
+  approved_by               String?     @db.Uuid
+  approved_at               DateTime?
+  evidence_validation_score Int?
+  reliability_level         String?
+  kpi_health_score          Int?
+  kpi_risk_level            String?
+  version                   Int         @default(1)
+  visibility                String      @default("internal")
+  created_at                DateTime    @default(now())
+  updated_at                DateTime    @default(now())
+  rollback_plan             String?
+  constraints_considered    Json?
+  confidence_level          String?
+  expires_at                DateTime?
+  is_ai_proposal            Boolean     @default(false)
+  created_by                String?     @db.Uuid
+  engagements               engagements @relation(fields: [engagement_id], references: [id])
+  findings                  findings?   @relation(fields: [finding_id], references: [id])
+
+  @@unique([finding_id, title], where: raw("(finding_id IS NOT NULL)"))
+  @@index([engagement_id])
+  @@index([priority])
+  @@index([status])
+  @@index([workspace_id])
 }
 
-model CanonicalEvent {
-  id String @id
-  aggregateId String
-  aggregateType String
-  eventType String
-  eventVersion Int
-  eventNumber Int
-  payload Json?
-  actorId String?
-  workspaceId String
-  causationId String?
-  correlationId String?
-  idempotencyKey String? @unique
-  visibilityScope String?
-  sensitivityClassification String?
-  occurredAt DateTime?
-  recordedAt DateTime?
-  checksum String?
-  createdAt DateTime?
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model recommendations_legacy {
+  id                                              String      @db.Uuid
+  engagement_id                                   String      @db.Uuid
+  stage_id                                        String?     @db.Uuid
+  finding_id                                      String      @db.Uuid
+  title                                           String
+  summary                                         String
+  priority                                        String
+  type                                            String
+  status                                          String      @default("proposed")
+  rationale                                       String
+  expected_impact                                 String?
+  estimated_effort                                String?
+  target_metric                                   String?
+  owner_id                                        String?     @db.Uuid
+  due_at                                          DateTime?
+  endorsed_at                                     DateTime?
+  converted_at                                    DateTime?
+  rejected_at                                     DateTime?
+  withdrawn_at                                    DateTime?
+  metadata                                        Json?
+  version                                         Int         @default(1)
+  created_at                                      DateTime    @default(now())
+  updated_at                                      DateTime
+  archived_at                                     DateTime?
+  rollback_plan                                   String?
+  constraints_considered                          Json?
+  confidence_level                                String?
+  expires_at                                      DateTime?
+  is_ai_proposal                                  Boolean     @default(false)
+  created_by                                      String?     @db.Uuid
+  evidence_validation_score                       Int?
+  reliability_level                               String?
+  kpi_health_score                                Int?
+  kpi_risk_level                                  String?
+  description                                     String?
+  approved_by                                     String?     @db.Uuid
+  approved_at                                     DateTime?
+  visibility                                      String      @default("internal")
+  workspace_id                                    String?     @db.Uuid
+  users_recommendations_legacy_approved_byTousers users?      @relation("recommendations_legacy_approved_byTousers", fields: [approved_by], references: [id], map: "recommendations_approved_by_fkey")
+  users_recommendations_legacy_created_byTousers  users?      @relation("recommendations_legacy_created_byTousers", fields: [created_by], references: [id], map: "recommendations_created_by_fkey")
+  workspaces                                      workspaces? @relation(fields: [workspace_id], references: [id], onDelete: Restrict, map: "recommendations_workspace_id_fkey")
 
-  @@index([aggregateId])
-  @@index([aggregateType])
-  @@index([workspaceId])
-  @@index([eventNumber])
-  @@unique([workspaceId, aggregateId, eventNumber])
+  @@index([evidence_validation_score], map: "recommendations_evidence_validation_score_idx")
+  @@index([expires_at], map: "recommendations_expires_at_idx")
+  @@index([is_ai_proposal], map: "recommendations_is_ai_proposal_idx")
+  @@index([kpi_health_score], map: "recommendations_kpi_health_score_idx")
+  @@ignore
 }
 
-model SnapshotData {
-  id String @id
-  aggregateId String
-  aggregateType String
-  workspaceId String
-  eventNumber Int
-  data Json?
-  checksum String?
-  createdAt DateTime?
-  updatedAt DateTime?
+model risks {
+  id                  String      @id @db.Uuid
+  stage_id            String      @db.Uuid
+  engagement_id       String      @db.Uuid
+  title               String
+  description         String?
+  status              String      @default("identified")
+  identified_at       DateTime    @default(now())
+  identified_by       String?     @db.Uuid
+  assessed_at         DateTime?
+  assessed_by         String?     @db.Uuid
+  mitigation_strategy String?
+  created_at          DateTime    @default(now())
+  updated_at          DateTime
+  engagements         engagements @relation(fields: [engagement_id], references: [id])
+  stages              stages      @relation(fields: [stage_id], references: [id])
 
-  @@index([aggregateId])
-  @@index([workspaceId])
-  @@unique([workspaceId, aggregateId])
+  @@index([engagement_id])
+  @@index([stage_id])
+  @@index([status])
+}
+
+model scheduled_tasks {
+  id            String    @id @db.Uuid
+  task_name     String
+  payload       Json?
+  status        String    @default("pending")
+  attempts      Int       @default(0)
+  max_attempts  Int       @default(3)
+  last_error    String?
+  scheduled_for DateTime
+  started_at    DateTime?
+  completed_at  DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime
+
+  @@index([status, scheduled_for])
+  @@index([task_name])
+}
+
+model sessions {
+  id         String    @id @db.Uuid
+  user_id    String    @db.Uuid
+  token      String    @unique
+  expires_at DateTime
+  created_at DateTime  @default(now())
+  revoked_at DateTime?
+  ip_address String?
+  user_agent String?
+  users      users     @relation(fields: [user_id], references: [id])
+
+  @@index([expires_at])
+  @@index([user_id])
+}
+
+model shock_events {
+  id            String      @id @db.Uuid
+  engagement_id String      @db.Uuid
+  type          String
+  severity      String
+  happened_at   DateTime
+  notes         String?
+  reported_by   String?     @db.Uuid
+  created_by    String?     @db.Uuid
+  created_at    DateTime    @default(now())
+  updated_at    DateTime
+  engagements   engagements @relation(fields: [engagement_id], references: [id])
+
+  @@index([engagement_id])
+  @@index([severity])
+  @@index([type])
+}
+
+model snapshot_data {
+  id               String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  aggregate_id     String
+  aggregate_type   String
+  snapshot_version Int        @default(0)
+  state            Json
+  checksum         String
+  event_number     Int
+  created_at       DateTime   @default(now())
+  expires_at       DateTime?
+  workspace_id     String     @db.Uuid
+  workspaces       workspaces @relation(fields: [workspace_id], references: [id])
+
+  @@unique([aggregate_id, aggregate_type, workspace_id])
+  @@index([created_at])
+  @@index([workspace_id, created_at])
+  @@index([workspace_id, expires_at])
+}
+
+model stages {
+  id               String         @id @db.Uuid
+  engagement_id    String         @db.Uuid
+  title            String
+  description      String?
+  status           String
+  is_blocked       Boolean        @default(false)
+  blocker_severity String?
+  blocker_type     String?
+  blocker_reason   String?
+  blocked_at       DateTime?
+  unblocked_at     DateTime?
+  due_at           DateTime?
+  completed_at     DateTime?
+  owner_id         String?        @db.Uuid
+  version          Int            @default(1)
+  created_at       DateTime       @default(now())
+  updated_at       DateTime
+  actions          actions[]
+  deliverables     deliverables[]
+  evidence         evidence[]
+  findings         findings[]
+  risks            risks[]
+  engagements      engagements    @relation(fields: [engagement_id], references: [id])
+
+  @@index([engagement_id])
+  @@index([is_blocked])
+  @@index([status])
+}
+
+model subscriptions {
+  id                     String           @id @db.Uuid
+  billing_account_id     String           @unique @db.Uuid
+  plan_id                String           @db.Uuid
+  status                 String           @default("trialing")
+  current_period_start   DateTime
+  current_period_end     DateTime
+  trial_ends_at          DateTime?
+  canceled_at            DateTime?
+  cancel_reason          String?
+  created_at             DateTime         @default(now())
+  updated_at             DateTime
+  stripe_subscription_id String?
+  last_event_timestamp   DateTime?        @db.Timestamp(6)
+  billing_accounts       billing_accounts @relation(fields: [billing_account_id], references: [id], onDelete: Cascade)
+  plans                  plans            @relation(fields: [plan_id], references: [id])
+
+  @@index([last_event_timestamp], map: "idx_subscriptions_last_event_timestamp")
+  @@index([stripe_subscription_id], map: "idx_subscriptions_stripe_subscription_id")
+  @@index([current_period_end])
+  @@index([plan_id])
+  @@index([status])
+}
+
+model threshold_configs {
+  id                                    String   @id @db.Uuid
+  workspace_id                          String   @unique @db.Uuid
+  confidence_min_threshold              Float    @default(0.65)
+  low_confidence_value_threshold        Float    @default(3000000)
+  low_confidence_failure_rate_threshold Float    @default(0.40)
+  rule_block_value_threshold            Float    @default(5000000)
+  false_positive_rate_threshold         Float    @default(0.25)
+  block_count_threshold                 Int      @default(50)
+  override_failure_rate_threshold       Float    @default(0.30)
+  override_failure_value_threshold      Float    @default(2000000)
+  failure_count_threshold               Int      @default(10)
+  missing_data_value_threshold          Float    @default(4000000)
+  pending_age_threshold                 Int      @default(604800000)
+  field_missing_rate_threshold          Float    @default(0.30)
+  confidence_change_threshold           Float    @default(0.05)
+  approval_rate_change_threshold        Float    @default(0.10)
+  block_rate_change_threshold           Float    @default(0.10)
+  drift_severity_low                    Float    @default(0.02)
+  drift_severity_medium                 Float    @default(0.05)
+  drift_severity_high                   Float    @default(0.10)
+  stalled_pipeline_threshold            Float    @default(10000000)
+  created_by                            String?  @db.Uuid
+  created_at                            DateTime @default(now())
+  updated_at                            DateTime
+
+  @@index([workspace_id])
+}
+
+model usage_events {
+  id           String   @id @db.Uuid
+  workspace_id String   @db.Uuid
+  key          String
+  value        Int
+  timestamp    DateTime @default(now())
+  created_at   DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([workspace_id])
+  @@index([workspace_id, key])
+  @@index([workspace_id, timestamp])
+}
+
+model user_role_assignments {
+  id         String    @id @db.Uuid
+  user_id    String    @db.Uuid
+  role       String
+  scope      String?
+  scope_id   String?   @db.Uuid
+  granted_by String?   @db.Uuid
+  granted_at DateTime  @default(now())
+  revoked_at DateTime?
+  is_active  Boolean   @default(true)
+  users      users     @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, role, scope, scope_id])
+  @@index([user_id, is_active])
+}
+
+model users {
+  id                                                               String                   @id @db.Uuid
+  email                                                            String                   @unique
+  name                                                             String?
+  hashed_password                                                  String?
+  is_active                                                        Boolean                  @default(true)
+  version                                                          Int                      @default(1)
+  created_at                                                       DateTime                 @default(now())
+  updated_at                                                       DateTime
+  deactivated_at                                                   DateTime?
+  operatorItemsCreated                                             String?
+  operatorItemsCompleted                                           String?
+  operatorItemsVerified                                            String?
+  overrideRecords                                                  String?
+  entitiesCreated                                                  String?
+  financialBaselinesCreated                                        String?
+  audit_events                                                     audit_events[]
+  engagement_memberships                                           engagement_memberships[]
+  entities                                                         entities[]
+  financial_baselines                                              financial_baselines[]
+  operator_items_operator_items_completed_byTousers                operator_items[]         @relation("operator_items_completed_byTousers")
+  operator_items_operator_items_created_by_user_idTousers          operator_items[]         @relation("operator_items_created_by_user_idTousers")
+  operator_items_operator_items_verified_byTousers                 operator_items[]         @relation("operator_items_verified_byTousers")
+  override_records                                                 override_records[]
+  recommendations_legacy_recommendations_legacy_approved_byTousers recommendations_legacy[] @relation("recommendations_legacy_approved_byTousers") @ignore
+  recommendations_legacy_recommendations_legacy_created_byTousers  recommendations_legacy[] @relation("recommendations_legacy_created_byTousers") @ignore
+  sessions                                                         sessions[]
+  user_role_assignments                                            user_role_assignments[]
+  workspace_memberships                                            workspace_memberships[]
+}
+
+model webhook_deliveries {
+  id               String          @id @db.Uuid
+  event_name       String
+  operator_item_id String?         @db.Uuid
+  url              String
+  payload          Json
+  status           String          @default("pending")
+  response_code    Int?
+  response_body    Json?
+  retry_count      Int             @default(0)
+  next_retry_at    DateTime?
+  created_at       DateTime        @default(now())
+  sent_at          DateTime?
+  operator_items   operator_items? @relation(fields: [operator_item_id], references: [id])
+
+  @@index([event_name, created_at])
+  @@index([status, next_retry_at])
+}
+
+model webhook_events {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  stripe_event_id  String    @unique
+  type             String
+  processed_at     DateTime? @default(now()) @db.Timestamp(6)
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  stripe_timestamp Int?
+  status           String    @default("processing")
+  attempts         Int       @default(0)
+  last_error       String?
+  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([processed_at], map: "idx_webhook_events_processed_at")
+  @@index([status], map: "idx_webhook_events_status")
+  @@index([status, attempts], map: "idx_webhook_events_status_attempts")
+  @@index([stripe_event_id], map: "idx_webhook_events_stripe_event_id")
+  @@index([stripe_timestamp], map: "idx_webhook_events_stripe_timestamp")
+  @@index([type], map: "idx_webhook_events_type")
+}
+
+model workspace_memberships {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  workspace_id String     @db.Uuid
+  user_id      String     @db.Uuid
+  role         String
+  added_by     String?    @db.Uuid
+  added_at     DateTime   @default(now())
+  removed_at   DateTime?
+  is_active    Boolean    @default(true)
+  users        users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  workspaces   workspaces @relation(fields: [workspace_id], references: [id], onDelete: Cascade)
+
+  @@unique([workspace_id, user_id])
+  @@index([user_id, is_active])
+  @@index([workspace_id, is_active])
+}
+
+model workspaces {
+  id                     String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                   String
+  slug                   String                   @unique
+  description            String?
+  created_by             String?                  @db.Uuid
+  is_active              Boolean                  @default(true)
+  created_at             DateTime                 @default(now())
+  updated_at             DateTime                 @default(now())
+  engagements            engagements[]
+  recommendations_legacy recommendations_legacy[] @ignore
+  snapshot_data          snapshot_data[]
+  workspace_memberships  workspace_memberships[]
+}
+
+enum evidence_capture_method {
+  MANUAL
+  UPLOAD
+  INTEGRATION
+  EXTERNAL
+}
+
+enum evidence_category {
+  FINANCIAL
+  OPERATIONAL
+  HUMAN
+  RESILIENCE
+  CLIENT
+  COMMERCIAL
+  LEADERSHIP
+  EXECUTION
+}
+
+enum evidence_source_type {
+  PERSON
+  DOCUMENT
+  SYSTEM
+  REPORT
+}
+
+enum evidence_traceability_status {
+  COMPLETE
+  PARTIAL
+  MISSING
+}
+
+enum evidence_type {
+  FREE_TEXT
+  DOCUMENT
+  INTERVIEW
+  METRICS
+  SYSTEM
+  APPROVAL
+}
+
+enum evidence_validation_status {
+  PENDING
+  VALIDATED
+  INVALID
+}
+
+enum evidence_visibility {
+  INTERNAL
+  CLIENT_VISIBLE
+  RESTRICTED
 }
