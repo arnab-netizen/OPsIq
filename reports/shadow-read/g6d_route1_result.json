@@ -1,0 +1,26 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "route": "src/app/api/decisions/list/route.ts",
+  "route_name": "decisions/list",
+  "migration_status": "SUCCESS",
+  "changes_made": [
+    "Added import: canonicalizeAuthContext from @/lib/auth-guard",
+    "Replaced: const { session } = await withAuth()",
+    "Added: Moved workspaceId extraction before bridge call",
+    "Added: const ctx = canonicalizeAuthContext(auth, workspaceId)",
+    "Changed: userId from session.user.id to ctx.verifiedActorId"
+  ],
+  "build_status": "✓ Compiled successfully",
+  "tests_status": "✓ All tests passing (338/338)",
+  "response_shape_preserved": true,
+  "workspace_scoping_preserved": true,
+  "authorization_preserved": true,
+  "no_new_violations": true,
+  "timestamp": "2026-05-14T12:53:30Z",
+  "notes": [
+    "Direct db access (no reverted services), safest migration",
+    "workspace scoping preserved via canonicalizeAuthContext",
+    "userId extraction changed to use verified actor ID",
+    "All existing logic preserved, only auth context changed"
+  ]
+}

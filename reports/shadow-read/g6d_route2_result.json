@@ -1,0 +1,27 @@
+{
+  "phase": "G6D-C",
+  "route": "src/app/api/notifications/preferences/route.ts",
+  "status": "MIGRATED_SUCCESS",
+  "timestamp": "2026-05-14T13:15:00Z",
+  "changes": {
+    "import_line": "Added canonicalizeAuthContext import on line 9",
+    "get_method": "Added bridge conversion: const ctx = canonicalizeAuthContext(auth, workspaceId); const userId = ctx.verifiedActorId;",
+    "workspace_source": "x-workspace-id header (moved before bridge call)",
+    "service_calls": ["getPreferences (GET)", "setPreferences (PATCH)"],
+    "services_risk_level": "SAFE (not in reverted services list)"
+  },
+  "validation": {
+    "build_result": "SUCCESS - Turbopack compiled in 11.8s",
+    "typescript_check": "PASSED - No new type errors from this route",
+    "test_suite": {
+      "g6r_auth_bridge": "14/14 PASSED",
+      "phase_d": "105/105 PASSED",
+      "phase_e": "204/204 PASSED",
+      "phase_f": "15/15 PASSED",
+      "total": "338/338 PASSED"
+    },
+    "regression_check": "NONE - All core enforcement tests still passing"
+  },
+  "decision": "PROCEED_TO_ROUTE_3",
+  "reason": "Route 2 compiled successfully, all tests pass, no regressions detected. Ready to migrate Route 3 (entitlement/route.ts)."
+}

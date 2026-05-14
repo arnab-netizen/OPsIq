@@ -6,7 +6,7 @@
 
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { z } from "zod";
 import {
   setPreferences,
@@ -42,7 +42,8 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     throw new Error("Workspace ID required (x-workspace-id header)");
   }
 
-  const userId = auth.session.user.id;
+  const ctx = canonicalizeAuthContext(auth, workspaceId);
+  const userId = ctx.verifiedActorId;
 
   const preferences = await getPreferences(workspaceId, userId);
 

@@ -1,20 +1,21 @@
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { db } from "@/lib/db";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 export const GET = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate (throws UnauthorizedError if no valid session)
-  const { session } = await withAuth();
+  const auth = await withAuth();
 
-  const userId = session.user.id;
   const workspaceId = request.nextUrl.searchParams.get("workspaceId");
-
   if (!workspaceId) {
     throw new UnauthorizedError("Workspace ID required");
   }
+
+  const ctx = canonicalizeAuthContext(auth, workspaceId);
+  const userId = ctx.verifiedActorId;
 
   // Enforce workspace scoping
   const membership = await enforceWorkspaceScoping(request, workspaceId);
