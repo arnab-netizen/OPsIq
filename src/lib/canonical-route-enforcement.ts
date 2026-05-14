@@ -18,13 +18,11 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import type { AuthState } from "@/services/auth/state-engine";
-import { executeAuthPipeline, type AuthPipelineResult, type AuthExecutionStage } from "@/services/auth/pipeline-executor";
-import { emitTelemetry } from "@/infra/errors";
-import { getAuditPersistenceQueue } from "@/infra/flood-protection-audit-isolation";
-import { getAdaptiveSamplingController } from "@/infra/flood-protection-sampling";
-import { classifyAuditEvent, shouldPersistAuditEvent } from "@/infra/flood-protection-tiers";
+import { requireAuth, canDo } from "@/lib/auth-guard";
 import { logger } from "@/infra/logger";
+import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
+import type { PolicyContext } from "@/policies/capability-check";
+import type { CapabilityName } from "@/domain/constants/capabilities";
 
 /**
  * Verified context passed to handler
@@ -37,15 +35,16 @@ export interface CanonicalAuthContext {
   // Verified actor (always present if handler is called)
   verifiedActorId: string;
   verifiedActorType: "user" | "service";
+  verifiedActor: AuthenticatedUser;
 
   // Verified workspace (if workspace-scoped route)
-  verifiedWorkspaceId?: string;
+  verifiedWorkspaceId: string;
 
   // Verified capabilities (if capability-scoped route)
   verifiedCapabilities: Set<string>;
 
   // Execution trace (for observability)
-  executionTrace: AuthExecutionStage[];
+  executionTrace: Array<{ stage: string; timestamp: number; result: string }>;
 
   // Correlation ID (for request tracking)
   correlationId: string;
@@ -55,6 +54,12 @@ export interface CanonicalAuthContext {
 
   // Raw NextRequest (for reading body, headers, etc.)
   request: NextRequest;
+
+  // Session info (from auth system)
+  session?: SessionInfo;
+
+  // Policy context (from auth system)
+  policy?: PolicyContext;
 }
 
 /**
@@ -100,6 +105,7 @@ export function withCanonicalEnforcement(
       // Generate correlation ID from request headers or create new one
       const correlationId = req.headers.get("x-correlation-id") || `corr-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const requestId = req.headers.get("x-request-id") || `req-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const executionTrace: Array<{ stage: string; timestamp: number; result: string }> = [];
 
       logger.info("Canonical route enforcement started", {
         correlationId,
@@ -109,142 +115,118 @@ export function withCanonicalEnforcement(
       });
 
       // ========================================
-      // STEP 1: BUILD AUTH STATE FROM REQUEST
+      // STEP 1: EXTRACT AND VALIDATE AUTH
       // ========================================
 
-      // Extract credentials from request (bearer token, session cookie, etc.)
-      const authHeader = req.headers.get("authorization") || "";
-      const sessionCookie = req.cookies.get("session")?.value || "";
-      const workspaceIdHeader = req.headers.get("x-workspace-id") || "";
+      const workspaceId = req.headers.get("x-workspace-id") || "system";
+      executionTrace.push({ stage: "WORKSPACE_EXTRACTED", timestamp: Date.now(), result: workspaceId });
 
-      // Build auth state for evaluation
-      // This is a simplified version - real implementation would parse credentials
-      const authState: AuthState = parseAuthStateFromRequest(authHeader, sessionCookie, workspaceIdHeader);
-
-      // ========================================
-      // STEP 2: EXECUTE CANONICAL PIPELINE
-      // ========================================
-
-      const pipelineResult = await executeAuthPipeline(authState, {
-        correlationId,
-        emitTelemetry: true, // Telemetry automatic
-        emitAudit: true, // Audit automatic
-      });
-
-      // ========================================
-      // STEP 3: GUARANTEE HANDLER NEVER EXECUTES IF AUTH FAILED
-      // ========================================
-
-      if (!pipelineResult.allowed) {
-        // Auth failed - handler is NOT called
-        const error = pipelineResult.error || new Error("Auth pipeline failed");
-
-        // Emit telemetry for failure
-        try {
-          await emitTelemetry(pipelineResult.finalDecision.telemetryClass, {
-            state: pipelineResult.finalState,
-            correlationId,
-            httpStatus: pipelineResult.finalDecision.httpStatus,
-          });
-        } catch {
-          // Telemetry failure doesn't affect response
-        }
-
-        // Return standardized error response
+      if (options?.requireWorkspace && !workspaceId) {
+        logger.warn("Route requires workspace but none provided", { correlationId });
         return new NextResponse(
           JSON.stringify({
-            error: pipelineResult.finalDecision.errorMessage,
+            error: "Workspace required",
             correlationId,
           }),
           {
-            status: pipelineResult.finalDecision.httpStatus,
-            headers: {
-              "x-correlation-id": correlationId,
-              "content-type": "application/json",
-            },
+            status: 403,
+            headers: { "x-correlation-id": correlationId, "content-type": "application/json" },
           }
         );
       }
 
       // ========================================
-      // STEP 4: VERIFY HANDLER PRECONDITIONS
+      // STEP 2: AUTHENTICATE AND GET CONTEXT
       // ========================================
 
-      // Check handler requirements
-      if (options?.requireWorkspace && !authState.workspaceId) {
-        throw new Error("Route requires workspace scope but none provided");
-      }
+      let session: SessionInfo | null = null;
+      let policy: PolicyContext | null = null;
 
-      if (options?.requireCapabilities && options.requireCapabilities.length > 0) {
-        const actor = extractActorFromState(authState);
-        if (!actor || !hasCapabilities(actor, options.requireCapabilities)) {
-          const error = new Error("Missing required capabilities");
-          return new NextResponse(JSON.stringify({ error: error.message, correlationId }), {
-            status: 403,
+      try {
+        const authContext = await requireAuth(workspaceId);
+        session = authContext.session;
+        policy = authContext.policy;
+        executionTrace.push({ stage: "AUTH_VALIDATED", timestamp: Date.now(), result: "SUCCESS" });
+      } catch (error) {
+        logger.warn("Authentication failed", { correlationId }, { error: String(error) });
+        executionTrace.push({ stage: "AUTH_VALIDATED", timestamp: Date.now(), result: "FAILED" });
+
+        return new NextResponse(
+          JSON.stringify({
+            error: "Unauthorized",
+            correlationId,
+          }),
+          {
+            status: 401,
             headers: { "x-correlation-id": correlationId, "content-type": "application/json" },
-          });
-        }
-      }
-
-      if (options?.requireActorType) {
-        const actor = extractActorFromState(authState);
-        const requiredTypes = Array.isArray(options.requireActorType) ? options.requireActorType : [options.requireActorType];
-        if (!actor || !requiredTypes.includes(actor.type)) {
-          const error = new Error("Invalid actor type for this route");
-          return new NextResponse(JSON.stringify({ error: error.message, correlationId }), {
-            status: 403,
-            headers: { "x-correlation-id": correlationId, "content-type": "application/json" },
-          });
-        }
+          }
+        );
       }
 
       // ========================================
-      // STEP 5: BUILD VERIFIED CONTEXT
+      // STEP 3: VERIFY CAPABILITIES (IF REQUIRED)
       // ========================================
 
-      const actor = extractActorFromState(authState);
-      if (!actor) {
-        throw new Error("Auth passed but actor not found");
+      if (options?.requireCapabilities && options.requireCapabilities.length > 0 && policy) {
+        const hasRequired = options.requireCapabilities.every((cap) => canDo(policy, cap as CapabilityName));
+
+        if (!hasRequired) {
+          logger.warn("Required capabilities missing", { correlationId, required: options.requireCapabilities });
+          return new NextResponse(
+            JSON.stringify({
+              error: "Insufficient permissions",
+              correlationId,
+            }),
+            {
+              status: 403,
+              headers: { "x-correlation-id": correlationId, "content-type": "application/json" },
+            }
+          );
+        }
+
+        executionTrace.push({ stage: "CAPABILITY_VALIDATED", timestamp: Date.now(), result: "SUCCESS" });
       }
+
+      // ========================================
+      // STEP 4: BUILD VERIFIED CONTEXT
+      // ========================================
+
+      if (!session) {
+        throw new Error("Auth passed but session is null");
+      }
+
+      // Derive capabilities from policy roles
+      const derivedCapabilities = deriveCapabilitiesFromPolicy(policy);
 
       const verifiedContext: CanonicalAuthContext = {
-        verifiedActorId: actor.id,
-        verifiedActorType: actor.type,
-        verifiedWorkspaceId: authState.workspaceId,
-        verifiedCapabilities: new Set(actor.capabilities || []),
-        executionTrace: pipelineResult.executionTrace,
+        verifiedActorId: session.user.id,
+        verifiedActorType: "user",
+        verifiedActor: session.user,
+        verifiedWorkspaceId: workspaceId,
+        verifiedCapabilities: derivedCapabilities,
+        executionTrace,
         correlationId,
         requestId,
         request: req,
+        session,
+        policy,
       };
 
       // ========================================
-      // STEP 6: CALL HANDLER (NOW SAFE)
+      // STEP 5: CALL HANDLER (NOW SAFE)
       // ========================================
 
       // Handler can ONLY be called here, AFTER auth passed
       // Handler receives verified context only
+      logger.debug("Canonical handler executing", { correlationId, actorId: verifiedContext.verifiedActorId });
       const result = await handler(verifiedContext, params);
 
       // ========================================
-      // STEP 7: EMIT SUCCESS TELEMETRY
+      // STEP 6: RETURN HANDLER RESULT
       // ========================================
 
-      try {
-        await emitTelemetry("AUTH_SUCCESS", {
-          correlationId,
-          actorId: verifiedContext.verifiedActorId,
-          workspaceId: verifiedContext.verifiedWorkspaceId,
-        });
-      } catch {
-        // Telemetry failure doesn't affect success response
-      }
+      executionTrace.push({ stage: "HANDLER_SUCCESS", timestamp: Date.now(), result: "COMPLETED" });
 
-      // ========================================
-      // STEP 8: RETURN HANDLER RESULT
-      // ========================================
-
-      // Serialize result to JSON response
       return new NextResponse(JSON.stringify(result), {
         status: 200,
         headers: {
@@ -254,9 +236,7 @@ export function withCanonicalEnforcement(
       });
     } catch (error) {
       // Unhandled error in handler or pipeline
-      logger.error("Canonical route handler failed", error as Error, {
-        reason: "Unhandled error in canonical wrapper",
-      });
+      logger.error("Canonical route handler failed", error as Error, { correlationId: req.headers.get("x-correlation-id") || "unknown" });
 
       return new NextResponse(
         JSON.stringify({
@@ -273,44 +253,24 @@ export function withCanonicalEnforcement(
 }
 
 /**
- * Helper: Parse auth state from request
- * (Simplified - real implementation would parse JWT, sessions, etc.)
+ * Helper: Derive all capabilities from policy context
+ *
+ * Extracts all capabilities the user has based on their role assignments.
+ * This is a simplified version - the full implementation would use ROLE_CAPABILITIES mapping.
  */
-function parseAuthStateFromRequest(authHeader: string, sessionCookie: string, workspaceId: string): AuthState {
-  // TODO: Parse credentials and build auth state
-  // For now, return placeholder
-  return "SESSION_INVALID";
-}
+function deriveCapabilitiesFromPolicy(policy: PolicyContext | null): Set<string> {
+  const capabilities = new Set<string>();
 
-/**
- * Helper: Extract actor from auth state
- */
-function extractActorFromState(state: AuthState): { id: string; type: "user" | "service"; capabilities?: string[] } | null {
-  // TODO: Extract actor from auth state
-  // For now, return placeholder
-  return null;
-}
+  if (!policy || !policy.roles) {
+    return capabilities;
+  }
 
-/**
- * Helper: Check if actor has required capabilities
- */
-function hasCapabilities(actor: { capabilities?: string[] }, required: string[]): boolean {
-  const actorCaps = new Set(actor.capabilities || []);
-  return required.every((cap) => actorCaps.has(cap));
-}
+  // For now, return empty set
+  // In production, this would:
+  // 1. Look up each role in ROLE_CAPABILITIES
+  // 2. Collect all capabilities for the user's roles
+  // 3. Apply scope restrictions
+  // The existing canDo() function handles this properly
 
-/**
- * Type guard: Verify context shape at compile time
- */
-export function isCanonicalAuthContext(obj: unknown): obj is CanonicalAuthContext {
-  if (typeof obj !== "object" || obj === null) return false;
-  const o = obj as Record<string, unknown>;
-  return (
-    typeof o.verifiedActorId === "string" &&
-    (o.verifiedActorType === "user" || o.verifiedActorType === "service") &&
-    o.verifiedCapabilities instanceof Set &&
-    Array.isArray(o.executionTrace) &&
-    typeof o.correlationId === "string" &&
-    typeof o.requestId === "string"
-  );
+  return capabilities;
 }

@@ -123,7 +123,7 @@ export class BoundedCardinalityAggregator<T> {
    * Increment counter for key
    */
   public increment(key: string, initialValue: number = 0, delta: number = 1): number {
-    const current = this.getOrCreate(key, initialValue);
+    const current = this.getOrCreate(key, initialValue as unknown as T);
     if (typeof current !== "number") {
       throw new Error(`Expected number, got ${typeof current}`);
     }

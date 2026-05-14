@@ -59,6 +59,7 @@ describe("Route Security Scanner", () => {
       const hasRequireAuth = content.includes("requireAuth(");
       const hasResolveServerRole = content.includes("resolveServerRole(");
       const hasRequireAuthForCapability = content.includes("requireAuthForCapability(");
+      const hasCanonicalEnforcement = content.includes("withCanonicalEnforcement(");
 
       // Check for workspace context (only valid if auth is present)
       const hasWorkspaceContext = content.includes("requireWorkspaceContext()");
@@ -80,11 +81,11 @@ describe("Route Security Scanner", () => {
 
       // Check if route requires workspace context WITHOUT auth
       const requiresWorkspaceWithoutAuth =
-        hasWorkspaceContext && !hasWithAuth && !hasGetSession && !hasRequireAuth && !hasResolveServerRole;
+        hasWorkspaceContext && !hasWithAuth && !hasGetSession && !hasRequireAuth && !hasResolveServerRole && !hasCanonicalEnforcement;
 
       if (requiresWorkspaceWithoutAuth) {
         unprotected.push(`${routePath} (uses requireWorkspaceContext without auth)`);
-      } else if (!hasWithAuth && !hasGetSession && !hasRequireAuth && !hasResolveServerRole && !hasRequireAuthForCapability && !isStripeWebhook) {
+      } else if (!hasWithAuth && !hasGetSession && !hasRequireAuth && !hasResolveServerRole && !hasRequireAuthForCapability && !hasCanonicalEnforcement && !isStripeWebhook) {
         unprotected.push(`${routePath} (no auth enforcement)`);
       }
     }
@@ -149,13 +150,14 @@ describe("Route Security Scanner", () => {
       const hasRequireWorkspace = content.includes("requireWorkspaceContext()");
       const hasWithAuth = content.includes("await withAuth(");
       const hasRequireAuthForCapability = content.includes("requireAuthForCapability(");
+      const hasCanonicalEnforcement = content.includes("withCanonicalEnforcement(");
 
       // Allow if disabled
       if (content.includes('throw new Error("Endpoint disabled")')) {
         continue;
       }
 
-      if (hasRequireWorkspace && !hasWithAuth && !hasRequireAuthForCapability) {
+      if (hasRequireWorkspace && !hasWithAuth && !hasRequireAuthForCapability && !hasCanonicalEnforcement) {
         workspaceOnlyViolations.push(routePath);
       }
     }
