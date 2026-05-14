@@ -1,0 +1,230 @@
+{
+  "phase": "G7D-R",
+  "audit_type": "scope_and_contract_reconciliation",
+  "timestamp": "2026-05-14T20:35:00Z",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "changed_files": [
+    {
+      "file": "src/lib/canonical-route-enforcement.ts",
+      "change_type": "auth_context_contract_change",
+      "allowed_by_g7d": false,
+      "severity": "HIGH",
+      "risk": "HIGH",
+      "change_summary": "Made request field non-optional: request?: NextRequest → request: NextRequest",
+      "reason": "This is a contract change to CanonicalAuthContext interface - changes what all handlers can assume about context availability",
+      "requires_separate_approval": true,
+      "impact": "All handlers using withCanonicalEnforcement now assume request is always present. This is technically correct (wrapper always sets it) but changes the contract and may affect type safety expectations."
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/route.ts",
+      "change_type": "selected_handler_migration",
+      "handler": "GET",
+      "allowed_by_g7d": true,
+      "risk": "LOW",
+      "changes_detail": [
+        "Added imports: withCanonicalEnforcement, CanonicalAuthContext",
+        "Migrated GET handler from withEnforcementFull+withAuth to withCanonicalEnforcement",
+        "Removed withAuth call and workspace/capability check code",
+        "Handler now uses ctx.verifiedWorkspaceId instead of header extraction",
+        "Handler signature changed to (ctx, params) pattern"
+      ],
+      "get_handler_clean": true,
+      "violation_reduction_expected": 2,
+      "notes": "GET handler is clean. File still has 6 violations from PATCH/POST handlers (not in scope)"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/contacts/route.ts",
+      "change_type": "selected_handler_migration",
+      "handler": "GET",
+      "allowed_by_g7d": true,
+      "risk": "LOW",
+      "changes_detail": [
+        "Added imports: withCanonicalEnforcement, CanonicalAuthContext",
+        "Migrated GET handler from withEnforcementFull+withAuth to withCanonicalEnforcement",
+        "Removed withAuth call, workspace extraction, membership validation",
+        "Handler receives verified context from wrapper"
+      ],
+      "get_handler_clean": true,
+      "violation_reduction_expected": 2,
+      "notes": "GET handler is clean. File still has 2-4 violations from POST handler (not in scope)"
+    },
+    {
+      "file": "src/app/api/users/[userId]/roles/route.ts",
+      "change_type": "selected_handler_migration",
+      "handler": "GET",
+      "allowed_by_g7d": true,
+      "risk": "LOW",
+      "changes_detail": [
+        "Added imports: withCanonicalEnforcement, CanonicalAuthContext",
+        "Migrated GET from withEnforcementFull+withAuth to withCanonicalEnforcement",
+        "Removed withAuth, workspace header extraction, membership check",
+        "Capability verified by wrapper"
+      ],
+      "get_handler_clean": true,
+      "violation_reduction_expected": 2,
+      "notes": "GET handler is clean. File still has 4 violations from POST/DELETE handlers (not in scope)"
+    },
+    {
+      "file": "src/app/api/leads/[leadId]/route.ts",
+      "change_type": "selected_handler_migration",
+      "handler": "GET",
+      "allowed_by_g7d": true,
+      "risk": "LOW",
+      "changes_detail": [
+        "Added imports: withCanonicalEnforcement, CanonicalAuthContext",
+        "Migrated GET from withEnforcementFull+withAuth to withCanonicalEnforcement",
+        "Removed withAuth call and validation boilerplate"
+      ],
+      "get_handler_clean": true,
+      "violation_reduction_expected": 2,
+      "notes": "GET handler is clean. File still has 6 violations from PATCH/POST handlers (not in scope)"
+    },
+    {
+      "file": "src/app/api/auth/logout/route.ts",
+      "change_type": "unrelated_route_fix",
+      "handler": "POST",
+      "allowed_by_g7d": false,
+      "severity": "HIGH",
+      "risk": "HIGH",
+      "change_summary": "Added canonicalizeAuthContext bridge to convert AuthContext to CanonicalAuthContext before calling revokeSession",
+      "reason": "revokeSession service was changed to expect CanonicalAuthContext instead of (sessionId: string, actorId: string)",
+      "status": "UNPLANNED_MIGRATION_SIDE_EFFECT",
+      "details": "This is a service-layer type change that required handler updates. This is outside G7D scope (no handler migration intended, only type compatibility fix)."
+    },
+    {
+      "file": "src/app/api/actions/route.ts",
+      "change_type": "unrelated_route_fix",
+      "handler": "GET and POST",
+      "allowed_by_g7d": false,
+      "severity": "MEDIUM",
+      "risk": "MEDIUM",
+      "change_summary": "Added canonicalizeAuthContext bridge in handlePost and fixed GET to return Response.json",
+      "reason": "createAction service was changed to expect CanonicalAuthContext. GET handler fix addresses type error.",
+      "status": "UNPLANNED_MIGRATION_SIDE_EFFECT",
+      "details": "Type compatibility fix in response to broader service-layer migration, not part of G7D selected handlers"
+    },
+    {
+      "file": "src/app/api/actions/[actionId]/route.ts",
+      "change_type": "unrelated_route_fix",
+      "handler": "GET and PATCH",
+      "allowed_by_g7d": false,
+      "severity": "MEDIUM",
+      "risk": "MEDIUM",
+      "change_summary": "Added canonicalizeAuthContext in PATCH handler; fixed GET return statement",
+      "reason": "updateAction service changed to expect CanonicalAuthContext",
+      "status": "UNPLANNED_MIGRATION_SIDE_EFFECT"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
+      "change_type": "unrelated_route_fix",
+      "handler": "PATCH and DELETE",
+      "allowed_by_g7d": false,
+      "severity": "MEDIUM",
+      "risk": "MEDIUM",
+      "change_summary": "Added canonicalizeAuthContext bridge in PATCH and DELETE handlers",
+      "reason": "updateContact and deactivateContact services changed to expect CanonicalAuthContext",
+      "status": "UNPLANNED_MIGRATION_SIDE_EFFECT"
+    },
+    {
+      "file": "reports/shadow-read/g7d_batch2_before.json",
+      "change_type": "report_artifact",
+      "allowed_by_g7d": true,
+      "risk": "LOW",
+      "reason": "Before-snapshot artifact generated during G7D phase"
+    },
+    {
+      "file": "reports/shadow-read/g7d_batch2_after.json",
+      "change_type": "report_artifact",
+      "allowed_by_g7d": true,
+      "risk": "LOW",
+      "reason": "After-snapshot artifact generated during G7D phase"
+    },
+    {
+      "file": "reports/shadow-read/g7d_decision.md",
+      "change_type": "report_artifact",
+      "allowed_by_g7d": true,
+      "risk": "LOW",
+      "reason": "Decision document for G7D blocker analysis"
+    },
+    {
+      "file": "reports/shadow-read/g7d_batch2_selection.json",
+      "change_type": "report_artifact",
+      "allowed_by_g7d": true,
+      "risk": "LOW",
+      "reason": "Selection artifact from G7D batch planning"
+    },
+    {
+      "file": "shadow_read_violations.json",
+      "change_type": "report_artifact",
+      "allowed_by_g7d": true,
+      "risk": "LOW",
+      "reason": "Scanner output artifact (current state)"
+    }
+  ],
+  "scope_violations": [
+    {
+      "violation": "CanonicalAuthContext interface was modified outside of handler migration scope",
+      "file": "src/lib/canonical-route-enforcement.ts",
+      "type": "WRAPPER_CONTRACT_EXPANSION",
+      "severity": "HIGH",
+      "requires_decision": true,
+      "details": "Making request non-optional changes the contract for ALL handlers using withCanonicalEnforcement. This should have been a separate architectural decision, not bundled with handler migration."
+    },
+    {
+      "violation": "Multiple unrelated handler fixes bundled with G7D commits",
+      "files": ["actions/route.ts", "actions/[actionId]/route.ts", "auth/logout/route.ts", "clients/[clientId]/contacts/[contactId]/route.ts"],
+      "type": "SCOPE_CREEP",
+      "severity": "MEDIUM",
+      "details": "Service-layer type changes (revokeSession, createAction, updateAction, updateContact) forced compatibility fixes in handlers not selected for G7D. This created hidden dependencies on broader service-layer migration work."
+    }
+  ],
+  "requires_revert": [
+    {
+      "file": "src/lib/canonical-route-enforcement.ts",
+      "change": "request?: NextRequest → request: NextRequest",
+      "reason": "This is a contract change that affects all canonical handlers. It should be a separate decision and commit.",
+      "action": "REVERT or APPROVE_SEPARATELY",
+      "impact": "Currently all handlers assuming request is present. If reverted, handlers using ctx.request need null checks."
+    }
+  ],
+  "accepted_changes": [
+    {
+      "file": "src/app/api/clients/[clientId]/route.ts",
+      "handler": "GET",
+      "status": "ACCEPTED",
+      "reason": "GET handler successfully migrated to withCanonicalEnforcement with CLIENT_VIEW capability"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/contacts/route.ts",
+      "handler": "GET",
+      "status": "ACCEPTED",
+      "reason": "GET handler successfully migrated to withCanonicalEnforcement with CLIENT_VIEW capability"
+    },
+    {
+      "file": "src/app/api/users/[userId]/roles/route.ts",
+      "handler": "GET",
+      "status": "ACCEPTED",
+      "reason": "GET handler successfully migrated to withCanonicalEnforcement with USER_VIEW capability"
+    },
+    {
+      "file": "src/app/api/leads/[leadId]/route.ts",
+      "handler": "GET",
+      "status": "ACCEPTED",
+      "reason": "GET handler successfully migrated to withCanonicalEnforcement with LEAD_VIEW capability"
+    }
+  ],
+  "critical_findings": [
+    {
+      "finding": "Hidden service-layer migration dependency",
+      "description": "G7D handler migrations were blocked by unrelated service-layer changes expecting CanonicalAuthContext. This suggests a larger refactoring effort is underway beyond handler migration.",
+      "impact": "Multiple handlers had to be patched with canonicalizeAuthContext() bridges to maintain compatibility",
+      "recommendation": "Service-layer migration (revokeSession, createAction, updateAction, etc.) should be tracked as a separate phase with explicit scope and approval"
+    },
+    {
+      "finding": "CanonicalAuthContext contract changed",
+      "description": "Made request field non-optional to fix type errors in handlers. This is technically correct but represents a contract change.",
+      "approval_status": "REQUIRES_DECISION",
+      "options": ["Accept and document", "Revert and add null checks to handlers", "Make optional again and use non-null assertion only where needed"]
+    }
+  ]
+}
