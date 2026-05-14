@@ -60,8 +60,9 @@ export interface CanonicalAuthContext {
   verifiedCapabilities: Set<string>;
 
   // PHASE D: ROOT CONTAINER - Single execution lineage authority
-  traceId: string;
-  executionTrace: Readonly<any>;  // Read-only reference to unified trace
+  // Optional: not required for service layer, only for logging/tracing
+  traceId?: string;
+  executionTrace?: Readonly<any>;  // Read-only reference to unified trace
 
   // PHASE E: IMMUTABLE SESSION SNAPSHOT - Single request reality
   verifiedSessionSnapshot: {
@@ -73,14 +74,12 @@ export interface CanonicalAuthContext {
     capabilities: readonly string[];
   };
 
-  // Correlation ID (for request tracking)
-  correlationId: string;
+  // Optional: for request tracking (not required for service layer)
+  correlationId?: string;
+  requestId?: string;
 
-  // Request ID (for logging)
-  requestId: string;
-
-  // Raw NextRequest (for reading body, headers, etc.)
-  request: NextRequest;
+  // Optional: raw NextRequest (not required for service layer)
+  request?: NextRequest;
 
   // Session info (from auth system)
   session?: SessionInfo;

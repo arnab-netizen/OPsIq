@@ -1,0 +1,77 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_timestamp": "2026-05-14T12:10:00Z",
+  "auth_context_files": [
+    {
+      "file": "src/lib/auth-guard.ts",
+      "type_name": "AuthContext",
+      "definition": "{ session: SessionInfo; policy: PolicyContext; }",
+      "location": "lines 37-40",
+      "purpose": "Legacy auth context returned by withAuth(), requireAuth(), etc.",
+      "status": "ACTIVE (legacy, being superseded)"
+    }
+  ],
+  "canonical_auth_context_files": [
+    {
+      "file": "src/lib/canonical-route-enforcement.ts",
+      "type_name": "CanonicalAuthContext",
+      "definition": "{ verifiedActorId, verifiedActorType, verifiedActor, verifiedWorkspaceId, verifiedCapabilities, traceId, executionTrace, verifiedSessionSnapshot, correlationId, requestId, request, session?, policy? }",
+      "location": "lines 50-90",
+      "purpose": "New verified context passed to route handlers",
+      "status": "ACTIVE (new, canonical)"
+    }
+  ],
+  "wrapper_return_types": [
+    {
+      "function": "withAuth()",
+      "file": "src/lib/auth-guard.ts",
+      "return_type": "Promise<AuthContext>",
+      "line": 125,
+      "notes": "Legacy wrapper, returns decomposed session+policy"
+    },
+    {
+      "function": "requireAuth()",
+      "file": "src/lib/auth-guard.ts",
+      "return_type": "Promise<AuthContext>",
+      "line": 60,
+      "notes": "Throws if auth fails, returns AuthContext"
+    },
+    {
+      "function": "requireAuthForCapability()",
+      "file": "src/lib/auth-guard.ts",
+      "return_type": "Promise<AuthContext>",
+      "line": 78,
+      "notes": "Throws if capability missing, returns AuthContext"
+    },
+    {
+      "function": "getServerAuthContext()",
+      "file": "src/lib/auth-guard.ts",
+      "return_type": "Promise<AuthContext | null>",
+      "line": 106,
+      "notes": "Returns null if not authenticated (optional auth)"
+    },
+    {
+      "function": "withCanonicalEnforcement()",
+      "file": "src/lib/canonical-route-enforcement.ts",
+      "return_type": "CanonicalAuthContext",
+      "line": 98,
+      "notes": "New wrapper, handler receives CanonicalAuthContext directly"
+    }
+  ],
+  "existing_converters": [],
+  "missing_bridge": true,
+  "bridge_gap_analysis": {
+    "problem": "AuthContext lacks: verifiedActorId, verifiedActorType, verifiedWorkspaceId, verifiedCapabilities, traceId, executionTrace, verifiedSessionSnapshot, correlationId, requestId, request",
+    "why_gap_exists": "AuthContext is minimal (session + policy). CanonicalAuthContext is verified superset with execution context. withAuth() routes cannot produce CanonicalAuthContext without additional verified data.",
+    "conversion_feasibility": "POSSIBLE - AuthContext contains SessionInfo and PolicyContext, which can be converted to CanonicalAuthContext fields IF we have traceId, workspaceId, request context (all available at route level)",
+    "prerequisite": "Routes must pass request, workspace context, and trace context to converter"
+  },
+  "notes": [
+    "AuthContext is returned by legacy auth functions in auth-guard.ts",
+    "CanonicalAuthContext is the new verified context standard",
+    "No existing converter between the two types",
+    "Services now require CanonicalAuthContext (type-strict)",
+    "Routes using withAuth() cannot call these services without conversion",
+    "Bridge must convert without fabricating permissions or weakening enforcement"
+  ]
+}
