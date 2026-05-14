@@ -18,6 +18,7 @@ import type { CapabilityName } from "@/domain/constants/capabilities";
 import type { SessionInfo } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
 import { hasCapability, highestRole, hasInternalAccess } from "@/policies/capability-check";
+import { resolveCanonicalCapabilities } from "@/lib/canonical-capability-resolver";
 
 // ─── Auth Facts: Raw State ──────────────────────────────────────────────────
 
@@ -526,15 +527,17 @@ export function evaluateAuthState(
   }
 
   // All checks passed - derive capabilities and build context
-  const verifiedCapabilities = new Set<string>();
-  state.capabilityFacts.forEach((fact) => {
-    if (fact.granted) {
-      verifiedCapabilities.add(fact.capability);
-    }
-  });
-
   const session = state.sessionFact.session!;
   const policy = state.policyFact.policy!;
+
+  // PHASE B: Use canonical capability resolver to derive complete capability set
+  const canonicalCapabilities = resolveCanonicalCapabilities(policy);
+  const verifiedCapabilities = new Set<string>();
+
+  // Populate verifiedCapabilities from canonical resolver
+  canonicalCapabilities.global.forEach((cap) => {
+    verifiedCapabilities.add(cap);
+  });
 
   trace.decision = "allow";
   trace.reason = "All auth checks passed";
