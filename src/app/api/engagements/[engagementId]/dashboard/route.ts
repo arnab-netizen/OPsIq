@@ -1,5 +1,5 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getOwnerDashboard } from "@/services/owner-dashboard.service";
 import { assertEngagementAccess } from "@/lib/visibility";
@@ -23,7 +23,7 @@ export const GET = withEnforcementFull(async (request, context, params) => {
   await assertEngagementAccess(session.user.id, engagementId, workspaceId);
 
   try {
-    const dashboard = await getOwnerDashboard(engagementId, { session, policy }, workspaceId);
+    const dashboard = await getOwnerDashboard(engagementId, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
     return Response.json(dashboard);
   } catch (error) {
     if (error instanceof Error && error.message.includes("Engagement")) {

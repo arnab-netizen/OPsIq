@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getFindingDetail, updateFinding } from "@/services/findings";
@@ -81,7 +81,7 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, findingId);
 
   const body = await parseRequestBody(request, updateFindingSchema);
-  await updateFinding(findingId, body, { session, policy }, workspaceId);
+  await updateFinding(findingId, body, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
 
   const updated = await getFindingDetail(findingId, undefined, undefined, workspaceId);
   return Response.json(updated);

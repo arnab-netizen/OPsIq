@@ -1,5 +1,5 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createRecommendation } from "@/services/recommendation";
@@ -75,7 +75,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   }
 
   try {
-    const result = await createRecommendation(body, authContext, workspaceId);
+    const result = await createRecommendation(body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
     return result;
   } catch (error) {

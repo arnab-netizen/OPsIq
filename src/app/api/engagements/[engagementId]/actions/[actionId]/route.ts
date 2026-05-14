@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { updateActionStatus } from "@/services/action";
 import { parseRequestBody } from "@/lib/validation";
 import { assertEngagementAccess } from "@/lib/visibility";
@@ -32,6 +32,6 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
 
   await assertEngagementAccess(session.user.id, action.engagementId, workspaceId);
 
-  const updated = await updateActionStatus(actionId, body, { session, policy }, workspaceId);
+  const updated = await updateActionStatus(actionId, body, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
   return Response.json(updated);
 });

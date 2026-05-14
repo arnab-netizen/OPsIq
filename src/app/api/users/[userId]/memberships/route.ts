@@ -2,7 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -92,7 +92,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   try {
     const result = await addMember(
       { userId, ...body, workspaceId } as Parameters<typeof addMember>[0],
-      { session, policy }
+      canonicalizeAuthContext({ session, policy }, workspaceId)
     );
 
     await recordIdempotencyResponse(idempotencyKey, result.isNew ? 201 : 200, result);
@@ -133,7 +133,7 @@ export const DELETE = withEnforcementFull(async (request, context, params) => {
 
   await removeMember(
     { userId, ...body, workspaceId } as Parameters<typeof removeMember>[0],
-    { session, policy }
+    canonicalizeAuthContext({ session, policy }, workspaceId)
   );
 
   return Response.json({ status: "removed" });

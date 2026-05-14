@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getEvidenceById, updateEvidence } from "@/services/evidence";
@@ -74,7 +74,7 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, evidenceId);
 
   const body = await parseRequestBody(request, updateEvidenceSchema);
-  await updateEvidence(evidenceId, body, authContext, workspaceId);
+  await updateEvidence(evidenceId, body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
 
   const updated = await getEvidenceById(evidenceId, workspaceId);
   return Response.json(updated);

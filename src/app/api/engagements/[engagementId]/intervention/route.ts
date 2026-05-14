@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -89,10 +89,10 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
 
   if ("interventionPhase" in body) {
     const validatedBody = updateInterventionPhaseSchema.parse(body);
-    await updateInterventionPhase(engagementId, validatedBody, { session, policy }, workspaceId);
+    await updateInterventionPhase(engagementId, validatedBody, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
   } else if ("interventionMode" in body) {
     const validatedBody = updateInterventionModeSchema.parse(body);
-    await updateInterventionMode(engagementId, validatedBody, { session, policy }, workspaceId);
+    await updateInterventionMode(engagementId, validatedBody, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
   } else {
     return Response.json(
       {
