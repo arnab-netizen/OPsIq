@@ -2,7 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getLeadById, updateLead, linkLeadToEngagement } from "@/services/lead";
@@ -69,7 +69,8 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, leadId);
 
   const body = await parseRequestBody(request, updateLeadSchema);
-  await updateLead(leadId, body, authContext, workspaceId);
+  const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
+  await updateLead(leadId, body, canonicalContext, workspaceId);
 
   const updated = await getLeadById(leadId, workspaceId);
   return Response.json(updated);

@@ -126,7 +126,8 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   }
 
   try {
-    await archiveClient(clientId, { session, policy }, body.version, workspaceId);
+    const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
+    await archiveClient(clientId, canonicalContext, body.version, workspaceId);
     const result = { status: "archived" };
     await recordIdempotencyResponse(idempotencyKey, 200, result);
     return Response.json(result);

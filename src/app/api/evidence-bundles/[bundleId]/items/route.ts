@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   addEvidenceToBundle,
@@ -63,7 +63,8 @@ export const POST = withEnforcementFull(async (request, context, params) => {
       });
     }
 
-    await addEvidenceToBundle(bodyData, authContext, workspaceId);
+    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
+    await addEvidenceToBundle(bodyData, canonicalContext, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, { success: true });
 
     return Response.json({ success: true }, { status: 201 });
@@ -104,7 +105,8 @@ export const DELETE = withEnforcementFull(async (request, context, params) => {
       );
     }
 
-    await removeEvidenceFromBundle(bodyData, authContext, workspaceId);
+    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
+    await removeEvidenceFromBundle(bodyData, canonicalContext, workspaceId);
 
     return Response.json({ success: true });
   } catch (error) {
