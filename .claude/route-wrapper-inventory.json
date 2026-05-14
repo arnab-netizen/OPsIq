@@ -1,0 +1,2702 @@
+{
+  "summary": {
+    "total": 144,
+    "CATEGORY_ROUTE_A_CANONICAL": 14,
+    "CATEGORY_ROUTE_B_LEGACY": 118,
+    "CATEGORY_ROUTE_C_INLINE": 0,
+    "CATEGORY_ROUTE_D_NONE": 12
+  },
+  "routes": {
+    "canonical": [
+      "src/app/api/billing/plan/route.ts",
+      "src/app/api/business-impact/decision/[id]/route.ts",
+      "src/app/api/business-impact/summary/route.ts",
+      "src/app/api/control/today/route.ts",
+      "src/app/api/deliverables/[deliverableId]/route.ts",
+      "src/app/api/engagements/[engagementId]/actions/route.ts",
+      "src/app/api/engagements/[engagementId]/business-impact/route.ts",
+      "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
+      "src/app/api/engagements/[engagementId]/findings/route.ts",
+      "src/app/api/engagements/[engagementId]/kpis/route.ts",
+      "src/app/api/engagements/[engagementId]/outcomes/route.ts",
+      "src/app/api/engagements/[engagementId]/recommendations/route.ts",
+      "src/app/api/engagements/[engagementId]/report/route.ts",
+      "src/app/api/me/route.ts"
+    ],
+    "legacy": [
+      "src/app/api/actions/[actionId]/complete/route.ts",
+      "src/app/api/actions/[actionId]/impact-delta/route.ts",
+      "src/app/api/actions/[actionId]/route.ts",
+      "src/app/api/actions/[actionId]/start/route.ts",
+      "src/app/api/actions/route.ts",
+      "src/app/api/admin/audit-log/route.ts",
+      "src/app/api/admin/workspaces/[id]/disable/route.ts",
+      "src/app/api/admin/workspaces/[id]/members/route.ts",
+      "src/app/api/admin/workspaces/route.ts",
+      "src/app/api/audit/events/route.ts",
+      "src/app/api/audit/route.ts",
+      "src/app/api/auth/logout/route.ts",
+      "src/app/api/billing/upgrade/route.ts",
+      "src/app/api/billing/usage/route.ts",
+      "src/app/api/calibration/route.ts",
+      "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
+      "src/app/api/clients/[clientId]/contacts/route.ts",
+      "src/app/api/clients/[clientId]/route.ts",
+      "src/app/api/clients/route.ts",
+      "src/app/api/control/blocked-metrics/route.ts",
+      "src/app/api/decision/export/route.ts",
+      "src/app/api/decisions/[decisionId]/close/route.ts",
+      "src/app/api/decisions/[decisionId]/evaluate/route.ts",
+      "src/app/api/decisions/[decisionId]/execute/route.ts",
+      "src/app/api/decisions/[decisionId]/fail/route.ts",
+      "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
+      "src/app/api/decisions/[decisionId]/route.ts",
+      "src/app/api/decisions/create/route.ts",
+      "src/app/api/decisions/intake/route.ts",
+      "src/app/api/decisions/list/route.ts",
+      "src/app/api/deliverables/route.ts",
+      "src/app/api/diagnosis/archetype/route.ts",
+      "src/app/api/diagnosis/bottleneck/route.ts",
+      "src/app/api/diagnosis/maturity/route.ts",
+      "src/app/api/diagnosis/root-cause/route.ts",
+      "src/app/api/diagnosis/route.ts",
+      "src/app/api/engagements/[engagementId]/acknowledge/route.ts",
+      "src/app/api/engagements/[engagementId]/actions/[actionId]/route.ts",
+      "src/app/api/engagements/[engagementId]/business-impact/detail/route.ts",
+      "src/app/api/engagements/[engagementId]/condition/route.ts",
+      "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+      "src/app/api/engagements/[engagementId]/dashboard/route.ts",
+      "src/app/api/engagements/[engagementId]/drift/route.ts",
+      "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
+      "src/app/api/engagements/[engagementId]/execution-certainty/route.ts",
+      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
+      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
+      "src/app/api/engagements/[engagementId]/experiments/route.ts",
+      "src/app/api/engagements/[engagementId]/intervention/route.ts",
+      "src/app/api/engagements/[engagementId]/intervention-state/route.ts",
+      "src/app/api/engagements/[engagementId]/recommendations/rerank/route.ts",
+      "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
+      "src/app/api/engagements/[engagementId]/route.ts",
+      "src/app/api/engagements/[engagementId]/shock-events/route.ts",
+      "src/app/api/engagements/route.ts",
+      "src/app/api/entitlement/quota/route.ts",
+      "src/app/api/entitlement/route.ts",
+      "src/app/api/entity/route.ts",
+      "src/app/api/evidence/[evidenceId]/route.ts",
+      "src/app/api/evidence/[evidenceId]/validate/route.ts",
+      "src/app/api/evidence/route.ts",
+      "src/app/api/evidence-bundles/[bundleId]/items/route.ts",
+      "src/app/api/evidence-bundles/[bundleId]/route.ts",
+      "src/app/api/evidence-bundles/route.ts",
+      "src/app/api/execute/route.ts",
+      "src/app/api/export/route.ts",
+      "src/app/api/findings/[findingId]/evidence/route.ts",
+      "src/app/api/findings/[findingId]/route.ts",
+      "src/app/api/findings/route.ts",
+      "src/app/api/governance/alerts/route.ts",
+      "src/app/api/governance/metrics/route.ts",
+      "src/app/api/growth/acquisition-metrics/route.ts",
+      "src/app/api/growth/offers/route.ts",
+      "src/app/api/growth/pricing-tiers/route.ts",
+      "src/app/api/growth/retention-metrics/route.ts",
+      "src/app/api/growth/revenue-streams/route.ts",
+      "src/app/api/growth/sales-pipeline/route.ts",
+      "src/app/api/growth/unit-economics/route.ts",
+      "src/app/api/intelligence/insights/route.ts",
+      "src/app/api/intelligence/patterns/route.ts",
+      "src/app/api/intelligence/recommendations/route.ts",
+      "src/app/api/intelligence/summary/route.ts",
+      "src/app/api/leads/[leadId]/route.ts",
+      "src/app/api/leads/route.ts",
+      "src/app/api/metrics/control-effectiveness/route.ts",
+      "src/app/api/metrics/decision-latency/route.ts",
+      "src/app/api/notifications/[id]/route.ts",
+      "src/app/api/notifications/preferences/route.ts",
+      "src/app/api/notifications/route.ts",
+      "src/app/api/observability/summary/route.ts",
+      "src/app/api/onboarding/invite/route.ts",
+      "src/app/api/onboarding/workspace/route.ts",
+      "src/app/api/operator/my-day/route.ts",
+      "src/app/api/operator/myday/route.ts",
+      "src/app/api/operator/queue/route.ts",
+      "src/app/api/operator/route.ts",
+      "src/app/api/opsiq/consulting-engine/run/route.ts",
+      "src/app/api/override/route.ts",
+      "src/app/api/owner/config/route.ts",
+      "src/app/api/owner/dashboard/route.ts",
+      "src/app/api/recommendations/[recommendationId]/route.ts",
+      "src/app/api/recommendations/route.ts",
+      "src/app/api/report/route.ts",
+      "src/app/api/run/route.ts",
+      "src/app/api/scenario/route.ts",
+      "src/app/api/users/[userId]/memberships/route.ts",
+      "src/app/api/users/[userId]/roles/route.ts",
+      "src/app/api/users/[userId]/route.ts",
+      "src/app/api/users/route.ts",
+      "src/app/api/value/7day/route.ts",
+      "src/app/api/value/route.ts",
+      "src/app/api/value/summary/route.ts",
+      "src/app/api/verify/route.ts",
+      "src/app/api/webhooks/[id]/test/route.ts",
+      "src/app/api/webhooks/subscribe/route.ts"
+    ],
+    "inline": [],
+    "none": [
+      "src/app/api/auth/login/route.ts",
+      "src/app/api/decisions/[decisionId]/accept/route.ts",
+      "src/app/api/decisions/[decisionId]/reject/route.ts",
+      "src/app/api/decisions/submit-external/route.ts",
+      "src/app/api/health/route.ts",
+      "src/app/api/liveness/route.ts",
+      "src/app/api/public/actions/route.ts",
+      "src/app/api/public/engagements/route.ts",
+      "src/app/api/public/kpis/route.ts",
+      "src/app/api/readiness/route.ts",
+      "src/app/api/startup/route.ts",
+      "src/app/api/webhooks/stripe/route.ts"
+    ]
+  },
+  "details": [
+    {
+      "path": "src/app/api/actions/[actionId]/complete/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getActionById } from \"@/services/action\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { db } from \"@/lib/db\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { NotFoundError, ValidationError } from \"@/infra/errors\";",
+        "import { recordOutcome } from \"@/services/outcome/outcome.service\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/actions/[actionId]/impact-delta/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { calculateImpactDelta } from \"@/services/business-impact/impact-delta.service\";",
+        "import { db } from \"@/lib/db\";",
+        "import { NotFoundError } from \"@/infra/errors\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/actions/[actionId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getActionById, updateAction } from \"@/services/action\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { z } from \"zod/v4\";",
+        "import { ACTION_STATUSES } from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/actions/[actionId]/start/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getActionById } from \"@/services/action\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { db } from \"@/lib/db\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { NotFoundError, ValidationError } from \"@/infra/errors\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/actions/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { checkWorkspaceRateLimit } from \"@/middleware/rate-limit\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { createAction, listActions } from \"@/services/action\";",
+        "import { parseRequestBody, parseSearchParams } from \"@/lib/validation\";",
+        "import { withIdempotency } from \"@/infra/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { paginationSchema } from \"@/lib/validation\";",
+        "import { assertCapability } from \"@/services/entitlement.service\";",
+        "import { PlanLimitError } from \"@/infra/errors\";",
+        "import { getTierConfig, type SubscriptionTier } from \"@/lib/tier-config\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/admin/audit-log/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  AuditTrailQueryParamsSchema,\n} from \"@/domain/audit/audit-trail-contracts\";",
+        "import {\n  queryAuditTrail,\n  getAuditStatistics,\n} from \"@/services/audit-trail\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/admin/workspaces/[id]/disable/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { z } from \"zod\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/admin/workspaces/[id]/members/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/admin/workspaces/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/audit/events/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { parseSearchParams } from \"@/lib/validation\";",
+        "import { z } from \"zod/v4\";",
+        "import { queryAuditEvents, createListResponse, AuditQueryFilter } from \"@/lib/response-formatter\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/audit/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { queryAuditEvents } from \"@/infra/audit\";",
+        "import type { Prisma } from \"@/generated/prisma/client\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/auth/login/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { db } from \"@/lib/db\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { requireRateLimit, LOGIN_RATE_LIMIT } from \"@/infra/rate-limit\";",
+        "import { getSessionCookieName, getSessionDurationMs } from \"@/services/auth\";",
+        "import { v4 as uuidv4 } from \"uuid\";",
+        "import { z } from \"zod/v4\";",
+        "import { cookies } from \"next/headers\";",
+        "import * as bcrypt from \"bcryptjs\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/auth/logout/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { db } from \"@/lib/db\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { getSession, getSessionCookieName, revokeSession } from \"@/services/auth\";",
+        "import { cookies } from \"next/headers\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/billing/plan/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { resolveEntitlements } from \"@/services/entitlement.service\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/billing/upgrade/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { ValidationError } from \"@/infra/errors\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { db } from \"@/lib/db\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/billing/usage/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { resolveEntitlements } from \"@/services/entitlement.service\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/business-impact/decision/[id]/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { calculateDecisionImpact } from \"@/services/business-impact/decision-impact.service\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/business-impact/summary/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { calculateWorkspaceImpactSummary } from \"@/services/business-impact/decision-impact.service\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/calibration/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcement } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { getItems } from \"@/services/operator/store\";",
+        "import { computeCalibration, computeCalibrationBySegment } from \"@/services/calibration/engine\";",
+        "import { resolveServerRole } from \"@/services/auth/server-role\";",
+        "import { canView } from \"@/services/auth/access\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  updateContact,\n  deactivateContact,\n} from \"@/services/client-contact\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/clients/[clientId]/contacts/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { createContact, getContactsForClient } from \"@/services/client-contact\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/clients/[clientId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { hasInternalAccess } from \"@/policies/capability-check\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  getClientById,\n  updateClient,\n  archiveClient,\n} from \"@/services/client-account\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/clients/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { hasInternalAccess } from \"@/policies/capability-check\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { createClient, listClients } from \"@/services/client-account\";",
+        "import { parseRequestBody, parseSearchParams } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { paginationSchema } from \"@/lib/validation\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/control/blocked-metrics/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { db } from \"@/lib/db\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/control/today/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { getControlSurface } from \"@/services/control/control-surface.service\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decision/export/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { db } from \"@/lib/db\";",
+        "import { queryAuditEvents } from \"@/infra/audit\";",
+        "import type { Prisma } from \"@/generated/prisma/client\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/[decisionId]/accept/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { requireAuthForCapability } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { acceptDecision } from \"@/services/decision-validation/decision-acceptance.service\";",
+        "import { ValidationError, NotFoundError, ForbiddenError } from \"@/infra/errors\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { z } from \"zod\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { enforceWorkspaceScoping, hasPermission } from \"@/middleware/workspace-enforcement\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { closeDecision } from \"@/services/decisions/decision-lifecycle.service\";",
+        "import { db } from \"@/lib/db\";",
+        "import { ValidationError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/[decisionId]/evaluate/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { db } from \"@/lib/db\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { enforceWorkspaceScoping, hasPermission } from \"@/middleware/workspace-enforcement\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/[decisionId]/execute/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { enforceWorkspaceScoping, hasPermission } from \"@/middleware/workspace-enforcement\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { executeDecision } from \"@/services/decisions/decision-lifecycle.service\";",
+        "import { db } from \"@/lib/db\";",
+        "import { ValidationError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/[decisionId]/fail/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { enforceWorkspaceScoping, hasPermission } from \"@/middleware/workspace-enforcement\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { failDecision } from \"@/services/decisions/decision-lifecycle.service\";",
+        "import { db } from \"@/lib/db\";",
+        "import { ValidationError } from \"@/infra/errors\";",
+        "import { z } from \"zod\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { enforceWorkspaceScoping, hasPermission } from \"@/middleware/workspace-enforcement\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { recordDecisionOutcome } from \"@/services/decisions/decision-lifecycle.service\";",
+        "import { db } from \"@/lib/db\";",
+        "import { ValidationError } from \"@/infra/errors\";",
+        "import { z } from \"zod\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/[decisionId]/reject/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { requireAuthForCapability } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { rejectDecision } from \"@/services/decision-validation/decision-acceptance.service\";",
+        "import { ValidationError, NotFoundError, ForbiddenError } from \"@/infra/errors\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { z } from \"zod\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/[decisionId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import {\n  enforceWorkspaceScoping,\n  hasPermission,\n  canActOnDecision,\n} from \"@/middleware/workspace-enforcement\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import {\n  approveDecision,\n  rejectDecision,\n} from \"@/services/decisions/decision-lifecycle.service\";",
+        "import { db } from \"@/lib/db\";",
+        "import { ValidationError, NotFoundError } from \"@/infra/errors\";",
+        "import { z } from \"zod\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/create/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { NextRequest } from \"next/server\";",
+        "import {\n  createDecision,\n  createDecisionsBulk,\n  parseCSV,\n} from \"@/services/decisions/decision-creation-service\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { assertCapability } from \"@/services/entitlement.service\";",
+        "import { PlanLimitError, UnauthorizedError, ForbiddenError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/intake/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { db } from \"@/lib/db\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { z } from \"zod\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/list/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { db } from \"@/lib/db\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping, hasPermission } from \"@/middleware/workspace-enforcement\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/decisions/submit-external/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { withEnforcement } from \"@/lib/enforced-route\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/deliverables/[deliverableId]/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { getDeliverableById } from \"@/services/deliverable\";",
+        "import { NotFoundError } from \"@/infra/errors\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/deliverables/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { createDeliverable, getDeliverablesForEngagement } from \"@/services/deliverable\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { parseOrThrow, parseRequestBody, uuidSchema } from \"@/lib/validation\";",
+        "import { withIdempotency } from \"@/infra/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/diagnosis/archetype/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { archetypeEngine } from \"@/services/diagnostic-core/archetype-engine\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/diagnosis/bottleneck/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { bottleneckEngine } from \"@/services/diagnostic-core/bottleneck-engine\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/diagnosis/maturity/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { maturityEngine } from \"@/services/diagnostic-core/maturity-engine\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/diagnosis/root-cause/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { rootCauseEngine } from \"@/services/diagnostic-core/root-cause-engine\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/diagnosis/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { diagnoseBusiness, validateBusinessProblem } from \"@/services/diagnosis\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/acknowledge/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { db } from \"@/lib/db\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { NotFoundError } from \"@/infra/errors\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/actions/[actionId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { updateActionStatus } from \"@/services/action\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { db } from \"@/lib/db\";",
+        "import { NotFoundError } from \"@/infra/errors\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/actions/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { getActionsForEngagement } from \"@/services/action\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/business-impact/detail/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { generateBusinessImpact } from \"@/services/business-impact/business-impact.service\";",
+        "import { detectExecutionDrift } from \"@/services/execution-drift/execution-drift.service\";",
+        "import { calculateExecutionCertainty } from \"@/services/execution-certainty\";",
+        "import { db } from \"@/lib/db\";",
+        "import { NotFoundError } from \"@/infra/errors\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/business-impact/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { generateBusinessImpact } from \"@/services/business-impact/business-impact.service\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/condition/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  assessCondition,\n  getConditionHistory,\n} from \"@/services/business-condition\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import {\n  BUSINESS_CONDITION_RATINGS,\n  PRESSURE_LEVELS,\n  MATURITY_LEVELS,\n} from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { ConstraintEnforcer } from \"@/services/decision-core/constraint-enforcer\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/dashboard/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getOwnerDashboard } from \"@/services/owner-dashboard.service\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { getDecisionEvidence } from \"@/services/decision-evidence/decision-evidence.service\";",
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/drift/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { detectExecutionDrift } from \"@/services/execution-drift/execution-drift.service\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  detectHighPriorityOverdueActions,\n  detectKPIDeteriorationPattern,\n} from \"@/services/escalation\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/execution-certainty/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { calculateExecutionCertainty } from \"@/services/execution-certainty\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { db } from \"@/lib/db\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { approveExperiment, ExperimentLifecycleError } from \"@/services/experiment/experiment-lifecycle.service\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import type { Experiment } from \"@/domain/experiment/experiment\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { captureLearning, ExperimentLifecycleError } from \"@/services/experiment/experiment-lifecycle.service\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import type { Experiment } from \"@/domain/experiment/experiment\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { updateExecution, ExperimentLifecycleError } from \"@/services/experiment/experiment-lifecycle.service\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import type { Experiment } from \"@/domain/experiment/experiment\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { recordResult, analyzeOutcome, ExperimentLifecycleError } from \"@/services/experiment/experiment-lifecycle.service\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import type { Experiment } from \"@/domain/experiment/experiment\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { startExperiment, ExperimentLifecycleError } from \"@/services/experiment/experiment-lifecycle.service\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import type { Experiment } from \"@/domain/experiment/experiment\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/experiments/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  createExperiment,\n  approveExperiment,\n  startExperiment,\n  updateExecution,\n  recordResult,\n  captureLearning,\n  analyzeOutcome,\n  ExperimentLifecycleError,\n} from \"@/services/experiment/experiment-lifecycle.service\";",
+        "import { assertCapability } from \"@/services/entitlement.service\";",
+        "import { PlanLimitError } from \"@/infra/errors\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import type {\n  Experiment,\n  ExperimentPlan,\n  Hypothesis,\n  ExperimentExecution,\n  ExperimentResult,\n  ExperimentLearning,\n} from \"@/domain/experiment/experiment\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/findings/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { listFindingsForEngagement } from \"@/services/findings\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/intervention/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  getInterventionState,\n  updateInterventionPhase,\n  updateInterventionMode,\n} from \"@/services/intervention-state\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { z } from \"zod/v4\";",
+        "import { INTERVENTION_PHASES, INTERVENTION_MODES } from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/intervention-state/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getInterventionState, transitionPhase } from \"@/services/intervention-state\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { INTERVENTION_PHASES } from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/kpis/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { getKPIsForEngagement } from \"@/services/kpi\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { db } from \"@/lib/db\";",
+        "import { NotFoundError } from \"@/infra/errors\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/outcomes/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { getEngagementOutcomes } from \"@/services/outcome/outcome.service\";",
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/recommendations/rerank/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { reRankRecommendationsInEngagement } from \"@/services/recommendation\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/recommendations/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { getRecommendationsForEngagement } from \"@/services/recommendation\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/report/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { generateEngagementReport } from \"@/services/report-generator\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { db } from \"@/lib/db\";",
+        "import { NotFoundError } from \"@/infra/errors\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { generateReviewCycle } from \"@/services/review-cycle\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { hasInternalAccess } from \"@/policies/capability-check\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getEngagementById, updateEngagement } from \"@/services/engagement\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import {\n  ENGAGEMENT_STATUSES,\n  INTERVENTION_MODES,\n  SERVICE_TIERS,\n  ENGAGEMENT_MODES,\n  HEALTH_STATUSES,\n} from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/[engagementId]/shock-events/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  createShockEvent,\n  listShockEventsForEngagement,\n} from \"@/services/shock-event\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/engagements/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { hasInternalAccess } from \"@/policies/capability-check\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { createEngagement, listEngagements } from \"@/services/engagement\";",
+        "import { parseRequestBody, parseSearchParams } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { paginationSchema } from \"@/lib/validation\";",
+        "import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES } from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { assertCapability } from \"@/services/entitlement.service\";",
+        "import { PlanLimitError, UnauthorizedError, ForbiddenError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/entitlement/quota/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { z } from \"zod\";",
+        "import {\n  getQuotaUsage,\n  incrementQuotaUsage,\n  getTierConfig,\n  getSubscriptionTier,\n} from \"@/services/entitlement\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/entitlement/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { z } from \"zod\";",
+        "import {\n  getSubscriptionTier,\n  getTierConfig,\n  hasCapability,\n  hasFeature,\n  canCreateAction,\n  canCreateDecision,\n  canCreateExperiment,\n  canExportData,\n  hasApiAccess,\n  getQuotaUsage,\n  Capability,\n  SubscriptionTier,\n} from \"@/services/entitlement\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/entity/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { createEntity, getEntities } from \"@/services/entity/store\";",
+        "import { requireAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { resolveServerRole } from \"@/services/auth/server-role\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { canEdit } from \"@/services/auth/access\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { randomUUID } from \"crypto\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": true
+    },
+    {
+      "path": "src/app/api/evidence/[evidenceId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getEvidenceById, updateEvidence } from \"@/services/evidence\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { z } from \"zod/v4\";",
+        "import { EVIDENCE_STATUSES } from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/evidence/[evidenceId]/validate/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { validateEvidence } from \"@/services/evidence\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { validateEvidenceSchema } from \"@/domain/validation/evidence\";",
+        "import { errorToResponse } from \"@/infra/errors\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/evidence/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { createEvidence, listEvidence } from \"@/services/evidence\";",
+        "import { parseRequestBody, parseSearchParams } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { paginationSchema } from \"@/lib/validation\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/evidence-bundles/[bundleId]/items/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  addEvidenceToBundle,\n  removeEvidenceFromBundle,\n} from \"@/services/evidence\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import {\n  addEvidenceToBundleSchema,\n  removeEvidenceFromBundleSchema,\n} from \"@/domain/validation/evidence\";",
+        "import { errorToResponse } from \"@/infra/errors\";",
+        "import { logger } from \"@/infra/logger\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/evidence-bundles/[bundleId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  getEvidenceBundleById,\n  updateEvidenceBundle,\n} from \"@/services/evidence\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { updateEvidenceBundleSchema } from \"@/domain/validation/evidence\";",
+        "import { errorToResponse } from \"@/infra/errors\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/evidence-bundles/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  createEvidenceBundle,\n  listEvidenceBundles,\n} from \"@/services/evidence\";",
+        "import { parseRequestBody, parseSearchParams } from \"@/lib/validation\";",
+        "import { createEvidenceBundleSchema } from \"@/domain/validation/evidence\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { errorToResponse } from \"@/infra/errors\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/execute/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { executeWorkflow } from \"@/services/execute\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { assertCapability } from \"@/services/entitlement.service\";",
+        "import { PlanLimitError } from \"@/infra/errors\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/export/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest, NextResponse } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import {\n  createExportPackage,\n  validateExportData,\n  type ExportedData,\n  type ExportOptions,\n} from \"@/services/export\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/findings/[findingId]/evidence/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { linkEvidenceToFinding, unlinkEvidenceFromFinding } from \"@/services/findings\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/findings/[findingId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getFindingDetail, updateFinding } from \"@/services/findings\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { z } from \"zod/v4\";",
+        "import {\n  FINDING_STATUSES,\n  FINDING_SEVERITIES,\n  FINDING_IMPACTS,\n} from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/findings/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { createFinding } from \"@/services/findings\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import {\n  FINDING_STATUSES,\n  FINDING_SEVERITIES,\n  FINDING_IMPACTS,\n} from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { assertCapability } from \"@/services/entitlement.service\";",
+        "import { PlanLimitError } from \"@/infra/errors\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/governance/alerts/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { calculateGovernanceMetrics } from \"@/services/governance/metrics\";",
+        "import { getObservabilitySummary } from \"@/services/observability/statistics\";",
+        "import { evaluateGovernanceAlerts } from \"@/services/governance/alerts\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/governance/metrics/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { calculateGovernanceMetrics } from \"@/services/governance/metrics\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/growth/acquisition-metrics/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { AcquisitionEngine } from \"@/services/growth/acquisition-engine\";",
+        "import { AcquisitionChannel } from \"@/domain/growth/growth-engines\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/growth/offers/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { OfferEngine } from \"@/services/growth/offer-engine\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/growth/pricing-tiers/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { PricingEngine } from \"@/services/growth/pricing-engine\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/growth/retention-metrics/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { RetentionEngine } from \"@/services/growth/retention-engine\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/growth/revenue-streams/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { RevenueEngine } from \"@/services/growth/revenue-engine\";",
+        "import { RevenueStream } from \"@/domain/growth/growth-engines\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/growth/sales-pipeline/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { SalesPipelineEngine } from \"@/services/growth/sales-pipeline-engine\";",
+        "import { DealStage } from \"@/domain/growth/growth-engines\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/growth/unit-economics/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { UnitEconomicsEngine } from \"@/services/growth/unit-economics-engine\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/health/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { withEnforcement } from \"@/lib/enforced-route\";",
+        "import { db, getDbInstance } from \"@/lib/db\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { classifyError, reportError } from \"@/infra/error-tracking\";",
+        "import { cleanupOldRecords } from \"@/services/production/retention-cleanup\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/intelligence/insights/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { calculateSystemicInsights } from \"@/services/intelligence/insights-engine\";",
+        "import { createEventLogger } from \"@/lib/observability/log\";",
+        "import { db } from \"@/lib/db\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/intelligence/patterns/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { detectPatterns } from \"@/services/intelligence/pattern-engine\";",
+        "import { createEventLogger } from \"@/lib/observability/log\";",
+        "import { db } from \"@/lib/db\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/intelligence/recommendations/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { generateRecommendation, generateMultipleRecommendations } from \"@/services/intelligence/recommendation\";",
+        "import { detectPatterns } from \"@/services/intelligence/pattern-engine\";",
+        "import { validateDependencies } from \"@/services/control/variable-registry\";",
+        "import { evaluateDecisionGate } from \"@/services/control/decision-gate\";",
+        "import { evaluateGuardrails } from \"@/services/control/guardrails\";",
+        "import { enforceControlLayer } from \"@/services/control/enforcement\";",
+        "import { createEventLogger } from \"@/lib/observability/log\";",
+        "import { db } from \"@/lib/db\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/intelligence/summary/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { detectPatterns } from \"@/services/intelligence/pattern-engine\";",
+        "import { generateRecommendation } from \"@/services/intelligence/recommendation\";",
+        "import { calculateSystemicInsights } from \"@/services/intelligence/insights-engine\";",
+        "import { validateDependencies } from \"@/services/control/variable-registry\";",
+        "import { evaluateDecisionGate } from \"@/services/control/decision-gate\";",
+        "import { evaluateGuardrails } from \"@/services/control/guardrails\";",
+        "import { enforceControlLayer } from \"@/services/control/enforcement\";",
+        "import { createEventLogger } from \"@/lib/observability/log\";",
+        "import { db } from \"@/lib/db\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/leads/[leadId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getLeadById, updateLead, linkLeadToEngagement } from \"@/services/lead\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { LEAD_STATUSES } from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/leads/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { createLead, listLeads } from \"@/services/lead\";",
+        "import { parseRequestBody, parseSearchParams } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { z } from \"zod/v4\";",
+        "import { paginationSchema } from \"@/lib/validation\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/liveness/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { getMonitoringServiceInstance } from \"@/middleware/monitoring.middleware\";",
+        "import { logger } from \"@/infra/logger\";",
+        "import { getDbInstance } from \"@/lib/db\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/me/route.ts",
+      "wrapper": "CANONICAL",
+      "imports": [
+        "import { withCanonicalEnforcement } from \"@/lib/canonical-route-enforcement\";",
+        "import { getRolesForUser } from \"@/services/role-assignment\";",
+        "import { getMembershipsForUser } from \"@/services/engagement-membership\";",
+        "import { highestRole } from \"@/policies/capability-check\";",
+        "import { hasInternalAccess } from \"@/policies/capability-check\";",
+        "import type { CanonicalAuthContext } from \"@/lib/canonical-route-enforcement\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": true,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/metrics/control-effectiveness/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { db } from \"@/lib/db\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/metrics/decision-latency/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { db } from \"@/lib/db\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/notifications/[id]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import {\n  getNotification,\n  markAsRead,\n} from \"@/services/notifications/notification-service\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/notifications/preferences/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { z } from \"zod\";",
+        "import {\n  setPreferences,\n  getPreferences,\n  NotificationChannel,\n  NotificationType,\n} from \"@/services/notifications/notification-service\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/notifications/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { z } from \"zod\";",
+        "import {\n  sendNotification,\n  listUserNotifications,\n  NotificationChannel,\n  NotificationType,\n} from \"@/services/notifications/notification-service\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/observability/summary/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { getObservabilitySummary } from \"@/services/observability/statistics\";",
+        "import { createEventLogger } from \"@/lib/observability/log\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/onboarding/invite/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { db } from \"@/lib/db\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { z } from \"zod\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/onboarding/workspace/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { db } from \"@/lib/db\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { z } from \"zod\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/operator/my-day/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getQueuedItems } from \"@/services/operator/store\";",
+        "import { getMyDayItems } from \"@/services/operator/myday\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/operator/myday/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { getMyDayItems } from \"@/services/operator/myday\";",
+        "import { resolveServerRole } from \"@/services/auth/server-role\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/operator/queue/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getQueuedItems } from \"@/services/operator/store\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/operator/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import {\n  getItems,\n  updateItem,\n  addCalibrationRecord,\n} from \"@/services/operator/store\";",
+        "import { sortByPriority } from \"@/services/operator/sort\";",
+        "import { calculateOutcomeDelta } from \"@/services/operator/outcome\";",
+        "import { calculateDecisionAccuracy } from \"@/services/operator/accuracy\";",
+        "import { evaluatePolicy, validateCompletion } from \"@/services/policy/engine\";",
+        "import { canEdit } from \"@/services/auth/access\";",
+        "import { resolveServerRole } from \"@/services/auth/server-role\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { sendWebhook } from \"@/services/integration/webhook\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { validateStatusTransition, getStatusTransitionError } from \"@/services/operator/validate\";",
+        "import { createEventLogger } from \"@/lib/observability/log\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { emitWebhookAsync } from \"@/lib/integrations/webhook\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import type { PolicyRule } from \"@/domain/policy/types\";",
+        "import { assertCapability } from \"@/services/entitlement.service\";",
+        "import { PlanLimitError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/opsiq/consulting-engine/run/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { runConsultingPipeline } from \"@/services/consulting-engine/pipeline\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { assertEngagementAccess } from \"@/lib/visibility\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/override/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { addOverride } from \"@/services/override/store\";",
+        "import { getItems, applyOverride } from \"@/services/operator/store\";",
+        "import { resolveServerRole } from \"@/services/auth/server-role\";",
+        "import { canEdit } from \"@/services/auth/access\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { randomUUID } from \"crypto\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/owner/config/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { validateOwnerDashboardConfig, ActionQueuePriority, HealthStatus, OwnerDashboardConfig } from \"@/domain/owner-mode/owner-dashboard\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/owner/dashboard/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { calculateWorkspaceHealth, summarizeActionQueue, buildOwnerDashboardView, DashboardServiceError } from \"@/services/owner-mode/dashboard.service\";",
+        "import { OwnerDashboardConfig, HealthStatus, ActionQueuePriority } from \"@/domain/owner-mode/owner-dashboard\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/public/actions/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { toPublicActionDTO, PublicAPIError } from \"@/services/public-api.service\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/public/engagements/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { toPublicEngagementDTO, PublicAPIError } from \"@/services/public-api.service\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/public/kpis/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { emitAuditEvent } from \"@/infra/audit\";",
+        "import { AUDIT_EVENTS } from \"@/domain/constants/audit-events\";",
+        "import { toPublicKPIDTO, PublicAPIError } from \"@/services/public-api.service\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { z } from \"zod/v4\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/readiness/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { getMonitoringServiceInstance } from \"@/middleware/monitoring.middleware\";",
+        "import { logger } from \"@/infra/logger\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/recommendations/[recommendationId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { getRecommendation, updateRecommendation } from \"@/services/recommendation\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { z } from \"zod/v4\";",
+        "import {\n  RECOMMENDATION_STATUSES,\n  RECOMMENDATION_PRIORITIES,\n  RECOMMENDATION_TYPES,\n} from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/recommendations/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { createRecommendation } from \"@/services/recommendation\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { assertCapability } from \"@/services/entitlement.service\";",
+        "import { PlanLimitError, UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { z } from \"zod/v4\";",
+        "import {\n  RECOMMENDATION_PRIORITIES,\n  RECOMMENDATION_TYPES,\n} from \"@/domain/constants/statuses\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/report/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { generateReport } from \"@/services/report/engine\";",
+        "import type { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/run/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { runSystem } from \"@/services/system/run\";",
+        "import { createBaseline } from \"@/services/onboarding/basic\";",
+        "import { generateOperatorItems } from \"@/services/operator/generate\";",
+        "import { addItems, addBlockedDecision } from \"@/services/operator/store\";",
+        "import { resolveServerRole, getSession } from \"@/services/auth/server-role\";",
+        "import { canEdit } from \"@/services/auth/access\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { createDecisionResult } from \"@/services/explanation/generate\";",
+        "import { createIntegrityPayload } from \"@/services/integrity/hash\";",
+        "import { createSignaturePayload } from \"@/services/integrity/sign\";",
+        "import { classifyProblem } from \"@/services/problem/classifier\";",
+        "import { calculateBaselineMetrics } from \"@/services/baseline/calculator\";",
+        "import { DecisionResult } from \"@/domain/decision/types\";",
+        "import { createEventLogger } from \"@/lib/observability/log\";",
+        "import { emitWebhookAsync } from \"@/lib/integrations/webhook\";",
+        "import { normalizeDecisionInput, validateNormalizedMetrics } from \"@/lib/decision/run\";",
+        "import { evaluateDecisionGate, gateResultToPayload } from \"@/services/control/decision-gate\";",
+        "import { evaluateGuardrails, formatGuardrailViolations } from \"@/services/control/guardrails\";",
+        "import { validateDependencies } from \"@/services/control/variable-registry\";",
+        "import { enforceControlLayer } from \"@/services/control/enforcement\";",
+        "import { recordLifecycleStage } from \"@/services/lifecycle/decision-lifecycle\";",
+        "import { checkRateLimit, isDuplicateRequest, getRequestHash } from \"@/services/production/safety-config\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/scenario/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { runScenario } from \"@/services/scenario/engine\";",
+        "import { resolveServerRole } from \"@/services/auth/server-role\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";",
+        "import { randomUUID } from \"crypto\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/startup/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { getMonitoringServiceInstance } from \"@/middleware/monitoring.middleware\";",
+        "import { logger } from \"@/infra/logger\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/users/[userId]/memberships/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  addMember,\n  removeMember,\n  getMembershipsForUser,\n} from \"@/services/engagement-membership\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { ROLES } from \"@/domain/constants/roles\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/users/[userId]/roles/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth, getActorHierarchyLevel } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  assignRole,\n  revokeRole,\n  getRolesForUser,\n} from \"@/services/role-assignment\";",
+        "import { parseRequestBody, parseOrThrow, uuidSchema } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { ROLES } from \"@/domain/constants/roles\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/users/[userId]/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import {\n  getUserById,\n  updateUser,\n  deactivateUser,\n  reactivateUser,\n} from \"@/services/user\";",
+        "import { parseRequestBody } from \"@/lib/validation\";",
+        "import { uuidSchema } from \"@/lib/validation\";",
+        "import { parseOrThrow } from \"@/lib/validation\";",
+        "import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from \"@/services/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/users/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { enforceWorkspaceScoping } from \"@/middleware/workspace-enforcement\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { createUser, listUsers } from \"@/services/user\";",
+        "import { parseRequestBody, parseSearchParams } from \"@/lib/validation\";",
+        "import { withIdempotency } from \"@/infra/idempotency\";",
+        "import { z } from \"zod/v4\";",
+        "import { paginationSchema } from \"@/lib/validation\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import type { NextRequest } from \"next/server\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/value/7day/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { db } from \"@/lib/db\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/value/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { getItems } from \"@/services/operator/store\";",
+        "import { calculateValue } from \"@/services/value/tracker\";",
+        "import { resolveServerRole } from \"@/services/auth/server-role\";",
+        "import { canView } from \"@/services/auth/access\";",
+        "import { getSession } from \"@/services/auth\";",
+        "import { logAuditEvent } from \"@/services/audit/audit-log\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/value/summary/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { requireWorkspaceContext } from \"@/services/workspace/context\";",
+        "import { db } from \"@/lib/db\";",
+        "import type { Prisma } from \"@/generated/prisma/client\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/verify/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { verifySignature } from \"@/services/integrity/sign\";",
+        "import {\n  generateDecisionHash,\n  canonicalStringify,\n  createCanonicalPayload,\n} from \"@/services/integrity/hash\";",
+        "import { verifyAsymmetricSignature, getPublicKey } from \"@/services/integrity/asymmetric\";",
+        "import { createDecisionResult } from \"@/services/explanation/generate\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/webhooks/[id]/test/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { WebhookTestRequestSchema } from \"@/domain/webhooks/webhook-contracts\";",
+        "import { testWebhookDelivery } from \"@/services/webhooks.service\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/webhooks/stripe/route.ts",
+      "wrapper": "NONE",
+      "imports": [
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { UnauthorizedError, ForbiddenError } from \"@/infra/errors\";",
+        "import {\n  verifyWebhookSignature,\n  checkSignatureTimestamp,\n  getOrCreateWebhookEvent,\n  markWebhookEventProcessed,\n  markWebhookEventFailed,\n  handleWebhookEvent,\n} from \"@/services/webhook.service\";",
+        "import { logger } from \"@/infra/logger\";"
+      ],
+      "hasWithAuth": false,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    },
+    {
+      "path": "src/app/api/webhooks/subscribe/route.ts",
+      "wrapper": "LEGACY",
+      "imports": [
+        "import { NextRequest } from \"next/server\";",
+        "import { UnauthorizedError } from \"@/infra/errors\";",
+        "import { withEnforcementFull } from \"@/lib/enforced-route\";",
+        "import { withAuth } from \"@/lib/auth-guard\";",
+        "import { CAPABILITIES } from \"@/domain/constants/capabilities\";",
+        "import { WebhookRegistrationSchema } from \"@/domain/webhooks/webhook-contracts\";",
+        "import { registerWebhook } from \"@/services/webhooks.service\";",
+        "import { z } from \"zod\";"
+      ],
+      "hasWithAuth": true,
+      "hasWithCanonical": false,
+      "hasInlineAuth": false
+    }
+  ]
+}
