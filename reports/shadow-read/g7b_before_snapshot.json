@@ -1,0 +1,114 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "g7b",
+  "timestamp": "2026-05-14T19:55:00Z",
+  "purpose": "Baseline state before 3-route capability canonical migration",
+  "scanner_baseline": {
+    "raw": 571,
+    "unique": 411,
+    "actionable_route": 366
+  },
+  "target_routes": [
+    {
+      "file": "src/app/api/evidence/route.ts",
+      "exact_required_capability": "EVIDENCE_VIEW",
+      "before_route_violations": 6,
+      "before_route_entries": [
+        {
+          "line": 29,
+          "column": 3,
+          "pattern": "withAuth()",
+          "context": "await withAuth({ capability: CAPABILITIES.EVIDENCE_VIEW });"
+        },
+        {
+          "line": 29,
+          "column": 9,
+          "pattern": "withAuth()",
+          "context": "await withAuth({ capability: CAPABILITIES.EVIDENCE_VIEW });"
+        },
+        {
+          "line": 54,
+          "column": 23,
+          "pattern": "withAuth()",
+          "context": "const authContext = await withAuth({"
+        },
+        {
+          "line": 54,
+          "column": 29,
+          "pattern": "withAuth()",
+          "context": "const authContext = await withAuth({"
+        },
+        {
+          "line": 2,
+          "column": 1,
+          "pattern": "auth-guard import",
+          "context": "import { withAuth } from \"@/lib/auth-guard\";"
+        },
+        {
+          "line": 2,
+          "column": 1,
+          "pattern": "withAuth import",
+          "context": "import { withAuth } from \"@/lib/auth-guard\";"
+        }
+      ],
+      "current_auth_pattern": "withEnforcementFull wrapper with withAuth({ capability: CAPABILITIES.EVIDENCE_VIEW })",
+      "current_response_shape_summary": "{ evidence: [...], total, limit, offset }",
+      "workspace_source": "x-workspace-id header",
+      "current_imports": [
+        "withEnforcementFull from @/lib/enforced-route",
+        "withAuth from @/lib/auth-guard",
+        "enforceWorkspaceScoping from @/middleware/workspace-enforcement",
+        "CAPABILITIES from @/domain/constants/capabilities",
+        "createEvidence, listEvidence from @/services/evidence",
+        "parseRequestBody, parseSearchParams from @/lib/validation",
+        "checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError from @/services/idempotency",
+        "z from zod",
+        "paginationSchema from @/lib/validation",
+        "NextRequest from next/server",
+        "UnauthorizedError, ForbiddenError from @/infra/errors"
+      ],
+      "methods": ["GET", "POST"],
+      "migrate_methods": ["GET"],
+      "get_line": 27,
+      "post_line": 52
+    },
+    {
+      "file": "src/app/api/evidence-bundles/route.ts",
+      "exact_required_capability": "EVIDENCE_VIEW",
+      "before_route_violations": 6,
+      "current_auth_pattern": "withEnforcementFull wrapper with withAuth({ capability: CAPABILITIES.EVIDENCE_VIEW })",
+      "current_response_shape_summary": "{ bundles: [...], total, limit, offset }",
+      "workspace_source": "x-workspace-id header",
+      "methods": ["GET", "POST"],
+      "migrate_methods": ["GET"],
+      "get_line": 82,
+      "post_line": 22
+    },
+    {
+      "file": "src/app/api/clients/route.ts",
+      "exact_required_capability": "CLIENT_VIEW",
+      "before_route_violations": 6,
+      "current_auth_pattern": "withEnforcementFull wrapper with withAuth({ capability: CAPABILITIES.CLIENT_VIEW })",
+      "current_response_shape_summary": "{ clients: [...], total, limit, offset }",
+      "workspace_source": "x-workspace-id header",
+      "methods": ["GET", "POST"],
+      "migrate_methods": ["GET"],
+      "get_line": 29,
+      "post_line": 50
+    }
+  ],
+  "git_diff_clean": true,
+  "expected_total_reduction": 12,
+  "expected_reduction_per_route": 4,
+  "notes": [
+    "All 3 routes are GET/POST with auth at handler level",
+    "Migrating only GET handlers in G7B (POST handlers left for future phases if needed)",
+    "All use x-workspace-id header for workspace scoping",
+    "All currently use withAuth(capability) pattern",
+    "All have simple response shapes (arrays with pagination)",
+    "No service mutations in GET handlers (read-only)",
+    "No custom workspace resolution logic",
+    "All import withAuth from @/lib/auth-guard (will be removed)",
+    "All use withEnforcementFull outer wrapper (will be replaced with withCanonicalEnforcement)"
+  ]
+}
