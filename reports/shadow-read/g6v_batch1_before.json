@@ -1,0 +1,34 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "batch": "g6v_batch1",
+  "timestamp": "2026-05-14T14:00:00Z",
+  "before_raw_scanner_count": 571,
+  "before_unique_count": 411,
+  "before_actionable_route_count": 366,
+  "selected_routes_count": 10,
+  "selected_route_violations": {
+    "src/app/api/governance/alerts/route.ts": 2,
+    "src/app/api/observability/summary/route.ts": 2,
+    "src/app/api/value/route.ts": 2,
+    "src/app/api/value/summary/route.ts": 2,
+    "src/app/api/report/route.ts": 2,
+    "src/app/api/intelligence/summary/route.ts": 2,
+    "src/app/api/value/7day/route.ts": 2,
+    "src/app/api/governance/metrics/route.ts": 2,
+    "src/app/api/auth/logout/route.ts": 2,
+    "src/app/api/verify/route.ts": 2
+  },
+  "total_violations_in_selected_routes": 20,
+  "expected_reduction": 20,
+  "expected_after_raw_count": 551,
+  "expected_after_unique_count": 391,
+  "expected_after_actionable_count": 346,
+  "git_diff_status": "clean",
+  "notes": [
+    "Baseline is post-G6U (all 3 pilot routes migrated)",
+    "10 selected routes for batch migration",
+    "All selected routes use bridge pattern (withAuth + canonicalizeAuthContext)",
+    "Expected 20 violations to be eliminated (2 per route: withAuth + import)",
+    "Validation checkpoints after every 3 routes"
+  ]
+}

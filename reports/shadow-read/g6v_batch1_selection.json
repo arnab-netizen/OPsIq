@@ -1,0 +1,186 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "batch": "g6v_batch1",
+  "batch_goal": "Controlled max 10-route canonical migration after successful 3-route pilot",
+  "max_routes": 10,
+  "selection_criteria": [
+    "withAuth() no-args only",
+    "read-only GET routes first",
+    "no service calls preferred",
+    "explicit workspace source",
+    "low response-shape risk",
+    "existing tests preferred"
+  ],
+  "already_migrated": [
+    "src/app/api/decisions/list/route.ts",
+    "src/app/api/notifications/preferences/route.ts",
+    "src/app/api/entitlement/route.ts"
+  ],
+  "selected_routes": [
+    {
+      "rank": 1,
+      "file": "src/app/api/governance/alerts/route.ts",
+      "methods": ["GET"],
+      "risk": "LOW",
+      "workspace_source": "header (assumed x-workspace-id)",
+      "service_calls": [],
+      "service_count": 0,
+      "lines": 63,
+      "expected_reduction": 2,
+      "reason_selected": "GET-only, simple governance alerts read, no service calls"
+    },
+    {
+      "rank": 2,
+      "file": "src/app/api/observability/summary/route.ts",
+      "methods": ["GET"],
+      "risk": "LOW",
+      "workspace_source": "header (assumed x-workspace-id)",
+      "service_calls": [],
+      "service_count": 0,
+      "lines": 51,
+      "expected_reduction": 2,
+      "reason_selected": "GET-only, simple observability summary, no service calls"
+    },
+    {
+      "rank": 3,
+      "file": "src/app/api/value/route.ts",
+      "methods": ["GET"],
+      "risk": "LOW",
+      "workspace_source": "header (assumed x-workspace-id)",
+      "service_calls": [],
+      "service_count": 0,
+      "lines": 55,
+      "expected_reduction": 2,
+      "reason_selected": "GET-only, simple value metrics, no service calls"
+    },
+    {
+      "rank": 4,
+      "file": "src/app/api/value/summary/route.ts",
+      "methods": ["GET"],
+      "risk": "LOW",
+      "workspace_source": "header (assumed x-workspace-id)",
+      "service_calls": [],
+      "service_count": 0,
+      "lines": 45,
+      "expected_reduction": 2,
+      "reason_selected": "GET-only, simple value summary, no service calls"
+    },
+    {
+      "rank": 5,
+      "file": "src/app/api/report/route.ts",
+      "methods": ["GET"],
+      "risk": "LOW",
+      "workspace_source": "header (assumed x-workspace-id)",
+      "service_calls": [],
+      "service_count": 0,
+      "lines": 33,
+      "expected_reduction": 2,
+      "reason_selected": "GET-only, simple report generation, no service calls"
+    },
+    {
+      "rank": 6,
+      "file": "src/app/api/intelligence/summary/route.ts",
+      "methods": ["GET"],
+      "risk": "LOW",
+      "workspace_source": "header (assumed x-workspace-id)",
+      "service_calls": [],
+      "service_count": 0,
+      "lines": 231,
+      "expected_reduction": 2,
+      "reason_selected": "GET-only intelligence summary, no service calls, higher complexity but LOW risk"
+    },
+    {
+      "rank": 7,
+      "file": "src/app/api/value/7day/route.ts",
+      "methods": ["GET"],
+      "risk": "LOW",
+      "workspace_source": "header (assumed x-workspace-id)",
+      "service_calls": [],
+      "service_count": 0,
+      "lines": 40,
+      "expected_reduction": 2,
+      "reason_selected": "GET-only, simple 7-day value metric, no service calls"
+    },
+    {
+      "rank": 8,
+      "file": "src/app/api/governance/metrics/route.ts",
+      "methods": ["GET"],
+      "risk": "MEDIUM",
+      "workspace_source": "header (assumed x-workspace-id)",
+      "service_calls": [],
+      "service_count": 0,
+      "lines": 89,
+      "expected_reduction": 2,
+      "reason_selected": "GET-only governance metrics, no service calls, slightly higher complexity"
+    },
+    {
+      "rank": 9,
+      "file": "src/app/api/auth/logout/route.ts",
+      "methods": ["POST"],
+      "risk": "LOW",
+      "workspace_source": "header (assumed)",
+      "service_calls": [],
+      "service_count": 0,
+      "lines": 25,
+      "expected_reduction": 2,
+      "reason_selected": "Simple logout mutation, minimal workspace requirement, straightforward"
+    },
+    {
+      "rank": 10,
+      "file": "src/app/api/verify/route.ts",
+      "methods": ["POST"],
+      "risk": "MEDIUM",
+      "workspace_source": "optional/minimal",
+      "service_calls": [],
+      "service_count": 0,
+      "lines": 83,
+      "expected_reduction": 2,
+      "reason_selected": "POST verification endpoint, moderate complexity, minimal workspace coupling"
+    }
+  ],
+  "excluded_candidates": [
+    {
+      "file": "src/app/api/actions/[actionId]/route.ts",
+      "reason_excluded": "Complex service calls, mutation operations, requires deeper analysis"
+    },
+    {
+      "file": "src/app/api/decisions/[decisionId]/route.ts",
+      "reason_excluded": "Complex business logic, decision state management, higher risk"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/route.ts",
+      "reason_excluded": "Engagement mutations, complex state, requires business logic review"
+    },
+    {
+      "file": "src/app/api/run/route.ts",
+      "reason_excluded": "Very large (1074 lines), complex execution logic, exclude from batch"
+    },
+    {
+      "file": "src/app/api/scenario/route.ts",
+      "reason_excluded": "POST scenario creation, complex mutations, defer to next batch"
+    },
+    {
+      "file": "src/app/api/recommendations/route.ts",
+      "reason_excluded": "Complex recommendation logic, multiple service calls, higher risk"
+    },
+    {
+      "file": "src/app/api/billing/upgrade/route.ts",
+      "reason_excluded": "Billing mutation, financial operation, requires extra caution"
+    },
+    {
+      "file": "src/app/api/admin/workspaces/[id]/disable/route.ts",
+      "reason_excluded": "Admin destructive operation, exclude from batch"
+    }
+  ],
+  "expected_total_reduction": 20,
+  "expected_raw_count_after": 551,
+  "expected_unique_after": 391,
+  "expected_actionable_after": 346,
+  "notes": [
+    "Selected 7 GET-only routes (lowest risk) + 3 POST routes (simple, non-destructive)",
+    "All selected routes have no service calls or minimal service calls",
+    "Expected reduction: ~20 violations (2 per route average)",
+    "Routes will be validated in micro-batches: checkpoint after every 3 routes",
+    "Conservative selection favors safety over speed"
+  ]
+}
