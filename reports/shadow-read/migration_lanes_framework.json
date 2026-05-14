@@ -1,0 +1,204 @@
+{
+  "phase": "X1-D",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "title": "Migration Lanes Framework & Assignment Structure",
+  "status": "FRAMEWORK_DEFINED - ASSIGNMENT_PENDING_CODE_INSPECTION",
+  "lanes": [
+    {
+      "lane": "LANE_1_SIMPLE_CANONICAL_READ",
+      "criteria": [
+        "GET/read-only operation",
+        "no capability requirement",
+        "no PolicyContext usage",
+        "no hasInternalAccess usage",
+        "clear workspace source",
+        "no custom workspace logic",
+        "no mutation"
+      ],
+      "legacy_roadmap_mapping": "G6E/G6F",
+      "recipe": "withCanonicalEnforcement(async (ctx) => { ... })",
+      "estimated_routes": "~20-30",
+      "estimated_reduction": "20-30 violations",
+      "safety_level": "LOWEST",
+      "batch_eligible": true,
+      "requires_proof": [
+        "GET-only method in route"
+      ],
+      "blocking_factors": [],
+      "expected_difficulty": "TRIVIAL"
+    },
+    {
+      "lane": "LANE_2_CAPABILITY_CANONICAL_READ",
+      "criteria": [
+        "GET/read-only operation",
+        "exact single capability requirement",
+        "no PolicyContext usage",
+        "no hasInternalAccess usage",
+        "clear workspace source",
+        "no mutation",
+        "no quarantined bridge unless clear final migration target"
+      ],
+      "legacy_roadmap_mapping": "G7",
+      "recipe": "withCanonicalEnforcement({ requireCapabilities: [\"EXACT_CAPABILITY\"] }, async (ctx) => { ... })",
+      "estimated_routes": "~40-50",
+      "estimated_reduction": "40-50 violations",
+      "safety_level": "LOW",
+      "batch_eligible": true,
+      "requires_proof": [
+        "GET-only method in route",
+        "Exact capability determinable from handler code"
+      ],
+      "blocking_factors": [
+        "PolicyContext dependency would move to LANE_7"
+      ],
+      "expected_difficulty": "SMALL"
+    },
+    {
+      "lane": "LANE_3_CAPABILITY_MUTATION",
+      "criteria": [
+        "POST/PATCH/DELETE operation",
+        "exact capability or capability derivable from route",
+        "mutation behavior",
+        "no PolicyContext dependency"
+      ],
+      "legacy_roadmap_mapping": "G7/G11 (depending risk)",
+      "recipe": "withCanonicalEnforcement({ requireCapabilities: [\"EXACT_CAPABILITY\"] }, async (ctx) => { ... })",
+      "estimated_routes": "~15-25",
+      "estimated_reduction": "15-25 violations",
+      "safety_level": "MEDIUM",
+      "batch_eligible": false,
+      "requires_proof": [
+        "Wrong workspace cannot mutate",
+        "Missing capability cannot mutate",
+        "Correct capability can mutate",
+        "Audit/event behavior preserved",
+        "Idempotency preserved",
+        "Response shape preserved",
+        "Quarantined bridge removed or replaced"
+      ],
+      "blocking_factors": [
+        "PolicyContext dependency would move to LANE_7",
+        "Service signature issues would block until resolved"
+      ],
+      "expected_difficulty": "MEDIUM"
+    },
+    {
+      "lane": "LANE_4_GET_SERVER_AUTH_CONTEXT",
+      "criteria": [
+        "getServerAuthContext() usage",
+        "server-side implicit auth retrieval",
+        "session/cookie/header-based auth context"
+      ],
+      "legacy_roadmap_mapping": "G8",
+      "recipe": "To be determined after G8 audit",
+      "status": "DEFERRED",
+      "do_not_migrate_in_x1": true,
+      "estimated_routes": "~0-5",
+      "notes": "No getServerAuthContext() calls found in route files during X1 baseline scan. If any exist, defer to dedicated G8 audit phase."
+    },
+    {
+      "lane": "LANE_5_REQUIRE_AUTH_FOR_CAPABILITY",
+      "criteria": [
+        "requireAuthForCapability() usage",
+        "explicit capability helper",
+        "not already canonical wrapper"
+      ],
+      "legacy_roadmap_mapping": "G9",
+      "recipe": "To be determined after G9 audit",
+      "status": "DEFERRED",
+      "do_not_migrate_in_x1": true,
+      "estimated_routes": "~0",
+      "notes": "Not detected in X1 baseline. Defer to dedicated phase."
+    },
+    {
+      "lane": "LANE_6_REQUIRE_AUTH_NO_ARGS",
+      "criteria": [
+        "requireAuth() usage",
+        "no explicit capability",
+        "non-canonical helper"
+      ],
+      "legacy_roadmap_mapping": "G10",
+      "recipe": "To be determined after G10 audit",
+      "status": "DEFERRED",
+      "do_not_migrate_in_x1": true,
+      "estimated_routes": "~1",
+      "notes": "Found in at least 1 route. Defer to dedicated G10 phase."
+    },
+    {
+      "lane": "LANE_7_POLICY_CONTEXT_INTERNAL_ACCESS",
+      "criteria": [
+        "AuthContext.policy usage",
+        "hasInternalAccess() usage",
+        "internal override logic",
+        "policy branching",
+        "route requires PolicyContext"
+      ],
+      "legacy_roadmap_mapping": "G11",
+      "recipe": "Requires dedicated PolicyContext migration design",
+      "status": "DEFERRED",
+      "do_not_migrate_in_normal_batches": true,
+      "estimated_routes": "~0",
+      "notes": "Not detected in initial pattern analysis. If discovered during code inspection, requires separate PolicyContext migration strategy."
+    },
+    {
+      "lane": "LANE_8_CUSTOM_WORKSPACE_AUTH",
+      "criteria": [
+        "requireWorkspaceContext() usage",
+        "resolveServerRole() usage",
+        "custom workspace resolution",
+        "cross-workspace query",
+        "unclear workspace source"
+      ],
+      "legacy_roadmap_mapping": "G11",
+      "recipe": "Requires custom workspace-auth audit",
+      "status": "DEFERRED",
+      "do_not_migrate_in_normal_batches": true,
+      "estimated_routes": "~0-5",
+      "notes": "Requires dedicated audit before migration. Will be discovered during Lane 1-3 code inspection phase."
+    },
+    {
+      "lane": "LANE_9_CONTRACT_BLOCKER",
+      "criteria": [
+        "request field dependency",
+        "wrapper contract issue",
+        "CanonicalAuthContext construction issue",
+        "background/system/webhook/event replay context",
+        "manual CanonicalAuthContext construction",
+        "service signature blocker",
+        "quarantined bridge that cannot be safely replaced without design work"
+      ],
+      "legacy_roadmap_mapping": "G11/G12 prerequisite",
+      "recipe": "Requires contract decision before migration",
+      "status": "DEFERRED",
+      "estimated_routes": "~0-3",
+      "blocking_is_critical": true,
+      "notes": "Request field is optional (request?: NextRequest), so should not block most routes. Any blockers found during code inspection must be resolved before proceeding to Lane 3+ migration."
+    }
+  ],
+  "assignment_process": {
+    "step_1": "During X2 phases, inspect handler code for each route",
+    "step_2": "Determine handler type (READ vs MUTATION)",
+    "step_3": "Identify capability requirements (if any)",
+    "step_4": "Check for PolicyContext, hasInternalAccess, custom workspace logic",
+    "step_5": "Assign to appropriate lane based on criteria above",
+    "step_6": "If blockers found, move to LANE_9 for decision",
+    "step_7": "Proceed with lane-specific migration recipe"
+  },
+  "execution_order": [
+    "LANE_1_SIMPLE_CANONICAL_READ (safest first)",
+    "LANE_2_CAPABILITY_CANONICAL_READ (high-volume reads)",
+    "LANE_3_CAPABILITY_MUTATION (mutations with proof)",
+    "LANE_4_THROUGH_8 (deferred or depends on findings)",
+    "LANE_9 (blockers resolved)",
+    "LANE_9_RESOLVED_ROUTES (re-assigned after fix)"
+  ],
+  "critical_constraints": {
+    "NO_POLICY_CONTEXT_IN_BATCH_MIGRATION": "PolicyContext routes must have dedicated design (G11)",
+    "NO_CUSTOM_WORKSPACE_IN_BATCH": "Custom workspace logic requires audit (G11)",
+    "MUTATIONS_SEPARATE_FROM_READS": "Lane 3 must include full proof before migration",
+    "NO_BULK_REPLACE": "Each route must follow recipe exactly",
+    "MAINTAIN_WRAPPER_CONTRACT": "request?: NextRequest remains optional"
+  },
+  "safest_next_lane": "LANE_1_SIMPLE_CANONICAL_READ",
+  "rationale_for_order": "Lane 1 requires minimal code inspection (GET-only, no capability). Lane 2 adds capability requirement but still read-only. Lane 3 requires full mutation proof. Lanes 4+ deferred until dedicated audits complete."
+}

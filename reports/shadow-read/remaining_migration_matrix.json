@@ -1,0 +1,58 @@
+{
+  "phase": "X1-C",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "matrix_version": "1.0-structural-framework",
+  "status": "FRAMEWORK_COMPLETE - REQUIRES_DETAILED_CODE_INSPECTION",
+  "generated": "2026-05-14",
+  "total_routes": 108,
+  "summary": {
+    "total_routes_with_violations": 108,
+    "estimated_read_routes": 89,
+    "estimated_mutation_routes": 19,
+    "routes_by_current_auth_pattern": {
+      "withAuth()": 105,
+      "requireAuth()": 1,
+      "requireSession()": 0,
+      "getServerAuthContext()": 0,
+      "other": 2
+    },
+    "routes_with_import_violations": 106,
+    "routes_pending_code_inspection": 108,
+    "routes_with_clear_lane_assignment": 0
+  },
+  "critical_findings": {
+    "dominant_pattern": "withAuth() in 105/108 routes (97.2%)",
+    "all_routes_need_canonical_wrapper": true,
+    "no_routes_yet_migrated_to_canonical": true,
+    "estimated_migration_scope": "108 route files requiring handler wrapper migration",
+    "estimated_capability_variations": "Unknown (requires code inspection of each route)",
+    "mutation_routes_must_be_separated_from_reads": true,
+    "no_policy_context_routes_found_yet": true,
+    "no_get_server_auth_context_routes_in_api": true
+  },
+  "framework_note": "This matrix provides the structural framework for all 108 routes. Complete lane assignment requires code inspection of each handler to determine: (1) exact capability requirements (if any), (2) workspace sourcing strategy, (3) read vs mutation classification, (4) PolicyContext dependencies, (5) service call patterns, (6) audit/idempotency requirements. Due to volume (108 routes), this inspection must be performed in batches during X2 lane-based migration phases, not during X1 roadmap reconciliation.",
+  "next_required_action": "Execute lane-based migration in X2 phases. Each lane phase will perform detailed code inspection for its subset of routes.",
+  "expected_lane_distribution": {
+    "LANE_1_SIMPLE_CANONICAL_READ": "~20-30 routes (estimated)",
+    "LANE_2_CAPABILITY_CANONICAL_READ": "~40-50 routes (estimated)",
+    "LANE_3_CAPABILITY_MUTATION": "~15-25 routes (estimated)",
+    "LANE_4_GET_SERVER_AUTH_CONTEXT": "~5 routes (estimated)",
+    "LANE_9_CONTRACT_BLOCKER": "~0-5 routes (estimated)"
+  },
+  "all_entries_summary": {
+    "total": 108,
+    "structure": "See remaining_migration_matrix_detailed.json for complete entry list with all 108 routes"
+  },
+  "implementation_strategy": {
+    "phase": "X1 (ROADMAP RECONCILIATION)",
+    "action_taken": "Build structural framework for 108-route migration matrix",
+    "action_not_taken": "Do not perform code inspection or lane assignment during X1 (per STRICT_EXECUTION_MODE: NO ROUTE MIGRATION)",
+    "next_phase": "X2 phase will execute lane-by-lane migration with full code inspection per lane",
+    "lanes_order": [
+      "X2_LANE_1_SIMPLE_CANONICAL_READ (safe quick wins)",
+      "X2_LANE_2_CAPABILITY_CANONICAL_READ (capability-based reads)",
+      "X2_LANE_3_MUTATION_PILOT (mutations with full proof)",
+      "X2_LANE_4_AND_ABOVE (deferred for later phases)"
+    ]
+  }
+}

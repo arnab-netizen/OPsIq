@@ -1,0 +1,90 @@
+{
+  "phase": "X1-A",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+  "timestamp": "2026-05-14T23:15:58.988Z",
+  "total_violations": 512,
+  "critical_violations": 322,
+  "block_build_violations": 190,
+  "unique_route_files": 108,
+  "pattern_counts": {
+    "withAuth()": 312,
+    "auth-guard import": 118,
+    "withAuth import": 71,
+    "requireAuth()": 4,
+    "requireSession()": 3,
+    "getServerAuthContext()": 3,
+    "requireAuth import": 1
+  },
+  "top_files_by_violation_count": [
+    {
+      "file": "src/governance/shadow-read-classifier.ts",
+      "count": 14,
+      "file_type": "governance/analysis"
+    },
+    {
+      "file": "src/lib/auth-guard.ts",
+      "count": 9,
+      "file_type": "library"
+    },
+    {
+      "file": "src/governance/ci-shadow-read-gate.ts",
+      "count": 9,
+      "file_type": "governance/enforcement"
+    },
+    {
+      "file": "src/app/api/operator/route.ts",
+      "count": 8,
+      "file_type": "route"
+    },
+    {
+      "file": "src/app/api/entity/route.ts",
+      "count": 7,
+      "file_type": "route"
+    }
+  ],
+  "summary": {
+    "total_routes_with_violations": 108,
+    "total_non_route_files_with_violations": 13,
+    "library_files": [
+      "src/lib/auth-guard.ts",
+      "src/lib/runtime-shadow-read-enforcer.ts",
+      "src/lib/auth-ownership-allowlist.ts",
+      "src/lib/actor-context.ts"
+    ],
+    "governance_files": [
+      "src/governance/shadow-read-classifier.ts",
+      "src/governance/ci-shadow-read-gate.ts"
+    ],
+    "service_files": [
+      "src/services/stage.ts",
+      "src/services/owner-dashboard.service.ts",
+      "src/services/findings.ts",
+      "src/services/deliverable.ts",
+      "src/services/review-cycle.ts",
+      "src/services/roi-lifecycle-gating.ts",
+      "src/services/shock-event.ts"
+    ]
+  },
+  "baseline_facts": {
+    "critical_severity_count": 322,
+    "block_build_severity_count": 190,
+    "withAuth_only_count": 312,
+    "import_violations_count": 190,
+    "legacy_auth_function_count": 10,
+    "classification": "RUNTIME_ENFORCED_HYBRID",
+    "request_field_status": "request?: NextRequest (optional)",
+    "quarantined_bridge_count": 32,
+    "quarantined_bridge_status": "TRANSITIONAL_DEBT"
+  },
+  "notes": [
+    "Total violations: 512 (matches X1P-SCANNER-TYPE-FIX baseline)",
+    "108 unique route files require canonical migration",
+    "withAuth() is dominant pattern (312 of 512 violations = 60.9%)",
+    "Imports are second pattern (190 of 512 violations = 37.1%)",
+    "Library/governance/service files have 14 violations total",
+    "Actionable route files: ~108 routes need migration",
+    "Governance library fixes in X1P are type-only, zero behavior change",
+    "Ready for lane-based migration execution"
+  ]
+}
