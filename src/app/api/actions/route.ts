@@ -3,7 +3,7 @@ import { UnauthorizedError } from "@/infra/errors";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { checkWorkspaceRateLimit } from "@/middleware/rate-limit";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -74,10 +74,11 @@ const handlePost = async (request: NextRequest) => {
 
   const body = await parseRequestBody(request, createActionSchema);
 
+  const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
   const { isNew, result } = await withIdempotency(
     idempotencyKey,
     "action.create",
-    async () => createAction(body, authContext, workspaceId),
+    async () => createAction(body, canonicalContext, workspaceId),
     body,
     authContext.session.user.id
   );
@@ -90,7 +91,7 @@ export const GET = withCanonicalEnforcement(
     const workspaceId = ctx.verifiedWorkspaceId;
     const params = parseSearchParams(ctx.request.url, listActionsSchema);
     const result = await listActions(workspaceId, params);
-    return result;
+    return Response.json(result);
   },
   { requireWorkspace: true, requireCapabilities: ['ACTION_VIEW'] }
 );

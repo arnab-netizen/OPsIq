@@ -1,3 +1,5 @@
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
@@ -30,31 +32,17 @@ const archiveSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { policy } = await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const { clientId } = params;
+    parseOrThrow(uuidSchema, clientId);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const { clientId } = params;
-  parseOrThrow(uuidSchema, clientId);
-
-  const client = await getClientById(clientId, workspaceId);
-  return Response.json(client);
-});
+    const client = await getClientById(clientId, workspaceId);
+    return Response.json(client);
+  },
+  { requireWorkspace: true, requireCapabilities: ['CLIENT_VIEW'] }
+);
 
 export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)

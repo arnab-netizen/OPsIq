@@ -1,5 +1,5 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   updateContact,
@@ -41,7 +41,8 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   }
 
   const body = await parseRequestBody(request, updateContactSchema);
-  await updateContact(contactId, body, authContext, workspaceId);
+  const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
+  await updateContact(contactId, body, canonicalContext, workspaceId);
 
   return Response.json({ status: "updated" });
 });
@@ -65,7 +66,8 @@ export const DELETE = withEnforcementFull(async (request, context, params) => {
   }
 
   const body = await parseRequestBody(request, deactivateContactSchema);
-  await deactivateContact(contactId, authContext, workspaceId);
+  const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
+  await deactivateContact(contactId, canonicalContext, workspaceId);
 
   return Response.json({ status: "deactivated" });
 });

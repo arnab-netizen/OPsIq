@@ -1,0 +1,149 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "g7d",
+  "batch": "g7d_batch2",
+  "timestamp": "2026-05-14T20:06:00Z",
+  "purpose": "Second controlled capability canonical batch - max 10 handlers",
+  "max_handlers": 10,
+  "scanner_baseline": {
+    "raw": 555,
+    "unique": 395,
+    "actionable_route": 350
+  },
+  "selection_count": 5,
+  "selected_handlers": [
+    {
+      "rank": 1,
+      "file": "src/app/api/clients/[clientId]/route.ts",
+      "method": "GET",
+      "exact_required_capability": "CLIENT_VIEW",
+      "canonical_wrapper_option": "requireCapabilities: ['CLIENT_VIEW']",
+      "workspace_source": "x-workspace-id header (verified)",
+      "service_calls": ["getClientById(clientId, workspaceId)"],
+      "response_shape": "client object",
+      "is_read_only": true,
+      "has_internal_only": false,
+      "has_params": true,
+      "param_names": ["clientId"],
+      "expected_reduction": 2,
+      "violations_before": 6,
+      "risk": "LOW",
+      "reason_selected": "GET-only with params, single capability CLIENT_VIEW, no internalOnly, x-workspace-id verified, read-safe, simple response",
+      "current_pattern": "const { policy } = await withAuth({ capability: CAPABILITIES.CLIENT_VIEW })"
+    },
+    {
+      "rank": 2,
+      "file": "src/app/api/clients/[clientId]/contacts/route.ts",
+      "method": "GET",
+      "exact_required_capability": "CLIENT_VIEW",
+      "canonical_wrapper_option": "requireCapabilities: ['CLIENT_VIEW']",
+      "workspace_source": "x-workspace-id header (verified)",
+      "service_calls": ["getContactsForClient(clientId, workspaceId)"],
+      "response_shape": "{ contacts: [...] }",
+      "is_read_only": true,
+      "has_internal_only": false,
+      "has_params": true,
+      "param_names": ["clientId"],
+      "expected_reduction": 2,
+      "violations_before": 4,
+      "risk": "LOW",
+      "reason_selected": "GET-only with params, single capability CLIENT_VIEW, no internalOnly, x-workspace-id verified, read-safe",
+      "current_pattern": "await withAuth({ capability: CAPABILITIES.CLIENT_VIEW })"
+    },
+    {
+      "rank": 3,
+      "file": "src/app/api/users/[userId]/roles/route.ts",
+      "method": "GET",
+      "exact_required_capability": "USER_VIEW",
+      "canonical_wrapper_option": "requireCapabilities: ['USER_VIEW']",
+      "workspace_source": "x-workspace-id header (verified)",
+      "service_calls": ["getRolesForUser(userId, workspaceId)"],
+      "response_shape": "{ roles: [...] }",
+      "is_read_only": true,
+      "has_internal_only": true,
+      "has_params": true,
+      "param_names": ["userId"],
+      "expected_reduction": 2,
+      "violations_before": 6,
+      "risk": "LOW",
+      "reason_selected": "GET-only with params, single capability USER_VIEW, x-workspace-id verified, read-safe, pattern proven in G7C",
+      "current_pattern": "await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true })"
+    },
+    {
+      "rank": 4,
+      "file": "src/app/api/leads/[leadId]/route.ts",
+      "method": "GET",
+      "exact_required_capability": "LEAD_VIEW",
+      "canonical_wrapper_option": "requireCapabilities: ['LEAD_VIEW']",
+      "workspace_source": "x-workspace-id header (verified)",
+      "service_calls": ["getLeadById(leadId, workspaceId)"],
+      "response_shape": "lead object",
+      "is_read_only": true,
+      "has_internal_only": true,
+      "has_params": true,
+      "param_names": ["leadId"],
+      "expected_reduction": 2,
+      "violations_before": 6,
+      "risk": "LOW",
+      "reason_selected": "GET-only with params, single capability LEAD_VIEW, x-workspace-id verified, read-safe, pattern proven in G7C",
+      "current_pattern": "await withAuth({ capability: CAPABILITIES.LEAD_VIEW, internalOnly: true })"
+    },
+    {
+      "rank": 5,
+      "file": "src/app/api/engagements/[engagementId]/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "canonical_wrapper_option": "requireCapabilities: ['ENGAGEMENT_VIEW']",
+      "workspace_source": "x-workspace-id header (verified)",
+      "service_calls": ["getEngagementById(engagementId, workspaceId, ...)"],
+      "response_shape": "engagement object",
+      "is_read_only": true,
+      "has_internal_only": false,
+      "has_params": true,
+      "param_names": ["engagementId"],
+      "expected_reduction": 2,
+      "violations_before": 4,
+      "risk": "LOW",
+      "reason_selected": "GET-only read-safe, single capability ENGAGEMENT_VIEW, x-workspace-id verified, no internalOnly, engagement-read (not mutation)",
+      "current_pattern": "const { session, policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW })"
+    }
+  ],
+  "excluded_candidates": [
+    {
+      "file": "src/app/api/operator/route.ts",
+      "method": "GET",
+      "reason_excluded": "Uses custom requireWorkspaceContext() pattern, not x-workspace-id header based"
+    },
+    {
+      "file": "src/app/api/findings/route.ts",
+      "method": "POST",
+      "reason_excluded": "POST-only (not GET), excluded by GET-only priority"
+    },
+    {
+      "file": "src/app/api/diagnosis/route.ts",
+      "method": "POST",
+      "reason_excluded": "POST-only (not GET), ENGAGEMENT_CREATE (engagement mutation)"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/condition/route.ts",
+      "method": "GET",
+      "reason_excluded": "Engagement sub-route, potential complex workspace logic, deprioritized"
+    }
+  ],
+  "expected_total_reduction": 10,
+  "expected_raw_count_after": 545,
+  "expected_unique_after": 385,
+  "expected_actionable_after": 340,
+  "selection_notes": [
+    "Selected 5 GET/read-safe handlers for second batch",
+    "All 5 use single, clear capability requirement",
+    "All 5 use x-workspace-id header (proven pattern)",
+    "All 5 are read-only (no mutations)",
+    "2 without internalOnly flag (clients routes)",
+    "3 with internalOnly flag but still GET-only and safe",
+    "All include path params (clientId, userId, leadId, engagementId) - pattern tested in G7C",
+    "Expected reduction: 10 violations (2 per handler)",
+    "No engagement mutations (only engagement reads)",
+    "No admin or billing mutations included"
+  ]
+}

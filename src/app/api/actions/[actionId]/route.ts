@@ -1,7 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getActionById, updateAction } from "@/services/action";
@@ -30,7 +30,7 @@ export const GET = withCanonicalEnforcement(
     parseOrThrow(uuidSchema, actionId);
 
     const action = await getActionById(actionId, ctx.verifiedWorkspaceId);
-    return action;
+    return Response.json(action);
   },
   {
     requireWorkspace: true,
@@ -64,7 +64,8 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, actionId);
 
   const body = await parseRequestBody(request, updateActionSchema);
-  await updateAction(actionId, body, { session, policy }, workspaceId);
+  const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
+  await updateAction(actionId, body, canonicalContext, workspaceId);
 
   const updated = await getActionById(actionId, workspaceId);
   return Response.json(updated);
