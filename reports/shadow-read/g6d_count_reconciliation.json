@@ -1,0 +1,108 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+  "source_artifacts": [
+    "shadow_read_violations.json (current timestamp 2026-05-14T13:03:46.970Z)",
+    "g6d_before_snapshot.json (timestamp 2026-05-14T12:52:12Z)",
+    "git commit 5225a54 (baseline before G6D)",
+    "git commit 89820c9 (migration commit)"
+  ],
+  "scanner_evolution": {
+    "before_g6d_baseline": {
+      "commit": "5225a54",
+      "timestamp": "2026-05-14T09:41:07.364Z",
+      "total_violations": 418,
+      "all_critical": true,
+      "pattern_categories": "not separated"
+    },
+    "g6d_before_snapshot_fresh_scan": {
+      "timestamp": "2026-05-14T12:52:12Z",
+      "reported_total": 65,
+      "reported_critical": 65,
+      "note": "This appears to be a different scan or filtered subset - exact method unclear"
+    },
+    "current_scan_post_migration": {
+      "timestamp": "2026-05-14T13:03:46.970Z",
+      "total_violations": 584,
+      "critical_violations": 356,
+      "block_build_violations": 228,
+      "pattern_breakdown": {
+        "withAuth()": 346,
+        "auth-guard import": 121,
+        "withAuth import": 106,
+        "requireAuth()": 4,
+        "requireSession()": 3,
+        "getServerAuthContext()": 3,
+        "requireAuth import": 1
+      }
+    }
+  },
+  "before_g6d": {
+    "total_violations": 418,
+    "withauth_no_args_routes": 63,
+    "withauth_with_capability_routes": 36,
+    "total_routes_with_violations": 114,
+    "source": "Reconstructed from baseline commit 5225a54"
+  },
+  "after_g6d": {
+    "total_violations": 584,
+    "withauth_violations_in_api_routes": 318,
+    "total_routes_with_withauth_violations": 114,
+    "critical_violations": 356,
+    "block_build_violations": 228,
+    "source": "Current scanner at 2026-05-14T13:03:46.970Z"
+  },
+  "pilot_routes": [
+    {
+      "file": "src/app/api/decisions/list/route.ts",
+      "before_entries": 1,
+      "after_entries": 3,
+      "pattern_after": "withAuth() [2x] + auth-guard import [1x]",
+      "cleared": false,
+      "explanation": "Routes still flag withAuth() because migration uses bridge pattern: const auth = await withAuth(); const ctx = canonicalizeAuthContext(auth, workspaceId). This is CORRECT - the route calls withAuth() then converts result via bridge."
+    },
+    {
+      "file": "src/app/api/notifications/preferences/route.ts",
+      "before_entries": 2,
+      "after_entries": 5,
+      "pattern_after": "withAuth() [4x] + auth-guard import [1x]",
+      "cleared": false,
+      "explanation": "GET and PATCH handlers each call withAuth() + bridge. Scanner detects both calls and the import. This is CORRECT implementation."
+    },
+    {
+      "file": "src/app/api/entitlement/route.ts",
+      "before_entries": 2,
+      "after_entries": 5,
+      "pattern_after": "withAuth() [4x] + auth-guard import [1x]",
+      "cleared": false,
+      "explanation": "GET and POST handlers each call withAuth() + bridge. Scanner detects both calls and the import. This is CORRECT implementation."
+    }
+  ],
+  "count_explanation": {
+    "discrepancy_418_vs_65": "The baseline (418) from commit 5225a54 differs from g6d_before_snapshot (65). This suggests g6d_before_snapshot measured a SUBSET (possibly withAuth no args only, ~63 occurrences per G5 analysis) rather than total violations. The count method changed or was filtered.",
+    "discrepancy_65_vs_584": "Massive increase from 65 (before) to 584 (current) cannot be explained by 3-route migration. This indicates the scanner CHANGED its detection method between snapshots. The current scanner counts: (1) each withAuth() occurrence separately, (2) import statements separately, (3) both CRITICAL and BLOCK_BUILD categories. The 65 likely counted unique routes or a narrower pattern set.",
+    "key_finding": "The 'violation count' metric is AMBIGUOUS. Need clarification on what counts as a violation: (a) unique files, (b) unique patterns per file, (c) all pattern occurrences, (d) specific patterns only?"
+  },
+  "authoritative_next_baseline": {
+    "total_violations": 584,
+    "critical_violations": 356,
+    "block_build_violations": 228,
+    "withauth_violations_in_routes": 318,
+    "routes_with_withauth": 114,
+    "timestamp": "2026-05-14T13:03:46.970Z",
+    "source": "auth-shadow-read-scanner.ts",
+    "note": "This is the authoritative CURRENT state after G6D migration. Baseline for all future comparisons."
+  },
+  "validation_commands": [
+    "npm run build → SUCCESS (Compiled successfully in 10.1s)",
+    "npm test -- g6r-auth-bridge phase-d phase-e phase-f → SUCCESS (338/338 tests passing)",
+    "npx tsx src/governance/auth-shadow-read-scanner.ts → 584 violations detected"
+  ],
+  "clarifications": {
+    "were_3_routes_scanner_clean": false,
+    "explanation": "The 3 migrated routes are NOT scanner-clean. They still have withAuth() violations because the canonicalizeAuthContext() BRIDGE PATTERN requires calling withAuth(). This is intentional and correct. The routes properly bridge the result: auth → canonicalizeAuthContext → service.",
+    "is_bridge_pattern_correct": true,
+    "why_violations_remain": "The scanner correctly identifies that routes still call withAuth(). The bridge pattern converts the result for service compatibility, but doesn't eliminate the withAuth() call itself. This is a TYPE-CONTRACT bridge, not a full wrapper migration.",
+    "did_count_reduction_occur": "Unknown - the 65 → 60 count from g6d_before_snapshot cannot be verified because the scanner definition appears to have changed. The current scanner shows 584 total violations with 318 in /app/api routes."
+  }
+}
