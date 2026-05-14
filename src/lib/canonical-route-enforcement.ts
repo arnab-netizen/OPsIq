@@ -26,6 +26,13 @@ import type { CapabilityName } from "@/domain/constants/capabilities";
 import { buildAuthState, evaluateAuthState, translateAuthDecisionToResponse } from "@/lib/canonical-auth-facts";
 import type { AuthDecision } from "@/lib/canonical-auth-facts";
 import { CanonicalTelemetryLifecycle } from "@/lib/canonical-telemetry-lifecycle";
+import { CanonicalExecutionTraceManager } from "@/lib/canonical-execution-trace";
+import {
+  classifyExecution,
+  pushExecutionContext,
+  popExecutionContext,
+  type ReentryClassification,
+} from "@/lib/execution-reentry-detector";
 
 /**
  * Verified context passed to handler
@@ -46,8 +53,9 @@ export interface CanonicalAuthContext {
   // Verified capabilities (if capability-scoped route)
   verifiedCapabilities: Set<string>;
 
-  // Execution trace (for observability)
-  executionTrace: Array<{ stage: string; timestamp: number; result: string }>;
+  // PHASE D: ROOT CONTAINER - Single execution lineage authority
+  traceId: string;
+  executionTrace: Readonly<any>;  // Read-only reference to unified trace
 
   // Correlation ID (for request tracking)
   correlationId: string;
@@ -104,12 +112,43 @@ export function withCanonicalEnforcement(
   return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
     const params = await context.params;
     let telemetry: CanonicalTelemetryLifecycle | null = null;
+    let traceManager: CanonicalExecutionTraceManager | null = null;
+
+    // Generate correlation ID from request headers or create new one
+    const correlationId = req.headers.get("x-correlation-id") || `corr-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    const requestId = req.headers.get("x-request-id") || `req-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
     try {
-      // Generate correlation ID from request headers or create new one
-      const correlationId = req.headers.get("x-correlation-id") || `corr-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      const requestId = req.headers.get("x-request-id") || `req-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-      const executionTrace: Array<{ stage: string; timestamp: number; result: string }> = [];
+
+      // ========================================
+      // PHASE D: ROOT CONTAINER - Initialize execution trace
+      // ========================================
+      traceManager = new CanonicalExecutionTraceManager({
+        correlationId,
+        requestId,
+        method: req.method,
+        pathname: req.nextUrl.pathname,
+        queryString: req.nextUrl.search,
+      });
+
+      // STEP D3.2: Detect reentry/nesting
+      const reentryStatus = classifyExecution({
+        traceId: traceManager.getTrace().traceId,
+        correlationId,
+        requestId,
+      });
+
+      if (reentryStatus !== "SAFE") {
+        throw new Error(
+          `EXECUTION REENTRY VIOLATION: ${reentryStatus}. Cannot nest canonical wrapper execution.`
+        );
+      }
+
+      pushExecutionContext({
+        traceId: traceManager.getTrace().traceId,
+        correlationId,
+        requestId,
+      });
 
       // ========================================
       // TELEMETRY: Initialize lifecycle
@@ -122,13 +161,14 @@ export function withCanonicalEnforcement(
       });
 
       telemetry.emitPipelineStarted();
+      traceManager.recordStage("PIPELINE_STARTED", "success");
 
       // ========================================
       // STEP 1: EXTRACT WORKSPACE ID
       // ========================================
 
       const workspaceId = req.headers.get("x-workspace-id") || "system";
-      executionTrace.push({ stage: "WORKSPACE_EXTRACTED", timestamp: Date.now(), result: workspaceId });
+      traceManager.recordStage("WORKSPACE_EXTRACTED", "success", workspaceId);
 
       // ========================================
       // STEP 2: GATHER AUTH FACTS (NO ERRORS THROWN)
@@ -142,7 +182,15 @@ export function withCanonicalEnforcement(
         sessionValid: sessionFact.valid,
         policyValid: policyFact.valid,
       });
-      executionTrace.push({ stage: "FACTS_GATHERED", timestamp: Date.now(), result: "SUCCESS" });
+      traceManager.recordStage("FACTS_GATHERED", "success");
+      traceManager.recordAuthSnapshot({
+        sessionValid: sessionFact.valid,
+        sessionInvalidReason: sessionFact.invalidReason,
+        policyValid: policyFact.valid,
+        policyInvalidReason: policyFact.invalidReason,
+        workspaceId: workspaceId || undefined,
+        workspaceValid: true,
+      });
 
       // ========================================
       // STEP 3: BUILD COMPLETE AUTH STATE
@@ -160,7 +208,7 @@ export function withCanonicalEnforcement(
 
       // TELEMETRY: State built
       telemetry.emitStateBuilt(authState);
-      executionTrace.push({ stage: "AUTH_STATE_BUILT", timestamp: Date.now(), result: "SUCCESS" });
+      traceManager.recordStage("AUTH_STATE_BUILT", "success");
 
       // ========================================
       // STEP 4: EVALUATE AUTH STATE → DECISION
@@ -174,16 +222,29 @@ export function withCanonicalEnforcement(
 
       // TELEMETRY: Evaluated
       telemetry.emitEvaluated(decision);
+      traceManager.recordStage("AUTH_EVALUATED", decision.allowed ? "success" : "failed");
+
+      // Record decision in trace (immutable after this point)
+      if (decision.context) {
+        traceManager.recordAuthSnapshot({
+          sessionValid: true,
+          policyValid: true,
+          workspaceId: decision.context.verifiedWorkspaceId,
+          workspaceValid: true,
+          actorId: decision.context.verifiedActorId,
+        });
+      }
+
+      traceManager.recordDecision({
+        allowed: decision.allowed,
+        statusCode: decision.statusCode,
+        reason: decision.trace.reason,
+        checks: decision.trace.checks,
+      });
 
       // ========================================
       // STEP 5: HANDLE AUTH DECISION
       // ========================================
-
-      executionTrace.push({
-        stage: "AUTH_EVALUATED",
-        timestamp: Date.now(),
-        result: decision.allowed ? "ALLOWED" : "DENIED"
-      });
 
       if (!decision.allowed) {
         logger.warn("Auth decision: DENIED", {
@@ -203,7 +264,7 @@ export function withCanonicalEnforcement(
       }
 
       logger.debug("Auth decision: ALLOWED", { correlationId });
-      executionTrace.push({ stage: "AUTH_AUTHORIZED", timestamp: Date.now(), result: "SUCCESS" });
+      traceManager.recordStage("AUTH_AUTHORIZED", "success");
 
       let session: SessionInfo | null = null;
       let policy: PolicyContext | null = null;
@@ -227,7 +288,9 @@ export function withCanonicalEnforcement(
         verifiedActor: session.user,
         verifiedWorkspaceId: workspaceId,
         verifiedCapabilities: decision.context!.verifiedCapabilities,
-        executionTrace,
+        // PHASE D: Trace is ROOT container (read-only)
+        traceId: traceManager.getTrace().traceId,
+        executionTrace: traceManager.getReadOnlyTrace(),
         correlationId,
         requestId,
         request: req,
@@ -241,6 +304,7 @@ export function withCanonicalEnforcement(
 
       // Handler can ONLY be called here, AFTER auth passed
       // Handler receives verified context only
+      traceManager.recordStage("HANDLER_EXECUTING", "success");
       telemetry.emitHandlerExecuting(verifiedContext.verifiedActorId);
       const result = await handler(verifiedContext, params);
 
@@ -248,19 +312,42 @@ export function withCanonicalEnforcement(
       // STEP 8: RETURN HANDLER RESULT
       // ========================================
 
-      executionTrace.push({ stage: "HANDLER_SUCCESS", timestamp: Date.now(), result: "COMPLETED" });
+      traceManager.recordStage("HANDLER_SUCCESS", "success");
       telemetry.emitHandlerCompleted();
+
+      // PHASE D: Finalize trace (becomes immutable)
+      const finalTrace = traceManager.finalize({
+        allowed: true,
+        statusCode: 200,
+        sessionSnapshotId: session?.sessionId,
+      });
+
       telemetry.emitRequestCompleted();
+      popExecutionContext(finalTrace.traceId);
 
       return new NextResponse(JSON.stringify(result), {
         status: 200,
         headers: {
           "x-correlation-id": correlationId,
+          "x-trace-id": finalTrace.traceId,
           "content-type": "application/json",
         },
       });
     } catch (error) {
       // Unhandled error in handler or pipeline
+      try {
+        if (traceManager) {
+          traceManager.recordStage("HANDLER_FAILED", "failed", String(error));
+          const failedTrace = traceManager.finalize({
+            allowed: false,
+            statusCode: 500,
+          });
+          popExecutionContext(failedTrace.traceId);
+        }
+      } catch (traceError) {
+        logger.error("Trace finalization error", traceError as Error, { correlationId });
+      }
+
       const telemetryCtx = telemetry?.getContext();
       telemetry?.emitHandlerFailed(error as Error);
       telemetry?.emitRequestCompleted();
