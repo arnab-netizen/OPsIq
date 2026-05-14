@@ -11,6 +11,26 @@ import type { CapabilityName } from "@/domain/constants/capabilities";
 import { ROLE_HIERARCHY } from "@/domain/constants/roles";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
+/**
+ * PHASE A: Auth Guard Transition (Legacy Code)
+ *
+ * IMPORTANT: This module is in transition during PHASE A-F.
+ * Do NOT use these functions in NEW code.
+ *
+ * INSTEAD:
+ * - Use withCanonicalEnforcement() for protected routes
+ * - Use canonical-auth-facts.ts for auth decision logic
+ * - Use services/auth.ts fact-returning functions (getSessionFact, getPolicyContextFact)
+ *
+ * These legacy functions are kept for backward compatibility with existing code.
+ * They will be deprecated and removed after PHASE F.
+ *
+ * What changed:
+ * - BEFORE: requireAuth() threw UnauthorizedError → old code caught it
+ * - NOW: Canonical wrapper uses facts → makes decisions itself
+ * - AFTER (Phase F): All semantic logic removed from legacy helpers
+ */
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export interface AuthContext {

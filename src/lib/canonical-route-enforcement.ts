@@ -23,7 +23,7 @@ import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
 import { getSessionFact, getPolicyContextFact } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
 import type { CapabilityName } from "@/domain/constants/capabilities";
-import { buildAuthState, evaluateAuthState } from "@/lib/canonical-auth-facts";
+import { buildAuthState, evaluateAuthState, translateAuthDecisionToResponse } from "@/lib/canonical-auth-facts";
 import type { AuthDecision } from "@/lib/canonical-auth-facts";
 
 /**
@@ -177,17 +177,14 @@ export function withCanonicalEnforcement(
           reason: decision.trace.reason,
         });
 
-        return new NextResponse(
-          JSON.stringify({
-            error: decision.message,
-            correlationId,
-            ...(decision.statusCode === 403 && { detail: "Insufficient permissions" }),
-          }),
-          {
-            status: decision.statusCode,
-            headers: { "x-correlation-id": correlationId, "content-type": "application/json" },
-          }
-        );
+        // PHASE A STEP A3: Use single error translation layer
+        // ONLY this layer generates HTTP error responses
+        const errorResponse = translateAuthDecisionToResponse(decision, correlationId);
+
+        return new NextResponse(JSON.stringify(errorResponse.body), {
+          status: errorResponse.status,
+          headers: { "x-correlation-id": correlationId, "content-type": "application/json" },
+        });
       }
 
       logger.debug("Auth decision: ALLOWED", { correlationId });

@@ -219,6 +219,123 @@ export function buildInternalAccessFact(policy: PolicyContext | null): InternalA
  *
  * No errors thrown - just facts.
  */
+// ─── Response Translation: Facts → HTTP ────────────────────────────────────
+
+/**
+ * PHASE A STEP A3: Single Error Translation Layer
+ *
+ * ONLY this layer may translate auth decisions to HTTP responses.
+ * ONLY this layer may emit status codes and error semantics.
+ * Legacy system must NEVER generate responses.
+ *
+ * This is the canonical wrapper's exclusive authority:
+ * AuthDecision → HTTP Status Code + Message
+ */
+
+export interface AuthErrorResponse {
+  status: 401 | 403 | 429 | 503 | 500;
+  body: {
+    error: string;
+    correlationId: string;
+    detail?: string;
+  };
+}
+
+/**
+ * Translate auth decision to HTTP error response.
+ * ONLY called by canonical wrapper when auth fails.
+ * ONLY place where HTTP status codes are generated.
+ *
+ * This gives canonical wrapper absolute authority over:
+ * - 401 vs 403 vs 429 vs 503 vs 500 decisions
+ * - Error message semantics
+ * - HTTP response headers
+ */
+export function translateAuthDecisionToResponse(
+  decision: AuthDecision,
+  correlationId: string
+): AuthErrorResponse {
+  if (decision.allowed) {
+    throw new Error("translateAuthDecisionToResponse: decision.allowed must be false");
+  }
+
+  const status = decision.statusCode as 401 | 403 | 429 | 503 | 500;
+
+  return {
+    status,
+    body: {
+      error: decision.message,
+      correlationId,
+      ...(status === 403 && { detail: "Insufficient permissions" }),
+      ...(status === 401 && { detail: "Please authenticate" }),
+      ...(status === 429 && { detail: "Too many requests" }),
+      ...(status === 503 && { detail: "Service temporarily unavailable" }),
+      ...(status === 500 && { detail: "Internal server error" }),
+    },
+  };
+}
+
+/**
+ * Validate that legacy system does NOT own error generation.
+ *
+ * This function can be called in tests to ensure legacy helpers
+ * are not throwing HTTP-semantic errors anymore.
+ *
+ * FORBIDDEN legacy behaviors:
+ * - throw new UnauthorizedError() → must return fact instead
+ * - throw new ForbiddenError() → must return fact instead
+ * - generate NextResponse directly → wrapper owns this
+ * - emit auth telemetry → wrapper owns this
+ */
+export function validateLegacySemanticStripdown(context: {
+  legacyThrowsErrors: boolean;
+  legacyEmitsResponses: boolean;
+  legacyEmitsTelemetry: boolean;
+  canonicalOwnsDecisions: boolean;
+  canonicalOwnsResponses: boolean;
+}): boolean {
+  if (context.legacyThrowsErrors) {
+    console.error(
+      "[PHASE A VIOLATION] Legacy system still throws HTTP-semantic errors"
+    );
+    return false;
+  }
+  if (context.legacyEmitsResponses) {
+    console.error("[PHASE A VIOLATION] Legacy system still emits responses");
+    return false;
+  }
+  if (context.legacyEmitsTelemetry) {
+    console.error(
+      "[PHASE A VIOLATION] Legacy system still emits auth telemetry"
+    );
+    return false;
+  }
+  if (!context.canonicalOwnsDecisions) {
+    console.error(
+      "[PHASE A VIOLATION] Canonical wrapper does not own auth decisions"
+    );
+    return false;
+  }
+  if (!context.canonicalOwnsResponses) {
+    console.error("[PHASE A VIOLATION] Canonical wrapper does not own responses");
+    return false;
+  }
+  return true;
+}
+
+// ─── Auth State Builder: Orchestrate all facts ──────────────────────────────
+
+/**
+ * Build complete auth state from facts.
+ * This is called by canonical wrapper to gather all raw auth state before decisions.
+ *
+ * This function:
+ * 1. Gathers all facts (session, policy, capabilities)
+ * 2. Validates workspace requirement
+ * 3. Returns complete state for decision-making
+ *
+ * No errors thrown - just facts.
+ */
 export async function buildAuthState(input: {
   correlationId: string;
   requestId: string;

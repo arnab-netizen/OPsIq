@@ -24,6 +24,21 @@ export interface SessionInfo {
   expiresAt: Date;
 }
 
+/**
+ * PHASE A: Legacy Auth System - Now Pure Data Providers
+ *
+ * As of PHASE A, the legacy auth system is being transitioned to pure data providers.
+ * All auth semantic decisions (status codes, error types, flow control) have moved to:
+ * - Canonical wrapper: src/lib/canonical-route-enforcement.ts
+ * - Facts system: src/lib/canonical-auth-facts.ts
+ *
+ * Legacy helpers still exist for backward compatibility and as data sources.
+ * New code should use the facts-based functions instead of throwing versions.
+ *
+ * Throwing versions (requireSession, requirePolicyContext, etc.) will be deprecated
+ * after PHASE F when legacy is fully stripped down.
+ */
+
 export async function getSession(workspaceId: string = "system"): Promise<SessionInfo | null> {
   // CRITICAL: Ensure database is initialized before ANY db access
   // This prevents the db Proxy from throwing "Database not initialized" errors
