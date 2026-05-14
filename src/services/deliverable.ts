@@ -4,7 +4,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { requireCapabilityForService } from "@/lib/auth-guard";
-import type { AuthContext } from "@/lib/auth-guard";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export interface CreateDeliverableInput {
@@ -23,13 +23,13 @@ export interface UpdateDeliverableInput {
 
 export async function createDeliverable(
   input: CreateDeliverableInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   if (!workspaceId) throw new Error("workspaceId is required");
   requireCapabilityForService(authContext, CAPABILITIES.DELIVERABLE_CREATE);
 
-  const actorId = authContext.session.user.id;
+  const actorId = authContext.session?.user?.id;
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId, workspaceId },
   });
@@ -108,13 +108,13 @@ export async function getDeliverableById(deliverableId: string, workspaceId: str
 export async function updateDeliverableReviewStatus(
   deliverableId: string,
   input: UpdateDeliverableInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   if (!workspaceId) throw new Error("workspaceId is required");
   requireCapabilityForService(authContext, CAPABILITIES.DELIVERABLE_APPROVE);
 
-  const actorId = authContext.session.user.id;
+  const actorId = authContext.session?.user?.id;
   const deliv = await db.deliverable.findFirst({
     where: {
       id: deliverableId,

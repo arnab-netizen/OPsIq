@@ -1,4 +1,4 @@
-import { AuthContext } from "@/lib/auth-guard";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
 
 /**
@@ -12,12 +12,12 @@ import { UnauthorizedError } from "@/infra/errors";
  * Throws UnauthorizedError if authContext is missing or invalid.
  * Returns the authenticated userId from the session.
  */
-export function requireServiceAuth(authContext: AuthContext | null | undefined): string {
+export function requireServiceAuth(authContext: CanonicalAuthContext | null | undefined): string {
   if (!authContext) {
     throw new UnauthorizedError("Service requires authentication context");
   }
 
-  const userId = authContext.session.user.id;
+  const userId = authContext.session?.user.id;
   if (!userId) {
     throw new UnauthorizedError("Invalid auth context: missing user ID");
   }
@@ -42,7 +42,7 @@ export function requireWorkspaceContext(workspaceId: string | null | undefined):
  * Returns tuple of [userId, workspaceId] for convenience.
  */
 export function requireServiceContext(
-  authContext: AuthContext | null | undefined,
+  authContext: CanonicalAuthContext | null | undefined,
   workspaceId: string | null | undefined
 ): [string, string] {
   const userId = requireServiceAuth(authContext);

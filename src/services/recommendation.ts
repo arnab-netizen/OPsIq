@@ -13,7 +13,7 @@ import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { AuthContext } from "@/lib/auth-guard";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
@@ -355,7 +355,7 @@ async function evaluateEngagementKPIHealth(
 
 export async function createRecommendation(
   input: CreateRecommendationInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string,
   idempotencyKey?: string
 ) {
@@ -649,7 +649,7 @@ export async function getRecommendationsForEngagement(
 export async function updateRecommendationStatus(
   recommendationId: string,
   input: UpdateRecommendationInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(
@@ -942,7 +942,7 @@ export async function updateRecommendationStatus(
 export async function updateRecommendationPriorityFromScore(
   recommendationId: string,
   scoringInput: RecommendationScoringInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string,
   recommendationClass?: RecommendationClass
 ): Promise<{ id: string; score: number; priority: string }> {
@@ -1020,7 +1020,7 @@ export async function updateRecommendationPriorityFromScore(
 
 export async function reRankRecommendationsInEngagement(
   engagementId: string,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{
   updated: number;
@@ -1157,7 +1157,7 @@ export async function getRecommendation(
 export async function updateRecommendation(
   recommendationId: string,
   input: UpdateRecommendationInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(
@@ -1266,7 +1266,7 @@ export async function getRecommendationAuditTrail(
 export async function createRecommendationsFromInterventions(
   engagementId: string,
   interventions: PrioritizedIntervention[],
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [, validatedWorkspaceId] = requireServiceContext(

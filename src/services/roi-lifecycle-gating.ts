@@ -21,7 +21,7 @@ import {
   TERMINAL_STATES,
 } from "@/domain/decision-lifecycle";
 import { ValidationError, NotFoundError, ConflictError } from "@/infra/errors";
-import type { AuthContext } from "@/lib/auth-guard";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 /**
  * Impact type classification
@@ -167,7 +167,7 @@ export function validateFinalROIMarking(
  */
 export async function recordImpactWithGating(
   request: ImpactRecordingRequest,
-  authContext: AuthContext
+  authContext: CanonicalAuthContext
 ): Promise<{ decisionId: string; impactType: ImpactType; recorded: boolean }> {
   // Verify auth
   requireServiceContext(authContext, request.workspaceId);
@@ -301,7 +301,7 @@ export async function recordImpactWithGating(
  */
 export async function recordROIWithGating(
   request: ROIRecordingRequest,
-  authContext: AuthContext
+  authContext: CanonicalAuthContext
 ): Promise<{ decisionId: string; roiValue: number; isFinal: boolean }> {
   // Verify auth
   requireServiceContext(authContext, request.workspaceId);

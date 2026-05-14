@@ -6,7 +6,7 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
-import type { AuthContext } from "@/lib/auth-guard";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
   BUSINESS_CONDITION_RATINGS,
   PRESSURE_LEVELS,
@@ -101,9 +101,12 @@ function validateConditionInput(input: CreateConditionProfileInput): void {
 
 export async function assessCondition(
   input: CreateConditionProfileInput,
-  authContext: AuthContext
+  authContext: CanonicalAuthContext
 ): Promise<{ id: string }> {
-  const actorId = authContext.session.user.id;
+  const actorId = authContext.session?.user?.id;
+  if (!actorId) {
+    throw new ValidationError("User ID is required in auth context");
+  }
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId, workspaceId: input.workspaceId },

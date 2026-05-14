@@ -9,7 +9,7 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import { detectShockFromCurrentState } from "@/services/shock-detection";
 import type { ShockEventType } from "@/domain/constants/statuses";
 import type { RiskSeverity } from "@/domain/constants/statuses";
-import type { AuthContext } from "@/lib/auth-guard";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export interface CreateShockEventInput {
   engagementId: string;
@@ -31,7 +31,7 @@ export interface UpdateShockEventInput {
 
 export async function createShockEvent(
   input: CreateShockEventInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<{ id: string; engagementId: string; detectionConfirmed: boolean }> {
   const actorId = authContext.session.user.id;
@@ -111,7 +111,7 @@ export async function createShockEvent(
 export async function updateShockEvent(
   shockEventId: string,
   input: UpdateShockEventInput,
-  authContext: AuthContext
+  authContext: CanonicalAuthContext
 ): Promise<{ id: string }> {
   // Note: ShockEvent model does not exist in schema - always throw NotFoundError
   throw new NotFoundError("ShockEvent", shockEventId);

@@ -172,9 +172,18 @@ export function canDo(
  * Use at the service layer to enforce authorization independent of routes.
  */
 export function requireCapabilityForService(
-  authContext: AuthContext,
+  authContext: AuthContext | { verifiedCapabilities?: Set<string>; policy?: PolicyContext },
   capability: CapabilityName,
   scope?: { type: string; id: string }
 ): void {
-  requireCapability(authContext.policy, capability, scope);
+  // Support both AuthContext (legacy) and CanonicalAuthContext (new)
+  const policy = (authContext as AuthContext).policy || (authContext as any).policy;
+  if (policy) {
+    requireCapability(policy, capability, scope);
+  } else if ((authContext as any).verifiedCapabilities) {
+    // For CanonicalAuthContext, verify capability is in the set
+    if (!(authContext as any).verifiedCapabilities.has(capability)) {
+      throw new ForbiddenError(`Capability required: ${capability}`);
+    }
+  }
 }

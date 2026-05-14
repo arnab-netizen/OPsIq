@@ -9,7 +9,7 @@ import { logger } from "@/infra/logger";
 import { requireCapabilityForService } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import type { GovernedStageState, BlockerSeverity, BlockerType } from "@/domain/constants/statuses";
-import type { AuthContext } from "@/lib/auth-guard";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -42,7 +42,7 @@ export interface UnblockStageInput {
 
 export async function createStage(
   input: CreateStageInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_CREATE);
@@ -83,7 +83,7 @@ export async function createStage(
   return { id: stage.id };
 }
 
-export async function getStage(id: string, authContext: AuthContext, workspaceId: string) {
+export async function getStage(id: string, authContext: CanonicalAuthContext, workspaceId: string) {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_VIEW);
 
   const stage = await db.stage.findFirst({
@@ -97,7 +97,7 @@ export async function getStage(id: string, authContext: AuthContext, workspaceId
   return stage;
 }
 
-export async function getStagesForEngagement(engagementId: string, authContext: AuthContext, workspaceId: string) {
+export async function getStagesForEngagement(engagementId: string, authContext: CanonicalAuthContext, workspaceId: string) {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_VIEW);
 
   const engagement = await db.engagement.findUnique({
@@ -114,7 +114,7 @@ export async function getStagesForEngagement(engagementId: string, authContext: 
 export async function updateStage(
   id: string,
   input: UpdateStageInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
@@ -187,7 +187,7 @@ export async function updateStage(
 export async function blockStage(
   id: string,
   input: BlockStageInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
@@ -270,7 +270,7 @@ export async function blockStage(
 export async function unblockStage(
   id: string,
   input: UnblockStageInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
