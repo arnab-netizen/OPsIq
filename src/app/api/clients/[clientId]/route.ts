@@ -2,7 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -70,7 +70,8 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, clientId);
 
   const body = await parseRequestBody(request, updateClientSchema);
-  await updateClient(clientId, body, { session, policy }, workspaceId);
+  const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
+  await updateClient(clientId, body, canonicalContext, workspaceId);
 
   const updated = await getClientById(clientId, workspaceId);
   return Response.json(updated);
@@ -125,7 +126,8 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   }
 
   try {
-    await archiveClient(clientId, { session, policy }, body.version, workspaceId);
+    const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
+    await archiveClient(clientId, canonicalContext, body.version, workspaceId);
     const result = { status: "archived" };
     await recordIdempotencyResponse(idempotencyKey, 200, result);
     return Response.json(result);

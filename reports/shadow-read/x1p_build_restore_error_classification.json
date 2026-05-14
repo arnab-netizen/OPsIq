@@ -1,0 +1,47 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X1P_BUILD_RESTORE_B",
+  "errors": [
+    {
+      "file": "src/app/api/clients/[clientId]/contacts/route.ts",
+      "line": 76,
+      "error": "Argument of type 'AuthContext' is not assignable to parameter of type 'CanonicalAuthContext'",
+      "category": "UNAUTHORIZED_BRIDGE_REMOVED",
+      "root_cause": "X1P_SELECTIVE_CLEANUP_1D24AD1 removed canonicalizeAuthContext() bridge call. Service createContact() requires CanonicalAuthContext, but route now passes AuthContext directly.",
+      "handler_type": "POST (mutation handler)",
+      "service_called": "createContact",
+      "allowed_fix": "Reintroduce canonicalizeAuthContext() as quarantined transitional bridge (LANE_3_CAPABILITY_MUTATION phase)",
+      "forbidden_fix": "Change createContact() signature to accept AuthContext, move canonicalization into service, use as any workaround"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/route.ts",
+      "line": 73,
+      "error": "Argument of type '{ session: SessionInfo; policy: PolicyContext; }' is not assignable to parameter of type 'CanonicalAuthContext'",
+      "category": "UNAUTHORIZED_BRIDGE_REMOVED",
+      "root_cause": "X1P_SELECTIVE_CLEANUP_1D24AD1 removed canonicalizeAuthContext() bridge call. Service updateClient() requires CanonicalAuthContext, but route now passes auth object directly.",
+      "handler_type": "PATCH (mutation handler)",
+      "service_called": "updateClient",
+      "allowed_fix": "Reintroduce canonicalizeAuthContext() as quarantined transitional bridge (LANE_3_CAPABILITY_MUTATION phase)",
+      "forbidden_fix": "Change updateClient() signature to accept AuthContext, move canonicalization into service, use as any workaround"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/route.ts",
+      "line": 128,
+      "error": "Argument of type '{ session: SessionInfo; policy: PolicyContext; }' is not assignable to parameter of type 'CanonicalAuthContext'",
+      "category": "UNAUTHORIZED_BRIDGE_REMOVED",
+      "root_cause": "X1P_SELECTIVE_CLEANUP_1D24AD1 removed canonicalizeAuthContext() bridge call. Service archiveClient() requires CanonicalAuthContext, but route now passes auth object directly.",
+      "handler_type": "POST (mutation handler)",
+      "service_called": "archiveClient",
+      "allowed_fix": "Reintroduce canonicalizeAuthContext() as quarantined transitional bridge (LANE_3_CAPABILITY_MUTATION phase)",
+      "forbidden_fix": "Change archiveClient() signature to accept AuthContext, move canonicalization into service, use as any workaround"
+    }
+  ],
+  "summary": {
+    "total_errors": 3,
+    "all_from_cleanup": true,
+    "service_signature_issues": 3,
+    "mutation_handlers_affected": 2,
+    "requires_transitional_bridges": 3,
+    "requires_mutation_proof_phase": true
+  }
+}

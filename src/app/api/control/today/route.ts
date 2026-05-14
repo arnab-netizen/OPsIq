@@ -10,7 +10,7 @@ export const GET = withCanonicalEnforcement(
       throw new Error("Workspace ID required");
     }
 
-    const membership = await enforceWorkspaceScoping(ctx.request, workspaceIdParam);
+    const membership = await enforceWorkspaceScoping(ctx.request!, workspaceIdParam);
     if (!membership) {
       throw new Error("Unauthorized or invalid workspace");
     }
