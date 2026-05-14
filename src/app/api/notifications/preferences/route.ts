@@ -4,10 +4,9 @@
  * Manage user notification preferences: channels, frequency, quiet hours.
  */
 
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { z } from "zod";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
   setPreferences,
   getPreferences,
@@ -34,60 +33,53 @@ const SetPreferencesSchema = z.object({
  * GET /api/notifications/preferences
  * Get user notification preferences
  */
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  const auth = await withAuth();
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const userId = ctx.verifiedActorId;
 
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
+    const preferences = await getPreferences(workspaceId, userId);
 
-  const ctx = canonicalizeAuthContext(auth, workspaceId);
-  const userId = ctx.verifiedActorId;
-
-  const preferences = await getPreferences(workspaceId, userId);
-
-  return {
-    success: true,
-    preferences: preferences || {
-      workspaceId,
-      userId,
-      channels: {
-        [NotificationChannel.EMAIL]: true,
-        [NotificationChannel.SMS]: true,
-        [NotificationChannel.WEBHOOK]: true,
-        [NotificationChannel.IN_APP]: true,
+    return {
+      success: true,
+      preferences: preferences || {
+        workspaceId,
+        userId,
+        channels: {
+          [NotificationChannel.EMAIL]: true,
+          [NotificationChannel.SMS]: true,
+          [NotificationChannel.WEBHOOK]: true,
+          [NotificationChannel.IN_APP]: true,
+        },
+        frequency: "real_time",
       },
-      frequency: "real_time",
-    },
-  };
-});
+    };
+  },
+  { requireWorkspace: true }
+);
 
 /**
  * PATCH /api/notifications/preferences
  * Update user notification preferences
  */
-export const PATCH = withEnforcementFull(async (request: NextRequest) => {
-  const auth = await withAuth();
+export const PATCH = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const userId = ctx.verifiedActorId;
 
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
+    const body = await ctx.request!.json();
+    const parsed = SetPreferencesSchema.parse(body);
 
-  const userId = auth.session.user.id;
+    const preferences = await setPreferences({
+      workspaceId,
+      userId,
+      ...parsed,
+    });
 
-  const body = await request.json();
-  const parsed = SetPreferencesSchema.parse(body);
-
-  const preferences = await setPreferences({
-    workspaceId,
-    userId,
-    ...parsed,
-  });
-
-  return {
-    success: true,
-    preferences,
-  };
-});
+    return {
+      success: true,
+      preferences,
+    };
+  },
+  { requireWorkspace: true }
+);

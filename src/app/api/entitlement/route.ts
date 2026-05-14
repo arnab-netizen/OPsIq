@@ -5,12 +5,9 @@
  * Workspace-scoped, requires authentication.
  */
 
-import { NextRequest } from "next/server";
-import { UnauthorizedError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { z } from "zod";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
   getSubscriptionTier,
   getTierConfig,
@@ -38,61 +35,43 @@ const GetQuotaSchema = z.object({
  * GET /api/entitlement/tier
  * Get workspace subscription tier
  */
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  const auth = await withAuth();
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
+    const tier = getSubscriptionTier(workspaceId);
+    const config = getTierConfig(tier);
 
-  const ctx = canonicalizeAuthContext(auth, workspaceId);
-
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new UnauthorizedError("Unauthorized");
-  }
-
-  const tier = getSubscriptionTier(workspaceId);
-  const config = getTierConfig(tier);
-
-  return {
-    success: true,
-    tier,
-    config,
-  };
-});
+    return {
+      success: true,
+      tier,
+      config,
+    };
+  },
+  { requireWorkspace: true }
+);
 
 /**
  * POST /api/entitlement/check-capability
  * Check if workspace has a specific capability
  */
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  const auth = await withAuth();
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
+    const body = await ctx.request!.json();
+    const parsed = CheckCapabilitySchema.parse(body);
+    const allowed = hasCapability(workspaceId, parsed.capability);
 
-  const ctx = canonicalizeAuthContext(auth, workspaceId);
+    if (!allowed) {
+      throw new Error(`Capability ${parsed.capability} not available on current tier`);
+    }
 
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new UnauthorizedError("Unauthorized");
-  }
-
-  const body = await request.json();
-  const parsed = CheckCapabilitySchema.parse(body);
-  const allowed = hasCapability(workspaceId, parsed.capability);
-
-  if (!allowed) {
-    throw new Error(`Capability ${parsed.capability} not available on current tier`);
-  }
-
-  return {
-    success: true,
-    allowed: true,
-    capability: parsed.capability,
-  };
-});
+    return {
+      success: true,
+      allowed: true,
+      capability: parsed.capability,
+    };
+  },
+  { requireWorkspace: true }
+);

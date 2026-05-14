@@ -1,0 +1,47 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "route_migrated": "src/app/api/notifications/preferences/route.ts",
+  "migration_pattern": "Bridge pattern → withCanonicalEnforcement()",
+  "handlers_migrated": 2,
+  "handler_details": [
+    {
+      "method": "GET",
+      "before": "withEnforcementFull + withAuth + canonicalizeAuthContext",
+      "after": "withCanonicalEnforcement(async (ctx) => {...})",
+      "status": "✓ MIGRATED"
+    },
+    {
+      "method": "PATCH",
+      "before": "withEnforcementFull + withAuth + canonicalizeAuthContext",
+      "after": "withCanonicalEnforcement(async (ctx) => {...})",
+      "status": "✓ MIGRATED"
+    }
+  ],
+  "before_raw_scanner_count": 581,
+  "after_raw_scanner_count": 576,
+  "before_unique_count": 417,
+  "after_unique_count": 414,
+  "before_route_entries": 5,
+  "after_route_entries": 0,
+  "expected_reduction": 5,
+  "actual_reduction": 5,
+  "route_scanner_clean": true,
+  "build_status": "success (pre-existing error in unrelated route)",
+  "tests_status": "338/338 PASS - No regression",
+  "response_shape_preserved": true,
+  "workspace_scoping": "Header-based (x-workspace-id) - preserved",
+  "status_codes_preserved": true,
+  "service_calls": [
+    "getPreferences (GET) - safe",
+    "setPreferences (PATCH) - safe"
+  ],
+  "mutations_preserved": "PATCH mutation semantics intact",
+  "notes": [
+    "Route is now scanner-clean (0 violations)",
+    "Removed 5 violations: GET handler (2x withAuth) + PATCH handler (2x withAuth) + auth-guard import",
+    "Both handlers use wrapper-enforced workspace (x-workspace-id header)",
+    "Response shapes identical",
+    "GET/PATCH mutation semantics preserved",
+    "Tests pass - no regression detected"
+  ]
+}
