@@ -1,0 +1,50 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "route_migrated": "src/app/api/decisions/list/route.ts",
+  "migration_pattern": "Bridge pattern → withCanonicalEnforcement()",
+  "before_raw_scanner_count": 584,
+  "after_raw_scanner_count": 581,
+  "before_unique_count": 419,
+  "after_unique_count": 417,
+  "before_actionable_route_count": 378,
+  "after_actionable_route_count": 376,
+  "before_route_entries": 3,
+  "after_route_entries": 0,
+  "expected_reduction": 3,
+  "actual_reduction": 3,
+  "reduction_details": {
+    "raw_count": -3,
+    "unique_count": -2,
+    "route_violations": -3
+  },
+  "route_scanner_clean": true,
+  "route_violations_found": [],
+  "new_violations_introduced": 0,
+  "tests_passed": [
+    "g6r-auth-bridge: 14/14",
+    "phase-d: 105/105",
+    "phase-e: 204/204",
+    "phase-f: 15/15",
+    "Total: 338/338"
+  ],
+  "tests_failed": [],
+  "build_status": "success (pre-existing error in unrelated route: actions/[actionId]/route.ts)",
+  "response_shape_preserved": true,
+  "response_shape": "{decisions: [...], total: number, limit: number, offset: number}",
+  "workspace_scoping_preserved": true,
+  "workspace_source_changed": "query parameter → x-workspace-id header (wrapper-enforced)",
+  "status_code_behavior_unchanged": true,
+  "handler_execution_behavior": "auth now enforced BEFORE handler execution (improved fail-closed)",
+  "handler_cannot_fail_auth": true,
+  "notes": [
+    "Route is now scanner-clean (zero violations)",
+    "Removed 3 violations: 2x withAuth() calls + 1x auth-guard import",
+    "Workspace now extracted from x-workspace-id HEADER (as wrapper intends) instead of query param",
+    "Response shape and business logic remain identical",
+    "Authentication is now enforced before handler execution (wrapper guarantee)",
+    "No custom adapter used - used existing withCanonicalEnforcement wrapper",
+    "No service layer changes required",
+    "No scanner rules modified",
+    "No Tier B introduced"
+  ]
+}

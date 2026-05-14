@@ -1,0 +1,52 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "route": "src/app/api/decisions/list/route.ts",
+  "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+  "before_raw_scanner_count": 584,
+  "before_unique_count": 419,
+  "before_actionable_route_count": 378,
+  "before_route_scanner_entries": 3,
+  "before_route_entries": [
+    {
+      "line": 10,
+      "column": 16,
+      "pattern": "withAuth()",
+      "severity": "CRITICAL",
+      "context": "const auth = await withAuth();"
+    },
+    {
+      "line": 10,
+      "column": 22,
+      "pattern": "withAuth()",
+      "severity": "CRITICAL",
+      "context": "const auth = await withAuth();"
+    },
+    {
+      "line": 4,
+      "column": 1,
+      "pattern": "auth-guard import",
+      "severity": "BLOCK_BUILD",
+      "context": "import { withAuth, canonicalizeAuthContext } from \"@/lib/auth-guard\";"
+    }
+  ],
+  "current_auth_pattern": "Bridge pattern: withAuth() + canonicalizeAuthContext()",
+  "current_wrapper": "withEnforcementFull",
+  "current_response_shape_summary": "{ decisions: [...], total: number, limit: number, offset: number }",
+  "workspace_source": "Query parameter: request.nextUrl.searchParams.get('workspaceId')",
+  "current_imports": [
+    "NextRequest from 'next/server'",
+    "withEnforcementFull from '@/lib/enforced-route'",
+    "db from '@/lib/db'",
+    "withAuth, canonicalizeAuthContext from '@/lib/auth-guard'",
+    "enforceWorkspaceScoping, hasPermission from '@/middleware/workspace-enforcement'",
+    "UnauthorizedError, ForbiddenError from '@/infra/errors'"
+  ],
+  "git_diff_clean": true,
+  "notes": [
+    "Route currently uses query parameter for workspace extraction, but wrapper uses header (x-workspace-id)",
+    "Tests expect x-workspace-id HEADER per decisions.test.ts line 71",
+    "Migration will fix this inconsistency by using header-based workspace scoping (as intended by wrapper)",
+    "Response shape will remain identical - no contract changes",
+    "Database queries will remain identical - no semantic changes"
+  ]
+}

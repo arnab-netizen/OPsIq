@@ -1,85 +1,66 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { db } from "@/lib/db";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate (throws UnauthorizedError if no valid session)
-  const auth = await withAuth();
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const userId = ctx.verifiedActorId;
 
-  const workspaceId = request.nextUrl.searchParams.get("workspaceId");
-  if (!workspaceId) {
-    throw new UnauthorizedError("Workspace ID required");
-  }
+    // Get filter from query params
+    const status = ctx.request?.nextUrl.searchParams.get("status");
+    const limit = Math.min(parseInt(ctx.request?.nextUrl.searchParams.get("limit") || "100"), 1000);
+    const offset = Math.max(parseInt(ctx.request?.nextUrl.searchParams.get("offset") || "0"), 0);
 
-  const ctx = canonicalizeAuthContext(auth, workspaceId);
-  const userId = ctx.verifiedActorId;
+    // Build filter
+    const where: any = {
+      workspaceId,
+    };
 
-  // Enforce workspace scoping
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new UnauthorizedError("Unauthorized or invalid workspace");
-  }
+    if (status && ["pending", "blocked", "approved", "done", "failed"].includes(status)) {
+      where.status = status;
+    }
 
-  // Check permission to read/view decisions
-  if (!hasPermission(membership.role, "read")) {
-    throw new ForbiddenError("Insufficient permissions to view decisions");
-  }
+    // Fetch decisions
+    const decisionsRaw = await db.operatorItem.findMany({
+      where,
+      select: {
+        id: true,
+        problem: true,
+        action: true,
+        impactExpected: true,
+        confidence: true,
+        status: true,
+        blockStage: true,
+        blockReason: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit,
+      skip: offset,
+    });
 
-  // Get filter from query params
-  const status = request.nextUrl.searchParams.get("status");
-  const limit = Math.min(parseInt(request.nextUrl.searchParams.get("limit") || "100"), 1000);
-  const offset = Math.max(parseInt(request.nextUrl.searchParams.get("offset") || "0"), 0);
+    const total = await db.operatorItem.count({ where });
 
-  // Build filter
-  const where: any = {
-    workspaceId,
-  };
-
-  if (status && ["pending", "blocked", "approved", "done", "failed"].includes(status)) {
-    where.status = status;
-  }
-
-  // Fetch decisions
-  const decisionsRaw = await db.operatorItem.findMany({
-    where,
-    select: {
-      id: true,
-      problem: true,
-      action: true,
-      impactExpected: true,
-      confidence: true,
-      status: true,
-      blockStage: true,
-      blockReason: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-    take: limit,
-    skip: offset,
-  });
-
-  const total = await db.operatorItem.count({ where });
-
-  return {
-    decisions: decisionsRaw.map((d: typeof decisionsRaw[0]) => ({
-      id: d.id,
-      title: d.problem,
-      status: d.status,
-      impact: d.impactExpected,
-      confidence: d.confidence,
-      blockStage: d.blockStage,
-      blockReason: d.blockReason,
-      createdAt: d.createdAt,
-      updatedAt: d.updatedAt,
-    })),
-    total,
-    limit,
-    offset,
-  };
-});
+    return {
+      decisions: decisionsRaw.map((d: typeof decisionsRaw[0]) => ({
+        id: d.id,
+        title: d.problem,
+        status: d.status,
+        impact: d.impactExpected,
+        confidence: d.confidence,
+        blockStage: d.blockStage,
+        blockReason: d.blockReason,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+      })),
+      total,
+      limit,
+      offset,
+    };
+  },
+  { requireWorkspace: true }
+);
