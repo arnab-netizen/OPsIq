@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-05-14T09:27:32.217Z",
-  "totalViolations": 415,
-  "critical": 415,
+  "timestamp": "2026-05-14T09:41:07.364Z",
+  "totalViolations": 418,
+  "critical": 418,
   "violations": [
     {
       "file": "src/services/user.ts",
@@ -219,6 +219,27 @@
       "pattern": "auth-guard import",
       "severity": "CRITICAL",
       "context": "import { AuthContext } from \"@/lib/auth-guard\";"
+    },
+    {
+      "file": "src/lib/runtime-shadow-read-enforcer.ts",
+      "line": 16,
+      "pattern": "withAuth()",
+      "severity": "CRITICAL",
+      "context": "* - withAuth()"
+    },
+    {
+      "file": "src/lib/runtime-shadow-read-enforcer.ts",
+      "line": 173,
+      "pattern": "withAuth()",
+      "severity": "CRITICAL",
+      "context": "Do not call: getSession(), requireSession(), withAuth(), getPolicyContext()"
+    },
+    {
+      "file": "src/lib/runtime-shadow-read-enforcer.ts",
+      "line": 208,
+      "pattern": "withAuth()",
+      "severity": "CRITICAL",
+      "context": "* Call this in getSession(), requireSession(), withAuth(), etc."
     },
     {
       "file": "src/lib/actor-context.ts",
