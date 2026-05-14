@@ -124,7 +124,7 @@ export async function updateInterventionPhase(
   authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<void> {
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
 
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace-scoped queries");
@@ -210,7 +210,7 @@ export async function updateInterventionMode(
   authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<void> {
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
 
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace-scoped queries");
@@ -291,7 +291,7 @@ export async function initializeInterventionState(
   authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
   enforceWorkspaceId(workspaceId, "initializeInterventionState", "engagement");
 
   const engagement = await db.engagement.findUnique({
@@ -333,7 +333,7 @@ export async function transitionPhase(
   authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
 
   const engagement = await db.engagement.findFirst({
     where: { id: engagementId, workspaceId },
@@ -386,7 +386,7 @@ export async function blockEngagement(
   authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
   const engagement = await db.engagement.findFirst({
     where: { id: engagementId, workspaceId },
     select: { id: true, version: true, workspaceId: true, isBlocked: true },
@@ -450,7 +450,7 @@ export async function unblockEngagement(
   authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
   const engagement = await db.engagement.findFirst({
     where: { id: engagementId, workspaceId },
     select: { id: true, version: true, workspaceId: true, isBlocked: true },

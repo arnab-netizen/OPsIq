@@ -47,7 +47,7 @@ function classifyViolation(
   context: string
 ): ClassifiedViolation {
   // Determine initial category based on pattern
-  let category = RemediationCategory.CATEGORY_A;
+  let category: keyof typeof RemediationCategory = RemediationCategory.CATEGORY_A;
   let reason = "";
   let remediation = "";
   let effort: "TRIVIAL" | "SMALL" | "MEDIUM" | "LARGE" = "SMALL";

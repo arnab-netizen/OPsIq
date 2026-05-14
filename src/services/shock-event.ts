@@ -34,7 +34,7 @@ export async function createShockEvent(
   authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<{ id: string; engagementId: string; detectionConfirmed: boolean }> {
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
 
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace-scoped shock event creation");

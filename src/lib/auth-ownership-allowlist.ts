@@ -116,13 +116,14 @@ export const AUTH_READ_ALLOWLIST = {
 export function isAuthReadAllowed(functionName: string, filePath: string): boolean {
   // Check canonical sources
   const allowed = Object.values(AUTH_READ_ALLOWLIST).some((allowlist) => {
-    if (allowlist.type === undefined) {
+    if (!Array.isArray(allowlist) && 'functions' in allowlist) {
       // It's a canonical entry
       return (
         allowlist.functions?.includes(functionName) &&
         filePath.includes(allowlist.file.replace("src/", ""))
       );
     }
+    return false;
   });
 
   // Check forbidden

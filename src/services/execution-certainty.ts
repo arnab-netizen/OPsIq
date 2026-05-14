@@ -1,3 +1,5 @@
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+
 export interface Finding {
   id: string;
   severity: "critical" | "high" | "medium" | "low";

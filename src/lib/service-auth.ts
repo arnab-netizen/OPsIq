@@ -21,7 +21,7 @@ export function requireServiceAuth(authContext: CanonicalAuthContext | null | un
     throw new UnauthorizedError("Service requires authentication context");
   }
 
-  const userId = authContext.verifiedSessionSnapshot?.user.id;
+  const userId = authContext.verifiedActorId;
   if (!userId) {
     throw new UnauthorizedError("Invalid auth context: missing user ID");
   }

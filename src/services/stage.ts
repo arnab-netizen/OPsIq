@@ -47,7 +47,7 @@ export async function createStage(
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_CREATE);
 
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
   const engagement = await db.engagement.findUnique({
     where: { id: input.engagementId, workspaceId },
   });
@@ -119,7 +119,7 @@ export async function updateStage(
 ): Promise<void> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
 
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
   const stage = await db.stage.findFirst({
     where: { id, engagement: { workspaceId } },
     include: { engagement: true },
@@ -192,7 +192,7 @@ export async function blockStage(
 ): Promise<void> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
 
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
   const stage = await db.stage.findFirst({
     where: { id, engagement: { workspaceId } },
     include: { engagement: true },
@@ -275,7 +275,7 @@ export async function unblockStage(
 ): Promise<void> {
   requireCapabilityForService(authContext, CAPABILITIES.STAGE_TRANSITION);
 
-  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
+  const actorId = authContext.verifiedActorId;
   const stage = await db.stage.findFirst({
     where: { id, engagement: { workspaceId } },
     include: { engagement: true },

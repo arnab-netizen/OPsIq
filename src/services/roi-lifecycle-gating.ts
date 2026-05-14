@@ -206,13 +206,13 @@ export async function recordImpactWithGating(
         data: {
           impactExpected: request.expectedOutcomeValue || null,
           updatedAt: new Date(),
-          lastUpdatedBy: (authContext).verifiedActorId || authContext.session?.user?.id,
+          lastUpdatedBy: authContext.verifiedActorId,
         },
       });
 
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.DECISION_IMPACT_PROJECTED,
-        actorId: (authContext).verifiedActorId || authContext.session?.user?.id,
+        actorId: authContext.verifiedActorId,
         entityType: "decision",
         entityId: decisionId,
         workspaceId,
@@ -255,13 +255,13 @@ export async function recordImpactWithGating(
           actualOutcomeValue: actualOutcomeValue || null,
           actualOutcome: actualOutcome || null,
           updatedAt: new Date(),
-          lastUpdatedBy: (authContext).verifiedActorId || authContext.session?.user?.id,
+          lastUpdatedBy: authContext.verifiedActorId,
         },
       });
 
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.DECISION_IMPACT_REALIZED,
-        actorId: (authContext).verifiedActorId || authContext.session?.user?.id,
+        actorId: authContext.verifiedActorId,
         entityType: "decision",
         entityId: decisionId,
         workspaceId,
