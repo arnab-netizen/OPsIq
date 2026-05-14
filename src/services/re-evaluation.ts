@@ -715,8 +715,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
           },
           correlationId: "",
           requestId: "",
-          request: null as any,
-        } as CanonicalAuthContext;
+        };
         const reRankResult = await reRankRecommendationsInEngagement(event.engagementId, authContext, engagementForWs.workspaceId);
 
         if (reRankResult.updated > 0) {
@@ -786,8 +785,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
           },
           correlationId: "",
           requestId: "",
-          request: null as any,
-        } as CanonicalAuthContext;
+        };
         await checkEngagementEscalations(event.engagementId, internalAuthContext, engagementForPhase7.workspaceId);
         await computeNextReviewDate(event.engagementId, internalAuthContext, engagementForPhase7.workspaceId);
       }

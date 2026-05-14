@@ -78,8 +78,8 @@ export interface CanonicalAuthContext {
   correlationId?: string;
   requestId?: string;
 
-  // Raw NextRequest (always provided by wrapper)
-  request: NextRequest;
+  // Optional: raw NextRequest (not required for service layer or non-request-bound contexts)
+  request?: NextRequest;
 
   // Session info (from auth system)
   session?: SessionInfo;
