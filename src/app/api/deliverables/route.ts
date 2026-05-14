@@ -1,3 +1,5 @@
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -17,40 +19,28 @@ const createDeliverableSchema = z.object({
   description: z.string().optional(),
 });
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  const { session } = await withAuth({ capability: CAPABILITIES.DELIVERABLE_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const url = new URL(ctx.request.url);
+    const engagementId = url.searchParams.get("engagementId");
 
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    if (!engagementId) {
+      return Response.json(
+        { error: "engagementId is required" },
+        { status: 400 }
+      );
+    }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+    parseOrThrow(uuidSchema, engagementId);
 
-  const url = new URL(request.url);
-  const engagementId = url.searchParams.get("engagementId");
+    await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
-  if (!engagementId) {
-    return Response.json(
-      { error: "engagementId is required" },
-      { status: 400 }
-    );
-  }
-
-  parseOrThrow(uuidSchema, engagementId);
-
-  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
-
-  const deliverables = await getDeliverablesForEngagement(engagementId, workspaceId);
-  return Response.json(deliverables);
-});
+    const deliverables = await getDeliverablesForEngagement(engagementId, workspaceId);
+    return Response.json(deliverables);
+  },
+  { requireWorkspace: true, requireCapabilities: ['DELIVERABLE_VIEW'] }
+);
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)

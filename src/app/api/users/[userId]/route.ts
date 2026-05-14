@@ -1,3 +1,5 @@
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
@@ -37,31 +39,17 @@ const actionSchema = z.discriminatedUnion("action", [
   reactivateSchema,
 ]);
 
-export const GET = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const { userId } = params;
+    parseOrThrow(uuidSchema, userId);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const { userId } = params;
-  parseOrThrow(uuidSchema, userId);
-
-  const user = await getUserById(userId, workspaceId);
-  return Response.json(user);
-});
+    const user = await getUserById(userId, workspaceId);
+    return Response.json(user);
+  },
+  { requireWorkspace: true, requireCapabilities: ['USER_VIEW'] }
+);
 
 export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)

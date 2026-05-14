@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { UnauthorizedError } from "@/infra/errors";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -30,28 +32,6 @@ const listActionsSchema = paginationSchema.extend({
   status: z.string().optional(),
   assignedTo: z.string().uuid().optional(),
 });
-
-const handleGet = async (request: NextRequest) => {
-  // Authenticate + authorize (fail-closed)
-  // Database initialization is guaranteed by auth middleware
-  await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
-
-  // Validate workspace membership (fail-closed)
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
-
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new UnauthorizedError("Unauthorized");
-  }
-
-  const params = parseSearchParams(request.url, listActionsSchema);
-  const result = await listActions(workspaceId, params);
-
-  return result;
-};
 
 const handlePost = async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
@@ -105,5 +85,13 @@ const handlePost = async (request: NextRequest) => {
   return result;
 };
 
-export const GET = withEnforcementFull(handleGet);
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const params = parseSearchParams(ctx.request.url, listActionsSchema);
+    const result = await listActions(workspaceId, params);
+    return result;
+  },
+  { requireWorkspace: true, requireCapabilities: ['ACTION_VIEW'] }
+);
 export const POST = withEnforcementFull(handlePost);

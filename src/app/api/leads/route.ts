@@ -1,3 +1,5 @@
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -26,26 +28,15 @@ const listLeadsSchema = paginationSchema.extend({
   search: z.string().optional(),
 });
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate + authorize (fail-closed)
-  await withAuth({ capability: CAPABILITIES.LEAD_VIEW, internalOnly: true });
-
-  // Validate workspace membership (fail-closed)
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new UnauthorizedError("Workspace ID required (x-workspace-id header)");
-  }
-
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const params = parseSearchParams(request.url, listLeadsSchema);
-  const result = await listLeads(workspaceId, params);
-
-  return result;
-});
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const params = parseSearchParams(ctx.request.url, listLeadsSchema);
+    const result = await listLeads(workspaceId, params);
+    return result;
+  },
+  { requireWorkspace: true, requireCapabilities: ['LEAD_VIEW'] }
+);
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
