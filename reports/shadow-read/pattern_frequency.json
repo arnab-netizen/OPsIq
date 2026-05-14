@@ -1,0 +1,66 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "source_artifact": "g5a_cluster_analysis",
+  "total_patterns": 6,
+  "patterns": [
+    {
+      "pattern": "withAuth no args",
+      "occurrences": 63,
+      "file_count": 38,
+      "representative_files": [
+        "src/governance/shadow-read-classifier.ts",
+        "src/governance/auth-shadow-read-scanner.ts",
+        "src/governance/ci-shadow-read-gate.ts"
+      ]
+    },
+    {
+      "pattern": "withAuth with capability",
+      "occurrences": 36,
+      "file_count": 35,
+      "representative_files": [
+        "src/governance/shadow-read-classifier.ts",
+        "src/governance/ci-shadow-read-gate.ts",
+        "src/app/api/engagements/route.ts"
+      ]
+    },
+    {
+      "pattern": "getServerAuthContext",
+      "occurrences": 14,
+      "file_count": 5,
+      "representative_files": [
+        "src/governance/shadow-read-classifier.ts",
+        "src/governance/auth-shadow-read-scanner.ts",
+        "src/__ignored_tests__/lib/auth-guard.test.ts"
+      ]
+    },
+    {
+      "pattern": "requireAuthForCapability",
+      "occurrences": 11,
+      "file_count": 5,
+      "representative_files": [
+        "src/app/api/decisions/[decisionId]/accept/route.ts",
+        "src/app/api/decisions/[decisionId]/reject/route.ts",
+        "src/__ignored_tests__/lib/auth-guard.test.ts"
+      ]
+    },
+    {
+      "pattern": "requireAuth no args",
+      "occurrences": 9,
+      "file_count": 5,
+      "representative_files": [
+        "src/governance/shadow-read-classifier.ts",
+        "src/governance/auth-shadow-read-scanner.ts",
+        "src/app/api/entity/route.ts"
+      ]
+    },
+    {
+      "pattern": "requireAuthInternal",
+      "occurrences": 5,
+      "file_count": 2,
+      "representative_files": [
+        "src/__ignored_tests__/lib/auth-guard.test.ts",
+        "src/lib/auth-guard.ts"
+      ]
+    }
+  ]
+}

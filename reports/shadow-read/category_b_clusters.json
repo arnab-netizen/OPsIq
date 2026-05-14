@@ -1,0 +1,304 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "source_artifact": "fresh_scanner_g4a",
+  "total_category_b_violations": 190,
+  "total_clusters": 11,
+  "clusters": [
+    {
+      "cluster_id": "B_OTHER",
+      "cluster_name": "other",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 113,
+      "files": [
+        "src/governance/shadow-read-classifier.ts",
+        "src/governance/auth-shadow-read-scanner.ts",
+        "src/governance/ci-shadow-read-gate.ts",
+        "src/app/api/deliverables/route.ts",
+        "src/app/api/value/route.ts",
+        "src/app/api/value/summary/route.ts",
+        "src/app/api/value/7day/route.ts",
+        "src/app/api/evidence-bundles/route.ts",
+        "src/app/api/evidence-bundles/[bundleId]/route.ts",
+        "src/app/api/evidence-bundles/[bundleId]/items/route.ts",
+        "src/app/api/growth/unit-economics/route.ts",
+        "src/app/api/growth/pricing-tiers/route.ts",
+        "src/app/api/growth/acquisition-metrics/route.ts",
+        "src/app/api/growth/offers/route.ts",
+        "src/app/api/growth/sales-pipeline/route.ts",
+        "src/app/api/growth/revenue-streams/route.ts",
+        "src/app/api/growth/retention-metrics/route.ts",
+        "src/app/api/users/route.ts",
+        "src/app/api/users/[userId]/route.ts",
+        "src/app/api/users/[userId]/memberships/route.ts",
+        "src/app/api/users/[userId]/roles/route.ts",
+        "src/app/api/operator/route.ts",
+        "src/app/api/operator/queue/route.ts",
+        "src/app/api/operator/myday/route.ts",
+        "src/app/api/operator/my-day/route.ts",
+        "src/app/api/governance/metrics/route.ts",
+        "src/app/api/governance/alerts/route.ts",
+        "src/app/api/observability/summary/route.ts",
+        "src/app/api/report/route.ts",
+        "src/app/api/intelligence/patterns/route.ts",
+        "src/app/api/intelligence/summary/route.ts",
+        "src/app/api/intelligence/recommendations/route.ts",
+        "src/app/api/intelligence/insights/route.ts",
+        "src/app/api/export/route.ts",
+        "src/app/api/scenario/route.ts",
+        "src/app/api/notifications/route.ts",
+        "src/app/api/notifications/[id]/route.ts",
+        "src/app/api/notifications/preferences/route.ts",
+        "src/app/api/leads/route.ts",
+        "src/app/api/leads/[leadId]/route.ts",
+        "src/app/api/override/route.ts",
+        "src/app/api/execute/route.ts",
+        "src/app/api/findings/route.ts",
+        "src/app/api/findings/[findingId]/route.ts",
+        "src/app/api/findings/[findingId]/evidence/route.ts",
+        "src/app/api/owner/config/route.ts",
+        "src/app/api/owner/dashboard/route.ts",
+        "src/app/api/opsiq/consulting-engine/run/route.ts",
+        "src/app/api/calibration/route.ts",
+        "src/app/api/webhooks/subscribe/route.ts",
+        "src/app/api/webhooks/[id]/test/route.ts",
+        "src/app/api/entity/route.ts",
+        "src/app/api/onboarding/workspace/route.ts",
+        "src/app/api/onboarding/invite/route.ts",
+        "src/app/api/verify/route.ts",
+        "src/app/api/recommendations/[recommendationId]/route.ts",
+        "src/app/api/recommendations/route.ts",
+        "src/app/api/run/route.ts",
+        "src/app/api/evidence/route.ts",
+        "src/app/api/evidence/[evidenceId]/route.ts",
+        "src/app/api/evidence/[evidenceId]/validate/route.ts",
+        "src/app/api/entitlement/route.ts",
+        "src/app/api/entitlement/quota/route.ts"
+      ],
+      "representative_files": [
+        "src/governance/shadow-read-classifier.ts",
+        "src/governance/auth-shadow-read-scanner.ts",
+        "src/governance/ci-shadow-read-gate.ts"
+      ],
+      "common_shape": "withAuth() requireAuth()",
+      "semantic_notes": "Cluster contains 63 files with 109 withAuth and 4 requireAuth calls",
+      "migration_sensitivity": "HIGH",
+      "known_risks": []
+    },
+    {
+      "cluster_id": "B_ENGAGEMENTS",
+      "cluster_name": "engagements",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 32,
+      "files": [
+        "src/app/api/engagements/route.ts",
+        "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
+        "src/app/api/engagements/[engagementId]/route.ts",
+        "src/app/api/engagements/[engagementId]/actions/[actionId]/route.ts",
+        "src/app/api/engagements/[engagementId]/intervention/route.ts",
+        "src/app/api/engagements/[engagementId]/business-impact/detail/route.ts",
+        "src/app/api/engagements/[engagementId]/condition/route.ts",
+        "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
+        "src/app/api/engagements/[engagementId]/drift/route.ts",
+        "src/app/api/engagements/[engagementId]/acknowledge/route.ts",
+        "src/app/api/engagements/[engagementId]/shock-events/route.ts",
+        "src/app/api/engagements/[engagementId]/execution-certainty/route.ts",
+        "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+        "src/app/api/engagements/[engagementId]/recommendations/rerank/route.ts",
+        "src/app/api/engagements/[engagementId]/dashboard/route.ts",
+        "src/app/api/engagements/[engagementId]/intervention-state/route.ts"
+      ],
+      "representative_files": [
+        "src/app/api/engagements/route.ts",
+        "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
+        "src/app/api/engagements/[engagementId]/route.ts"
+      ],
+      "common_shape": "withAuth()",
+      "semantic_notes": "Cluster contains 22 files with 32 withAuth and 0 requireAuth calls",
+      "migration_sensitivity": "HIGH",
+      "known_risks": []
+    },
+    {
+      "cluster_id": "B_LIB",
+      "cluster_name": "lib",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 13,
+      "files": [
+        "src/__ignored_tests__/lib/auth-guard.test.ts",
+        "src/lib/auth-ownership-allowlist.ts",
+        "src/lib/auth-guard.ts",
+        "src/lib/runtime-shadow-read-enforcer.ts"
+      ],
+      "representative_files": [
+        "src/__ignored_tests__/lib/auth-guard.test.ts",
+        "src/lib/auth-ownership-allowlist.ts",
+        "src/lib/auth-guard.ts"
+      ],
+      "common_shape": "withAuth() requireAuth()",
+      "semantic_notes": "Cluster contains 4 files with 5 withAuth and 8 requireAuth calls",
+      "migration_sensitivity": "LOW",
+      "known_risks": []
+    },
+    {
+      "cluster_id": "B_CLIENTS",
+      "cluster_name": "clients",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 9,
+      "files": [
+        "src/app/api/clients/route.ts",
+        "src/app/api/clients/[clientId]/route.ts",
+        "src/app/api/clients/[clientId]/contacts/route.ts",
+        "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts"
+      ],
+      "representative_files": [
+        "src/app/api/clients/route.ts",
+        "src/app/api/clients/[clientId]/route.ts",
+        "src/app/api/clients/[clientId]/contacts/route.ts"
+      ],
+      "common_shape": "withAuth()",
+      "semantic_notes": "Cluster contains 4 files with 9 withAuth and 0 requireAuth calls",
+      "migration_sensitivity": "LOW",
+      "known_risks": []
+    },
+    {
+      "cluster_id": "B_DECISIONS",
+      "cluster_name": "decisions",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 9,
+      "files": [
+        "src/app/api/decisions/list/route.ts",
+        "src/app/api/decisions/create/route.ts",
+        "src/app/api/decisions/intake/route.ts",
+        "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
+        "src/app/api/decisions/[decisionId]/fail/route.ts",
+        "src/app/api/decisions/[decisionId]/evaluate/route.ts",
+        "src/app/api/decisions/[decisionId]/route.ts",
+        "src/app/api/decisions/[decisionId]/close/route.ts",
+        "src/app/api/decisions/[decisionId]/execute/route.ts"
+      ],
+      "representative_files": [
+        "src/app/api/decisions/list/route.ts",
+        "src/app/api/decisions/create/route.ts",
+        "src/app/api/decisions/intake/route.ts"
+      ],
+      "common_shape": "withAuth()",
+      "semantic_notes": "Cluster contains 9 files with 9 withAuth and 0 requireAuth calls",
+      "migration_sensitivity": "LOW",
+      "known_risks": []
+    },
+    {
+      "cluster_id": "B_ACTIONS",
+      "cluster_name": "actions",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 5,
+      "files": [
+        "src/app/api/actions/route.ts",
+        "src/app/api/actions/[actionId]/route.ts",
+        "src/app/api/actions/[actionId]/start/route.ts",
+        "src/app/api/actions/[actionId]/complete/route.ts"
+      ],
+      "representative_files": [
+        "src/app/api/actions/route.ts",
+        "src/app/api/actions/[actionId]/route.ts",
+        "src/app/api/actions/[actionId]/start/route.ts"
+      ],
+      "common_shape": "withAuth()",
+      "semantic_notes": "Cluster contains 4 files with 5 withAuth and 0 requireAuth calls",
+      "migration_sensitivity": "LOW",
+      "known_risks": []
+    },
+    {
+      "cluster_id": "B_DIAGNOSIS",
+      "cluster_name": "diagnosis",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 5,
+      "files": [
+        "src/app/api/diagnosis/route.ts",
+        "src/app/api/diagnosis/archetype/route.ts",
+        "src/app/api/diagnosis/maturity/route.ts",
+        "src/app/api/diagnosis/root-cause/route.ts",
+        "src/app/api/diagnosis/bottleneck/route.ts"
+      ],
+      "representative_files": [
+        "src/app/api/diagnosis/route.ts",
+        "src/app/api/diagnosis/archetype/route.ts",
+        "src/app/api/diagnosis/maturity/route.ts"
+      ],
+      "common_shape": "withAuth()",
+      "semantic_notes": "Cluster contains 5 files with 5 withAuth and 0 requireAuth calls",
+      "migration_sensitivity": "LOW",
+      "known_risks": []
+    },
+    {
+      "cluster_id": "B_KPI",
+      "cluster_name": "kpi",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 4,
+      "files": [
+        "src/app/api/metrics/control-effectiveness/route.ts",
+        "src/app/api/metrics/decision-latency/route.ts"
+      ],
+      "representative_files": [
+        "src/app/api/metrics/control-effectiveness/route.ts",
+        "src/app/api/metrics/decision-latency/route.ts"
+      ],
+      "common_shape": "withAuth()",
+      "semantic_notes": "Cluster contains 2 files with 4 withAuth and 0 requireAuth calls",
+      "migration_sensitivity": "LOW",
+      "known_risks": []
+    },
+    {
+      "cluster_id": "B_ADMIN",
+      "cluster_name": "admin",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 1,
+      "files": [
+        "src/app/api/admin/workspaces/[id]/disable/route.ts"
+      ],
+      "representative_files": [
+        "src/app/api/admin/workspaces/[id]/disable/route.ts"
+      ],
+      "common_shape": "withAuth()",
+      "semantic_notes": "Cluster contains 1 files with 1 withAuth and 0 requireAuth calls",
+      "migration_sensitivity": "LOW",
+      "known_risks": []
+    },
+    {
+      "cluster_id": "B_AUTH",
+      "cluster_name": "auth",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 1,
+      "files": [
+        "src/app/api/auth/logout/route.ts"
+      ],
+      "representative_files": [
+        "src/app/api/auth/logout/route.ts"
+      ],
+      "common_shape": "withAuth()",
+      "semantic_notes": "Cluster contains 1 files with 1 withAuth and 0 requireAuth calls",
+      "migration_sensitivity": "LOW",
+      "known_risks": []
+    },
+    {
+      "cluster_id": "B_BILLING",
+      "cluster_name": "billing",
+      "cluster_type": "AUTH_WRAPPER",
+      "occurrences": 1,
+      "files": [
+        "src/app/api/billing/upgrade/route.ts"
+      ],
+      "representative_files": [
+        "src/app/api/billing/upgrade/route.ts"
+      ],
+      "common_shape": "withAuth()",
+      "semantic_notes": "Cluster contains 1 files with 1 withAuth and 0 requireAuth calls",
+      "migration_sensitivity": "LOW",
+      "known_risks": []
+    }
+  ]
+}
