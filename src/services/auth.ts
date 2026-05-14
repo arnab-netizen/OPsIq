@@ -1,7 +1,6 @@
 import { db, getDbInstance } from "@/lib/db";
 import type { UserRoleAssignment } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
-import { logger } from "@/infra/logger";
 import type { PolicyContext } from "@/policies/capability-check";
 import type { RoleName } from "@/domain/constants/roles";
 import { cookies } from "next/headers";
@@ -57,19 +56,14 @@ export async function getSession(workspaceId: string = "system"): Promise<Sessio
   if (!session) return null;
 
   if (session.revokedAt) {
-    logger.info("Session revoked", { sessionId: session.id });
     return null;
   }
 
   if (session.expiresAt < new Date()) {
-    logger.info("Session expired", { sessionId: session.id });
     return null;
   }
 
   if (!session.user.isActive) {
-    logger.warn("Inactive user attempted session use", {
-      userId: session.user.id,
-    });
     return null;
   }
 
@@ -149,13 +143,10 @@ export async function revokeSession(
   sessionId: string,
   authContext: any
 ): Promise<void> {
-  const actorId = typeof authContext === "string" ? authContext : authContext.session.user.id;
   await db.session.update({
     where: { id: sessionId },
     data: { revokedAt: new Date() },
   });
-
-  logger.info("Session revoked", { sessionId, revokedBy: actorId });
 }
 
 export function getSessionCookieName(): string {
