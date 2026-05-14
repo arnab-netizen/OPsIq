@@ -325,11 +325,28 @@ export class CanonicalExecutionTraceManager {
       completedAt: Date.now(),
     };
 
-    // Seal trace (immutable)
+    // Seal trace (immutable) - deep freeze all nested objects
     this.trace.sealed = true;
-    Object.freeze(this.trace);
+    this.deepFreeze(this.trace);
 
     return this.trace;
+  }
+
+  /**
+   * Deep freeze an object and all nested objects recursively
+   */
+  private deepFreeze(obj: any): any {
+    Object.freeze(obj);
+
+    Object.getOwnPropertyNames(obj).forEach((prop) => {
+      if (obj[prop] !== null && (typeof obj[prop] === "object" || typeof obj[prop] === "function")) {
+        if (!Object.isFrozen(obj[prop])) {
+          this.deepFreeze(obj[prop]);
+        }
+      }
+    });
+
+    return obj;
   }
 
   /**
