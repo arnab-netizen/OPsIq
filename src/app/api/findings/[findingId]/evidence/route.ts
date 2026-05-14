@@ -1,5 +1,5 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { linkEvidenceToFinding, unlinkEvidenceFromFinding } from "@/services/findings";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -51,8 +51,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   }
 
   try {
-    const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
-    const result = await linkEvidenceToFinding(findingId, body.evidenceId, canonicalContext, undefined, workspaceId);
+    const result = await linkEvidenceToFinding(findingId, body.evidenceId, { session, policy }, undefined, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
     return Response.json(result, { status: 201 });
   } catch (error) {
@@ -75,8 +74,7 @@ export const DELETE = withEnforcementFull(async (request, context, params) => {
   }, workspaceId);
 
   const body = await parseRequestBody(request, unlinkEvidenceSchema);
-  const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
-  const result = await unlinkEvidenceFromFinding(findingId, body.evidenceId, canonicalContext, workspaceId);
+  const result = await unlinkEvidenceFromFinding(findingId, body.evidenceId, { session, policy }, workspaceId);
 
   return Response.json(result, { status: 200 });
 });

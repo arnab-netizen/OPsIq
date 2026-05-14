@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -124,8 +124,7 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   }
 
   try {
-    const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
-    await updateEngagement(engagementId, body, canonicalContext, workspaceId);
+    await updateEngagement(engagementId, body, { session, policy }, workspaceId);
     const updated = await getEngagementById(engagementId, workspaceId, hasInternalAccess(policy));
     await recordIdempotencyResponse(idempotencyKey, 200, updated);
     return Response.json(updated);

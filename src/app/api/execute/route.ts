@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { executeWorkflow } from "@/services/execute";
 import { parseRequestBody } from "@/lib/validation";
@@ -56,8 +56,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   }
 
   try {
-    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-    const result = await executeWorkflow(body, canonicalContext, workspaceId);
+    const result = await executeWorkflow(body, authContext, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 200, result as unknown as Record<string, unknown>);
     return Response.json(result, { status: 200 });
   } catch (error) {

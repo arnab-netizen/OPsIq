@@ -1,5 +1,5 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createUser, listUsers } from "@/services/user";
@@ -70,11 +70,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
   const body = await parseRequestBody(request, createUserSchema);
 
-  const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
   const { isNew, result } = await withIdempotency(
     idempotencyKey,
     "user.create",
-    async () => createUser(body, canonicalContext, workspaceId),
+    async () => createUser(body, authContext, workspaceId),
     body,
     authContext.session.user.id
   );

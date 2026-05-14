@@ -2,7 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -77,8 +77,7 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, updateUserSchema);
-  const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-  await updateUser(userId, body, canonicalContext, workspaceId);
+  await updateUser(userId, body, authContext, workspaceId);
 
   const updated = await getUserById(userId, workspaceId);
   return Response.json(updated);
@@ -133,16 +132,15 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   }
 
   try {
-    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
     if (body.action === "deactivate") {
-      await deactivateUser(userId, body.version, canonicalContext, workspaceId);
+      await deactivateUser(userId, body.version, authContext, workspaceId);
       const result = { status: "deactivated" };
       await recordIdempotencyResponse(idempotencyKey, 200, result);
       return Response.json(result);
     }
 
     // reactivate
-    await reactivateUser(userId, body.version, canonicalContext, workspaceId);
+    await reactivateUser(userId, body.version, authContext, workspaceId);
     const result = { status: "reactivated" };
     await recordIdempotencyResponse(idempotencyKey, 200, result);
     return Response.json(result);

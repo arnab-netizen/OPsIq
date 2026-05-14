@@ -1,5 +1,5 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createFinding } from "@/services/findings";
@@ -85,8 +85,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   }
 
   try {
-    const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
-    const result = await createFinding(body, canonicalContext, workspaceId);
+    const result = await createFinding(body, { session, policy }, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
     return Response.json(result, { status: 201 });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getRecommendation, updateRecommendation } from "@/services/recommendation";
@@ -80,8 +80,7 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, recommendationId);
 
   const body = await parseRequestBody(request, updateRecommendationSchema);
-  const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-  await updateRecommendation(recommendationId, body, canonicalContext, workspaceId);
+  await updateRecommendation(recommendationId, body, authContext, workspaceId);
 
   const updated = await getRecommendation(recommendationId, workspaceId);
   return Response.json(updated);

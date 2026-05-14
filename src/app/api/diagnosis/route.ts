@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { diagnoseBusiness, validateBusinessProblem } from "@/services/diagnosis";
 import { parseRequestBody } from "@/lib/validation";
@@ -53,8 +53,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
   try {
     validateBusinessProblem(body);
-    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-    const result = await diagnoseBusiness(body, canonicalContext, workspaceId);
+    const result = await diagnoseBusiness(body, authContext, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>);
     return result;
   } catch (error) {

@@ -307,4 +307,4 @@ if (require.main === module) {
   });
 }
 
-export type { ShadowReadViolation };
+export { ShadowReadViolation };

@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { reRankRecommendationsInEngagement } from "@/services/recommendation";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -37,8 +37,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   }
 
   try {
-    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-    const result = await reRankRecommendationsInEngagement(engagementId, canonicalContext, workspaceId);
+    const result = await reRankRecommendationsInEngagement(engagementId, authContext, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 200, result);
     return Response.json(result);
   } catch (error) {

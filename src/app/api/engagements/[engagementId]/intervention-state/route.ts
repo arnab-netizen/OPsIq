@@ -1,5 +1,5 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getInterventionState, transitionPhase } from "@/services/intervention-state";
 import { assertEngagementAccess } from "@/lib/visibility";
@@ -68,8 +68,7 @@ export const PUT = withEnforcementFull(async (request, context, params) => {
   }
 
   try {
-    const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
-    const result = await transitionPhase(engagementId, body.targetPhase, canonicalContext, workspaceId);
+    const result = await transitionPhase(engagementId, body.targetPhase, { session, policy }, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 200, result, workspaceId);
     return Response.json(result);
   } catch (error) {

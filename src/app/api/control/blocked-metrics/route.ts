@@ -290,7 +290,7 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
 
   const metrics: BlockedMetrics = {
     workspace: {
-      workspaceId: ctx.verifiedWorkspaceId,
+      workspaceId: workspace.workspaceId,
     },
     period: {
       startDate: startDate.toISOString(),

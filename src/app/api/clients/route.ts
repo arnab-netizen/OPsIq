@@ -1,7 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -76,8 +76,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   }
 
   try {
-    const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
-    const result = await createClient(body, canonicalContext, workspaceId);
+    const result = await createClient(body, { session, policy }, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
     return result;
   } catch (error) {

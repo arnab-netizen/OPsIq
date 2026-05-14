@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -74,8 +74,7 @@ export const PUT = withEnforcementFull(async (request, context, params) => {
 
     const body = await parseRequestBody(request, updateEvidenceBundleSchema);
 
-    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-    await updateEvidenceBundle(bundleId, body, canonicalContext, workspaceId);
+    await updateEvidenceBundle(bundleId, body, authContext, workspaceId);
 
     return Response.json({ success: true });
   } catch (error) {

@@ -1,7 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -67,8 +67,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       });
     }
 
-    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-    const result = await createEvidenceBundle(body, canonicalContext, workspaceId);
+    const result = await createEvidenceBundle(body, authContext, workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
 
     return Response.json(result, { status: 201 });
