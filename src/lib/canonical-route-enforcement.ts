@@ -25,6 +25,7 @@ import type { PolicyContext } from "@/policies/capability-check";
 import type { CapabilityName } from "@/domain/constants/capabilities";
 import { buildAuthState, evaluateAuthState, translateAuthDecisionToResponse } from "@/lib/canonical-auth-facts";
 import type { AuthDecision } from "@/lib/canonical-auth-facts";
+import { CanonicalTelemetryLifecycle } from "@/lib/canonical-telemetry-lifecycle";
 
 /**
  * Verified context passed to handler
@@ -102,6 +103,7 @@ export function withCanonicalEnforcement(
 ): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
   return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
     const params = await context.params;
+    let telemetry: CanonicalTelemetryLifecycle | null = null;
 
     try {
       // Generate correlation ID from request headers or create new one
@@ -109,12 +111,17 @@ export function withCanonicalEnforcement(
       const requestId = req.headers.get("x-request-id") || `req-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       const executionTrace: Array<{ stage: string; timestamp: number; result: string }> = [];
 
-      logger.info("Canonical route enforcement started", {
+      // ========================================
+      // TELEMETRY: Initialize lifecycle
+      // ========================================
+      telemetry = new CanonicalTelemetryLifecycle({
         correlationId,
         requestId,
         method: req.method,
         pathname: req.nextUrl.pathname,
       });
+
+      telemetry.emitPipelineStarted();
 
       // ========================================
       // STEP 1: EXTRACT WORKSPACE ID
@@ -130,11 +137,12 @@ export function withCanonicalEnforcement(
       const sessionFact = await getSessionFact(workspaceId);
       const policyFact = await getPolicyContextFact(workspaceId);
 
-      logger.debug("Auth facts gathered", {
-        correlationId,
+      // TELEMETRY: Facts gathered
+      telemetry.emitFactsGathered({
         sessionValid: sessionFact.valid,
         policyValid: policyFact.valid,
       });
+      executionTrace.push({ stage: "FACTS_GATHERED", timestamp: Date.now(), result: "SUCCESS" });
 
       // ========================================
       // STEP 3: BUILD COMPLETE AUTH STATE
@@ -150,6 +158,10 @@ export function withCanonicalEnforcement(
         requiredCapabilities: (options?.requireCapabilities || []) as CapabilityName[],
       });
 
+      // TELEMETRY: State built
+      telemetry.emitStateBuilt(authState);
+      executionTrace.push({ stage: "AUTH_STATE_BUILT", timestamp: Date.now(), result: "SUCCESS" });
+
       // ========================================
       // STEP 4: EVALUATE AUTH STATE → DECISION
       // ========================================
@@ -159,6 +171,9 @@ export function withCanonicalEnforcement(
         requireCapabilities: (options?.requireCapabilities || []) as CapabilityName[],
         requireInternalOnly: false, // TODO: Add option if needed
       });
+
+      // TELEMETRY: Evaluated
+      telemetry.emitEvaluated(decision);
 
       // ========================================
       // STEP 5: HANDLE AUTH DECISION
@@ -226,7 +241,7 @@ export function withCanonicalEnforcement(
 
       // Handler can ONLY be called here, AFTER auth passed
       // Handler receives verified context only
-      logger.debug("Canonical handler executing", { correlationId, actorId: verifiedContext.verifiedActorId });
+      telemetry.emitHandlerExecuting(verifiedContext.verifiedActorId);
       const result = await handler(verifiedContext, params);
 
       // ========================================
@@ -234,6 +249,8 @@ export function withCanonicalEnforcement(
       // ========================================
 
       executionTrace.push({ stage: "HANDLER_SUCCESS", timestamp: Date.now(), result: "COMPLETED" });
+      telemetry.emitHandlerCompleted();
+      telemetry.emitRequestCompleted();
 
       return new NextResponse(JSON.stringify(result), {
         status: 200,
@@ -244,12 +261,14 @@ export function withCanonicalEnforcement(
       });
     } catch (error) {
       // Unhandled error in handler or pipeline
-      logger.error("Canonical route handler failed", error as Error, { correlationId: req.headers.get("x-correlation-id") || "unknown" });
+      const telemetryCtx = telemetry?.getContext();
+      telemetry?.emitHandlerFailed(error as Error);
+      telemetry?.emitRequestCompleted();
 
       return new NextResponse(
         JSON.stringify({
           error: "Internal server error",
-          correlationId: req.headers.get("x-correlation-id") || "unknown",
+          correlationId: telemetryCtx?.correlationId || "unknown",
         }),
         {
           status: 500,
