@@ -155,7 +155,7 @@ export function getSessionDurationMs(): number {
 
 export async function revokeSession(
   sessionId: string,
-  authContext: any
+  authContext: CanonicalAuthContext
 ): Promise<void> {
   await db.session.update({
     where: { id: sessionId },

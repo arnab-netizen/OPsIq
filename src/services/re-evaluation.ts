@@ -697,7 +697,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       if (!engagementForWs) {
         logger.warn("Engagement not found for re-ranking", { engagementId: event.engagementId });
       } else {
-        const authContext: any = {
+        const authContext: CanonicalAuthContext = {
           verifiedActorId: event.triggeredBy,
           verifiedActorType: "service",
           verifiedActor: { id: event.triggeredBy, email: "system", name: "System", isActive: true },
@@ -716,7 +716,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
           correlationId: "",
           requestId: "",
           request: null as any,
-        } as any;
+        } as CanonicalAuthContext;
         const reRankResult = await reRankRecommendationsInEngagement(event.engagementId, authContext, engagementForWs.workspaceId);
 
         if (reRankResult.updated > 0) {
@@ -768,7 +768,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         select: { workspaceId: true },
       });
       if (engagementForPhase7) {
-        const internalAuthContext: any = {
+        const internalAuthContext: CanonicalAuthContext = {
           verifiedActorId: event.triggeredBy,
           verifiedActorType: "service",
           verifiedActor: { id: event.triggeredBy, email: "", name: "", isActive: true },
@@ -787,7 +787,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
           correlationId: "",
           requestId: "",
           request: null as any,
-        } as any;
+        } as CanonicalAuthContext;
         await checkEngagementEscalations(event.engagementId, internalAuthContext, engagementForPhase7.workspaceId);
         await computeNextReviewDate(event.engagementId, internalAuthContext, engagementForPhase7.workspaceId);
       }
