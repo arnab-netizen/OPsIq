@@ -246,7 +246,7 @@ export async function validateFinding(
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
-  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
+  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
 
   const existing = await db.finding.findUnique({
     where: { id: findingId, engagement: { workspaceId } },
@@ -300,7 +300,7 @@ export async function disputeFinding(
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
-  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
+  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
   const validatedWorkspaceId = workspaceId;
 
   const existing = await db.finding.findUnique({
@@ -337,7 +337,7 @@ export async function supersedeFinding(
 ): Promise<{ id: string; supersededFindingId: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
-  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
+  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
 
   // Validate old finding exists with workspace scope
   const oldFinding = await db.finding.findFirst({
@@ -408,7 +408,7 @@ export async function linkEvidenceToFinding(
     authContext = linkTypeOrAuthContext as any;
   }
 
-  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
+  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
 
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace isolation");
@@ -490,7 +490,7 @@ export async function unlinkEvidenceFromFinding(
   authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<{ findingId: string; evidenceId: string }> {
-  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
+  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
 
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace isolation");

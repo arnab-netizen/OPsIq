@@ -11,6 +11,7 @@ import { logger } from "@/infra/logger";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 import { recordDecisionEngineUsage } from "@/services/usage.service";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export interface ConsultingEnginePipelineResult {
   status: "SUCCESS" | "INSUFFICIENT_DATA" | "ERROR";
@@ -22,7 +23,7 @@ export interface ConsultingEnginePipelineResult {
 
 export async function runConsultingPipeline(
   engagementId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<ConsultingEnginePipelineResult> {
   // Check capability: decision_engine

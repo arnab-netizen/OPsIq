@@ -26,7 +26,8 @@
     "dev:backbone": "vitest run src/__tests__/backbone.test.ts",
     "governance:scan-shadow-reads": "tsx src/governance/auth-shadow-read-scanner.ts",
     "governance:classify-shadows": "tsx src/governance/shadow-read-classifier.ts",
-    "governance:ci-gate": "tsx src/governance/ci-shadow-read-gate.ts"
+    "governance:ci-gate": "tsx src/governance/ci-shadow-read-gate.ts",
+    "governance:phase-g2": "node scripts/phase-g2-compiler-hardening.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",

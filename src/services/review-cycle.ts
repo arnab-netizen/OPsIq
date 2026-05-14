@@ -39,7 +39,7 @@ export async function generateReviewCycle(
   authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<ReviewCycle> {
-  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
+  const actorId = (authContext).verifiedActorId || authContext.session?.user?.id;
   enforceWorkspaceId(workspaceId, "generateReviewCycle", "review_cycle");
 
   // Validate engagement exists
