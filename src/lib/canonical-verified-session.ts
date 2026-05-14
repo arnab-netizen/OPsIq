@@ -190,8 +190,8 @@ export class CanonicalVerifiedSessionBuilder {
           joinedAt: now,  // TODO: Fetch actual join date
           roles: input.policyContext.roles.map((r) => ({
             role: r.role,
-            scope: r.scope,
-            scopeId: r.scopeId,
+            scope: r.scope || "workspace",
+            scopeId: r.scopeId || input.workspaceId,
             grantedAt: now,  // TODO: Fetch actual grant date
           })),
         },
@@ -199,12 +199,12 @@ export class CanonicalVerifiedSessionBuilder {
 
       roles: input.policyContext.roles.map((r) => ({
         role: r.role,
-        scope: r.scope,
-        scopeId: r.scopeId,
+        scope: r.scope || "workspace",
+        scopeId: r.scopeId || input.workspaceId,
         grantedAt: now,  // TODO: Fetch actual grant date
       })),
 
-      engagementMemberships: input.policyContext.engagementMemberships.map((em) => ({
+      engagementMemberships: (input.policyContext.engagementMemberships || []).map((em) => ({
         engagementId: em.engagementId,
         role: em.role,
         joinedAt: now,  // TODO: Fetch actual join date

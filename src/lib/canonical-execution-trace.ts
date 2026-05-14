@@ -84,6 +84,16 @@ export interface CanonicalExecutionTrace {
     };
   };
 
+  // ─── Session Snapshot (PHASE E: Immutable request auth reality)
+  verifiedSessionSnapshot?: {
+    snapshotId: string;
+    snapshotTimestamp: Date;
+    snapshotHash: string;
+    actorId: string;
+    workspaceId: string;
+    capabilities: Array<string>;
+  };
+
   // ─── Telemetry References
   telemetryEvents: Array<{
     event: string;
@@ -234,6 +244,25 @@ export class CanonicalExecutionTraceManager {
     }
 
     this.trace.decision = decision;
+  }
+
+  /**
+   * Record verified session snapshot (PHASE E)
+   * Called at wrapper entry with immutable snapshot
+   */
+  public recordVerifiedSessionSnapshot(snapshot: {
+    snapshotId: string;
+    snapshotTimestamp: Date;
+    snapshotHash: string;
+    actorId: string;
+    workspaceId: string;
+    capabilities: Array<string>;
+  }): void {
+    if (this.trace.sealed) {
+      throw new Error("Cannot record session snapshot on sealed trace");
+    }
+
+    this.trace.verifiedSessionSnapshot = snapshot;
   }
 
   /**

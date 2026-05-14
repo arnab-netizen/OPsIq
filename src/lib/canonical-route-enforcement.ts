@@ -27,6 +27,7 @@ import { buildAuthState, evaluateAuthState, translateAuthDecisionToResponse } fr
 import type { AuthDecision } from "@/lib/canonical-auth-facts";
 import { CanonicalTelemetryLifecycle } from "@/lib/canonical-telemetry-lifecycle";
 import { CanonicalExecutionTraceManager } from "@/lib/canonical-execution-trace";
+import { CanonicalVerifiedSessionBuilder } from "@/lib/canonical-verified-session";
 import {
   classifyExecution,
   pushExecutionContext,
@@ -56,6 +57,16 @@ export interface CanonicalAuthContext {
   // PHASE D: ROOT CONTAINER - Single execution lineage authority
   traceId: string;
   executionTrace: Readonly<any>;  // Read-only reference to unified trace
+
+  // PHASE E: IMMUTABLE SESSION SNAPSHOT - Single request reality
+  verifiedSessionSnapshot: {
+    snapshotId: string;
+    snapshotTimestamp: Date;
+    snapshotHash: string;
+    actorId: string;
+    workspaceId: string;
+    capabilities: readonly string[];
+  };
 
   // Correlation ID (for request tracking)
   correlationId: string;
@@ -275,12 +286,40 @@ export function withCanonicalEnforcement(
       }
 
       // ========================================
-      // STEP 6: BUILD VERIFIED CONTEXT
+      // STEP 6: CREATE IMMUTABLE SESSION SNAPSHOT (PHASE E)
       // ========================================
 
       if (!session || !policy) {
         throw new Error("Auth allowed but session or policy is null");
       }
+
+      // PHASE E: Create immutable snapshot of auth state
+      const sessionSnapshotBuilder = new CanonicalVerifiedSessionBuilder({
+        traceId: traceManager.getTrace().traceId,
+        correlationId,
+        sessionInfo: session,
+        policyContext: policy,
+        workspaceId,
+        capabilities: decision.context!.verifiedCapabilities as Set<CapabilityName>,
+      });
+
+      const sessionSnapshot = sessionSnapshotBuilder.finalize();
+
+      // Record snapshot in trace (trace now owns it)
+      traceManager.recordVerifiedSessionSnapshot({
+        snapshotId: sessionSnapshot.snapshotId,
+        snapshotTimestamp: sessionSnapshot.snapshotTimestamp,
+        snapshotHash: sessionSnapshot.snapshotHash,
+        actorId: sessionSnapshot.actor.id,
+        workspaceId: sessionSnapshot.workspace.id,
+        capabilities: Array.from(sessionSnapshot.capabilities),
+      });
+
+      traceManager.recordStage("SESSION_SNAPSHOT_CREATED", "success", sessionSnapshot.snapshotId);
+
+      // ========================================
+      // STEP 7: BUILD VERIFIED CONTEXT
+      // ========================================
 
       const verifiedContext: CanonicalAuthContext = {
         verifiedActorId: session.user.id,
@@ -291,6 +330,15 @@ export function withCanonicalEnforcement(
         // PHASE D: Trace is ROOT container (read-only)
         traceId: traceManager.getTrace().traceId,
         executionTrace: traceManager.getReadOnlyTrace(),
+        // PHASE E: Immutable session snapshot
+        verifiedSessionSnapshot: {
+          snapshotId: sessionSnapshot.snapshotId,
+          snapshotTimestamp: sessionSnapshot.snapshotTimestamp,
+          snapshotHash: sessionSnapshot.snapshotHash,
+          actorId: sessionSnapshot.actor.id,
+          workspaceId: sessionSnapshot.workspace.id,
+          capabilities: Array.from(sessionSnapshot.capabilities),
+        },
         correlationId,
         requestId,
         request: req,
@@ -299,7 +347,7 @@ export function withCanonicalEnforcement(
       };
 
       // ========================================
-      // STEP 7: CALL HANDLER (NOW SAFE)
+      // STEP 8: CALL HANDLER (NOW SAFE)
       // ========================================
 
       // Handler can ONLY be called here, AFTER auth passed
@@ -309,7 +357,7 @@ export function withCanonicalEnforcement(
       const result = await handler(verifiedContext, params);
 
       // ========================================
-      // STEP 8: RETURN HANDLER RESULT
+      // STEP 9: RETURN HANDLER RESULT
       // ========================================
 
       traceManager.recordStage("HANDLER_SUCCESS", "success");
