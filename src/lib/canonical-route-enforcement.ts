@@ -18,11 +18,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, canDo } from "@/lib/auth-guard";
 import { logger } from "@/infra/logger";
 import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
+import { getSessionFact, getPolicyContextFact } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
 import type { CapabilityName } from "@/domain/constants/capabilities";
+import { buildAuthState, evaluateAuthState } from "@/lib/canonical-auth-facts";
+import type { AuthDecision } from "@/lib/canonical-auth-facts";
 
 /**
  * Verified context passed to handler
@@ -115,95 +117,104 @@ export function withCanonicalEnforcement(
       });
 
       // ========================================
-      // STEP 1: EXTRACT AND VALIDATE AUTH
+      // STEP 1: EXTRACT WORKSPACE ID
       // ========================================
 
       const workspaceId = req.headers.get("x-workspace-id") || "system";
       executionTrace.push({ stage: "WORKSPACE_EXTRACTED", timestamp: Date.now(), result: workspaceId });
 
-      if (options?.requireWorkspace && !workspaceId) {
-        logger.warn("Route requires workspace but none provided", { correlationId });
+      // ========================================
+      // STEP 2: GATHER AUTH FACTS (NO ERRORS THROWN)
+      // ========================================
+
+      const sessionFact = await getSessionFact(workspaceId);
+      const policyFact = await getPolicyContextFact(workspaceId);
+
+      logger.debug("Auth facts gathered", {
+        correlationId,
+        sessionValid: sessionFact.valid,
+        policyValid: policyFact.valid,
+      });
+
+      // ========================================
+      // STEP 3: BUILD COMPLETE AUTH STATE
+      // ========================================
+
+      const authState = await buildAuthState({
+        correlationId,
+        requestId,
+        workspaceId,
+        workspaceRequired: options?.requireWorkspace ?? false,
+        sessionFact,
+        policyFact,
+        requiredCapabilities: (options?.requireCapabilities || []) as CapabilityName[],
+      });
+
+      // ========================================
+      // STEP 4: EVALUATE AUTH STATE → DECISION
+      // ========================================
+
+      const decision = evaluateAuthState(authState, {
+        requireWorkspace: options?.requireWorkspace,
+        requireCapabilities: (options?.requireCapabilities || []) as CapabilityName[],
+        requireInternalOnly: false, // TODO: Add option if needed
+      });
+
+      // ========================================
+      // STEP 5: HANDLE AUTH DECISION
+      // ========================================
+
+      executionTrace.push({
+        stage: "AUTH_EVALUATED",
+        timestamp: Date.now(),
+        result: decision.allowed ? "ALLOWED" : "DENIED"
+      });
+
+      if (!decision.allowed) {
+        logger.warn("Auth decision: DENIED", {
+          correlationId,
+          statusCode: decision.statusCode,
+          reason: decision.trace.reason,
+        });
+
         return new NextResponse(
           JSON.stringify({
-            error: "Workspace required",
+            error: decision.message,
             correlationId,
+            ...(decision.statusCode === 403 && { detail: "Insufficient permissions" }),
           }),
           {
-            status: 403,
+            status: decision.statusCode,
             headers: { "x-correlation-id": correlationId, "content-type": "application/json" },
           }
         );
       }
 
-      // ========================================
-      // STEP 2: AUTHENTICATE AND GET CONTEXT
-      // ========================================
+      logger.debug("Auth decision: ALLOWED", { correlationId });
+      executionTrace.push({ stage: "AUTH_AUTHORIZED", timestamp: Date.now(), result: "SUCCESS" });
 
       let session: SessionInfo | null = null;
       let policy: PolicyContext | null = null;
 
-      try {
-        const authContext = await requireAuth(workspaceId);
-        session = authContext.session;
-        policy = authContext.policy;
-        executionTrace.push({ stage: "AUTH_VALIDATED", timestamp: Date.now(), result: "SUCCESS" });
-      } catch (error) {
-        logger.warn("Authentication failed", { correlationId }, { error: String(error) });
-        executionTrace.push({ stage: "AUTH_VALIDATED", timestamp: Date.now(), result: "FAILED" });
-
-        return new NextResponse(
-          JSON.stringify({
-            error: "Unauthorized",
-            correlationId,
-          }),
-          {
-            status: 401,
-            headers: { "x-correlation-id": correlationId, "content-type": "application/json" },
-          }
-        );
+      if (decision.context) {
+        session = decision.context.session;
+        policy = decision.context.policy;
       }
 
       // ========================================
-      // STEP 3: VERIFY CAPABILITIES (IF REQUIRED)
+      // STEP 6: BUILD VERIFIED CONTEXT
       // ========================================
 
-      if (options?.requireCapabilities && options.requireCapabilities.length > 0 && policy) {
-        const hasRequired = options.requireCapabilities.every((cap) => canDo(policy, cap as CapabilityName));
-
-        if (!hasRequired) {
-          logger.warn("Required capabilities missing", { correlationId, required: options.requireCapabilities });
-          return new NextResponse(
-            JSON.stringify({
-              error: "Insufficient permissions",
-              correlationId,
-            }),
-            {
-              status: 403,
-              headers: { "x-correlation-id": correlationId, "content-type": "application/json" },
-            }
-          );
-        }
-
-        executionTrace.push({ stage: "CAPABILITY_VALIDATED", timestamp: Date.now(), result: "SUCCESS" });
+      if (!session || !policy) {
+        throw new Error("Auth allowed but session or policy is null");
       }
-
-      // ========================================
-      // STEP 4: BUILD VERIFIED CONTEXT
-      // ========================================
-
-      if (!session) {
-        throw new Error("Auth passed but session is null");
-      }
-
-      // Derive capabilities from policy roles
-      const derivedCapabilities = deriveCapabilitiesFromPolicy(policy);
 
       const verifiedContext: CanonicalAuthContext = {
         verifiedActorId: session.user.id,
         verifiedActorType: "user",
         verifiedActor: session.user,
         verifiedWorkspaceId: workspaceId,
-        verifiedCapabilities: derivedCapabilities,
+        verifiedCapabilities: decision.context!.verifiedCapabilities,
         executionTrace,
         correlationId,
         requestId,
@@ -213,7 +224,7 @@ export function withCanonicalEnforcement(
       };
 
       // ========================================
-      // STEP 5: CALL HANDLER (NOW SAFE)
+      // STEP 7: CALL HANDLER (NOW SAFE)
       // ========================================
 
       // Handler can ONLY be called here, AFTER auth passed
@@ -222,7 +233,7 @@ export function withCanonicalEnforcement(
       const result = await handler(verifiedContext, params);
 
       // ========================================
-      // STEP 6: RETURN HANDLER RESULT
+      // STEP 8: RETURN HANDLER RESULT
       // ========================================
 
       executionTrace.push({ stage: "HANDLER_SUCCESS", timestamp: Date.now(), result: "COMPLETED" });
@@ -252,25 +263,3 @@ export function withCanonicalEnforcement(
   };
 }
 
-/**
- * Helper: Derive all capabilities from policy context
- *
- * Extracts all capabilities the user has based on their role assignments.
- * This is a simplified version - the full implementation would use ROLE_CAPABILITIES mapping.
- */
-function deriveCapabilitiesFromPolicy(policy: PolicyContext | null): Set<string> {
-  const capabilities = new Set<string>();
-
-  if (!policy || !policy.roles) {
-    return capabilities;
-  }
-
-  // For now, return empty set
-  // In production, this would:
-  // 1. Look up each role in ROLE_CAPABILITIES
-  // 2. Collect all capabilities for the user's roles
-  // 3. Apply scope restrictions
-  // The existing canDo() function handles this properly
-
-  return capabilities;
-}

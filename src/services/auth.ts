@@ -5,6 +5,8 @@ import { logger } from "@/infra/logger";
 import type { PolicyContext } from "@/policies/capability-check";
 import type { RoleName } from "@/domain/constants/roles";
 import { cookies } from "next/headers";
+import type { SessionFact, PolicyFact } from "@/lib/canonical-auth-facts";
+import { buildSessionFact, buildPolicyFact } from "@/lib/canonical-auth-facts";
 
 const SESSION_COOKIE_NAME = "opsiq_session";
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -143,4 +145,41 @@ export async function revokeSession(
 
 export function getSessionCookieName(): string {
   return SESSION_COOKIE_NAME;
+}
+
+// ─── PHASE A: Fact-Returning Versions (No Errors Thrown) ─────────────────────
+
+/**
+ * Get session and return raw facts (not throwing).
+ * Used by canonical wrapper to evaluate auth state.
+ */
+export async function getSessionFact(workspaceId: string = "system"): Promise<SessionFact> {
+  const session = await getSession(workspaceId);
+
+  if (!session) {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+    if (!sessionToken) {
+      return buildSessionFact(null, "not_found");
+    }
+
+    return buildSessionFact(null, "not_found");
+  }
+
+  return buildSessionFact(session, undefined);
+}
+
+/**
+ * Get policy context and return raw facts (not throwing).
+ * Used by canonical wrapper to evaluate auth state.
+ */
+export async function getPolicyContextFact(workspaceId: string = "system"): Promise<PolicyFact> {
+  const policy = await getPolicyContext(workspaceId);
+
+  if (!policy) {
+    return buildPolicyFact(null, "not_found");
+  }
+
+  return buildPolicyFact(policy, undefined);
 }
