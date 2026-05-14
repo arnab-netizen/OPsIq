@@ -143,11 +143,10 @@ export function calculateExecutionCertainty(
   };
 }
 
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export async function generateExecutionCertainty(
   engagementId: string,
-  authContext: CanonicalAuthContext
+  authContext: any
 ) {
   return {
     engagementId,

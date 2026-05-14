@@ -15,7 +15,6 @@ import type { EvidenceStatus } from "@/domain/constants/statuses";
 import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { EventEmitterService } from "@/services/event-emitter";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -56,7 +55,7 @@ export interface UpdateEvidenceInput {
 
 export async function createEvidence(
   input: CreateEvidenceInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<{ id: string; engagementId?: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -196,7 +195,7 @@ export async function createEvidence(
 export async function updateEvidence(
   evidenceId: string,
   input: UpdateEvidenceInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -445,10 +444,10 @@ export async function listEvidence(
 
 export async function validateEvidence(
   input: { evidenceItemId: string; isValid: boolean; version: number } | string,
-  authContextOrActorId?: CanonicalAuthContext | string,
+  authContextOrActorId?: any | string,
   workspaceIdOrUndefined?: string
 ) {
-  // Handle both function signatures: new (CanonicalAuthContext) and old (actorId) for backward compatibility
+  // Handle both function signatures: new (any) and old (actorId) for backward compatibility
   let userId: string;
   let workspaceId: string;
 
@@ -531,7 +530,7 @@ export interface RemoveEvidenceFromBundleInput {
 
 export async function createEvidenceBundle(
   input: CreateEvidenceBundleInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -606,7 +605,7 @@ export async function listEvidenceBundles(engagementId: string, workspaceId: str
 
 export async function addEvidenceToBundle(
   input: AddEvidenceToBundleInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -659,7 +658,7 @@ export async function addEvidenceToBundle(
 
 export async function removeEvidenceFromBundle(
   input: RemoveEvidenceFromBundleInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -700,7 +699,7 @@ export async function removeEvidenceFromBundle(
 export async function updateEvidenceBundle(
   bundleId: string,
   input: UpdateEvidenceBundleInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);

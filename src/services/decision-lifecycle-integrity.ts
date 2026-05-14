@@ -8,6 +8,7 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { requireServiceContext } from "@/lib/service-auth";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
   DecisionState,
   isTerminalState,
@@ -84,19 +85,19 @@ function mapStatusToState(status: string): DecisionState | string {
  * @returns Structured integrity findings
  */
 export async function runDecisionLifecycleIntegrityCheck(
-  authContext: any
+  authContext: CanonicalAuthContext
 ): Promise<IntegrityCheckResult> {
   // Verify auth context
-  requireServiceContext(authContext, authContext.workspace?.id);
+  requireServiceContext(authContext, authContext.verifiedWorkspaceId);
 
-  const workspaceId = authContext.workspace?.id;
+  const workspaceId = authContext.verifiedWorkspaceId;
   const findings: IntegrityFinding[] = [];
   const startTime = Date.now();
 
   try {
     logger.info("Starting decision lifecycle integrity check", {
       workspaceId,
-      userId: authContext.user?.id,
+      userId: authContext.verifiedActorId,
     });
 
     // Fetch all decisions in workspace

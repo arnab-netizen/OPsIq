@@ -13,7 +13,6 @@ import { withIdempotency } from "@/infra/idempotency";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import type {
   FindingStatus,
 } from "@/domain/constants/statuses";
@@ -56,7 +55,7 @@ export interface LinkEvidenceToFindingInput {
 
 export async function createFinding(
   input: CreateFindingInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<{ id: string; engagementId: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -153,7 +152,7 @@ export async function createFinding(
 export async function updateFinding(
   findingId: string,
   input: UpdateFindingInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -241,12 +240,12 @@ export async function updateFinding(
 
 export async function validateFinding(
   findingId: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string = "unknown"
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
-  const actorId = authContext.session?.user?.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
 
   const existing = await db.finding.findUnique({
     where: { id: findingId, engagement: { workspaceId } },
@@ -295,12 +294,12 @@ export async function validateFinding(
 
 export async function disputeFinding(
   findingId: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string = "unknown"
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
-  const actorId = authContext.session?.user?.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
   const validatedWorkspaceId = workspaceId;
 
   const existing = await db.finding.findUnique({
@@ -332,12 +331,12 @@ export async function disputeFinding(
 export async function supersedeFinding(
   oldFindingId: string,
   newFindingInput: CreateFindingInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<{ id: string; supersededFindingId: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
 
-  const actorId = authContext.session?.user?.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
 
   // Validate old finding exists with workspace scope
   const oldFinding = await db.finding.findFirst({
@@ -391,13 +390,13 @@ export async function supersedeFinding(
 export async function linkEvidenceToFinding(
   findingId: string,
   evidenceId: string,
-  linkTypeOrAuthContext: string | CanonicalAuthContext,
-  maybeAuthContext?: CanonicalAuthContext,
+  linkTypeOrAuthContext: string | any,
+  maybeAuthContext?: any,
   workspaceId?: string
 ): Promise<{ id?: string; findingId: string; evidenceId: string }> {
   // Handle both calling conventions
   let linkType: string | undefined;
-  let authContext: CanonicalAuthContext;
+  let authContext: any;
 
   if (maybeAuthContext) {
     // New signature: linkEvidenceToFinding(findingId, evidenceId, linkType, authContext)
@@ -405,10 +404,10 @@ export async function linkEvidenceToFinding(
     authContext = maybeAuthContext;
   } else {
     // Old signature: linkEvidenceToFinding(findingId, evidenceId, authContext)
-    authContext = linkTypeOrAuthContext as CanonicalAuthContext;
+    authContext = linkTypeOrAuthContext as any;
   }
 
-  const actorId = authContext.session?.user?.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
 
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace isolation");
@@ -487,10 +486,10 @@ export async function linkEvidenceToFinding(
 export async function unlinkEvidenceFromFinding(
   findingId: string,
   evidenceId: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId?: string
 ): Promise<{ findingId: string; evidenceId: string }> {
-  const actorId = authContext.session?.user?.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
 
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace isolation");

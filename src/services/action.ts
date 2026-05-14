@@ -10,7 +10,6 @@ import { withIdempotency } from "@/infra/idempotency";
 import { validateStateTransition, enforceActionRules } from "@/services/action-lifecycle";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { recordActionUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
 
@@ -70,7 +69,7 @@ function validateActionTransition(fromStatus: ActionStatus, toStatus: ActionStat
 
 export async function createAction(
   input: CreateActionInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string,
   idempotencyKey?: string
 ) {
@@ -268,7 +267,7 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
 export async function updateActionStatus(
   actionId: string,
   input: UpdateActionInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -376,7 +375,7 @@ export async function updateActionStatus(
   return updated;
 }
 
-export async function detectOverdueActions(engagementId: string, authContext: CanonicalAuthContext, workspaceId: string) {
+export async function detectOverdueActions(engagementId: string, authContext: any, workspaceId: string) {
   const actorId = authContext.session?.user?.id;
   enforceWorkspaceId(workspaceId, "detectOverdueActions", "action");
 
@@ -472,7 +471,7 @@ export async function getActionById(actionId: string, workspaceId: string) {
 export async function updateAction(
   actionId: string,
   input: UpdateActionInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -556,7 +555,7 @@ export async function listActions(workspaceId: string, params: any) {
 export async function createActionsFromInterventions(
   engagementId: string,
   interventions: any[], // PrioritizedIntervention[] from consulting-engine
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ) {
   enforceWorkspaceId(workspaceId, "createActionsFromInterventions", "action");

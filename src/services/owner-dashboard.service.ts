@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { NotFoundError, ForbiddenError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { requireCapabilityForService } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { calculateExecutionCertainty, type ExecutionCertaintyResult } from "./execution-certainty";
@@ -64,7 +63,7 @@ export interface OwnerDashboardData {
 
 export async function getOwnerDashboard(
   engagementId: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<OwnerDashboardData> {
   // Enforce capability check

@@ -8,7 +8,6 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { Recommendation, Action } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 import { recordDecisionEngineUsage } from "@/services/usage.service";
@@ -23,7 +22,7 @@ export interface ConsultingEnginePipelineResult {
 
 export async function runConsultingPipeline(
   engagementId: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<ConsultingEnginePipelineResult> {
   // Check capability: decision_engine

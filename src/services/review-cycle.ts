@@ -4,7 +4,6 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export interface ReviewCycle {
   id: string;
@@ -36,10 +35,10 @@ export interface ReviewCycleStats {
 
 export async function generateReviewCycle(
   engagementId: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<ReviewCycle> {
-  const actorId = authContext.session.user.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
   enforceWorkspaceId(workspaceId, "generateReviewCycle", "review_cycle");
 
   // Validate engagement exists

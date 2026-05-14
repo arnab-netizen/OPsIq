@@ -3,7 +3,6 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export interface EscalationAlert {
   type: "high_priority_overdue" | "kpi_deterioration_pattern";
@@ -15,7 +14,7 @@ export interface EscalationAlert {
 
 export async function detectHighPriorityOverdueActions(
   engagementId: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<EscalationAlert | null> {
   enforceWorkspaceId(workspaceId, "detectHighPriorityOverdueActions", "escalation");
@@ -71,7 +70,7 @@ export async function detectHighPriorityOverdueActions(
 
 export async function detectKPIDeteriorationPattern(
   engagementId: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<EscalationAlert | null> {
   const kpis = await db.kPI.findMany({
@@ -148,7 +147,7 @@ export async function detectKPIDeteriorationPattern(
 
 export async function checkEngagementEscalations(
   engagementId: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId?: string
 ): Promise<EscalationAlert[]> {
   // Fetch workspaceId from engagement if not provided

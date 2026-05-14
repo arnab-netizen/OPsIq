@@ -3,6 +3,7 @@ import type { UserRoleAssignment } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";
 import type { PolicyContext } from "@/policies/capability-check";
 import type { RoleName } from "@/domain/constants/roles";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { cookies } from "next/headers";
 import type { SessionFact, PolicyFact } from "@/lib/canonical-auth-facts";
 import { buildSessionFact, buildPolicyFact } from "@/lib/canonical-auth-facts";

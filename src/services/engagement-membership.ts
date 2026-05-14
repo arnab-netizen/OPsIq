@@ -10,7 +10,6 @@ import {
 import { ROLES, type RoleName } from "@/domain/constants/roles";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -41,7 +40,7 @@ function validateRoleName(role: string): asserts role is RoleName {
 
 export async function addMember(
   input: AddMemberInput,
-  authContext: CanonicalAuthContext
+  authContext: any
 ): Promise<{ id: string; isNew: boolean }> {
   validateRoleName(input.role);
 
@@ -169,7 +168,7 @@ export async function addMember(
 
 export async function removeMember(
   input: RemoveMemberInput,
-  authContext: CanonicalAuthContext
+  authContext: any
 ): Promise<void> {
   validateRoleName(input.role);
 

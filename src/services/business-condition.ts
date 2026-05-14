@@ -6,7 +6,6 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
   BUSINESS_CONDITION_RATINGS,
   PRESSURE_LEVELS,
@@ -101,7 +100,7 @@ function validateConditionInput(input: CreateConditionProfileInput): void {
 
 export async function assessCondition(
   input: CreateConditionProfileInput,
-  authContext: CanonicalAuthContext
+  authContext: any
 ): Promise<{ id: string }> {
   const actorId = authContext.session?.user?.id;
   if (!actorId) {

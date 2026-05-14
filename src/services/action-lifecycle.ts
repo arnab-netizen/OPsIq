@@ -4,7 +4,6 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 // ─── Action Lifecycle States ──────────────────────────────────────────────────
 
@@ -121,7 +120,7 @@ export async function transitionActionState(
   actionId: string,
   nextState: ActionLifecycleState,
   context: {
-    authContext?: CanonicalAuthContext;
+    authContext?: any;
     actorId?: string;
     reason?: string;
     evidence?: string;

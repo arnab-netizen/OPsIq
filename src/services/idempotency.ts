@@ -2,12 +2,11 @@ import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { ValidationError } from "@/infra/errors";
 import crypto from "crypto";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export interface IdempotencyOptions {
   idempotencyKey: string;
   operationName: string;
-  authContext?: CanonicalAuthContext;
+  authContext?: any;
   actorId?: string;
   workspaceId?: string;
   payload: Record<string, unknown>;

@@ -17,7 +17,6 @@ import type { EngagementStatus, InterventionMode } from "@/domain/constants/stat
 import { ENGAGEMENT_STATUSES, INTERVENTION_MODES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordEngagementCreationUsage } from "@/services/usage.service";
 
@@ -87,7 +86,7 @@ async function generateEngagementCode(workspaceId: string, clientId: string): Pr
 
 export async function createEngagement(
   input: CreateEngagementInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<{ id: string; code: string }> {
   // Check capability: create_engagement
@@ -208,7 +207,7 @@ export async function createEngagement(
 export async function updateEngagement(
   engagementId: string,
   input: UpdateEngagementInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<void> {
   // Service-layer auth: require authContext, extract userId from it (never from parameters)
@@ -462,7 +461,7 @@ export async function listEngagements(
 
 export async function computeNextReviewDate(
   engagementId: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<{ nextReviewDate: Date; isDueSoon: boolean; daysUntilDue: number }> {
   const actorId = authContext.session?.user?.id;

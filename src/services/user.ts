@@ -15,7 +15,6 @@ import {
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -42,7 +41,7 @@ export interface ListUsersParams {
 
 export async function createUser(
   input: CreateUserInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -94,7 +93,7 @@ export async function createUser(
 export async function updateUser(
   userId: string,
   input: UpdateUserInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -147,7 +146,7 @@ export async function updateUser(
 export async function deactivateUser(
   userId: string,
   version: number,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -220,7 +219,7 @@ export async function deactivateUser(
 export async function reactivateUser(
   userId: string,
   version: number,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);

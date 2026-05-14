@@ -7,7 +7,6 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { withIdempotency } from "@/infra/idempotency";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export interface CreateKPIInput {
   engagementId: string;
@@ -24,7 +23,7 @@ export interface UpdateKPIInput {
 
 export async function createKPI(
   input: CreateKPIInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string,
   idempotencyKey?: string
 ) {
@@ -136,7 +135,7 @@ export async function getKPIsForEngagement(engagementId: string, workspaceId: st
 export async function updateKPIValue(
   kpiId: string,
   input: UpdateKPIInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string,
   idempotencyKey?: string
 ) {

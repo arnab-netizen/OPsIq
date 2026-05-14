@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { reRankRecommendationsInEngagement } from "@/services/recommendation";
 import { checkEngagementEscalations } from "@/services/escalation";
 import { computeNextReviewDate } from "@/services/engagement";
@@ -697,10 +698,25 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         logger.warn("Engagement not found for re-ranking", { engagementId: event.engagementId });
       } else {
         const authContext: any = {
-          user: { id: event.triggeredBy },
-          session: { user: { id: event.triggeredBy } },
-          workspace: { id: engagementForWs.workspaceId },
-        };
+          verifiedActorId: event.triggeredBy,
+          verifiedActorType: "service",
+          verifiedActor: { id: event.triggeredBy, email: "system", name: "System", isActive: true },
+          verifiedWorkspaceId: engagementForWs.workspaceId,
+          verifiedCapabilities: new Set(),
+          traceId: "",
+          executionTrace: {},
+          verifiedSessionSnapshot: {
+            snapshotId: "",
+            snapshotTimestamp: new Date(),
+            snapshotHash: "",
+            actorId: event.triggeredBy,
+            workspaceId: engagementForWs.workspaceId,
+            capabilities: [],
+          },
+          correlationId: "",
+          requestId: "",
+          request: null as any,
+        } as any;
         const reRankResult = await reRankRecommendationsInEngagement(event.engagementId, authContext, engagementForWs.workspaceId);
 
         if (reRankResult.updated > 0) {
@@ -753,18 +769,25 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       });
       if (engagementForPhase7) {
         const internalAuthContext: any = {
-          session: {
-            user: {
-              id: event.triggeredBy,
-              email: "",
-              name: "",
-              isActive: true,
-            },
-            sessionId: "",
-            expiresAt: new Date(),
+          verifiedActorId: event.triggeredBy,
+          verifiedActorType: "service",
+          verifiedActor: { id: event.triggeredBy, email: "", name: "", isActive: true },
+          verifiedWorkspaceId: engagementForPhase7.workspaceId,
+          verifiedCapabilities: new Set(),
+          traceId: "",
+          executionTrace: {},
+          verifiedSessionSnapshot: {
+            snapshotId: "",
+            snapshotTimestamp: new Date(),
+            snapshotHash: "",
+            actorId: event.triggeredBy,
+            workspaceId: engagementForPhase7.workspaceId,
+            capabilities: [],
           },
-          policy: {},
-        };
+          correlationId: "",
+          requestId: "",
+          request: null as any,
+        } as any;
         await checkEngagementEscalations(event.engagementId, internalAuthContext, engagementForPhase7.workspaceId);
         await computeNextReviewDate(event.engagementId, internalAuthContext, engagementForPhase7.workspaceId);
       }

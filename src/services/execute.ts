@@ -8,7 +8,6 @@ import { transitionActionState } from "@/services/action-lifecycle";
 import { computeEngagementHealth } from "@/services/engagement-health";
 import { ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export interface ExecuteInput {
   clientName: string;
@@ -41,7 +40,7 @@ export interface ExecuteOutput {
 
 export async function executeWorkflow(
   input: ExecuteInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<ExecuteOutput> {
   logger.info("Executing workflow", {

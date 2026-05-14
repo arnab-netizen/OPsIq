@@ -14,7 +14,6 @@ import {
 } from "@/lib/optimistic-lock";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -65,7 +64,7 @@ function validateLeadTransition(from: LeadStatus, to: LeadStatus): void {
 
 export async function createLead(
   input: CreateLeadInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -118,7 +117,7 @@ export async function createLead(
 export async function updateLead(
   leadId: string,
   input: UpdateLeadInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<void> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);

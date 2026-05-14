@@ -5,7 +5,6 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
   INTERVENTION_PHASES,
   INTERVENTION_MODES,
@@ -121,10 +120,10 @@ export async function getInterventionState(
 export async function updateInterventionPhase(
   engagementId: string,
   input: UpdateInterventionPhaseInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId?: string
 ): Promise<void> {
-  const actorId = authContext.session.user.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
 
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace-scoped queries");
@@ -207,10 +206,10 @@ export async function updateInterventionPhase(
 export async function updateInterventionMode(
   engagementId: string,
   input: UpdateInterventionModeInput,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId?: string
 ): Promise<void> {
-  const actorId = authContext.session.user.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
 
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace-scoped queries");
@@ -288,10 +287,10 @@ export async function updateInterventionMode(
 export async function initializeInterventionState(
   engagementId: string,
   interventionMode: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ) {
-  const actorId = authContext.session.user.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
   enforceWorkspaceId(workspaceId, "initializeInterventionState", "engagement");
 
   const engagement = await db.engagement.findUnique({
@@ -330,10 +329,10 @@ export async function initializeInterventionState(
 export async function transitionPhase(
   engagementId: string,
   newPhase: string,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ) {
-  const actorId = authContext.session.user.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
 
   const engagement = await db.engagement.findFirst({
     where: { id: engagementId, workspaceId },
@@ -383,10 +382,10 @@ export async function blockEngagement(
   engagementId: string,
   blockerReason: string,
   version: number,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<void> {
-  const actorId = authContext.session.user.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
   const engagement = await db.engagement.findFirst({
     where: { id: engagementId, workspaceId },
     select: { id: true, version: true, workspaceId: true, isBlocked: true },
@@ -447,10 +446,10 @@ export async function blockEngagement(
 export async function unblockEngagement(
   engagementId: string,
   version: number,
-  authContext: CanonicalAuthContext,
+  authContext: any,
   workspaceId: string
 ): Promise<void> {
-  const actorId = authContext.session.user.id;
+  const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
   const engagement = await db.engagement.findFirst({
     where: { id: engagementId, workspaceId },
     select: { id: true, version: true, workspaceId: true, isBlocked: true },
