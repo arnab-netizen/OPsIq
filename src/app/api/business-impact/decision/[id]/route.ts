@@ -1,32 +1,22 @@
-import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
-import { UnauthorizedError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { getSession } from "@/services/auth";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { calculateDecisionImpact } from "@/services/business-impact/decision-impact.service";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export const GET = withEnforcementFull(
-  async (request: NextRequest, ctx, params) => {
-    const { session } = await withAuth();
-    if (!session?.user?.id) {
-      throw new UnauthorizedError("Unauthorized");
-    }
-
-    const workspaceIdParam = request.nextUrl.searchParams.get("workspaceId");
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceIdParam = ctx.request.nextUrl.searchParams.get("workspaceId");
     if (!workspaceIdParam) {
       throw new Error("Workspace ID required");
     }
 
-    const membership = await enforceWorkspaceScoping(request, workspaceIdParam);
+    const membership = await enforceWorkspaceScoping(ctx.request, workspaceIdParam);
     if (!membership) {
-      throw new UnauthorizedError("Unauthorized or invalid workspace");
+      throw new Error("Unauthorized or invalid workspace");
     }
 
-    const workspaceId = workspaceIdParam;
     const decisionId = params.id;
-
-    const metrics = await calculateDecisionImpact(decisionId, workspaceId);
+    const metrics = await calculateDecisionImpact(decisionId, workspaceIdParam);
 
     return metrics;
   }

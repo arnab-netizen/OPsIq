@@ -1,25 +1,22 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { resolveEntitlements } from "@/services/entitlement.service";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate
-  await withAuth();
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.request.headers.get("x-workspace-id");
 
-  // Get workspaceId from header
-  const workspaceId = request.headers.get("x-workspace-id");
+    if (!workspaceId) {
+      throw new Error("Workspace ID required (x-workspace-id header)");
+    }
 
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
+    const entitlements = await resolveEntitlements(workspaceId);
+
+    return {
+      plan: entitlements.plan,
+      status: entitlements.status,
+      currentPeriodStart: entitlements.currentPeriodStart,
+      currentPeriodEnd: entitlements.currentPeriodEnd,
+    };
   }
-
-  const entitlements = await resolveEntitlements(workspaceId);
-
-  return {
-    plan: entitlements.plan,
-    status: entitlements.status,
-    currentPeriodStart: entitlements.currentPeriodStart,
-    currentPeriodEnd: entitlements.currentPeriodEnd,
-  };
-});
+);

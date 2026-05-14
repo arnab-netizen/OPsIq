@@ -1,16 +1,16 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import type { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { getRecommendationsForEngagement } from "@/services/recommendation";
 import { assertEngagementAccess } from "@/lib/visibility";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export const GET = withEnforcementFull(async (request, context, params) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
-  const { engagementId } = params;
-  const { session } = await withAuth();
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.request.headers.get("x-workspace-id") || "";
+    const { engagementId } = params;
 
-  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
+    await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
-  const recommendations = await getRecommendationsForEngagement(engagementId, session.user.id, workspaceId);
-  return Response.json(recommendations);
-});
+    const recommendations = await getRecommendationsForEngagement(engagementId, ctx.verifiedActorId, workspaceId);
+    return recommendations;
+  }
+);

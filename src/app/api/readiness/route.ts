@@ -1,11 +1,10 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { getMonitoringServiceInstance } from "@/middleware/monitoring.middleware";
 import { logger } from "@/infra/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export const GET = withEnforcementFull(async () => {
+export const GET = async () => {
   const monitoringService = getMonitoringServiceInstance();
   const readinessCheck = await monitoringService.checkReadiness();
 
@@ -17,5 +16,8 @@ export const GET = withEnforcementFull(async () => {
     queue_healthy: readinessCheck.queue_healthy,
   });
 
-  return { ...readinessCheck, status: statusCode };
-});
+  return new Response(JSON.stringify({ ...readinessCheck, status: statusCode }), {
+    status: statusCode,
+    headers: { "content-type": "application/json" },
+  });
+};

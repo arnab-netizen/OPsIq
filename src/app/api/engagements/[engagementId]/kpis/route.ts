@@ -1,25 +1,25 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import type { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { getKPIsForEngagement } from "@/services/kpi";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export const GET = withEnforcementFull(async (_request, context, params) => {
-  const { engagementId } = params;
-  const { session } = await withAuth();
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { engagementId } = params;
 
-  const engagement = await db.engagement.findUnique({
-    where: { id: engagementId },
-    select: { workspaceId: true },
-  });
-  if (!engagement) {
-    throw new NotFoundError("Engagement", engagementId);
+    const engagement = await db.engagement.findUnique({
+      where: { id: engagementId },
+      select: { workspaceId: true },
+    });
+    if (!engagement) {
+      throw new NotFoundError("Engagement", engagementId);
+    }
+
+    await assertEngagementAccess(ctx.verifiedActorId, engagementId, engagement.workspaceId);
+
+    const kpis = await getKPIsForEngagement(engagementId, engagement.workspaceId);
+    return kpis;
   }
-
-  await assertEngagementAccess(session.user.id, engagementId, engagement.workspaceId);
-
-  const kpis = await getKPIsForEngagement(engagementId, engagement.workspaceId);
-  return Response.json(kpis);
-});
+);
