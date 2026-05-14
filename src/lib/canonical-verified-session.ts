@@ -240,6 +240,8 @@ export class CanonicalVerifiedSessionBuilder {
 
     // Seal and freeze
     this.snapshot.sealed = true;
+    this.snapshot.readonly = true;  // Set before freezing
+
     Object.freeze(this.snapshot);
     this.deepFreeze(this.snapshot);
 
@@ -250,7 +252,7 @@ export class CanonicalVerifiedSessionBuilder {
    * Get read-only reference for handler
    */
   public getReadOnlySnapshot(): Readonly<CanonicalVerifiedSession> {
-    this.snapshot.readonly = true;
+    // Already finalized, no need to set readonly again
     return Object.freeze({ ...this.snapshot });
   }
 
