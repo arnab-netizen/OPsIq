@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
@@ -86,7 +87,7 @@ async function generateEngagementCode(workspaceId: string, clientId: string): Pr
 
 export async function createEngagement(
   input: CreateEngagementInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string; code: string }> {
   // Check capability: create_engagement
@@ -207,7 +208,7 @@ export async function createEngagement(
 export async function updateEngagement(
   engagementId: string,
   input: UpdateEngagementInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   // Service-layer auth: require authContext, extract userId from it (never from parameters)
@@ -461,7 +462,7 @@ export async function listEngagements(
 
 export async function computeNextReviewDate(
   engagementId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ nextReviewDate: Date; isDueSoon: boolean; daysUntilDue: number }> {
   const actorId = authContext.session?.user?.id;

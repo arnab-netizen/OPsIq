@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
@@ -55,7 +56,7 @@ export interface UpdateEvidenceInput {
 
 export async function createEvidence(
   input: CreateEvidenceInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string; engagementId?: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -195,7 +196,7 @@ export async function createEvidence(
 export async function updateEvidence(
   evidenceId: string,
   input: UpdateEvidenceInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -530,7 +531,7 @@ export interface RemoveEvidenceFromBundleInput {
 
 export async function createEvidenceBundle(
   input: CreateEvidenceBundleInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -605,7 +606,7 @@ export async function listEvidenceBundles(engagementId: string, workspaceId: str
 
 export async function addEvidenceToBundle(
   input: AddEvidenceToBundleInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -658,7 +659,7 @@ export async function addEvidenceToBundle(
 
 export async function removeEvidenceFromBundle(
   input: RemoveEvidenceFromBundleInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -699,7 +700,7 @@ export async function removeEvidenceFromBundle(
 export async function updateEvidenceBundle(
   bundleId: string,
   input: UpdateEvidenceBundleInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);

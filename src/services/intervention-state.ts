@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -120,7 +121,7 @@ export async function getInterventionState(
 export async function updateInterventionPhase(
   engagementId: string,
   input: UpdateInterventionPhaseInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<void> {
   const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
@@ -206,7 +207,7 @@ export async function updateInterventionPhase(
 export async function updateInterventionMode(
   engagementId: string,
   input: UpdateInterventionModeInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<void> {
   const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
@@ -287,7 +288,7 @@ export async function updateInterventionMode(
 export async function initializeInterventionState(
   engagementId: string,
   interventionMode: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
@@ -329,7 +330,7 @@ export async function initializeInterventionState(
 export async function transitionPhase(
   engagementId: string,
   newPhase: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
@@ -382,7 +383,7 @@ export async function blockEngagement(
   engagementId: string,
   blockerReason: string,
   version: number,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
@@ -446,7 +447,7 @@ export async function blockEngagement(
 export async function unblockEngagement(
   engagementId: string,
   version: number,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -604,7 +605,7 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
 
 // ─── Main Diagnosis Function ───────────────────────────────────────────────
 
-export async function diagnoseBusiness(input: BusinessProblemInput, authContext: any, workspaceId: string): Promise<DiagnosisResult> {
+export async function diagnoseBusiness(input: BusinessProblemInput, authContext: CanonicalAuthContext, workspaceId: string): Promise<DiagnosisResult> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
   enforceWorkspaceId(validatedWorkspaceId, "diagnoseBusiness", "diagnosis");
 

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -35,7 +36,7 @@ export interface ReviewCycleStats {
 
 export async function generateReviewCycle(
   engagementId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<ReviewCycle> {
   const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;

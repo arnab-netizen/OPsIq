@@ -146,7 +146,7 @@ export function calculateExecutionCertainty(
 
 export async function generateExecutionCertainty(
   engagementId: string,
-  authContext: any
+  authContext: CanonicalAuthContext
 ) {
   return {
     engagementId,

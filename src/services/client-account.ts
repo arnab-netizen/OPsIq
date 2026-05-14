@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
@@ -39,7 +40,7 @@ export interface UpdateClientInput {
 
 export async function createClient(
   input: CreateClientInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -87,7 +88,7 @@ export async function createClient(
 export async function updateClient(
   clientId: string,
   input: UpdateClientInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -131,7 +132,7 @@ export async function updateClient(
 
 export async function archiveClient(
   clientId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   version: number,
   workspaceId: string
 ): Promise<void> {

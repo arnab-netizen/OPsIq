@@ -1,5 +1,4 @@
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import type { AuthContext } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
 
 /**
@@ -7,22 +6,22 @@ import { UnauthorizedError } from "@/infra/errors";
  * Ensures protected services only accept calls with valid authContext.
  * Enforces that user identity comes from authContext, not from request body/params.
  *
- * Supports both AuthContext (legacy withAuth) and CanonicalAuthContext (new wrapper).
+ * IMPORTANT: Services now require CanonicalAuthContext exclusively.
+ * Routes that have not been migrated to withCanonicalEnforcement will fail
+ * at compile time (intended behavior to force systematic migration).
  */
-
-type AuthContextLike = AuthContext | CanonicalAuthContext | any;
 
 /**
  * Requires authContext to be present and valid.
  * Throws UnauthorizedError if authContext is missing or invalid.
- * Returns the authenticated userId from the session.
+ * Returns the authenticated userId from the verified session snapshot.
  */
-export function requireServiceAuth(authContext: AuthContextLike | null | undefined): string {
+export function requireServiceAuth(authContext: CanonicalAuthContext | null | undefined): string {
   if (!authContext) {
     throw new UnauthorizedError("Service requires authentication context");
   }
 
-  const userId = authContext.session?.user.id || authContext.verifiedActor?.id;
+  const userId = authContext.verifiedSessionSnapshot?.user.id;
   if (!userId) {
     throw new UnauthorizedError("Invalid auth context: missing user ID");
   }
@@ -47,7 +46,7 @@ export function requireWorkspaceContext(workspaceId: string | null | undefined):
  * Returns tuple of [userId, workspaceId] for convenience.
  */
 export function requireServiceContext(
-  authContext: AuthContextLike | null | undefined,
+  authContext: CanonicalAuthContext | null | undefined,
   workspaceId: string | null | undefined
 ): [string, string] {
   const userId = requireServiceAuth(authContext);

@@ -1,8 +1,5 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 
 interface GuardrailViolation {
@@ -46,15 +43,10 @@ interface BlockedMetrics {
   };
 }
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate user (fail-closed)
-  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
-
-  // Get workspace context (fail closed if missing)
-  const workspace = await requireWorkspaceContext();
+export const GET = withCanonicalEnforcement(async (ctx) => {
 
   // Calculate date range: default to last 30 days
-  const daysParam = request.nextUrl.searchParams.get("days");
+  const daysParam = ctx.request.nextUrl.searchParams.get("days");
   const days = daysParam ? Math.min(parseInt(daysParam), 90) : 30;
 
   const endDate = new Date();
@@ -64,7 +56,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   // Fetch all blocked decisions
   const blockedDecisions = await db.operatorItem.findMany({
     where: {
-      workspaceId: workspace.workspaceId,
+      workspaceId: ctx.verifiedWorkspaceId,
       status: "blocked",
       createdAt: {
         gte: startDate,
@@ -76,7 +68,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   if (blockedDecisions.length === 0) {
     const emptyMetrics: BlockedMetrics = {
       workspace: {
-        workspaceId: workspace.workspaceId,
+        workspaceId: ctx.verifiedWorkspaceId,
       },
       period: {
         startDate: startDate.toISOString(),
@@ -316,4 +308,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   };
 
   return metrics;
+}, {
+  requireWorkspace: true,
+  requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
 });

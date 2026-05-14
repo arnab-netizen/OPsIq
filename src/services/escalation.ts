@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
@@ -14,7 +15,7 @@ export interface EscalationAlert {
 
 export async function detectHighPriorityOverdueActions(
   engagementId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<EscalationAlert | null> {
   enforceWorkspaceId(workspaceId, "detectHighPriorityOverdueActions", "escalation");
@@ -70,7 +71,7 @@ export async function detectHighPriorityOverdueActions(
 
 export async function detectKPIDeteriorationPattern(
   engagementId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<EscalationAlert | null> {
   const kpis = await db.kPI.findMany({
@@ -147,7 +148,7 @@ export async function detectKPIDeteriorationPattern(
 
 export async function checkEngagementEscalations(
   engagementId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<EscalationAlert[]> {
   // Fetch workspaceId from engagement if not provided

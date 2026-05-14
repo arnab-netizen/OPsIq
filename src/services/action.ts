@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
@@ -69,7 +70,7 @@ function validateActionTransition(fromStatus: ActionStatus, toStatus: ActionStat
 
 export async function createAction(
   input: CreateActionInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string,
   idempotencyKey?: string
 ) {
@@ -267,7 +268,7 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
 export async function updateActionStatus(
   actionId: string,
   input: UpdateActionInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -375,7 +376,7 @@ export async function updateActionStatus(
   return updated;
 }
 
-export async function detectOverdueActions(engagementId: string, authContext: any, workspaceId: string) {
+export async function detectOverdueActions(engagementId: string, authContext: CanonicalAuthContext, workspaceId: string) {
   const actorId = authContext.session?.user?.id;
   enforceWorkspaceId(workspaceId, "detectOverdueActions", "action");
 
@@ -471,7 +472,7 @@ export async function getActionById(actionId: string, workspaceId: string) {
 export async function updateAction(
   actionId: string,
   input: UpdateActionInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -555,7 +556,7 @@ export async function listActions(workspaceId: string, params: any) {
 export async function createActionsFromInterventions(
   engagementId: string,
   interventions: any[], // PrioritizedIntervention[] from consulting-engine
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   enforceWorkspaceId(workspaceId, "createActionsFromInterventions", "action");

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -30,7 +31,7 @@ export interface UpdateShockEventInput {
 
 export async function createShockEvent(
   input: CreateShockEventInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<{ id: string; engagementId: string; detectionConfirmed: boolean }> {
   const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;
@@ -110,7 +111,7 @@ export async function createShockEvent(
 export async function updateShockEvent(
   shockEventId: string,
   input: UpdateShockEventInput,
-  authContext: any
+  authContext: CanonicalAuthContext
 ): Promise<{ id: string }> {
   // Note: ShockEvent model does not exist in schema - always throw NotFoundError
   throw new NotFoundError("ShockEvent", shockEventId);

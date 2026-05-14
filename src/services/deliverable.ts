@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
@@ -22,7 +23,7 @@ export interface UpdateDeliverableInput {
 
 export async function createDeliverable(
   input: CreateDeliverableInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   if (!workspaceId) throw new Error("workspaceId is required");
@@ -107,7 +108,7 @@ export async function getDeliverableById(deliverableId: string, workspaceId: str
 export async function updateDeliverableReviewStatus(
   deliverableId: string,
   input: UpdateDeliverableInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   if (!workspaceId) throw new Error("workspaceId is required");

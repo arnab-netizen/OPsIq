@@ -11,6 +11,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { logger } from "@/infra/logger";
 import { requireServiceContext } from "@/lib/service-auth";
 import { emitAuditEvent } from "@/infra/audit";
@@ -166,7 +167,7 @@ export function validateFinalROIMarking(
  */
 export async function recordImpactWithGating(
   request: ImpactRecordingRequest,
-  authContext: any
+  authContext: CanonicalAuthContext
 ): Promise<{ decisionId: string; impactType: ImpactType; recorded: boolean }> {
   // Verify auth
   requireServiceContext(authContext, request.workspaceId);
@@ -300,7 +301,7 @@ export async function recordImpactWithGating(
  */
 export async function recordROIWithGating(
   request: ROIRecordingRequest,
-  authContext: any
+  authContext: CanonicalAuthContext
 ): Promise<{ decisionId: string; roiValue: number; isFinal: boolean }> {
   // Verify auth
   requireServiceContext(authContext, request.workspaceId);

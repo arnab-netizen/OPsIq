@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -55,7 +56,7 @@ export interface LinkEvidenceToFindingInput {
 
 export async function createFinding(
   input: CreateFindingInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string; engagementId: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -152,7 +153,7 @@ export async function createFinding(
 export async function updateFinding(
   findingId: string,
   input: UpdateFindingInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -240,7 +241,7 @@ export async function updateFinding(
 
 export async function validateFinding(
   findingId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string = "unknown"
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
@@ -294,7 +295,7 @@ export async function validateFinding(
 
 export async function disputeFinding(
   findingId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string = "unknown"
 ): Promise<{ id: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
@@ -331,7 +332,7 @@ export async function disputeFinding(
 export async function supersedeFinding(
   oldFindingId: string,
   newFindingInput: CreateFindingInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string; supersededFindingId: string }> {
   requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
@@ -396,7 +397,7 @@ export async function linkEvidenceToFinding(
 ): Promise<{ id?: string; findingId: string; evidenceId: string }> {
   // Handle both calling conventions
   let linkType: string | undefined;
-  let authContext: any;
+  let authContext: CanonicalAuthContext;
 
   if (maybeAuthContext) {
     // New signature: linkEvidenceToFinding(findingId, evidenceId, linkType, authContext)
@@ -486,7 +487,7 @@ export async function linkEvidenceToFinding(
 export async function unlinkEvidenceFromFinding(
   findingId: string,
   evidenceId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<{ findingId: string; evidenceId: string }> {
   const actorId = (authContext as any).verifiedActorId || authContext.session?.user?.id;

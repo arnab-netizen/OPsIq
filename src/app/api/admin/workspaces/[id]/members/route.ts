@@ -6,10 +6,7 @@
  * Workspace-scoped: admin must have ADMIN_SETTINGS in their own workspace.
  */
 
-import { NextRequest } from "next/server";
-import { UnauthorizedError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 interface WorkspaceMember {
@@ -18,23 +15,15 @@ interface WorkspaceMember {
   createdAt?: string;
 }
 
-export const GET = withEnforcementFull(
-  async (request: NextRequest, ctx, params) => {
-    // Auth enforcement (ADMIN_SETTINGS capability)
-    const { session, policy } = await withAuth({
-      capability: CAPABILITIES.SYSTEM_ADMIN,
-    });
-    if (!session || !policy) {
-      throw new UnauthorizedError("Unauthorized");
-    }
-
+export const GET = withCanonicalEnforcement(
+  async (ctx, params) => {
     const workspaceId = params.id;
     if (!workspaceId) {
       throw new Error("Workspace ID required");
     }
 
     // Parse query parameters
-    const url = new URL(request.url);
+    const url = new URL(ctx.request.url);
     const limit = parseInt(url.searchParams.get("limit") || "50");
     const cursor = url.searchParams.get("cursor") || undefined;
 
@@ -52,5 +41,8 @@ export const GET = withEnforcementFull(
         hasMore: false,
       },
     };
+  },
+  {
+    requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN],
   }
 );

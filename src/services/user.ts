@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
@@ -41,7 +42,7 @@ export interface ListUsersParams {
 
 export async function createUser(
   input: CreateUserInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -93,7 +94,7 @@ export async function createUser(
 export async function updateUser(
   userId: string,
   input: UpdateUserInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -146,7 +147,7 @@ export async function updateUser(
 export async function deactivateUser(
   userId: string,
   version: number,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -219,7 +220,7 @@ export async function deactivateUser(
 export async function reactivateUser(
   userId: string,
   version: number,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);

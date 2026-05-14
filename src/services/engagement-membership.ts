@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
@@ -40,7 +41,7 @@ function validateRoleName(role: string): asserts role is RoleName {
 
 export async function addMember(
   input: AddMemberInput,
-  authContext: any
+  authContext: CanonicalAuthContext
 ): Promise<{ id: string; isNew: boolean }> {
   validateRoleName(input.role);
 
@@ -168,7 +169,7 @@ export async function addMember(
 
 export async function removeMember(
   input: RemoveMemberInput,
-  authContext: any
+  authContext: CanonicalAuthContext
 ): Promise<void> {
   validateRoleName(input.role);
 

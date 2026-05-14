@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { createClient } from "@/services/client-account";
 import { createEngagement } from "@/services/engagement";
 import { createFinding } from "@/services/findings";
@@ -40,7 +41,7 @@ export interface ExecuteOutput {
 
 export async function executeWorkflow(
   input: ExecuteInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<ExecuteOutput> {
   logger.info("Executing workflow", {

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
@@ -64,7 +65,7 @@ function validateLeadTransition(from: LeadStatus, to: LeadStatus): void {
 
 export async function createLead(
   input: CreateLeadInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -117,7 +118,7 @@ export async function createLead(
 export async function updateLead(
   leadId: string,
   input: UpdateLeadInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);

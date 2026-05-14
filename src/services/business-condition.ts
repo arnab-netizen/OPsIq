@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
@@ -100,7 +101,7 @@ function validateConditionInput(input: CreateConditionProfileInput): void {
 
 export async function assessCondition(
   input: CreateConditionProfileInput,
-  authContext: any
+  authContext: CanonicalAuthContext
 ): Promise<{ id: string }> {
   const actorId = authContext.session?.user?.id;
   if (!actorId) {

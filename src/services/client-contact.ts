@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -29,7 +30,7 @@ export interface UpdateContactInput {
 
 export async function createContact(
   input: CreateContactInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
   if (!workspaceId) throw new Error("workspaceId is required");
@@ -76,7 +77,7 @@ export async function createContact(
 
 export async function deactivateContact(
   contactId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   if (!workspaceId) throw new Error("workspaceId is required");
@@ -119,7 +120,7 @@ export async function deactivateContact(
 export async function updateContact(
   contactId: string,
   input: UpdateContactInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   if (!workspaceId) throw new Error("workspaceId is required");

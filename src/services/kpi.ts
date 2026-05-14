@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ConflictError } from "@/infra/errors";
@@ -23,7 +24,7 @@ export interface UpdateKPIInput {
 
 export async function createKPI(
   input: CreateKPIInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string,
   idempotencyKey?: string
 ) {
@@ -135,7 +136,7 @@ export async function getKPIsForEngagement(engagementId: string, workspaceId: st
 export async function updateKPIValue(
   kpiId: string,
   input: UpdateKPIInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string,
   idempotencyKey?: string
 ) {

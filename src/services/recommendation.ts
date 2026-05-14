@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
@@ -354,7 +355,7 @@ async function evaluateEngagementKPIHealth(
 
 export async function createRecommendation(
   input: CreateRecommendationInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string,
   idempotencyKey?: string
 ) {
@@ -648,7 +649,7 @@ export async function getRecommendationsForEngagement(
 export async function updateRecommendationStatus(
   recommendationId: string,
   input: UpdateRecommendationInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(
@@ -941,7 +942,7 @@ export async function updateRecommendationStatus(
 export async function updateRecommendationPriorityFromScore(
   recommendationId: string,
   scoringInput: RecommendationScoringInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string,
   recommendationClass?: RecommendationClass
 ): Promise<{ id: string; score: number; priority: string }> {
@@ -1019,7 +1020,7 @@ export async function updateRecommendationPriorityFromScore(
 
 export async function reRankRecommendationsInEngagement(
   engagementId: string,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{
   updated: number;
@@ -1156,7 +1157,7 @@ export async function getRecommendation(
 export async function updateRecommendation(
   recommendationId: string,
   input: UpdateRecommendationInput,
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(
@@ -1265,7 +1266,7 @@ export async function getRecommendationAuditTrail(
 export async function createRecommendationsFromInterventions(
   engagementId: string,
   interventions: PrioritizedIntervention[],
-  authContext: any,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [, validatedWorkspaceId] = requireServiceContext(
