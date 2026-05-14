@@ -17,7 +17,7 @@ const auditQuerySchema = z.object({
 
 export const GET = withCanonicalEnforcement(
   async (ctx) => {
-    const params = parseSearchParams(ctx.request.url, auditQuerySchema);
+    const params = parseSearchParams(ctx.request!.url, auditQuerySchema);
     const { events, total } = await queryAuditEvents({ ...params, workspaceId: ctx.verifiedWorkspaceId } as AuditQueryFilter & { workspaceId: string });
 
     const limit = Math.min(params.limit || 50, 200);

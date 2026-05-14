@@ -5,12 +5,12 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceIdParam = ctx.request.nextUrl.searchParams.get("workspaceId");
+    const workspaceIdParam = ctx.request!.nextUrl.searchParams.get("workspaceId");
     if (!workspaceIdParam) {
       throw new Error("Workspace ID required");
     }
 
-    const membership = await enforceWorkspaceScoping(ctx.request, workspaceIdParam);
+    const membership = await enforceWorkspaceScoping(ctx.request!, workspaceIdParam);
     if (!membership) {
       throw new Error("Unauthorized or invalid workspace");
     }

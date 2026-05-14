@@ -4,7 +4,7 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.request.headers.get("x-workspace-id");
+    const workspaceId = ctx.request!.headers.get("x-workspace-id");
 
     if (!workspaceId) {
       throw new Error("Workspace ID required (x-workspace-id header)");

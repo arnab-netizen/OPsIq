@@ -19,7 +19,7 @@ import {
 export const GET = withCanonicalEnforcement(
   async (ctx) => {
     // Parse query parameters
-    const url = new URL(ctx.request.url);
+    const url = new URL(ctx.request!.url);
     const params = {
       workspaceId: ctx.verifiedWorkspaceId,
       entityType: url.searchParams.get("entityType") || undefined,

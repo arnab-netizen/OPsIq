@@ -1,7 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createContact, getContactsForClient } from "@/services/client-contact";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -71,9 +71,10 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   }
 
   try {
+    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
     const result = await createContact(
       { ...body, clientId },
-      authContext,
+      canonicalContext,
       workspaceId
     );
     await recordIdempotencyResponse(idempotencyKey, 201, result);

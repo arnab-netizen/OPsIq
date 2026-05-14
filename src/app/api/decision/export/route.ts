@@ -41,7 +41,7 @@ interface DecisionExport {
 export const GET = withCanonicalEnforcement(
   async (ctx) => {
     // Parse query parameter for decision ID
-    const searchParams = ctx.request.nextUrl.searchParams;
+    const searchParams = ctx.request!.nextUrl.searchParams;
     const decisionId = searchParams.get("decisionId");
 
     if (!decisionId) {

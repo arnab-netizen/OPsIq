@@ -29,7 +29,7 @@ const listEvidenceSchema = paginationSchema.extend({
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
-    const params = parseSearchParams(ctx.request.url, listEvidenceSchema);
+    const params = parseSearchParams(ctx.request!.url, listEvidenceSchema);
     const result = await listEvidence(workspaceId, params);
     return Response.json(result);
   },

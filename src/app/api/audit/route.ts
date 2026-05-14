@@ -6,7 +6,7 @@ import type { Prisma } from "@/generated/prisma/client";
 export const GET = withCanonicalEnforcement(
   async (ctx) => {
     // Parse query parameters
-    const searchParams = ctx.request.nextUrl.searchParams;
+    const searchParams = ctx.request!.nextUrl.searchParams;
     const decisionId = searchParams.get("decisionId");
     const userId = searchParams.get("userId");
     const fromDate = searchParams.get("fromDate");

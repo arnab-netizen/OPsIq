@@ -9,8 +9,8 @@ export const GET = withCanonicalEnforcement(
     const { engagementId } = params;
     parseOrThrow(uuidSchema, engagementId);
 
-    const workspaceId = ctx.request.headers.get("x-workspace-id") ||
-                        ctx.request.nextUrl.searchParams.get("workspaceId");
+    const workspaceId = ctx.request!.headers.get("x-workspace-id") ||
+                        ctx.request!.nextUrl.searchParams.get("workspaceId");
     if (!workspaceId) {
       throw new Error("Workspace ID required");
     }

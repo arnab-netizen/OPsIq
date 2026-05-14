@@ -89,7 +89,7 @@ const handlePost = async (request: NextRequest) => {
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
-    const params = parseSearchParams(ctx.request.url, listActionsSchema);
+    const params = parseSearchParams(ctx.request!.url, listActionsSchema);
     const result = await listActions(workspaceId, params);
     return Response.json(result);
   },

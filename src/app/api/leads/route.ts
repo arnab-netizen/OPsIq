@@ -31,7 +31,7 @@ const listLeadsSchema = paginationSchema.extend({
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
-    const params = parseSearchParams(ctx.request.url, listLeadsSchema);
+    const params = parseSearchParams(ctx.request!.url, listLeadsSchema);
     const result = await listLeads(workspaceId, params);
     return result;
   },

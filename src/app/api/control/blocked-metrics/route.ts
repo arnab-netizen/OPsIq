@@ -46,7 +46,7 @@ interface BlockedMetrics {
 export const GET = withCanonicalEnforcement(async (ctx) => {
 
   // Calculate date range: default to last 30 days
-  const daysParam = ctx.request.nextUrl.searchParams.get("days");
+  const daysParam = ctx.request!.nextUrl.searchParams.get("days");
   const days = daysParam ? Math.min(parseInt(daysParam), 90) : 30;
 
   const endDate = new Date();

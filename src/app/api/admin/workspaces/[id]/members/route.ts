@@ -23,7 +23,7 @@ export const GET = withCanonicalEnforcement(
     }
 
     // Parse query parameters
-    const url = new URL(ctx.request.url);
+    const url = new URL(ctx.request!.url);
     const limit = parseInt(url.searchParams.get("limit") || "50");
     const cursor = url.searchParams.get("cursor") || undefined;
 
