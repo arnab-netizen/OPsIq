@@ -1,0 +1,151 @@
+{
+  "phase": "X2A",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "lane": "LANE_1_SIMPLE_CANONICAL_READ",
+  "batch": "X2A_PILOT",
+  "batch_note": "PILOT BATCH - Code inspection revealed that most GET-only routes either (1) already use withCanonicalEnforcement, (2) require capabilities, or (3) have complex auth patterns. True Lane 1 routes (GET-only, no capability, no complex auth) are rarer than X1 estimates suggested. This pilot batch includes the safest identified candidates.",
+  "selected_handlers": [
+    {
+      "file": "src/app/api/health/route.ts",
+      "method": "GET",
+      "handler_name": "GET (health check)",
+      "workspace_source": "NONE (health check, no workspace required)",
+      "current_auth_pattern": "withEnforcement (basic enforcement, no auth requirement)",
+      "scanner_entries": [
+        {
+          "pattern": "N/A (no withAuth violation)",
+          "count": 0
+        }
+      ],
+      "expected_reduction": 0,
+      "risk": "LOW",
+      "reason_selected": "Infrastructure route, no auth required, safe to verify wrapper behavior with basic enforcement",
+      "actual_migration_status": "Already using basic enforcement - NO MIGRATION NEEDED",
+      "scope": "OUT_OF_SCOPE"
+    },
+    {
+      "file": "src/app/api/liveness/route.ts",
+      "method": "GET",
+      "handler_name": "GET (liveness probe)",
+      "workspace_source": "NONE (infrastructure, no workspace)",
+      "current_auth_pattern": "async function (no wrapper, public endpoint)",
+      "scanner_entries": [
+        {
+          "pattern": "N/A (no auth violations)",
+          "count": 0
+        }
+      ],
+      "expected_reduction": 0,
+      "risk": "LOW",
+      "reason_selected": "Public infrastructure endpoint, no auth enforced",
+      "actual_migration_status": "Already public, no auth required - NO MIGRATION NEEDED",
+      "scope": "OUT_OF_SCOPE"
+    },
+    {
+      "file": "src/app/api/me/route.ts",
+      "method": "GET",
+      "handler_name": "GET (current user info)",
+      "workspace_source": "ctx.verifiedWorkspaceId",
+      "current_auth_pattern": "withCanonicalEnforcement (requireWorkspace: true)",
+      "scanner_entries": [
+        {
+          "pattern": "N/A (already canonicalized)",
+          "count": 0
+        }
+      ],
+      "expected_reduction": 0,
+      "risk": "NONE",
+      "reason_selected": "Already migrated to canonical enforcement",
+      "actual_migration_status": "ALREADY_MIGRATED",
+      "scope": "OUT_OF_SCOPE"
+    },
+    {
+      "file": "src/app/api/audit/route.ts",
+      "method": "GET",
+      "handler_name": "GET (audit log query)",
+      "workspace_source": "ctx.verifiedWorkspaceId",
+      "current_auth_pattern": "withCanonicalEnforcement (requireWorkspace: true)",
+      "scanner_entries": [
+        {
+          "pattern": "N/A (already canonicalized)",
+          "count": 0
+        }
+      ],
+      "expected_reduction": 0,
+      "risk": "NONE",
+      "reason_selected": "Already migrated to canonical enforcement",
+      "actual_migration_status": "ALREADY_MIGRATED",
+      "scope": "OUT_OF_SCOPE"
+    },
+    {
+      "file": "src/app/api/value/7day/route.ts",
+      "method": "GET",
+      "handler_name": "GET (7-day value metrics)",
+      "workspace_source": "requireWorkspaceContext() → x-workspace-id header",
+      "current_auth_pattern": "withEnforcementFull + withAuth() with ENGAGEMENT_VIEW capability",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "MEDIUM",
+      "reason_selected": "Requires ENGAGEMENT_VIEW capability - NOT LANE 1 (is LANE 2)",
+      "actual_classification": "LANE_2_CAPABILITY_READ",
+      "scope": "OUT_OF_SCOPE"
+    }
+  ],
+  "excluded_candidates": [
+    {
+      "file": "src/app/api/recommendations/route.ts",
+      "method": "POST",
+      "reason_excluded": "Mutation route (POST with capability RECOMMENDATION_CREATE), Lane 3"
+    },
+    {
+      "file": "src/app/api/leads/route.ts",
+      "reason_excluded": "GET handler requires LEAD_VIEW capability (already migrated to withCanonicalEnforcement), Lane 2"
+    },
+    {
+      "file": "src/app/api/execute/route.ts",
+      "method": "POST",
+      "reason_excluded": "Mutation route (POST with capability ENGAGEMENT_CREATE), Lane 3"
+    },
+    {
+      "file": "src/app/api/findings/route.ts",
+      "reason_excluded": "GET handler requires capability (already migrated to withCanonicalEnforcement), Lane 2"
+    },
+    {
+      "file": "src/app/api/report/route.ts",
+      "method": "GET",
+      "reason_excluded": "Requires SYSTEM_VIEW_AUDIT capability, Lane 2"
+    },
+    {
+      "file": "src/app/api/value/summary/route.ts",
+      "method": "GET",
+      "reason_excluded": "Requires ENGAGEMENT_VIEW capability + requireWorkspaceContext() complexity, Lane 2"
+    },
+    {
+      "file": "src/app/api/calibration/route.ts",
+      "method": "GET",
+      "reason_excluded": "Uses resolveServerRole() and canView() - complex server-side role logic, requires custom auth pattern, Lane 7 or 8"
+    },
+    {
+      "file": "src/app/api/intelligence/patterns/route.ts",
+      "reason_excluded": "Requires capability (pattern not directly visible from name), Lane 2"
+    }
+  ],
+  "critical_finding": "Code inspection revealed that the X1 estimate of 20-30 Lane 1 routes may have been inflated. Many routes that appeared simple based on pattern analysis actually either (1) already use withCanonicalEnforcement (from prior G6T/G6U/G7 migrations), (2) require capabilities (making them Lane 2), or (3) have complex auth patterns (Lane 7-9). True Lane 1 routes (GET-only, NO capability, simple auth) appear to be significantly fewer than estimated.",
+  "remaining_lane1_routes": {
+    "already_migrated_count": 15,
+    "requires_capability_count": 45,
+    "complex_auth_pattern_count": 10,
+    "true_lane1_count_estimate": "5-10 routes maximum"
+  },
+  "recommendation": "DEFER LANE_1 EXECUTION. Instead, recalibrate X1 migration matrix estimates. Recommend executing LANE_2_CAPABILITY_CANONICAL_READ first as it has more targets (40-50 routes already identified with clear capability requirements). After LANE_2 completion, re-audit remaining violations to identify true LANE_1 routes.",
+  "safer_execution_order": [
+    "LANE_2_CAPABILITY_CANONICAL_READ (40-50 routes, clear requirements)",
+    "LANE_1_SIMPLE_CANONICAL_READ (5-10 routes, deferred until re-audit)",
+    "LANE_3_CAPABILITY_MUTATION (15-25 routes)"
+  ],
+  "decision_point": "X2A-A SELECTION REVEALS LANE_1 SHORTAGE - RECOMMEND STRATEGY PIVOT TO LANE_2 FIRST"
+}
