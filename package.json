@@ -23,7 +23,8 @@
     "test:mvp": "vitest run src/__tests__/mvp-operational-flow.test.ts",
     "test:db": "TEST_WITH_DB=true vitest run --testNamePattern='\\[db\\]'",
     "test:stripe-sim": "vitest run src/tests/stripe-sim/stripe-simulation.test.ts",
-    "dev:backbone": "vitest run src/__tests__/backbone.test.ts"
+    "dev:backbone": "vitest run src/__tests__/backbone.test.ts",
+    "governance:scan-shadow-reads": "tsx src/governance/auth-shadow-read-scanner.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
