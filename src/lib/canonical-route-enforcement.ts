@@ -34,6 +34,11 @@ import {
   popExecutionContext,
   type ReentryClassification,
 } from "@/lib/execution-reentry-detector";
+import {
+  initializeEnforcerForRequest,
+  RequestLifecycleStage,
+  type RuntimeShadowReadEnforcer,
+} from "@/lib/runtime-shadow-read-enforcer";
 
 /**
  * Verified context passed to handler
@@ -124,6 +129,7 @@ export function withCanonicalEnforcement(
     const params = await context.params;
     let telemetry: CanonicalTelemetryLifecycle | null = null;
     let traceManager: CanonicalExecutionTraceManager | null = null;
+    let shadowReadEnforcer: RuntimeShadowReadEnforcer | null = null;
 
     // Generate correlation ID from request headers or create new one
     const correlationId = req.headers.get("x-correlation-id") || `corr-${Date.now()}-${Math.random().toString(36).substring(7)}`;
@@ -141,6 +147,16 @@ export function withCanonicalEnforcement(
         pathname: req.nextUrl.pathname,
         queryString: req.nextUrl.search,
       });
+
+      // ========================================
+      // PHASE F: RUNTIME SHADOW READ ENFORCER - Initialize
+      // ========================================
+      shadowReadEnforcer = initializeEnforcerForRequest(
+        correlationId,
+        requestId,
+        traceManager.getTrace().traceId,
+        req.nextUrl.pathname
+      );
 
       // STEP D3.2: Detect reentry/nesting
       const reentryStatus = classifyExecution({
@@ -317,6 +333,9 @@ export function withCanonicalEnforcement(
 
       traceManager.recordStage("SESSION_SNAPSHOT_CREATED", "success", sessionSnapshot.snapshotId);
 
+      // PHASE F: Mark snapshot as created
+      shadowReadEnforcer.setLifecycleStage(RequestLifecycleStage.SNAPSHOT_CREATED);
+
       // ========================================
       // STEP 7: BUILD VERIFIED CONTEXT
       // ========================================
@@ -350,8 +369,13 @@ export function withCanonicalEnforcement(
       // STEP 8: CALL HANDLER (NOW SAFE)
       // ========================================
 
+      // PHASE F: Mark auth as finalized before handler execution
+      // After this point, any auth reads will be blocked (shadow read enforcement)
+      shadowReadEnforcer.setLifecycleStage(RequestLifecycleStage.AUTH_FINALIZED);
+
       // Handler can ONLY be called here, AFTER auth passed
       // Handler receives verified context only
+      shadowReadEnforcer.setLifecycleStage(RequestLifecycleStage.HANDLER_EXECUTING);
       traceManager.recordStage("HANDLER_EXECUTING", "success");
       telemetry.emitHandlerExecuting(verifiedContext.verifiedActorId);
       const result = await handler(verifiedContext, params);
@@ -371,6 +395,11 @@ export function withCanonicalEnforcement(
       });
 
       telemetry.emitRequestCompleted();
+
+      // PHASE F: Mark request complete and clear enforcer
+      shadowReadEnforcer.setLifecycleStage(RequestLifecycleStage.REQUEST_COMPLETE);
+      shadowReadEnforcer.clear();
+
       popExecutionContext(finalTrace.traceId);
 
       return new NextResponse(JSON.stringify(result), {
@@ -391,6 +420,12 @@ export function withCanonicalEnforcement(
             statusCode: 500,
           });
           popExecutionContext(failedTrace.traceId);
+        }
+
+        // PHASE F: Clean up enforcer on error
+        if (shadowReadEnforcer) {
+          shadowReadEnforcer.setLifecycleStage(RequestLifecycleStage.REQUEST_COMPLETE);
+          shadowReadEnforcer.clear();
         }
       } catch (traceError) {
         logger.error("Trace finalization error", traceError as Error, { correlationId });

@@ -10,6 +10,7 @@ import {
 import type { CapabilityName } from "@/domain/constants/capabilities";
 import { ROLE_HIERARCHY } from "@/domain/constants/roles";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { checkShadowRead } from "@/lib/runtime-shadow-read-enforcer";
 
 /**
  * PHASE A: Auth Guard Transition (Legacy Code)
@@ -57,6 +58,9 @@ export interface AuthOptions {
  * Fails closed: null/missing session → throw.
  */
 export async function requireAuth(workspaceId: string = "system"): Promise<AuthContext> {
+  // PHASE F: Check for shadow reads after snapshot finalized
+  checkShadowRead("requireAuth");
+
   try {
     const session = await requireSession(workspaceId);
     const policy = await requirePolicyContext(workspaceId);
@@ -100,6 +104,9 @@ export async function requireAuthInternal(workspaceId: string = "system"): Promi
  * Use for optional auth endpoints.
  */
 export async function getServerAuthContext(workspaceId: string = "system"): Promise<AuthContext | null> {
+  // PHASE F: Check for shadow reads after snapshot finalized
+  checkShadowRead("getServerAuthContext");
+
   try {
     const session = await requireSession(workspaceId);
     const policy = await requirePolicyContext(workspaceId);
@@ -119,6 +126,9 @@ export async function withAuth(
   options: AuthOptions = {},
   workspaceId: string = "system"
 ): Promise<AuthContext> {
+  // PHASE F: Check for shadow reads after snapshot finalized
+  checkShadowRead("withAuth");
+
   const session = await requireSession(workspaceId);
   const policy = await requirePolicyContext(workspaceId);
 

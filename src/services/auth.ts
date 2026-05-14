@@ -6,6 +6,7 @@ import type { RoleName } from "@/domain/constants/roles";
 import { cookies } from "next/headers";
 import type { SessionFact, PolicyFact } from "@/lib/canonical-auth-facts";
 import { buildSessionFact, buildPolicyFact } from "@/lib/canonical-auth-facts";
+import { checkShadowRead } from "@/lib/runtime-shadow-read-enforcer";
 
 const SESSION_COOKIE_NAME = "opsiq_session";
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
@@ -39,6 +40,9 @@ export interface SessionInfo {
  */
 
 export async function getSession(workspaceId: string = "system"): Promise<SessionInfo | null> {
+  // PHASE F: Check for shadow reads after snapshot finalized
+  checkShadowRead("getSession");
+
   // CRITICAL: Ensure database is initialized before ANY db access
   // This prevents the db Proxy from throwing "Database not initialized" errors
   await getDbInstance();
@@ -80,6 +84,9 @@ export async function getSession(workspaceId: string = "system"): Promise<Sessio
 }
 
 export async function requireSession(workspaceId: string = "system"): Promise<SessionInfo> {
+  // PHASE F: Check for shadow reads after snapshot finalized
+  checkShadowRead("requireSession");
+
   const session = await getSession(workspaceId);
   if (!session) {
     throw new UnauthorizedError("Valid session required");
@@ -88,6 +95,9 @@ export async function requireSession(workspaceId: string = "system"): Promise<Se
 }
 
 export async function getPolicyContext(workspaceId: string = "system"): Promise<PolicyContext | null> {
+  // PHASE F: Check for shadow reads after snapshot finalized
+  checkShadowRead("getPolicyContext");
+
   // Ensure database is initialized (getSession does this too, but be explicit)
   await getDbInstance();
 
@@ -128,6 +138,9 @@ export async function getPolicyContext(workspaceId: string = "system"): Promise<
 }
 
 export async function requirePolicyContext(workspaceId: string = "system"): Promise<PolicyContext> {
+  // PHASE F: Check for shadow reads after snapshot finalized
+  checkShadowRead("requirePolicyContext");
+
   const ctx = await getPolicyContext(workspaceId);
   if (!ctx) {
     throw new UnauthorizedError("Authentication required");
