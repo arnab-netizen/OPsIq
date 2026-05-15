@@ -98,6 +98,8 @@ export const CAPABILITIES = {
   REVIEW_VIEW: "review:view",
 
   // Decisions
+  DECISION_CREATE: "decision:create",
+  DECISION_UPDATE: "decision:update",
   DECISION_ACCEPT: "decision:accept",
   DECISION_REJECT: "decision:reject",
 
