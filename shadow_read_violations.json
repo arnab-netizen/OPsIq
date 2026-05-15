@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-15T12:57:01.166Z",
+  "timestamp": "2026-05-15T13:19:51.930Z",
   "totalViolations": 450,
   "critical": 283,
   "blockBuild": 167,
@@ -428,42 +428,6 @@
       "context": "const auth = await getServerAuthContext();"
     },
     {
-      "file": "src/app/api/verify/route.ts",
-      "line": 14,
-      "column": 3,
-      "pattern": "withAuth()",
-      "severity": "CRITICAL",
-      "replacement": "ctx.verifiedSessionSnapshot",
-      "context": "await withAuth();"
-    },
-    {
-      "file": "src/app/api/verify/route.ts",
-      "line": 14,
-      "column": 9,
-      "pattern": "withAuth()",
-      "severity": "CRITICAL",
-      "replacement": "ctx.verifiedSessionSnapshot",
-      "context": "await withAuth();"
-    },
-    {
-      "file": "src/app/api/verify/route.ts",
-      "line": 3,
-      "column": 1,
-      "pattern": "auth-guard import",
-      "severity": "BLOCK_BUILD",
-      "replacement": "Remove import - use ctx.verifiedSessionSnapshot",
-      "context": "import { withAuth } from \"@/lib/auth-guard\";"
-    },
-    {
-      "file": "src/app/api/verify/route.ts",
-      "line": 3,
-      "column": 1,
-      "pattern": "withAuth import",
-      "severity": "BLOCK_BUILD",
-      "replacement": "Remove import - use ctx.verifiedSessionSnapshot",
-      "context": "import { withAuth } from \"@/lib/auth-guard\";"
-    },
-    {
       "file": "src/app/api/value/route.ts",
       "line": 24,
       "column": 23,
@@ -493,6 +457,42 @@
     {
       "file": "src/app/api/value/route.ts",
       "line": 2,
+      "column": 1,
+      "pattern": "withAuth import",
+      "severity": "BLOCK_BUILD",
+      "replacement": "Remove import - use ctx.verifiedSessionSnapshot",
+      "context": "import { withAuth } from \"@/lib/auth-guard\";"
+    },
+    {
+      "file": "src/app/api/verify/route.ts",
+      "line": 14,
+      "column": 3,
+      "pattern": "withAuth()",
+      "severity": "CRITICAL",
+      "replacement": "ctx.verifiedSessionSnapshot",
+      "context": "await withAuth();"
+    },
+    {
+      "file": "src/app/api/verify/route.ts",
+      "line": 14,
+      "column": 9,
+      "pattern": "withAuth()",
+      "severity": "CRITICAL",
+      "replacement": "ctx.verifiedSessionSnapshot",
+      "context": "await withAuth();"
+    },
+    {
+      "file": "src/app/api/verify/route.ts",
+      "line": 3,
+      "column": 1,
+      "pattern": "auth-guard import",
+      "severity": "BLOCK_BUILD",
+      "replacement": "Remove import - use ctx.verifiedSessionSnapshot",
+      "context": "import { withAuth } from \"@/lib/auth-guard\";"
+    },
+    {
+      "file": "src/app/api/verify/route.ts",
+      "line": 3,
       "column": 1,
       "pattern": "withAuth import",
       "severity": "BLOCK_BUILD",
