@@ -1,0 +1,24 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X9A",
+  "subphase": "A_SCANNER_BASELINE",
+  "audit_date": "2026-05-15",
+  "scan_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+  "baseline": {
+    "total_violations": 450,
+    "critical_violations": 283,
+    "block_build_violations": 167
+  },
+  "violation_patterns": {
+    "auth_guard_imports": "Imports from @/lib/auth-guard (withAuth, requireAuth, requireSession)",
+    "with_auth_calls": "Direct withAuth() function calls in routes/services",
+    "require_auth_calls": "Direct requireAuth() function calls",
+    "require_session_calls": "Direct requireSession() function calls",
+    "canonicalize_auth_context": "Transitional bridges using canonicalizeAuthContext()"
+  },
+  "stability": {
+    "change_from_x8a": 0,
+    "status": "STABLE"
+  },
+  "note": "Baseline stable. All 450 violations remain - X9A is audit-only, no code migration. Violations fall into contract/service/governance blockers that require design phase resolution."
+}
