@@ -1,0 +1,113 @@
+{
+  "phase": "X9C-4R",
+  "title": "Internal Caller Audit",
+  "date": "2026-05-15",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "summary": {
+    "total_internal_callers": 2,
+    "required_updates": 2,
+    "required_cause": "findings.ts signature changed from (input, CanonicalAuthContext, workspaceId) to (input, ServiceAuthEnvelope)"
+  },
+  "internal_callers": [
+    {
+      "file": "src/services/diagnosis.ts",
+      "function_name": "diagnoseBusiness",
+      "line_range": "719-727",
+      "reason_changed": "createFinding() signature changed - diagnoseBusiness calls createFinding with old signature, compilation would fail",
+      "change_type": "REQUIRED_INTERNAL_CALLER_UPDATE",
+      "required_for_x9c4": true,
+      "change_summary": "Added ServiceAuthEnvelope construction before createFinding call",
+      "code_before": "await createFinding({\n  ...\n}, authContext, validatedWorkspaceId)",
+      "code_after": "const authEnvelope: ServiceAuthEnvelope = { ... };\nawait createFinding({\n  ...\n}, authEnvelope)",
+      "envelope_construction": {
+        "source": "CanonicalAuthContext (authContext parameter to diagnoseBusiness)",
+        "fields": {
+          "verifiedActorId": "authContext.verifiedActorId",
+          "verifiedActorType": "authContext.verifiedActorType",
+          "verifiedWorkspaceId": "authContext.verifiedWorkspaceId",
+          "verifiedCapabilities": "authContext.verifiedCapabilities",
+          "hasInternalAccess": "authContext.policy ? hasInternalAccess(authContext.policy) : false",
+          "verifiedActor": "authContext.verifiedActor"
+        }
+      },
+      "envelope_construction_safe": true,
+      "fabricated_fields": [],
+      "no_weak_context_used": true,
+      "business_behavior_changed": false,
+      "business_logic_unchanged": "diagnoseBusiness logic flow preserved - only how findings are created changed, not what findings are created",
+      "pre_existing_auth_patterns": [
+        "diagnoseBusiness still uses requireServiceContext(authContext, workspaceId) for its own parameter validation"
+      ],
+      "note_on_pre_existing": "requireServiceContext import and call in diagnoseBusiness existed BEFORE X9C-4. X9C-4 did not change this. It is NOT in scope for X9C-4 as diagnosis.ts was not selected for refactor. X9C-4 only updated the createFinding call signature.",
+      "verdict": "ACCEPT",
+      "reasoning": "Required update due to findings.ts signature change. Envelope construction is safe, sourced from verified CanonicalAuthContext passed to the function. Business behavior unchanged. Can be accepted as necessary compilation fix."
+    },
+    {
+      "file": "src/services/execute.ts",
+      "function_name": "executeWorkflow",
+      "line_range": "93-101",
+      "reason_changed": "createFinding() signature changed - executeWorkflow calls createFinding with old signature, compilation would fail",
+      "change_type": "REQUIRED_INTERNAL_CALLER_UPDATE",
+      "required_for_x9c4": true,
+      "change_summary": "Added ServiceAuthEnvelope construction before createFinding call",
+      "code_before": "for (const findingTitle of input.findings) {\n  const finding = await createFinding({\n    ...\n  }, authContext, workspaceId);",
+      "code_after": "const authEnvelope: ServiceAuthEnvelope = { ... };\nfor (const findingTitle of input.findings) {\n  const finding = await createFinding({\n    ...\n  }, authEnvelope);",
+      "envelope_construction": {
+        "source": "CanonicalAuthContext (authContext parameter to executeWorkflow)",
+        "fields": {
+          "verifiedActorId": "authContext.verifiedActorId",
+          "verifiedActorType": "authContext.verifiedActorType",
+          "verifiedWorkspaceId": "authContext.verifiedWorkspaceId",
+          "verifiedCapabilities": "authContext.verifiedCapabilities",
+          "hasInternalAccess": "authContext.policy ? hasInternalAccess(authContext.policy) : false",
+          "verifiedActor": "authContext.verifiedActor"
+        }
+      },
+      "envelope_construction_safe": true,
+      "fabricated_fields": [],
+      "no_weak_context_used": true,
+      "business_behavior_changed": false,
+      "business_logic_unchanged": "executeWorkflow creates same findings with same logic - only how findings are created changed, not what or why",
+      "verdict": "ACCEPT",
+      "reasoning": "Required update due to findings.ts signature change. Envelope construction is safe, sourced from verified CanonicalAuthContext. Business behavior and output unchanged. No new auth behaviors introduced. Can be accepted as necessary compilation fix."
+    }
+  ],
+  "cross_service_pattern_analysis": {
+    "pattern": "Service-to-Service Call Pattern",
+    "route_layer_flow": "Route verifies auth → creates CanonicalAuthContext → passes to service",
+    "service_to_service_flow": "Service receives CanonicalAuthContext → constructs ServiceAuthEnvelope → passes to called service",
+    "validity_check": "Is it valid for service-to-service calls to construct envelopes from CanonicalAuthContext?",
+    "answer": "YES - The CanonicalAuthContext represents ALREADY VERIFIED auth facts from the route layer. Service-to-service calls don't introduce NEW verification; they propagate EXISTING verified facts.",
+    "safety_pattern": "Route verifies once → context flows through service call chain → all services trust verified facts"
+  },
+  "verification_results": {
+    "diagnosis_ts": {
+      "imports_added": [
+        "ServiceAuthEnvelope (type import)",
+        "hasInternalAccess (from @/policies/capability-check)"
+      ],
+      "imports_removed": [],
+      "forbidden_patterns_added": false,
+      "canonicalization_added": false,
+      "capability_fabrication": false,
+      "envelope_only_from_verified_context": true
+    },
+    "execute_ts": {
+      "imports_added": [
+        "ServiceAuthEnvelope (type import)",
+        "hasInternalAccess (from @/policies/capability-check)"
+      ],
+      "imports_removed": [],
+      "forbidden_patterns_added": false,
+      "canonicalization_added": false,
+      "capability_fabrication": false,
+      "envelope_only_from_verified_context": true
+    }
+  },
+  "audit_result": "PASS",
+  "final_verdict": {
+    "diagnosis_ts": "ACCEPT - Required update, safe envelope construction, business logic preserved",
+    "execute_ts": "ACCEPT - Required update, safe envelope construction, business logic preserved",
+    "overall": "X9C-4R INTERNAL CALLER AUDIT: ✓✓✓ PASS"
+  }
+}
