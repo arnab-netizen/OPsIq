@@ -152,12 +152,13 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Create package
   const exportPackage = createExportPackage(exportedData);
 
-    return Response.json({
-      success: true,
-      exportId: `export_${Date.now()}`,
-      format,
-      fileName: exportPackage.fileName,
-      createdAt: new Date().toISOString(),
-      downloadUrl: `/api/export/download?id=export_${Date.now()}`,
-    });
+  // Return response
+  return {
+    success: true,
+    exportId: `export_${Date.now()}`,
+    format,
+    fileName: exportPackage.fileName,
+    createdAt: new Date().toISOString(),
+    downloadUrl: `/api/export/download?id=export_${Date.now()}`,
+  };
 });
