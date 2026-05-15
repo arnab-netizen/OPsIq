@@ -1,7 +1,8 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext, ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createDeliverable, getDeliverablesForEngagement } from "@/services/deliverable";
@@ -84,7 +85,15 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     "deliverable.create",
     async () => {
       const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-      return createDeliverable(body, canonicalContext, workspaceId);
+      const authEnvelope: ServiceAuthEnvelope = {
+        verifiedActorId: canonicalContext.verifiedActorId,
+        verifiedActorType: canonicalContext.verifiedActorType,
+        verifiedWorkspaceId: canonicalContext.verifiedWorkspaceId,
+        verifiedCapabilities: canonicalContext.verifiedCapabilities,
+        hasInternalAccess: authContext.policy ? hasInternalAccess(authContext.policy) : false,
+        verifiedActor: canonicalContext.verifiedActor,
+      };
+      return createDeliverable(body, authEnvelope);
     },
     body,
     authContext.session.user.id
