@@ -1,10 +1,5 @@
-import { NextRequest } from "next/server";
-import { UnauthorizedError } from "@/infra/errors";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { checkWorkspaceRateLimit } from "@/middleware/rate-limit";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createAction, listActions } from "@/services/action";
@@ -33,59 +28,6 @@ const listActionsSchema = paginationSchema.extend({
   assignedTo: z.string().uuid().optional(),
 });
 
-const handlePost = async (request: NextRequest) => {
-  // Authenticate + authorize (fail-closed)
-  // Database initialization is guaranteed by auth middleware
-  const authContext = await withAuth({
-    capability: CAPABILITIES.ACTION_CREATE,
-    internalOnly: true,
-  });
-
-  // Validate workspace membership (fail-closed)
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
-
-  // Require Idempotency-Key (fail-closed)
-  const idempotencyKey = request.headers.get("Idempotency-Key");
-  if (!idempotencyKey) {
-    throw new Error("Idempotency-Key header required");
-  }
-
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new UnauthorizedError("Unauthorized");
-  }
-
-  // Check rate limiting: workspace requests/hour limit
-  const tier: SubscriptionTier = (request.headers.get("x-tier") as SubscriptionTier) || "free";
-  const rateLimit = checkWorkspaceRateLimit(workspaceId, tier);
-  if (!rateLimit.allowed) {
-    const config = getTierConfig(tier);
-    throw new Error(`Rate limit exceeded: ${config.limits.requestsPerHour} requests/hour`);
-  }
-
-  // Check capability: action_create
-  const capabilityCheck = await assertCapability(workspaceId, "action_create");
-  if (!capabilityCheck.allowed) {
-    throw new PlanLimitError("action_create", capabilityCheck.reason || "Plan limit exceeded");
-  }
-
-  const body = await parseRequestBody(request, createActionSchema);
-
-  const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-  const { isNew, result } = await withIdempotency(
-    idempotencyKey,
-    "action.create",
-    async () => createAction(body, canonicalContext, workspaceId),
-    body,
-    authContext.session.user.id
-  );
-
-  return result;
-};
-
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
@@ -95,4 +37,42 @@ export const GET = withCanonicalEnforcement(
   },
   { requireWorkspace: true, requireCapabilities: ['ACTION_VIEW'] }
 );
-export const POST = withEnforcementFull(handlePost);
+
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+
+    // Require Idempotency-Key (fail-closed)
+    const idempotencyKey = ctx.request?.headers.get("Idempotency-Key");
+    if (!idempotencyKey) {
+      throw new Error("Idempotency-Key header required");
+    }
+
+    // Check rate limiting: workspace requests/hour limit
+    const tier: SubscriptionTier = (ctx.request?.headers.get("x-tier") as SubscriptionTier) || "free";
+    const rateLimit = checkWorkspaceRateLimit(workspaceId, tier);
+    if (!rateLimit.allowed) {
+      const config = getTierConfig(tier);
+      throw new Error(`Rate limit exceeded: ${config.limits.requestsPerHour} requests/hour`);
+    }
+
+    // Check capability: action_create
+    const capabilityCheck = await assertCapability(workspaceId, "action_create");
+    if (!capabilityCheck.allowed) {
+      throw new PlanLimitError("action_create", capabilityCheck.reason || "Plan limit exceeded");
+    }
+
+    const body = await parseRequestBody(ctx.request!, createActionSchema);
+
+    const { isNew, result } = await withIdempotency(
+      idempotencyKey,
+      "action.create",
+      async () => createAction(body, ctx, workspaceId),
+      body,
+      ctx.verifiedActorId
+    );
+
+    return result;
+  },
+  { requireCapabilities: ["ACTION_CREATE"], requireWorkspace: true }
+);

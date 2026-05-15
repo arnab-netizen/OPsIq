@@ -1,16 +1,12 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createLead, listLeads } from "@/services/lead";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { UnauthorizedError } from "@/infra/errors";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
-import type { NextRequest } from "next/server";
 
 const createLeadSchema = z.object({
   companyName: z.string().min(1),
@@ -38,50 +34,38 @@ export const GET = withCanonicalEnforcement(
   { requireWorkspace: true, requireCapabilities: ['LEAD_VIEW'] }
 );
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate + authorize (fail-closed)
-  const authContext = await withAuth({
-    capability: CAPABILITIES.LEAD_CREATE,
-    internalOnly: true,
-  });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Validate workspace membership (fail-closed)
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new UnauthorizedError("Workspace ID required (x-workspace-id header)");
-  }
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new UnauthorizedError("idempotency-key header required");
+    }
 
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+    const body = await parseRequestBody(ctx.request!, createLeadSchema);
 
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    throw new UnauthorizedError("idempotency-key header required");
-  }
+    // Check idempotency
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "createLead",
+      actorId: ctx.verifiedActorId,
+      payload: body,
+    });
 
-  const body = await parseRequestBody(request, createLeadSchema);
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
 
-  // Check idempotency
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "createLead",
-    actorId: authContext.session.user.id,
-    payload: body,
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return idempotencyCheck.cachedResponse.body;
-  }
-
-  try {
-    const result = await createLead(body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
-    await recordIdempotencyResponse(idempotencyKey, 201, result);
-    return result;
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    throw error;
-  }
-});
+    try {
+      const result = await createLead(body, ctx, workspaceId);
+      await recordIdempotencyResponse(idempotencyKey, 201, result);
+      return result;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
+    }
+  },
+  { requireCapabilities: ["LEAD_CREATE"], requireWorkspace: true }
+);
