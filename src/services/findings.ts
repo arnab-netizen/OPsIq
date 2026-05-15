@@ -1,10 +1,9 @@
 import { db } from "@/lib/db";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import type { ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError, ValidationError } from "@/infra/errors";
+import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
-import { requireCapabilityForService } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   FINDING_STATUSES,
@@ -13,7 +12,6 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import { withIdempotency } from "@/infra/idempotency";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
-import { requireServiceContext } from "@/lib/service-auth";
 import type {
   FindingStatus,
 } from "@/domain/constants/statuses";
@@ -56,18 +54,15 @@ export interface LinkEvidenceToFindingInput {
 
 export async function createFinding(
   input: CreateFindingInput,
-  authContext: CanonicalAuthContext,
-  workspaceId: string
+  auth: ServiceAuthEnvelope
 ): Promise<{ id: string; engagementId: string }> {
-  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
-
   // Map backward compatibility fields
   const summary = input.summary || input.description || input.statement || "";
   const primaryEvidenceId = input.primaryEvidenceId || (input.linkedEvidenceIds?.[0]) || null;
 
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId, workspaceId: validatedWorkspaceId },
+    where: { id: input.engagementId, workspaceId: auth.verifiedWorkspaceId },
     select: { id: true },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
@@ -115,8 +110,8 @@ export async function createFinding(
       severity: input.severity,
       rootCause: input.rootCause || null,
       linkedEvidence: primaryEvidenceId ? [primaryEvidenceId] : [],
-      createdBy: userId,
-      workspaceId: validatedWorkspaceId,
+      createdBy: auth.verifiedActorId,
+      workspaceId: auth.verifiedWorkspaceId,
     },
     select: { id: true, engagementId: true },
   });
@@ -124,10 +119,10 @@ export async function createFinding(
   // Emit audit event as side effect
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_CREATED,
-    actorId: userId,
+    actorId: auth.verifiedActorId,
     entityType: "Finding",
     entityId: finding.id,
-    workspaceId: validatedWorkspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       engagementId: input.engagementId,
       severity: input.severity,
@@ -141,10 +136,10 @@ export async function createFinding(
     entityType: "Finding",
     entityId: finding.id,
     engagementId: input.engagementId,
-    workspaceId: validatedWorkspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     severity: (input.severity === "critical" ? "critical" : input.severity === "high" ? "high" : "medium") as "low" | "medium" | "high" | "critical",
     description: `Finding created: ${input.title}`,
-    triggeredBy: userId,
+    triggeredBy: auth.verifiedActorId,
   });
 
   return finding;
@@ -153,14 +148,11 @@ export async function createFinding(
 export async function updateFinding(
   findingId: string,
   input: UpdateFindingInput,
-  authContext: CanonicalAuthContext,
-  workspaceId: string
+  auth: ServiceAuthEnvelope
 ): Promise<{ id: string }> {
-  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
-
   // Validate finding exists and check version
   const existing = await db.finding.findUnique({
-    where: { id: findingId, workspaceId: validatedWorkspaceId },
+    where: { id: findingId, workspaceId: auth.verifiedWorkspaceId },
     select: { id: true, engagementId: true, version: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
@@ -202,17 +194,17 @@ export async function updateFinding(
   data.version = existing.version + 1;
 
   const updated = await db.finding.update({
-    where: { id: findingId, workspaceId: validatedWorkspaceId },
+    where: { id: findingId, workspaceId: auth.verifiedWorkspaceId },
     data,
     select: { id: true, engagementId: true },
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_UPDATED,
-    actorId: userId,
+    actorId: auth.verifiedActorId,
     entityType: "Finding",
     entityId: findingId,
-    workspaceId: validatedWorkspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       engagementId: updated.engagementId,
       severity: input.severity,
@@ -230,10 +222,10 @@ export async function updateFinding(
     entityType: "Finding",
     entityId: findingId,
     engagementId: existing.engagementId,
-    workspaceId: validatedWorkspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     severity: updateSeverity as "low" | "medium" | "high" | "critical",
     description: `Finding updated: ${input.title || "finding"}`,
-    triggeredBy: userId,
+    triggeredBy: auth.verifiedActorId,
   });
 
   return { id: updated.id };
@@ -241,20 +233,18 @@ export async function updateFinding(
 
 export async function validateFinding(
   findingId: string,
-  authContext: CanonicalAuthContext,
-  workspaceId: string = "unknown"
+  auth: ServiceAuthEnvelope
 ): Promise<{ id: string }> {
-  requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
-
-  const actorId = authContext.verifiedActorId;
+  // Validate capability
+  if (!auth.verifiedCapabilities.has(CAPABILITIES.FINDING_VALIDATE)) {
+    throw new ForbiddenError(`${CAPABILITIES.FINDING_VALIDATE} capability required`);
+  }
 
   const existing = await db.finding.findUnique({
-    where: { id: findingId, engagement: { workspaceId } },
+    where: { id: findingId, engagement: { workspaceId: auth.verifiedWorkspaceId } },
     select: { id: true, engagementId: true, linkedEvidence: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
-
-  const validatedWorkspaceId = workspaceId;
 
   if (existing.linkedEvidence && existing.linkedEvidence.length === 0) {
     throw new ValidationError("Finding must have at least one linked evidence before validation");
@@ -268,10 +258,10 @@ export async function validateFinding(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_VALIDATED,
-    actorId,
+    actorId: auth.verifiedActorId,
     entityType: "Finding",
     entityId: findingId,
-    workspaceId: validatedWorkspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       engagementId: existing.engagementId,
     },
@@ -284,10 +274,10 @@ export async function validateFinding(
     entityType: "Finding",
     entityId: findingId,
     engagementId: existing.engagementId,
-    workspaceId: validatedWorkspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     severity: "high",
     description: "Finding validated",
-    triggeredBy: actorId,
+    triggeredBy: auth.verifiedActorId,
   });
 
   return { id: existing.id };
@@ -295,16 +285,15 @@ export async function validateFinding(
 
 export async function disputeFinding(
   findingId: string,
-  authContext: CanonicalAuthContext,
-  workspaceId: string = "unknown"
+  auth: ServiceAuthEnvelope
 ): Promise<{ id: string }> {
-  requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
-
-  const actorId = authContext.verifiedActorId;
-  const validatedWorkspaceId = workspaceId;
+  // Validate capability
+  if (!auth.verifiedCapabilities.has(CAPABILITIES.FINDING_VALIDATE)) {
+    throw new ForbiddenError(`${CAPABILITIES.FINDING_VALIDATE} capability required`);
+  }
 
   const existing = await db.finding.findUnique({
-    where: { id: findingId, engagement: { workspaceId } },
+    where: { id: findingId, engagement: { workspaceId: auth.verifiedWorkspaceId } },
     select: { id: true, engagementId: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
@@ -317,10 +306,10 @@ export async function disputeFinding(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_DISPUTED,
-    actorId,
+    actorId: auth.verifiedActorId,
     entityType: "Finding",
     entityId: findingId,
-    workspaceId: validatedWorkspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       engagementId: existing.engagementId,
     },
@@ -332,18 +321,18 @@ export async function disputeFinding(
 export async function supersedeFinding(
   oldFindingId: string,
   newFindingInput: CreateFindingInput,
-  authContext: CanonicalAuthContext,
-  workspaceId: string
+  auth: ServiceAuthEnvelope
 ): Promise<{ id: string; supersededFindingId: string }> {
-  requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE);
-
-  const actorId = authContext.verifiedActorId;
+  // Validate capability
+  if (!auth.verifiedCapabilities.has(CAPABILITIES.FINDING_VALIDATE)) {
+    throw new ForbiddenError(`${CAPABILITIES.FINDING_VALIDATE} capability required`);
+  }
 
   // Validate old finding exists with workspace scope
   const oldFinding = await db.finding.findFirst({
     where: {
       id: oldFindingId,
-      engagement: { workspaceId },
+      engagement: { workspaceId: auth.verifiedWorkspaceId },
     },
     select: { id: true, engagementId: true },
   });
@@ -361,8 +350,8 @@ export async function supersedeFinding(
       severity: newFindingInput.severity,
       rootCause: newFindingInput.rootCause || null,
       linkedEvidence: newFindingInput.primaryEvidenceId || null,
-      createdBy: actorId,
-      workspaceId,
+      createdBy: auth.verifiedActorId,
+      workspaceId: auth.verifiedWorkspaceId,
     },
     select: { id: true, engagementId: true },
   });
@@ -375,10 +364,10 @@ export async function supersedeFinding(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_SUPERSEDED,
-    actorId,
+    actorId: auth.verifiedActorId,
     entityType: "Finding",
     entityId: newFinding.id,
-    workspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       engagementId: newFinding.engagementId,
       supersedes: oldFindingId,
@@ -391,33 +380,28 @@ export async function supersedeFinding(
 export async function linkEvidenceToFinding(
   findingId: string,
   evidenceId: string,
-  linkTypeOrAuthContext: string | any,
-  maybeAuthContext?: any,
-  workspaceId?: string
+  authOrLinkType: ServiceAuthEnvelope | string,
+  maybeAuth?: ServiceAuthEnvelope
 ): Promise<{ id?: string; findingId: string; evidenceId: string }> {
   // Handle both calling conventions
   let linkType: string | undefined;
-  let authContext: CanonicalAuthContext;
+  let auth: ServiceAuthEnvelope;
 
-  if (maybeAuthContext) {
-    // New signature: linkEvidenceToFinding(findingId, evidenceId, linkType, authContext)
-    linkType = linkTypeOrAuthContext as string;
-    authContext = maybeAuthContext;
+  if (typeof authOrLinkType === "string" && maybeAuth) {
+    // New signature: linkEvidenceToFinding(findingId, evidenceId, linkType, auth)
+    linkType = authOrLinkType;
+    auth = maybeAuth;
+  } else if (typeof authOrLinkType === "object") {
+    // Signature: linkEvidenceToFinding(findingId, evidenceId, auth)
+    auth = authOrLinkType as ServiceAuthEnvelope;
   } else {
-    // Old signature: linkEvidenceToFinding(findingId, evidenceId, authContext)
-    authContext = linkTypeOrAuthContext as any;
-  }
-
-  const actorId = authContext.verifiedActorId;
-
-  if (!workspaceId) {
-    throw new Error("workspaceId is required for workspace isolation");
+    throw new Error("Invalid arguments to linkEvidenceToFinding");
   }
 
   const finding = await db.finding.findFirst({
     where: {
       id: findingId,
-      engagement: { workspaceId },
+      engagement: { workspaceId: auth.verifiedWorkspaceId },
     },
     select: { id: true, engagementId: true, linkedEvidence: true },
   });
@@ -426,7 +410,7 @@ export async function linkEvidenceToFinding(
   const evidence = await db.evidence.findFirst({
     where: {
       id: evidenceId,
-      engagement: { workspaceId },
+      engagement: { workspaceId: auth.verifiedWorkspaceId },
     },
     select: { id: true, engagementId: true, status: true, relatedFindingId: true },
   });
@@ -469,10 +453,10 @@ export async function linkEvidenceToFinding(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_EVIDENCE_LINKED,
-    actorId,
+    actorId: auth.verifiedActorId,
     entityType: "Finding",
     entityId: findingId,
-    workspaceId: evidence.workspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       findingId,
       evidenceId,
@@ -487,19 +471,12 @@ export async function linkEvidenceToFinding(
 export async function unlinkEvidenceFromFinding(
   findingId: string,
   evidenceId: string,
-  authContext: CanonicalAuthContext,
-  workspaceId?: string
+  auth: ServiceAuthEnvelope
 ): Promise<{ findingId: string; evidenceId: string }> {
-  const actorId = authContext.verifiedActorId;
-
-  if (!workspaceId) {
-    throw new Error("workspaceId is required for workspace isolation");
-  }
-
   const finding = await db.finding.findFirst({
     where: {
       id: findingId,
-      engagement: { workspaceId },
+      engagement: { workspaceId: auth.verifiedWorkspaceId },
     },
     select: { id: true, engagementId: true, linkedEvidence: true },
   });
@@ -508,10 +485,10 @@ export async function unlinkEvidenceFromFinding(
   const evidence = await db.evidence.findFirst({
     where: {
       id: evidenceId,
-      engagement: { workspaceId },
+      engagement: { workspaceId: auth.verifiedWorkspaceId },
     },
-      select: { id: true, engagementId: true, relatedFindingId: true },
-    });
+    select: { id: true, engagementId: true, relatedFindingId: true },
+  });
   if (!evidence) throw new NotFoundError("Evidence", evidenceId);
 
   if (finding.engagementId !== evidence.engagementId) {
@@ -541,10 +518,10 @@ export async function unlinkEvidenceFromFinding(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.FINDING_EVIDENCE_UNLINKED,
-    actorId,
+    actorId: auth.verifiedActorId,
     entityType: "Finding",
     entityId: findingId,
-    workspaceId: evidence.workspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       findingId,
       evidenceId,

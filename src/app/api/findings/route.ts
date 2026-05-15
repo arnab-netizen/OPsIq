@@ -3,6 +3,8 @@ import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createFinding } from "@/services/findings";
+import type { ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
@@ -85,7 +87,16 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   }
 
   try {
-    const result = await createFinding(body, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
+    const canonicalCtx = canonicalizeAuthContext({ session, policy }, workspaceId);
+    const authEnvelope: ServiceAuthEnvelope = {
+      verifiedActorId: canonicalCtx.verifiedActorId,
+      verifiedActorType: canonicalCtx.verifiedActorType,
+      verifiedWorkspaceId: canonicalCtx.verifiedWorkspaceId,
+      verifiedCapabilities: canonicalCtx.verifiedCapabilities,
+      hasInternalAccess: policy ? hasInternalAccess(policy) : false,
+      verifiedActor: canonicalCtx.verifiedActor,
+    };
+    const result = await createFinding(body, authEnvelope);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
     return Response.json(result, { status: 201 });
   } catch (error) {

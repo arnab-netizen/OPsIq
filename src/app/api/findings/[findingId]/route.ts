@@ -1,6 +1,7 @@
-import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext, type ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import type { NextRequest } from "next/server";
 import { ForbiddenError } from "@/infra/errors";
@@ -70,7 +71,16 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, findingId);
 
   const body = await parseRequestBody(request, updateFindingSchema);
-  await updateFinding(findingId, body, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
+  const canonicalCtx = canonicalizeAuthContext({ session, policy }, workspaceId);
+  const authEnvelope: ServiceAuthEnvelope = {
+    verifiedActorId: canonicalCtx.verifiedActorId,
+    verifiedActorType: canonicalCtx.verifiedActorType,
+    verifiedWorkspaceId: canonicalCtx.verifiedWorkspaceId,
+    verifiedCapabilities: canonicalCtx.verifiedCapabilities,
+    hasInternalAccess: policy ? hasInternalAccess(policy) : false,
+    verifiedActor: canonicalCtx.verifiedActor,
+  };
+  await updateFinding(findingId, body, authEnvelope);
 
   const updated = await getFindingDetail(findingId, undefined, undefined, workspaceId);
   return Response.json(updated);

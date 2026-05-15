@@ -90,6 +90,34 @@ export interface CanonicalAuthContext {
 }
 
 /**
+ * Service Auth Envelope: Minimal verified auth data for service layer
+ *
+ * Services receive ONLY verified decisions from routes/wrappers.
+ * All fields are readonly to prevent mutation.
+ * Services must never construct or modify this object.
+ *
+ * Pattern: Route creates envelope from CanonicalAuthContext and passes to service.
+ * Service reads fields for business decisions.
+ * Service NEVER calls auth functions or re-verifies auth.
+ */
+export interface ServiceAuthEnvelope {
+  // Mandatory: Core verified identity and scope
+  readonly verifiedActorId: string;
+  readonly verifiedActorType: "user" | "service";
+  readonly verifiedWorkspaceId: string;
+
+  // Mandatory: Verified capability decision
+  readonly verifiedCapabilities: ReadonlySet<string>;
+  readonly hasInternalAccess: boolean;
+
+  // Optional: Actor details for complex cases
+  readonly verifiedActor?: Readonly<AuthenticatedUser>;
+
+  // Optional: Policy context for policy-aware services ONLY
+  readonly policy?: Readonly<PolicyContext>;
+}
+
+/**
  * Route handler signature
  *
  * Handler receives verified context, never auth data.

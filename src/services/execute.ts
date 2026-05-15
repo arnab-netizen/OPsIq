@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext, ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { createClient } from "@/services/client-account";
 import { createEngagement } from "@/services/engagement";
 import { createFinding } from "@/services/findings";
@@ -88,6 +89,16 @@ export async function executeWorkflow(
   );
 
   // 3. Create findings
+  // Construct ServiceAuthEnvelope for service calls
+  const authEnvelope: ServiceAuthEnvelope = {
+    verifiedActorId: authContext.verifiedActorId,
+    verifiedActorType: authContext.verifiedActorType,
+    verifiedWorkspaceId: authContext.verifiedWorkspaceId,
+    verifiedCapabilities: authContext.verifiedCapabilities,
+    hasInternalAccess: authContext.policy ? hasInternalAccess(authContext.policy) : false,
+    verifiedActor: authContext.verifiedActor,
+  };
+
   const createdFindings = [];
   for (const findingTitle of input.findings) {
     logger.info("Creating finding", { title: findingTitle });
@@ -99,8 +110,7 @@ export async function executeWorkflow(
         severity: input.priority === "critical" ? "critical" : input.priority === "high" ? "high" : "medium",
         impactArea: "execution",
       },
-      authContext,
-      workspaceId
+      authEnvelope
     );
     createdFindings.push(finding);
   }

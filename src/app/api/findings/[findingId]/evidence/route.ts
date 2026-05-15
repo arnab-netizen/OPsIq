@@ -2,6 +2,8 @@ import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { linkEvidenceToFinding, unlinkEvidenceFromFinding } from "@/services/findings";
+import type { ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
@@ -51,7 +53,16 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   }
 
   try {
-    const result = await linkEvidenceToFinding(findingId, body.evidenceId, canonicalizeAuthContext({ session, policy }, workspaceId), undefined, workspaceId);
+    const canonicalCtx = canonicalizeAuthContext({ session, policy }, workspaceId);
+    const authEnvelope: ServiceAuthEnvelope = {
+      verifiedActorId: canonicalCtx.verifiedActorId,
+      verifiedActorType: canonicalCtx.verifiedActorType,
+      verifiedWorkspaceId: canonicalCtx.verifiedWorkspaceId,
+      verifiedCapabilities: canonicalCtx.verifiedCapabilities,
+      hasInternalAccess: policy ? hasInternalAccess(policy) : false,
+      verifiedActor: canonicalCtx.verifiedActor,
+    };
+    const result = await linkEvidenceToFinding(findingId, body.evidenceId, authEnvelope);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
     return Response.json(result, { status: 201 });
   } catch (error) {
@@ -74,7 +85,16 @@ export const DELETE = withEnforcementFull(async (request, context, params) => {
   }, workspaceId);
 
   const body = await parseRequestBody(request, unlinkEvidenceSchema);
-  const result = await unlinkEvidenceFromFinding(findingId, body.evidenceId, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
+  const canonicalCtx = canonicalizeAuthContext({ session, policy }, workspaceId);
+  const authEnvelope: ServiceAuthEnvelope = {
+    verifiedActorId: canonicalCtx.verifiedActorId,
+    verifiedActorType: canonicalCtx.verifiedActorType,
+    verifiedWorkspaceId: canonicalCtx.verifiedWorkspaceId,
+    verifiedCapabilities: canonicalCtx.verifiedCapabilities,
+    hasInternalAccess: policy ? hasInternalAccess(policy) : false,
+    verifiedActor: canonicalCtx.verifiedActor,
+  };
+  const result = await unlinkEvidenceFromFinding(findingId, body.evidenceId, authEnvelope);
 
   return Response.json(result, { status: 200 });
 });

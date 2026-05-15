@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext, ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -715,6 +716,16 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
   // Use the verified auth context passed to diagnose function
   await assessCondition(conditionInput, authContext);
 
+  // Construct ServiceAuthEnvelope for service calls
+  const authEnvelope: ServiceAuthEnvelope = {
+    verifiedActorId: authContext.verifiedActorId,
+    verifiedActorType: authContext.verifiedActorType,
+    verifiedWorkspaceId: authContext.verifiedWorkspaceId,
+    verifiedCapabilities: authContext.verifiedCapabilities,
+    hasInternalAccess: authContext.policy ? hasInternalAccess(authContext.policy) : false,
+    verifiedActor: authContext.verifiedActor,
+  };
+
   const createdFindings = await Promise.all(
     findingsData.map((f) =>
       createFinding(
@@ -732,8 +743,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
                 : "execution",
           findingType: "operational",
         },
-        authContext,
-        validatedWorkspaceId
+        authEnvelope
       )
     )
   );
