@@ -1,0 +1,65 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X3A-R",
+  "subphase": "E_VERIFY_X3A_PILOT_CLEANLINESS",
+  "reaudit_date": "2026-05-15",
+  "x3a_handlers": [
+    {
+      "file": "src/app/api/actions/route.ts",
+      "method": "POST",
+      "exact_required_capability": "ACTION_CREATE",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement(..., { requireCapabilities: ['ACTION_CREATE'], requireWorkspace: true })",
+      "quarantined_bridge_removed": true,
+      "bridge_was": "canonicalizeAuthContext(authContext, workspaceId) at line 77",
+      "bridge_now": "Removed - ctx passed directly to createAction(body, ctx, workspaceId)",
+      "scanner_clean": true,
+      "mutation_semantics_preserved": true,
+      "idempotency_preserved": true,
+      "audit_preserved": true,
+      "notes": "Action create operation. Idempotency via withIdempotency(). Audit event 'action.create' preserved. Handler compiles cleanly."
+    },
+    {
+      "file": "src/app/api/clients/route.ts",
+      "method": "POST",
+      "exact_required_capability": "CLIENT_CREATE",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement(..., { requireCapabilities: ['CLIENT_CREATE'], requireWorkspace: true })",
+      "quarantined_bridge_removed": true,
+      "bridge_was": "canonicalizeAuthContext({session, policy}, workspaceId) at line 79",
+      "bridge_now": "Removed - ctx passed directly to createClient(body, ctx, workspaceId)",
+      "scanner_clean": true,
+      "mutation_semantics_preserved": true,
+      "idempotency_preserved": true,
+      "audit_preserved": true,
+      "notes": "Client create operation. Idempotency via checkIdempotencyKey(). Audit via recordIdempotencyResponse(). Handler compiles cleanly."
+    },
+    {
+      "file": "src/app/api/leads/route.ts",
+      "method": "POST",
+      "exact_required_capability": "LEAD_CREATE",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement(..., { requireCapabilities: ['LEAD_CREATE'], requireWorkspace: true })",
+      "quarantined_bridge_removed": true,
+      "bridge_was": "canonicalizeAuthContext(authContext, workspaceId) at line 79",
+      "bridge_now": "Removed - ctx passed directly to createLead(body, ctx, workspaceId)",
+      "scanner_clean": true,
+      "mutation_semantics_preserved": true,
+      "idempotency_preserved": true,
+      "audit_preserved": true,
+      "notes": "Lead create operation. Idempotency via checkIdempotencyKey(). Audit via recordIdempotencyResponse(). Handler compiles cleanly."
+    }
+  ],
+  "summary": {
+    "total_x3a_handlers": 3,
+    "still_canonical": 3,
+    "regressed": 0,
+    "all_clean": true,
+    "all_migrated": true,
+    "wrapper_pattern_consistency": "100% - All use withCanonicalEnforcement",
+    "quarantined_bridges_removed": 3,
+    "new_bridges_added": 0,
+    "mutation_semantics_preserved_all": true,
+    "audit_conclusion": "ALL 3 X3A PILOT HANDLERS VERIFIED CLEAN. No regressions detected. All quarantined bridges properly removed. All mutation semantics preserved."
+  }
+}

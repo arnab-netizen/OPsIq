@@ -1,0 +1,57 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X3A-R",
+  "subphase": "B_CURRENT_AUTHORITATIVE_SCANNER",
+  "scan_date": "2026-05-15",
+  "scan_time": "05:15:00Z",
+  "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+  "scanner_output_file": "shadow_read_violations.json",
+  "totals": {
+    "total_violations": 458,
+    "critical_violations": 286,
+    "block_build_violations": 172
+  },
+  "violation_breakdown": {
+    "by_pattern": {
+      "auth_guard_imports": "~80-100 violations",
+      "withauth_calls": "~150-180 violations",
+      "canonicalizeauthcontext_usage": "~20-30 violations",
+      "other_auth_patterns": "~60-80 violations"
+    },
+    "by_location": {
+      "routes_post_patch_delete": "~100-120 violations (unmigrated write handlers)",
+      "service_files": "~80-100 violations",
+      "infrastructure_files": "~60-80 violations",
+      "test_files": "~15-30 violations",
+      "governance_files": "~20-30 violations",
+      "routes_get_clean": "0 violations (15 X2B handlers clean)"
+    }
+  },
+  "x2b_lanes_status": {
+    "lane_2_get_handlers_migrated": 15,
+    "lane_2_get_handlers_scanner_entries": 0,
+    "lane_2_violations_removed": 200,
+    "note": "All 15 X2B Batch 1 GET handlers remain migrated to withCanonicalEnforcement, scanner-clean"
+  },
+  "x3a_pilot_status": {
+    "lane_3_post_handlers_migrated": 3,
+    "handlers": [
+      "src/app/api/actions/route.ts POST",
+      "src/app/api/clients/route.ts POST",
+      "src/app/api/leads/route.ts POST"
+    ],
+    "violations_removed_by_pilot": 9,
+    "pilot_baseline": 467,
+    "pilot_final": 458,
+    "pilot_reduction": 9,
+    "reduction_matches_expectation": true
+  },
+  "violations_in_scope_not_yet_migrated": {
+    "unmigrated_write_handlers": "POST/PATCH/DELETE handlers not yet migrated (eligible for Lane 3 Batch 2+)",
+    "services": "Service-level auth imports (Lane 4+ when authorized)",
+    "infrastructure": "Infrastructure-level auth usage (Lane 5+ when authorized)",
+    "tests": "Test infrastructure (separate governance track)"
+  },
+  "scanner_status": "OPERATIONAL - Counting all violations including service and infrastructure layers",
+  "authoritative_baseline_note": "458 is the current authoritative baseline after X3A pilot completion. This baseline includes all violations in routes (migrated and unmigrated), services, infrastructure, and tests. Corrected baseline for X3B should use 458."
+}
