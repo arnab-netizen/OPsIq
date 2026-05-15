@@ -1,0 +1,61 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X5B",
+  "subphase": "C_CHECKPOINT_2",
+  "handler_number": 2,
+  "checkpoint_date": "2026-05-15",
+  "handler": {
+    "file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+    "method": "POST",
+    "exact_required_capability": "DECISION_ACCEPT",
+    "migration_status": "COMPLETE"
+  },
+  "build_validation": {
+    "command": "npm run build",
+    "result": "PASS",
+    "errors": 0,
+    "warnings": 0
+  },
+  "test_validation": {
+    "g6r_auth_bridge": "PASS (14/14)",
+    "phase_d_e_f": "PASS (324/324)",
+    "total_tests": 338,
+    "total_passed": 338,
+    "total_failed": 0
+  },
+  "scanner_validation": {
+    "before_total": 454,
+    "after_total": 453,
+    "actual_reduction": 1,
+    "expected_reduction": 1,
+    "reduction_matched": true,
+    "before_critical": 284,
+    "after_critical": 284,
+    "critical_unchanged": true,
+    "before_block_build": 170,
+    "after_block_build": 169,
+    "block_build_reduction": 1
+  },
+  "cumulative_reduction": {
+    "baseline_before_x5b": 455,
+    "baseline_after_handler_1": 454,
+    "baseline_after_handler_2": 453,
+    "total_reduction": 2,
+    "expected_total": 2,
+    "met_expectation": true
+  },
+  "migration_details": {
+    "removed_imports": ["withEnforcementFull", "requireAuthForCapability", "enforceWorkspaceScoping", "UnauthorizedError", "ValidationError", "NotFoundError", "ForbiddenError", "NextRequest"],
+    "added_imports": ["withCanonicalEnforcement", "CanonicalAuthContext"],
+    "signature_changed": true,
+    "workspace_handling": "implicit in ctx.verifiedWorkspaceId",
+    "capability_enforcement": "moved to wrapper requireCapabilities option",
+    "auth_context_replaced": "auth.session.user.id -> ctx.verifiedActorId",
+    "service_calls_preserved": true,
+    "audit_logging_preserved": true
+  },
+  "handler_scanner_clean": true,
+  "mutation_semantics_preserved": true,
+  "ready_for_final_snapshot": true,
+  "notes": "Handler 2 migration successful. All tests pass. Scanner shows expected 1-violation reduction. Total reduction for X5B: 2 violations (from 455 to 453). Both handlers complete. Ready for final validation."
+}

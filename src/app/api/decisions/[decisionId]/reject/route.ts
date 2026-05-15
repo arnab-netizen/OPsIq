@@ -1,12 +1,7 @@
-import { NextRequest } from "next/server";
-import { UnauthorizedError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { requireAuthForCapability } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { rejectDecision } from "@/services/decision-validation/decision-acceptance.service";
-import { ValidationError, NotFoundError, ForbiddenError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { z } from "zod";
 
 const RejectDecisionSchema = z.object({
@@ -14,27 +9,13 @@ const RejectDecisionSchema = z.object({
   reason: z.string().min(10, "Rejection reason must be at least 10 characters"),
 });
 
-export const POST = withEnforcementFull(
-  async (request: NextRequest, ctx, params) => {
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params) => {
     const decisionId = params.decisionId;
-
-    // Extract workspace from header
-    const workspaceId = request.headers.get("x-workspace-id");
-    if (!workspaceId) {
-      throw new Error("Workspace ID required (x-workspace-id header)");
-    }
-
-    // Enforce workspace membership
-    const membership = await enforceWorkspaceScoping(request, workspaceId);
-    if (!membership) {
-      throw new UnauthorizedError("Unauthorized");
-    }
-
-    // Enforce DECISION_ACCEPT capability (same as accept - owner decision authority)
-    const auth = await requireAuthForCapability(CAPABILITIES.DECISION_ACCEPT, undefined, workspaceId);
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     // Parse and validate request body
-    const body = await request.json();
+    const body = await ctx.request!.json();
     const parsed = RejectDecisionSchema.parse(body);
 
     // Reject decision
@@ -42,17 +23,18 @@ export const POST = withEnforcementFull(
       decisionId,
       engagementId: parsed.engagementId,
       workspaceId,
-      rejectedBy: auth.session.user.id,
+      rejectedBy: ctx.verifiedActorId,
       reason: parsed.reason,
     });
 
     logger.info("Decision rejection recorded", {
       decisionId,
       engagementId: parsed.engagementId,
-      userId: auth.session.user.id,
+      userId: ctx.verifiedActorId,
       reason: parsed.reason,
     });
 
     return result;
-  }
+  },
+  { requireCapabilities: ["DECISION_ACCEPT"], requireWorkspace: true }
 );
