@@ -1,31 +1,25 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { calculateSystemicInsights } from "@/services/intelligence/insights-engine";
 import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate user (fail-closed)
-  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Get workspace context (fail closed if missing)
-  const workspace = await requireWorkspaceContext();
+    // Initialize logger
+    const logger = createEventLogger("api_intelligence_insights", workspaceId);
 
-  // Initialize logger
-  const logger = createEventLogger("api_intelligence_insights", workspace.workspaceId);
+    // Calculate date range: last 30 days
+    const endDate = new Date();
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 30);
 
-  // Calculate date range: last 30 days
-  const endDate = new Date();
-  const startDate = new Date(endDate);
-  startDate.setDate(startDate.getDate() - 30);
-
-  // Fetch items from last 30 days
-  const items = await db.operatorItem.findMany({
-    where: {
-      workspaceId: workspace.workspaceId,
+    // Fetch items from last 30 days
+    const items = await db.operatorItem.findMany({
+      where: {
+        workspaceId,
       createdAt: {
         gte: startDate,
         lte: endDate,
@@ -83,21 +77,23 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     blockingDependencies: Array.isArray(r.blockingDependencies) ? (r.blockingDependencies as string[]) : [],
   }));
 
-  // Calculate systemic insights
-  const insights = calculateSystemicInsights(operatorItems);
+    // Calculate systemic insights
+    const insights = calculateSystemicInsights(operatorItems);
 
-  const response = {
-    workspace: {
-      workspaceId: workspace.workspaceId,
-    },
-    insights,
-  };
+    const response = {
+      workspace: {
+        workspaceId,
+      },
+      insights,
+    };
 
-  logger.success({
-    itemsAnalyzed: operatorItems.length,
-    worstPerforming: insights.worstPerformingType,
-    bestPerforming: insights.bestPerformingType,
-  });
+    logger.success({
+      itemsAnalyzed: operatorItems.length,
+      worstPerforming: insights.worstPerformingType,
+      bestPerforming: insights.bestPerformingType,
+    });
 
-  return response;
-});
+    return Response.json(response);
+  },
+  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+);

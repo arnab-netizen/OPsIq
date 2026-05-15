@@ -1,26 +1,20 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
 import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate user (fail-closed)
-  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Get workspace context (fail closed if missing)
-  const workspace = await requireWorkspaceContext();
+    // Initialize logger
+    const logger = createEventLogger("api_intelligence_patterns", workspaceId);
 
-  // Initialize logger
-  const logger = createEventLogger("api_intelligence_patterns", workspace.workspaceId);
-
-  // Fetch last 100 completed items from workspace
-  const items = await db.operatorItem.findMany({
-    where: {
-      workspaceId: workspace.workspaceId,
+    // Fetch last 100 completed items from workspace
+    const items = await db.operatorItem.findMany({
+      where: {
+        workspaceId,
     },
     orderBy: {
       createdAt: "desc",
@@ -75,26 +69,28 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     blockingDependencies: Array.isArray(r.blockingDependencies) ? (r.blockingDependencies as string[]) : [],
   }));
 
-  // Detect patterns
-  const patterns = detectPatterns(operatorItems);
+    // Detect patterns
+    const patterns = detectPatterns(operatorItems);
 
-  const response = {
-    workspace: {
-      workspaceId: workspace.workspaceId,
-    },
-    patterns,
-    summary: {
-      totalPatterns: patterns.length,
-      totalItemsAnalyzed: operatorItems.length,
-      minPatternFrequency: 3,
-      maxPatterns: 20,
-    },
-  };
+    const response = {
+      workspace: {
+        workspaceId,
+      },
+      patterns,
+      summary: {
+        totalPatterns: patterns.length,
+        totalItemsAnalyzed: operatorItems.length,
+        minPatternFrequency: 3,
+        maxPatterns: 20,
+      },
+    };
 
-  logger.success({
-    patternsDetected: patterns.length,
-    itemsAnalyzed: operatorItems.length,
-  });
+    logger.success({
+      patternsDetected: patterns.length,
+      itemsAnalyzed: operatorItems.length,
+    });
 
-  return response;
-});
+    return Response.json(response);
+  },
+  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+);

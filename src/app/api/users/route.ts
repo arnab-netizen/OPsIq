@@ -1,6 +1,7 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createUser, listUsers } from "@/services/user";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";

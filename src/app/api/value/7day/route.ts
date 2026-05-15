@@ -1,8 +1,5 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 
 interface SevenDayImpact {
@@ -28,23 +25,19 @@ interface SevenDayImpact {
   };
 }
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate and authorize (fail-closed)
-  // Require engagement view permission to see workspace metrics
-  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Get workspace context (fail closed if missing)
-  const workspace = await requireWorkspaceContext();
+    // Calculate date range: last 7 days
+    const endDate = new Date();
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 7);
 
-  // Calculate date range: last 7 days
-  const endDate = new Date();
-  const startDate = new Date(endDate);
-  startDate.setDate(startDate.getDate() - 7);
-
-  // Fetch all completed items from last 7 days (approved decisions)
-  const approvedItems = await db.operatorItem.findMany({
-    where: {
-      workspaceId: workspace.workspaceId,
+    // Fetch all completed items from last 7 days (approved decisions)
+    const approvedItems = await db.operatorItem.findMany({
+      where: {
+        workspaceId,
       status: "done",
       completedAt: {
         gte: startDate,
@@ -53,10 +46,10 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     },
   });
 
-  // Fetch all blocked decisions from last 7 days
-  const blockedItems = await db.operatorItem.findMany({
-    where: {
-      workspaceId: workspace.workspaceId,
+    // Fetch all blocked decisions from last 7 days
+    const blockedItems = await db.operatorItem.findMany({
+      where: {
+        workspaceId,
       status: "blocked",
       createdAt: {
         gte: startDate,
@@ -65,14 +58,14 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     },
   });
 
-  // Calculate approved metrics
-  let totalGain = 0;
-  let totalLoss = 0;
-  let successCount = 0;
-  let totalApprovedConfidence = 0;
-  let totalActualImpact = 0;
+    // Calculate approved metrics
+    let totalGain = 0;
+    let totalLoss = 0;
+    let successCount = 0;
+    let totalApprovedConfidence = 0;
+    let totalActualImpact = 0;
 
-  for (const item of approvedItems) {
+    for (const item of approvedItems) {
     // Use actualOutcomeValue if available, otherwise try to infer from delta
     let impact = 0;
 
@@ -97,49 +90,51 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     totalApprovedConfidence += Number(item.confidence || 0);
   }
 
-  // Calculate blocked metrics
-  let totalRejectedImpact = 0;
-  let totalBlockedConfidence = 0;
+    // Calculate blocked metrics
+    let totalRejectedImpact = 0;
+    let totalBlockedConfidence = 0;
 
-  for (const item of blockedItems) {
-    const expectedImpact = Number(item.impactExpected || 0);
-    totalRejectedImpact += expectedImpact;
-    totalBlockedConfidence += Number(item.confidence || 0);
-  }
+    for (const item of blockedItems) {
+      const expectedImpact = Number(item.impactExpected || 0);
+      totalRejectedImpact += expectedImpact;
+      totalBlockedConfidence += Number(item.confidence || 0);
+    }
 
-  const netImpact = totalGain - totalLoss;
-  const approvedCount = approvedItems.length;
-  const blockedCount = blockedItems.length;
-  const totalDecisions = approvedCount + blockedCount;
-  const successRate =
-    approvedCount > 0 ? (successCount / approvedCount) * 100 : 0;
-  const avgConfidenceApproved =
-    approvedCount > 0 ? totalApprovedConfidence / approvedCount : 0;
-  const avgConfidenceBlocked =
-    blockedCount > 0 ? totalBlockedConfidence / blockedCount : 0;
+    const netImpact = totalGain - totalLoss;
+    const approvedCount = approvedItems.length;
+    const blockedCount = blockedItems.length;
+    const totalDecisions = approvedCount + blockedCount;
+    const successRate =
+      approvedCount > 0 ? (successCount / approvedCount) * 100 : 0;
+    const avgConfidenceApproved =
+      approvedCount > 0 ? totalApprovedConfidence / approvedCount : 0;
+    const avgConfidenceBlocked =
+      blockedCount > 0 ? totalBlockedConfidence / blockedCount : 0;
 
-  const summary: SevenDayImpact = {
-    workspace: {
-      workspaceId: workspace.workspaceId,
-    },
-    period: {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      daysInPeriod: 7,
-    },
-    metrics: {
-      approvedCount,
-      blockedCount,
-      totalGain,
-      totalLoss,
-      netImpact,
-      rejectedImpact: totalRejectedImpact,
-      actualImpactApproved: totalActualImpact,
-      avgConfidenceApproved: Math.round(avgConfidenceApproved * 100) / 100,
-      avgConfidenceBlocked: Math.round(avgConfidenceBlocked * 100) / 100,
-      successRate: Math.round(successRate * 100) / 100,
-    },
-  };
+    const summary: SevenDayImpact = {
+      workspace: {
+        workspaceId,
+      },
+      period: {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        daysInPeriod: 7,
+      },
+      metrics: {
+        approvedCount,
+        blockedCount,
+        totalGain,
+        totalLoss,
+        netImpact,
+        rejectedImpact: totalRejectedImpact,
+        actualImpactApproved: totalActualImpact,
+        avgConfidenceApproved: Math.round(avgConfidenceApproved * 100) / 100,
+        avgConfidenceBlocked: Math.round(avgConfidenceBlocked * 100) / 100,
+        successRate: Math.round(successRate * 100) / 100,
+      },
+    };
 
-  return summary;
-});
+    return Response.json(summary);
+  },
+  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+);

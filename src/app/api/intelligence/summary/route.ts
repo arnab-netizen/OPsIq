@@ -1,8 +1,5 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
 import { generateRecommendation } from "@/services/intelligence/recommendation";
 import { calculateSystemicInsights } from "@/services/intelligence/insights-engine";
@@ -13,25 +10,22 @@ import { enforceControlLayer } from "@/services/control/enforcement";
 import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate user (fail-closed)
-  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Get workspace context (fail closed if missing)
-  const workspace = await requireWorkspaceContext();
-
-  // Initialize logger
-  const logger = createEventLogger("api_intelligence_summary", workspace.workspaceId);
+    // Initialize logger
+    const logger = createEventLogger("api_intelligence_summary", workspaceId);
 
     // Extract query parameters
-    const decisionId = request.nextUrl.searchParams.get("decisionId");
-    const limitParam = request.nextUrl.searchParams.get("limit");
+    const decisionId = ctx.request?.nextUrl.searchParams.get("decisionId");
+    const limitParam = ctx.request?.nextUrl.searchParams.get("limit");
     const limit = limitParam ? Math.min(parseInt(limitParam), 50) : 50;
 
     // Fetch last 100 items from workspace for analysis
     const items = await db.operatorItem.findMany({
       where: {
-        workspaceId: workspace.workspaceId,
+        workspaceId,
       },
       orderBy: {
         createdAt: "desc",
@@ -101,7 +95,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
 
     if (decisionId) {
       const decision = await db.operatorItem.findUnique({
-        where: { id: decisionId, workspaceId: workspace.workspaceId },
+        where: { id: decisionId, workspaceId },
       });
 
       if (decision) {
@@ -202,7 +196,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
 
     const response = {
       workspace: {
-        workspaceId: workspace.workspaceId,
+        workspaceId,
       },
       patterns: patterns.slice(0, limit - recommendationCount - 1),
       recommendation,
@@ -221,11 +215,13 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
       },
     };
 
-  logger.success({
-    patternsDetected: allPatterns.length,
-    itemsAnalyzed: operatorItems.length,
-    payloadSize: itemCount,
-  });
+    logger.success({
+      patternsDetected: allPatterns.length,
+      itemsAnalyzed: operatorItems.length,
+      payloadSize: itemCount,
+    });
 
-  return response;
-});
+    return Response.json(response);
+  },
+  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+);

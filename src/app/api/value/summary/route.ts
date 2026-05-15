@@ -1,8 +1,5 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -36,18 +33,14 @@ interface ValueSummary {
   items: TimeToValueMetric[];
 }
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate and authorize (fail-closed)
-  // Require engagement view permission to see workspace metrics
-  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Get workspace context (fail closed if missing)
-  const workspace = await requireWorkspaceContext();
-
-  // Fetch all completed items with outcome data
-  const items = await db.operatorItem.findMany({
-    where: {
-      workspaceId: workspace.workspaceId,
+    // Fetch all completed items with outcome data
+    const items = await db.operatorItem.findMany({
+      where: {
+        workspaceId,
       status: "done",
       firstCompletedAt: {
         not: null,
@@ -118,7 +111,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
 
   const summary: ValueSummary = {
     workspace: {
-      workspaceId: workspace.workspaceId,
+      workspaceId,
     },
     metrics: {
       totalCompleted,
@@ -133,5 +126,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     items: timeToValueMetrics,
   };
 
-  return summary;
-});
+    return Response.json(summary);
+  },
+  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+);

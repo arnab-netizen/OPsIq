@@ -1,8 +1,5 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { generateRecommendation, generateMultipleRecommendations } from "@/services/intelligence/recommendation";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
 import { validateDependencies } from "@/services/control/variable-registry";
@@ -12,35 +9,32 @@ import { enforceControlLayer } from "@/services/control/enforcement";
 import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate user (fail-closed)
-  await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Get workspace context (fail closed if missing)
-  const workspace = await requireWorkspaceContext();
+    // Initialize logger
+    const logger = createEventLogger("api_intelligence_recommendations", workspaceId);
 
-  // Initialize logger
-  const logger = createEventLogger("api_intelligence_recommendations", workspace.workspaceId);
-
-  // Extract decisionId from query
-  const decisionId = request.nextUrl.searchParams.get("decisionId");
+    // Extract decisionId from query
+    const decisionId = ctx.request?.nextUrl.searchParams.get("decisionId");
   if (!decisionId) {
     throw new Error("Missing required parameter: decisionId");
   }
 
-  // Fetch the decision (scoped by workspace at DB level)
-  const decision = await db.operatorItem.findUnique({
-    where: { id: decisionId, workspaceId: workspace.workspaceId },
-  });
+    // Fetch the decision (scoped by workspace at DB level)
+    const decision = await db.operatorItem.findUnique({
+      where: { id: decisionId, workspaceId },
+    });
 
-  if (!decision) {
-    throw new Error("Decision not found");
-  }
+    if (!decision) {
+      throw new Error("Decision not found");
+    }
 
-  // Fetch last 100 items from workspace for pattern detection
-  const items = await db.operatorItem.findMany({
-    where: {
-      workspaceId: workspace.workspaceId,
+    // Fetch last 100 items from workspace for pattern detection
+    const items = await db.operatorItem.findMany({
+      where: {
+        workspaceId,
     },
     orderBy: {
       createdAt: "desc",
@@ -207,11 +201,13 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     },
   };
 
-  logger.success({
-    decisionId: decision.id,
-    hasRecommendation: !!recommendation,
-    alternativesCount: alternatives.length,
-  });
+    logger.success({
+      decisionId: decision.id,
+      hasRecommendation: !!recommendation,
+      alternativesCount: alternatives.length,
+    });
 
-  return response;
-});
+    return Response.json(response);
+  },
+  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+);
