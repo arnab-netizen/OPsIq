@@ -1,6 +1,7 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { NextRequest } from "next/server";
 import {
   createDecision,
@@ -27,9 +28,9 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   }
 
   // Check entitlement: decision_create (plan-based quota enforcement)
-  const capabilityCheck = await assertCapability(workspaceId, "decision_create");
+  const capabilityCheck = await assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE);
   if (!capabilityCheck.allowed) {
-    throw new PlanLimitError("decision_create", capabilityCheck.reason || "Plan limit exceeded");
+    throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || "Plan limit exceeded");
   }
 
   const contentType = request.headers.get("content-type") || "";
