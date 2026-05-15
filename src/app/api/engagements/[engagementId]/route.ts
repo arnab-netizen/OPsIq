@@ -1,3 +1,4 @@
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
@@ -33,33 +34,20 @@ const updateEngagementSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session, policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const { engagementId } = params;
+    parseOrThrow(uuidSchema, engagementId);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+    await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
-  const { engagementId } = params;
-  parseOrThrow(uuidSchema, engagementId);
-
-  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
-
-  const engagement = await getEngagementById(engagementId, workspaceId, hasInternalAccess(policy));
-  return Response.json(engagement);
-});
+    const engagement = await getEngagementById(engagementId, workspaceId, ctx.policy ? hasInternalAccess(ctx.policy) : false);
+    return Response.json(engagement);
+  },
+  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+);
 
 export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)

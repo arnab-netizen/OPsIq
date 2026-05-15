@@ -1,7 +1,8 @@
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { ForbiddenError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   getInterventionState,
@@ -24,33 +25,20 @@ const updateInterventionModeSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const { engagementId } = params;
+    parseOrThrow(uuidSchema, engagementId);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+    await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
-  const { engagementId } = params;
-  parseOrThrow(uuidSchema, engagementId);
-
-  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
-
-  const state = await getInterventionState(engagementId);
-  return Response.json(state);
-});
+    const state = await getInterventionState(engagementId);
+    return Response.json(state);
+  },
+  { requireCapabilities: ["INTERVENTION_VIEW"], requireWorkspace: true }
+);
 
 export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
@@ -59,7 +47,6 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
     internalOnly: true,
   });
 
-  // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
   const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
@@ -67,11 +54,6 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
       { error: "Workspace ID required (x-workspace-id header)" },
       { status: 400 }
     );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
   }
 
   const { engagementId } = params;

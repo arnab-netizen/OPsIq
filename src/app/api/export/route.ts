@@ -1,24 +1,11 @@
-/**
- * Data Export API
- *
- * Provides endpoints for exporting workspace data in CSV or JSON format.
- * Supports GDPR data portability and user data exports.
- *
- * GET /api/export?format=json|csv
- *   - Returns user's own data export
- *   - Requires authentication
- *
- * GET /api/export/audit?startDate=ISO&endDate=ISO
- *   - Returns audit trail (admin only)
- *   - Requires AUDIT_VIEW capability
- */
-
-import { NextRequest, NextResponse } from "next/server";
-import { UnauthorizedError } from "@/infra/errors";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth } from "@/lib/auth-guard";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { UnauthorizedError } from "@/infra/errors";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   createExportPackage,
   validateExportData,
@@ -30,27 +17,15 @@ import {
  * GET /api/export
  * Export workspace data (CSV or JSON)
  */
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate
-  const authContext = await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Get workspace ID from header
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
-
-  // Verify workspace membership
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new UnauthorizedError("Unauthorized");
-  }
-
-  // Get format from query parameters
-  const url = new URL(request.url);
-  const format = (url.searchParams.get("format") || "json") as
-    | "json"
-    | "csv";
+    // Get format from query parameters
+    const url = new URL(ctx.request?.url || "");
+    const format = (url.searchParams.get("format") || "json") as
+      | "json"
+      | "csv";
 
   if (format !== "json" && format !== "csv") {
     throw new Error("Invalid format. Use 'json' or 'csv'");
@@ -177,13 +152,12 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Create package
   const exportPackage = createExportPackage(exportedData);
 
-  // Return response
-  return {
-    success: true,
-    exportId: `export_${Date.now()}`,
-    format,
-    fileName: exportPackage.fileName,
-    createdAt: new Date().toISOString(),
-    downloadUrl: `/api/export/download?id=export_${Date.now()}`,
-  };
+    return Response.json({
+      success: true,
+      exportId: `export_${Date.now()}`,
+      format,
+      fileName: exportPackage.fileName,
+      createdAt: new Date().toISOString(),
+      downloadUrl: `/api/export/download?id=export_${Date.now()}`,
+    });
 });

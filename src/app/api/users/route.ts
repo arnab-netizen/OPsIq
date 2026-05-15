@@ -1,6 +1,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createUser, listUsers } from "@/services/user";
@@ -24,26 +25,21 @@ const listUsersSchema = paginationSchema.extend({
   search: z.string().optional(),
 });
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate + authorize (fail-closed)
-  await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Validate workspace membership (fail-closed)
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new UnauthorizedError("Workspace ID required (x-workspace-id header)");
-  }
+    if (ctx.verifiedActorType !== "service") {
+      throw new UnauthorizedError("Internal only");
+    }
 
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+    const params = parseSearchParams(ctx.request?.url || "", listUsersSchema);
+    const result = await listUsers(workspaceId, params);
 
-  const params = parseSearchParams(request.url, listUsersSchema);
-  const result = await listUsers(workspaceId, params);
-
-  return result;
-});
+    return Response.json(result);
+  },
+  { requireCapabilities: ["USER_VIEW"], requireWorkspace: true }
+);
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)

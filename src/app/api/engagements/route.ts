@@ -1,7 +1,9 @@
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { hasInternalAccess } from "@/policies/capability-check";
+import type { NextRequest } from "next/server";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createEngagement, listEngagements } from "@/services/engagement";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
@@ -9,7 +11,6 @@ import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError 
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
 import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES } from "@/domain/constants/statuses";
-import type { NextRequest } from "next/server";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError, UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
@@ -33,26 +34,17 @@ const listEngagementsSchema = paginationSchema.extend({
   search: z.string().optional(),
 });
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate + authorize (fail-closed)
-  const { policy } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Validate workspace membership (fail-closed)
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new UnauthorizedError("Workspace ID required (x-workspace-id header)");
-  }
+    const params = parseSearchParams(ctx.request?.url || "", listEngagementsSchema);
+    const result = await listEngagements(workspaceId, params, ctx.policy ? hasInternalAccess(ctx.policy) : false);
 
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const params = parseSearchParams(request.url, listEngagementsSchema);
-  const result = await listEngagements(workspaceId, params, hasInternalAccess(policy));
-
-  return result;
-});
+    return Response.json(result);
+  },
+  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+);
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
