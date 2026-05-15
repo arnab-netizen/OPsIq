@@ -1,0 +1,77 @@
+{
+  "phase": "X9E-1",
+  "date": "2026-05-15",
+  "title": "X9E-1: Current Baseline Validation",
+  "status": "BASELINE_ESTABLISHED",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "baseline_validation": {
+    "git_status": "clean",
+    "uncommitted_files": 0,
+    "untracked_files": 0
+  },
+  "build_validation": {
+    "command": "npm run build",
+    "status": "PASS",
+    "typescript_errors": 0,
+    "compile_time_seconds": 8.1,
+    "static_pages_generated": "99/99"
+  },
+  "test_validation": {
+    "command": "npm test -- governance-capabilities, policy-wrapper-enforcement, g6r-auth-bridge, phase-d phase-e phase-f",
+    "status": "PASS",
+    "test_suites": [
+      {
+        "suite": "governance-capabilities",
+        "files": 1,
+        "tests": 32,
+        "status": "PASS"
+      },
+      {
+        "suite": "policy-wrapper-enforcement",
+        "files": 1,
+        "tests": 32,
+        "status": "PASS"
+      },
+      {
+        "suite": "g6r-auth-bridge",
+        "files": 1,
+        "tests": 14,
+        "status": "PASS"
+      },
+      {
+        "suite": "phase-d phase-e phase-f",
+        "files": 17,
+        "tests": 324,
+        "status": "PASS"
+      }
+    ],
+    "total_test_files": 20,
+    "total_tests": 402,
+    "all_tests_pass": true,
+    "regressions": 0
+  },
+  "scanner_baseline": {
+    "command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+    "status": "PASS",
+    "total_violations": 448,
+    "critical_violations": 283,
+    "block_build_violations": 165,
+    "scanner_note": "Baseline established for decision governance refactor selection"
+  },
+  "x9d_impl_verification": {
+    "decision_create_added": true,
+    "decision_update_added": true,
+    "domain_capabilities_extended": true,
+    "route_cleanup_deferred": true,
+    "service_refactor_deferred": true,
+    "test_file_created": true,
+    "scanner_stable": true,
+    "violations_change": 0
+  },
+  "readiness_for_refactor_selection": {
+    "all_validation_gates_pass": true,
+    "no_pending_fixes": true,
+    "capabilities_ready_for_routing": true,
+    "safe_to_proceed_with_pilot_selection": true
+  }
+}

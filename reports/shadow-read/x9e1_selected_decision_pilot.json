@@ -1,0 +1,157 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "date": "2026-05-15",
+  "phase": "X9E-1",
+  "status": "PILOT_SELECTED",
+  "pilot_size": 1,
+  "selected_pilot": {
+    "type": "DECISION_ROUTE_CLEANUP",
+    "file": "src/app/api/decisions/create/route.ts",
+    "handler_or_function": "POST /api/decisions/create",
+    "operation": "Single decision creation",
+    "current_pattern": "assertCapability(workspaceId, \"decision_create\")",
+    "target_pattern": "assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE)",
+    "capability": "DECISION_CREATE",
+    "capability_constant_value": "decision:create",
+    "entitlement_mapping": {
+      "domain_constant": "CAPABILITIES.DECISION_CREATE",
+      "domain_value": "decision:create",
+      "entitlement_enum": "Capability.DECISION_CREATE",
+      "entitlement_value": "decision_create",
+      "tier_mapping": {
+        "free": true,
+        "pro": true,
+        "enterprise": true
+      }
+    },
+    "callers": [
+      "POST /api/decisions/create (JSON single)",
+      "POST /api/decisions/create (JSON bulk)",
+      "POST /api/decisions/create (CSV upload)"
+    ],
+    "changes_required": [
+      {
+        "file": "src/app/api/decisions/create/route.ts",
+        "line": 30,
+        "from": "const capabilityCheck = await assertCapability(workspaceId, \"decision_create\");",
+        "to": "const capabilityCheck = await assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE);",
+        "change_type": "string_to_constant_replacement",
+        "reason": "Use domain constant instead of string literal for type safety"
+      },
+      {
+        "file": "src/app/api/decisions/create/route.ts",
+        "line": 32,
+        "from": "throw new PlanLimitError(\"decision_create\", capabilityCheck.reason || \"Plan limit exceeded\");",
+        "to": "throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || \"Plan limit exceeded\");",
+        "change_type": "string_to_constant_replacement",
+        "reason": "Keep error reporting consistent with constant usage"
+      }
+    ],
+    "expected_reduction": 2,
+    "reduction_explanation": "Two scanner violations related to capability string usage will be reduced when constant reference is recognized as safe pattern",
+    "risk": "LOW",
+    "risk_justification": "Minimal change - string literal replaced with existing constant. No business logic changes, no service changes, no auth pattern changes.",
+    "reason_selected": "decisions/create route is the safest first step. It's isolated from other decision operations, uses simple string-to-constant replacement, enables future service refactoring, and has clear scanner reduction path.",
+    "proof_requirements": [
+      {
+        "requirement": "auth_behavior_preserved",
+        "how_verified": "assertCapability still called identically, entitlement checks unchanged, quota enforcement unchanged",
+        "test_coverage": "Existing tests verify decision creation capability check"
+      },
+      {
+        "requirement": "capability_mapping_uses_domain_constant",
+        "how_verified": "String \"decision_create\" replaced with CAPABILITIES.DECISION_CREATE constant",
+        "test_coverage": "governance-capabilities.test.ts verifies constant exists and has correct value"
+      },
+      {
+        "requirement": "no_entitlement_bypass",
+        "how_verified": "assertCapability function unchanged - still maps domain constant to entitlement string internally",
+        "test_coverage": "Entitlement tier tests verify mapping is correct"
+      },
+      {
+        "requirement": "no_service_side_canonicalization",
+        "how_verified": "Service functions unchanged - canonicalization still happens in route only",
+        "test_coverage": "No service-side auth added"
+      },
+      {
+        "requirement": "business_logic_preserved",
+        "how_verified": "Only string literal replaced - decision creation logic, validation, CSV parsing all unchanged",
+        "test_coverage": "All existing decision creation tests must pass"
+      },
+      {
+        "requirement": "response_shape_preserved",
+        "how_verified": "Response building code unchanged - only capability check parameter changed",
+        "test_coverage": "Response format tests must pass"
+      },
+      {
+        "requirement": "tests_pass",
+        "how_verified": "All 402 existing tests must still pass after change",
+        "test_coverage": "Run full test suite"
+      },
+      {
+        "requirement": "scanner_result_verified",
+        "how_verified": "Scanner should show 2-3 violation reduction from current 448 baseline",
+        "test_coverage": "Scanner before/after comparison"
+      }
+    ]
+  },
+  "excluded_items": [
+    {
+      "file": "src/app/api/decisions/[decisionId]/accept/route.ts",
+      "handler_or_function": "POST /api/decisions/[decisionId]/accept",
+      "reason_excluded": "Uses legacy withCanonicalEnforcement pattern and CanonicalAuthContext. Requires full service refactoring (X9C-5) not just route cleanup. Complex side effects with reject route capability bug."
+    },
+    {
+      "file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+      "handler_or_function": "POST /api/decisions/[decisionId]/reject",
+      "reason_excluded": "Uses wrong capability string (DECISION_ACCEPT instead of DECISION_REJECT). Requires bug fix AND service refactoring. Excluded pending governance clarification on unified accept/reject capability model. Complex to refactor alone due to coupled accept logic."
+    },
+    {
+      "file": "src/app/api/recommendations/route.ts",
+      "handler_or_function": "POST /api/recommendations",
+      "reason_excluded": "Mixed pattern - uses both domain CAPABILITIES.RECOMMENDATION_CREATE and entitlement string \"decision_create\". Could be secondary cleanup after decisions/create, but excluded from first pilot to keep scope minimal. Will be included in X9E-2 if approved."
+    },
+    {
+      "file": "src/app/api/decisions/list/route.ts",
+      "handler_or_function": "GET /api/decisions/list",
+      "reason_excluded": "Uses legacy withCanonicalEnforcement but requires no capability check. Low priority refactoring - deferred to service refactoring phase."
+    },
+    {
+      "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "handler_or_function": "POST /api/decisions/[decisionId]/close",
+      "reason_excluded": "No decision update capability check - would need to ADD capability check, not just replace string. Enhancement candidate for future phase, not cleanup candidate."
+    },
+    {
+      "file": "src/services/decision-validation/decision-acceptance.service.ts",
+      "handler_or_function": "acceptDecision() / rejectDecision()",
+      "reason_excluded": "Service layer refactoring required - needs ServiceAuthEnvelope integration. Deferred to X9C-5 service refactoring phase. Route cleanup must be completed first."
+    }
+  ],
+  "selection_rationale": {
+    "decision_reasoning": "Selected decisions/create as the minimal, safest, first refactoring pilot because it requires only a string-to-constant replacement in a single route, has no service dependencies, no business logic changes, clear scanner reduction, and enables future service refactoring without introducing risk.",
+    "scope_justification": "Keeping scope to exactly 1 file with 2 line changes follows STRICT EXECUTION MODE constraints: minimal, focused, low-risk change that can be easily rolled back if needed.",
+    "exclusion_rationale": "All other decision routes and services excluded because they require either (1) service refactoring, (2) legacy pattern migration (withCanonicalEnforcement), or (3) bug fixes (reject capability string). These are deferred to coordinated X9C-5 phase.",
+    "next_steps": "If decisions/create cleanup succeeds, X9E-2 can select recommendations route cleanup as secondary pilot. If successful, decision service refactoring (X9C-5) can proceed with foundation established."
+  },
+  "constraints_satisfied": [
+    "NO CODE IMPLEMENTATION beyond route cleanup",
+    "NO SERVICE REFACTOR in this pilot",
+    "NO SCANNER CHANGE (reduction is improvement, not violation)",
+    "NO WRAPPER CHANGE",
+    "NO AUTH CONTEXT CHANGE (CanonicalAuthContext not introduced, assertCapability still used)",
+    "NO NEW CAPABILITY ADDITION (uses existing CAPABILITIES.DECISION_CREATE)",
+    "NO CAPABILITY MODEL REDESIGN",
+    "NO WORKSPACE DESIGN IMPLEMENTATION",
+    "NO ROLE DESIGN IMPLEMENTATION",
+    "NO BRIDGE EXPANSION",
+    "NO BULK REPLACE (targeted single file change)",
+    "NO FEATURE WORK",
+    "NO TIER B",
+    "NO any/as any introduction",
+    "NO SERVICE ACCEPTS AuthContext (service not changed)",
+    "NO SERVICE-SIDE CANONICALIZATION (route side only)",
+    "NO PERMISSION FABRICATION",
+    "NO FAKE ServiceAuthEnvelope",
+    "RUNTIME_ENFORCED_HYBRID maintained"
+  ]
+}
