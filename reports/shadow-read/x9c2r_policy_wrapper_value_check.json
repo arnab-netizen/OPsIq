@@ -1,0 +1,114 @@
+{
+  "phase": "X9C-2R",
+  "date": "2026-05-15",
+  "title": "X9C-2R Policy Wrapper Value Assessment",
+  "status": "VALUE_CHECK_COMPLETE",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "question": "Does withCanonicalPolicyEnforcement immediately reduce scanner count or enable route-level migrations?",
+  "summary_answer": "NO immediate route-level value. Wrapper provides foundation for future migrations but does not solve current scanner violations or enable pilots now.",
+  "policy_route_analysis": {
+    "canonical_safe_get_routes": {
+      "count": 4,
+      "status": "ALREADY_CANONICAL_SAFE_NO_ACTION",
+      "routes": [
+        "src/app/api/engagements/route.ts GET",
+        "src/app/api/engagements/[engagementId]/route.ts GET",
+        "src/app/api/me/route.ts GET",
+        "src/app/api/clients/[clientId]/route.ts GET"
+      ],
+      "current_pattern": "withCanonicalEnforcement with ctx.policy ? hasInternalAccess(ctx.policy) : false",
+      "current_behavior": "SAFE - defensive fallback, no violations",
+      "would_migration_to_wrapper_help": false,
+      "reasoning": "Routes already use canonical pattern. Migration to withCanonicalPolicyEnforcement WITHOUT policy requirement options would have zero behavior change. Adding requireInternalAccess or requirePolicyContext is not appropriate because routes don't enforce policy - they use it optionally for filtering."
+    },
+    "policy_mutation_routes": {
+      "count": 20,
+      "status": "NEEDS_POLICY_MUTATION_DESIGN",
+      "examples": [
+        "src/app/api/engagements/route.ts POST",
+        "src/app/api/engagements/[engagementId]/route.ts PATCH",
+        "src/app/api/findings/route.ts POST",
+        "src/app/api/evidence/route.ts POST"
+      ],
+      "current_pattern": "withEnforcementFull + withAuth (legacy)",
+      "current_violations": "YES - withAuth and canonicalizeAuthContext imports",
+      "would_wrapper_help_now": false,
+      "reasoning": "These routes have scanner violations from using withAuth. Migration requires: (1) full refactoring from withEnforcementFull to withCanonicalEnforcement, (2) policy enforcement rules clarification (should policy checks be fail-closed?), (3) service boundary changes (services currently accept ctx with policy). Wrapper alone doesn't solve this - needs design + service refactoring."
+    },
+    "service_dependent_policy_routes": {
+      "count": 10,
+      "status": "NEEDS_SERVICE_BOUNDARY_DESIGN",
+      "examples": [
+        "updateEngagement with policy override checks",
+        "createFinding with policy context",
+        "admin workspace operations with policy checks"
+      ],
+      "current_pattern": "Services receive ctx.policy directly and enforce policy logic",
+      "current_violations": "YES - services import auth-guard or directly use policy from ctx",
+      "would_wrapper_help_now": false,
+      "reason": "These routes have policy logic in service layer. Even with the new wrapper, services still need ctx.policy to enforce their logic. Service refactoring (X9C-3) is prerequisite. Wrapper can be applied after services are refactored to use parameters instead of ctx.policy."
+    },
+    "governance_complex_routes": {
+      "count": 5,
+      "status": "NEEDS_GOVERNANCE_CAPABILITY_DECISION",
+      "examples": [
+        "diagnosis routes with role-based filtering",
+        "recommendation routes with intervention-stage checks",
+        "custom role resolution routes"
+      ],
+      "current_pattern": "Routes with custom role logic or workspace-scoped behavior",
+      "current_violations": "MAYBE - depends on how role logic is implemented",
+      "would_wrapper_help_now": false,
+      "reason": "These routes require workspace/role design clarification. Wrapper requires knowing what policies to enforce, but governance design isn't complete. These routes are blocked on X9D design, not on wrapper availability."
+    }
+  },
+  "scanner_impact_assessment": {
+    "current_violations": 450,
+    "can_wrapper_reduce_count": false,
+    "reasoning": "Current violations are from legacy auth-guard imports and withAuth calls. Wrapper doesn't eliminate those - it's an alternative pattern for NEW migrations. To reduce violations, routes must actually migrate from legacy pattern to canonical pattern, which requires design + service refactoring work. Wrapper exists but can't be used until blockers are cleared."
+  },
+  "route_pilot_availability": {
+    "policies_immediately_ready": false,
+    "canonical_safe_routes_need_migration": false,
+    "new_routes_blocked": 20,
+    "routes_unblocked_by_wrapper": 0
+  },
+  "wrapper_value_timeline": {
+    "x9c1_value": "Foundation built - wrapper exists and is tested",
+    "x9c2_value": "Assessment complete - wrapper ready but not needed yet for routes already safe",
+    "x9c3_value": "Service refactoring enables wrapper use in X9C-4 mutations",
+    "x9c4_value": "Legacy routes migrate to canonical + wrapper when service refactoring done",
+    "x9c5_value": "Wrapper applied to policy-enforcement use cases after service boundary established"
+  },
+  "critical_finding": "The wrapper is a PRECONDITION for future migrations, not a SOLUTION for current problems. Current blockers are not lack of wrapper - they are: (1) Service boundary design, (2) Policy mutation semantics, (3) Governance design. Wrapper waits for these to be solved.",
+  "recommendations": [
+    {
+      "priority": 1,
+      "action": "Do NOT attempt route-level pilot migrations in X9C-3. Routes are blocked by service refactoring needs, not wrapper availability.",
+      "reasoning": "Wrapper exists but routes can't use it effectively until services are refactored to accept parameters instead of ctx.policy."
+    },
+    {
+      "priority": 2,
+      "action": "Focus X9C-3 on service boundary work, not route migration. This is the actual bottleneck.",
+      "reasoning": "10+ services have policy logic embedded. These must be refactored to use parameters. Only then can routes safely migrate."
+    },
+    {
+      "priority": 3,
+      "action": "Run X9D workspace/role design in parallel with X9C-3 service work.",
+      "reasoning": "5 routes are blocked on governance design. Can't wait for this if we're migrating others."
+    },
+    {
+      "priority": 4,
+      "action": "Sequence X9C-4 as legacy route migration (not X9C-3). X9C-3 should be service groundwork.",
+      "reasoning": "Current X9C-2 recommendation of 'X9C-3 service refactoring' is correct, but calling it a route migration phase is misleading. It's infrastructure work."
+    }
+  ],
+  "final_assessment": {
+    "wrapper_immediately_useful_for_routes": false,
+    "wrapper_foundation_necessary": true,
+    "next_blocker": "Service boundary design and refactoring",
+    "routes_ready_for_immediate_migration": 0,
+    "routes_ready_after_x9c3": "TBD (depends on service refactoring scope)",
+    "estimated_timeline_to_first_wrapper_use": "X9C-5 (after X9C-3 and X9C-4)"
+  }
+}

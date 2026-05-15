@@ -1,0 +1,201 @@
+{
+  "phase": "X9C-2R",
+  "date": "2026-05-15",
+  "title": "X9C-2R Service Blocker Preflight Inventory",
+  "status": "PREFLIGHT_ASSESSMENT_COMPLETE",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "scanner_baseline": {
+    "total_violations": 450,
+    "critical_violations": 283,
+    "block_build_violations": 167,
+    "service_layer_violations_estimate": "~100-120 (auth-guard imports in services)"
+  },
+  "service_blocker_findings": {
+    "total_services_analyzed": 20,
+    "services_with_auth_blockers": 4,
+    "services_already_refactored": 2,
+    "services_with_context_dependencies": 6
+  },
+  "blockers_by_severity": {
+    "high_priority": [
+      {
+        "file": "src/services/owner-dashboard.service.ts",
+        "blocker_type": "AUTH_GUARD_IMPORT",
+        "current_pattern": "import { requireCapabilityForService } from '@/lib/auth-guard'",
+        "violation_type": "BLOCK_BUILD",
+        "impact": "Service directly calls legacy auth-guard, violates canonical auth pattern",
+        "called_by_routes": [
+          "Likely dashboard/admin routes"
+        ],
+        "requires_refactoring": true,
+        "refactoring_scope": "Remove auth-guard import, accept capability/access parameters from routes",
+        "risk": "HIGH",
+        "blocking_x9c3": true
+      },
+      {
+        "file": "src/services/deliverable.ts",
+        "blocker_type": "AUTH_GUARD_IMPORT",
+        "current_pattern": "import { requireCapabilityForService } from '@/lib/auth-guard'",
+        "violation_type": "BLOCK_BUILD",
+        "impact": "Service directly calls legacy auth-guard",
+        "called_by_routes": [
+          "deliverables/* routes"
+        ],
+        "requires_refactoring": true,
+        "refactoring_scope": "Remove auth-guard import, accept parameters from routes",
+        "risk": "HIGH",
+        "blocking_x9c3": true
+      },
+      {
+        "file": "src/services/stage.ts",
+        "blocker_type": "AUTH_GUARD_IMPORT",
+        "current_pattern": "import { requireCapabilityForService } from '@/lib/auth-guard'",
+        "violation_type": "BLOCK_BUILD",
+        "impact": "Service directly calls legacy auth-guard",
+        "called_by_routes": [
+          "stage/* routes, likely POST/PATCH handlers"
+        ],
+        "requires_refactoring": true,
+        "refactoring_scope": "Remove auth-guard import, accept parameters",
+        "risk": "HIGH",
+        "blocking_x9c3": true
+      },
+      {
+        "file": "src/services/findings.ts",
+        "blocker_type": "AUTH_GUARD_IMPORT",
+        "current_pattern": "import { requireCapabilityForService } from '@/lib/auth-guard'",
+        "violation_type": "BLOCK_BUILD",
+        "impact": "Service directly calls legacy auth-guard",
+        "called_by_routes": [
+          "findings/* routes POST/PATCH"
+        ],
+        "requires_refactoring": true,
+        "refactoring_scope": "Remove auth-guard import, accept parameters",
+        "risk": "HIGH",
+        "blocking_x9c3": true
+      }
+    ],
+    "medium_priority": [
+      {
+        "file": "src/services/engagement.ts",
+        "blocker_type": "CONTEXT_DEPENDENCY",
+        "current_pattern": "Services accept authContext: CanonicalAuthContext parameter but only use limited fields",
+        "violation_type": "NONE (already refactored)",
+        "status": "ALREADY_REFACTORED",
+        "description": "engagement.ts functions like getEngagementById(id, workspaceId, hasInternalAccess) and listEngagements(..., hasInternalAccess) correctly accept hasInternalAccess as parameter instead of ctx.policy",
+        "risk": "LOW",
+        "blocking_x9c3": false
+      },
+      {
+        "file": "src/services/client-account.ts",
+        "blocker_type": "CONTEXT_DEPENDENCY",
+        "current_pattern": "Services accept authContext parameter, use hasInternalAccess parameter for filtering",
+        "violation_type": "NONE (already refactored)",
+        "status": "ALREADY_REFACTORED",
+        "description": "getClientById(id, workspaceId, hasInternalAccess) and listClients(..., hasInternalAccess) correctly use parameters",
+        "risk": "LOW",
+        "blocking_x9c3": false
+      }
+    ],
+    "low_priority_or_design_dependent": [
+      {
+        "category": "Services with governance logic",
+        "count": 5,
+        "description": "Services that implement custom role resolution, workspace membership checks, or intervention state logic",
+        "current_status": "Design-dependent (requires X9D)",
+        "blocker_type": "GOVERNANCE_DESIGN_DEPENDENCY",
+        "blocking_x9c3": false,
+        "blocking_x9d": true
+      }
+    ]
+  },
+  "refactoring_map": {
+    "must_refactor_in_x9c3": [
+      {
+        "service": "owner-dashboard.service.ts",
+        "from_pattern": "Service imports requireCapabilityForService, calls withAuth-style validation internally",
+        "to_pattern": "Route validates capability, passes capability boolean/status to service",
+        "estimated_lines_to_change": "15-25",
+        "estimated_complexity": "MEDIUM",
+        "test_impact": "Service tests must update to pass capability parameters"
+      },
+      {
+        "service": "deliverable.ts",
+        "from_pattern": "Service imports requireCapabilityForService",
+        "to_pattern": "Route validates, passes parameters",
+        "estimated_lines_to_change": "10-15",
+        "estimated_complexity": "LOW",
+        "test_impact": "Update service tests"
+      },
+      {
+        "service": "stage.ts",
+        "from_pattern": "Service imports requireCapabilityForService",
+        "to_pattern": "Route validates, passes parameters",
+        "estimated_lines_to_change": "10-15",
+        "estimated_complexity": "LOW",
+        "test_impact": "Update service tests"
+      },
+      {
+        "service": "findings.ts",
+        "from_pattern": "Service imports requireCapabilityForService",
+        "to_pattern": "Route validates, passes parameters",
+        "estimated_lines_to_change": "15-20",
+        "estimated_complexity": "MEDIUM",
+        "test_impact": "Multiple service tests need parameter updates"
+      }
+    ],
+    "already_refactored_no_action": [
+      {
+        "service": "engagement.ts",
+        "status": "ALREADY_CORRECT",
+        "reason": "Functions already accept hasInternalAccess as parameter"
+      },
+      {
+        "service": "client-account.ts",
+        "status": "ALREADY_CORRECT",
+        "reason": "Functions already accept hasInternalAccess as parameter"
+      }
+    ]
+  },
+  "expected_reduction_if_resolved": {
+    "current_violations_from_4_services": "~60-80",
+    "violations_reduced_after_x9c3": "~60-80",
+    "remaining_violations_after_x9c3": "~370-390",
+    "reason": "Only the 4 services with auth-guard imports are addressed in X9C-3. Other 450-X=370+ violations remain from routes and other infrastructure."
+  },
+  "critical_findings": [
+    {
+      "finding": "4 of 6 services with policy/auth dependencies still use legacy auth-guard imports",
+      "impact": "These are direct blockers for route migration. Routes cannot safely migrate to canonical pattern while their services import legacy auth.",
+      "blocking_timeline": "X9C-3 must address these before X9C-4 route migration"
+    },
+    {
+      "finding": "2 services (engagement.ts, client-account.ts) are already correctly refactored",
+      "impact": "These show the correct pattern - accept parameters instead of ctx. Can be used as templates for refactoring others.",
+      "positive": "Proof that refactoring is feasible and maintainable"
+    },
+    {
+      "finding": "Service refactoring is NOT just removing imports - it's changing function signatures",
+      "impact": "All callers (routes and other services) must be updated. This is a larger scope than just X9C-3.",
+      "scope": "Service refactoring impacts routes (X9C-4), services (X9C-3), and tests (all phases)"
+    },
+    {
+      "finding": "5 additional services with governance logic are design-dependent",
+      "impact": "Cannot be refactored until X9D clarifies workspace/role semantics",
+      "timeline": "X9D must complete before these services can be safely changed"
+    }
+  ],
+  "x9c3_readiness_assessment": {
+    "can_x9c3_start_immediately": false,
+    "reason": "X9C-3 is described as 'service refactoring', but current blockers (4 services with auth-guard imports) require careful design: (1) How do routes pass capability/access info to services? (2) How do services validate without auth-guard? (3) What's the signature change for each function?",
+    "prerequisite": "X9C-3 should start with SERVICE BOUNDARY DESIGN before any code changes",
+    "design_questions_to_resolve": [
+      "Which services need refactoring (all 4 with auth-guard imports, or only those called by migrating routes)?",
+      "What parameters should replace requireCapabilityForService calls?",
+      "How do services know whether they're being called from canonical vs legacy routes?",
+      "Should service signatures change universally or can legacy callers coexist during transition?",
+      "What's the test strategy for changed signatures?"
+    ]
+  },
+  "recommendation": "X9C-3 should be renamed to 'X9C-3 Service Boundary Design + Selective Refactoring' and should NOT attempt full service refactoring of all 4 services at once. Instead: (1) Design the new service boundaries, (2) Refactor engagement.ts caller patterns as template, (3) Refactor 1-2 of the 4 high-priority services as proof-of-concept, (4) Plan full rollout for X9C-4 alongside route migration."
+}
