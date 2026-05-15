@@ -1,0 +1,55 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "scan_date": "2026-05-15",
+  "phase": "X2C-PREFLIGHT",
+  "baseline_snapshot": {
+    "total_violations": 312,
+    "critical_violations": 312,
+    "block_build_violations": 0,
+    "scanner_status": "OPERATIONAL",
+    "routes_with_violations_approximate": 30,
+    "services_with_violations_approximate": 8,
+    "governance_with_violations_approximate": 1,
+    "test_with_violations_approximate": 2
+  },
+  "violation_categories": {
+    "auth_guard_imports": {
+      "count": "~80-100",
+      "locations": [
+        "src/services/*",
+        "src/lib/auth-guard.ts",
+        "src/lib/runtime-shadow-read-enforcer.ts",
+        "src/lib/actor-context.ts",
+        "src/governance/*",
+        "src/__ignored_tests__/*"
+      ],
+      "note": "Type imports and function calls detecting shadow auth reads"
+    },
+    "withauth_calls": {
+      "count": "~150-180",
+      "locations": [
+        "Unmigrated write-path handlers (POST/PATCH/DELETE)",
+        "Service functions",
+        "Governance utilities",
+        "Infrastructure code"
+      ],
+      "note": "Direct withAuth() calls in non-canonical contexts"
+    },
+    "route_handlers": {
+      "migrated_count": 15,
+      "remaining_count": "INVENTORY_REQUIRED",
+      "note": "15 GET handlers migrated in X2B Batch 1, remaining to be inventoried"
+    }
+  },
+  "analysis": {
+    "migrations_completed": 15,
+    "violations_reduced_by_migrations": 200,
+    "current_violation_count": 312,
+    "violations_in_migrated_handlers": 0,
+    "violations_in_write_paths": "~100-150",
+    "violations_in_services": "~80-100",
+    "violations_in_infrastructure": "~60-80",
+    "violations_in_tests": "~15-30"
+  },
+  "lane2_readiness_note": "Scanner baseline established. Phase B inventory required to identify remaining GET-only canonical read handlers eligible for Lane 2 migration."
+}
