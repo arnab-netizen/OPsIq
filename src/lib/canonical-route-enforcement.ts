@@ -22,6 +22,7 @@ import { logger } from "@/infra/logger";
 import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
 import { getSessionFact, getPolicyContextFact } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
+import { hasInternalAccess } from "@/policies/capability-check";
 import type { CapabilityName } from "@/domain/constants/capabilities";
 import { buildAuthState, evaluateAuthState, translateAuthDecisionToResponse } from "@/lib/canonical-auth-facts";
 import type { AuthDecision } from "@/lib/canonical-auth-facts";
@@ -445,6 +446,80 @@ export function withCanonicalEnforcement(
         }
       );
     }
+  };
+}
+
+/**
+ * POLICY-AWARE CANONICAL ROUTE ENFORCEMENT
+ *
+ * For routes that need policy context validation (internal access, role checks).
+ *
+ * Layers on top of withCanonicalEnforcement.
+ * Policy checks happen after identity/capability checks (fail-closed).
+ * Handler only executes if both identity AND policy checks pass.
+ *
+ * Usage:
+ * ```typescript
+ * export const GET = withCanonicalPolicyEnforcement(
+ *   async (ctx) => {
+ *     // ctx.policy is available and verified
+ *     const isInternal = ctx.policy ? hasInternalAccess(ctx.policy) : false;
+ *     return { isInternal };
+ *   },
+ *   {
+ *     requireInternalAccess: true,  // Route requires internal user
+ *     requireCapabilities: ["AUDIT_VIEW"],  // Existing capability checks
+ *   }
+ * );
+ * ```
+ */
+export function withCanonicalPolicyEnforcement(
+  handler: CanonicalHandler,
+  options?: {
+    requireInternalAccess?: boolean;
+    requirePolicyContext?: boolean;
+    requireCapabilities?: string[];
+    requireActorType?: "user" | "service" | ("user" | "service")[];
+  }
+): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
+  return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
+    const params = await context.params;
+
+    // STEP 1: Use withCanonicalEnforcement to build verified context
+    const baseWrapper = withCanonicalEnforcement(
+      async (ctx: CanonicalAuthContext, handlerParams: Record<string, string>) => {
+        // STEP 2: Apply policy-specific checks (fail-closed)
+
+        if (options?.requireInternalAccess) {
+          const internalAccess = ctx.policy ? hasInternalAccess(ctx.policy) : false;
+          if (!internalAccess) {
+            return new NextResponse(
+              JSON.stringify({ error: "Internal access required" }),
+              { status: 403 }
+            );
+          }
+        }
+
+        if (options?.requirePolicyContext) {
+          if (!ctx.policy) {
+            return new NextResponse(
+              JSON.stringify({ error: "Policy context required" }),
+              { status: 403 }
+            );
+          }
+        }
+
+        // STEP 3: Call handler (only if all policy checks passed)
+        return handler(ctx, handlerParams);
+      },
+      {
+        requireCapabilities: options?.requireCapabilities,
+        requireActorType: options?.requireActorType,
+      }
+    );
+
+    // STEP 4: Delegate to base wrapper (which handles all auth/policy enforcement)
+    return baseWrapper(req, { params: Promise.resolve(params) });
   };
 }
 
