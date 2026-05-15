@@ -1,0 +1,80 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X6B",
+  "subphase": "E_AFTER_SNAPSHOT",
+  "snapshot_date": "2026-05-15",
+  "lane": "LANE_6_REQUIRE_AUTH_NO_ARGS",
+  "batch": "X6B_PILOT",
+  "handlers_migrated": [
+    "src/app/api/entity/route.ts GET"
+  ],
+  "before_total_violations": 453,
+  "after_total_violations": 450,
+  "before_critical": 284,
+  "after_critical": 283,
+  "before_block_build": 169,
+  "after_block_build": 167,
+  "expected_reduction": 1,
+  "actual_reduction": 3,
+  "reduction_matched_expectation": false,
+  "reduction_exceeded_expectation": true,
+  "handler_results": [
+    {
+      "file": "src/app/api/entity/route.ts",
+      "method": "GET",
+      "migration_status": "COMPLETE",
+      "expected_reduction": 1,
+      "actual_reduction": 3,
+      "handler_scanner_clean": true,
+      "read_semantics_preserved": true,
+      "service_calls_preserved": true,
+      "response_shape_preserved": true
+    }
+  ],
+  "build_validation": {
+    "command": "npm run build",
+    "result": "PASS",
+    "errors": 0,
+    "warnings": 0,
+    "typescript_check": "clean"
+  },
+  "test_validation": {
+    "g6r_auth_bridge": {
+      "result": "PASS",
+      "test_files": 1,
+      "tests_passed": 14,
+      "tests_failed": 0
+    },
+    "phase_d_e_f": {
+      "result": "PASS",
+      "test_files": 17,
+      "tests_passed": 324,
+      "tests_failed": 0
+    },
+    "total_tests": 338,
+    "total_passed": 338,
+    "total_failed": 0,
+    "regressions": 0
+  },
+  "new_violations_introduced": [],
+  "tests_passed": [
+    "g6r-auth-bridge (14/14)",
+    "phase-d (part of 324/324)",
+    "phase-e (part of 324/324)",
+    "phase-f (part of 324/324)"
+  ],
+  "tests_failed": [],
+  "test_gaps": [
+    "No dedicated route-level tests for entity GET handler"
+  ],
+  "notes": [
+    "Handler successfully migrated to withCanonicalEnforcement",
+    "All tests pass with no regressions",
+    "Scanner shows unexpected 3-violation reduction (expected 1)",
+    "Suggests multiple violations per handler in scanner output",
+    "Critical reduced by 1, block-build reduced by 2",
+    "All read semantics preserved",
+    "No new violations introduced",
+    "Lane 6 pilot migration complete"
+  ]
+}

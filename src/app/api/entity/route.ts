@@ -1,34 +1,23 @@
 import { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
-import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { UnauthorizedError } from "@/infra/errors";
 import { createEntity, getEntities } from "@/services/entity/store";
-import { requireAuth } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { getSession } from "@/services/auth";
 import { canEdit } from "@/services/auth/access";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { randomUUID } from "crypto";
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Require authentication (fail-closed)
-  await requireAuth();
-
-  // Require workspace context
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
-
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new UnauthorizedError("Unauthorized");
-  }
-
-  const entities = getEntities();
-  return entities;
-});
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const entities = getEntities();
+    return entities;
+  },
+  { requireWorkspace: true }
+);
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Enforce server-side auth
