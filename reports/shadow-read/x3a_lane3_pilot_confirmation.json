@@ -1,0 +1,77 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X3A",
+  "subphase": "A_CONFIRM_PILOT_SELECTION",
+  "confirmation_date": "2026-05-15",
+  "pilot_handlers": [
+    {
+      "file": "src/app/api/actions/route.ts",
+      "method": "POST",
+      "exact_required_capability": "ACTION_CREATE",
+      "workspace_source": "x-workspace-id header via request.headers.get() + enforceWorkspaceScoping(request, workspaceId)",
+      "current_auth_pattern": "withEnforcementFull(handlePost) where handlePost: async (request: NextRequest) => { const authContext = await withAuth({capability: CAPABILITIES.ACTION_CREATE, internalOnly: true}); ... const canonicalContext = canonicalizeAuthContext(authContext, workspaceId); ... }",
+      "uses_quarantined_bridge": true,
+      "bridge_usage": "Line 77: canonicalizeAuthContext(authContext, workspaceId)",
+      "service_calls": [
+        "createAction(body, canonicalContext, workspaceId)"
+      ],
+      "requires_idempotency": true,
+      "idempotency_impl": "withIdempotency(idempotencyKey, 'action.create', ...)",
+      "requires_audit_event": true,
+      "audit_event_name": "action.create",
+      "expected_reduction": 3,
+      "risk": "LOW",
+      "confirmed_safe_for_pilot": true,
+      "migration_notes": "Handler function extracted to handlePost. Will inline into withCanonicalEnforcement. Remove canonicalizeAuthContext bridge usage, use ctx directly."
+    },
+    {
+      "file": "src/app/api/clients/route.ts",
+      "method": "POST",
+      "exact_required_capability": "CLIENT_CREATE",
+      "workspace_source": "x-workspace-id header via request.headers.get() + enforceWorkspaceScoping(request, workspaceId)",
+      "current_auth_pattern": "withEnforcementFull(async (request: NextRequest) => { const { session, policy } = await withAuth({capability: CAPABILITIES.CLIENT_CREATE, internalOnly: true}); ... const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId); ... })",
+      "uses_quarantined_bridge": true,
+      "bridge_usage": "Line 79: canonicalizeAuthContext({ session, policy }, workspaceId)",
+      "service_calls": [
+        "createClient(body, canonicalContext, workspaceId)"
+      ],
+      "requires_idempotency": true,
+      "idempotency_impl": "checkIdempotencyKey() + recordIdempotencyResponse/recordIdempotencyError",
+      "requires_audit_event": true,
+      "audit_event_name": "createClient (via recordIdempotencyResponse)",
+      "expected_reduction": 3,
+      "risk": "LOW",
+      "confirmed_safe_for_pilot": true,
+      "migration_notes": "Inline into withCanonicalEnforcement. Remove canonicalizeAuthContext bridge usage, use ctx directly."
+    },
+    {
+      "file": "src/app/api/leads/route.ts",
+      "method": "POST",
+      "exact_required_capability": "LEAD_CREATE",
+      "workspace_source": "x-workspace-id header via request.headers.get() + enforceWorkspaceScoping(request, workspaceId)",
+      "current_auth_pattern": "withEnforcementFull(async (request: NextRequest) => { const authContext = await withAuth({capability: CAPABILITIES.LEAD_CREATE, internalOnly: true}); ... const result = await createLead(body, canonicalizeAuthContext(authContext, workspaceId), workspaceId); ... })",
+      "uses_quarantined_bridge": true,
+      "bridge_usage": "Line 79: canonicalizeAuthContext(authContext, workspaceId)",
+      "service_calls": [
+        "createLead(body, canonicalizeAuthContext(...), workspaceId)"
+      ],
+      "requires_idempotency": true,
+      "idempotency_impl": "checkIdempotencyKey() + recordIdempotencyResponse/recordIdempotencyError",
+      "requires_audit_event": true,
+      "audit_event_name": "createLead (via recordIdempotencyResponse)",
+      "expected_reduction": 3,
+      "risk": "LOW",
+      "confirmed_safe_for_pilot": true,
+      "migration_notes": "Inline into withCanonicalEnforcement. Remove canonicalizeAuthContext bridge usage, use ctx directly."
+    }
+  ],
+  "confirmation_summary": {
+    "total_handlers_confirmed": 3,
+    "all_safe_for_pilot": true,
+    "all_low_risk": true,
+    "all_pure_creates": true,
+    "quarantined_bridge_used_in_all": true,
+    "expected_total_reduction": 9,
+    "confirmation_status": "APPROVED - Ready for Phase B before snapshot"
+  }
+}

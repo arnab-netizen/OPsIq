@@ -1,0 +1,74 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X3C",
+  "subphase": "C_QUARANTINED_BRIDGE_INVENTORY_UPDATE",
+  "audit_date": "2026-05-15",
+  "original_register_source": "reports/shadow-read/x1p_quarantined_bridge_register.json",
+  "original_quarantined_bridges": 37,
+  "bridges_tracking_sample": [
+    {
+      "file": "src/app/api/actions/route.ts",
+      "method": "POST",
+      "original_status": "QUARANTINED_TRANSITIONAL_DEBT",
+      "current_status": "REMOVED",
+      "removed_in_phase": "X3A_PILOT",
+      "still_requires_future_migration": false,
+      "future_lane": "N/A - REMOVED"
+    },
+    {
+      "file": "src/app/api/clients/route.ts",
+      "method": "POST",
+      "original_status": "QUARANTINED_TRANSITIONAL_DEBT",
+      "current_status": "REMOVED",
+      "removed_in_phase": "X3A_PILOT",
+      "still_requires_future_migration": false,
+      "future_lane": "N/A - REMOVED"
+    },
+    {
+      "file": "src/app/api/leads/route.ts",
+      "method": "POST",
+      "original_status": "QUARANTINED_TRANSITIONAL_DEBT",
+      "current_status": "REMOVED",
+      "removed_in_phase": "X3A_PILOT",
+      "still_requires_future_migration": false,
+      "future_lane": "N/A - REMOVED"
+    },
+    {
+      "file": "src/app/api/users/route.ts",
+      "method": "POST",
+      "original_status": "QUARANTINED_TRANSITIONAL_DEBT",
+      "current_status": "REMOVED",
+      "removed_in_phase": "X3B_BATCH2",
+      "still_requires_future_migration": false,
+      "future_lane": "N/A - REMOVED"
+    },
+    {
+      "file": "src/app/api/decisions/create/route.ts",
+      "method": "POST",
+      "original_status": "QUARANTINED_TRANSITIONAL_DEBT",
+      "current_status": "STILL_PRESENT",
+      "removed_in_phase": "NOT_REMOVED",
+      "still_requires_future_migration": true,
+      "future_lane": "DEFERRED - Governance decision required before migration"
+    }
+  ],
+  "summary": {
+    "original_count": 37,
+    "removed_by_x3a_pilot": 3,
+    "removed_by_x3b_batch2": 1,
+    "total_removed": 4,
+    "still_present_in_routes": 1,
+    "still_present_in_services": "~33 (not in scope for X3A-X3B, belong to future lanes)",
+    "percent_removed_from_route_mutations": "80% (4 of 5 lane 3 ready mutations)",
+    "remaining_in_scope": 1,
+    "remaining_in_other_scopes": "~33 (services, infrastructure, other patterns)"
+  },
+  "bridge_removal_confidence": {
+    "actions_post_removed": "VERIFIED - Code inspection confirms canonicalizeAuthContext removed",
+    "clients_post_removed": "VERIFIED - Code inspection confirms canonicalizeAuthContext removed",
+    "leads_post_removed": "VERIFIED - Code inspection confirms canonicalizeAuthContext removed",
+    "users_post_removed": "VERIFIED - Code inspection confirms canonicalizeAuthContext removed",
+    "decisions_create_still_present": "CONFIRMED - Handler not migrated, bridge still in code (deferred)"
+  },
+  "note": "Lane 3 mutation scope: 4 of 5 quarantined bridges successfully removed (80%). 1 deferred due to governance constraint. Remaining 32+ bridges in services, infrastructure, and other patterns await future lanes (Lane 4-7, G8-G12)."
+}

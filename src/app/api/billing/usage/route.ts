@@ -1,7 +1,5 @@
-import type { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { resolveEntitlements } from "@/services/entitlement.service";
-import { errorToResponse } from "@/infra/errors";
 
 interface UsageDetail {
   key: string;
@@ -11,22 +9,9 @@ interface UsageDetail {
   remaining: number | null;
 }
 
-export async function GET(request: Request) {
-  try {
-    // Authenticate
-    await withAuth();
-
-    // Get workspaceId from header
-    const nextRequest = request as NextRequest;
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
-
-    if (!workspaceId) {
-      return errorToResponse(
-        new Error("Workspace ID required (x-workspace-id header)")
-      );
-    }
-
-    const entitlements = await resolveEntitlements(workspaceId);
+export const GET = withCanonicalEnforcement(
+  async (ctx) => {
+    const entitlements = await resolveEntitlements(ctx.verifiedWorkspaceId);
 
     // Map capabilities with usage data
     const usageDetails: UsageDetail[] = entitlements.capabilities.map(
@@ -53,21 +38,19 @@ export async function GET(request: Request) {
       }
     );
 
-    return Response.json(
-      {
-        plan: {
-          id: entitlements.plan.id,
-          name: entitlements.plan.name,
-        },
-        period: {
-          start: entitlements.currentPeriodStart,
-          end: entitlements.currentPeriodEnd,
-        },
-        usage: usageDetails,
+    return {
+      plan: {
+        id: entitlements.plan.id,
+        name: entitlements.plan.name,
       },
-      { status: 200 }
-    );
-  } catch (error) {
-    return errorToResponse(error);
+      period: {
+        start: entitlements.currentPeriodStart,
+        end: entitlements.currentPeriodEnd,
+      },
+      usage: usageDetails,
+    };
+  },
+  {
+    requireWorkspace: true,
   }
-}
+);

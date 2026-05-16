@@ -1,3 +1,5 @@
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+
 export interface Finding {
   id: string;
   severity: "critical" | "high" | "medium" | "low";
@@ -143,11 +145,10 @@ export function calculateExecutionCertainty(
   };
 }
 
-import type { AuthContext } from "@/lib/auth-guard";
 
 export async function generateExecutionCertainty(
   engagementId: string,
-  authContext: AuthContext
+  authContext: CanonicalAuthContext
 ) {
   return {
     engagementId,

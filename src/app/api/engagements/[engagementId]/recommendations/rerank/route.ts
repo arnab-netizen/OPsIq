@@ -1,13 +1,14 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { reRankRecommendationsInEngagement } from "@/services/recommendation";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 
-export const POST = withRequestContext(async (request, context) => {
+export const POST = withEnforcementFull(async (request, context, params) => {
   const workspaceId = request.headers.get("x-workspace-id") || "";
-  const { engagementId } = await context.params;
+  const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
   const authContext = await withAuth({
     capability: CAPABILITIES.RECOMMENDATION_APPROVE,
@@ -36,7 +37,7 @@ export const POST = withRequestContext(async (request, context) => {
   }
 
   try {
-    const result = await reRankRecommendationsInEngagement(engagementId, authContext, workspaceId);
+    const result = await reRankRecommendationsInEngagement(engagementId, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 200, result);
     return Response.json(result);
   } catch (error) {

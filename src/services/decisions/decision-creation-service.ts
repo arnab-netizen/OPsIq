@@ -2,15 +2,17 @@ import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 
-export interface CreateDecisionInput {
+export interface VerifiedDecisionInput {
+  // Business data
   title: string;
   type: string;
   impact: number;
   confidence: number;
-  workspaceId: string;
-  userId: string;
   problemType?: string;
   expectedOutcome?: string;
+  // Verified auth metadata
+  verifiedActorId: string;
+  verifiedWorkspaceId: string;
 }
 
 export interface CreateDecisionResult {
@@ -24,18 +26,11 @@ export interface CreateDecisionResult {
 }
 
 export async function createDecision(
-  input: CreateDecisionInput
+  input: VerifiedDecisionInput
 ): Promise<CreateDecisionResult> {
-  const {
-    title,
-    type,
-    impact,
-    confidence,
-    workspaceId,
-    userId,
-    problemType,
-    expectedOutcome,
-  } = input;
+  const { title, type, impact, confidence, verifiedWorkspaceId, verifiedActorId, problemType, expectedOutcome } = input;
+  const workspaceId = verifiedWorkspaceId;
+  const userId = verifiedActorId;
 
   // Enforce workspace isolation
   enforceWorkspaceId(workspaceId, "createDecision", "OperatorItem");
@@ -111,7 +106,7 @@ export async function createDecision(
 }
 
 export interface BulkCreateInput {
-  decisions: CreateDecisionInput[];
+  decisions: VerifiedDecisionInput[];
 }
 
 export interface BulkCreateResult {
@@ -154,7 +149,7 @@ export async function createDecisionsBulk(
       });
       logger.warn("Failed to create decision in bulk", {
         title: decision.title,
-        workspaceId: decision.workspaceId,
+        workspaceId: decision.verifiedWorkspaceId,
         reason: error instanceof Error ? error.message : String(error),
       });
     }
@@ -186,7 +181,7 @@ export function parseCSV(
   csvContent: string,
   workspaceId: string,
   userId: string
-): CreateDecisionInput[] {
+): VerifiedDecisionInput[] {
   const lines = csvContent.trim().split("\n");
 
   if (lines.length < 2) {
@@ -207,7 +202,7 @@ export function parseCSV(
     throw new Error(`Missing required columns: ${missingColumns.join(", ")}`);
   }
 
-  const decisions: CreateDecisionInput[] = [];
+  const decisions: VerifiedDecisionInput[] = [];
 
   // Parse data rows
   for (let i = 1; i < lines.length; i++) {
@@ -227,8 +222,8 @@ export function parseCSV(
         type: row["type"],
         impact: parseFloat(row["impact"]),
         confidence: parseFloat(row["confidence"]),
-        workspaceId,
-        userId,
+        verifiedWorkspaceId: workspaceId,
+        verifiedActorId: userId,
         problemType: row["problemtype"] || undefined,
         expectedOutcome: row["expectedoutcome"] || undefined,
       });

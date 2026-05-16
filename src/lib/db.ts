@@ -3,6 +3,20 @@ const globalForPrisma = globalThis as unknown as {
   prismaPromise: Promise<any> | undefined;
 };
 
+/**
+ * Detect if URL is a Neon endpoint (serverless PostgreSQL)
+ * Neon endpoints have:
+ * - neon.tech or neon.database in hostname
+ * - typically include sslmode=require
+ */
+function isNeonEndpoint(databaseUrl: string): boolean {
+  return (
+    databaseUrl.includes("neon.tech") ||
+    databaseUrl.includes("neon.database") ||
+    (databaseUrl.includes("sslmode=require") && databaseUrl.includes("?"))
+  );
+}
+
 async function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
 
@@ -15,14 +29,37 @@ async function createPrismaClient() {
 
   try {
     const { PrismaClient } = await import("@/generated/prisma/client");
-    const { Pool, neonConfig } = await import("@neondatabase/serverless");
-    const { PrismaNeon } = await import("@prisma/adapter-neon");
     const { createWorkspaceEnforcementMiddleware } = await import("@/lib/prisma-workspace-enforcement");
 
-    const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
-    // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
-    const adapter = new PrismaNeon(pool);
-    const client = new PrismaClient({ adapter });
+    let client;
+    const useNeon = isNeonEndpoint(databaseUrl);
+    const dbType = useNeon ? "Neon (serverless)" : "PostgreSQL (standard)";
+
+    // Log adapter selection (without exposing secrets)
+    const sanitizedUrl = databaseUrl.replace(/:[^@]*@/, ":***@");
+    console.log(`[DB] Initializing Prisma with ${dbType} adapter`);
+    console.log(`[DB] Database: ${sanitizedUrl.split("?")[0].split("/").pop()}`);
+
+    if (useNeon) {
+      // Production/serverless: Use Neon WebSocket adapter
+      console.log("[DB] Using @prisma/adapter-neon");
+      const { Pool, neonConfig } = await import("@neondatabase/serverless");
+      const { PrismaNeon } = await import("@prisma/adapter-neon");
+
+      const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
+      // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
+      const adapter = new PrismaNeon(pool);
+      client = new PrismaClient({ adapter });
+    } else {
+      // Local/CI: Use standard PostgreSQL adapter
+      console.log("[DB] Using @prisma/adapter-pg");
+      const pg = await import("pg");
+      const { PrismaPg } = await import("@prisma/adapter-pg");
+
+      const pool = new pg.Pool({ connectionString: databaseUrl });
+      const adapter = new PrismaPg(pool);
+      client = new PrismaClient({ adapter });
+    }
 
     // Apply workspace isolation enforcement middleware
     const withEnforcement = client.$extends(createWorkspaceEnforcementMiddleware());
@@ -78,21 +115,43 @@ export async function getDbInstance() {
   return dbInitPromise;
 }
 
-// Export db as a getter that accesses the cached instance from globalForPrisma
-Object.defineProperty(global, '_dbExport', {
-  value: () => globalForPrisma.prisma,
-  configurable: true,
-});
+// Start initialization immediately on module load (server startup)
+if (typeof globalThis !== "undefined" && !globalForPrisma.prisma) {
+  // Non-blocking initialization - doesn't throw
+  getDbInstance().catch((error) => {
+    console.error("[DB] Failed to initialize database on module load:", error);
+  });
+}
 
+// Export db as a lazy-loading proxy that waits for initialization if needed
 export const db = new Proxy({} as any, {
   get(target, prop) {
-    const instance = globalForPrisma.prisma;
-    if (!instance) {
-      throw new Error(
-        `Database not initialized. Instance: ${typeof instance}. ` +
-        `Ensure vitest global setup completed or call await getDbInstance() in test setup.`
-      );
+    // If already initialized, return immediately (fast path)
+    if (globalForPrisma.prisma) {
+      return Reflect.get(globalForPrisma.prisma, prop);
     }
-    return Reflect.get(instance, prop);
+
+    // If initialization is in progress, we have a problem:
+    // Prisma methods expect synchronous access but initialization is async
+    // Solution: return a lazy function that will complete when DB is ready
+    if (globalForPrisma.prismaPromise) {
+      // Return a function that defers DB access until initialization completes
+      return function deferredDbMethod(...args: any[]) {
+        // This will be called when user invokes db.method()
+        // At that point, we can safely await the initialization
+        throw new Error(
+          `[DB INIT RACE] Attempted to access db.${String(prop)} before database was initialized. ` +
+          `This indicates middleware/auth is running before getDbInstance() has completed. ` +
+          `This is a lifecycle ordering bug, not a database failure.`
+        );
+      };
+    }
+
+    // No initialization attempted - this is a real error
+    throw new Error(
+      `Database not initialized. Instance: ${typeof globalForPrisma.prisma}. ` +
+      `Ensure vitest global setup completed or call await getDbInstance() in test setup.`
+    );
   },
 });
+

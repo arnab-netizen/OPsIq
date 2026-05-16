@@ -1,46 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/services/auth";
-import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const userId = session.user.id;
-    const workspaceId = request.nextUrl.searchParams.get("workspaceId");
-
-    if (!workspaceId) {
-      return NextResponse.json(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
-    }
-
-    // Enforce workspace scoping
-    const membership = await enforceWorkspaceScoping(request, workspaceId);
-    if (!membership) {
-      return NextResponse.json(
-        { error: "Unauthorized or invalid workspace" },
-        { status: 403 }
-      );
-    }
-
-    // Check permission to read/view decisions
-    if (!hasPermission(membership.role, "read")) {
-      return NextResponse.json(
-        { error: "Insufficient permissions to view decisions" },
-        { status: 403 }
-      );
-    }
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const userId = ctx.verifiedActorId;
 
     // Get filter from query params
-    const status = request.nextUrl.searchParams.get("status");
-    const limit = Math.min(parseInt(request.nextUrl.searchParams.get("limit") || "100"), 1000);
-    const offset = Math.max(parseInt(request.nextUrl.searchParams.get("offset") || "0"), 0);
+    const status = ctx.request?.nextUrl.searchParams.get("status");
+    const limit = Math.min(parseInt(ctx.request?.nextUrl.searchParams.get("limit") || "100"), 1000);
+    const offset = Math.max(parseInt(ctx.request?.nextUrl.searchParams.get("offset") || "0"), 0);
 
     // Build filter
     const where: any = {
@@ -75,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     const total = await db.operatorItem.count({ where });
 
-    return NextResponse.json({
+    return {
       decisions: decisionsRaw.map((d: typeof decisionsRaw[0]) => ({
         id: d.id,
         title: d.problem,
@@ -90,14 +60,7 @@ export async function GET(request: NextRequest) {
       total,
       limit,
       offset,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error(`Failed to fetch decisions: ${message}`);
-
-    return NextResponse.json(
-      { error: "Failed to fetch decisions", details: message },
-      { status: 500 }
-    );
-  }
-}
+    };
+  },
+  { requireWorkspace: true }
+);

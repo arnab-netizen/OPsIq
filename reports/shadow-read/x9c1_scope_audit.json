@@ -1,0 +1,115 @@
+{
+  "phase": "X9C-1",
+  "date": "2026-05-15",
+  "title": "X9C-1 Scope Audit - File Modification Inventory",
+  "status": "VERIFIED",
+  "summary": {
+    "total_files_modified": 1,
+    "total_files_created": 2,
+    "total_changes": 3,
+    "scope_compliance": "COMPLIANT",
+    "authorization_compliance": "COMPLIANT"
+  },
+  "files_modified": [
+    {
+      "path": "src/lib/canonical-route-enforcement.ts",
+      "status": "modified",
+      "changes": [
+        {
+          "type": "import_added",
+          "line": 25,
+          "content": "import { hasInternalAccess } from \"@/policies/capability-check\";",
+          "justification": "Required to call hasInternalAccess check in wrapper"
+        },
+        {
+          "type": "function_added",
+          "lines": "452-520",
+          "name": "withCanonicalPolicyEnforcement",
+          "justification": "New wrapper for policy-enforcement checks (layered on withCanonicalEnforcement)"
+        }
+      ],
+      "unmodified_functions": [
+        "withCanonicalEnforcement (lines 119-449) - UNCHANGED",
+        "CanonicalAuthContext interface - UNCHANGED",
+        "All other functions - UNCHANGED"
+      ]
+    }
+  ],
+  "files_created": [
+    {
+      "path": "reports/shadow-read/x9c1_contract_confirmation.md",
+      "type": "documentation",
+      "justification": "Contract verification for withCanonicalEnforcement location and behavior"
+    },
+    {
+      "path": "reports/shadow-read/x9c1_wrapper_implementation_notes.md",
+      "type": "documentation",
+      "justification": "Implementation details and design notes for withCanonicalPolicyEnforcement"
+    }
+  ],
+  "files_NOT_modified": {
+    "route_files": {
+      "status": "VERIFIED - NO CHANGES",
+      "description": "No route files modified in X9C-1 (deferred to X9C-2)",
+      "sample_checked": [
+        "src/app/api/engagements/route.ts",
+        "src/app/api/engagements/[engagementId]/route.ts",
+        "src/app/api/me/route.ts"
+      ]
+    },
+    "service_files": {
+      "status": "VERIFIED - NO CHANGES",
+      "description": "No service files modified in X9C-1 (deferred to X9C-3)",
+      "scope": "Service layer parameter refactoring deferred to X9C-3"
+    },
+    "capability_constants": {
+      "status": "VERIFIED - NO CHANGES",
+      "file": "src/domain/constants/capabilities.ts",
+      "description": "No new capabilities added (DECISION_CREATE deferred to later phase)"
+    },
+    "auth_guard_legacy": {
+      "status": "VERIFIED - NO CHANGES",
+      "file": "src/lib/auth-guard.ts",
+      "description": "Legacy system not modified in X9C-1"
+    },
+    "scanner_infrastructure": {
+      "status": "VERIFIED - NO CHANGES",
+      "file": "src/governance/auth-shadow-read-scanner.ts",
+      "description": "Scanner not modified (violation count stable at 450)"
+    },
+    "middleware_enforcement": {
+      "status": "VERIFIED - NO CHANGES",
+      "file": "src/middleware/workspace-enforcement.ts",
+      "description": "Workspace enforcement deferred to X9D"
+    }
+  },
+  "compliance_checks": {
+    "scope_authorization": {
+      "status": "✓ PASS",
+      "details": "All modified files within authorized scope per X9B-R implementation readiness"
+    },
+    "no_unauthorized_changes": {
+      "status": "✓ PASS",
+      "details": "No changes to forbidden files (auth-guard, scanner, capabilities, workspace-enforcement)"
+    },
+    "wrapper_only_implementation": {
+      "status": "✓ PASS",
+      "details": "X9C-1 implements wrapper foundation only (no route migrations, no service refactoring)"
+    },
+    "type_safety": {
+      "status": "✓ PASS",
+      "details": "No any/as any introduced, full TypeScript compliance"
+    },
+    "backward_compatibility": {
+      "status": "✓ PASS",
+      "details": "Existing withCanonicalEnforcement unchanged, all existing routes still functional"
+    }
+  },
+  "phase_boundaries": {
+    "x9c1_scope": "Wrapper foundation implementation",
+    "x9c2_scope": "Route pilot migration (3-4 GET handlers)",
+    "x9c3_scope": "Service layer parameter refactoring",
+    "separation_maintained": "✓ VERIFIED"
+  },
+  "audit_verdict": "✓ COMPLIANT - All changes within authorized scope for X9C-1 phase"
+}

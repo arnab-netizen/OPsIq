@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { createLogger } from "@/infra/logger";
-import { errorToResponse, AppError } from "@/infra/errors";
+import { errorToResponse, AppError, toAppError } from "@/infra/errors";
 
 export type ApiHandler = (
   request: Request,
@@ -37,14 +37,7 @@ export function withRequestContext(handler: ApiHandler): ApiHandler {
 
       return response;
     } catch (error) {
-      const appError =
-        error instanceof AppError
-          ? error
-          : new AppError(
-              "INTERNAL_ERROR",
-              "An unexpected error occurred",
-              500
-            );
+      const appError = toAppError(error, correlationId);
 
       log.error("API request failed", {
         method: request.method,
@@ -55,7 +48,7 @@ export function withRequestContext(handler: ApiHandler): ApiHandler {
         durationMs: Date.now() - start,
       });
 
-      const response = errorToResponse(appError);
+      const response = errorToResponse(appError, correlationId);
       response.headers.set("x-correlation-id", correlationId);
       response.headers.set("x-request-id", requestId);
 

@@ -1,0 +1,31 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "route": "src/app/api/clients/route.ts",
+  "phase": "g7b",
+  "timestamp": "2026-05-14T19:57:00Z",
+  "migration_status": "COMPLETE",
+  "handler_migrated": "GET",
+  "exact_required_capability": "CLIENT_VIEW",
+  "before_violations": 6,
+  "after_violations": 4,
+  "expected_reduction": 4,
+  "actual_reduction": 2,
+  "reduction_notes": "Migration of GET handler removed 2 violations (withAuth calls at line 31). POST handler remains unchanged with withAuth at line 52. Import still needed for POST handler.",
+  "build_status": "✓ PASS",
+  "bridge_tests": "14/14 PASS",
+  "phase_tests": "324/324 PASS",
+  "scanner_status": "✓ PASS (no new violations)",
+  "total_violations_change": 567,
+  "total_violations_after": 565,
+  "net_violation_reduction": -2,
+  "route_scanner_clean": false,
+  "reason_not_clean": "POST handler still uses withAuth() pattern with CLIENT_CREATE capability",
+  "migration_complete": false,
+  "notes": [
+    "GET handler successfully migrated to withCanonicalEnforcement",
+    "Capability enforcement moved to wrapper level: requireCapabilities: ['CLIENT_VIEW']",
+    "POST handler left unchanged (uses CLIENT_CREATE with internalOnly, different capability)",
+    "No new violations introduced",
+    "Tests pass with no regressions"
+  ]
+}

@@ -1,0 +1,203 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X8B-1",
+  "date": "2026-05-16",
+  "scanner_baseline": {
+    "total": 448,
+    "critical": 283,
+    "block_build": 165
+  },
+  "items": [
+    {
+      "file": "src/domain/constants/roles.ts",
+      "symbol": "ROLES.SYSTEM_ADMIN",
+      "current_pattern": "system_admin",
+      "role_or_permission": "SYSTEM_ADMIN",
+      "hierarchy_level": 100,
+      "is_internal": true,
+      "maps_to_capability": "All capabilities (Object.values(CAPABILITIES))",
+      "used_by_close_decision": true,
+      "risk": "LOW",
+      "notes": "System admin gets all capabilities including DECISION_CLOSE"
+    },
+    {
+      "file": "src/domain/constants/roles.ts",
+      "symbol": "ROLES.ADMIN_OR_PORTFOLIO_MANAGER",
+      "current_pattern": "admin_or_portfolio_manager",
+      "role_or_permission": "ADMIN_OR_PORTFOLIO_MANAGER",
+      "hierarchy_level": 80,
+      "is_internal": true,
+      "maps_to_capability": "Multiple (see capability-check.ts ROLE_CAPABILITIES)",
+      "used_by_close_decision": true,
+      "risk": "MEDIUM",
+      "notes": "Admin/Portfolio manager role - likely should have DECISION_CLOSE capability"
+    },
+    {
+      "file": "src/domain/constants/roles.ts",
+      "symbol": "ROLES.EXPERIENCED_CONSULTANT",
+      "current_pattern": "experienced_consultant",
+      "role_or_permission": "EXPERIENCED_CONSULTANT",
+      "hierarchy_level": 60,
+      "is_internal": true,
+      "maps_to_capability": "Multiple (see capability-check.ts ROLE_CAPABILITIES)",
+      "used_by_close_decision": false,
+      "risk": "LOW",
+      "notes": "Experienced consultant - may or may not have close permission"
+    },
+    {
+      "file": "src/domain/constants/roles.ts",
+      "symbol": "ROLES.BEGINNER_CONSULTANT",
+      "current_pattern": "beginner_consultant",
+      "role_or_permission": "BEGINNER_CONSULTANT",
+      "hierarchy_level": 40,
+      "is_internal": true,
+      "maps_to_capability": "Multiple (see capability-check.ts ROLE_CAPABILITIES)",
+      "used_by_close_decision": false,
+      "risk": "LOW",
+      "notes": "Beginner consultant - unlikely to have close permission"
+    },
+    {
+      "file": "src/domain/constants/roles.ts",
+      "symbol": "ROLES.ANALYST",
+      "current_pattern": "analyst",
+      "role_or_permission": "ANALYST",
+      "hierarchy_level": 30,
+      "is_internal": true,
+      "maps_to_capability": "Multiple (see capability-check.ts ROLE_CAPABILITIES)",
+      "used_by_close_decision": false,
+      "risk": "LOW",
+      "notes": "Analyst - unlikely to have close permission"
+    },
+    {
+      "file": "src/domain/constants/roles.ts",
+      "symbol": "ROLES.CLIENT_OWNER",
+      "current_pattern": "client_owner",
+      "role_or_permission": "CLIENT_OWNER",
+      "hierarchy_level": 20,
+      "is_internal": false,
+      "maps_to_capability": "Read-only client capabilities",
+      "used_by_close_decision": false,
+      "risk": "LOW",
+      "notes": "Client role - should not have DECISION_CLOSE (internal operation)"
+    },
+    {
+      "file": "src/domain/constants/roles.ts",
+      "symbol": "ROLES.CLIENT_TEAM_MEMBER",
+      "current_pattern": "client_team_member",
+      "role_or_permission": "CLIENT_TEAM_MEMBER",
+      "hierarchy_level": 10,
+      "is_internal": false,
+      "maps_to_capability": "Read-only client capabilities",
+      "used_by_close_decision": false,
+      "risk": "LOW",
+      "notes": "Client role - should not have DECISION_CLOSE (internal operation)"
+    },
+    {
+      "file": "src/domain/constants/roles.ts",
+      "symbol": "ROLES.VIEWER",
+      "current_pattern": "viewer",
+      "role_or_permission": "VIEWER",
+      "hierarchy_level": 0,
+      "is_internal": false,
+      "maps_to_capability": "Read-only capabilities",
+      "used_by_close_decision": false,
+      "risk": "LOW",
+      "notes": "Read-only viewer - should not have DECISION_CLOSE"
+    },
+    {
+      "file": "src/middleware/workspace-enforcement.ts",
+      "symbol": "hasPermission",
+      "current_pattern": "permissions['role'].includes(action)",
+      "role_or_permission": "LEGACY_PERMISSION_CHECK",
+      "maps_to_capability": "N/A (legacy pattern, not capability-based)",
+      "used_by_close_decision": true,
+      "risk": "HIGH",
+      "notes": "CRITICAL: hasPermission checks for 'close_decision' but 'close_decision' is NOT in permissions mapping. Close route will ALWAYS fail permission check."
+    },
+    {
+      "file": "src/middleware/workspace-enforcement.ts",
+      "symbol": "permissions['admin']",
+      "current_pattern": "[\"create\", \"read\", \"update\", \"delete\", \"approve\", \"reject\", \"override\", \"evaluate\"]",
+      "role_or_permission": "ADMIN_PERMISSIONS",
+      "maps_to_capability": "N/A",
+      "used_by_close_decision": false,
+      "risk": "MEDIUM",
+      "notes": "Admin permissions do NOT include 'close_decision'. This is a bug."
+    },
+    {
+      "file": "src/middleware/workspace-enforcement.ts",
+      "symbol": "permissions['operator']",
+      "current_pattern": "[\"create\", \"read\", \"evaluate\"]",
+      "role_or_permission": "OPERATOR_PERMISSIONS",
+      "maps_to_capability": "N/A",
+      "used_by_close_decision": false,
+      "risk": "LOW",
+      "notes": "Operator permissions do not include 'close_decision' (expected)"
+    },
+    {
+      "file": "src/middleware/workspace-enforcement.ts",
+      "symbol": "permissions['reviewer']",
+      "current_pattern": "[\"read\", \"approve\", \"reject\", \"evaluate\"]",
+      "role_or_permission": "REVIEWER_PERMISSIONS",
+      "maps_to_capability": "N/A",
+      "used_by_close_decision": false,
+      "risk": "LOW",
+      "notes": "Reviewer permissions do not include 'close_decision' (expected)"
+    },
+    {
+      "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "symbol": "hasPermission(membership.role, \"close_decision\")",
+      "current_pattern": "Legacy permission check in route",
+      "role_or_permission": "CLOSE_DECISION_CHECK",
+      "maps_to_capability": "N/A (legacy)",
+      "used_by_close_decision": true,
+      "risk": "HIGH",
+      "notes": "Close route checks for 'close_decision' permission via hasPermission(). But 'close_decision' does NOT exist in hasPermission mapping. Route will ALWAYS return 403."
+    },
+    {
+      "file": "src/domain/constants/capabilities.ts",
+      "symbol": "CAPABILITIES.DECISION_CLOSE",
+      "current_pattern": "\"decision:close\"",
+      "role_or_permission": "DECISION_CLOSE_CONSTANT",
+      "maps_to_capability": "Domain constant (not yet mapped to roles or entitlements)",
+      "used_by_close_decision": false,
+      "risk": "MEDIUM",
+      "notes": "DECISION_CLOSE constant exists in domain but is NOT mapped to any role or entitlement. Route enforcement not yet added."
+    },
+    {
+      "file": "src/policies/capability-check.ts",
+      "symbol": "ROLE_CAPABILITIES",
+      "current_pattern": "Role -> capability[] mapping",
+      "role_or_permission": "ROLE_CAPABILITY_MAPPING",
+      "maps_to_capability": "Domain capabilities (DECISION_CREATE, DECISION_ACCEPT, DECISION_REJECT, but NOT DECISION_CLOSE)",
+      "used_by_close_decision": false,
+      "risk": "MEDIUM",
+      "notes": "ROLE_CAPABILITIES maps roles to domain capabilities. DECISION_CLOSE not in any role mapping yet."
+    },
+    {
+      "file": "src/services/entitlement.ts",
+      "symbol": "TIER_CONFIGS",
+      "current_pattern": "Subscription tier -> capabilities",
+      "role_or_permission": "ENTITLEMENT_MAPPING",
+      "maps_to_capability": "Plan-based capabilities (decision_create, decision_update but NOT decision_close)",
+      "used_by_close_decision": false,
+      "risk": "MEDIUM",
+      "notes": "Entitlement tiers map subscription plans to capabilities. DECISION_CLOSE not in any tier configuration yet."
+    }
+  ],
+  "summary": {
+    "total_items": 15,
+    "legacy_close_permission_items": 2,
+    "role_mapping_items": 8,
+    "entitlement_mapping_items": 1,
+    "workspace_membership_items": 1,
+    "capability_definition_items": 2,
+    "blocked_items": 1,
+    "critical_findings": [
+      "hasPermission('close_decision') is checked in close route but 'close_decision' is NOT defined in hasPermission permissions mapping",
+      "This means close route ALWAYS returns 403 - close functionality is currently broken",
+      "DECISION_CLOSE constant exists but is not mapped to any role or entitlement",
+      "Two separate authorization systems must be designed: (1) legacy close_decision, (2) modern DECISION_CLOSE capability"
+    ]
+  }
+}

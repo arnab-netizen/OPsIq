@@ -1,14 +1,12 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
-import { hasInternalAccess } from "@/policies/capability-check";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createClient, listClients } from "@/services/client-account";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
 import { paginationSchema } from "@/lib/validation";
-import type { NextRequest } from "next/server";
+import { UnauthorizedError } from "@/infra/errors";
 
 const createClientSchema = z.object({
   name: z.string().min(1),
@@ -25,84 +23,48 @@ const listClientsSchema = paginationSchema.extend({
   search: z.string().optional(),
 });
 
-export const GET = withRequestContext(async (request) => {
-  // Authenticate + authorize (fail-closed)
-  const { policy } = await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const params = parseSearchParams(ctx.request!.url, listClientsSchema);
+    const result = await listClients(workspaceId, params);
+    return result;
+  },
+  { requireWorkspace: true, requireCapabilities: ['CLIENT_VIEW'] }
+);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new UnauthorizedError("idempotency-key header required");
+    }
 
-  const params = parseSearchParams(request.url, listClientsSchema);
-  const result = await listClients(workspaceId, params);
+    const body = await parseRequestBody(ctx.request!, createClientSchema);
 
-  return Response.json(result);
-});
-
-export const POST = withRequestContext(async (request) => {
-  // Authenticate + authorize (fail-closed)
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.CLIENT_CREATE,
-    internalOnly: true,
-  });
-
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    return Response.json(
-      { error: "idempotency-key header required" },
-      { status: 400 }
-    );
-  }
-
-  const body = await parseRequestBody(request, createClientSchema);
-
-  // Check idempotency
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "createClient",
-    actorId: session.user.id,
-    payload: body,
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
-      status: idempotencyCheck.cachedResponse.status,
+    // Check idempotency
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "createClient",
+      actorId: ctx.verifiedActorId,
+      payload: body,
     });
-  }
 
-  try {
-    const result = await createClient(body, { session, policy }, workspaceId);
-    await recordIdempotencyResponse(idempotencyKey, 201, result);
-    return Response.json(result, { status: 201 });
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    throw error;
-  }
-});
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+
+    try {
+      const result = await createClient(body, ctx, workspaceId);
+      await recordIdempotencyResponse(idempotencyKey, 201, result);
+      return result;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
+    }
+  },
+  { requireCapabilities: ["CLIENT_CREATE"], requireWorkspace: true }
+);

@@ -6,7 +6,8 @@
  * Enforces: workspace scoping, auth (ENGAGEMENT_UPDATE capability), validation
  */
 
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -20,6 +21,8 @@ import {
   analyzeOutcome,
   ExperimentLifecycleError,
 } from "@/services/experiment/experiment-lifecycle.service";
+import { assertCapability } from "@/services/entitlement.service";
+import { PlanLimitError } from "@/infra/errors";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
 import type {
@@ -131,7 +134,7 @@ function toExperimentDTO(exp: Experiment) {
  * POST /api/engagements/[engagementId]/experiments
  * Create a new experiment in draft status
  */
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request) => {
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
   });
@@ -147,7 +150,13 @@ export const POST = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
+  }
+
+  // Check entitlement: experiment_create (plan-based quota enforcement)
+  const capabilityCheck = await assertCapability(workspaceId, "experiment_create");
+  if (!capabilityCheck.allowed) {
+    throw new PlanLimitError("experiment_create", capabilityCheck.reason || "Plan limit exceeded");
   }
 
   try {
@@ -194,7 +203,7 @@ export const POST = withRequestContext(async (request) => {
  * GET /api/engagements/[engagementId]/experiments
  * List experiments for engagement
  */
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request) => {
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
   });
@@ -210,7 +219,7 @@ export const GET = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {

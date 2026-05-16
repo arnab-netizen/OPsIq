@@ -1,0 +1,167 @@
+name: CI - Build & Test
+
+on:
+  push:
+    branches: [main, "feature/**", "claude/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+          POSTGRES_INITDB_ARGS: "-c log_min_messages=warning"
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type checking
+        run: npx tsc --noEmit
+        continue-on-error: false
+
+      - name: Prisma schema validation
+        run: npx prisma validate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+        continue-on-error: false
+
+      - name: Prisma database migration
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+        continue-on-error: false
+
+      - name: Build project
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          NODE_ENV: test
+        continue-on-error: false
+
+      - name: Run full test suite
+        run: npm test
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          NODE_ENV: test
+        continue-on-error: false
+
+      - name: Run Phase 3 - Event Sourcing Truth Verification
+        run: npm test -- phase-3-event-sourcing-truth
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          NODE_ENV: test
+        continue-on-error: false
+
+      - name: Run Phase 3 - Event Emitter Integration
+        run: npm test -- phase-3-event-emitter-integration
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          NODE_ENV: test
+        continue-on-error: false
+
+      - name: Run Phase 3 - Event Replay Engine
+        run: npm test -- phase-3-event-replay-engine
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          NODE_ENV: test
+        continue-on-error: false
+
+      - name: Run Phase 3 - Hardening Proofs
+        run: npm test -- phase-3-hardening-proofs
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          NODE_ENV: test
+        continue-on-error: false
+
+      - name: Run Phase 3 - Snapshot Engine
+        run: npm test -- phase-3-snapshot-engine
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          NODE_ENV: test
+        continue-on-error: false
+
+      - name: Run Phase 3 - Projection Engine
+        run: npm test -- phase-3-projection-engine
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          NODE_ENV: test
+        continue-on-error: false
+
+      - name: Upload coverage (if generated)
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/coverage-final.json
+          fail_ci_if_error: false
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+        continue-on-error: true
+
+  branch-protection:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    needs: [build-and-test, lint]
+    steps:
+      - name: PR check passed
+        run: echo "All required checks passed"

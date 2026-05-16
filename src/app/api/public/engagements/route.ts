@@ -4,7 +4,8 @@
  * Public API - requires workspace ID but no auth capability (read-only)
  */
 
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -18,7 +19,7 @@ const querySchema = z.object({
   offset: z.string().optional().default("0"),
 });
 
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request) => {
   const nextRequest = request as NextRequest;
   const workspaceId = nextRequest.headers.get("x-workspace-id");
 
@@ -31,7 +32,7 @@ export const GET = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireWorkspaceContext } from "@/services/workspace/context";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 import { queryAuditEvents } from "@/infra/audit";
 import type { Prisma } from "@/generated/prisma/client";
@@ -38,40 +38,31 @@ interface DecisionExport {
   }>;
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    // Get workspace context (fail closed if missing)
-    const workspace = await requireWorkspaceContext();
-
+export const GET = withCanonicalEnforcement(
+  async (ctx) => {
     // Parse query parameter for decision ID
-    const searchParams = request.nextUrl.searchParams;
+    const searchParams = ctx.request!.nextUrl.searchParams;
     const decisionId = searchParams.get("decisionId");
 
     if (!decisionId) {
-      return NextResponse.json(
-        { error: "Missing required parameter: decisionId" },
-        { status: 400 }
-      );
+      throw new Error("Missing required parameter: decisionId");
     }
 
     // Fetch operator item
     const item = await db.operatorItem.findFirst({
       where: {
         id: decisionId,
-        workspaceId: workspace.workspaceId,
+        workspaceId: ctx.verifiedWorkspaceId,
       },
     });
 
     if (!item) {
-      return NextResponse.json(
-        { error: "Decision not found" },
-        { status: 404 }
-      );
+      throw new Error("Decision not found");
     }
 
     // Fetch audit trail for this decision
     const auditEvents = await queryAuditEvents({
-      workspaceId: workspace.workspaceId,
+      workspaceId: ctx.verifiedWorkspaceId,
       entityId: decisionId,
     });
 
@@ -114,18 +105,10 @@ export async function GET(request: NextRequest) {
     const jsonString = JSON.stringify(exportData, Object.keys(exportData).sort(), 2);
     const deterministicData = JSON.parse(jsonString);
 
-    return NextResponse.json(deterministicData);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    if (message.includes("Unauthorized")) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return deterministicData;
+  },
+  {
+    requireWorkspace: true,
+    requireCapabilities: [CAPABILITIES.AUDIT_VIEW],
   }
-}
+);

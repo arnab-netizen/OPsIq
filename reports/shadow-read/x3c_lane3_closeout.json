@@ -1,0 +1,99 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X3C",
+  "subphase": "B_LANE3_CLOSEOUT_AUDIT",
+  "audit_date": "2026-05-15",
+  "lane": "LANE_3_CAPABILITY_MUTATION",
+  "candidates": [
+    {
+      "file": "src/app/api/actions/route.ts",
+      "method": "POST",
+      "status": "MIGRATED_CLEAN",
+      "capability_or_auth_requirement": "ACTION_CREATE",
+      "scanner_clean": true,
+      "quarantined_bridge_removed": true,
+      "bridge_was": "canonicalizeAuthContext",
+      "phase_migrated": "X3A_PILOT",
+      "violations_removed": 3,
+      "reason": "Successfully migrated to withCanonicalEnforcement. Quarantined bridge removed. All tests pass.",
+      "future_phase": "N/A - COMPLETE"
+    },
+    {
+      "file": "src/app/api/clients/route.ts",
+      "method": "POST",
+      "status": "MIGRATED_CLEAN",
+      "capability_or_auth_requirement": "CLIENT_CREATE",
+      "scanner_clean": true,
+      "quarantined_bridge_removed": true,
+      "bridge_was": "canonicalizeAuthContext",
+      "phase_migrated": "X3A_PILOT",
+      "violations_removed": 3,
+      "reason": "Successfully migrated to withCanonicalEnforcement. Quarantined bridge removed. All tests pass.",
+      "future_phase": "N/A - COMPLETE"
+    },
+    {
+      "file": "src/app/api/leads/route.ts",
+      "method": "POST",
+      "status": "MIGRATED_CLEAN",
+      "capability_or_auth_requirement": "LEAD_CREATE",
+      "scanner_clean": true,
+      "quarantined_bridge_removed": true,
+      "bridge_was": "canonicalizeAuthContext",
+      "phase_migrated": "X3A_PILOT",
+      "violations_removed": 3,
+      "reason": "Successfully migrated to withCanonicalEnforcement. Quarantined bridge removed. All tests pass.",
+      "future_phase": "N/A - COMPLETE"
+    },
+    {
+      "file": "src/app/api/users/route.ts",
+      "method": "POST",
+      "status": "MIGRATED_CLEAN",
+      "capability_or_auth_requirement": "USER_CREATE",
+      "scanner_clean": true,
+      "quarantined_bridge_removed": true,
+      "bridge_was": "canonicalizeAuthContext",
+      "phase_migrated": "X3B_BATCH2",
+      "violations_removed": 3,
+      "reason": "Successfully migrated to withCanonicalEnforcement. Quarantined bridge removed. All tests pass.",
+      "future_phase": "N/A - COMPLETE"
+    },
+    {
+      "file": "src/app/api/decisions/create/route.ts",
+      "method": "POST",
+      "status": "DEFERRED_GOVERNANCE_CAPABILITY_BLOCKER",
+      "capability_or_auth_requirement": "decision_create (entitlement, not capability)",
+      "scanner_clean": false,
+      "quarantined_bridge_removed": false,
+      "bridge_was": "canonicalizeAuthContext (not removed)",
+      "phase_deferred": "X3B_BATCH2",
+      "violations_present": 3,
+      "reason": "Cannot migrate without violating NO NEW GOVERNANCE constraint. Handler uses entitlement-based auth pattern (decision_create string) rather than capability-based (DECISION_CREATE constant in CAPABILITIES). DECISION_CREATE does not exist in CAPABILITIES and adding it would violate constraint.",
+      "future_phase": "REQUIRES_GOVERNANCE_DECISION - Lane 4/5 or manual G11/G12 after capability infrastructure designed"
+    }
+  ],
+  "summary": {
+    "total_lane3_candidates": 5,
+    "migrated_clean": 4,
+    "deferred_governance_blockers": 1,
+    "still_lane3_ready": 0,
+    "reclassified_high_risk": 0,
+    "unknown": 0
+  },
+  "lane3_status": {
+    "status": "CLOSED",
+    "all_ready_candidates_processed": true,
+    "no_remaining_lane3_ready": true,
+    "deferred_count": 1,
+    "deferred_reason": "Governance/capability design required (not a code or pattern issue)",
+    "total_mutations_migrated": 4,
+    "total_violations_removed": 12,
+    "original_x2d_inventory": 5,
+    "processed_count": 5,
+    "closure_complete": true
+  },
+  "migration_success_rate": {
+    "eligible_for_migration": 4,
+    "successfully_migrated": 4,
+    "success_rate": "100%"
+  }
+}

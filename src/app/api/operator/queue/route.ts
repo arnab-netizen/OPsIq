@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -20,7 +21,7 @@ const queueParamsSchema = z.object({
  * Wire: operator/store.getQueuedItems()
  * Supports: status filtering, pagination
  */
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request) => {
   const { session } = await withAuth({
     capability: CAPABILITIES.ACTION_VIEW,
   });
@@ -36,7 +37,7 @@ export const GET = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {

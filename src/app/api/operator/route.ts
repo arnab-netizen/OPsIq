@@ -1,4 +1,7 @@
-import { NextResponse, NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import {
   getItems,
   updateItem,
@@ -22,250 +25,207 @@ import type { PolicyRule } from "@/domain/policy/types";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 
-export async function GET() {
-  let logger: ReturnType<typeof createEventLogger> | null = null;
+export const GET = withEnforcementFull(async () => {
+  await withAuth();
+  const workspace = await requireWorkspaceContext();
+  const logger = createEventLogger("api_operator_get", workspace.workspaceId);
 
-  try {
-    const workspace = await requireWorkspaceContext();
-    logger = createEventLogger("api_operator_get", workspace.workspaceId);
+  const items = await getItems();
+  const sorted = sortByPriority(items);
 
-    const items = await getItems();
-    const sorted = sortByPriority(items);
+  logger.success({ itemCount: sorted.length });
+  return sorted;
+});
 
-    if (logger) {
-      logger.success({ itemCount: sorted.length });
-    }
-    return NextResponse.json(sorted);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    if (logger) {
-      logger.error(message);
-    }
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
-}
-
-export async function POST(request: NextRequest) {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
+  await withAuth();
   let logger: ReturnType<typeof createEventLogger> | null = null;
   let workspaceId: string | null = null;
   let id: string | null = null;
   let idempotencyKey: string | null = null;
 
-  try {
-    // Check idempotency key (required)
-    idempotencyKey = request.headers.get("idempotency-key");
-    if (!idempotencyKey) {
-      return NextResponse.json(
-        { error: "idempotency-key header required" },
-        { status: 400 }
-      );
+  // Check idempotency key (required)
+  idempotencyKey = request.headers.get("idempotency-key");
+  if (!idempotencyKey) {
+    throw new Error("idempotency-key header required");
+  }
+
+  const body = await request.json();
+  id = body.id;
+  const { status, actualOutcome, approvalRequired } = body;
+
+  // Resolve role from server-side session/database (never from request body)
+  const role = await resolveServerRole();
+
+  if (!role) {
+    throw new UnauthorizedError("Unauthorized");
+  }
+
+  if (!canEdit(role)) {
+    throw new Error("Insufficient permissions");
+  }
+
+  if (!id) {
+    throw new Error("Missing required field: id");
+  }
+
+  // Get actor ID from session
+  const { session } = await withAuth();
+  const actorId = session?.user.id ?? null;
+
+  // Check idempotency (need workspace context first)
+  // Will be set after we get workspace from item
+
+  // Capture before state for audit
+  const allItemsBefore = await getItems();
+  const beforeItem = allItemsBefore.find((i) => i.id === id);
+
+  // Initialize logger with workspace context from item
+  if (beforeItem && beforeItem.workspaceId) {
+    workspaceId = beforeItem.workspaceId;
+    logger = createEventLogger("api_operator_post", workspaceId);
+
+    // Check capability: decision_engine
+    const capabilityCheck = await assertCapability(workspaceId, "decision_engine");
+    if (!capabilityCheck.allowed) {
+      throw new PlanLimitError("decision_engine", capabilityCheck.reason || "Plan limit exceeded");
     }
 
-    const body = await request.json();
-    id = body.id;
-    const { status, actualOutcome, approvalRequired } = body;
-
-    // Resolve role from server-side session/database (never from request body)
-    const role = await resolveServerRole();
-
-    if (!role) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
-
-    if (!canEdit(role)) {
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
-    }
-
-    if (!id) {
-      return NextResponse.json(
-        { error: "Missing required field: id" },
-        { status: 400 }
-      );
-    }
-
-    // Get actor ID from session
-    const session = await getSession();
-    const actorId = session?.user.id ?? null;
-
-    // Check idempotency (need workspace context first)
-    // Will be set after we get workspace from item
-
-    // Capture before state for audit
-    const allItemsBefore = await getItems();
-    const beforeItem = allItemsBefore.find((i) => i.id === id);
-
-    // Initialize logger with workspace context from item
-    if (beforeItem && beforeItem.workspaceId) {
-      workspaceId = beforeItem.workspaceId;
-      logger = createEventLogger("api_operator_post", workspaceId);
-
-      // Check capability: decision_engine
-      const capabilityCheck = await assertCapability(workspaceId, "decision_engine");
-      if (!capabilityCheck.allowed) {
-        throw new PlanLimitError("decision_engine", capabilityCheck.reason || "Plan limit exceeded");
-      }
-
-      // Check idempotency after we have workspace context
-      const idempotencyCheck = await checkIdempotencyKey({
-        idempotencyKey,
-        operationName: "updateOperatorItem",
-        actorId: actorId || "unknown",
-        payload: body,
-      });
-
-      if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-        return NextResponse.json(idempotencyCheck.cachedResponse.body, {
-          status: idempotencyCheck.cachedResponse.status,
-        });
-      }
-    }
-
-    // Validate status transition
-    if (beforeItem && status) {
-      const currentStatus = beforeItem.status as "pending" | "in_progress" | "done" | "failed";
-      const newStatus = status as "pending" | "in_progress" | "done" | "failed";
-      const transitionError = getStatusTransitionError(currentStatus, newStatus);
-      if (transitionError) {
-        return NextResponse.json(
-          { error: transitionError },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate completion policy when task is completed
-    if (status === "done") {
-      const items = await getItems();
-      const item = items.find((i) => i.id === id);
-
-      if (item) {
-        // Validate completion policy
-        const completionPolicy = validateCompletion(item, approvalRequired);
-        if (!completionPolicy.allowed) {
-          return NextResponse.json(
-            { error: completionPolicy.reason },
-            { status: 400 }
-          );
-        }
-
-        if (typeof actualOutcome !== "number") {
-          return NextResponse.json(
-            { error: "Missing or invalid field: actualOutcome must be a number" },
-            { status: 400 }
-          );
-        }
-
-        addCalibrationRecord(
-          id,
-          item.impactExpected,
-          actualOutcome,
-          item.confidence
-        );
-      }
-    }
-
-    const updatePayload: any = {
-      status,
-    };
-
-    if (status === 'done') {
-      updatePayload.actualOutcomeValue = actualOutcome;
-      updatePayload.completedAt = new Date().toISOString();
-      updatePayload.executionStatus = 'completed';
-
-      // Calculate outcome delta
-      const expectedImpact = beforeItem?.impactExpected ?? null;
-      const deltaResult = calculateOutcomeDelta(expectedImpact, actualOutcome);
-      if (deltaResult.valid && deltaResult.delta !== null) {
-        updatePayload.outcomeDelta = deltaResult.delta;
-      }
-
-      // Calculate decision accuracy metrics
-      const accuracyResult = calculateDecisionAccuracy(expectedImpact, actualOutcome);
-      if (accuracyResult.valid) {
-        if (accuracyResult.accuracy !== null) {
-          updatePayload.decisionAccuracy = accuracyResult.accuracy;
-        }
-        if (accuracyResult.error !== null) {
-          updatePayload.decisionError = accuracyResult.error;
-        }
-      }
-    } else if (status === 'in_progress') {
-      updatePayload.startedAt = new Date().toISOString();
-      updatePayload.executionStatus = 'started';
-    }
-
-    await updateItem(id, updatePayload, workspaceId || undefined);
-
-    // Capture after state and log audit event
-    const allItemsAfter = await getItems();
-    const afterItem = allItemsAfter.find((i) => i.id === id);
-
-    // Determine event name
-    const eventName = status === "done" ? "COMPLETE" : "UPDATE";
-
-    // Log audit event (fail-closed if audit fails)
-    await logAuditEvent({
-      eventName,
-      entityType: "OperatorItem",
-      entityId: id,
-      actorId,
-      role,
-      before: beforeItem ?? null,
-      after: afterItem ?? null,
+    // Check idempotency after we have workspace context
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "updateOperatorItem",
+      actorId: actorId || "unknown",
+      payload: body,
     });
 
-    if (status === "done") {
-      const completedItem = afterItem;
-      if (completedItem) {
-        sendWebhook({
-          event: "action_completed",
-          payload: completedItem,
-        });
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+  }
 
-        // Emit structured webhook for completion (non-blocking)
-        emitWebhookAsync(`${process.env.WEBHOOK_URL || ""}`, {
-          event: "action_completed",
-          timestamp: new Date().toISOString(),
-          workspaceId: completedItem.workspaceId,
-          data: {
-            itemId: completedItem.id,
-            problem: completedItem.problem,
-            action: completedItem.action,
-            expectedImpact: Number(completedItem.impactExpected),
-            actualOutcome: completedItem.actualOutcomeValue,
-            outcomeDelta: completedItem.outcomeDelta,
-            decisionAccuracy: completedItem.decisionAccuracy,
-          },
-        }).catch(() => {
-          // Intentionally swallow errors - webhook failures should not block the request
-        });
+  // Validate status transition
+  if (beforeItem && status) {
+    const currentStatus = beforeItem.status as "pending" | "in_progress" | "done" | "failed";
+    const newStatus = status as "pending" | "in_progress" | "done" | "failed";
+    const transitionError = getStatusTransitionError(currentStatus, newStatus);
+    if (transitionError) {
+      throw new Error(transitionError);
+    }
+  }
+
+  // Validate completion policy when task is completed
+  if (status === "done") {
+    const items = await getItems();
+    const item = items.find((i) => i.id === id);
+
+    if (item) {
+      // Validate completion policy
+      const completionPolicy = validateCompletion(item, approvalRequired);
+      if (!completionPolicy.allowed) {
+        throw new Error(completionPolicy.reason);
+      }
+
+      if (typeof actualOutcome !== "number") {
+        throw new Error("Missing or invalid field: actualOutcome must be a number");
+      }
+
+      addCalibrationRecord(
+        id,
+        item.impactExpected,
+        actualOutcome,
+        item.confidence
+      );
+    }
+  }
+
+  const updatePayload: any = {
+    status,
+  };
+
+  if (status === 'done') {
+    updatePayload.actualOutcomeValue = actualOutcome;
+    updatePayload.completedAt = new Date().toISOString();
+    updatePayload.executionStatus = 'completed';
+
+    // Calculate outcome delta
+    const expectedImpact = beforeItem?.impactExpected ?? null;
+    const deltaResult = calculateOutcomeDelta(expectedImpact, actualOutcome);
+    if (deltaResult.valid && deltaResult.delta !== null) {
+      updatePayload.outcomeDelta = deltaResult.delta;
+    }
+
+    // Calculate decision accuracy metrics
+    const accuracyResult = calculateDecisionAccuracy(expectedImpact, actualOutcome);
+    if (accuracyResult.valid) {
+      if (accuracyResult.accuracy !== null) {
+        updatePayload.decisionAccuracy = accuracyResult.accuracy;
+      }
+      if (accuracyResult.error !== null) {
+        updatePayload.decisionError = accuracyResult.error;
       }
     }
-
-    if (logger) {
-      logger.success({ itemId: id, newStatus: status });
-    }
-    const result = { success: true };
-    if (workspaceId && idempotencyKey) {
-      await recordIdempotencyResponse(idempotencyKey, 200, result);
-    }
-    return NextResponse.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    if (logger) {
-      logger.error(message, { itemId: id });
-    }
-    if (workspaceId && idempotencyKey) {
-      const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
-    }
-    return NextResponse.json({ error: message }, { status: 400 });
+  } else if (status === 'in_progress') {
+    updatePayload.startedAt = new Date().toISOString();
+    updatePayload.executionStatus = 'started';
   }
-}
+
+  await updateItem(id, updatePayload, workspaceId || undefined);
+
+  // Capture after state and log audit event
+  const allItemsAfter = await getItems();
+  const afterItem = allItemsAfter.find((i) => i.id === id);
+
+  // Determine event name
+  const eventName = status === "done" ? "COMPLETE" : "UPDATE";
+
+  // Log audit event (fail-closed if audit fails)
+  await logAuditEvent({
+    eventName,
+    entityType: "OperatorItem",
+    entityId: id,
+    actorId,
+    role,
+    before: beforeItem ?? null,
+    after: afterItem ?? null,
+  }).catch((auditError) => {
+    if (logger) logger.error(`Audit failed: ${auditError}`);
+  });
+
+  if (status === "done") {
+    const completedItem = afterItem;
+    if (completedItem) {
+      sendWebhook({
+        event: "action_completed",
+        payload: completedItem,
+      });
+
+      // Emit structured webhook for completion (non-blocking)
+      emitWebhookAsync(`${process.env.WEBHOOK_URL || ""}`, {
+        event: "action_completed",
+        timestamp: new Date().toISOString(),
+        workspaceId: completedItem.workspaceId,
+        data: {
+          itemId: completedItem.id,
+          problem: completedItem.problem,
+          action: completedItem.action,
+          expectedImpact: Number(completedItem.impactExpected),
+          actualOutcome: completedItem.actualOutcomeValue,
+          outcomeDelta: completedItem.outcomeDelta,
+          decisionAccuracy: completedItem.decisionAccuracy,
+        },
+      }).catch(() => {
+        // Intentionally swallow errors - webhook failures should not block the request
+      });
+    }
+  }
+
+  if (logger) {
+    logger.success({ itemId: id, newStatus: status });
+  }
+  const result = { success: true };
+  if (workspaceId && idempotencyKey) {
+    await recordIdempotencyResponse(idempotencyKey, 200, result);
+  }
+  return result;
+});

@@ -1,0 +1,154 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "g7c",
+  "batch": "g7c_batch1",
+  "timestamp": "2026-05-14T19:58:00Z",
+  "purpose": "First controlled capability canonical batch - max 10 handlers",
+  "max_handlers": 10,
+  "scanner_baseline": {
+    "raw": 565,
+    "unique": 405,
+    "actionable_route": 360
+  },
+  "selection_count": 5,
+  "selected_handlers": [
+    {
+      "rank": 1,
+      "file": "src/app/api/actions/route.ts",
+      "method": "GET",
+      "handler_name": "handleGet",
+      "exact_required_capability": "ACTION_VIEW",
+      "canonical_wrapper_option": "requireCapabilities: ['ACTION_VIEW']",
+      "workspace_source": "x-workspace-id header (verified)",
+      "service_calls": ["listActions(workspaceId, params)"],
+      "response_shape": "{ actions: [...], total, limit, offset }",
+      "is_read_only": true,
+      "has_internal_only": false,
+      "expected_reduction": 2,
+      "violations_before": 2,
+      "risk": "LOW",
+      "reason_selected": "GET-only handler, single capability ACTION_VIEW, no internalOnly, x-workspace-id verified, read-safe, simple response shape",
+      "current_pattern": "await withAuth({ capability: CAPABILITIES.ACTION_VIEW })"
+    },
+    {
+      "rank": 2,
+      "file": "src/app/api/deliverables/route.ts",
+      "method": "GET",
+      "handler_name": "GET (inline)",
+      "exact_required_capability": "DELIVERABLE_VIEW",
+      "canonical_wrapper_option": "requireCapabilities: ['DELIVERABLE_VIEW']",
+      "workspace_source": "x-workspace-id header (verified)",
+      "service_calls": ["getDeliverablesForEngagement(engagementId, workspaceId)"],
+      "response_shape": "deliverables array",
+      "is_read_only": true,
+      "has_internal_only": false,
+      "expected_reduction": 2,
+      "violations_before": 2,
+      "risk": "LOW",
+      "reason_selected": "GET-only handler, single capability DELIVERABLE_VIEW, no internalOnly, x-workspace-id verified, read-safe",
+      "current_pattern": "const { session } = await withAuth({ capability: CAPABILITIES.DELIVERABLE_VIEW })"
+    },
+    {
+      "rank": 3,
+      "file": "src/app/api/leads/route.ts",
+      "method": "GET",
+      "handler_name": "GET (inline)",
+      "exact_required_capability": "LEAD_VIEW",
+      "canonical_wrapper_option": "requireCapabilities: ['LEAD_VIEW']",
+      "workspace_source": "x-workspace-id header (verified)",
+      "service_calls": ["listLeads(workspaceId, params)"],
+      "response_shape": "{ leads: [...], total, limit, offset }",
+      "is_read_only": true,
+      "has_internal_only": true,
+      "expected_reduction": 2,
+      "violations_before": 2,
+      "risk": "LOW",
+      "reason_selected": "GET-only handler, single capability LEAD_VIEW, x-workspace-id verified, read-safe, internalOnly flag present but GET-only is safe",
+      "current_pattern": "await withAuth({ capability: CAPABILITIES.LEAD_VIEW, internalOnly: true })"
+    },
+    {
+      "rank": 4,
+      "file": "src/app/api/users/[userId]/route.ts",
+      "method": "GET",
+      "handler_name": "GET (inline)",
+      "exact_required_capability": "USER_VIEW",
+      "canonical_wrapper_option": "requireCapabilities: ['USER_VIEW']",
+      "workspace_source": "x-workspace-id header (verified)",
+      "service_calls": ["getUserById(userId, workspaceId)"],
+      "response_shape": "user object",
+      "is_read_only": true,
+      "has_internal_only": true,
+      "expected_reduction": 2,
+      "violations_before": 2,
+      "risk": "LOW",
+      "reason_selected": "GET-only handler with params, single capability USER_VIEW, x-workspace-id verified, read-safe",
+      "current_pattern": "await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true })"
+    },
+    {
+      "rank": 5,
+      "file": "src/app/api/users/[userId]/memberships/route.ts",
+      "method": "GET",
+      "handler_name": "GET (inline)",
+      "exact_required_capability": "USER_VIEW",
+      "canonical_wrapper_option": "requireCapabilities: ['USER_VIEW']",
+      "workspace_source": "x-workspace-id header (verified)",
+      "service_calls": ["getMembershipsForUser(userId, workspaceId)"],
+      "response_shape": "{ memberships: [...] }",
+      "is_read_only": true,
+      "has_internal_only": true,
+      "expected_reduction": 2,
+      "violations_before": 2,
+      "risk": "LOW",
+      "reason_selected": "GET-only handler with params, single capability USER_VIEW, x-workspace-id verified, read-safe",
+      "current_pattern": "await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true })"
+    }
+  ],
+  "excluded_candidates": [
+    {
+      "file": "src/app/api/operator/route.ts",
+      "method": "GET",
+      "reason_excluded": "Uses custom requireWorkspaceContext() pattern, not x-workspace-id header based, withAuth() has no capability argument"
+    },
+    {
+      "file": "src/app/api/findings/route.ts",
+      "method": "POST",
+      "reason_excluded": "POST-only (not GET), excluded by GET-only priority"
+    },
+    {
+      "file": "src/app/api/diagnosis/route.ts",
+      "method": "POST",
+      "reason_excluded": "POST-only (not GET), ENGAGEMENT_CREATE capability (engagement mutation concern)"
+    },
+    {
+      "file": "src/app/api/users/[userId]/roles/route.ts",
+      "method": "GET",
+      "reason_excluded": "Similar to memberships but USER_VIEW + internalOnly, deprioritized (memberships selected instead for similar safety)"
+    },
+    {
+      "file": "src/app/api/admin/workspaces/route.ts",
+      "method": "GET",
+      "reason_excluded": "Admin route - excluded by admin-sensitive handler rule"
+    },
+    {
+      "file": "src/app/api/billing/plan/route.ts",
+      "method": "GET",
+      "reason_excluded": "Billing route - excluded by billing mutation concern rule"
+    }
+  ],
+  "expected_total_reduction": 10,
+  "expected_raw_count_after": 555,
+  "expected_unique_after": 395,
+  "expected_actionable_after": 350,
+  "selection_notes": [
+    "Selected 5 safest GET/read-only handlers for first batch (conservative approach)",
+    "All 5 use single, clear capability requirement",
+    "All 5 use x-workspace-id header (proven pattern)",
+    "All 5 are read-only (no mutations)",
+    "2 without internalOnly flag (actions, deliverables)",
+    "3 with internalOnly flag but still GET-only and safe (leads, users)",
+    "Expected reduction: 10 violations (2 per handler)",
+    "No engagement, admin, or billing mutations included",
+    "No custom workspace logic present",
+    "Next batch can expand to 10 handlers if first 5 pass validation"
+  ]
+}

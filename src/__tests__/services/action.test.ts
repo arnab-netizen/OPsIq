@@ -269,11 +269,13 @@ describe("Action Service", () => {
     });
 
     it("should record completedBy user", () => {
-      expect(true).toBe(true); // Service records this
+      expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: SERVICE_STATE_TRACKING (service internal state)
     });
 
     it("should record completedAt timestamp", () => {
-      expect(true).toBe(true); // Service records this
+      expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: SERVICE_STATE_TRACKING (service internal state)
     });
 
     it("should support optional assignedTo", () => {
@@ -285,28 +287,34 @@ describe("Action Service", () => {
   describe("Action Blocking & Reasons", () => {
     it("should support blockageReason field", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (schema definition)
     });
 
     it("should support blockerReason field", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (schema definition)
     });
 
     it("should require reason when transitioning to blocked", () => {
-      expect(true).toBe(true); // Enforcement rule
+      expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: STATE_MACHINE (service enforces transitions)
     });
   });
 
   describe("Action Impact Tracking", () => {
     it("should store outcome snapshot", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (service persistence)
     });
 
     it("should track predicted metrics", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (service persistence)
     });
 
     it("should track actual metrics", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (service persistence)
     });
 
     it("should calculate delta between predicted and actual", () => {
@@ -329,7 +337,8 @@ describe("Action Service", () => {
     });
 
     it("should scope visible actions by engagement access", () => {
-      expect(true).toBe(true); // Service enforces via assertEngagementAccess
+      expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (authorization service)
     });
   });
 
@@ -351,14 +360,17 @@ describe("Action Service", () => {
 
     it("should track notes field", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (schema definition)
     });
 
     it("should track created timestamp", () => {
-      expect(true).toBe(true); // createdAt defaults to now()
+      expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (service defaults createdAt to now())
     });
 
     it("should track updated timestamp", () => {
-      expect(true).toBe(true); // updatedAt updates on change
+      expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (service updates updatedAt on change)
     });
 
     it("should track version for optimistic locking", () => {
@@ -375,34 +387,42 @@ describe("Action Service", () => {
 
     it("should transition from in_progress to blocked", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: STATE_MACHINE (service validates transitions)
     });
 
     it("should transition from blocked back to assigned", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: STATE_MACHINE (service validates transitions)
     });
 
     it("should transition from in_progress to completed", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: STATE_MACHINE (service validates transitions)
     });
 
     it("should transition from completed to verified", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: STATE_MACHINE (service validates transitions)
     });
 
     it("should allow cancellation from draft", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: STATE_MACHINE (service validates transitions)
     });
 
     it("should allow cancellation from assigned", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: STATE_MACHINE (service validates transitions)
     });
 
     it("should allow cancellation from blocked", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: STATE_MACHINE (service validates transitions)
     });
 
     it("should prevent cancellation from completed", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: STATE_MACHINE (service validates transitions)
     });
   });
 
@@ -414,11 +434,13 @@ describe("Action Service", () => {
     });
 
     it("should prevent cross-workspace action retrieval", () => {
-      expect(true).toBe(true); // Service enforces workspaceId check
+      expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (service validates workspaceId)
     });
 
     it("should prevent cross-workspace action update", () => {
       expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (service validates workspaceId)
     });
 
     it("should scope all queries to authenticated workspace", () => {
@@ -426,7 +448,8 @@ describe("Action Service", () => {
     });
 
     it("should fail-closed without workspace context", () => {
-      expect(true).toBe(true); // enforceWorkspaceId throws on empty
+      expect(true).toBe(true);
+      // TODO_A2_FAKE_TEST_QUARANTINED: DELEGATED_TO_SERVICE (enforceWorkspaceId throws on empty)
     });
   });
 });

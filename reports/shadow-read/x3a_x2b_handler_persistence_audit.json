@@ -1,0 +1,152 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X3A-R",
+  "subphase": "D_VERIFY_X2B_HANDLERS_STILL_CLEAN",
+  "audit_date": "2026-05-15",
+  "x2b_handlers": [
+    {
+      "file": "src/app/api/report/route.ts",
+      "method": "GET",
+      "exact_required_capability": "SYSTEM_VIEW_AUDIT",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement(..., { requireCapabilities: ['SYSTEM_VIEW_AUDIT'], requireWorkspace: true })",
+      "scanner_clean": true,
+      "notes": "Migration verified in code. Uses ctx.verifiedWorkspaceId"
+    },
+    {
+      "file": "src/app/api/value/summary/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Aggregation endpoint. Uses ctx.request?.url for query params"
+    },
+    {
+      "file": "src/app/api/value/7day/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Temporal window preservation. 7-day lookback maintained"
+    },
+    {
+      "file": "src/app/api/intelligence/patterns/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Pattern detection. Workspace enforcement via wrapper"
+    },
+    {
+      "file": "src/app/api/intelligence/summary/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Summary aggregation. Query params via ctx.request"
+    },
+    {
+      "file": "src/app/api/intelligence/recommendations/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Query param extraction via ctx.request"
+    },
+    {
+      "file": "src/app/api/intelligence/insights/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Time-series aggregation. 30-day lookback preserved"
+    },
+    {
+      "file": "src/app/api/users/route.ts",
+      "method": "GET",
+      "exact_required_capability": "USER_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Internal-only service. Uses ctx.verifiedActorType check"
+    },
+    {
+      "file": "src/app/api/export/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ACTION_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Format param extracted via ctx.request?.url. POST handler intentionally left unmigrated (X2B-R1)"
+    },
+    {
+      "file": "src/app/api/engagements/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "List endpoint with optional policy context via ctx.policy ? hasInternalAccess(ctx.policy) : false"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Dynamic param handling via params Record. Uses ctx.verifiedActorId for visibility check"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/intervention/route.ts",
+      "method": "GET",
+      "exact_required_capability": "INTERVENTION_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Dynamic param unpacking via params. Uses ctx.verifiedActorId"
+    },
+    {
+      "file": "src/app/api/findings/[findingId]/route.ts",
+      "method": "GET",
+      "exact_required_capability": "FINDING_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Dynamic param handling. Uses ctx.verifiedWorkspaceId"
+    },
+    {
+      "file": "src/app/api/evidence/[evidenceId]/route.ts",
+      "method": "GET",
+      "exact_required_capability": "EVIDENCE_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Dynamic param unpacking. Uses ctx.verifiedWorkspaceId"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/dashboard/route.ts",
+      "method": "GET",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "still_canonical": true,
+      "wrapper_pattern": "withCanonicalEnforcement",
+      "scanner_clean": true,
+      "notes": "Removed manual canonicalizeAuthContext bridge. Directly passes ctx"
+    }
+  ],
+  "summary": {
+    "total_x2b_handlers": 15,
+    "still_canonical": 15,
+    "regressed": 0,
+    "all_clean": true,
+    "all_migrated": true,
+    "wrapper_pattern_consistency": "100% - All use withCanonicalEnforcement",
+    "audit_conclusion": "ALL 15 X2B BATCH 1 HANDLERS VERIFIED CLEAN. No regressions detected. All still use withCanonicalEnforcement pattern."
+  }
+}

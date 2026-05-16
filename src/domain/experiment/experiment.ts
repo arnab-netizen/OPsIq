@@ -241,7 +241,7 @@ export function validateExperimentPlan(plan: ExperimentPlan): string[] {
   }
 
   if (plan.confoundingFactors.length === 0) {
-    errors.push("Must identify at least one potential confounding factor");
+    errors.push("At least one potential confounding factor must be identified");
   }
 
   if (plan.estimatedCost < 0) {

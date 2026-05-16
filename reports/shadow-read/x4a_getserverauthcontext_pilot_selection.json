@@ -1,0 +1,18 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X4A",
+  "subphase": "C_PILOT_SELECTION",
+  "audit_date": "2026-05-15",
+  "pilot_size": 0,
+  "selected_pilot_handlers": [],
+  "excluded_candidates": [],
+  "audit_finding": {
+    "getServerAuthContext_present": true,
+    "getServerAuthContext_used_in_routes": false,
+    "definition_location": "src/lib/auth-guard.ts line 107",
+    "pilot_selection_possible": false,
+    "reason_no_pilots": "No route handlers currently use getServerAuthContext(). The function is defined in the auth-guard module as an optional-auth utility (fails open, returns null if auth missing) but has zero active usage in the codebase. Lane 4 as described cannot proceed without actual getServerAuthContext() usage patterns to migrate.",
+    "alternative_patterns": "Remaining 455 violations are in: withAuth() calls, requireAuth() calls, requireSession() calls, getPolicyContext() calls, and auth-guard imports in service/infrastructure layers. These do not match the Lane 4 getServerAuthContext pattern."
+  },
+  "recommendation": "Lane 4 audit reveals that the hypothetical 'getServerAuthContext() usage in routes' pattern does not exist in the current codebase. The function is defined but unused. Recommendation: defer Lane 4 and move to alternative next lane (e.g., address remaining withAuth() patterns in services, or continue with Gap analysis for Lanes 5-8)."
+}

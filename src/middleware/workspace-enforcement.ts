@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/services/auth";
+import { ForbiddenError } from "@/infra/errors";
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Enforce workspace scoping for API requests
@@ -11,6 +14,11 @@ export async function enforceWorkspaceScoping(
   workspaceId: string
 ): Promise<{ userId: string; role: string } | null> {
   try {
+    // Validate workspace ID format first
+    if (!UUID_REGEX.test(workspaceId)) {
+      throw new ForbiddenError("Invalid workspace ID format");
+    }
+
     const session = await getSession();
     if (!session?.user?.id) {
       return null;
@@ -44,6 +52,10 @@ export async function enforceWorkspaceScoping(
       role: membership.role,
     };
   } catch (error) {
+    // If it's already a ForbiddenError, rethrow it
+    if (error instanceof ForbiddenError) {
+      throw error;
+    }
     console.error("Workspace enforcement error:", error);
     return null;
   }

@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireWorkspaceContext } from "@/services/workspace/context";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { detectPatterns } from "@/services/intelligence/pattern-engine";
 import { generateRecommendation } from "@/services/intelligence/recommendation";
 import { calculateSystemicInsights } from "@/services/intelligence/insights-engine";
@@ -10,25 +10,22 @@ import { enforceControlLayer } from "@/services/control/enforcement";
 import { createEventLogger } from "@/lib/observability/log";
 import { db } from "@/lib/db";
 
-export async function GET(request: NextRequest) {
-  let logger: ReturnType<typeof createEventLogger> | null = null;
-
-  try {
-    // Get workspace context (fail closed if missing)
-    const workspace = await requireWorkspaceContext();
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     // Initialize logger
-    logger = createEventLogger("api_intelligence_summary", workspace.workspaceId);
+    const logger = createEventLogger("api_intelligence_summary", workspaceId);
 
     // Extract query parameters
-    const decisionId = request.nextUrl.searchParams.get("decisionId");
-    const limitParam = request.nextUrl.searchParams.get("limit");
+    const decisionId = ctx.request?.nextUrl.searchParams.get("decisionId");
+    const limitParam = ctx.request?.nextUrl.searchParams.get("limit");
     const limit = limitParam ? Math.min(parseInt(limitParam), 50) : 50;
 
     // Fetch last 100 items from workspace for analysis
     const items = await db.operatorItem.findMany({
       where: {
-        workspaceId: workspace.workspaceId,
+        workspaceId,
       },
       orderBy: {
         createdAt: "desc",
@@ -98,7 +95,7 @@ export async function GET(request: NextRequest) {
 
     if (decisionId) {
       const decision = await db.operatorItem.findUnique({
-        where: { id: decisionId, workspaceId: workspace.workspaceId },
+        where: { id: decisionId, workspaceId },
       });
 
       if (decision) {
@@ -149,14 +146,7 @@ export async function GET(request: NextRequest) {
         const depValidation = validateDependencies(inputVariables || {});
         if (!depValidation.valid) {
           executedValidations.push("dependency_validation");
-          return NextResponse.json(
-            {
-              error: "Dependency validation failed",
-              details: depValidation.error,
-              recommendation: null,
-            },
-            { status: 422 }
-          );
+          throw new Error(`Dependency validation failed: ${depValidation.error}`);
         }
         executedValidations.push("dependency_validation");
 
@@ -167,14 +157,7 @@ export async function GET(request: NextRequest) {
         });
         if (!gateResult.allowed) {
           executedValidations.push("decision_gate");
-          return NextResponse.json(
-            {
-              error: "Decision gate rejected",
-              reason: gateResult.reason,
-              recommendation: { blocked: true, blockReason: gateResult.reason },
-            },
-            { status: 422 }
-          );
+          throw new Error(`Decision gate rejected: ${gateResult.reason}`);
         }
         executedValidations.push("decision_gate");
 
@@ -194,13 +177,7 @@ export async function GET(request: NextRequest) {
           });
           if (guardrailsResult.blocked) {
             executedValidations.push("guardrails");
-            return NextResponse.json(
-              {
-                error: "Guardrails violation",
-                recommendation: { blocked: true, blockReason: "Guardrails violation" },
-              },
-              { status: 422 }
-            );
+            throw new Error("Guardrails violation");
           }
           executedValidations.push("guardrails");
           recommendationCount = 1;
@@ -219,7 +196,7 @@ export async function GET(request: NextRequest) {
 
     const response = {
       workspace: {
-        workspaceId: workspace.workspaceId,
+        workspaceId,
       },
       patterns: patterns.slice(0, limit - recommendationCount - 1),
       recommendation,
@@ -238,29 +215,13 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    if (logger) {
-      logger.success({
-        patternsDetected: allPatterns.length,
-        itemsAnalyzed: operatorItems.length,
-        payloadSize: itemCount,
-      });
-    }
+    logger.success({
+      patternsDetected: allPatterns.length,
+      itemsAnalyzed: operatorItems.length,
+      payloadSize: itemCount,
+    });
 
-    return NextResponse.json(response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    if (logger) {
-      logger.error(message);
-    }
-    if (message.includes("Unauthorized")) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+    return Response.json(response);
+  },
+  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+);

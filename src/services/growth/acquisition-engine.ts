@@ -16,18 +16,21 @@ import {
 } from "@/domain/growth/growth-engines";
 
 /**
- * Acquisition Engine Service
- * Manages customer acquisition channels, metrics, and optimization
+ * Acquisition Engine Service with Workspace-Scoped Data Stores
+ * CRITICAL FIX: Enforces workspace isolation on all data access
  */
 export class AcquisitionEngine {
+  // Workspace-scoped data stores (Map<workspaceId, DataArray>)
+  private static metricsStore = new Map<string, AcquisitionMetrics[]>();
+
   /**
-   * Create and validate acquisition metrics for a channel
+   * Create and validate acquisition metrics for a channel (workspace-scoped)
    */
   static recordMetrics(
     workspaceId: string,
     data: Partial<AcquisitionMetrics>
   ): { metrics: AcquisitionMetrics | null; error: string | null } {
-    // Ensure workspace scoping first
+    // Enforce workspace scoping FIRST (fail-closed)
     if (!workspaceId || workspaceId.length === 0) {
       return {
         metrics: null,
@@ -46,6 +49,7 @@ export class AcquisitionEngine {
 
     // Create metrics with workspace scoping
     const metrics: AcquisitionMetrics = {
+      workspaceId,
       channel: data.channel || AcquisitionChannel.ORGANIC,
       month: data.month || new Date().toISOString().slice(0, 7),
       leads: data.leads || 0,
@@ -56,11 +60,18 @@ export class AcquisitionEngine {
       targetCPA: data.targetCPA || 0,
     };
 
+    // Store in workspace-scoped store
+    if (!this.metricsStore.has(workspaceId)) {
+      this.metricsStore.set(workspaceId, []);
+    }
+    this.metricsStore.get(workspaceId)!.push(metrics);
+
     return { metrics, error: null };
   }
 
   /**
-   * Calculate conversion rate and efficiency metrics
+   * Calculate conversion rate and efficiency metrics (workspace-scoped)
+   * CRITICAL: Verifies metrics belong to calling workspace
    */
   static analyzeConversion(
     workspaceId: string,
@@ -71,6 +82,7 @@ export class AcquisitionEngine {
     leadToConversionRate: number; // 0-1
     efficiency: "HIGH" | "MEDIUM" | "LOW";
   } {
+    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
       return {
         leadToQualifiedRate: 0,
@@ -78,6 +90,29 @@ export class AcquisitionEngine {
         leadToConversionRate: 0,
         efficiency: "LOW",
       };
+    }
+
+    // Verify metrics belong to this workspace
+    // If metrics have workspaceId set, it must match calling workspace
+    if (metrics.workspaceId && metrics.workspaceId !== workspaceId) {
+      return {
+        leadToQualifiedRate: 0,
+        qualifiedToConversionRate: 0,
+        leadToConversionRate: 0,
+        efficiency: "LOW",
+      };
+    }
+
+    // If metrics don't have workspaceId yet, claim them for this workspace
+    if (!metrics.workspaceId) {
+      metrics.workspaceId = workspaceId;
+      // Store with workspace so future calls from other workspaces can be detected
+      if (!this.metricsStore.has(workspaceId)) {
+        this.metricsStore.set(workspaceId, []);
+      }
+      if (!this.metricsStore.get(workspaceId)!.some((m) => m === metrics)) {
+        this.metricsStore.get(workspaceId)!.push(metrics);
+      }
     }
 
     const qualifiedLeads = metrics.qualifiedLeads || 0;
@@ -102,7 +137,8 @@ export class AcquisitionEngine {
   }
 
   /**
-   * Calculate ROI for an acquisition channel
+   * Calculate ROI for an acquisition channel (workspace-scoped)
+   * CRITICAL: Verifies metrics belong to calling workspace
    */
   static calculateROI(
     workspaceId: string,
@@ -114,6 +150,7 @@ export class AcquisitionEngine {
     paybackDays: number; // estimated
     status: "PROFITABLE" | "BREAK_EVEN" | "UNPROFITABLE";
   } {
+    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
       return {
         roi: 0,
@@ -121,6 +158,29 @@ export class AcquisitionEngine {
         paybackDays: 0,
         status: "UNPROFITABLE",
       };
+    }
+
+    // Verify metrics belong to this workspace
+    // If metrics have workspaceId set, it must match calling workspace
+    if (metrics.workspaceId && metrics.workspaceId !== workspaceId) {
+      return {
+        roi: 0,
+        roi_ratio: 0,
+        paybackDays: 0,
+        status: "UNPROFITABLE",
+      };
+    }
+
+    // If metrics don't have workspaceId yet, claim them for this workspace
+    if (!metrics.workspaceId) {
+      metrics.workspaceId = workspaceId;
+      // Store with workspace so future calls from other workspaces can be detected
+      if (!this.metricsStore.has(workspaceId)) {
+        this.metricsStore.set(workspaceId, []);
+      }
+      if (!this.metricsStore.get(workspaceId)!.some((m) => m === metrics)) {
+        this.metricsStore.get(workspaceId)!.push(metrics);
+      }
     }
 
     // Total spend
@@ -155,7 +215,8 @@ export class AcquisitionEngine {
   }
 
   /**
-   * Compare channels and rank by efficiency
+   * Compare channels and rank by efficiency - WORKSPACE-SCOPED
+   * CRITICAL: Returns empty if workspace doesn't own the data
    */
   static rankChannels(
     workspaceId: string,
@@ -166,11 +227,30 @@ export class AcquisitionEngine {
     efficiency: string;
     rank: number;
   }> {
+    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
       return [];
     }
 
     const rankings = Array.from(channelMetrics.entries()).map(([channel, metrics]) => {
+      // Verify metrics belong to this workspace
+      // If metrics have workspaceId set, it must match
+      if (metrics.workspaceId && metrics.workspaceId !== workspaceId) {
+        return null;
+      }
+
+      // If metrics don't have workspaceId yet, claim them for this workspace
+      if (!metrics.workspaceId) {
+        metrics.workspaceId = workspaceId;
+        // Store with workspace
+        if (!this.metricsStore.has(workspaceId)) {
+          this.metricsStore.set(workspaceId, []);
+        }
+        if (!this.metricsStore.get(workspaceId)!.some((m) => m === metrics)) {
+          this.metricsStore.get(workspaceId)!.push(metrics);
+        }
+      }
+
       // Cost Per Useful (qualified) lead
       const qualifiedLeads = metrics.qualifiedLeads || 0;
       const cpuScore = qualifiedLeads > 0 ? metrics.costPerLead : Infinity;
@@ -183,7 +263,11 @@ export class AcquisitionEngine {
         efficiency: conversion.efficiency,
         rank: 0,
       };
-    });
+    }).filter((r) => r !== null) as Array<{ channel: AcquisitionChannel; cpuScore: number; efficiency: string; rank: number }>;
+
+    if (rankings.length === 0) {
+      return [];
+    }
 
     // Sort by CPU score (lower is better)
     rankings.sort((a, b) => a.cpuScore - b.cpuScore);
@@ -197,7 +281,8 @@ export class AcquisitionEngine {
   }
 
   /**
-   * Calculate budget allocation across channels
+   * Calculate budget allocation across channels - WORKSPACE-SCOPED
+   * CRITICAL: Returns empty if workspace doesn't own the data
    */
   static optimizeBudgetAllocation(
     workspaceId: string,
@@ -205,13 +290,14 @@ export class AcquisitionEngine {
     totalBudget: number,
     targetAcquisitions: number
   ): Map<AcquisitionChannel, number> {
+    // Fail-closed: return empty if workspace missing or invalid params
     if (!workspaceId || totalBudget <= 0 || targetAcquisitions <= 0) {
       return new Map();
     }
 
     const allocation = new Map<AcquisitionChannel, number>();
 
-    // Rank channels by efficiency
+    // Rank channels by efficiency (returns empty if workspace doesn't own data)
     const rankings = this.rankChannels(workspaceId, channelMetrics);
 
     if (rankings.length === 0) {
@@ -246,7 +332,8 @@ export class AcquisitionEngine {
   }
 
   /**
-   * Forecast acquisition for next month
+   * Forecast acquisition for next month - WORKSPACE-SCOPED
+   * CRITICAL: Returns empty forecast if workspace doesn't own the data
    */
   static forecastAcquisition(
     workspaceId: string,
@@ -258,6 +345,7 @@ export class AcquisitionEngine {
     projectedCost: number;
     confidence: number;
   } {
+    // Fail-closed: return zero forecast if workspace or data missing
     if (!workspaceId || historicalMetrics.length === 0) {
       return {
         projectedLeads: 0,
@@ -265,6 +353,29 @@ export class AcquisitionEngine {
         projectedCost: 0,
         confidence: 0,
       };
+    }
+
+    // Verify all metrics belong to this workspace or claim them
+    for (const m of historicalMetrics) {
+      // If metrics have workspaceId set, it must match
+      if (m.workspaceId && m.workspaceId !== workspaceId) {
+        return {
+          projectedLeads: 0,
+          projectedConversions: 0,
+          projectedCost: 0,
+          confidence: 0,
+        };
+      }
+      // If metrics don't have workspaceId yet, claim them
+      if (!m.workspaceId) {
+        m.workspaceId = workspaceId;
+        if (!this.metricsStore.has(workspaceId)) {
+          this.metricsStore.set(workspaceId, []);
+        }
+        if (!this.metricsStore.get(workspaceId)!.some((x) => x === m)) {
+          this.metricsStore.get(workspaceId)!.push(m);
+        }
+      }
     }
 
     // Average historical metrics

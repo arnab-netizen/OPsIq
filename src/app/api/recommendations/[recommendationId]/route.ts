@@ -1,5 +1,6 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getRecommendation, updateRecommendation } from "@/services/recommendation";
@@ -27,7 +28,7 @@ const updateRecommendationSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (request, context) => {
+export const GET = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   await withAuth({ capability: CAPABILITIES.RECOMMENDATION_VIEW });
 
@@ -43,17 +44,17 @@ export const GET = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { recommendationId } = await context.params;
+  const { recommendationId } = params;
   parseOrThrow(uuidSchema, recommendationId);
 
   const recommendation = await getRecommendation(recommendationId, workspaceId);
   return Response.json(recommendation);
 });
 
-export const PATCH = withRequestContext(async (request, context) => {
+export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const authContext = await withAuth({
     capability: CAPABILITIES.RECOMMENDATION_APPROVE,
@@ -72,14 +73,14 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { recommendationId } = await context.params;
+  const { recommendationId } = params;
   parseOrThrow(uuidSchema, recommendationId);
 
   const body = await parseRequestBody(request, updateRecommendationSchema);
-  await updateRecommendation(recommendationId, body, authContext, workspaceId);
+  await updateRecommendation(recommendationId, body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
 
   const updated = await getRecommendation(recommendationId, workspaceId);
   return Response.json(updated);

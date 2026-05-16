@@ -1,5 +1,8 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext, ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createDeliverable, getDeliverablesForEngagement } from "@/services/deliverable";
@@ -8,6 +11,7 @@ import { parseOrThrow, parseRequestBody, uuidSchema } from "@/lib/validation";
 import { withIdempotency } from "@/infra/idempotency";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 const createDeliverableSchema = z.object({
   engagementId: z.string().uuid(),
@@ -16,42 +20,30 @@ const createDeliverableSchema = z.object({
   description: z.string().optional(),
 });
 
-export const GET = withRequestContext(async (request) => {
-  const { session } = await withAuth({ capability: CAPABILITIES.DELIVERABLE_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const url = new URL(ctx.request!.url);
+    const engagementId = url.searchParams.get("engagementId");
 
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    if (!engagementId) {
+      return Response.json(
+        { error: "engagementId is required" },
+        { status: 400 }
+      );
+    }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
+    parseOrThrow(uuidSchema, engagementId);
 
-  const url = new URL(request.url);
-  const engagementId = url.searchParams.get("engagementId");
+    await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
-  if (!engagementId) {
-    return Response.json(
-      { error: "engagementId is required" },
-      { status: 400 }
-    );
-  }
+    const deliverables = await getDeliverablesForEngagement(engagementId, workspaceId);
+    return Response.json(deliverables);
+  },
+  { requireWorkspace: true, requireCapabilities: ['DELIVERABLE_VIEW'] }
+);
 
-  parseOrThrow(uuidSchema, engagementId);
-
-  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
-
-  const deliverables = await getDeliverablesForEngagement(engagementId, workspaceId);
-  return Response.json(deliverables);
-});
-
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   const authContext = await withAuth({
     capability: CAPABILITIES.DELIVERABLE_CREATE,
@@ -79,7 +71,7 @@ export const POST = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const body = await parseRequestBody(request, createDeliverableSchema);
@@ -91,7 +83,18 @@ export const POST = withRequestContext(async (request) => {
   const { isNew, result } = await withIdempotency(
     idempotencyKey,
     "deliverable.create",
-    async () => createDeliverable(body, authContext, workspaceId),
+    async () => {
+      const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
+      const authEnvelope: ServiceAuthEnvelope = {
+        verifiedActorId: canonicalContext.verifiedActorId,
+        verifiedActorType: canonicalContext.verifiedActorType,
+        verifiedWorkspaceId: canonicalContext.verifiedWorkspaceId,
+        verifiedCapabilities: canonicalContext.verifiedCapabilities,
+        hasInternalAccess: authContext.policy ? hasInternalAccess(authContext.policy) : false,
+        verifiedActor: canonicalContext.verifiedActor,
+      };
+      return createDeliverable(body, authEnvelope);
+    },
     body,
     authContext.session.user.id
   );

@@ -1,0 +1,63 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_date": "2026-05-16",
+  "phase": "X9F-2R",
+  "callers": [
+    {
+      "file": "src/app/api/decisions/create/route.ts",
+      "line": 70,
+      "caller_type": "ROUTE",
+      "function_called": "createDecision",
+      "input_format_used": "VERIFIED",
+      "source_context": "const verifiedInput: VerifiedDecisionInput = { title, type, impact, confidence, verifiedActorId: userId, verifiedWorkspaceId: workspaceId, ... }; const decision = await createDecision(verifiedInput);",
+      "safe": true,
+      "reason": "Route constructs VerifiedDecisionInput from pre-verified context (session.user.id, enforceWorkspaceScoping, assertCapability)"
+    },
+    {
+      "file": "src/app/api/decisions/create/route.ts",
+      "line": 52,
+      "caller_type": "ROUTE",
+      "function_called": "createDecisionsBulk",
+      "input_format_used": "VERIFIED",
+      "source_context": "const decisions = body.decisions.map((d: any) => ({ ...d, verifiedWorkspaceId: workspaceId, verifiedActorId: userId, })); const result = await createDecisionsBulk({ decisions });",
+      "safe": true,
+      "reason": "Route constructs VerifiedDecisionInput for bulk JSON creation from pre-verified context"
+    },
+    {
+      "file": "src/app/api/decisions/create/route.ts",
+      "line": 109,
+      "caller_type": "ROUTE",
+      "function_called": "createDecisionsBulk",
+      "input_format_used": "VERIFIED",
+      "source_context": "const verifiedDecisions = parsedDecisions.map((d: any) => ({ ...d, verifiedWorkspaceId: workspaceId, verifiedActorId: userId, })); const result = await createDecisionsBulk({ decisions: verifiedDecisions });",
+      "safe": true,
+      "reason": "Route constructs VerifiedDecisionInput for CSV bulk creation from pre-verified context"
+    },
+    {
+      "file": "src/services/decisions/decision-creation-service.ts",
+      "line": 162,
+      "caller_type": "SERVICE",
+      "function_called": "createDecision",
+      "input_format_used": "VERIFIED",
+      "source_context": "for (const decision of decisions) { const result = await createDecision(decision); }",
+      "safe": true,
+      "reason": "Bulk function receives decisions from route-constructed VerifiedDecisionInput"
+    }
+  ],
+  "summary": {
+    "total_callers": 4,
+    "verified_input_callers": 4,
+    "old_raw_input_callers": 0,
+    "test_only_old_raw_callers": 0,
+    "unsafe_production_callers": 0,
+    "unknown_callers": 0,
+    "conclusion": "✓ ALL CALLERS USE VERIFIED INPUT - No production code calls with old raw format"
+  },
+  "old_format_usage_analysis": {
+    "old_format_still_accepted": true,
+    "reason": "Service accepts union type (VerifiedDecisionInput | CreateDecisionInput) for backward compatibility",
+    "production_uses_old_format": false,
+    "test_uses_old_format": false,
+    "old_format_necessary": "UNCLEAR - backward compatibility only, not used in practice"
+  }
+}

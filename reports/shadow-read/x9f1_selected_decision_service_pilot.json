@@ -1,0 +1,126 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "date": "2026-05-16",
+  "phase": "X9F-1",
+  "pilot_selection_status": "COMPLETE",
+  "pilot_size": 1,
+  "selected_pilot": {
+    "type": "DECISION_SERVICE_AUTH_ENVELOPE_REFACTOR",
+    "priority": "PRIMARY",
+    "rank": 1,
+    "file": "src/services/decisions/decision-creation-service.ts",
+    "service_or_function": "createDecision",
+    "operation": "CREATE",
+    "current_pattern": "Input object: CreateDecisionInput { title, type, impact, confidence, workspaceId, userId, ... }",
+    "target_pattern": "ServiceAuthEnvelope-wrapped input with verified credentials",
+    "capability": "DECISION_CREATE",
+    "route_callers": [
+      {
+        "file": "src/app/api/decisions/create/route.ts",
+        "line": 30,
+        "wrapper": "withCanonicalEnforcement",
+        "auth_check": "requireCapabilities: [DECISION_CREATE]",
+        "status": "MODERN_CANONICAL (X9E-2 cleaned)"
+      }
+    ],
+    "service_callers": [],
+    "background_callers": [],
+    "expected_reduction": 0,
+    "reduction_reason": "Pattern change only (envelope instead of separate params), route already canonical",
+    "risk": "LOW",
+    "risk_mitigation": "Route already modernized in X9E-2, proven pattern, single caller, typed input",
+    "selection_reason": "LOWEST RISK CANDIDATE - Route already modernized (X9E-2), proven pattern to follow, fewest dependencies, highest confidence in success",
+    "proof_requirements": [
+      "service_signature_preserves_auth_boundary",
+      "callers_construct_envelope_from_verified_context",
+      "no_weak_auth_accepted",
+      "no_service_side_canonicalization",
+      "business_logic_preserved",
+      "response_shape_preserved",
+      "tests_pass",
+      "scanner_result_verified"
+    ],
+    "proof_details": {
+      "service_signature_preserves_auth_boundary": "createDecision() will accept ServiceAuthEnvelope instead of individual userId parameter",
+      "callers_construct_envelope_from_verified_context": "Route constructs envelope from CanonicalAuthContext.verifiedActorId and verifiedCapabilities",
+      "no_weak_auth_accepted": "Service only accepts ServiceAuthEnvelope (readonly), never plain userId",
+      "no_service_side_canonicalization": "Route handles all canonicalization, service only uses verified fields",
+      "business_logic_preserved": "Decision creation logic unchanged, only input envelope structure changes",
+      "response_shape_preserved": "Return type CreateDecisionResult unchanged",
+      "tests_pass": "phase-d/e/f integration tests verify creation still works",
+      "scanner_result_verified": "Scanner shows 0 reduction (expected, pattern change doesn't affect violation detection)"
+    },
+    "forbidden_actions": [
+      "Service must not accept CanonicalAuthContext",
+      "Service must not perform auth checks",
+      "Service must not fabricate permissions",
+      "Route must not pass raw userId without envelope",
+      "Response shape must not change",
+      "Business logic must not change"
+    ]
+  },
+  "alternative_candidates": [
+    {
+      "rank": 2,
+      "type": "DECISION_SERVICE_AUTH_ENVELOPE_REFACTOR",
+      "file": "src/services/decision-validation/decision-acceptance.service.ts",
+      "service_or_function": "acceptDecision",
+      "risk": "LOW",
+      "reason_not_selected": "Alternative candidate - slightly less proven than createDecision (X9E-2), but also low risk",
+      "note": "Could be X9F-3 if createDecision successful"
+    },
+    {
+      "rank": 3,
+      "type": "DECISION_SERVICE_AUTH_ENVELOPE_REFACTOR",
+      "file": "src/services/decision-validation/decision-acceptance.service.ts",
+      "service_or_function": "rejectDecision",
+      "risk": "LOW",
+      "reason_not_selected": "Alternative candidate - recently fixed in X9E-6, allow stabilization before refactor",
+      "note": "Could be X9F-4 after accept/reject pair stabilizes"
+    }
+  ],
+  "excluded_items": [
+    {
+      "rank": 4,
+      "type": "BLOCKED",
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "service_or_function": "closeDecision",
+      "reason_excluded": "GOVERNANCE_BLOCKED - Route uses legacy pattern, missing DECISION_CLOSE capability design",
+      "blocker_details": [
+        "Route uses withEnforcementFull (legacy wrapper), not withCanonicalEnforcement",
+        "Route uses hasPermission(membership.role, 'close_decision') - role-based not capability-based",
+        "DECISION_CLOSE not defined in domain CAPABILITIES",
+        "Close operation auth model incomplete",
+        "Requires Phase X9G: close route modernization + capability design"
+      ],
+      "unblock_conditions": [
+        "Design and add DECISION_CLOSE to domain CAPABILITIES",
+        "Migrate close route to withCanonicalEnforcement",
+        "Map role-based 'close_decision' to capability-based DECISION_CLOSE",
+        "Complete close operation governance model"
+      ]
+    }
+  ],
+  "recommendation": {
+    "status": "PROCEED_WITH_CREATEDECIISION",
+    "next_phase": "X9F-2",
+    "next_phase_task": "Service Auth Envelope Refactor - createDecision",
+    "authorization_required": "YES",
+    "implementation_ready": "YES",
+    "dependencies": "NONE - route already modernized (X9E-2)",
+    "risk_assessment": "LOW",
+    "confidence_level": "HIGH"
+  },
+  "summary": {
+    "total_services_audited": 4,
+    "ready_to_refactor": 3,
+    "blocked_by_governance": 1,
+    "selected_pilot_count": 1,
+    "selected_pilot_name": "createDecision (src/services/decisions/decision-creation-service.ts)",
+    "expected_scanner_reduction": 0,
+    "build_status_expectation": "PASS",
+    "test_status_expectation": "PASS (402/402)",
+    "authorization_for_x9f2": "YES",
+    "next_phase_name": "X9F-2"
+  }
+}

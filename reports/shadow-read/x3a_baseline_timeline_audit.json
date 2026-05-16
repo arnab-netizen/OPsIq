@@ -1,0 +1,99 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X3A-R",
+  "subphase": "A_COMMIT_AND_REPORT_TIMELINE_AUDIT",
+  "audit_date": "2026-05-15",
+  "timeline": [
+    {
+      "phase": "X2B Lane 2 Batch 1 - Start",
+      "git_commit": "Be (before migration)",
+      "reported_total": 512,
+      "reported_critical": 322,
+      "reported_block_build": 190,
+      "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+      "report_file": "X2B-LANE2-BATCH1-CLOSEOUT.json",
+      "notes": "Baseline before X2B Batch 1 migration"
+    },
+    {
+      "phase": "X2B Batch 1 - Intermediate (8/15 handlers)",
+      "git_commit": "x2b_lane2_batch1_after_snapshot.json timestamp",
+      "reported_total": 484,
+      "reported_critical": 308,
+      "reported_block_build": 176,
+      "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+      "report_file": "x2b_lane2_batch1_after_snapshot.json",
+      "notes": "After 8 of 15 handlers migrated, reduction 28 from 512"
+    },
+    {
+      "phase": "X2B Batch 1 - Complete",
+      "git_commit": "32a10a4 - Complete X2B Lane 2 Batch 1",
+      "reported_total": 312,
+      "reported_critical": null,
+      "reported_block_build": null,
+      "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+      "report_file": "X2B-LANE2-BATCH1-CLOSEOUT.json",
+      "notes": "All 15 handlers migrated, total reduction 200 from 512 baseline"
+    },
+    {
+      "phase": "X2C-PREFLIGHT Lane 2 Inventory",
+      "git_commit": "79b5c86 X2C-PREFLIGHT",
+      "reported_total": 312,
+      "reported_critical": 312,
+      "reported_block_build": 0,
+      "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+      "report_file": "x2c_lane2_inventory_scanner_baseline.json",
+      "notes": "Confirms X2B baseline of 312 still valid, no changes since X2B completion"
+    },
+    {
+      "phase": "X2D-PREFLIGHT Lane 2 Closeout + Lane 3 Preflight",
+      "git_commit": "cafc4c3 Phase X2D",
+      "reported_total": 312,
+      "reported_critical": null,
+      "reported_block_build": null,
+      "scanner_command": "Not run (preflight plan only)",
+      "report_file": "x2d_lane3_pilot_execution_plan.md",
+      "notes": "Lane 3 pilot plan created, baseline still 312 from X2C"
+    },
+    {
+      "phase": "X3A-B Before Snapshot",
+      "git_commit": "Before 064705c (first X3A run)",
+      "reported_total": 467,
+      "reported_critical": 292,
+      "reported_block_build": 175,
+      "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+      "report_file": "x3a_lane3_before_snapshot.json",
+      "notes": "MISMATCH DETECTED: Scanner jumped from 312 to 467. Report noted: service-level auth-guard imports now in scope."
+    },
+    {
+      "phase": "X3A-E After Snapshot (3 handlers migrated)",
+      "git_commit": "064705c Phase X3A - Complete Pilot",
+      "reported_total": 458,
+      "reported_critical": 286,
+      "reported_block_build": 172,
+      "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+      "report_file": "x3a_lane3_after_snapshot.json",
+      "notes": "Reduction of 9 violations as expected (467 → 458)"
+    },
+    {
+      "phase": "X3A-R Authoritative Scanner Run",
+      "git_commit": "064705c (current state)",
+      "reported_total": 458,
+      "reported_critical": 286,
+      "reported_block_build": 172,
+      "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+      "report_file": "shadow_read_violations.json (live)",
+      "notes": "Current authoritative baseline: 458. Confirms X3A pilot reduction of 9 violations was real."
+    }
+  ],
+  "mismatch_detected": true,
+  "mismatch_summary": {
+    "discrepancy": "Scanner baseline reported as 312 from X2B/X2C/X2D, but when X3A first ran scanner it showed 467",
+    "magnitude": "155 additional violations appeared",
+    "root_cause_hypothesis": "Scanner scope change - X3A scanner run included service-level auth-guard imports that previous runs did not count",
+    "evidence": "X3A before snapshot report itself noted: 'Scanner baseline increased from X2D expected 312 to 467. This includes service-level auth-guard imports that were not previously in scope.'",
+    "x2b_batch1_status": "15/15 handlers still migrated and using withCanonicalEnforcement",
+    "x3a_pilot_status": "3/3 handlers migrated successfully, scanner-clean",
+    "x3a_pilot_reduction": "Genuine reduction of 9 violations from 467 baseline",
+    "recommendation": "Mismatch is due to scanner scope change (service-level imports), not handler regression. X3A pilot is valid against its baseline of 467. Corrected baseline for X3B should be 458."
+  }
+}

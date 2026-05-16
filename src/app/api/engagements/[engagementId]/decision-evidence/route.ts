@@ -1,22 +1,21 @@
 import { getDecisionEvidence } from "@/services/decision-evidence/decision-evidence.service";
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export const GET = withRequestContext(async (request, context) => {
-  const { engagementId } = await context.params;
-  parseOrThrow(uuidSchema, engagementId);
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { engagementId } = params;
+    parseOrThrow(uuidSchema, engagementId);
 
-  await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_VIEW,
-  });
+    const workspaceId = ctx.request!.headers.get("x-workspace-id") || "";
+    const evidence = await getDecisionEvidence(engagementId, workspaceId);
 
-  const workspaceId = request.headers.get("x-workspace-id") || "";
-  const evidence = await getDecisionEvidence(engagementId, workspaceId);
-
-  return Response.json({
-    success: true,
-    data: evidence,
-  });
-});
+    return {
+      success: true,
+      data: evidence,
+    };
+  },
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW] }
+);

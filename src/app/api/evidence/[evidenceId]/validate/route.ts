@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -10,7 +11,7 @@ import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import type { NextRequest } from "next/server";
 
-export const POST = withRequestContext(async (request, context) => {
+export const POST = withEnforcementFull(async (request, context, params) => {
   try {
     // Authenticate + authorize (fail-closed)
     const { session } = await withAuth({
@@ -30,7 +31,7 @@ export const POST = withRequestContext(async (request, context) => {
 
     const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
     if (!membership) {
-      return Response.json({ error: "Unauthorized" }, { status: 403 });
+      throw new ForbiddenError("Unauthorized");
     }
 
     const idempotencyKey = request.headers.get("idempotency-key");
@@ -41,7 +42,7 @@ export const POST = withRequestContext(async (request, context) => {
       );
     }
 
-    const { evidenceId } = await context.params;
+    const { evidenceId } = params;
     parseOrThrow(uuidSchema, evidenceId);
 
     const bodyData = await parseRequestBody(request, validateEvidenceSchema);

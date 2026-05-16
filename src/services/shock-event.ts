@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -9,7 +10,6 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import { detectShockFromCurrentState } from "@/services/shock-detection";
 import type { ShockEventType } from "@/domain/constants/statuses";
 import type { RiskSeverity } from "@/domain/constants/statuses";
-import type { AuthContext } from "@/lib/auth-guard";
 
 export interface CreateShockEventInput {
   engagementId: string;
@@ -31,10 +31,10 @@ export interface UpdateShockEventInput {
 
 export async function createShockEvent(
   input: CreateShockEventInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<{ id: string; engagementId: string; detectionConfirmed: boolean }> {
-  const actorId = authContext.session.user.id;
+  const actorId = authContext.verifiedActorId;
 
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace-scoped shock event creation");
@@ -111,7 +111,7 @@ export async function createShockEvent(
 export async function updateShockEvent(
   shockEventId: string,
   input: UpdateShockEventInput,
-  authContext: AuthContext
+  authContext: CanonicalAuthContext
 ): Promise<{ id: string }> {
   // Note: ShockEvent model does not exist in schema - always throw NotFoundError
   throw new NotFoundError("ShockEvent", shockEventId);

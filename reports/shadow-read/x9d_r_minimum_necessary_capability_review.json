@@ -1,0 +1,172 @@
+{
+  "phase": "X9D-R",
+  "date": "2026-05-15",
+  "title": "X9D-R: Minimum Necessary Capability Review",
+  "status": "REVIEW_COMPLETE",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "summary": {
+    "proposed_capabilities": 8,
+    "add_now": 2,
+    "defer": 5,
+    "reject": 1,
+    "immediate_blockers": 2,
+    "future_optional": 5,
+    "unsafe_too_broad": 0,
+    "unknown_not_proven": 3
+  },
+  "proposed_capabilities": [
+    {
+      "capability": "DECISION_CREATE",
+      "classification": "IMMEDIATE_BLOCKER",
+      "current_code_dependency": "src/app/api/decisions/create/route.ts line 30: assertCapability(workspaceId, 'decision_create')",
+      "route_or_service": "POST /api/decisions/create",
+      "entitlement_overlap": "Yes - exists in services/entitlement.ts Capability enum",
+      "expected_scanner_reduction": 1,
+      "security_risk": "LOW",
+      "testable_now": true,
+      "decision": "ADD_NOW",
+      "reason": "Proven blocker. Route actively uses 'decision_create' string that must map to domain CAPABILITIES. Cannot refactor to ServiceAuthEnvelope without this. Immediate test path available."
+    },
+    {
+      "capability": "DECISION_UPDATE",
+      "classification": "IMMEDIATE_BLOCKER",
+      "current_code_dependency": "Decision update flows in service, quota enforcement in entitlements",
+      "route_or_service": "Decision service + recommendations route",
+      "entitlement_overlap": "Yes - exists in services/entitlement.ts",
+      "expected_scanner_reduction": 1,
+      "security_risk": "LOW",
+      "testable_now": true,
+      "decision": "ADD_NOW",
+      "reason": "Required for consistency with DECISION_CREATE. Maintains mapping between entitlement and domain capabilities. Needed for decision service refactoring."
+    },
+    {
+      "capability": "EXPERIMENT_CREATE",
+      "classification": "UNKNOWN_NOT_PROVEN",
+      "current_code_dependency": "None found in routes or active services",
+      "route_or_service": "No experiment/* routes in src/app/api/experiment/",
+      "entitlement_overlap": "Yes - exists in entitlements only",
+      "expected_scanner_reduction": 0,
+      "security_risk": "MEDIUM",
+      "testable_now": false,
+      "decision": "DEFER",
+      "reason": "No active route users. experiment-lifecycle.service.ts exists but is not called by any routes. Adding capability without proven usage increases permission surface unnecessarily. Defer until experiments are actively used in routes."
+    },
+    {
+      "capability": "EXPERIMENT_UPDATE",
+      "classification": "UNKNOWN_NOT_PROVEN",
+      "current_code_dependency": "None found",
+      "route_or_service": "None",
+      "entitlement_overlap": "Yes - entitlements only",
+      "expected_scanner_reduction": 0,
+      "security_risk": "MEDIUM",
+      "testable_now": false,
+      "decision": "DEFER",
+      "reason": "Same as EXPERIMENT_CREATE. Not proven necessary. Defer until needed."
+    },
+    {
+      "capability": "ADMIN_SETTINGS",
+      "classification": "UNSAFE_TOO_BROAD",
+      "current_code_dependency": "Comments mention it, but actual code uses CAPABILITIES.SYSTEM_ADMIN (already exists)",
+      "route_or_service": "src/app/api/admin/workspaces/route.ts actually uses SYSTEM_ADMIN",
+      "entitlement_overlap": "Yes - entitlements only, but domain has SYSTEM_ADMIN instead",
+      "expected_scanner_reduction": 0,
+      "security_risk": "MEDIUM",
+      "testable_now": false,
+      "decision": "REJECT",
+      "reason": "CRITICAL: Admin routes actually use SYSTEM_ADMIN (already in domain CAPABILITIES), not ADMIN_SETTINGS. Adding ADMIN_SETTINGS would create redundancy and confusion. Comments are misleading. Reject and correct comments instead."
+    },
+    {
+      "capability": "ADMIN_TEAM",
+      "classification": "UNKNOWN_NOT_PROVEN",
+      "current_code_dependency": "None found",
+      "route_or_service": "None",
+      "entitlement_overlap": "Yes - entitlements only",
+      "expected_scanner_reduction": 0,
+      "security_risk": "MEDIUM",
+      "testable_now": false,
+      "decision": "DEFER",
+      "reason": "No active route users. Admin-level operation not in service lanes. Defer until needed."
+    },
+    {
+      "capability": "WORKSPACE_CREATE",
+      "classification": "UNKNOWN_NOT_PROVEN",
+      "current_code_dependency": "None found in routes",
+      "route_or_service": "None",
+      "entitlement_overlap": "Yes - entitlements only",
+      "expected_scanner_reduction": 0,
+      "security_risk": "MEDIUM",
+      "testable_now": false,
+      "decision": "DEFER",
+      "reason": "No active route users. Admin-level operation. Deferred to workspace design phase (X9H or later). Not in current service lanes."
+    },
+    {
+      "capability": "WORKSPACE_INVITE",
+      "classification": "UNKNOWN_NOT_PROVEN",
+      "current_code_dependency": "None found",
+      "route_or_service": "None",
+      "entitlement_overlap": "Yes - entitlements only",
+      "expected_scanner_reduction": 0,
+      "security_risk": "MEDIUM",
+      "testable_now": false,
+      "decision": "DEFER",
+      "reason": "Same as WORKSPACE_CREATE. Deferred to workspace design phase."
+    }
+  ],
+  "security_implications": {
+    "add_now": {
+      "count": 2,
+      "risk": "LOW",
+      "reason": "Both are decision-specific, proven route users, and lower permission surface"
+    },
+    "defer": {
+      "count": 5,
+      "risk": "MEDIUM",
+      "reason": "Adding unused capabilities increases permission surface unnecessarily"
+    },
+    "reject": {
+      "count": 1,
+      "risk": "HIGH_IF_ADDED",
+      "reason": "ADMIN_SETTINGS is redundant with SYSTEM_ADMIN and would create confusion"
+    }
+  },
+  "key_findings": [
+    {
+      "finding": "ADMIN_SETTINGS is Redundant",
+      "evidence": "Admin routes use CAPABILITIES.SYSTEM_ADMIN (already exists in domain), not ADMIN_SETTINGS",
+      "impact": "Adding ADMIN_SETTINGS would create duplication and confusion",
+      "recommendation": "REJECT ADMIN_SETTINGS. Correct misleading comments instead."
+    },
+    {
+      "finding": "6 of 8 Proposed Capabilities Lack Active Route Users",
+      "evidence": "EXPERIMENT_*, ADMIN_TEAM, WORKSPACE_* are only in entitlements, no routes use them",
+      "impact": "Adding them increases permission surface without proven necessity",
+      "recommendation": "DEFER until proven necessary by actual route/service code"
+    },
+    {
+      "finding": "Only 2 Capabilities Are Proven Blockers",
+      "evidence": "DECISION_CREATE (2 routes) and DECISION_UPDATE (service) have proven code dependencies",
+      "impact": "Minimal scope reduces risk and enables faster implementation",
+      "recommendation": "ADD ONLY: DECISION_CREATE, DECISION_UPDATE"
+    }
+  ],
+  "recommended_implementation_scope": {
+    "capabilities_to_add": [
+      "DECISION_CREATE",
+      "DECISION_UPDATE"
+    ],
+    "capabilities_to_defer": [
+      "EXPERIMENT_CREATE",
+      "EXPERIMENT_UPDATE",
+      "ADMIN_TEAM",
+      "WORKSPACE_CREATE",
+      "WORKSPACE_INVITE"
+    ],
+    "capabilities_to_reject": [
+      "ADMIN_SETTINGS (redundant with SYSTEM_ADMIN)"
+    ],
+    "total_minimal_scope": 2,
+    "total_x9d_proposed_scope": 8,
+    "scope_reduction": 6,
+    "scope_reduction_percentage": 75
+  }
+}

@@ -1,5 +1,6 @@
 import { withAuth } from "@/lib/auth-guard";
-import { withRequestContext } from "@/lib/api-handler";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { RevenueEngine } from "@/services/growth/revenue-engine";
@@ -21,7 +22,7 @@ const createStreamSchema = z.object({
  * Create a new revenue stream (workspace-scoped)
  * Wire: RevenueEngine.createRevenueStream()
  */
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request) => {
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
   });
@@ -37,7 +38,7 @@ export const POST = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {
@@ -76,7 +77,7 @@ export const POST = withRequestContext(async (request) => {
  * Analyze revenue stream health (requires stream data in body)
  * Wire: RevenueEngine.analyzeStreamHealth()
  */
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request) => {
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_VIEW,
   });
@@ -92,7 +93,7 @@ export const GET = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {

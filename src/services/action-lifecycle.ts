@@ -4,7 +4,6 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { triggerReEvaluation } from "@/services/re-evaluation";
-import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Action Lifecycle States ──────────────────────────────────────────────────
 
@@ -121,7 +120,7 @@ export async function transitionActionState(
   actionId: string,
   nextState: ActionLifecycleState,
   context: {
-    authContext?: AuthContext;
+    authContext?: any;
     actorId?: string;
     reason?: string;
     evidence?: string;
@@ -129,7 +128,7 @@ export async function transitionActionState(
     workspaceId: string;
   }
 ): Promise<any> {
-  const resolvedActorId = context.authContext?.session.user.id || context.actorId;
+  const resolvedActorId = context.authContext?.session?.user?.id || context.actorId;
   if (!resolvedActorId) {
     throw new Error("Either authContext or actorId must be provided");
   }

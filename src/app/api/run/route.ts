@@ -1,4 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
+import { NextRequest } from "next/server";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { runSystem } from "@/services/system/run";
 import { createBaseline } from "@/services/onboarding/basic";
 import { generateOperatorItems } from "@/services/operator/generate";
@@ -39,7 +42,8 @@ function addIntegrity(
   };
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
+  await withAuth();
   let decisionResult: DecisionResult | null = null;
   let workspace;
   let userId: string | null = null;
@@ -49,19 +53,15 @@ export async function POST(request: NextRequest) {
   // Track execution of control layer validations for bypass prevention
   const executedValidations: string[] = ["variable_registry"];
 
-  try {
-    // Get workspace context early (fail closed if missing)
-    workspace = await requireWorkspaceContext();
+  // Get workspace context early (fail closed if missing)
+  workspace = await requireWorkspaceContext();
 
     // Initialize logger once workspace is available
     logger = createEventLogger("api_run", workspace.workspaceId);
 
     // Check rate limit per workspace
     if (!checkRateLimit(workspace.workspaceId)) {
-      return NextResponse.json(
-        { error: "Rate limit exceeded" },
-        { status: 429 }
-      );
+      throw new Error("Rate limit exceeded");
     }
 
     // Record RECEIVED stage
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Get session for user identity
-    const session = await getSession();
+    const { session } = await withAuth();
     userId = session?.user.id ?? null;
 
     // Enforce server-side auth
@@ -96,13 +96,9 @@ export async function POST(request: NextRequest) {
         workspaceId: workspace?.workspaceId,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
-        throw auditError;
       });
 
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
+      throw new UnauthorizedError("Unauthorized");
     }
 
     if (!canEdit(role)) {
@@ -122,13 +118,9 @@ export async function POST(request: NextRequest) {
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
-        throw auditError;
       });
 
-      return NextResponse.json(
-        { error: "Insufficient permissions" },
-        { status: 403 }
-      );
+      throw new Error("Insufficient permissions");
     }
 
     // Record VALIDATED stage (auth and permissions passed)
@@ -202,13 +194,9 @@ export async function POST(request: NextRequest) {
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
-        throw auditError;
       });
 
-      return NextResponse.json(
-        { error: "Missing or invalid required fields: revenue and cost must be numbers" },
-        { status: 400 }
-      );
+      throw new Error("Missing or invalid required fields: revenue and cost must be numbers");
     }
 
     // 1b. FAIL-CLOSED: Require confidence to be explicitly provided
@@ -252,13 +240,9 @@ export async function POST(request: NextRequest) {
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
-        throw auditError;
       });
 
-      return NextResponse.json(
-        { error: "Missing required field: confidence must be a number between 0 and 1" },
-        { status: 400 }
-      );
+      throw new Error("Missing required field: confidence must be a number between 0 and 1");
     }
 
     // 1c. FAIL-CLOSED: Require revenue/cost changes to be explicitly provided
@@ -305,13 +289,9 @@ export async function POST(request: NextRequest) {
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
-        throw auditError;
       });
 
-      return NextResponse.json(
-        { error: "Missing required fields: revenueChange and costChange must be numbers" },
-        { status: 400 }
-      );
+      throw new Error("Missing required fields: revenueChange and costChange must be numbers");
     }
 
     // 2. Normalize financial inputs before any calculations
@@ -360,13 +340,9 @@ export async function POST(request: NextRequest) {
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
-        throw auditError;
       });
 
-      return NextResponse.json(
-        { error: `Missing FX rate for currency ${inputCurrency}. Provide fxRates: { "${inputCurrency}": rate }` },
-        { status: 400 }
-      );
+      throw new Error(`Missing FX rate for currency ${inputCurrency}. Provide fxRates: { "${inputCurrency}": rate }`);
     }
 
     let normalizedMetrics;
@@ -431,7 +407,6 @@ export async function POST(request: NextRequest) {
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
-        throw auditError;
       });
 
       // Record ERRORED stage for normalization failure
@@ -446,10 +421,7 @@ export async function POST(request: NextRequest) {
         // Ignore lifecycle recording errors - observability only
       });
 
-      return NextResponse.json(
-        { error: errorMsg },
-        { status: 400 }
-      );
+      throw new Error(errorMsg);
     }
 
     // Record NORMALIZED stage (input normalization successful)
@@ -530,7 +502,7 @@ export async function POST(request: NextRequest) {
         inputsSnapshot
       );
 
-      // Log DEPENDENCY_VALIDATION_BLOCKED audit event (fail-closed)
+      // Log DEPENDENCY_VALIDATION_BLOCKED audit event
       await logAuditEvent({
         eventName: "DEPENDENCY_VALIDATION_BLOCKED",
         entityType: "Decision",
@@ -550,7 +522,6 @@ export async function POST(request: NextRequest) {
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
-        throw auditError;
       });
 
       if (logger) {
@@ -573,13 +544,7 @@ export async function POST(request: NextRequest) {
         // Ignore lifecycle recording errors - observability only
       });
 
-      return NextResponse.json(
-        {
-          error: depValidation.error.details,
-          decision: decisionResult,
-        },
-        { status: 422 }
-      );
+      throw new Error(depValidation.error.details);
     }
 
     // Dependency validation passed
@@ -644,7 +609,7 @@ export async function POST(request: NextRequest) {
         inputsSnapshot
       );
 
-      // Log DECISION_GATE_BLOCKED audit event (fail-closed)
+      // Log DECISION_GATE_BLOCKED audit event
       await logAuditEvent({
         eventName: "DECISION_GATE_BLOCKED",
         entityType: "Decision",
@@ -665,7 +630,6 @@ export async function POST(request: NextRequest) {
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
-        throw auditError;
       });
 
       // Log gate rejection
@@ -690,14 +654,7 @@ export async function POST(request: NextRequest) {
         // Ignore lifecycle recording errors - observability only
       });
 
-      // Return gate result in response body with 422 status
-      return NextResponse.json(
-        {
-          ...gateResultToPayload(gateResult),
-          decision: decisionResult,
-        },
-        { status: 422 }
-      );
+      throw new Error(gateResult.reason || "Decision gate validation failed");
     }
 
     // Decision gate passed - record GATED stage
@@ -828,7 +785,7 @@ export async function POST(request: NextRequest) {
         // Ignore lifecycle recording errors - observability only
       });
 
-      return NextResponse.json(decisionResult, { status: 400 });
+      throw new Error(errorMsg);
     }
 
     // 7. Classify problem type based on normalized financial impact
@@ -932,7 +889,7 @@ export async function POST(request: NextRequest) {
         inputsSnapshot
       );
 
-      // Log GUARDRAILS_BLOCKED audit event (fail-closed)
+      // Log GUARDRAILS_BLOCKED audit event
       await logAuditEvent({
         eventName: "GUARDRAILS_BLOCKED",
         entityType: "Decision",
@@ -959,7 +916,6 @@ export async function POST(request: NextRequest) {
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
-        throw auditError;
       });
 
       if (logger) {
@@ -982,17 +938,7 @@ export async function POST(request: NextRequest) {
         // Ignore lifecycle recording errors - observability only
       });
 
-      return NextResponse.json(
-        {
-          decision: decisionResult,
-          guardrails: {
-            blocked: guardrailsResult.blocked,
-            violations: guardrailsResult.violations,
-            warnings: guardrailsResult.warnings,
-          },
-        },
-        { status: 400 }
-      );
+      throw new Error(guardrailsResult.violations.map((v) => v.message).join("; "));
     }
 
     // Record GUARDRAIL_CHECKED stage
@@ -1011,10 +957,7 @@ export async function POST(request: NextRequest) {
     executedValidations.push("guardrails");
 
     if (!userId) {
-      return NextResponse.json(
-        { error: "User identity required" },
-        { status: 403 }
-      );
+      throw new Error("User identity required");
     }
 
     // 10. Generate operator items and store them
@@ -1089,7 +1032,7 @@ export async function POST(request: NextRequest) {
     try {
       enforceControlLayer("/api/run", executedValidations);
     } catch (enforceError: any) {
-      // Control layer bypass detected - log and return error
+      // Control layer bypass detected - log and throw
       const bypasMsg = `CONTROL_LAYER_BYPASS: ${enforceError.reason}`;
       if (logger) {
         logger.error(bypasMsg, {
@@ -1097,16 +1040,7 @@ export async function POST(request: NextRequest) {
           requiredValidations: enforceError.requiredValidations,
         });
       }
-      return NextResponse.json(
-        {
-          error: "Control layer validation incomplete - decision blocked",
-          enforceError: {
-            reason: enforceError.reason,
-            skippedValidations: enforceError.skippedValidations,
-          },
-        },
-        { status: 400 }
-      );
+      throw new Error(`Control layer validation incomplete: ${enforceError.reason}`);
     }
 
     // Return decision result with explanation (including guardrails status)
@@ -1136,51 +1070,5 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    return NextResponse.json(responsePayload);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    if (logger) {
-      logger.error(errorMessage);
-    }
-
-    // Record ERRORED stage for uncaught errors
-    if (workspace) {
-      await recordLifecycleStage({
-        workspaceId: workspace.workspaceId,
-        actorId: userId,
-        stage: "ERRORED",
-        status: "error",
-        reason: errorMessage,
-        durationMs: Date.now() - startTime,
-      }).catch(() => {
-        // Ignore lifecycle recording errors - observability only
-      });
-    }
-
-    if (decisionResult) {
-      return NextResponse.json(decisionResult, { status: 400 });
-    }
-    const finalErrResult = createDecisionResult(
-      {
-        baselineRevenue: 0,
-        baselineCost: 0,
-        deltaRevenue: 0,
-        deltaCost: 0,
-        confidence: 0,
-        expectedImpact: 0,
-      },
-      false,
-      "INVALID_INPUT"
-    );
-    const errorResult = addIntegrity(
-      {
-        ...finalErrResult,
-        workspaceId: workspace?.workspaceId || "unknown",
-        ownerUserId: userId || undefined,
-        createdBy: userId || undefined,
-      },
-      {}
-    );
-    return NextResponse.json(errorResult, { status: 400 });
-  }
-}
+  return responsePayload;
+});

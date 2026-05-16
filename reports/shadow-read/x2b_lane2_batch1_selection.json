@@ -1,0 +1,380 @@
+{
+  "phase": "X2B",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "lane": "LANE_2_CAPABILITY_CANONICAL_READ",
+  "batch": "X2B_BATCH1",
+  "batch_date": "2026-05-15",
+  "selection_notes": "First controlled batch of Lane 2 GET-only capability reads. All selected handlers: (1) GET-only or GET with other mutations not migrated, (2) exact single capability known, (3) x-workspace-id header source or requireWorkspaceContext(), (4) no PolicyContext dependency, (5) simple service call semantics, (6) already audited or verified safe.",
+  "selected_handlers": [
+    {
+      "file": "src/app/api/report/route.ts",
+      "method": "GET",
+      "handler_name": "GET (audit report)",
+      "exact_required_capability": "SYSTEM_VIEW_AUDIT",
+      "workspace_source": "x-workspace-id header",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.SYSTEM_VIEW_AUDIT, internalOnly: true })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET-only. Clear workspace scoping. Verified in X2A-R audit as Lane 2 candidate.",
+      "service_calls": [
+        "generateReport()"
+      ],
+      "notes": "Has internalOnly flag - maintain in migration"
+    },
+    {
+      "file": "src/app/api/value/summary/route.ts",
+      "method": "GET",
+      "handler_name": "GET (engagement metrics summary)",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "workspace_source": "requireWorkspaceContext()",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET-only. Uses requireWorkspaceContext(). Verified in X2A-R audit.",
+      "service_calls": [
+        "db.operatorItem.findMany()"
+      ],
+      "notes": "Already uses requireWorkspaceContext() - workspace safe"
+    },
+    {
+      "file": "src/app/api/value/7day/route.ts",
+      "method": "GET",
+      "handler_name": "GET (7-day value metrics)",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "workspace_source": "requireWorkspaceContext()",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET-only. Uses requireWorkspaceContext(). Verified in X2A-R audit.",
+      "service_calls": [
+        "db.operatorItem.findMany()"
+      ],
+      "notes": "Mirrors /api/value/summary pattern"
+    },
+    {
+      "file": "src/app/api/intelligence/patterns/route.ts",
+      "method": "GET",
+      "handler_name": "GET (intelligence patterns)",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "workspace_source": "requireWorkspaceContext()",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET-only. Uses requireWorkspaceContext(). Verified in X2A-R audit.",
+      "service_calls": [
+        "db.operatorItem.findMany()",
+        "detectPatterns()"
+      ],
+      "notes": "Verified actual capability is ENGAGEMENT_VIEW, not INTELLIGENCE"
+    },
+    {
+      "file": "src/app/api/intelligence/summary/route.ts",
+      "method": "GET",
+      "handler_name": "GET (intelligence summary)",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "workspace_source": "requireWorkspaceContext()",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET-only. Uses requireWorkspaceContext(). Verified in X2A-R audit.",
+      "service_calls": [
+        "db.operatorItem.findMany()",
+        "detectPatterns()",
+        "generateRecommendation()"
+      ],
+      "notes": "Verified actual capability is ENGAGEMENT_VIEW"
+    },
+    {
+      "file": "src/app/api/intelligence/recommendations/route.ts",
+      "method": "GET",
+      "handler_name": "GET (intelligence recommendations)",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "workspace_source": "requireWorkspaceContext()",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET-only. Uses requireWorkspaceContext(). Verified in X2A-R audit.",
+      "service_calls": [
+        "db.operatorItem.findUnique()",
+        "db.operatorItem.findMany()",
+        "generateMultipleRecommendations()"
+      ],
+      "notes": "Has query param parsing (decisionId) - standard pattern"
+    },
+    {
+      "file": "src/app/api/intelligence/insights/route.ts",
+      "method": "GET",
+      "handler_name": "GET (intelligence insights)",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "workspace_source": "requireWorkspaceContext()",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET-only. Uses requireWorkspaceContext(). Verified in X2A-R audit.",
+      "service_calls": [
+        "db.operatorItem.findMany()",
+        "calculateSystemicInsights()"
+      ],
+      "notes": "Uses 30-day lookback window"
+    },
+    {
+      "file": "src/app/api/users/route.ts",
+      "method": "GET",
+      "handler_name": "GET (list users)",
+      "exact_required_capability": "USER_VIEW",
+      "workspace_source": "x-workspace-id header",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET with separate POST. Clear capability. Internal-only flag. Uses enforceWorkspaceScoping().",
+      "service_calls": [
+        "enforceWorkspaceScoping()",
+        "listUsers()"
+      ],
+      "notes": "Separate POST not migrated. Has internalOnly flag - maintain."
+    },
+    {
+      "file": "src/app/api/export/route.ts",
+      "method": "GET",
+      "handler_name": "GET (data export)",
+      "exact_required_capability": "ACTION_VIEW",
+      "workspace_source": "x-workspace-id header",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.ACTION_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET with separate POST. Clear capability. Uses enforceWorkspaceScoping().",
+      "service_calls": [
+        "enforceWorkspaceScoping()",
+        "createExportPackage()"
+      ],
+      "notes": "Separate POST not migrated. Query param for format."
+    },
+    {
+      "file": "src/app/api/engagements/route.ts",
+      "method": "GET",
+      "handler_name": "GET (list engagements)",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "workspace_source": "x-workspace-id header",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET with separate POST. Clear capability. Uses enforceWorkspaceScoping().",
+      "service_calls": [
+        "enforceWorkspaceScoping()",
+        "listEngagements()"
+      ],
+      "notes": "Separate POST not migrated. Pagination schema."
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/route.ts",
+      "method": "GET",
+      "handler_name": "GET (get engagement by id)",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "workspace_source": "x-workspace-id header",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET with separate PATCH. Clear capability. Uses enforceWorkspaceScoping(). Dynamic route param.",
+      "service_calls": [
+        "enforceWorkspaceScoping()",
+        "getEngagementById()"
+      ],
+      "notes": "Separate PATCH not migrated. Dynamic [engagementId] param."
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/intervention/route.ts",
+      "method": "GET",
+      "handler_name": "GET (intervention state)",
+      "exact_required_capability": "INTERVENTION_VIEW",
+      "workspace_source": "x-workspace-id header",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET with separate PATCH. Clear capability. Uses enforceWorkspaceScoping().",
+      "service_calls": [
+        "enforceWorkspaceScoping()",
+        "getInterventionState()",
+        "assertEngagementAccess()"
+      ],
+      "notes": "Separate PATCH not migrated."
+    },
+    {
+      "file": "src/app/api/findings/[findingId]/route.ts",
+      "method": "GET",
+      "handler_name": "GET (finding detail)",
+      "exact_required_capability": "FINDING_VIEW",
+      "workspace_source": "x-workspace-id header",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.FINDING_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET with separate PATCH. Clear capability. Uses enforceWorkspaceScoping().",
+      "service_calls": [
+        "enforceWorkspaceScoping()",
+        "getFindingDetail()"
+      ],
+      "notes": "Separate PATCH not migrated. Dynamic [findingId] param."
+    },
+    {
+      "file": "src/app/api/evidence/[evidenceId]/route.ts",
+      "method": "GET",
+      "handler_name": "GET (evidence detail)",
+      "exact_required_capability": "EVIDENCE_VIEW",
+      "workspace_source": "x-workspace-id header",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.EVIDENCE_VIEW })",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "LOW",
+      "reason_selected": "Simple capability read. GET with separate PATCH. Clear capability. Uses enforceWorkspaceScoping().",
+      "service_calls": [
+        "enforceWorkspaceScoping()",
+        "getEvidenceById()"
+      ],
+      "notes": "Separate PATCH not migrated. Dynamic [evidenceId] param."
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/dashboard/route.ts",
+      "method": "GET",
+      "handler_name": "GET (owner dashboard)",
+      "exact_required_capability": "ENGAGEMENT_VIEW",
+      "workspace_source": "x-workspace-id header",
+      "current_auth_pattern": "withEnforcementFull + withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW }) + manual canonicalizeAuthContext()",
+      "scanner_entries": [
+        "withAuth()",
+        "auth-guard import"
+      ],
+      "violation_count": 2,
+      "expected_reduction": 2,
+      "risk": "MEDIUM",
+      "reason_selected": "Simple capability read. GET-only. Clear capability. Currently uses manual canonicalizeAuthContext bridge - migration will eliminate bridge.",
+      "service_calls": [
+        "assertEngagementAccess()",
+        "getOwnerDashboard()"
+      ],
+      "notes": "Uses manual canonicalizeAuthContext() call - migration will convert to withCanonicalEnforcement wrapper, removing transitional debt bridge."
+    }
+  ],
+  "excluded_candidates": [
+    {
+      "file": "src/app/api/calibration/route.ts",
+      "method": "GET",
+      "reason_excluded": "Uses resolveServerRole() and canView() - complex server-side role logic, deferred to Lane 8"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/shock-events/route.ts",
+      "method": "GET",
+      "reason_excluded": "GET has capability check but also has POST handler - defer until POST logic reviewed"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/condition/route.ts",
+      "method": "GET",
+      "reason_excluded": "GET has capability check but also has POST handler - defer until POST logic reviewed"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/intervention-state/route.ts",
+      "method": "GET",
+      "reason_excluded": "GET has capability check but also has PUT handler - defer until PUT logic reviewed"
+    },
+    {
+      "file": "src/app/api/recommendations/[recommendationId]/route.ts",
+      "method": "GET",
+      "reason_excluded": "Not yet inspected - deferred for next batch"
+    }
+  ],
+  "batch_summary": {
+    "total_selected": 15,
+    "get_only": 8,
+    "get_with_other_mutations": 7,
+    "expected_total_reduction": 30,
+    "unique_capabilities": [
+      "SYSTEM_VIEW_AUDIT",
+      "ENGAGEMENT_VIEW",
+      "USER_VIEW",
+      "ACTION_VIEW",
+      "INTERVENTION_VIEW",
+      "FINDING_VIEW",
+      "EVIDENCE_VIEW"
+    ],
+    "workspace_source_distribution": {
+      "x-workspace-id_header": 10,
+      "requireWorkspaceContext": 5
+    },
+    "risk_assessment": "LOW - all handlers GET-only or GET with separate mutations, exact single capability known, simple service semantics, already audited or verified"
+  },
+  "validation_plan": [
+    "1. Build: npm run build",
+    "2. Tests: npm test -- phase-d phase-e phase-f",
+    "3. Tests: npm test -- g6r-auth-bridge",
+    "4. Scanner: npx tsx src/governance/auth-shadow-read-scanner.ts",
+    "5. Checkpoint after each 3 handlers"
+  ],
+  "next_phase": "X2B-B: Before snapshot"
+}

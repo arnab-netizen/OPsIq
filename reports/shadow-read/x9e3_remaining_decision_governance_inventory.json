@@ -1,0 +1,173 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "date": "2026-05-15",
+  "phase": "X9E-3",
+  "status": "INVENTORY_UPDATED_AFTER_X9E2",
+  "scanner_baseline": {
+    "total": 448,
+    "critical": 283,
+    "block_build": 165
+  },
+  "note": "X9E-2 completed decisions/create cleanup. This inventory reflects remaining items.",
+  "items": [
+    {
+      "file": "src/app/api/recommendations/route.ts",
+      "handler_or_function": "POST /api/recommendations",
+      "current_pattern": "withEnforcementFull + withAuth + assertCapability",
+      "issue_type": "ROUTE_CLEANUP",
+      "current_capability_or_string": "CAPABILITIES.RECOMMENDATION_CREATE (domain) + string \"decision_create\" (entitlement)",
+      "target_capability": "CAPABILITIES.DECISION_CREATE",
+      "uses_domain_capability": true,
+      "uses_raw_string": true,
+      "uses_entitlement_string": true,
+      "uses_service_auth_envelope": false,
+      "business_behavior_change_risk": "LOW",
+      "scanner_entries": [
+        "withAuth() call (line 35-36)",
+        "assertCapability() call with string literal (line 53)"
+      ],
+      "expected_reduction": 1,
+      "recommended_action": "ROUTE_CLEANUP_CANDIDATE: Replace string \"decision_create\" with CAPABILITIES.DECISION_CREATE (similar to X9E-2 decisions/create)",
+      "blocker_reason": ""
+    },
+    {
+      "file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+      "handler_or_function": "POST /api/decisions/[decisionId]/reject",
+      "current_pattern": "withCanonicalEnforcement + CanonicalAuthContext",
+      "issue_type": "BUG_FIX",
+      "current_capability_or_string": "string literal \"DECISION_ACCEPT\" (WRONG - should be \"DECISION_REJECT\")",
+      "target_capability": "CAPABILITIES.DECISION_REJECT (if bug fix strategy chosen)",
+      "uses_domain_capability": false,
+      "uses_raw_string": true,
+      "uses_entitlement_string": false,
+      "uses_service_auth_envelope": false,
+      "business_behavior_change_risk": "HIGH",
+      "scanner_entries": [
+        "withCanonicalEnforcement() call (line 12)",
+        "CanonicalAuthContext parameter (line 13)",
+        "Wrong capability string check (line 39)"
+      ],
+      "expected_reduction": 0,
+      "recommended_action": "BUG_FIX_CANDIDATE: Fix wrong capability string from \"DECISION_ACCEPT\" to \"DECISION_REJECT\". Requires clarification: is this intentional unified capability or a bug?",
+      "blocker_reason": "Capability string mismatch requires governance clarification before fix"
+    },
+    {
+      "file": "src/app/api/decisions/[decisionId]/accept/route.ts",
+      "handler_or_function": "POST /api/decisions/[decisionId]/accept",
+      "current_pattern": "withCanonicalEnforcement + CanonicalAuthContext",
+      "issue_type": "SERVICE_REFACTOR",
+      "current_capability_or_string": "string literal \"DECISION_ACCEPT\"",
+      "target_capability": "CAPABILITIES.DECISION_ACCEPT (if migrated to domain)",
+      "uses_domain_capability": false,
+      "uses_raw_string": true,
+      "uses_entitlement_string": false,
+      "uses_service_auth_envelope": false,
+      "business_behavior_change_risk": "MEDIUM",
+      "scanner_entries": [
+        "withCanonicalEnforcement() call (line 12)",
+        "CanonicalAuthContext parameter (line 13)"
+      ],
+      "expected_reduction": 1,
+      "recommended_action": "SERVICE_REFACTOR_CANDIDATE: Refactor acceptDecision() to use ServiceAuthEnvelope. Coupled with reject route - should refactor together if both use same capability.",
+      "blocker_reason": "Coupled with reject route. Should fix reject bug first or verify unified capability is intentional."
+    },
+    {
+      "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "handler_or_function": "POST /api/decisions/[decisionId]/close",
+      "current_pattern": "withEnforcementFull",
+      "issue_type": "ENHANCEMENT",
+      "current_capability_or_string": "No capability check (only workspace scoping)",
+      "target_capability": "CAPABILITIES.DECISION_UPDATE (should be added as test-driven enhancement)",
+      "uses_domain_capability": false,
+      "uses_raw_string": false,
+      "uses_entitlement_string": false,
+      "uses_service_auth_envelope": false,
+      "business_behavior_change_risk": "MEDIUM",
+      "scanner_entries": [
+        "withEnforcementFull() call"
+      ],
+      "expected_reduction": 0,
+      "recommended_action": "ENHANCEMENT_CANDIDATE: Add DECISION_UPDATE capability check to close operation. Requires test-driven design to define expected behavior.",
+      "blocker_reason": "Unclear whether close should require DECISION_UPDATE or different capability. Needs governance clarification."
+    },
+    {
+      "file": "src/app/api/decisions/list/route.ts",
+      "handler_or_function": "GET /api/decisions/list",
+      "current_pattern": "withCanonicalEnforcement + CanonicalAuthContext",
+      "issue_type": "SERVICE_REFACTOR",
+      "current_capability_or_string": "No capability check (list operation)",
+      "target_capability": "No capability needed (view operation)",
+      "uses_domain_capability": false,
+      "uses_raw_string": false,
+      "uses_entitlement_string": false,
+      "uses_service_auth_envelope": false,
+      "business_behavior_change_risk": "LOW",
+      "scanner_entries": [
+        "withCanonicalEnforcement() call (line 5)",
+        "CanonicalAuthContext parameter (line 6)"
+      ],
+      "expected_reduction": 1,
+      "recommended_action": "SERVICE_REFACTOR_CANDIDATE: Refactor to use enforced-route pattern (low priority, no capability change)",
+      "blocker_reason": "Low priority - no capability enforcement needed"
+    },
+    {
+      "file": "src/services/decision-validation/decision-acceptance.service.ts",
+      "handler_or_function": "acceptDecision() / rejectDecision()",
+      "current_pattern": "CanonicalAuthContext parameter (unused)",
+      "issue_type": "SERVICE_REFACTOR",
+      "current_capability_or_string": "No enforcement (service doesn't validate)",
+      "target_capability": "CAPABILITIES.DECISION_ACCEPT or CAPABILITIES.DECISION_REJECT (via ServiceAuthEnvelope)",
+      "uses_domain_capability": false,
+      "uses_raw_string": false,
+      "uses_entitlement_string": false,
+      "uses_service_auth_envelope": false,
+      "business_behavior_change_risk": "MEDIUM",
+      "scanner_entries": [
+        "No direct violations (route-level only)"
+      ],
+      "expected_reduction": 0,
+      "recommended_action": "SERVICE_REFACTOR_CANDIDATE: Migrate to ServiceAuthEnvelope when routes are refactored. Requires route refactoring first.",
+      "blocker_reason": "Blocked on route refactoring and reject bug clarification"
+    }
+  ],
+  "summary": {
+    "total_items": 6,
+    "route_cleanup_candidates": 1,
+    "bug_fix_candidates": 1,
+    "service_refactor_candidates": 3,
+    "enhancement_candidates": 1,
+    "blocked_items": 2,
+    "findings": [
+      {
+        "finding": "Recommendations route is next cleanup candidate (similar to X9E-2 decisions/create)",
+        "evidence": "Uses string \"decision_create\" that should be replaced with CAPABILITIES.DECISION_CREATE",
+        "risk": "LOW",
+        "readiness": "READY_NOW"
+      },
+      {
+        "finding": "Reject route has capability string mismatch (bug or feature?)",
+        "evidence": "Route checks \"DECISION_ACCEPT\" but operation is reject. Needs governance clarification.",
+        "risk": "HIGH_IF_BUG",
+        "readiness": "BLOCKED_PENDING_CLARIFICATION"
+      },
+      {
+        "finding": "Accept and reject routes are coupled",
+        "evidence": "Both use legacy withCanonicalEnforcement pattern and share accept/reject decision logic",
+        "risk": "MEDIUM",
+        "readiness": "BLOCKED_ON_REJECT_BUG_CLARITY"
+      },
+      {
+        "finding": "Close route lacks DECISION_UPDATE capability check",
+        "evidence": "Operation modifies decision state but has no capability enforcement",
+        "risk": "MEDIUM",
+        "readiness": "BLOCKED_PENDING_GOVERNANCE_DESIGN"
+      },
+      {
+        "finding": "Service layer refactoring requires route-level work first",
+        "evidence": "acceptDecision/rejectDecision need ServiceAuthEnvelope which comes from routes",
+        "risk": "MEDIUM",
+        "readiness": "BLOCKED_ON_ROUTE_REFACTORING"
+      }
+    ]
+  }
+}

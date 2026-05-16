@@ -9,6 +9,20 @@ import crypto from "crypto";
  */
 export class SnapshotOptimizationEngine {
   /**
+   * Stable JSON stringify with sorted keys
+   */
+  private static stableStringify(obj: unknown): string {
+    if (obj === null) return "null";
+    if (typeof obj !== "object") return JSON.stringify(obj);
+    if (Array.isArray(obj)) {
+      return "[" + obj.map(v => this.stableStringify(v)).join(",") + "]";
+    }
+    const keys = Object.keys(obj as Record<string, unknown>).sort();
+    const pairs = keys.map(k => `"${k}":${this.stableStringify((obj as any)[k])}`);
+    return "{" + pairs.join(",") + "}";
+  }
+
+  /**
    * Create snapshot with integrity checksum
    * Includes: all state at that point + checksum of state
    */
@@ -20,7 +34,8 @@ export class SnapshotOptimizationEngine {
     workspaceId: string
   ): Promise<string> {
     // Create checksum of state (integrity verification)
-    const stateString = JSON.stringify(state);
+    // Use stable JSON serialization (sorted keys) for consistent checksums
+    const stateString = this.stableStringify(state);
     const checksum = crypto.createHash("sha256").update(stateString).digest("hex");
 
     const snapshot = await db.snapshotData.create({
@@ -28,10 +43,9 @@ export class SnapshotOptimizationEngine {
         aggregateId,
         aggregateType,
         state,
-        lastEventNumber,
+        eventNumber: lastEventNumber,
         checksum, // Store checksum for validation
         workspaceId,
-        createdAt: new Date(),
       },
     });
 
@@ -75,7 +89,8 @@ export class SnapshotOptimizationEngine {
     }
 
     // Validate checksum (detect corruption)
-    const stateString = JSON.stringify(snapshot.state);
+    // Use stable JSON serialization (sorted keys) for consistent checksums
+    const stateString = this.stableStringify(snapshot.state);
     const expectedChecksum = crypto
       .createHash("sha256")
       .update(stateString)
@@ -112,7 +127,7 @@ export class SnapshotOptimizationEngine {
 
     return {
       state: snapshot.state as Record<string, unknown>,
-      lastEventNumber: snapshot.lastEventNumber,
+      lastEventNumber: snapshot.eventNumber,
       checksum: snapshot.checksum,
     };
   }

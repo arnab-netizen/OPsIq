@@ -1,0 +1,65 @@
+{
+  "phase": "X9E-5",
+  "date": "2026-05-16",
+  "status": "BASELINE_ESTABLISHED",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "purpose": "Establish current baseline before decision governance bug clarification",
+  "git_status": "clean",
+  "build_result": {
+    "status": "PASS",
+    "timestamp": "2026-05-16T01:01:00Z",
+    "build_time_seconds": 12.7,
+    "typescript_errors": 0,
+    "static_pages_generated": 99,
+    "pages_total": 99
+  },
+  "test_results": {
+    "governance_capabilities": {
+      "status": "PASS",
+      "files_passed": 1,
+      "tests_passed": 32
+    },
+    "policy_wrapper_enforcement": {
+      "status": "PASS",
+      "files_passed": 1,
+      "tests_passed": 32
+    },
+    "auth_bridge": {
+      "status": "PASS",
+      "files_passed": 1,
+      "tests_passed": 14
+    },
+    "phase_d_e_f": {
+      "status": "PASS",
+      "files_passed": 17,
+      "tests_passed": 324
+    },
+    "total": {
+      "files": 20,
+      "tests": 402,
+      "status": "PASS",
+      "percentage": 100
+    }
+  },
+  "scanner_baseline": {
+    "timestamp": "2026-05-16T01:01:22.026Z",
+    "total_violations": 448,
+    "critical": 283,
+    "block_build": 165,
+    "change_since_x9e4": 0,
+    "status": "STABLE"
+  },
+  "known_issues": [
+    {
+      "id": "REJECT_ROUTE_AUTH_BUG",
+      "severity": "HIGH",
+      "category": "AUTHORIZATION_CAPABILITY",
+      "status": "UNDER_INVESTIGATION",
+      "description": "Reject decision route may be using wrong capability constant",
+      "location": "src/app/api/decisions/[decisionId]/reject/route.ts:39",
+      "investigation_phase": "X9E-5"
+    }
+  ],
+  "validation_gates_status": "ALL_PASS",
+  "conclusion": "✓ Baseline established - ready for decision governance bug clarification phase"
+}

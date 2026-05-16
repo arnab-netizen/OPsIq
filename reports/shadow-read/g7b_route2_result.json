@@ -1,0 +1,32 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "route": "src/app/api/evidence-bundles/route.ts",
+  "phase": "g7b",
+  "timestamp": "2026-05-14T19:57:00Z",
+  "migration_status": "COMPLETE",
+  "handler_migrated": "GET",
+  "exact_required_capability": "EVIDENCE_VIEW",
+  "before_violations": 6,
+  "after_violations": 4,
+  "expected_reduction": 4,
+  "actual_reduction": 2,
+  "reduction_notes": "Migration of GET handler removed 2 violations (withAuth calls at line 85, now line 27). POST handler remains unchanged with withAuth at original line 25. Import still needed for POST handler.",
+  "build_status": "✓ PASS",
+  "bridge_tests": "14/14 PASS",
+  "phase_tests": "324/324 PASS",
+  "scanner_status": "✓ PASS (no new violations)",
+  "total_violations_change": 569,
+  "total_violations_after": 567,
+  "net_violation_reduction": -2,
+  "route_scanner_clean": false,
+  "reason_not_clean": "POST handler still uses withAuth() pattern with EVIDENCE_SUBMIT capability",
+  "migration_complete": false,
+  "notes": [
+    "GET handler successfully migrated to withCanonicalEnforcement",
+    "Removed try-catch wrapper from GET handler (error handling moved to wrapper)",
+    "Capability enforcement moved to wrapper level: requireCapabilities: ['EVIDENCE_VIEW']",
+    "POST handler left unchanged (uses EVIDENCE_SUBMIT, different capability)",
+    "No new violations introduced",
+    "Tests pass with no regressions"
+  ]
+}

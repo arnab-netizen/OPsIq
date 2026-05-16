@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { maturityEngine } from "@/services/diagnostic-core/maturity-engine";
@@ -23,7 +24,7 @@ const maturitySchema = z.object({
   }),
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request) => {
   const authContext = await withAuth({
     capability: CAPABILITIES.DIAGNOSIS_READ,
     internalOnly: false,

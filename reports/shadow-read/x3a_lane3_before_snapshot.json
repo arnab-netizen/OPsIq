@@ -1,0 +1,72 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X3A",
+  "subphase": "B_BEFORE_SNAPSHOT",
+  "snapshot_date": "2026-05-15",
+  "snapshot_time": "05:01:26Z",
+  "build_status": {
+    "status": "PASS",
+    "errors": 0,
+    "warnings": 0,
+    "duration_seconds": null
+  },
+  "test_results": {
+    "g6r_auth_bridge_tests": {
+      "status": "PASS",
+      "test_files_passed": 1,
+      "tests_passed": 14,
+      "duration_seconds": 8.19
+    },
+    "phase_d_e_f_tests": {
+      "status": "PASS",
+      "test_files_passed": 17,
+      "tests_passed": 324,
+      "duration_seconds": 12.05
+    },
+    "total_tests_passed": 338,
+    "total_tests_failed": 0
+  },
+  "scanner_baseline": {
+    "scanner_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+    "scanner_output_file": "shadow_read_violations.json",
+    "total_violations": 467,
+    "critical_violations": 292,
+    "block_build_violations": 175,
+    "notice": "Scanner baseline increased from X2D expected 312 to 467. This includes service-level auth-guard imports that were not previously in scope. Using 467 as actual baseline for pilot measurement."
+  },
+  "pilot_handlers_before": [
+    {
+      "file": "src/app/api/actions/route.ts",
+      "method": "POST",
+      "current_violations_count": null,
+      "note": "Will be counted during Phase C checkpoint"
+    },
+    {
+      "file": "src/app/api/clients/route.ts",
+      "method": "POST",
+      "current_violations_count": null,
+      "note": "Will be counted during Phase C checkpoint"
+    },
+    {
+      "file": "src/app/api/leads/route.ts",
+      "method": "POST",
+      "current_violations_count": null,
+      "note": "Will be counted during Phase C checkpoint"
+    }
+  ],
+  "git_status_before": {
+    "status": "clean",
+    "untracked_files": [
+      "reports/shadow-read/x3a_lane3_pilot_confirmation.json"
+    ],
+    "uncommitted_changes": "none"
+  },
+  "baseline_summary": {
+    "build_clean": true,
+    "all_tests_pass": true,
+    "scanner_count": 467,
+    "scanner_clean": false,
+    "ready_for_phase_c": true,
+    "note": "Scanner violations are expected (auth pattern validation in progress). Proceeding to Phase C handler migration."
+  }
+}

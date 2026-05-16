@@ -81,8 +81,8 @@ describe("Phase 3 Slice 3 — EventReplayEngine: Aggregate State Reconstruction"
       );
 
       expect(replayed.state.status).toBe("active");
-      expect(replayed.state.evidenceReliability).toBe("medium");
-      expect(replayed.state.kpiHealth).toBe("high");
+      expect(replayed.state.reliabilityLevel).toBe("medium");
+      expect(replayed.state.kpiRiskLevel).toBe("high");
     });
 
     it("maintains event history in state", async () => {

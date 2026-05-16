@@ -1,10 +1,9 @@
 import { db } from "@/lib/db";
+import type { ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { NotFoundError } from "@/infra/errors";
+import { NotFoundError, ForbiddenError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
-import { requireCapabilityForService } from "@/lib/auth-guard";
-import type { AuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export interface CreateDeliverableInput {
@@ -23,15 +22,15 @@ export interface UpdateDeliverableInput {
 
 export async function createDeliverable(
   input: CreateDeliverableInput,
-  authContext: AuthContext,
-  workspaceId: string
+  auth: ServiceAuthEnvelope
 ) {
-  if (!workspaceId) throw new Error("workspaceId is required");
-  requireCapabilityForService(authContext, CAPABILITIES.DELIVERABLE_CREATE);
+  // Validate capability
+  if (!auth.verifiedCapabilities.has(CAPABILITIES.DELIVERABLE_CREATE)) {
+    throw new ForbiddenError(`${CAPABILITIES.DELIVERABLE_CREATE} capability required`);
+  }
 
-  const actorId = authContext.session.user.id;
   const engagement = await db.engagement.findUnique({
-    where: { id: input.engagementId, workspaceId },
+    where: { id: input.engagementId, workspaceId: auth.verifiedWorkspaceId },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
 
@@ -41,16 +40,16 @@ export async function createDeliverable(
       stageId: input.stageId,
       title: input.title,
       description: input.description || null,
-      createdBy: actorId,
+      createdBy: auth.verifiedActorId,
     },
   });
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.DELIVERABLE_CREATED,
-    actorId,
+    actorId: auth.verifiedActorId,
     entityType: "deliverable",
     entityId: deliverable.id,
-    workspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       engagementId: input.engagementId,
       title: input.title,
@@ -108,17 +107,17 @@ export async function getDeliverableById(deliverableId: string, workspaceId: str
 export async function updateDeliverableReviewStatus(
   deliverableId: string,
   input: UpdateDeliverableInput,
-  authContext: AuthContext,
-  workspaceId: string
+  auth: ServiceAuthEnvelope
 ) {
-  if (!workspaceId) throw new Error("workspaceId is required");
-  requireCapabilityForService(authContext, CAPABILITIES.DELIVERABLE_APPROVE);
+  // Validate capability
+  if (!auth.verifiedCapabilities.has(CAPABILITIES.DELIVERABLE_APPROVE)) {
+    throw new ForbiddenError(`${CAPABILITIES.DELIVERABLE_APPROVE} capability required`);
+  }
 
-  const actorId = authContext.session.user.id;
   const deliv = await db.deliverable.findFirst({
     where: {
       id: deliverableId,
-      engagement: { workspaceId },
+      engagement: { workspaceId: auth.verifiedWorkspaceId },
     },
     include: { engagement: true },
   });
@@ -127,7 +126,7 @@ export async function updateDeliverableReviewStatus(
   const updated = await db.deliverable.update({
     where: { id: deliverableId },
     data: {
-      approvedBy: actorId,
+      approvedBy: auth.verifiedActorId,
       approvedAt: new Date(),
       status: "approved",
       version: input.version + 1,
@@ -136,10 +135,10 @@ export async function updateDeliverableReviewStatus(
 
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.DELIVERABLE_APPROVED,
-    actorId,
+    actorId: auth.verifiedActorId,
     entityType: "deliverable",
     entityId: deliverableId,
-    workspaceId,
+    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       status: "approved",
     },

@@ -1,3 +1,5 @@
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import {
   verifyWebhookSignature,
   checkSignatureTimestamp,
@@ -46,7 +48,7 @@ import { logger } from "@/infra/logger";
  * - Dead-letter events return 400 (no more retries)
  * - Alert to ops for manual investigation
  */
-export async function POST(request: Request) {
+export const POST = withEnforcementFull(async (request: Request) => {
   try {
     // Step 1: Get raw body for signature verification
     const body = await request.text();
@@ -64,10 +66,7 @@ export async function POST(request: Request) {
       logger.warn("Webhook signature verification failed", {
         error: error instanceof Error ? error.message : "unknown error",
       });
-      return Response.json(
-        { error: "Invalid signature" },
-        { status: 401 }
-      );
+      throw new UnauthorizedError("Invalid signature");
     }
 
     // Step 3: Check signature timestamp tolerance (replay protection)
@@ -77,10 +76,7 @@ export async function POST(request: Request) {
       logger.warn("Webhook replay protection check failed", {
         error: error instanceof Error ? error.message : "unknown error",
       });
-      return Response.json(
-        { error: "Invalid timestamp" },
-        { status: 401 }
-      );
+      throw new UnauthorizedError("Invalid timestamp");
     }
 
     // Step 4: Validate event structure
@@ -220,18 +216,15 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+});
 
 /**
  * Health check endpoint
  */
-export async function GET(request: Request) {
-  return Response.json(
-    {
-      service: "stripe-webhook",
-      status: "ready",
-      path: "/api/webhooks/stripe",
-    },
-    { status: 200 }
-  );
-}
+export const GET = withEnforcementFull(async (request: Request) => {
+  return {
+    service: "stripe-webhook",
+    status: "ready",
+    path: "/api/webhooks/stripe",
+  };
+});

@@ -1,5 +1,6 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   addEvidenceToBundle,
@@ -14,10 +15,10 @@ import {
 import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
-export const POST = withRequestContext(async (request, context) => {
+export const POST = withEnforcementFull(async (request, context, params) => {
   try {
     const workspaceId = request.headers.get("x-workspace-id") || "";
-    const { bundleId } = await context.params;
+    const { bundleId } = params;
     parseOrThrow(uuidSchema, bundleId);
 
     const authContext = await withAuth({
@@ -62,7 +63,7 @@ export const POST = withRequestContext(async (request, context) => {
       });
     }
 
-    await addEvidenceToBundle(bodyData, authContext, workspaceId);
+    await addEvidenceToBundle(bodyData, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, { success: true });
 
     return Response.json({ success: true }, { status: 201 });
@@ -76,10 +77,10 @@ export const POST = withRequestContext(async (request, context) => {
   }
 });
 
-export const DELETE = withRequestContext(async (request, context) => {
+export const DELETE = withEnforcementFull(async (request, context, params) => {
   try {
     const workspaceId = request.headers.get("x-workspace-id") || "";
-    const { bundleId } = await context.params;
+    const { bundleId } = params;
     parseOrThrow(uuidSchema, bundleId);
 
     const authContext = await withAuth({
@@ -103,7 +104,7 @@ export const DELETE = withRequestContext(async (request, context) => {
       );
     }
 
-    await removeEvidenceFromBundle(bodyData, authContext, workspaceId);
+    await removeEvidenceFromBundle(bodyData, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
 
     return Response.json({ success: true });
   } catch (error) {

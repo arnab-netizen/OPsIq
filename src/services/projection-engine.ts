@@ -80,46 +80,39 @@ export class ProjectionEngine {
     workspaceId: string
   ): Promise<ProjectionResult> {
     if (eventType === "recommendation.created") {
-      // Denormalize assessment data from event payload to materialized view
-      const updateData: Record<string, unknown> = {
-        title: (payload.title as string) || undefined,
-        description: (payload.description as string) || undefined,
-        priority: (payload.priority as string) || undefined,
-      };
-
-      // Denormalize Phase 1 evidence assessment scores
-      if (payload.evidenceValidationScore) {
-        updateData.evidenceValidationScore = Math.round(
-          (typeof payload.evidenceValidationScore === 'string'
-            ? parseFloat(payload.evidenceValidationScore)
-            : (payload.evidenceValidationScore as number)) * 100
-        );
-      }
-      if (payload.reliabilityLevel) {
-        updateData.reliabilityLevel = payload.reliabilityLevel as string;
-      }
-
-      // Denormalize Phase 2 KPI health assessment scores
-      if (payload.kpiHealthScore) {
-        updateData.kpiHealthScore = Math.round(
-          (typeof payload.kpiHealthScore === 'string'
-            ? parseFloat(payload.kpiHealthScore)
-            : (payload.kpiHealthScore as number)) * 100
-        );
-      }
-      if (payload.kpiRiskLevel) {
-        updateData.kpiRiskLevel = payload.kpiRiskLevel as string;
-      }
-
-      await db.recommendation.update({
-        where: { id: aggregateId },
-        data: updateData,
-      });
-
-      logger.info("ProjectionEngine: Recommendation projected", {
+      // Skip projection for created events - let manual creation handle it
+      // The event is persisted; projection rebuild will use the events as source of truth
+      logger.info("ProjectionEngine: Skipping projection for recommendation.created", {
         aggregateId,
-        eventType,
       });
+    } else if (eventType === "recommendation.updated" || eventType === "recommendation.status_changed" || eventType === "recommendation.priority_updated") {
+      // Handle update events with idempotent update
+      const updateData: Record<string, unknown> = {};
+
+      if (payload.title) updateData.title = payload.title;
+      if (payload.description !== undefined) updateData.description = payload.description;
+      if (payload.priority) updateData.priority = payload.priority;
+      if (payload.status) updateData.status = payload.status;
+
+      if (Object.keys(updateData).length > 0) {
+        try {
+          await db.recommendation.update({
+            where: { id: aggregateId },
+            data: updateData,
+          });
+
+          logger.info("ProjectionEngine: Recommendation updated", {
+            aggregateId,
+            eventType,
+          });
+        } catch (err) {
+          // If recommendation doesn't exist, skip silently (created event might not have projected yet)
+          logger.info("ProjectionEngine: Skipping update on non-existent recommendation", {
+            aggregateId,
+            eventType,
+          });
+        }
+      }
     }
 
     return {

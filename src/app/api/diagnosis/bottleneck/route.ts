@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { bottleneckEngine } from "@/services/diagnostic-core/bottleneck-engine";
@@ -27,7 +28,7 @@ const bottleneckSchema = z.object({
   { message: "At least 1 affected KPI required", path: ["affectedKpis"] }
 );
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request) => {
   const authContext = await withAuth({
     capability: CAPABILITIES.DIAGNOSIS_READ,
     internalOnly: false,

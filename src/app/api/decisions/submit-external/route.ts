@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { withEnforcement } from "@/lib/enforced-route";
 
 /**
  * SECURITY: This endpoint is DISABLED.
@@ -22,23 +22,10 @@ import { NextResponse } from "next/server";
  * See: AUTH_ADVERSARIAL_REPORT.md - CRITICAL VULN #1
  */
 
-export async function POST() {
-  return NextResponse.json(
-    {
-      error: "Endpoint disabled",
-      message: "External decision submission is currently disabled due to security constraints",
-      details: "Contact system administrator if you need to re-enable with proper authentication",
-    },
-    { status: 403 }
-  );
-}
+export const POST = withEnforcement(async () => {
+  throw new Error("Endpoint disabled");
+});
 
-export async function GET() {
-  return NextResponse.json(
-    {
-      error: "Endpoint disabled",
-      message: "This endpoint is not available",
-    },
-    { status: 403 }
-  );
-}
+export const GET = withEnforcement(async () => {
+  throw new Error("Endpoint disabled");
+});

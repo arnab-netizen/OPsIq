@@ -1,0 +1,24 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X4A",
+  "subphase": "A_SCANNER_BASELINE",
+  "audit_date": "2026-05-15",
+  "scan_command": "npx tsx src/governance/auth-shadow-read-scanner.ts",
+  "baseline": {
+    "total_violations": 455,
+    "critical_violations": 284,
+    "block_build_violations": 171
+  },
+  "pattern_status": {
+    "withAuth_calls": "DETECTED",
+    "requireAuth_calls": "DETECTED",
+    "requireSession_calls": "DETECTED",
+    "getPolicyContext_calls": "DETECTED",
+    "getServerAuthContext_calls": "NOT_DETECTED_IN_ROUTES"
+  },
+  "stability": {
+    "change_from_x3c": 0,
+    "status": "STABLE"
+  },
+  "note": "Scanner baseline matches X3C final state. getServerAuthContext() is defined in lib/auth-guard.ts but not currently used in route handlers."
+}

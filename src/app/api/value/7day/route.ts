@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireWorkspaceContext } from "@/services/workspace/context";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { db } from "@/lib/db";
 
 interface SevenDayImpact {
@@ -25,10 +25,9 @@ interface SevenDayImpact {
   };
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    // Get workspace context (fail closed if missing)
-    const workspace = await requireWorkspaceContext();
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     // Calculate date range: last 7 days
     const endDate = new Date();
@@ -38,26 +37,26 @@ export async function GET(request: NextRequest) {
     // Fetch all completed items from last 7 days (approved decisions)
     const approvedItems = await db.operatorItem.findMany({
       where: {
-        workspaceId: workspace.workspaceId,
-        status: "done",
-        completedAt: {
-          gte: startDate,
-          lte: endDate,
-        },
+        workspaceId,
+      status: "done",
+      completedAt: {
+        gte: startDate,
+        lte: endDate,
       },
-    });
+    },
+  });
 
     // Fetch all blocked decisions from last 7 days
     const blockedItems = await db.operatorItem.findMany({
       where: {
-        workspaceId: workspace.workspaceId,
-        status: "blocked",
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        },
+        workspaceId,
+      status: "blocked",
+      createdAt: {
+        gte: startDate,
+        lte: endDate,
       },
-    });
+    },
+  });
 
     // Calculate approved metrics
     let totalGain = 0;
@@ -67,29 +66,29 @@ export async function GET(request: NextRequest) {
     let totalActualImpact = 0;
 
     for (const item of approvedItems) {
-      // Use actualOutcomeValue if available, otherwise try to infer from delta
-      let impact = 0;
+    // Use actualOutcomeValue if available, otherwise try to infer from delta
+    let impact = 0;
 
-      if (item.actualOutcomeValue !== null && item.actualOutcomeValue !== undefined) {
-        impact = Number(item.actualOutcomeValue);
-        totalActualImpact += impact;
-      } else if (item.outcomeDelta !== null && item.outcomeDelta !== undefined) {
-        impact = Number(item.outcomeDelta);
-        totalActualImpact += impact;
-      } else {
-        // Fallback to expected impact as proxy
-        impact = Number(item.impactExpected);
-      }
-
-      if (impact > 0) {
-        totalGain += impact;
-        successCount++;
-      } else if (impact < 0) {
-        totalLoss += Math.abs(impact);
-      }
-
-      totalApprovedConfidence += Number(item.confidence || 0);
+    if (item.actualOutcomeValue !== null && item.actualOutcomeValue !== undefined) {
+      impact = Number(item.actualOutcomeValue);
+      totalActualImpact += impact;
+    } else if (item.outcomeDelta !== null && item.outcomeDelta !== undefined) {
+      impact = Number(item.outcomeDelta);
+      totalActualImpact += impact;
+    } else {
+      // Fallback to expected impact as proxy
+      impact = Number(item.impactExpected);
     }
+
+    if (impact > 0) {
+      totalGain += impact;
+      successCount++;
+    } else if (impact < 0) {
+      totalLoss += Math.abs(impact);
+    }
+
+    totalApprovedConfidence += Number(item.confidence || 0);
+  }
 
     // Calculate blocked metrics
     let totalRejectedImpact = 0;
@@ -114,7 +113,7 @@ export async function GET(request: NextRequest) {
 
     const summary: SevenDayImpact = {
       workspace: {
-        workspaceId: workspace.workspaceId,
+        workspaceId,
       },
       period: {
         startDate: startDate.toISOString(),
@@ -135,18 +134,7 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    return NextResponse.json(summary);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    if (message.includes("Unauthorized")) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
+    return Response.json(summary);
+  },
+  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+);

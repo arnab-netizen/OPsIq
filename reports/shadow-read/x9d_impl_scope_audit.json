@@ -1,0 +1,251 @@
+{
+  "phase": "X9D-IMPL",
+  "date": "2026-05-15",
+  "title": "X9D-IMPL: Scope Audit",
+  "status": "AUDIT_COMPLETE",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_summary": {
+    "files_modified": 1,
+    "files_created": 1,
+    "files_deleted": 0,
+    "capabilities_added": 2,
+    "unauthorized_capabilities_added": 0,
+    "scope_violations": 0,
+    "constraint_violations": 0
+  },
+  "files_changed": [
+    {
+      "file": "src/domain/constants/capabilities.ts",
+      "status": "MODIFIED",
+      "change_type": "capability_addition",
+      "lines_added": 2,
+      "lines_deleted": 0,
+      "lines_total": 127,
+      "changes": [
+        {
+          "line": 101,
+          "type": "ADD",
+          "content": "  DECISION_CREATE: \"decision:create\","
+        },
+        {
+          "line": 102,
+          "type": "ADD",
+          "content": "  DECISION_UPDATE: \"decision:update\","
+        }
+      ],
+      "authorization": "APPROVED_X9D_IMPL_MINIMAL_DECISION_CAPABILITIES_ONLY",
+      "scope_compliance": "YES"
+    }
+  ],
+  "files_created": [
+    {
+      "file": "src/__tests__/governance/governance-capabilities.test.ts",
+      "status": "CREATED",
+      "type": "test_file",
+      "purpose": "Test DECISION_CREATE and DECISION_UPDATE constants",
+      "test_count": 32,
+      "lines_of_code": 220,
+      "authorization": "APPROVED_X9D_IMPL_TEST_FILE",
+      "scope_compliance": "YES"
+    },
+    {
+      "file": "reports/shadow-read/x9d_impl_preimplementation_confirmation.md",
+      "status": "CREATED",
+      "type": "report",
+      "purpose": "Pre-implementation analysis and confirmation",
+      "authorization": "APPROVED_X9D_IMPL_REPORTING",
+      "scope_compliance": "YES"
+    },
+    {
+      "file": "reports/shadow-read/x9d_impl_capability_addition_notes.md",
+      "status": "CREATED",
+      "type": "report",
+      "purpose": "Document capability additions",
+      "authorization": "APPROVED_X9D_IMPL_REPORTING",
+      "scope_compliance": "YES"
+    },
+    {
+      "file": "reports/shadow-read/x9d_impl_entitlement_mapping_notes.md",
+      "status": "CREATED",
+      "type": "report",
+      "purpose": "Verify entitlement mapping completeness",
+      "authorization": "APPROVED_X9D_IMPL_REPORTING",
+      "scope_compliance": "YES"
+    },
+    {
+      "file": "reports/shadow-read/x9d_impl_route_cleanup_notes.md",
+      "status": "CREATED",
+      "type": "report",
+      "purpose": "Route cleanup assessment and deferral decision",
+      "authorization": "APPROVED_X9D_IMPL_REPORTING",
+      "scope_compliance": "YES"
+    },
+    {
+      "file": "reports/shadow-read/x9d_impl_test_notes.md",
+      "status": "CREATED",
+      "type": "report",
+      "purpose": "Document test coverage and strategy",
+      "authorization": "APPROVED_X9D_IMPL_REPORTING",
+      "scope_compliance": "YES"
+    },
+    {
+      "file": "reports/shadow-read/x9d_impl_validation.md",
+      "status": "CREATED",
+      "type": "report",
+      "purpose": "Validation gate results and compliance",
+      "authorization": "APPROVED_X9D_IMPL_REPORTING",
+      "scope_compliance": "YES"
+    }
+  ],
+  "capabilities_audit": {
+    "authorized_additions": [
+      {
+        "constant": "DECISION_CREATE",
+        "value": "decision:create",
+        "location": "src/domain/constants/capabilities.ts:101",
+        "authorization_status": "APPROVED",
+        "status": "ADDED"
+      },
+      {
+        "constant": "DECISION_UPDATE",
+        "value": "decision:update",
+        "location": "src/domain/constants/capabilities.ts:102",
+        "authorization_status": "APPROVED",
+        "status": "ADDED"
+      }
+    ],
+    "deferred_capabilities": [
+      {
+        "constant": "EXPERIMENT_CREATE",
+        "authorization_status": "NOT_ADDED",
+        "reason": "Deferred until experiment routes created",
+        "status": "NOT_PRESENT_IN_DOMAIN"
+      },
+      {
+        "constant": "EXPERIMENT_UPDATE",
+        "authorization_status": "NOT_ADDED",
+        "reason": "Deferred until experiment routes created",
+        "status": "NOT_PRESENT_IN_DOMAIN"
+      },
+      {
+        "constant": "ADMIN_TEAM",
+        "authorization_status": "NOT_ADDED",
+        "reason": "Deferred until admin team management routes created",
+        "status": "NOT_PRESENT_IN_DOMAIN"
+      },
+      {
+        "constant": "WORKSPACE_CREATE",
+        "authorization_status": "NOT_ADDED",
+        "reason": "Deferred to workspace design phase",
+        "status": "NOT_PRESENT_IN_DOMAIN"
+      },
+      {
+        "constant": "WORKSPACE_INVITE",
+        "authorization_status": "NOT_ADDED",
+        "reason": "Deferred to workspace design phase",
+        "status": "NOT_PRESENT_IN_DOMAIN"
+      }
+    ],
+    "rejected_capabilities": [
+      {
+        "constant": "ADMIN_SETTINGS",
+        "authorization_status": "REJECTED",
+        "reason": "Redundant with existing SYSTEM_ADMIN, use existing capability instead",
+        "status": "NOT_PRESENT_IN_DOMAIN"
+      }
+    ]
+  },
+  "constraint_compliance": {
+    "no_code_implementation_beyond_constants": {
+      "status": "PASS",
+      "evidence": "Only capabilities.ts modified, no service/route code changes"
+    },
+    "no_route_migration": {
+      "status": "PASS",
+      "evidence": "decisions/create and recommendations routes unchanged"
+    },
+    "no_service_refactor": {
+      "status": "PASS",
+      "evidence": "No service files modified"
+    },
+    "no_scanner_change": {
+      "status": "PASS",
+      "evidence": "Scanner shows 448 violations (baseline maintained)"
+    },
+    "no_wrapper_change": {
+      "status": "PASS",
+      "evidence": "No wrapper files modified"
+    },
+    "no_auth_context_change": {
+      "status": "PASS",
+      "evidence": "ServiceAuthEnvelope unchanged"
+    },
+    "no_capability_model_redesign": {
+      "status": "PASS",
+      "evidence": "Only minimal constant addition, no redesign"
+    },
+    "no_workspace_design": {
+      "status": "PASS",
+      "evidence": "No workspace changes made"
+    },
+    "no_role_design": {
+      "status": "PASS",
+      "evidence": "No role changes made"
+    },
+    "no_bridge_expansion": {
+      "status": "PASS",
+      "evidence": "No bridge changes made"
+    },
+    "no_bulk_replace": {
+      "status": "PASS",
+      "evidence": "No pattern replacements made"
+    },
+    "no_feature_work": {
+      "status": "PASS",
+      "evidence": "Governance only, no feature implementation"
+    },
+    "no_tier_b": {
+      "status": "PASS",
+      "evidence": "No tier downgrades made"
+    },
+    "no_any_or_as_any": {
+      "status": "PASS",
+      "evidence": "No TypeScript workarounds introduced"
+    },
+    "no_permission_fabrication": {
+      "status": "PASS",
+      "evidence": "Tests verify ReadonlySet intent, no .add() or .clear()"
+    },
+    "runtime_enforced_hybrid_maintained": {
+      "status": "PASS",
+      "evidence": "Classification unchanged, no modifications to enforcement patterns"
+    }
+  },
+  "scope_violations": [],
+  "unauthorized_changes": [],
+  "scope_audit_result": "PASS",
+  "findings": [
+    {
+      "finding": "Minimal scope execution",
+      "severity": "INFO",
+      "details": "X9D-IMPL executed with exactly 2 capability constants added, matching approved minimal scope decision from X9D-R"
+    },
+    {
+      "finding": "No scope creep detected",
+      "severity": "INFO",
+      "details": "All 5 deferred capabilities remain deferred, rejected capability remains rejected, no unauthorized additions"
+    },
+    {
+      "finding": "Test coverage complete",
+      "severity": "INFO",
+      "details": "New test suite covers constant existence, tier mapping, no unauthorized capabilities, and ServiceAuthEnvelope compatibility"
+    },
+    {
+      "finding": "Route cleanup properly deferred",
+      "severity": "INFO",
+      "details": "Route files unchanged, cleanup deferred to X9C-5 service refactoring phase as intended"
+    }
+  ],
+  "recommendation": "APPROVE_X9D_IMPL_RESULTS",
+  "next_phase": "X9D-IMPL-ACCEPTANCE (Phase H) and X9C-5 (Service Refactoring)"
+}

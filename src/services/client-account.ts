@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
@@ -11,7 +12,6 @@ import {
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -40,7 +40,7 @@ export interface UpdateClientInput {
 
 export async function createClient(
   input: CreateClientInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -88,7 +88,7 @@ export async function createClient(
 export async function updateClient(
   clientId: string,
   input: UpdateClientInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -132,7 +132,7 @@ export async function updateClient(
 
 export async function archiveClient(
   clientId: string,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   version: number,
   workspaceId: string
 ): Promise<void> {

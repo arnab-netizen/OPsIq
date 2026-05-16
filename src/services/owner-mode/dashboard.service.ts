@@ -132,7 +132,7 @@ export async function summarizeActionQueue(
   const priorityScores: number[] = [];
 
   const now = new Date();
-  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const criticalActions: ActionQueueItem[] = [];
   const dueThisWeek: ActionQueueItem[] = [];
@@ -158,7 +158,7 @@ export async function summarizeActionQueue(
       criticalActions.push(convertToActionQueueItem(action, daysOverdue));
     }
 
-    if (action.dueDate && new Date(action.dueDate) <= now && new Date(action.dueDate) >= oneWeekAgo) {
+    if (action.dueDate && new Date(action.dueDate) >= now && new Date(action.dueDate) <= oneWeekFromNow) {
       dueThisWeek.push(convertToActionQueueItem(action, daysOverdue));
     }
 

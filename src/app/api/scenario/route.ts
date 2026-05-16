@@ -1,72 +1,63 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { withAuth } from "@/lib/auth-guard";
+import { UnauthorizedError } from "@/infra/errors";
+import { withEnforcementFull } from "@/lib/enforced-route";
 import { runScenario } from "@/services/scenario/engine";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { randomUUID } from "crypto";
 
-export async function POST(request: NextRequest) {
-  try {
-    // Enforce server-side auth (scenario analysis affects decisions)
-    const role = await resolveServerRole();
-    if (!role) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 403 }
-      );
-    }
+export const POST = withEnforcementFull(async (request: NextRequest) => {
+  // Enforce server-side auth (scenario analysis affects decisions)
+  const role = await resolveServerRole();
+  if (!role) {
+    throw new UnauthorizedError("Unauthorized");
+  }
 
-    // Get actor ID for audit
-    const session = await getSession();
-    const actorId = session?.user.id ?? null;
+  // Get actor ID for audit
+  const { session } = await withAuth();
+  const actorId = session?.user.id ?? null;
 
-    const body = await request.json();
-    const { baseRevenue, baseCost, deltaRevenue, deltaCost } = body;
+  const body = await request.json();
+  const { baseRevenue, baseCost, deltaRevenue, deltaCost } = body;
 
-    // Validate input types
-    if (
-      typeof baseRevenue !== "number" ||
-      typeof baseCost !== "number" ||
-      typeof deltaRevenue !== "number" ||
-      typeof deltaCost !== "number"
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "Invalid input: baseRevenue, baseCost, deltaRevenue, deltaCost must be numbers",
-        },
-        { status: 400 }
-      );
-    }
+  // Validate input types
+  if (
+    typeof baseRevenue !== "number" ||
+    typeof baseCost !== "number" ||
+    typeof deltaRevenue !== "number" ||
+    typeof deltaCost !== "number"
+  ) {
+    throw new Error("Invalid input: baseRevenue, baseCost, deltaRevenue, deltaCost must be numbers");
+  }
 
-    const result = runScenario({
+  const result = runScenario({
+    baseRevenue,
+    baseCost,
+    deltaRevenue,
+    deltaCost,
+  });
+
+  // Log audit event for scenario analysis
+  const scenarioId = randomUUID();
+  await logAuditEvent({
+    eventName: "ANALYZE",
+    entityType: "Scenario",
+    entityId: scenarioId,
+    actorId,
+    role,
+    before: null,
+    after: {
       baseRevenue,
       baseCost,
       deltaRevenue,
       deltaCost,
-    });
+      result,
+    },
+  }).catch((auditError) => {
+    console.error(`Audit logging failed: ${auditError}`);
+  });
 
-    // Log audit event for scenario analysis (fail-closed if audit fails)
-    const scenarioId = randomUUID();
-    await logAuditEvent({
-      eventName: "ANALYZE",
-      entityType: "Scenario",
-      entityId: scenarioId,
-      actorId,
-      role,
-      before: null,
-      after: {
-        baseRevenue,
-        baseCost,
-        deltaRevenue,
-        deltaCost,
-        result,
-      },
-    });
-
-    return NextResponse.json(result);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
-}
+  return result;
+});

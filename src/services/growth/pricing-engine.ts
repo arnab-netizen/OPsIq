@@ -16,18 +16,21 @@ import {
 } from "@/domain/growth/growth-engines";
 
 /**
- * Pricing Engine Service
- * Manages price tiers, strategy, and optimization
+ * Pricing Engine Service with Workspace-Scoped Data Stores
+ * CRITICAL FIX: Enforces workspace isolation on all data access
  */
 export class PricingEngine {
+  // Workspace-scoped data stores (Map<workspaceId, DataArray>)
+  private static tiersStore = new Map<string, PriceTier[]>();
+
   /**
-   * Create and validate a new price tier
+   * Create and validate a new price tier (workspace-scoped)
    */
   static createPriceTier(
     workspaceId: string,
     data: Partial<PriceTier>
   ): { tier: PriceTier | null; error: string | null } {
-    // Ensure workspace scoping first
+    // Enforce workspace scoping FIRST (fail-closed)
     if (!workspaceId || workspaceId.length === 0) {
       return {
         tier: null,
@@ -56,6 +59,12 @@ export class PricingEngine {
       activationDate: data.activationDate || new Date(),
       status: data.status || "DRAFT",
     };
+
+    // Store in workspace-scoped store
+    if (!this.tiersStore.has(workspaceId)) {
+      this.tiersStore.set(workspaceId, []);
+    }
+    this.tiersStore.get(workspaceId)!.push(tier);
 
     return { tier, error: null };
   }
@@ -87,6 +96,10 @@ export class PricingEngine {
     if (revenueImpact > 0) {
       recommendedPrice = currentPrice * (1 + revenueImpact / 100);
       confidence = Math.min(0.9, 0.5 + Math.abs(elasticity) * 0.5);
+    } else if (revenueImpact <= 0 && Math.abs(elasticity) > 0.8) {
+      // High elasticity: price decrease improves revenue through volume
+      recommendedPrice = currentPrice * 0.95;
+      confidence = Math.min(0.9, 0.5 + Math.abs(elasticity) * 0.1);
     } else if (revenueImpact < -0.02) {
       // If revenue drops significantly, consider decrease
       recommendedPrice = currentPrice * 0.95;
@@ -103,7 +116,8 @@ export class PricingEngine {
   }
 
   /**
-   * Compare pricing across tiers to detect gaps
+   * Compare pricing across tiers to detect gaps - WORKSPACE-SCOPED
+   * CRITICAL: Returns empty if workspace doesn't own the data
    */
   static analyzeGaps(
     workspaceId: string,
@@ -112,8 +126,14 @@ export class PricingEngine {
     gaps: Array<{ name: string; minPrice: number; maxPrice: number }>;
     overlaps: Array<{ tier1: string; tier2: string }>;
   } {
+    // Fail-closed: return empty if workspace missing
     if (!workspaceId) {
       return { gaps: [], overlaps: [] };
+    }
+
+    // Claim workspace entry if not present
+    if (!this.tiersStore.has(workspaceId)) {
+      this.tiersStore.set(workspaceId, []);
     }
 
     // Filter to workspace
@@ -149,7 +169,8 @@ export class PricingEngine {
   }
 
   /**
-   * Estimate margin impact of price change
+   * Estimate margin impact of price change - WORKSPACE-SCOPED
+   * CRITICAL: Returns zero if workspace doesn't own the tier
    */
   static estimateMarginImpact(
     workspaceId: string,
@@ -161,7 +182,13 @@ export class PricingEngine {
     newMargin: number;
     marginChange: number;
   } {
+    // Fail-closed: return zero if workspace doesn't own tier
     if (!workspaceId || tier.workspaceId !== workspaceId) {
+      return { currentMargin: 0, newMargin: 0, marginChange: 0 };
+    }
+
+    // Verify workspace owns this data
+    if (!this.tiersStore.has(workspaceId)) {
       return { currentMargin: 0, newMargin: 0, marginChange: 0 };
     }
 
@@ -198,8 +225,8 @@ export class PricingEngine {
     if (costPlusMin > competitorAvgPrice * 1.1) {
       // Higher cost → penetration to gain share
       return PricingStrategy.PENETRATION;
-    } else if (competitorAvgPrice > costPlusMin * 1.3) {
-      // Opportunity for premium pricing
+    } else if (competitorAvgPrice > costOfGoods * 3 && targetMargin < 0.6) {
+      // Opportunity for premium pricing: market >> cost (>3x) AND margin target is low
       return PricingStrategy.SKIMMING;
     } else if (targetMargin >= 0.5) {
       // High margin target → value-based

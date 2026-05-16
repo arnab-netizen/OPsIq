@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
@@ -10,7 +11,6 @@ import { withIdempotency } from "@/infra/idempotency";
 import { validateStateTransition, enforceActionRules } from "@/services/action-lifecycle";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { AuthContext } from "@/lib/auth-guard";
 import { recordActionUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
 
@@ -70,7 +70,7 @@ function validateActionTransition(fromStatus: ActionStatus, toStatus: ActionStat
 
 export async function createAction(
   input: CreateActionInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string,
   idempotencyKey?: string
 ) {
@@ -268,7 +268,7 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
 export async function updateActionStatus(
   actionId: string,
   input: UpdateActionInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -376,8 +376,8 @@ export async function updateActionStatus(
   return updated;
 }
 
-export async function detectOverdueActions(engagementId: string, authContext: AuthContext, workspaceId: string) {
-  const actorId = authContext.session.user.id;
+export async function detectOverdueActions(engagementId: string, authContext: CanonicalAuthContext, workspaceId: string) {
+  const actorId = authContext.session?.user?.id;
   enforceWorkspaceId(workspaceId, "detectOverdueActions", "action");
 
   const now = new Date();
@@ -472,7 +472,7 @@ export async function getActionById(actionId: string, workspaceId: string) {
 export async function updateAction(
   actionId: string,
   input: UpdateActionInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -556,11 +556,11 @@ export async function listActions(workspaceId: string, params: any) {
 export async function createActionsFromInterventions(
   engagementId: string,
   interventions: any[], // PrioritizedIntervention[] from consulting-engine
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   enforceWorkspaceId(workspaceId, "createActionsFromInterventions", "action");
-  const actorId = authContext.session.user.id;
+  const actorId = authContext.session?.user?.id;
 
   if (!interventions || interventions.length === 0) {
     return [];

@@ -1,5 +1,7 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { ForbiddenError } from "@/infra/errors";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getActionById, updateAction } from "@/services/action";
@@ -22,33 +24,21 @@ const updateActionSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (request, context) => {
-  // Authenticate + authorize (fail-closed)
-  await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx, params) => {
+    const { actionId } = params;
+    parseOrThrow(uuidSchema, actionId);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    const action = await getActionById(actionId, ctx.verifiedWorkspaceId);
+    return Response.json(action);
+  },
+  {
+    requireWorkspace: true,
+    requireCapabilities: [CAPABILITIES.ACTION_VIEW],
   }
+);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
-  const { actionId } = await context.params;
-  parseOrThrow(uuidSchema, actionId);
-
-  const action = await getActionById(actionId, workspaceId);
-  return Response.json(action);
-});
-
-export const PATCH = withRequestContext(async (request, context) => {
+export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.ACTION_UPDATE,
@@ -67,14 +57,15 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { actionId } = await context.params;
+  const { actionId } = params;
   parseOrThrow(uuidSchema, actionId);
 
   const body = await parseRequestBody(request, updateActionSchema);
-  await updateAction(actionId, body, { session, policy }, workspaceId);
+  const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
+  await updateAction(actionId, body, canonicalContext, workspaceId);
 
   const updated = await getActionById(actionId, workspaceId);
   return Response.json(updated);

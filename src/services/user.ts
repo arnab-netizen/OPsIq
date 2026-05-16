@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
@@ -15,7 +16,6 @@ import {
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -42,7 +42,7 @@ export interface ListUsersParams {
 
 export async function createUser(
   input: CreateUserInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
   const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -94,7 +94,7 @@ export async function createUser(
 export async function updateUser(
   userId: string,
   input: UpdateUserInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -147,7 +147,7 @@ export async function updateUser(
 export async function deactivateUser(
   userId: string,
   version: number,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
@@ -162,7 +162,7 @@ export async function deactivateUser(
     throw new ValidationError("User is already deactivated");
   }
 
-  if (userId === authContext.session.user.id) {
+  if (userId === authContext.session?.user.id) {
     throw new ValidationError("Cannot deactivate your own account");
   }
 
@@ -220,7 +220,7 @@ export async function deactivateUser(
 export async function reactivateUser(
   userId: string,
   version: number,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);

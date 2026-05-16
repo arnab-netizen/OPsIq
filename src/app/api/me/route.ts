@@ -1,27 +1,24 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { getRolesForUser } from "@/services/role-assignment";
 import { getMembershipsForUser } from "@/services/engagement-membership";
 import { highestRole } from "@/policies/capability-check";
 import { hasInternalAccess } from "@/policies/capability-check";
-import type { NextRequest } from "next/server";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export const GET = withRequestContext(async (request) => {
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id") || "system";
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const [roles, memberships] = await Promise.all([
+      getRolesForUser(ctx.verifiedActorId, ctx.verifiedWorkspaceId),
+      getMembershipsForUser(ctx.verifiedActorId, ctx.verifiedWorkspaceId),
+    ]);
 
-  const { session, policy } = await withAuth(undefined, workspaceId);
-
-  const [roles, memberships] = await Promise.all([
-    getRolesForUser(session.user.id, workspaceId),
-    getMembershipsForUser(session.user.id, workspaceId),
-  ]);
-
-  return Response.json({
-    user: session.user,
-    roles,
-    memberships,
-    highestRole: highestRole(policy),
-    isInternal: hasInternalAccess(policy),
-  });
-});
+    return {
+      user: ctx.verifiedActor,
+      roles,
+      memberships,
+      highestRole: ctx.policy ? highestRole(ctx.policy) : null,
+      isInternal: ctx.policy ? hasInternalAccess(ctx.policy) : false,
+    };
+  },
+  { requireWorkspace: true }
+);

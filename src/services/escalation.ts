@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
-import type { AuthContext } from "@/lib/auth-guard";
 
 export interface EscalationAlert {
   type: "high_priority_overdue" | "kpi_deterioration_pattern";
@@ -15,7 +15,7 @@ export interface EscalationAlert {
 
 export async function detectHighPriorityOverdueActions(
   engagementId: string,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<EscalationAlert | null> {
   enforceWorkspaceId(workspaceId, "detectHighPriorityOverdueActions", "escalation");
@@ -44,7 +44,7 @@ export async function detectHighPriorityOverdueActions(
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ESCALATION_ALERT_HIGH_PRIORITY_OVERDUE,
-      actorId: authContext.session.user.id,
+      actorId: authContext.session?.user?.id,
       entityType: "escalation",
       entityId: engagementId,
       workspaceId,
@@ -71,7 +71,7 @@ export async function detectHighPriorityOverdueActions(
 
 export async function detectKPIDeteriorationPattern(
   engagementId: string,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<EscalationAlert | null> {
   const kpis = await db.kPI.findMany({
@@ -122,7 +122,7 @@ export async function detectKPIDeteriorationPattern(
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ESCALATION_ALERT_KPI_DETERIORATION_PATTERN,
-      actorId: authContext.session.user.id,
+      actorId: authContext.session?.user?.id,
       entityType: "escalation",
       entityId: engagementId,
       workspaceId,
@@ -148,7 +148,7 @@ export async function detectKPIDeteriorationPattern(
 
 export async function checkEngagementEscalations(
   engagementId: string,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId?: string
 ): Promise<EscalationAlert[]> {
   // Fetch workspaceId from engagement if not provided

@@ -1,12 +1,10 @@
-import { AppError } from "@/infra/errors";
+import { TooManyRequestsError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 
-export class RateLimitError extends AppError {
+export class RateLimitError extends TooManyRequestsError {
   constructor(retryAfterSeconds: number) {
     super(
-      "RATE_LIMITED",
       `Rate limit exceeded. Retry after ${retryAfterSeconds} seconds.`,
-      429,
       { retryAfterSeconds }
     );
     this.name = "RateLimitError";

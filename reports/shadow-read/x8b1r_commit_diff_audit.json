@@ -1,0 +1,126 @@
+{
+  "audit_type": "COMMIT_AND_DIFF_AUDIT",
+  "date": "2026-05-16",
+  "phase": "X8B-1R",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "git_status": {
+    "branch": "claude/verify-execution-hardening-LRoqi",
+    "working_tree": "CLEAN",
+    "uncommitted_changes": 0
+  },
+  "commits_reviewed": {
+    "c2d42b2": {
+      "message": "X9G-3: Add DECISION_CLOSE to ADMIN_OR_PORTFOLIO_MANAGER role mapping",
+      "type": "ROLE_MAPPING_IMPLEMENTATION",
+      "files_changed": 1,
+      "insertions": 1,
+      "deletions": 0,
+      "modified_files": [
+        "src/policies/capability-check.ts"
+      ]
+    },
+    "a762d88": {
+      "message": "Add X9G-3 implementation completion report",
+      "type": "REPORT_ONLY",
+      "files_changed": 1,
+      "insertions": 296,
+      "deletions": 0,
+      "modified_files": [
+        "reports/shadow-read/x9g3_implementation_completion.md"
+      ]
+    },
+    "9c0ac0b": {
+      "message": "Add X8B-1 design phase documentation and scanner baseline",
+      "type": "DESIGN_REPORT_AND_SCANNER_SNAPSHOT",
+      "files_changed": 7,
+      "insertions": 1489,
+      "deletions": 93,
+      "modified_files": [
+        "reports/shadow-read/x8b1_current_baseline.json",
+        "reports/shadow-read/x8b1_decision_close_mapping_decision.md",
+        "reports/shadow-read/x8b1_decision_close_mapping_options.md",
+        "reports/shadow-read/x8b1_decision_close_role_semantics.md",
+        "reports/shadow-read/x8b1_implementation_plan.md",
+        "reports/shadow-read/x8b1_workspace_role_permission_inventory.json",
+        "shadow_read_violations.json"
+      ]
+    }
+  },
+  "source_code_files_changed": {
+    "total_count": 1,
+    "files": [
+      {
+        "path": "src/policies/capability-check.ts",
+        "change_type": "ROLE_MAPPING_IMPLEMENTATION",
+        "lines_added": 1,
+        "lines_deleted": 0,
+        "line_number": 42,
+        "change": "+    CAPABILITIES.DECISION_CLOSE,",
+        "context": "ADMIN_OR_PORTFOLIO_MANAGER capabilities array",
+        "classification": "AUTHORIZED_DURING_X9G3_IMPLEMENTATION"
+      }
+    ]
+  },
+  "other_source_files_inspected": {
+    "capability_constants": {
+      "file": "src/domain/constants/capabilities.ts",
+      "status": "UNCHANGED_SINCE_X9G2",
+      "note": "DECISION_CLOSE constant added in X9G-2, not modified in X9G-3"
+    },
+    "close_route": {
+      "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "status": "UNCHANGED_SINCE_AUDIT",
+      "note": "Still uses legacy hasPermission check with 'close_decision' string"
+    },
+    "legacy_permission_function": {
+      "file": "src/middleware/workspace-enforcement.ts",
+      "status": "UNCHANGED_SINCE_AUDIT",
+      "note": "hasPermission function implementation unchanged"
+    },
+    "wrapper_pattern": {
+      "file": "src/lib/enforced-route.ts",
+      "status": "NOT_MODIFIED",
+      "note": "No wrapper changes in these commits"
+    },
+    "auth_context": {
+      "file": "src/lib/auth-guard.ts",
+      "status": "NOT_MODIFIED",
+      "note": "No auth context changes in these commits"
+    },
+    "service_layer": {
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "status": "NOT_MODIFIED",
+      "note": "No service changes in these commits"
+    }
+  },
+  "scanner_and_governance_files": {
+    "scanner_baseline": {
+      "file": "shadow_read_violations.json",
+      "type": "SCANNER_SNAPSHOT",
+      "status": "MODIFIED_BY_VALIDATION_RUN",
+      "note": "Auto-generated, updated during X9G-3 validation"
+    },
+    "governance_tests": {
+      "status": "NOT_MODIFIED",
+      "note": "Test code unchanged, but tests re-run during validation"
+    }
+  },
+  "unauthorized_changes_detected": false,
+  "scope_violations": false,
+  "summary": {
+    "design_phase_code_change": "YES - DECISION_CLOSE added to ADMIN_OR_PORTFOLIO_MANAGER",
+    "expected_design_only": "YES - X8B-1 was supposed to be design-only",
+    "reconciliation_needed": "YES - Implementation occurred before phase completion",
+    "other_source_files_changed": "NO - Only capability mapping changed",
+    "route_files_changed": "NO",
+    "service_files_changed": "NO",
+    "wrapper_files_changed": "NO",
+    "auth_context_files_changed": "NO",
+    "capabilities_file_changed": "NO - Constant added in X9G-2, not modified in X9G-3",
+    "scanner_wrapper_service_changed": "NO - Only auto-generated snapshot updated",
+    "total_source_code_lines_changed": 1,
+    "total_design_docs_added": 7,
+    "total_reports_generated": 2
+  },
+  "verdict": "IMPLEMENTATION_DURING_DESIGN_PHASE_CONFIRMED - Single authorized source change (DECISION_CLOSE mapping) found. No unauthorized files modified. No route/service/wrapper/auth context changes. Change is contained and reconcilable."
+}

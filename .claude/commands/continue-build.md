@@ -42,6 +42,23 @@ Every run executes in strict sequence:
 12. Push: git push -u origin <branch_name>
 13. Report ONLY: selected work, files changed, wiring proof, tests added, gates run, classification, next automatic target
 
+## DATABASE AVAILABILITY CHECK (Once Per Run)
+
+At LOOP ORDER step 5, perform exactly ONE database connectivity check:
+
+```bash
+# Check DATABASE_URL presence + connectivity (once only)
+if [ -z "$DATABASE_URL" ]; then
+  DB_STATUS="DB_BLOCKED_ENVIRONMENT_MISSING_CREDENTIALS"
+elif ! timeout 3 psql -h <host> -p 5432 -U <user> -d <db> -c "SELECT 1" >/dev/null 2>&1; then
+  DB_STATUS="DB_BLOCKED_ENVIRONMENT_NETWORK_UNREACHABLE"
+else
+  DB_STATUS="DB_AVAILABLE"
+fi
+```
+
+**Do NOT retry this check.** If DB unavailable, classify all remaining DB-dependent work as blocked and move to next non-DB slice.
+
 ## PRIORITY ORDER (Selection Algorithm)
 Always select next work in this order:
 1. Unpushed commits (push immediately before new work)
@@ -54,9 +71,12 @@ Always select next work in this order:
 8. Missing audit/event emission on material operation (audit compliance blocker)
 9. Missing tests for wired systems (< 20 tests per system triggers this)
 10. Stale/contradictory execution_state classification (update execution_state only)
-11. Next incomplete non-DB slice from execution.md roadmap (STAGE 0 → 17 order)
-12. Full deployment-readiness hardening (AFTER all STAGE 0-17 slices complete)
-13. Improvement/enhancement recommendations (AFTER deployment-readiness audit complete)
+11. Next incomplete **NON-DB** slice from execution.md roadmap (STAGE 0 → 17 order)
+12. Next NON_DB_BUILDABLE_NOW item from ADDENDUM F (Backlog) with DB_STATUS=DB_BLOCKED_ENVIRONMENT
+13. Full deployment-readiness hardening (AFTER all non-DB STAGE 0-17 slices complete)
+14. Improvement/enhancement recommendations (AFTER deployment-readiness audit complete)
+
+**Critical:** When DB_STATUS=DB_BLOCKED_ENVIRONMENT, skip items 11's DB-dependent slices and immediately jump to item 12 (ADDENDUM F non-DB buildable items). Never stop and ask for next step.
 
 ## MODULE REGISTRY SELECTION (For Phases 13+)
 When selecting Phase 13+ work, cross-reference ADDENDUM B (Module Registry 1-30):
@@ -64,6 +84,51 @@ When selecting Phase 13+ work, cross-reference ADDENDUM B (Module Registry 1-30)
 - Select next incomplete module per PRIORITY ORDER
 - Verify module exists in execution.md roadmap (section 6: CANONICAL IMPLEMENTATION ORDER)
 - If module not in STAGE 0-17, defer to Backlog A-K (ADDENDUM F)
+
+## WORK QUEUE CLASSIFICATION (ADDENDUM F Backlog Items)
+
+When DB_STATUS=DB_BLOCKED_ENVIRONMENT, maintain two queues:
+
+### LOCAL_SAFE_PENDING_SLICES (NON_DB_BUILDABLE_NOW)
+These CAN be built without database access:
+- Observability/readiness contracts (status endpoints, health checks, monitoring)
+- Data intake contracts (API schemas, DTO validation, input gates)
+- Integration Fabric backbone (connector registry contracts, auth interfaces)
+- Sync engine contracts (state machine, conflict detection, de-duplication)
+- Mapping/normalization engines (data transformation logic, business rules)
+- Data reliability scoring (statistical quality algorithms)
+- CSV/Sheets parser mocks (file format handlers with mock data)
+- Business Impact Engine (calculation logic, no persistence)
+- Financial Normalization Engine (calculation logic, no persistence)
+- Decision Confidence Engine (calculation logic, no persistence)
+- Priority Engine (ranking logic, no persistence)
+- Portfolio Command Center mock-backed shell (UI shells with mock data)
+- Owner Briefing Engine (aggregation logic, no DB queries)
+- Admin Billing UI mock-backed shell (billing UI with mock stripe responses)
+- Audit export packet generator (packet structure, mock data)
+- Self-serve onboarding shell (UX flow, no persistence)
+- Execution Workspace UX shell (UI shells, no DB)
+- Trust benchmarks (scoring algorithms, no DB)
+- Mocked load tests (performance testing with mock data)
+
+Classification: **COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE** (non-DB gates pass, mock-backed shells ready for real persistence later)
+
+### BLOCKED_RECOVERY_QUEUE (DB_OR_EXTERNAL_BLOCKED)
+These CANNOT be built until DB/external services available:
+- Persisted credentials (secrets management, DB storage)
+- Sync job persistence (job queue, audit trail)
+- Imported-record storage (multi-tenant record tables)
+- DB tenant isolation verification (schema validation)
+- Migration replay (event sourcing replay, DB schema)
+- DB-backed audit exports (querying persistent audit log)
+- DB-backed admin billing (quota tables, usage tracking)
+- Onboarding persistence (user creation, workspace setup)
+- Stripe webhook entitlement persistence (webhook delivery + DB storage)
+- Real Stripe UAT (live Stripe charges, DB order records)
+- Live HubSpot/QuickBooks/Google/Slack connectors (real OAuth, persisted tokens)
+- Production email/SMS delivery (real provider, audit trail)
+
+Classification: **DB_BLOCKED_ENVIRONMENT** (queue for implementation once DATABASE_URL + network available)
 
 ## ACTIVE CLASSIFICATION REQUIREMENTS
 A system may be classified ACTIVE only when ALL of the following are proven:
@@ -235,10 +300,14 @@ After all phases implemented and deployment-readiness audit complete, create .cl
 Do NOT implement enhancements unless required to remove deployment blockers.
 
 ## REPORT FORMAT (End of every /continue-build run)
-Report ONLY:
+Report ONLY (adapt format based on work completed):
+
+### When Implementing Work:
 ```
 STAGE X SLICE Y: [description]
 ---
+DB Status: DB_AVAILABLE | DB_BLOCKED_ENVIRONMENT_NETWORK | DB_BLOCKED_ENVIRONMENT_MISSING_CREDENTIALS
+
 Files Changed:
 - src/path/file1.ts (new/modified)
 - src/path/file2.ts (new/modified)
@@ -261,8 +330,6 @@ Gates Run:
 
 Classification: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE
 
-DB Status: DB_BLOCKED (@prisma/adapter-pg missing)
-
 Non-DB Blockers: None
 
 Branch Pushed: Yes (commit SHA: abc123)
@@ -270,51 +337,97 @@ Branch Pushed: Yes (commit SHA: abc123)
 Next Automatic Target: STAGE X+1 SLICE Y: [description]
 ```
 
-## LOCAL-SAFE MODE (For Network/Push-Blocked Environments)
+### When DB_STATUS=DB_BLOCKED_ENVIRONMENT:
+```
+DB Status: DB_BLOCKED_ENVIRONMENT_[NETWORK|MISSING_CREDENTIALS]
 
-**Activation condition:** git push fails due to HTTP 403, proxy auth failure, or network isolation.
+No new work implemented (database unavailable).
 
-**Mode behavior:** Continue building locally without remote push until infrastructure resolves.
+Skipped DB-Dependent Slices:
+- STAGE X SLICE Y (reason: requires DATABASE_URL)
+- STAGE X SLICE Z (reason: requires DATABASE_URL)
+
+Selected NON_DB_BUILDABLE_NOW Slice:
+ADDENDUM F Item: [name] (mock-backed shell / contracts / engine)
+- Files: [list]
+- Tests: [count+]
+- Gates: npm run build (✓), npx tsc (✓), npx prisma validate (✓)
+
+BLOCKED_RECOVERY_QUEUE (for when DB available):
+- Phase 13 Slice 2: Database Schema Finalization (40+ tests)
+- Phase 14 Slice 9: Admin API + Dashboard (50+ tests)
+- [list other DB-dependent work]
+
+Branch Pushed: [Yes (SHA) | No — PUSH_BLOCKED_ENVIRONMENT]
+
+Next Automatic Target: Next NON_DB_BUILDABLE_NOW item from ADDENDUM F
+```
+
+## LOCAL-SAFE MODE (For Network/Push-Blocked + DB-Blocked Environments)
+
+**Activation conditions:**
+- git push fails due to HTTP 403, proxy auth failure, or network isolation → PUSH_BLOCKED_ENVIRONMENT
+- DATABASE_URL missing or database endpoint unreachable → DB_BLOCKED_ENVIRONMENT
+- One or both blockers active → activate LOCAL-SAFE MODE
+
+**Mode behavior:** Continue building locally without remote push AND without DB-dependent work until infrastructure resolves.
 
 ### Rules
-1. **Push classification:**
-   - If push fails due to HTTP 403 / proxy / network → classify result as `PUSH_BLOCKED_ENVIRONMENT`
+
+1. **DB availability check (once per run):**
+   - Check DATABASE_URL presence + connectivity exactly once (see DATABASE AVAILABILITY CHECK section above)
+   - If DB unavailable → classify as DB_BLOCKED_ENVIRONMENT and maintain BLOCKED_RECOVERY_QUEUE
+   - Do NOT retry DB checks in same run
+   - Do NOT attempt DB migrations or DB-dependent slices while DB_BLOCKED_ENVIRONMENT
+
+2. **Push classification (once per run):**
+   - If push fails due to HTTP 403 / proxy / network → classify as PUSH_BLOCKED_ENVIRONMENT
    - Do NOT stop all build work because push failed
    - Continue local-only work if working tree is clean and non-DB gates pass
 
-2. **Next-slice selection:**
-   - If selected slice requires DATABASE_URL and unavailable → classify `DB_BLOCKED` and auto-select next non-DB slice from execution.md/ADDENDUM G
-   - Missing dependencies (npm packages, Prisma adapters) → classify `NON_DB_STATIC_BLOCKER`, not DB_BLOCKED
-   - Continue one non-DB slice per /continue-build run
+3. **Next-slice selection (CRITICAL FIX):**
+   - If selected slice requires DATABASE_URL and DB_STATUS=DB_BLOCKED_ENVIRONMENT:
+     - Immediately auto-select next NON_DB_BUILDABLE_NOW slice from LOCAL_SAFE_PENDING_SLICES (ADDENDUM F)
+     - Do NOT ask "what next?" or stop the build
+     - Continue building non-DB slices per LOCAL_SAFE_PENDING_SLICES queue
+   - If selected slice requires external service (Stripe, HubSpot, etc.) and not available:
+     - Move to BLOCKED_RECOVERY_QUEUE for later
+     - Select next LOCAL_SAFE_PENDING_SLICES item
+   - Missing dependencies (npm packages, Prisma adapters) → classify NON_DB_STATIC_BLOCKER, fix it, retry
 
-3. **Gates and verification:**
-   - Still run available gates: `npm ci`, `npx prisma validate`, `npx tsc --noEmit`, `npm run build`
-   - Run targeted tests for the slice
+4. **Gates and verification:**
+   - Still run all available gates: `npm ci`, `npx prisma validate`, `npx tsc --noEmit`, `npm run build`
+   - Run targeted tests for the slice (use mock data if needed)
    - Update execution_state.json after every slice
    - Commit locally after every successful slice
+   - Never skip non-DB gates to work around blockers
 
-4. **Recovery artifacts (after every local commit):**
+5. **Recovery artifacts (after every local commit):**
    - Create/update: `docs/LOCAL_ONLY_RECOVERY_LEDGER.md` (commit log + recovery instructions)
    - Create/update: `docs/opsiq-main-sync-latest.patch` (unified diff of unpushed commits)
    - Create/update: `docs/opsiq-main-sync-latest.bundle` (git binary bundle of unpushed commits)
    - Ensure: `docs/manual-main-sync-summary.md` exists with merge instructions
 
-5. **Push attempt protocol:**
+6. **Push attempt protocol:**
    - Attempt push once per /continue-build run
    - If push succeeds: mark `Branch Pushed: Yes (commit SHA: xxx)` in report
    - If push fails: create recovery artifacts, mark `PUSH_BLOCKED_ENVIRONMENT`, proceed to next slice in LOCAL-SAFE mode
+   - Never retry push in same run
 
-6. **Reporting requirements:**
+7. **Reporting requirements (CRITICAL):**
+   - Report DB_STATUS once at top of report (DB_AVAILABLE, DB_BLOCKED_ENVIRONMENT_NETWORK, or DB_BLOCKED_ENVIRONMENT_MISSING_CREDENTIALS)
+   - Report next selected slice from LOCAL_SAFE_PENDING_SLICES if DB blocked
+   - Report BLOCKED_RECOVERY_QUEUE items deferred
    - Always report `Branch Pushed: Yes` or `PUSH_BLOCKED_ENVIRONMENT` (never silent on push failure)
    - Never claim `REMOTE_SYNCED`, `DEPLOYMENT_READY`, or "main updated on GitHub" until push succeeds
    - Include recovery artifact paths in report if push blocked
-   - Never ask for next step unless execution.md is missing or contradictory
+   - **Never ask for next step unless execution.md is missing or internally contradictory**
 
-7. **Code safety:**
+8. **Code safety (NON-NEGOTIABLE):**
    - Do not edit app code to work around blockers
-   - Do not touch DB config
-   - Do not weaken auth, workspace enforcement, or DTO redaction
-   - Do not skip tests or gates
+   - Do not touch DATABASE_URL or DB config (let infrastructure owner fix it)
+   - Do not weaken auth, workspace enforcement, or DTO redaction (skip slice instead)
+   - Do not skip tests or gates (run with mock data if needed)
 
 ### Example LOCAL-SAFE Mode Report
 
@@ -349,3 +462,30 @@ Recommendation: (1) Configure DATABASE_URL to resume STAGE X+2, (2) Resolve prox
 - All export slices must include redaction verification (50+ tests)
 - All integration slices must include webhook delivery retry + signature validation
 - No slice is complete without at least 25+ new tests and passing non-DB gates
+
+## HANDLING DATABASE BLOCKERS (CRITICAL)
+When DATABASE_URL is unavailable (missing or network unreachable):
+
+1. **Do NOT:**
+   - Ask the user for next steps
+   - Try to modify DATABASE_URL or DB config
+   - Weaken code or skip gates to work around it
+   - Retry the DB connectivity check
+   - Declare "deployment ready" or "all work complete"
+
+2. **Do:**
+   - Classify as DB_BLOCKED_ENVIRONMENT (once per run)
+   - Maintain BLOCKED_RECOVERY_QUEUE for deferred work
+   - Auto-select next NON_DB_BUILDABLE_NOW slice from ADDENDUM F
+   - Build mock-backed shells and contracts without database
+   - Mock-backed shells are VALID work: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE (mock-backed)
+   - Continue building LOCAL_SAFE_PENDING_SLICES indefinitely
+   - Push after each slice (if push available)
+   - Report DB status, skipped items, selected non-DB work, recovery queue
+
+3. **Mock-backed shells as valid intermediate progress:**
+   - UI shells with hardcoded mock data → ready for real persistence layer later
+   - Engine algorithms with no DB queries → ready for storage layer later
+   - Contract/schema definitions with no storage → ready for implementation later
+   - All pass non-DB gates and compile successfully
+   - Classification: COMPLETE_CODE_VERIFIED_NOT_RUNTIME_ACTIVE (mock-backed, ready for real data source)

@@ -1,5 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getInterventionState, transitionPhase } from "@/services/intervention-state";
 import { assertEngagementAccess } from "@/lib/visibility";
@@ -13,8 +13,8 @@ const transitionPhaseSchema = z.object({
   targetPhase: z.enum(INTERVENTION_PHASES),
 });
 
-export const GET = withRequestContext(async (request, context) => {
-  const { engagementId } = await context.params;
+export const GET = withEnforcementFull(async (request, context, params) => {
+  const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
   const { session } = await withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW });
 
@@ -28,8 +28,8 @@ export const GET = withRequestContext(async (request, context) => {
   return Response.json(state);
 });
 
-export const PUT = withRequestContext(async (request, context) => {
-  const { engagementId } = await context.params;
+export const PUT = withEnforcementFull(async (request, context, params) => {
+  const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.INTERVENTION_MANAGE,
@@ -68,7 +68,7 @@ export const PUT = withRequestContext(async (request, context) => {
   }
 
   try {
-    const result = await transitionPhase(engagementId, body.targetPhase, { session, policy }, workspaceId);
+    const result = await transitionPhase(engagementId, body.targetPhase, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 200, result, workspaceId);
     return Response.json(result);
   } catch (error) {

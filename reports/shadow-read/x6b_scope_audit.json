@@ -1,0 +1,73 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X6B",
+  "subphase": "F_SCOPE_AUDIT",
+  "audit_date": "2026-05-15",
+  "changed_files": [
+    {
+      "file": "src/app/api/entity/route.ts",
+      "classification": "SELECTED_GET_HANDLER_MIGRATION",
+      "changes": [
+        "Replaced withEnforcementFull with withCanonicalEnforcement for GET handler only",
+        "Removed requireAuth import and call from GET",
+        "Removed enforceWorkspaceScoping call from GET",
+        "Removed getSession import (unused after migration)",
+        "Updated GET signature to (ctx: CanonicalAuthContext)",
+        "Replaced request.headers.get() with ctx.verifiedWorkspaceId",
+        "Added UnauthorizedError import for POST handler",
+        "POST handler unchanged"
+      ],
+      "scope_violation": false,
+      "reason": "Handler is selected pilot candidate. POST handler in same file remains untouched."
+    },
+    {
+      "file": "shadow_read_violations.json",
+      "classification": "REPORT_ONLY",
+      "reason": "Scanner output updated after migration - expected and allowed"
+    }
+  ],
+  "scope_compliance": {
+    "total_files_changed": 2,
+    "selected_handlers_changed": 1,
+    "unselected_handlers_changed": 0,
+    "scanner_file_changed": false,
+    "wrapper_changed": false,
+    "auth_context_changed": false,
+    "service_changed": false,
+    "entity_post_changed": false,
+    "any_introduced": false,
+    "as_any_introduced": false,
+    "new_bridges_added": false,
+    "scope_violations": 0,
+    "all_changes_in_scope": true
+  },
+  "hardline_constraints": {
+    "NO_MASS_MIGRATION": "✓ PASS - Only 1 handler migrated",
+    "NO_BULK_REPLACE": "✓ PASS - 1 targeted migration with validation",
+    "NO_MIGRATING_MORE_THAN_1": "✓ PASS - Exactly 1 handler migrated",
+    "NO_LANE_3_MIGRATION": "✓ PASS - Lane 6 handler only",
+    "NO_DECISION_CREATE_CAPABILITY_ADDITION": "✓ PASS - No new capabilities added",
+    "NO_GOVERNANCE_EXPANSION": "✓ PASS - No governance changes",
+    "NO_POLICY_CONTEXT_MIGRATION": "✓ PASS - No policy context patterns migrated",
+    "NO_CUSTOM_WORKSPACE_AUTH_MIGRATION": "✓ PASS - Standard workspace enforcement preserved",
+    "NO_GET_SERVER_AUTH_CONTEXT_MIGRATION": "✓ PASS - No optional auth patterns touched",
+    "NO_REQUIRE_AUTH_FOR_CAPABILITY_MIGRATION": "✓ PASS - Only requireAuth migrated",
+    "NO_FEATURE_WORK": "✓ PASS - Migration only, no feature changes",
+    "NO_TIER_B": "✓ PASS - No tier-breaking changes",
+    "NO_any": "✓ PASS - No any types introduced",
+    "NO_as_any": "✓ PASS - No as any casts introduced",
+    "NO_SERVICE_WEAKENING": "✓ PASS - Service calls unchanged, auth enforcement preserved",
+    "NO_PERMISSION_FABRICATION": "✓ PASS - No new permissions created",
+    "NO_SCANNER_CHANGE": "✓ PASS - Scanner unchanged, only output updated",
+    "NO_WRAPPER_CHANGE": "✓ PASS - Wrapper contract preserved",
+    "NO_AUTH_CONTEXT_CHANGE": "✓ PASS - CanonicalAuthContext unchanged",
+    "NO_UNSELECTED_HANDLER_MIGRATION": "✓ PASS - Only selected GET handler migrated, POST untouched"
+  },
+  "constraint_summary": {
+    "total_constraints": 20,
+    "passed": 20,
+    "failed": 0,
+    "all_constraints_met": true
+  },
+  "audit_verdict": "✓ SCOPE AUDIT PASSED - All changes in scope, all constraints met"
+}

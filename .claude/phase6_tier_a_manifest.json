@@ -1,0 +1,289 @@
+# PHASE 6 PART 2A: TIER A ROUTE MIGRATION MANIFEST
+
+**Locked**: 2026-05-14T02:00:00Z
+**Status**: FROZEN - NO CHANGES ALLOWED
+**Total TIER A Routes**: 53 (GET-only)
+**Initial Batch**: 15 routes (under 50 lines, lowest risk)
+**Target Completion**: Sequential, 1 route per verification cycle
+
+---
+
+## TIER A CLASSIFICATION CRITERIA
+
+Routes selected for TIER A must meet ALL criteria:
+
+✓ GET-only (no POST, PUT, DELETE, PATCH)
+✓ Read-only (no mutations except read-side caches)
+✓ Simple logic (<80 lines of code)
+✓ No external API dependencies
+✓ No complex business rules
+✓ No multi-step workflows
+✓ Standard response shape (JSON object or array)
+✓ Standard pagination (if any)
+✓ No special error handling
+
+---
+
+## INITIAL BATCH: 15 ROUTES (Highest Confidence)
+
+**Total Lines**: 482 lines combined
+**Avg Lines Per Route**: 32 lines
+**Complexity**: MINIMAL
+
+### Batch Routes (Ordered by Risk, Lowest First)
+
+| # | Route | Lines | Current Wrapper | Auth Pattern | Workspace | Capability |
+|----|-------|-------|-----------------|--------------|-----------|------------|
+| 1 | `/api/readiness` | 21 | `withEnforcementFull` | `withAuth()` | N | N |
+| 2 | `/api/me` | 27 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 3 | `/api/control/today` | 29 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 4 | `/api/billing/plan` | 25 | `withEnforcementFull` | `withAuth()` | N | N |
+| 5 | `/api/business-impact/summary` | 29 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 6 | `/api/business-impact/decision/[id]` | 33 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 7 | `/api/engagements/[id]/decision-evidence` | 23 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 8 | `/api/engagements/[id]/findings` | 18 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 9 | `/api/engagements/[id]/outcomes` | 22 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 10 | `/api/engagements/[id]/recommendations` | 16 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 11 | `/api/engagements/[id]/kpis` | 25 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 12 | `/api/engagements/[id]/actions` | 17 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 13 | `/api/deliverables/[id]` | 26 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 14 | `/api/engagements/[id]/business-impact` | 33 | `withEnforcementFull` | `withAuth()` | Y | N |
+| 15 | `/api/engagements/[id]/report` | 28 | `withEnforcementFull` | `withAuth()` | Y | N |
+
+---
+
+## PHASE BREAKDOWN
+
+### Phase 6.2A.1: Routes 1-5 (Pure reads, no workspace scope)
+**Target Time**: ~2 hours
+**Risk**: MINIMAL
+**Verification Required**:
+- ✓ Auth equivalence
+- ✓ Response shape
+- ✓ Status codes
+- ✓ Mutation profile
+
+### Phase 6.2A.2: Routes 6-10 (Workspace-scoped reads)
+**Target Time**: ~2 hours
+**Risk**: LOW
+**Verification Required**:
+- ✓ Workspace validation equivalence
+- ✓ Workspace denial semantics
+- ✓ DTO filtering consistency
+
+### Phase 6.2A.3: Routes 11-15 (Dynamic paths, workspace-scoped)
+**Target Time**: ~2 hours
+**Risk**: LOW
+**Verification Required**:
+- ✓ Dynamic parameter handling
+- ✓ NotFound semantics (404 vs 403)
+- ✓ Resource access patterns
+
+---
+
+## CURRENT PATTERNS (ALL TIER A ROUTES)
+
+### Common Current Implementation
+
+```typescript
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth } from "@/lib/auth-guard";
+
+export const GET = withEnforcementFull(async (request: NextRequest) => {
+  // Pattern 1: Extract workspace from header
+  const workspaceId = request.headers.get("x-workspace-id") || "system";
+
+  // Pattern 2: Fetch session/policy
+  const { session, policy } = await withAuth(undefined, workspaceId);
+
+  // Pattern 3: Simple queries
+  const data = await db.model.findMany({
+    where: { workspaceId }
+  });
+
+  // Pattern 4: Return JSON
+  return { data };
+});
+```
+
+### Target Implementation (Canonical)
+
+```typescript
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+
+export const GET = withCanonicalEnforcement(
+  async (ctx) => {
+    // ctx.verifiedActorId, ctx.verifiedWorkspaceId, etc.
+
+    const data = await db.model.findMany({
+      where: { workspaceId: ctx.verifiedWorkspaceId }
+    });
+
+    return { data };
+  },
+  { requireWorkspace: true }
+);
+```
+
+---
+
+## SEMANTIC EQUIVALENCE REQUIREMENTS
+
+### Auth Semantics (MUST be identical)
+| Condition | Current | Target | Status |
+|-----------|---------|--------|--------|
+| Missing session | 401 | 401 | ✓ Must match |
+| Invalid session | 401 | 401 | ✓ Must match |
+| Valid session, no workspace | 403 | 403 | ✓ Must match |
+| Valid session, workspace denied | 403 | 403 | ✓ Must match |
+| Valid session, workspace allowed | 200 | 200 | ✓ Must match |
+
+### Response Semantics (MUST be identical)
+| Property | Must Match | Allowed Changes |
+|----------|-----------|-----------------|
+| Status code | YES | NO |
+| Content-Type | YES | NO |
+| Response shape | YES | NO |
+| Field order | NO | YES (JSON doesn't guarantee order) |
+| Field whitespace | NO | YES (JSON can differ in formatting) |
+| Null vs undefined | YES | NO |
+| Array vs single object | YES | NO |
+
+### Telemetry Semantics (MUST be identical)
+| Signal | Must Match |
+|--------|-----------|
+| Telemetry event type | YES - AUTH_SUCCESS or AUTH_INVALID |
+| Telemetry class | YES - same classification |
+| Telemetry severity | YES - same severity level |
+| Correlation ID | YES - preserved |
+| Request ID | YES - preserved |
+
+### Execution Trace (MUST be complete)
+All routes must have:
+- ✓ AUTH_SUCCESS or AUTH_INVALID event
+- ✓ Execution trace with all stages
+- ✓ Correlation ID in all logging
+
+---
+
+## MUTATION PROFILE (READ-ONLY, BUT...)
+
+Even read-only routes mutate:
+- **Telemetry writes**: Async, non-blocking
+- **Audit writes**: Async, non-blocking (if enabled)
+- **Cache touches**: May update last-accessed timestamp
+- **Metrics increments**: In-memory counters
+
+**CRITICAL**: All mutations MUST be POST-AUTH only.
+
+---
+
+## VERIFICATION CHECKLIST (Per Route)
+
+### Before Migration
+- [ ] Route identified and isolated
+- [ ] Current behavior snapshot captured
+- [ ] Auth patterns documented
+- [ ] Mutation profile recorded
+- [ ] Response profile recorded
+
+### During Migration
+- [ ] Legacy wrapper removed
+- [ ] withCanonicalEnforcement() applied
+- [ ] Context injected correctly
+- [ ] No duplicate auth logic remains
+- [ ] Formatting/linting passes
+
+### After Migration
+- [ ] Compiles without errors
+- [ ] Runs without runtime errors
+- [ ] Snapshot equivalence tests pass
+- [ ] Mutation profile unchanged
+- [ ] Telemetry unchanged
+- [ ] No handler auth logic survives
+- [ ] Governance scanner passes
+
+---
+
+## RISK MITIGATION
+
+| Risk | Mitigation |
+|------|-----------|
+| Semantic drift | Snapshot testing + manual verification |
+| Missing mutations | Mutation spy + pre/post profiling |
+| Auth duplicated | Code review + trace inspection |
+| Handler reachability | Execution trace assertions |
+| Response format change | JSON schema comparison |
+| Telemetry divergence | Telemetry event class assertions |
+
+---
+
+## ROLLBACK STRATEGY
+
+If migration fails for a route:
+1. Revert to legacy implementation
+2. Document failure reason
+3. Move route to TIER B or TIER C
+4. Continue with remaining routes
+
+**No partial states allowed**: Route is either fully legacy or fully canonical.
+
+---
+
+## SUCCESS CRITERIA
+
+### Phase Complete When:
+- ✓ All 15 initial batch routes migrated
+- ✓ All snapshot equivalence tests pass
+- ✓ All mutation profiles match
+- ✓ All telemetry equivalence verified
+- ✓ All execution traces verified
+- ✓ Governance scanner: 0 violations
+- ✓ No handler auth logic survives
+- ✓ Convergence report generated
+
+### Phase FAILED If:
+- ✗ Any semantic drift discovered
+- ✗ Any mutations before auth
+- ✗ Handler reachable during auth failure
+- ✗ Auth duplicated
+- ✗ Telemetry diverges
+- ✗ Governance violations found
+- ✗ Traces incomplete
+
+---
+
+## EXECUTION PLAN
+
+### Week 1: Routes 1-5 (Pure Reads)
+Mon: Routes 1-2
+Tue: Route 3
+Wed: Routes 4-5
+Thu: Full Phase 1 verification
+Fri: Rollback if needed, or proceed
+
+### Week 1 (continued): Routes 6-10 (Workspace)
+Mon: Routes 6-7
+Tue: Routes 8-9
+Wed: Route 10
+Thu: Full Phase 2 verification
+Fri: Review findings
+
+### Week 2: Routes 11-15 (Dynamic Paths)
+Mon: Routes 11-12
+Tue: Route 13
+Wed: Routes 14-15
+Thu: Full Phase 3 verification
+Fri: Final convergence report
+
+---
+
+## SIGN-OFF
+
+This manifest is FROZEN.
+
+**No deviations allowed.**
+
+Route modifications, additions, or deletions must be explicitly approved with updated manifest.
+
+**Migration begins after Phase 1 infrastructure verified.**

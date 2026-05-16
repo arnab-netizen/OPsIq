@@ -1,0 +1,27 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X8A",
+  "subphase": "D_WORKSPACE_PILOT_SELECTION",
+  "audit_date": "2026-05-15",
+  "pilot_size": 0,
+  "selected_pilot_handlers": [],
+  "excluded_candidates": [
+    {
+      "category": "Workspace enforcement handlers",
+      "reason_excluded": "Migration not possible without design phase. withCanonicalEnforcement wrapper must first be extended to support workspace membership enforcement. Requires architecture decision on how workspace scoping integrates with canonical wrapper."
+    },
+    {
+      "category": "Custom role resolution handlers",
+      "reason_excluded": "Custom role resolution (resolveServerRole) requires separate design. Cannot use withCanonicalEnforcement directly. Requires decision on how custom roles integrate with capability-based auth."
+    }
+  ],
+  "audit_summary": {
+    "total_custom_workspace_routes": "~35-50",
+    "already_canonical": 0,
+    "safe_candidates_for_migration": 0,
+    "need_design_phase": "~30-40 (workspace enforcement)",
+    "need_custom_design": "~5-10 (role resolution)",
+    "pilot_ready": false,
+    "explanation": "No safe pilot candidates exist. Workspace enforcement requires wrapper design. Custom role resolution requires separate design. Both are architectural decisions."
+  }
+}

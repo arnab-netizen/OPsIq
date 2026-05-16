@@ -1,41 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/services/auth";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { calculateWorkspaceImpactSummary } from "@/services/business-impact/decision-impact.service";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const workspaceIdParam = request.nextUrl.searchParams.get("workspaceId");
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceIdParam = ctx.request!.nextUrl.searchParams.get("workspaceId");
     if (!workspaceIdParam) {
-      return NextResponse.json(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
+      throw new Error("Workspace ID required");
     }
 
-    const membership = await enforceWorkspaceScoping(request, workspaceIdParam);
+    const membership = await enforceWorkspaceScoping(ctx.request!, workspaceIdParam);
     if (!membership) {
-      return NextResponse.json(
-        { error: "Unauthorized or invalid workspace" },
-        { status: 403 }
-      );
+      throw new Error("Unauthorized or invalid workspace");
     }
 
-    const workspaceId = workspaceIdParam;
-    const summary = await calculateWorkspaceImpactSummary(workspaceId);
-
-    return NextResponse.json(summary);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error(`Failed to fetch impact summary: ${message}`);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    const summary = await calculateWorkspaceImpactSummary(workspaceIdParam);
+    return summary;
   }
-}
+);

@@ -130,10 +130,14 @@ export class EventReplayEngine {
     // Step 4: Create/update snapshot for optimization if replay yielded new events
     if (events.length > 0 && lastEvent) {
       try {
+        // Create snapshot without events array (only derived state)
+        const snapshotState = { ...state };
+        delete snapshotState.events;
+
         await SnapshotOptimizationEngine.createSnapshot(
           aggregateId,
           aggregateType,
-          state,
+          snapshotState,
           lastEvent.eventNumber,
           workspaceId
         );
@@ -175,6 +179,13 @@ export class EventReplayEngine {
     // Check payload is valid
     if (!event.payload || typeof event.payload !== "object") {
       errors.push("Event payload missing or invalid");
+    }
+
+    // Check required fields by event type
+    if (event.eventType === "recommendation.created") {
+      if (!event.payload?.title) errors.push("recommendation.created missing title");
+      if (!event.payload?.priority) errors.push("recommendation.created missing priority");
+      if (!event.payload?.engagementId) errors.push("recommendation.created missing engagementId");
     }
 
     return {
@@ -256,12 +267,50 @@ export class EventReplayEngine {
     // Apply event-specific transformations
     switch (event.eventType) {
       case "recommendation.created": {
-        state.recommendationId = event.payload.engagementId;
+        const convertScoreToInt = (val: unknown): number | undefined => {
+          if (!val) return undefined;
+          const num = typeof val === "string" ? parseFloat(val) : (val as number);
+          return Number.isNaN(num) ? undefined : Math.round(num * 100);
+        };
+
+        state.engagementId = event.payload.engagementId;
         state.priority = event.payload.priority;
         state.title = event.payload.title;
+        state.description = event.payload.description;
         state.status = "active";
-        state.evidenceReliability = event.payload.reliabilityLevel;
-        state.kpiHealth = event.payload.kpiRiskLevel;
+        state.evidenceValidationScore = convertScoreToInt(event.payload.evidenceValidationScore);
+        state.reliabilityLevel = event.payload.reliabilityLevel;
+        state.kpiHealthScore = convertScoreToInt(event.payload.kpiHealthScore);
+        state.kpiRiskLevel = event.payload.kpiRiskLevel;
+        break;
+      }
+      case "recommendation.updated": {
+        // Apply generic recommendation update (status, priority, etc.)
+        if (event.payload.status) {
+          state.status = event.payload.status;
+        }
+        if (event.payload.priority) {
+          state.priority = event.payload.priority;
+        }
+        if (event.payload.title) {
+          state.title = event.payload.title;
+        }
+        if (event.payload.description !== undefined) {
+          state.description = event.payload.description;
+        }
+        state.updatedAt = event.occurredAt;
+        break;
+      }
+      case "recommendation.status_changed": {
+        // Status transition event
+        state.status = event.payload.status as string;
+        state.updatedAt = event.occurredAt;
+        break;
+      }
+      case "recommendation.priority_updated": {
+        // Priority recalculation event
+        state.priority = event.payload.priority as string;
+        state.updatedAt = event.occurredAt;
         break;
       }
       case "action.completed": {

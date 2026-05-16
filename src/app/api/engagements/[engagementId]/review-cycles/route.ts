@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -17,7 +18,7 @@ const generateReviewSchema = z.object({
  * Wire: review-cycle.generateReviewCycle()
  * Assesses: KPI progress, action completion, findings, overall health
  */
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request) => {
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_UPDATE,
   });
@@ -33,7 +34,7 @@ export const POST = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {
@@ -87,7 +88,7 @@ export const POST = withRequestContext(async (request) => {
  * List historical review cycles for engagement
  * Note: Currently review cycles are not persisted; returns empty array
  */
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request) => {
   await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_VIEW,
   });
@@ -103,7 +104,7 @@ export const GET = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   // TODO: Implement history retrieval when ReviewCycle persistence is added to schema

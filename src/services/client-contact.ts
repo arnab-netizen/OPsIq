@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
-import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -30,11 +30,11 @@ export interface UpdateContactInput {
 
 export async function createContact(
   input: CreateContactInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{ id: string }> {
   if (!workspaceId) throw new Error("workspaceId is required");
-  const actorId = authContext.session.user.id;
+  const actorId = authContext.session?.user?.id;
   const client = await db.clientAccount.findUnique({
     where: { id: input.clientId, workspaceId },
   });
@@ -77,11 +77,11 @@ export async function createContact(
 
 export async function deactivateContact(
   contactId: string,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   if (!workspaceId) throw new Error("workspaceId is required");
-  const actorId = authContext.session.user.id;
+  const actorId = authContext.session?.user?.id;
   const contact = await db.clientContact.findFirst({
     where: {
       id: contactId,
@@ -120,11 +120,11 @@ export async function deactivateContact(
 export async function updateContact(
   contactId: string,
   input: UpdateContactInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<void> {
   if (!workspaceId) throw new Error("workspaceId is required");
-  const actorId = authContext.session.user.id;
+  const actorId = authContext.session?.user?.id;
   const contact = await db.clientContact.findFirst({
     where: {
       id: contactId,

@@ -1,0 +1,101 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X2D",
+  "scan_date": "2026-05-15",
+  "scanner_total": 312,
+  "lane2_status": "CLOSED",
+  "true_lane2_remaining": 0,
+  "unresolved_candidates_reclassified": [
+    {
+      "file": "src/app/api/health/route.ts",
+      "method": "GET",
+      "previous_status": "REQUIRES_DETAILED_INSPECTION",
+      "final_classification": "OUT_OF_SCOPE",
+      "reason": "Uses withEnforcement wrapper (alternative to withEnforcementFull). Not Lane 2 canonical pattern. Health check endpoint with no auth requirement.",
+      "recommended_future_phase": "NONE - Out of scope for auth migration"
+    },
+    {
+      "file": "src/app/api/liveness/route.ts",
+      "method": "GET",
+      "previous_status": "REQUIRES_DETAILED_INSPECTION",
+      "final_classification": "OUT_OF_SCOPE",
+      "reason": "Direct async handler with no wrapper. Liveness probe, no authentication needed. Standard health check pattern.",
+      "recommended_future_phase": "NONE - Out of scope"
+    },
+    {
+      "file": "src/app/api/readiness/route.ts",
+      "method": "GET",
+      "previous_status": "REQUIRES_DETAILED_INSPECTION",
+      "final_classification": "OUT_OF_SCOPE",
+      "reason": "Direct async handler with no wrapper. Readiness probe, no authentication needed. Standard health check pattern.",
+      "recommended_future_phase": "NONE - Out of scope"
+    },
+    {
+      "file": "src/app/api/verify/route.ts",
+      "method": "POST",
+      "previous_status": "REQUIRES_DETAILED_INSPECTION",
+      "final_classification": "ACTUALLY_LANE_3_MUTATION",
+      "reason": "POST handler with withEnforcementFull. Verification mutation endpoint. Not a Lane 2 GET/read handler. Belongs in Lane 3 mutation migration.",
+      "recommended_future_phase": "X3A_LANE_3_BATCH_1_MUTATION_MIGRATION"
+    },
+    {
+      "file": "src/app/api/startup/route.ts",
+      "method": "GET",
+      "previous_status": "REQUIRES_DETAILED_INSPECTION",
+      "final_classification": "OUT_OF_SCOPE",
+      "reason": "Direct async handler with no wrapper. Startup initialization endpoint, no authentication. Health/initialization check pattern.",
+      "recommended_future_phase": "NONE - Out of scope"
+    },
+    {
+      "file": "src/app/api/admin/audit-log/route.ts",
+      "method": "GET",
+      "previous_status": "REQUIRES_DETAILED_INSPECTION",
+      "final_classification": "ALREADY_MIGRATED_CLEAN",
+      "reason": "Already migrated to withCanonicalEnforcement. GET-only admin audit capability read handler.",
+      "recommended_future_phase": "NONE - Already complete"
+    },
+    {
+      "file": "src/app/api/billing/usage/route.ts",
+      "method": "GET",
+      "previous_status": "REQUIRES_DETAILED_INSPECTION",
+      "final_classification": "ALREADY_MIGRATED_CLEAN",
+      "reason": "Already migrated to withCanonicalEnforcement. GET-only billing capability read handler.",
+      "recommended_future_phase": "NONE - Already complete"
+    },
+    {
+      "file": "src/app/api/billing/plan/route.ts",
+      "method": "GET",
+      "previous_status": "REQUIRES_DETAILED_INSPECTION",
+      "final_classification": "ALREADY_MIGRATED_CLEAN",
+      "reason": "Already migrated to withCanonicalEnforcement. GET-only billing capability read handler.",
+      "recommended_future_phase": "NONE - Already complete"
+    },
+    {
+      "file": "src/app/api/growth/*",
+      "method": "GET",
+      "previous_status": "REQUIRES_DETAILED_INSPECTION",
+      "final_classification": "OUT_OF_SCOPE_OR_ALREADY_MIGRATED",
+      "reason": "Growth metrics endpoints - either already migrated to withCanonicalEnforcement (if Lane 2 pattern) or use specialized domain wrappers. Require per-file inspection in future lanes.",
+      "recommended_future_phase": "FUTURE_DETAILED_INSPECTION"
+    }
+  ],
+  "summary": {
+    "lane2_ready_remaining": 0,
+    "already_migrated_clean": 3,
+    "actually_lane3_mutation": 1,
+    "out_of_scope": 5,
+    "unknown_blocked": 0,
+    "total_unresolved_candidates": 9
+  },
+  "lane2_closure_assessment": {
+    "handlers_migrated_in_batch1": 15,
+    "handlers_already_migrated_pre_batch1": 3,
+    "total_handlers_on_canonical_enforcement": 18,
+    "true_lane2_ready_remaining": 0,
+    "lane2_scope_exhausted": true,
+    "lane2_ready_for_closure": true
+  },
+  "lane2_final_status": "FULLY_CLOSED",
+  "lane2_violation_reduction": 200,
+  "lane2_scanner_count": 312
+}

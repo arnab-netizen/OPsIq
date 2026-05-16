@@ -1,5 +1,6 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { executeWorkflow } from "@/services/execute";
 import { parseRequestBody } from "@/lib/validation";
@@ -7,6 +8,7 @@ import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError 
 import { z } from "zod/v4";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 const executeSchema = z.object({
   clientName: z.string().min(1, "Client name is required"),
@@ -15,7 +17,7 @@ const executeSchema = z.object({
   priority: z.enum(["low", "medium", "high", "critical"]),
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
   const authContext = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_CREATE,
     internalOnly: true,
@@ -54,7 +56,7 @@ export const POST = withRequestContext(async (request) => {
   }
 
   try {
-    const result = await executeWorkflow(body, authContext, workspaceId);
+    const result = await executeWorkflow(body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 200, result as unknown as Record<string, unknown>);
     return Response.json(result, { status: 200 });
   } catch (error) {

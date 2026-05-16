@@ -1,5 +1,8 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -36,33 +39,19 @@ const actionSchema = z.discriminatedUnion("action", [
   reactivateSchema,
 ]);
 
-export const GET = withRequestContext(async (request, context) => {
-  // Authenticate + authorize (fail-closed)
-  await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const { userId } = params;
+    parseOrThrow(uuidSchema, userId);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const user = await getUserById(userId, workspaceId);
+    return Response.json(user);
+  },
+  { requireWorkspace: true, requireCapabilities: ['USER_VIEW'] }
+);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
-  const { userId } = await context.params;
-  parseOrThrow(uuidSchema, userId);
-
-  const user = await getUserById(userId, workspaceId);
-  return Response.json(user);
-});
-
-export const PATCH = withRequestContext(async (request, context) => {
+export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const authContext = await withAuth({
     capability: CAPABILITIES.USER_UPDATE,
@@ -81,20 +70,20 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { userId } = await context.params;
+  const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, updateUserSchema);
-  await updateUser(userId, body, authContext, workspaceId);
+  await updateUser(userId, body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
 
   const updated = await getUserById(userId, workspaceId);
   return Response.json(updated);
 });
 
-export const POST = withRequestContext(async (request, context) => {
+export const POST = withEnforcementFull(async (request, context, params) => {
   // Auth check BEFORE body parse
   const authContext = await withAuth({
     capability: CAPABILITIES.USER_DEACTIVATE,
@@ -113,7 +102,7 @@ export const POST = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const idempotencyKey = request.headers.get("idempotency-key");
@@ -124,7 +113,7 @@ export const POST = withRequestContext(async (request, context) => {
     );
   }
 
-  const { userId } = await context.params;
+  const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, actionSchema);
@@ -144,14 +133,14 @@ export const POST = withRequestContext(async (request, context) => {
 
   try {
     if (body.action === "deactivate") {
-      await deactivateUser(userId, body.version, authContext, workspaceId);
+      await deactivateUser(userId, body.version, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
       const result = { status: "deactivated" };
       await recordIdempotencyResponse(idempotencyKey, 200, result);
       return Response.json(result);
     }
 
     // reactivate
-    await reactivateUser(userId, body.version, authContext, workspaceId);
+    await reactivateUser(userId, body.version, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
     const result = { status: "reactivated" };
     await recordIdempotencyResponse(idempotencyKey, 200, result);
     return Response.json(result);

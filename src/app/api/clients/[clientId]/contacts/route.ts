@@ -1,5 +1,7 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createContact, getContactsForClient } from "@/services/client-contact";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -16,25 +18,20 @@ const createContactSchema = z.object({
   notes: z.string().optional(),
 });
 
-export const GET = withRequestContext(async (request, context) => {
-  const { clientId } = await context.params;
-  parseOrThrow(uuidSchema, clientId);
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-  await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { clientId } = params;
+    parseOrThrow(uuidSchema, clientId);
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  const contacts = await getContactsForClient(clientId, workspaceId);
-  return Response.json({ contacts });
-});
+    const contacts = await getContactsForClient(clientId, workspaceId);
+    return Response.json({ contacts });
+  },
+  { requireWorkspace: true, requireCapabilities: ['CLIENT_VIEW'] }
+);
 
-export const POST = withRequestContext(async (request, context) => {
-  const { clientId } = await context.params;
+export const POST = withEnforcementFull(async (request, context, params) => {
+  const { clientId } = params;
   parseOrThrow(uuidSchema, clientId);
   const authContext = await withAuth({
     capability: CAPABILITIES.CLIENT_UPDATE,
@@ -74,9 +71,10 @@ export const POST = withRequestContext(async (request, context) => {
   }
 
   try {
+    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
     const result = await createContact(
       { ...body, clientId },
-      authContext,
+      canonicalContext,
       workspaceId
     );
     await recordIdempotencyResponse(idempotencyKey, 201, result);

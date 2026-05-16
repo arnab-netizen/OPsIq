@@ -1,0 +1,41 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X5B",
+  "subphase": "A_PILOT_CONFIRMATION",
+  "audit_date": "2026-05-15",
+  "baseline_total": 455,
+  "pilot_handlers": [
+    {
+      "file": "src/app/api/decisions/[decisionId]/accept/route.ts",
+      "method": "POST",
+      "exact_required_capability": "DECISION_ACCEPT",
+      "workspace_source": "x-workspace-id header via enforceWorkspaceScoping",
+      "current_auth_pattern": "withEnforcementFull + requireAuthForCapability(CAPABILITIES.DECISION_ACCEPT)",
+      "service_calls": ["acceptDecision"],
+      "requires_idempotency": false,
+      "requires_audit_event": true,
+      "audit_event_current": "logger.info('Decision acceptance recorded')",
+      "expected_reduction": 1,
+      "risk": "LOW",
+      "confirmed_safe_for_pilot": true,
+      "confirmation_notes": "Code verified: POST handler with DECISION_ACCEPT, workspace enforcement, single service call, audit logging present. Ready to migrate."
+    },
+    {
+      "file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+      "method": "POST",
+      "exact_required_capability": "DECISION_ACCEPT",
+      "workspace_source": "x-workspace-id header via enforceWorkspaceScoping",
+      "current_auth_pattern": "withEnforcementFull + requireAuthForCapability(CAPABILITIES.DECISION_ACCEPT)",
+      "service_calls": ["rejectDecision"],
+      "requires_idempotency": false,
+      "requires_audit_event": true,
+      "audit_event_current": "logger.info('Decision rejection recorded')",
+      "expected_reduction": 1,
+      "risk": "LOW",
+      "confirmed_safe_for_pilot": true,
+      "confirmation_notes": "Code verified: POST handler with DECISION_ACCEPT, workspace enforcement, single service call, audit logging present. Ready to migrate."
+    }
+  ],
+  "confirmation_result": "BOTH_HANDLERS_SAFE_FOR_PILOT",
+  "proceed_to_migration": true
+}

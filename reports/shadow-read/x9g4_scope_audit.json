@@ -1,0 +1,145 @@
+{
+  "audit_type": "X9G4_SCOPE_AUDIT",
+  "date": "2026-05-16",
+  "phase": "X9G-4",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "file_changes": {
+    "total_files_modified": 1,
+    "source_code_files_modified": 1,
+    "other_files_modified": 0
+  },
+  "modified_files": [
+    {
+      "path": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "change_type": "ROUTE_MODERNIZATION",
+      "pattern_change": "withEnforcementFull → withCanonicalEnforcement",
+      "auth_change": "hasPermission('close_decision') → requireCapabilities(['DECISION_CLOSE'])",
+      "lines_before": 74,
+      "lines_after": 35,
+      "lines_removed": 39,
+      "lines_added": 0,
+      "net_change": -39,
+      "service_layer_changed": false,
+      "business_logic_changed": false,
+      "response_shape_changed": false,
+      "authorization_fixed": true
+    }
+  ],
+  "unchanged_critical_files": {
+    "capabilities": {
+      "file": "src/domain/constants/capabilities.ts",
+      "status": "UNCHANGED",
+      "decision_close_exists": true
+    },
+    "role_mapping": {
+      "file": "src/policies/capability-check.ts",
+      "status": "UNCHANGED",
+      "decision_close_mapped": true,
+      "mapped_roles": ["ADMIN_OR_PORTFOLIO_MANAGER", "SYSTEM_ADMIN"]
+    },
+    "service": {
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "status": "UNCHANGED",
+      "function_signature": "unchanged"
+    },
+    "entitlements": {
+      "file": "src/services/entitlement.ts",
+      "status": "UNCHANGED",
+      "decision_close_entitlement_gated": false
+    },
+    "wrapper": {
+      "file": "src/lib/canonical-route-enforcement.ts",
+      "status": "UNCHANGED"
+    },
+    "auth_context": {
+      "file": "src/lib/auth-guard.ts",
+      "status": "UNCHANGED"
+    }
+  },
+  "scope_compliance": {
+    "route_modernized": true,
+    "service_refactored": false,
+    "scanner_changed": false,
+    "wrapper_changed": false,
+    "auth_context_changed": false,
+    "capability_added": false,
+    "entitlement_changed": false,
+    "role_mapping_changed": false,
+    "response_shape_changed": false,
+    "business_logic_changed": false,
+    "code_pattern_aligned": true
+  },
+  "authorization_changes": {
+    "legacy_check_removed": true,
+    "legacy_check_details": "hasPermission(membership.role, 'close_decision')",
+    "legacy_check_broken": true,
+    "modern_enforcement_added": true,
+    "modern_enforcement_details": "requireCapabilities(['DECISION_CLOSE'])",
+    "decision_close_capability": "decision:close",
+    "capability_mapped_roles": [
+      "SYSTEM_ADMIN",
+      "ADMIN_OR_PORTFOLIO_MANAGER"
+    ]
+  },
+  "validation_results": {
+    "build_status": "PASS",
+    "build_errors": 0,
+    "governance_tests": 32,
+    "governance_tests_pass": 32,
+    "wrapper_tests": 32,
+    "wrapper_tests_pass": 32,
+    "auth_bridge_tests": 14,
+    "auth_bridge_tests_pass": 14,
+    "integration_tests": 324,
+    "integration_tests_pass": 324,
+    "total_tests": 402,
+    "total_tests_pass": 402,
+    "scanner_violations_before": 448,
+    "scanner_violations_after": 444,
+    "scanner_violations_reduction": 4,
+    "shadow_auth_patterns_removed": [
+      "withAuth() call",
+      "hasPermission() function",
+      "enforceWorkspaceScoping() call",
+      "db.operatorItem.findFirst() call"
+    ]
+  },
+  "scope_violations": {
+    "unauthorized_files_changed": false,
+    "service_refactor_occurred": false,
+    "entitlement_change_occurred": false,
+    "scanner_modified": false,
+    "wrapper_modified": false,
+    "auth_context_modified": false,
+    "multiple_role_mappings_changed": false,
+    "business_logic_changed": false,
+    "response_shape_changed": false
+  },
+  "summary": {
+    "files_changed": 1,
+    "scope_violation_count": 0,
+    "lines_removed": 39,
+    "code_reduction_percent": 53,
+    "tests_passed": "402/402",
+    "build_clean": true,
+    "scanner_improved": true,
+    "authorization_fixed": true,
+    "pattern_modernized": true
+  },
+  "verdict": "SCOPE_COMPLIANT",
+  "rationale": [
+    "Single file modified: close route",
+    "Scope limited to route modernization: withEnforcementFull → withCanonicalEnforcement",
+    "Authorization modernized: legacy → capability-based",
+    "No service refactoring",
+    "No entitlement changes",
+    "No role mapping changes",
+    "No wrapper modifications",
+    "No auth context changes",
+    "Response shape preserved",
+    "Business logic unchanged",
+    "All validation gates pass",
+    "Code quality improved (39 lines removed)",
+    "Scanner improved (4 fewer violations)"
+  ]
+}

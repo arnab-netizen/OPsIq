@@ -98,8 +98,11 @@ export const CAPABILITIES = {
   REVIEW_VIEW: "review:view",
 
   // Decisions
+  DECISION_CREATE: "decision:create",
+  DECISION_UPDATE: "decision:update",
   DECISION_ACCEPT: "decision:accept",
   DECISION_REJECT: "decision:reject",
+  DECISION_CLOSE: "decision:close",
 
   // Diagnosis
   DIAGNOSIS_READ: "diagnosis:read",
@@ -113,6 +116,13 @@ export const CAPABILITIES = {
   // Owner Mode
   OWNER_VIEW: "owner:view",
   OWNER_MANAGE: "owner:manage",
+
+  // Audit Trail
+  AUDIT_VIEW: "audit:view",
+  AUDIT_EXPORT: "audit:export",
+
+  // Webhooks
+  WEBHOOK_MANAGE: "webhook:manage",
 } as const;
 
 export type CapabilityName =

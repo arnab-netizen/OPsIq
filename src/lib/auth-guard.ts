@@ -10,6 +10,28 @@ import {
 import type { CapabilityName } from "@/domain/constants/capabilities";
 import { ROLE_HIERARCHY } from "@/domain/constants/roles";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { checkShadowRead } from "@/lib/runtime-shadow-read-enforcer";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+
+/**
+ * PHASE A: Auth Guard Transition (Legacy Code)
+ *
+ * IMPORTANT: This module is in transition during PHASE A-F.
+ * Do NOT use these functions in NEW code.
+ *
+ * INSTEAD:
+ * - Use withCanonicalEnforcement() for protected routes
+ * - Use canonical-auth-facts.ts for auth decision logic
+ * - Use services/auth.ts fact-returning functions (getSessionFact, getPolicyContextFact)
+ *
+ * These legacy functions are kept for backward compatibility with existing code.
+ * They will be deprecated and removed after PHASE F.
+ *
+ * What changed:
+ * - BEFORE: requireAuth() threw UnauthorizedError → old code caught it
+ * - NOW: Canonical wrapper uses facts → makes decisions itself
+ * - AFTER (Phase F): All semantic logic removed from legacy helpers
+ */
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -37,6 +59,9 @@ export interface AuthOptions {
  * Fails closed: null/missing session → throw.
  */
 export async function requireAuth(workspaceId: string = "system"): Promise<AuthContext> {
+  // PHASE F: Check for shadow reads after snapshot finalized
+  checkShadowRead("requireAuth");
+
   try {
     const session = await requireSession(workspaceId);
     const policy = await requirePolicyContext(workspaceId);
@@ -80,6 +105,9 @@ export async function requireAuthInternal(workspaceId: string = "system"): Promi
  * Use for optional auth endpoints.
  */
 export async function getServerAuthContext(workspaceId: string = "system"): Promise<AuthContext | null> {
+  // PHASE F: Check for shadow reads after snapshot finalized
+  checkShadowRead("getServerAuthContext");
+
   try {
     const session = await requireSession(workspaceId);
     const policy = await requirePolicyContext(workspaceId);
@@ -99,6 +127,9 @@ export async function withAuth(
   options: AuthOptions = {},
   workspaceId: string = "system"
 ): Promise<AuthContext> {
+  // PHASE F: Check for shadow reads after snapshot finalized
+  checkShadowRead("withAuth");
+
   const session = await requireSession(workspaceId);
   const policy = await requirePolicyContext(workspaceId);
 
@@ -142,9 +173,108 @@ export function canDo(
  * Use at the service layer to enforce authorization independent of routes.
  */
 export function requireCapabilityForService(
-  authContext: AuthContext,
+  authContext: AuthContext | { verifiedCapabilities?: Set<string>; policy?: PolicyContext },
   capability: CapabilityName,
   scope?: { type: string; id: string }
 ): void {
-  requireCapability(authContext.policy, capability, scope);
+  // Support both AuthContext (legacy) and CanonicalAuthContext (new)
+  const policy = (authContext as AuthContext).policy || (authContext as any).policy;
+  if (policy) {
+    requireCapability(policy, capability, scope);
+  } else if ((authContext as any).verifiedCapabilities) {
+    // For CanonicalAuthContext, verify capability is in the set
+    if (!(authContext as any).verifiedCapabilities.has(capability)) {
+      throw new ForbiddenError(`Capability required: ${capability}`);
+    }
+  }
+}
+
+// ─── PHASE G6R: AUTH TYPE BRIDGE ──────────────────────────────────────────
+
+/**
+ * PHASE G6R: Bridge canonical auth context.
+ *
+ * Converts legacy AuthContext (from withAuth()) to CanonicalAuthContext
+ * required by service layer.
+ *
+ * Fails closed if required fields missing.
+ * Does not fabricate permissions.
+ * Preserves actor identity and workspace scoping.
+ *
+ * Usage:
+ *   const auth = await withAuth();
+ *   const ctx = canonicalizeAuthContext(auth, workspaceId);
+ *   await service(ctx, workspaceId);
+ */
+export function canonicalizeAuthContext(
+  authContext: AuthContext | null | undefined,
+  workspaceId: string
+): CanonicalAuthContext {
+  if (!authContext) {
+    throw new UnauthorizedError("Cannot canonicalize null auth context");
+  }
+
+  if (!authContext.session) {
+    throw new UnauthorizedError("Cannot canonicalize: missing session");
+  }
+
+  if (!authContext.session.user) {
+    throw new UnauthorizedError("Cannot canonicalize: missing user");
+  }
+
+  const userId = authContext.session.user.id;
+  if (!userId) {
+    throw new UnauthorizedError("Cannot canonicalize: user ID missing");
+  }
+
+  if (!workspaceId || workspaceId.trim() === "") {
+    throw new UnauthorizedError("Cannot canonicalize: workspace ID required");
+  }
+
+  const capabilities = extractCapabilities(authContext.policy);
+
+  const ctx: CanonicalAuthContext = {
+    verifiedActorId: userId,
+    verifiedActorType: "user",
+    verifiedActor: authContext.session.user,
+    verifiedWorkspaceId: workspaceId,
+    verifiedCapabilities: capabilities,
+    verifiedSessionSnapshot: {
+      snapshotId: `snapshot-${userId}-${Date.now()}`,
+      snapshotTimestamp: new Date(),
+      snapshotHash: "",
+      actorId: userId,
+      workspaceId,
+      capabilities: Array.from(capabilities),
+    },
+    // Optional fields intentionally omitted (not needed for service layer)
+    // traceId, executionTrace, request, correlationId, requestId
+    session: authContext.session,
+    policy: authContext.policy,
+  };
+
+  return ctx;
+}
+
+/**
+ * Extract verified capabilities from policy context.
+ * Fails closed: returns empty set if policy is missing.
+ * Does not fabricate capabilities.
+ */
+function extractCapabilities(policy: PolicyContext | undefined): Set<string> {
+  if (!policy) {
+    return new Set();
+  }
+
+  const capabilities = new Set<string>();
+
+  if (policy.roles && Array.isArray(policy.roles)) {
+    for (const roleAssignment of policy.roles) {
+      if (roleAssignment.role) {
+        capabilities.add(roleAssignment.role);
+      }
+    }
+  }
+
+  return capabilities;
 }

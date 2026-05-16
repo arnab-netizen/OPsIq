@@ -1,0 +1,62 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X5A",
+  "subphase": "B_REQUIREAUTHFORCAPABILITY_INVENTORY",
+  "audit_date": "2026-05-15",
+  "scanner_baseline": {
+    "total": 455,
+    "critical": 284,
+    "block_build": 171
+  },
+  "search_scope": "src/app/api/* route handlers for requireAuthForCapability() usage",
+  "usages": [
+    {
+      "file": "src/app/api/decisions/[decisionId]/accept/route.ts",
+      "method": "POST",
+      "current_auth_pattern": "withEnforcementFull + requireAuthForCapability",
+      "classification": "CAPABILITY_MUTATION",
+      "exact_capability": "DECISION_ACCEPT",
+      "workspace_source": "x-workspace-id header",
+      "uses_policy_context": false,
+      "uses_custom_workspace_logic": false,
+      "uses_service_calls": true,
+      "service_calls": ["acceptDecision"],
+      "requires_canonical_auth_context": true,
+      "handler_type": "MUTATION",
+      "risk": "LOW",
+      "expected_reduction": 1,
+      "recommended_action": "Migrate to withCanonicalEnforcement({ requireCapabilities: ['DECISION_ACCEPT'], requireWorkspace: true })",
+      "blocker_reason": ""
+    },
+    {
+      "file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+      "method": "POST",
+      "current_auth_pattern": "withEnforcementFull + requireAuthForCapability",
+      "classification": "CAPABILITY_MUTATION",
+      "exact_capability": "DECISION_ACCEPT",
+      "workspace_source": "x-workspace-id header",
+      "uses_policy_context": false,
+      "uses_custom_workspace_logic": false,
+      "uses_service_calls": true,
+      "service_calls": ["rejectDecision"],
+      "requires_canonical_auth_context": true,
+      "handler_type": "MUTATION",
+      "risk": "LOW",
+      "expected_reduction": 1,
+      "recommended_action": "Migrate to withCanonicalEnforcement({ requireCapabilities: ['DECISION_ACCEPT'], requireWorkspace: true })",
+      "blocker_reason": ""
+    }
+  ],
+  "summary": {
+    "total_usages": 2,
+    "simple_capability_read": 0,
+    "capability_mutation": 2,
+    "policy_context_dependent": 0,
+    "custom_workspace_auth": 0,
+    "service_context_blocker": 0,
+    "background_or_non_route_context": 0,
+    "already_canonical": 0,
+    "out_of_scope": 0,
+    "unknown_blocked": 0
+  }
+}

@@ -1,18 +1,16 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { listFindingsForEngagement } from "@/services/findings";
 import { assertEngagementAccess } from "@/lib/visibility";
-import type { NextRequest } from "next/server";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export const GET = withRequestContext(async (request, context) => {
-  const { engagementId } = await context.params;
-  const { session } = await withAuth();
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { engagementId } = params;
+    const workspaceId = ctx.request!.headers.get("x-workspace-id") || "";
 
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id") || "";
+    await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
-  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
-
-  const findings = await listFindingsForEngagement(engagementId, session.user.id, undefined, workspaceId);
-  return Response.json(findings);
-});
+    const findings = await listFindingsForEngagement(engagementId, ctx.verifiedActorId, undefined, workspaceId);
+    return findings;
+  }
+);

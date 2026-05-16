@@ -1,0 +1,21 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "g7d",
+  "batch": "g7d_batch2",
+  "timestamp": "2026-05-14T20:06:00Z",
+  "scanner_baseline": {
+    "raw": 555,
+    "unique": 395,
+    "actionable_route": 350
+  },
+  "selected_handlers": 5,
+  "handler_violations": {
+    "clients_[clientId]": 6,
+    "clients_[clientId]_contacts": 4,
+    "users_[userId]_roles": 6,
+    "leads_[leadId]": 6,
+    "engagements_[engagementId]": 4
+  },
+  "total_before_violations": 26,
+  "git_diff_clean": true
+}

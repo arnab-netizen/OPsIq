@@ -1,5 +1,6 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import type { NextRequest } from "next/server";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { runConsultingPipeline } from "@/services/consulting-engine/pipeline";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -11,7 +12,7 @@ const runConsultingEngineSchema = z.object({
   engagementId: z.string().uuid("Invalid engagement ID format"),
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request) => {
   const authContext = await withAuth({
     capability: CAPABILITIES.RECOMMENDATION_CREATE,
   });
@@ -48,7 +49,7 @@ export const POST = withRequestContext(async (request) => {
   try {
     const result = await runConsultingPipeline(
       body.engagementId,
-      authContext,
+      canonicalizeAuthContext(authContext, workspaceId),
       workspaceId
     );
 

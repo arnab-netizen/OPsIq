@@ -1,5 +1,8 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -29,33 +32,19 @@ const archiveSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (request, context) => {
-  // Authenticate + authorize (fail-closed)
-  const { policy } = await withAuth({ capability: CAPABILITIES.CLIENT_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const { clientId } = params;
+    parseOrThrow(uuidSchema, clientId);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const client = await getClientById(clientId, workspaceId);
+    return Response.json(client);
+  },
+  { requireWorkspace: true, requireCapabilities: ['CLIENT_VIEW'] }
+);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
-  const { clientId } = await context.params;
-  parseOrThrow(uuidSchema, clientId);
-
-  const client = await getClientById(clientId, workspaceId);
-  return Response.json(client);
-});
-
-export const PATCH = withRequestContext(async (request, context) => {
+export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_UPDATE,
@@ -74,20 +63,21 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { clientId } = await context.params;
+  const { clientId } = params;
   parseOrThrow(uuidSchema, clientId);
 
   const body = await parseRequestBody(request, updateClientSchema);
-  await updateClient(clientId, body, { session, policy }, workspaceId);
+  const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
+  await updateClient(clientId, body, canonicalContext, workspaceId);
 
   const updated = await getClientById(clientId, workspaceId);
   return Response.json(updated);
 });
 
-export const POST = withRequestContext(async (request, context) => {
+export const POST = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_ARCHIVE,
@@ -106,7 +96,7 @@ export const POST = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   const idempotencyKey = request.headers.get("idempotency-key");
@@ -117,7 +107,7 @@ export const POST = withRequestContext(async (request, context) => {
     );
   }
 
-  const { clientId } = await context.params;
+  const { clientId } = params;
   parseOrThrow(uuidSchema, clientId);
 
   const body = await parseRequestBody(request, archiveSchema);
@@ -136,7 +126,8 @@ export const POST = withRequestContext(async (request, context) => {
   }
 
   try {
-    await archiveClient(clientId, { session, policy }, body.version, workspaceId);
+    const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
+    await archiveClient(clientId, canonicalContext, body.version, workspaceId);
     const result = { status: "archived" };
     await recordIdempotencyResponse(idempotencyKey, 200, result);
     return Response.json(result);

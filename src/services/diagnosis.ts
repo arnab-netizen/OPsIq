@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext, ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
@@ -14,7 +16,6 @@ import { DiagnosisOrchestrator } from "@/engines/DiagnosisOrchestrator";
 import type { BusinessAssessment, OrchestratedDiagnosis } from "@/engines/contracts";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -605,7 +606,7 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
 
 // ─── Main Diagnosis Function ───────────────────────────────────────────────
 
-export async function diagnoseBusiness(input: BusinessProblemInput, authContext: AuthContext, workspaceId: string): Promise<DiagnosisResult> {
+export async function diagnoseBusiness(input: BusinessProblemInput, authContext: CanonicalAuthContext, workspaceId: string): Promise<DiagnosisResult> {
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
   enforceWorkspaceId(validatedWorkspaceId, "diagnoseBusiness", "diagnosis");
 
@@ -712,25 +713,18 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     notes: summary,
   };
 
-  // Create auth context for internal operations
-  const internalAuthContext: AuthContext = {
-    session: {
-      user: {
-        id: actorId,
-        email: "",
-        name: "",
-        isActive: true,
-      },
-      sessionId: "",
-      expiresAt: new Date(),
-    },
-    policy: {
-      userId: actorId,
-      roles: [],
-    },
-  };
+  // Use the verified auth context passed to diagnose function
+  await assessCondition(conditionInput, authContext);
 
-  await assessCondition(conditionInput, internalAuthContext);
+  // Construct ServiceAuthEnvelope for service calls
+  const authEnvelope: ServiceAuthEnvelope = {
+    verifiedActorId: authContext.verifiedActorId,
+    verifiedActorType: authContext.verifiedActorType,
+    verifiedWorkspaceId: authContext.verifiedWorkspaceId,
+    verifiedCapabilities: authContext.verifiedCapabilities,
+    hasInternalAccess: authContext.policy ? hasInternalAccess(authContext.policy) : false,
+    verifiedActor: authContext.verifiedActor,
+  };
 
   const createdFindings = await Promise.all(
     findingsData.map((f) =>
@@ -749,8 +743,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
                 : "execution",
           findingType: "operational",
         },
-        internalAuthContext,
-        validatedWorkspaceId
+        authEnvelope
       )
     )
   );
@@ -766,7 +759,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
           priority: r.priority,
           findingId: createdFindings[0]?.id,
         },
-        internalAuthContext,
+        authContext,
         validatedWorkspaceId
       )
     )
@@ -783,7 +776,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
           description: a.description,
           priority: a.priority,
         },
-        internalAuthContext,
+        authContext,
         validatedWorkspaceId
       );
     })

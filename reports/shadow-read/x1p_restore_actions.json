@@ -1,0 +1,349 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "restoration_strategy": "REVERT_UNAUTHORIZED_BRIDGES_ACCEPT_REQUEST_CONTRACT",
+  "actions": [
+    {
+      "file": "src/lib/canonical-route-enforcement.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Made request?: NextRequest (optional) - core G7D-C decision",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/services/re-evaluation.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Removed request: null as any - implements request-contract decision cleanly",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "reports/shadow-read/g7d_request_contract_audit.md",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Audit documentation of contract decision",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "reports/shadow-read/g7d_request_contract_decision.md",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Decision documentation",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "reports/shadow-read/g7d_request_usage_inventory.json",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Usage inventory supporting decision",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/actions/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/admin/audit-log/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/admin/workspaces/[id]/members/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/admin/workspaces/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/audit/events/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/audit/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/billing/plan/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/business-impact/decision/[id]/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/business-impact/summary/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/control/today/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/decision/export/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/deliverables/[deliverableId]/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/actions/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/business-impact/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/findings/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/recommendations/route.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only added ctx.request! assertion - request-contract fix",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/contacts/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 1d24ad1 (from continuation) - beyond approved G7D-C scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commits 1d24ad1 and 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/clients/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commits 1d24ad1 and 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/control/blocked-metrics/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commits 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/deliverables/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commits 1d24ad1 and 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/diagnosis/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/actions/[actionId]/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/condition/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/dashboard/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/intervention-state/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/intervention/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/recommendations/rerank/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/shock-events/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/engagements/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/evidence-bundles/[bundleId]/items/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/evidence-bundles/[bundleId]/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/evidence-bundles/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commits 1d24ad1 and 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/evidence/[evidenceId]/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/evidence/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commits 1d24ad1 and 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/execute/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/findings/[findingId]/evidence/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/findings/[findingId]/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/findings/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/leads/[leadId]/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/leads/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commits 1d24ad1 and 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/opsiq/consulting-engine/run/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/recommendations/[recommendationId]/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/recommendations/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/users/[userId]/memberships/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/users/[userId]/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/app/api/users/route.ts",
+      "action": "REVERTED",
+      "reason": "UNAUTHORIZED: Added canonicalizeAuthContext() bridge in commit 7a1c819 - beyond approved scope",
+      "follow_up_phase": "X1P_SERVICE_LAYER_COMPATIBILITY_PHASE"
+    },
+    {
+      "file": "src/governance/auth-shadow-read-scanner.ts",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Only changed export to export type - type-only change, no behavior impact",
+      "follow_up_phase": "NONE"
+    },
+    {
+      "file": "shadow_read_violations.json",
+      "action": "LEFT_UNCHANGED",
+      "reason": "ACCEPT: Updated artifact reflecting current state",
+      "follow_up_phase": "NONE"
+    }
+  ],
+  "revert_summary": {
+    "files_reverted": 26,
+    "files_quarantined": 0,
+    "files_accepted": 38
+  },
+  "critical_dependency": "Reverting canonicalizeAuthContext() bridges from 40 files will expose TypeScript errors in service layer functions that expect CanonicalAuthContext. This is NOT a blocker to reverting - it is a DOCUMENTED DEPENDENCY requiring a separate X1P_SERVICE_LAYER_COMPATIBILITY_PHASE phase after request contract is stabilized.",
+  "revert_instructions": "Revert commit 7a1c819 (Phase G7D-C continuation: Add canonicalizeAuthContext() bridges to handler mutations) and selectively revert canonicalizeAuthContext() additions from commit 1d24ad1 where they appeared. The request contract fixes (ctx.request! assertions) from 1d24ad1 must be KEPT."
+}

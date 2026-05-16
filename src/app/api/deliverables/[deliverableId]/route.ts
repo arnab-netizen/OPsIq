@@ -1,26 +1,22 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { getDeliverableById } from "@/services/deliverable";
 import { NotFoundError } from "@/infra/errors";
-import type { NextRequest } from "next/server";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export const GET = withRequestContext(async (request, context) => {
-  const { deliverableId } = await context.params;
-  await withAuth();
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { deliverableId } = params;
 
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    const workspaceId = ctx.request!.headers.get("x-workspace-id");
+    if (!workspaceId) {
+      throw new Error("Workspace ID required (x-workspace-id header)");
+    }
+
+    const deliverable = await getDeliverableById(deliverableId, workspaceId);
+    if (!deliverable) {
+      throw new NotFoundError("Deliverable", deliverableId);
+    }
+
+    return deliverable;
   }
-
-  const deliverable = await getDeliverableById(deliverableId, workspaceId);
-  if (!deliverable) {
-    throw new NotFoundError("Deliverable", deliverableId);
-  }
-
-  return Response.json(deliverable);
-});
+);

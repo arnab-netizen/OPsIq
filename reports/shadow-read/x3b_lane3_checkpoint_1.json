@@ -1,0 +1,52 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X3B",
+  "checkpoint": 1,
+  "handler_migrated": "src/app/api/users/route.ts",
+  "method": "POST",
+  "capability": "USER_CREATE",
+  "migration_status": "COMPLETE",
+  "checkpoint_date": "2026-05-15",
+  "build_result": {
+    "status": "PASS",
+    "errors": 0,
+    "warnings": 0
+  },
+  "scanner_result": {
+    "before_migrations": 458,
+    "after_this_handler": 455,
+    "reduction_this_handler": 3,
+    "expected_reduction": 3,
+    "reduction_matches_expectation": true
+  },
+  "code_changes": {
+    "removed": [
+      "withEnforcementFull wrapper",
+      "withAuth call",
+      "enforceWorkspaceScoping call",
+      "manual workspace validation",
+      "canonicalizeAuthContext bridge",
+      "Unused imports: withEnforcementFull, withAuth, canonicalizeAuthContext, enforceWorkspaceScoping, ForbiddenError, NextRequest"
+    ],
+    "modified": [
+      "POST handler: converted to withCanonicalEnforcement pattern",
+      "Service call: canonicalizeAuthContext(authContext, workspaceId) → ctx",
+      "Idempotency: authContext.session.user.id → ctx.verifiedActorId",
+      "Request handling: request.headers → ctx.request?.headers",
+      "parseRequestBody: request → ctx.request!"
+    ],
+    "preserved": [
+      "GET handler (unchanged)",
+      "Idempotency logic (intact)",
+      "Error handling (intact)",
+      "Response shape (result from idempotency wrapper)"
+    ]
+  },
+  "quarantined_bridge_status": {
+    "bridge_removed": true,
+    "bridge_was_canonicalizeAuthContext": true,
+    "context_passed_to_service": "ctx (CanonicalAuthContext) instead of canonicalContext",
+    "service_impact": "createUser now receives ctx which contains session, policy, and full auth context"
+  },
+  "checkpoint_decision": "PASS - Handler migrated successfully, scanner violation reduction confirmed (3 violations). Build clean. Phase C migration complete."
+}

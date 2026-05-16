@@ -1,0 +1,33 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "target_pattern": "withAuth() no args",
+  "selection_timestamp": "2026-05-14T12:05:00Z",
+  "selection_challenge": "All routes with withAuth() call reverted services that require CanonicalAuthContext. True isolation impossible without adapters (forbidden by G6 constraints).",
+  "selected_strategy": "DEFER PILOT - establish baseline for G6D/G6E first",
+  "pilot_status": "BLOCKED",
+  "blocker_analysis": {
+    "root_cause": "Service layer reverted to require CanonicalAuthContext in G4. All withAuth() routes call these services. Cannot migrate routes in isolation without TypeScript compilation errors.",
+    "options_considered": [
+      {
+        "option": "Migrate routes + their services together",
+        "status": "VIOLATES_G6C - would modify 5+ service files as unit"
+      },
+      {
+        "option": "Create temporary micro-adapter for services",
+        "status": "VIOLATES_G6 - NO_TIER_B, NO_NEW_GOVERNANCE"
+      },
+      {
+        "option": "Find routes that don't call services",
+        "status": "IMPOSSIBLE - all routes call services, no truly isolated routes exist"
+      },
+      {
+        "option": "Revert G4 service changes, allow any-type bridge temporarily",
+        "status": "VIOLATES_PHASE_G5_CONSTRAINTS - NO_any_types"
+      }
+    ]
+  },
+  "recommendation": "G6 pilot requires architectural decision: either allow micro-adapters for pilot scope, or revise service-layer approach. Current constraints are mutually exclusive.",
+  "blocked_selected_routes": [],
+  "blocked_excluded_candidates": [],
+  "g6_decision": "CANNOT_PROCEED_WITH_PILOT_AS_SPECIFIED"
+}

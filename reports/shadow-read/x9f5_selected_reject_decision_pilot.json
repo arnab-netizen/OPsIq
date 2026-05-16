@@ -1,0 +1,84 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X9F-5",
+  "date": "2026-05-16",
+  "pilot_size": 1,
+  "selected_pilot": {
+    "type": "REJECT_DECISION_VERIFIED_INPUT_REFACTOR",
+    "file": "src/services/decision-validation/decision-acceptance.service.ts",
+    "service_or_function": "rejectDecision",
+    "current_pattern": "Raw parameters (DecisionRejectionInput with plain workspaceId, rejectedBy)",
+    "target_pattern": "VerifiedRejectionInput with explicit verifiedWorkspaceId, verifiedActorId",
+    "capability": "DECISION_REJECT",
+    "route_callers": [
+      {
+        "file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+        "wrapper": "withCanonicalEnforcement",
+        "verified_context_available": true,
+        "verified_fields": ["ctx.verifiedWorkspaceId", "ctx.verifiedActorId"]
+      }
+    ],
+    "service_callers": [],
+    "background_callers": [],
+    "requires_dual_format_support": false,
+    "expected_reduction": 0,
+    "risk": "LOW",
+    "reason_selected": "rejectDecision meets all refactor criteria: (1) Route already modern with canonical enforcement (no modernization needed), (2) All verified context available from route (ctx.verifiedWorkspaceId, ctx.verifiedActorId), (3) Zero shadow reads detected, (4) Governance complete (DECISION_REJECT capability defined and correctly used after X9E-6 fix), (5) Structurally identical to acceptDecision (X9F-4 pattern), (6) Only one caller (route), (7) No internal/background callers, (8) Same verified input pattern proven safe in X9F-4. Direct precedent allows rapid, low-risk implementation.",
+    "proof_requirements": [
+      "service_signature_preserves_auth_boundary",
+      "caller_constructs_verified_input_from_verified_context",
+      "no_weak_auth_accepted",
+      "no_service_side_canonicalization",
+      "business_logic_preserved",
+      "response_shape_preserved",
+      "decision_reject_capability_preserved",
+      "tests_pass",
+      "scanner_result_verified"
+    ]
+  },
+  "excluded_items": [],
+  "implementation_scope": {
+    "files_to_modify": [
+      "src/services/decision-validation/decision-acceptance.service.ts",
+      "src/app/api/decisions/[decisionId]/reject/route.ts"
+    ],
+    "allowed_changes": [
+      "Create VerifiedRejectionInput interface in service",
+      "Update rejectDecision signature to accept VerifiedRejectionInput",
+      "Update route to construct VerifiedRejectionInput from verified context",
+      "Preserve response shape (RejectionRecord)",
+      "Preserve business logic"
+    ],
+    "forbidden_changes": [
+      "Accept AuthContext",
+      "Perform service-side canonicalization",
+      "Change response shape",
+      "Change business logic",
+      "Modify route wrapper (must stay withCanonicalEnforcement)",
+      "Modify other decision services",
+      "Add new capabilities",
+      "Change capability definitions"
+    ]
+  },
+  "success_criteria": {
+    "build_passes": true,
+    "all_tests_pass_402_core_plus_324_integration": true,
+    "scanner_maintains_448_baseline": true,
+    "scanner_no_new_violations": true,
+    "service_signature_clear_and_explicit": true,
+    "route_constructs_verified_input_safely": true,
+    "no_weak_auth_accepted": true,
+    "response_shape_unchanged": true,
+    "business_behavior_unchanged": true,
+    "decision_reject_capability_unchanged": true
+  },
+  "next_phase_recommendation": {
+    "phase_name": "X9F-5",
+    "type": "REJECT_DECISION_VERIFIED_INPUT_REFACTOR",
+    "estimated_scope_lines": 30,
+    "estimated_complexity": "LOW",
+    "estimated_duration_minutes": 15,
+    "ready_for_implementation": true,
+    "blocked_conditions": []
+  }
+}

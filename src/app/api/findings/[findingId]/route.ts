@@ -1,6 +1,11 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext, type ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import type { NextRequest } from "next/server";
+import { ForbiddenError } from "@/infra/errors";
+
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getFindingDetail, updateFinding } from "@/services/findings";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -10,7 +15,7 @@ import {
   FINDING_SEVERITIES,
   FINDING_IMPACTS,
 } from "@/domain/constants/statuses";
-import type { NextRequest } from "next/server";
+
 
 const updateFindingSchema = z.object({
   title: z.string().min(1).optional(),
@@ -28,33 +33,19 @@ const updateFindingSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (request, context) => {
-  // Authenticate + authorize (fail-closed)
-  await withAuth({ capability: CAPABILITIES.FINDING_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const { findingId } = params;
+    parseOrThrow(uuidSchema, findingId);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const finding = await getFindingDetail(findingId, undefined, undefined, workspaceId);
+    return Response.json(finding);
+  },
+  { requireCapabilities: ["FINDING_VIEW"], requireWorkspace: true }
+);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
-  const { findingId } = await context.params;
-  parseOrThrow(uuidSchema, findingId);
-
-  const finding = await getFindingDetail(findingId, undefined, undefined, workspaceId);
-  return Response.json(finding);
-});
-
-export const PATCH = withRequestContext(async (request, context) => {
+export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.FINDING_UPDATE,
@@ -73,14 +64,23 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { findingId } = await context.params;
+  const { findingId } = params;
   parseOrThrow(uuidSchema, findingId);
 
   const body = await parseRequestBody(request, updateFindingSchema);
-  await updateFinding(findingId, body, { session, policy }, workspaceId);
+  const canonicalCtx = canonicalizeAuthContext({ session, policy }, workspaceId);
+  const authEnvelope: ServiceAuthEnvelope = {
+    verifiedActorId: canonicalCtx.verifiedActorId,
+    verifiedActorType: canonicalCtx.verifiedActorType,
+    verifiedWorkspaceId: canonicalCtx.verifiedWorkspaceId,
+    verifiedCapabilities: canonicalCtx.verifiedCapabilities,
+    hasInternalAccess: policy ? hasInternalAccess(policy) : false,
+    verifiedActor: canonicalCtx.verifiedActor,
+  };
+  await updateFinding(findingId, body, authEnvelope);
 
   const updated = await getFindingDetail(findingId, undefined, undefined, workspaceId);
   return Response.json(updated);

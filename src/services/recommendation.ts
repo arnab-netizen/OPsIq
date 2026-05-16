@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import {
@@ -13,7 +14,6 @@ import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
-import type { AuthContext } from "@/lib/auth-guard";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordRecommendationUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
@@ -355,7 +355,7 @@ async function evaluateEngagementKPIHealth(
 
 export async function createRecommendation(
   input: CreateRecommendationInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string,
   idempotencyKey?: string
 ) {
@@ -649,7 +649,7 @@ export async function getRecommendationsForEngagement(
 export async function updateRecommendationStatus(
   recommendationId: string,
   input: UpdateRecommendationInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(
@@ -918,13 +918,31 @@ export async function updateRecommendationStatus(
     visibility: "internal",
   });
 
+  // Emit canonical event to maintain event sourcing trail
+  if (input.status) {
+    await EventEmitterService.emit({
+      aggregateId: recommendationId,
+      aggregateType: "recommendation",
+      eventType: "recommendation.status_changed",
+      eventVersion: 1,
+      payload: {
+        status: input.status,
+        previousStatus: rec.status,
+      },
+      actorId: userId,
+      workspaceId: validatedWorkspaceId,
+      visibilityScope: "internal",
+      sensitivityClassification: "standard",
+    });
+  }
+
   return updated;
 }
 
 export async function updateRecommendationPriorityFromScore(
   recommendationId: string,
   scoringInput: RecommendationScoringInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string,
   recommendationClass?: RecommendationClass
 ): Promise<{ id: string; score: number; priority: string }> {
@@ -969,6 +987,24 @@ export async function updateRecommendationPriorityFromScore(
     visibility: "internal",
   });
 
+  // Emit canonical event to maintain event sourcing trail
+  await EventEmitterService.emit({
+    aggregateId: recommendationId,
+    aggregateType: "recommendation",
+    eventType: "recommendation.priority_updated",
+    eventVersion: 1,
+    payload: {
+      priority: newPriority,
+      previousPriority: rec.priority,
+      score: String(score),
+      source: "re-evaluation",
+    },
+    actorId: userId,
+    workspaceId: validatedWorkspaceId,
+    visibilityScope: "internal",
+    sensitivityClassification: "standard",
+  });
+
   logger.info("Recommendation priority updated from score", {
     recommendationId,
     score,
@@ -984,7 +1020,7 @@ export async function updateRecommendationPriorityFromScore(
 
 export async function reRankRecommendationsInEngagement(
   engagementId: string,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ): Promise<{
   updated: number;
@@ -1121,7 +1157,7 @@ export async function getRecommendation(
 export async function updateRecommendation(
   recommendationId: string,
   input: UpdateRecommendationInput,
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [userId, validatedWorkspaceId] = requireServiceContext(
@@ -1166,6 +1202,29 @@ export async function updateRecommendation(
     visibility: "internal",
   });
 
+  // Emit canonical event to maintain event sourcing trail
+  const eventPayload: Record<string, string | undefined> = {};
+  if (input.status) {
+    eventPayload.status = input.status;
+  }
+  if (input.priority) {
+    eventPayload.priority = input.priority;
+  }
+
+  if (Object.keys(eventPayload).length > 0) {
+    await EventEmitterService.emit({
+      aggregateId: recommendationId,
+      aggregateType: "recommendation",
+      eventType: "recommendation.updated",
+      eventVersion: 1,
+      payload: eventPayload as Record<string, string>,
+      actorId: userId,
+      workspaceId: validatedWorkspaceId,
+      visibilityScope: "internal",
+      sensitivityClassification: "standard",
+    });
+  }
+
   return updated;
 }
 
@@ -1207,7 +1266,7 @@ export async function getRecommendationAuditTrail(
 export async function createRecommendationsFromInterventions(
   engagementId: string,
   interventions: PrioritizedIntervention[],
-  authContext: AuthContext,
+  authContext: CanonicalAuthContext,
   workspaceId: string
 ) {
   const [, validatedWorkspaceId] = requireServiceContext(

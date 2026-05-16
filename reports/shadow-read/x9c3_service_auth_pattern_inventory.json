@@ -1,0 +1,299 @@
+{
+  "phase": "X9C-3",
+  "date": "2026-05-15",
+  "title": "X9C-3 Service Auth Pattern Inventory",
+  "status": "PATTERN_INVENTORY_COMPLETE",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "scanner_baseline": {
+    "total": 450,
+    "critical": 283,
+    "block_build": 167,
+    "estimated_from_service_layer": "~100-120"
+  },
+  "inventory_scope": "All services with auth patterns, focusing on direct service-layer violations and context dependencies",
+  "summary": {
+    "total_services_inspected": 26,
+    "services_with_auth_guard_imports": 4,
+    "services_accepting_auth_context": 27,
+    "services_accepting_canonical_auth_context": 27,
+    "services_accepting_policy_context": 1,
+    "services_using_parameter_based_auth": 6,
+    "services_blocked_by_governance": 5,
+    "services_blocked_by_workspace_design": 8,
+    "services_low_risk_refactor_candidates": 2
+  },
+  "services_by_auth_pattern": [
+    {
+      "category": "HIGH-PRIORITY BLOCKERS: Auth-Guard Imports (4 services)",
+      "risk_level": "HIGH",
+      "services": [
+        {
+          "file": "src/services/findings.ts",
+          "functions_affected": [
+            "createFinding(input, authContext, workspaceId)",
+            "updateFinding(findingId, input, authContext, workspaceId)",
+            "validateFinding(findingId, authContext, workspaceId)"
+          ],
+          "current_auth_input": "CanonicalAuthContext",
+          "auth_guard_imports": [
+            "requireCapabilityForService",
+            "requireServiceContext"
+          ],
+          "legacy_auth_usage": [
+            "requireCapabilityForService(authContext, CAPABILITIES.FINDING_VALIDATE)",
+            "requireCapabilityForService(authContext, CAPABILITIES.FINDING_CREATE)",
+            "requireCapabilityForService(authContext, CAPABILITIES.FINDING_UPDATE)"
+          ],
+          "scanner_entries": ["import from auth-guard (BLOCK_BUILD violation)"],
+          "called_by_routes": [
+            "findings/route.ts POST",
+            "findings/[findingId]/route.ts PATCH"
+          ],
+          "current_risk": "HIGH",
+          "expected_reduction_if_refactored": 5,
+          "notes": "Functions call requireCapabilityForService internally. Should accept capability boolean from route instead."
+        },
+        {
+          "file": "src/services/deliverable.ts",
+          "functions_affected": [
+            "createDeliverable(input, authContext)",
+            "updateDeliverable(deliverableId, input, authContext)"
+          ],
+          "current_auth_input": "CanonicalAuthContext",
+          "auth_guard_imports": [
+            "requireCapabilityForService"
+          ],
+          "legacy_auth_usage": [
+            "requireCapabilityForService(authContext, CAPABILITIES.DELIVERABLE_CREATE)",
+            "requireCapabilityForService(authContext, CAPABILITIES.DELIVERABLE_UPDATE)"
+          ],
+          "scanner_entries": ["import from auth-guard"],
+          "called_by_routes": [
+            "deliverables/route.ts POST",
+            "deliverables/[id]/route.ts PATCH"
+          ],
+          "current_risk": "HIGH",
+          "expected_reduction_if_refactored": 3,
+          "notes": "Similar pattern to findings - route-level capability check should be passed as parameter"
+        },
+        {
+          "file": "src/services/stage.ts",
+          "functions_affected": [
+            "createStage(input, authContext, engagementId)",
+            "updateStage(stageId, input, authContext)"
+          ],
+          "current_auth_input": "CanonicalAuthContext",
+          "auth_guard_imports": [
+            "requireCapabilityForService"
+          ],
+          "legacy_auth_usage": [
+            "requireCapabilityForService(authContext, CAPABILITIES.STAGE_CREATE)"
+          ],
+          "scanner_entries": ["import from auth-guard"],
+          "called_by_routes": [
+            "stages/route.ts POST"
+          ],
+          "current_risk": "HIGH",
+          "expected_reduction_if_refactored": 2,
+          "notes": "Auth-guard import BLOCK_BUILD violation"
+        },
+        {
+          "file": "src/services/owner-dashboard.service.ts",
+          "functions_affected": [
+            "getDashboardData(authContext, workspaceId)"
+          ],
+          "current_auth_input": "CanonicalAuthContext",
+          "auth_guard_imports": [
+            "requireCapabilityForService"
+          ],
+          "legacy_auth_usage": [
+            "requireCapabilityForService(authContext, CAPABILITIES.DASHBOARD_VIEW)"
+          ],
+          "scanner_entries": ["import from auth-guard"],
+          "called_by_routes": [
+            "admin/dashboard/route.ts GET"
+          ],
+          "current_risk": "HIGH",
+          "expected_reduction_if_refactored": 2,
+          "notes": "Dashboard service validates capability internally"
+        }
+      ]
+    },
+    {
+      "category": "ALREADY REFACTORED: Parameter-Based Auth (6 services)",
+      "risk_level": "LOW",
+      "services": [
+        {
+          "file": "src/services/engagement.ts",
+          "functions_affected": [
+            "getEngagementById(engagementId, workspaceId, hasInternalAccess)",
+            "listEngagements(workspaceId, params, hasInternalAccess)",
+            "createEngagement(input, authContext, workspaceId)",
+            "updateEngagement(engagementId, input, authContext, workspaceId)"
+          ],
+          "current_auth_input": "MIXED: hasInternalAccess boolean for GET, CanonicalAuthContext for mutations",
+          "auth_guard_imports": [],
+          "legacy_auth_usage": [],
+          "canonical_auth_usage": [
+            "CanonicalAuthContext parameter in createEngagement and updateEngagement"
+          ],
+          "policy_usage": [],
+          "scanner_entries": [],
+          "called_by_routes": [
+            "engagements/route.ts GET/POST",
+            "engagements/[id]/route.ts GET/PATCH"
+          ],
+          "current_risk": "LOW",
+          "expected_reduction_if_refactored": 0,
+          "notes": "BEST PRACTICE EXAMPLE: GET methods already use hasInternalAccess parameter. Mutations accept authContext but don't call legacy auth functions. Can serve as template."
+        },
+        {
+          "file": "src/services/client-account.ts",
+          "functions_affected": [
+            "getClientById(clientId, workspaceId, hasInternalAccess)",
+            "listClients(workspaceId, params, hasInternalAccess)"
+          ],
+          "current_auth_input": "PARAMETER-BASED: Boolean flags",
+          "auth_guard_imports": [],
+          "legacy_auth_usage": [],
+          "scanner_entries": [],
+          "called_by_routes": [
+            "clients/route.ts GET",
+            "clients/[id]/route.ts GET"
+          ],
+          "current_risk": "LOW",
+          "expected_reduction_if_refactored": 0,
+          "notes": "Already follows correct pattern - accept hasInternalAccess as parameter"
+        },
+        {
+          "file": "src/services/lead.ts",
+          "functions_affected": [
+            "getLeadById(leadId, workspaceId)"
+          ],
+          "current_auth_input": "PARAMETER-BASED",
+          "auth_guard_imports": [],
+          "scanner_entries": [],
+          "called_by_routes": [
+            "leads/[id]/route.ts GET"
+          ],
+          "current_risk": "LOW",
+          "notes": "Parameter-based pattern"
+        }
+      ]
+    },
+    {
+      "category": "CONTEXT-ACCEPTING BUT NO VIOLATIONS (17 services)",
+      "risk_level": "MEDIUM",
+      "services": [
+        {
+          "file": "src/services/auth.ts",
+          "functions_affected": [
+            "getPolicyContextFact(userId, workspaceId)",
+            "getSessionFact(userId)"
+          ],
+          "current_auth_input": "None (auth system internal)",
+          "auth_guard_imports": [],
+          "policy_usage": [
+            "Returns PolicyContext"
+          ],
+          "scanner_entries": [],
+          "called_by_routes": [
+            "canonical-route-enforcement (internal)"
+          ],
+          "current_risk": "LOW",
+          "notes": "Auth infrastructure service, not subject to boundary design (used by wrappers)"
+        },
+        {
+          "file": "src/services/diagnosis.ts",
+          "functions_affected": [
+            "getDiagnosisData(authContext, engagementId)"
+          ],
+          "current_auth_input": "CanonicalAuthContext",
+          "auth_guard_imports": [],
+          "canonical_auth_usage": [
+            "Accepts CanonicalAuthContext parameter"
+          ],
+          "workspace_membership_usage": [
+            "Uses authContext.verifiedWorkspaceId"
+          ],
+          "scanner_entries": [],
+          "called_by_routes": [
+            "diagnosis/route.ts GET"
+          ],
+          "current_risk": "MEDIUM",
+          "blocking_workspace_design": true,
+          "notes": "Accepts authContext but no auth-guard violations. Blocked on workspace design."
+        }
+      ]
+    },
+    {
+      "category": "GOVERNANCE-DEPENDENT SERVICES (5 services)",
+      "risk_level": "HIGH",
+      "description": "Services with role/workspace/membership logic that require X9D governance design",
+      "blocked_by": "X9D_GOVERNANCE_DESIGN",
+      "examples": [
+        "src/services/role-assignment.ts",
+        "src/services/custom-role-resolver.ts",
+        "Services with intervention stage logic",
+        "Services with workspace membership validation"
+      ]
+    }
+  ],
+  "critical_findings": [
+    {
+      "finding": "4 services directly call legacy auth-guard from service layer",
+      "impact": "These are BLOCK_BUILD violations. Routes cannot be fully migrated to canonical until these services are refactored.",
+      "affected_services": [
+        "findings.ts",
+        "deliverable.ts",
+        "stage.ts",
+        "owner-dashboard.service.ts"
+      ]
+    },
+    {
+      "finding": "6 services already use parameter-based auth",
+      "impact": "POSITIVE: Shows the target pattern works. engagement.ts and client-account.ts are templates.",
+      "template_services": [
+        "engagement.ts",
+        "client-account.ts"
+      ]
+    },
+    {
+      "finding": "27 services accept CanonicalAuthContext",
+      "impact": "Most services have been migrated to accept canonical context, but 4 still do legacy validation inside.",
+      "implication": "Service auth boundary design must cover: (1) What auth data is acceptable, (2) When services should accept context vs parameters, (3) How to handle mixed patterns during transition"
+    },
+    {
+      "finding": "5+ services blocked by governance/workspace design",
+      "impact": "These cannot be safely refactored until X9D clarifies workspace/role/membership model.",
+      "scope": "Out of scope for X9C-3, must be deferred to post-X9D"
+    }
+  ],
+  "refactor_candidate_assessment": [
+    {
+      "service": "engagement.ts",
+      "current_state": "ALREADY REFACTORED",
+      "pilot_value": "TEMPLATE - use as reference, no refactoring needed"
+    },
+    {
+      "service": "findings.ts",
+      "current_state": "HIGH-PRIORITY BLOCKER",
+      "pilot_value": "POTENTIAL - 5 expected violations reduction, clear scope, 2-3 route callers"
+    },
+    {
+      "service": "deliverable.ts",
+      "current_state": "HIGH-PRIORITY BLOCKER",
+      "pilot_value": "POTENTIAL - 3 expected violations reduction, small scope, few callers"
+    },
+    {
+      "service": "stage.ts",
+      "current_state": "HIGH-PRIORITY BLOCKER",
+      "pilot_value": "LOWER - smaller impact, fewer callers, dependent on other refactors"
+    },
+    {
+      "service": "owner-dashboard.service.ts",
+      "current_state": "HIGH-PRIORITY BLOCKER",
+      "pilot_value": "LOWER - dashboard-specific, fewer callers, less critical path"
+    }
+  ]
+}

@@ -37,7 +37,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateHypothesis(hypothesis);
-      expect(errors).toContain(expect.stringContaining("statement must be at least 20 characters"));
+      expect(errors).toContainEqual(expect.stringContaining("statement must be at least 20 characters"));
     });
 
     it("should require success metric", () => {
@@ -54,7 +54,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateHypothesis(hypothesis);
-      expect(errors).toContain(expect.stringContaining("Success metric is required"));
+      expect(errors).toContainEqual(expect.stringContaining("Success metric is required"));
     });
 
     it("should require positive success threshold", () => {
@@ -71,7 +71,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateHypothesis(hypothesis);
-      expect(errors).toContain(expect.stringContaining("Success threshold must be greater than 0%"));
+      expect(errors).toContainEqual(expect.stringContaining("Success threshold must be greater than 0%"));
     });
 
     it("should require negative failure threshold (downside risk)", () => {
@@ -88,7 +88,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateHypothesis(hypothesis);
-      expect(errors).toContain(expect.stringContaining("Failure threshold must be negative"));
+      expect(errors).toContainEqual(expect.stringContaining("Failure threshold must be negative"));
     });
 
     it("should require minimum test duration of 1 week", () => {
@@ -105,7 +105,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateHypothesis(hypothesis);
-      expect(errors).toContain(expect.stringContaining("Test duration must be at least 1 week"));
+      expect(errors).toContainEqual(expect.stringContaining("Test duration must be at least 1 week"));
     });
 
     it("should require review cadence <= test duration", () => {
@@ -122,7 +122,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateHypothesis(hypothesis);
-      expect(errors).toContain(expect.stringContaining("Review cadence must be 1+ weeks and <= test duration"));
+      expect(errors).toContainEqual(expect.stringContaining("Review cadence must be 1+ weeks and <= test duration"));
     });
 
     it("should pass valid hypothesis", () => {
@@ -175,7 +175,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentPlan(plan);
-      expect(errors).toContain(expect.stringContaining("Action description must be at least 20 characters"));
+      expect(errors).toContainEqual(expect.stringContaining("Action description must be at least 20 characters"));
     });
 
     it("should require at least one secondary metric", () => {
@@ -197,7 +197,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentPlan(plan);
-      expect(errors).toContain(expect.stringContaining("At least one secondary metric is required"));
+      expect(errors).toContainEqual(expect.stringContaining("At least one secondary metric is required"));
     });
 
     it("should require at least one confounding factor identified", () => {
@@ -219,7 +219,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentPlan(plan);
-      expect(errors).toContain(expect.stringContaining("At least one potential confounding factor"));
+      expect(errors).toContainEqual(expect.stringContaining("At least one potential confounding factor"));
     });
 
     it("should require non-negative estimated cost", () => {
@@ -241,7 +241,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentPlan(plan);
-      expect(errors).toContain(expect.stringContaining("Estimated cost cannot be negative"));
+      expect(errors).toContainEqual(expect.stringContaining("Estimated cost cannot be negative"));
     });
 
     it("should require approvals for critical-risk experiments", () => {
@@ -263,7 +263,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentPlan(plan);
-      expect(errors).toContain(expect.stringContaining("required approvals"));
+      expect(errors).toContainEqual(expect.stringContaining("required approvals"));
     });
 
     it("should pass valid plan", () => {
@@ -301,7 +301,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentExecution(execution);
-      expect(errors).toContain(expect.stringContaining("Started experiments must have a startedAt timestamp"));
+      expect(errors).toContainEqual(expect.stringContaining("Started experiments must have a startedAt timestamp"));
     });
 
     it("should clamp percentComplete to 0-100", () => {
@@ -316,7 +316,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentExecution(execution);
-      expect(errors).toContain(expect.stringContaining("Percent complete must be 0-100"));
+      expect(errors).toContainEqual(expect.stringContaining("Percent complete must be 0-100"));
     });
 
     it("should require actualEndDate for completed experiments", () => {
@@ -331,7 +331,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentExecution(execution);
-      expect(errors).toContain(expect.stringContaining("actualEndDate"));
+      expect(errors).toContainEqual(expect.stringContaining("actualEndDate"));
     });
 
     it("should pass valid execution", () => {
@@ -365,7 +365,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentResult(result);
-      expect(errors).toContain(expect.stringContaining("Primary metric value"));
+      expect(errors).toContainEqual(expect.stringContaining("Primary metric value"));
     });
 
     it("should require primary metric change", () => {
@@ -382,7 +382,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentResult(result);
-      expect(errors).toContain(expect.stringContaining("Primary metric change"));
+      expect(errors).toContainEqual(expect.stringContaining("Primary metric change"));
     });
 
     it("should reject success classification if threshold not met", () => {
@@ -399,7 +399,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperimentResult(result);
-      expect(errors).toContain(expect.stringContaining("cannot be 'success' if threshold not met"));
+      expect(errors).toContainEqual(expect.stringContaining("cannot be 'success' if threshold not met"));
     });
 
     it("should pass valid result", () => {
@@ -466,7 +466,7 @@ describe("Experiment Domain Contract", () => {
       };
 
       const errors = validateExperiment(experiment);
-      expect(errors).toContain(expect.stringContaining("Experiment ID is required"));
+      expect(errors).toContainEqual(expect.stringContaining("Experiment ID is required"));
     });
 
     it("should pass valid experiment", () => {

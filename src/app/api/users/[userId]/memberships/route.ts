@@ -1,5 +1,8 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -25,33 +28,19 @@ const removeMemberSchema = z.object({
   role: z.enum(roleValues),
 });
 
-export const GET = withRequestContext(async (request, context) => {
-  // Authenticate + authorize (fail-closed)
-  await withAuth({ capability: CAPABILITIES.USER_VIEW, internalOnly: true });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const { userId } = params;
+    parseOrThrow(uuidSchema, userId);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const memberships = await getMembershipsForUser(userId, workspaceId);
+    return Response.json({ memberships });
+  },
+  { requireWorkspace: true, requireCapabilities: ['USER_VIEW'] }
+);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
-  const { userId } = await context.params;
-  parseOrThrow(uuidSchema, userId);
-
-  const memberships = await getMembershipsForUser(userId, workspaceId);
-  return Response.json({ memberships });
-});
-
-export const POST = withRequestContext(async (request, context) => {
+export const POST = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
@@ -79,10 +68,10 @@ export const POST = withRequestContext(async (request, context) => {
 
   const membershipCheck = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membershipCheck) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { userId } = await context.params;
+  const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, addMemberSchema);
@@ -103,7 +92,7 @@ export const POST = withRequestContext(async (request, context) => {
   try {
     const result = await addMember(
       { userId, ...body, workspaceId } as Parameters<typeof addMember>[0],
-      { session, policy }
+      canonicalizeAuthContext({ session, policy }, workspaceId)
     );
 
     await recordIdempotencyResponse(idempotencyKey, result.isNew ? 201 : 200, result);
@@ -115,7 +104,7 @@ export const POST = withRequestContext(async (request, context) => {
   }
 });
 
-export const DELETE = withRequestContext(async (request, context) => {
+export const DELETE = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
@@ -134,17 +123,17 @@ export const DELETE = withRequestContext(async (request, context) => {
 
   const membershipCheck = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membershipCheck) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
-  const { userId } = await context.params;
+  const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, removeMemberSchema);
 
   await removeMember(
     { userId, ...body, workspaceId } as Parameters<typeof removeMember>[0],
-    { session, policy }
+    canonicalizeAuthContext({ session, policy }, workspaceId)
   );
 
   return Response.json({ status: "removed" });

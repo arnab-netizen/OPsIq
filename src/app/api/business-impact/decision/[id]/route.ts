@@ -1,49 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/services/auth";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { calculateDecisionImpact } from "@/services/business-impact/decision-impact.service";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getSession();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const workspaceIdParam = request.nextUrl.searchParams.get("workspaceId");
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceIdParam = ctx.request!.nextUrl.searchParams.get("workspaceId");
     if (!workspaceIdParam) {
-      return NextResponse.json(
-        { error: "Workspace ID required" },
-        { status: 400 }
-      );
+      throw new Error("Workspace ID required");
     }
 
-    const membership = await enforceWorkspaceScoping(request, workspaceIdParam);
+    const membership = await enforceWorkspaceScoping(ctx.request!, workspaceIdParam);
     if (!membership) {
-      return NextResponse.json(
-        { error: "Unauthorized or invalid workspace" },
-        { status: 403 }
-      );
+      throw new Error("Unauthorized or invalid workspace");
     }
 
-    const workspaceId = workspaceIdParam;
-    const { id: decisionId } = await params;
+    const decisionId = params.id;
+    const metrics = await calculateDecisionImpact(decisionId, workspaceIdParam);
 
-    const metrics = await calculateDecisionImpact(decisionId, workspaceId);
-
-    return NextResponse.json(metrics);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    if (message.includes("not found")) {
-      return NextResponse.json({ error: "Decision not found" }, { status: 404 });
-    }
-    console.error(`Failed to fetch decision impact: ${message}`);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return metrics;
   }
-}
+);

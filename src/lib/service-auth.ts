@@ -1,23 +1,27 @@
-import { AuthContext } from "@/lib/auth-guard";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
 
 /**
  * Service-layer authentication helper.
  * Ensures protected services only accept calls with valid authContext.
  * Enforces that user identity comes from authContext, not from request body/params.
+ *
+ * IMPORTANT: Services now require CanonicalAuthContext exclusively.
+ * Routes that have not been migrated to withCanonicalEnforcement will fail
+ * at compile time (intended behavior to force systematic migration).
  */
 
 /**
  * Requires authContext to be present and valid.
  * Throws UnauthorizedError if authContext is missing or invalid.
- * Returns the authenticated userId from the session.
+ * Returns the authenticated userId from the verified session snapshot.
  */
-export function requireServiceAuth(authContext: AuthContext | null | undefined): string {
+export function requireServiceAuth(authContext: CanonicalAuthContext | null | undefined): string {
   if (!authContext) {
     throw new UnauthorizedError("Service requires authentication context");
   }
 
-  const userId = authContext.session.user.id;
+  const userId = authContext.verifiedActorId;
   if (!userId) {
     throw new UnauthorizedError("Invalid auth context: missing user ID");
   }
@@ -42,7 +46,7 @@ export function requireWorkspaceContext(workspaceId: string | null | undefined):
  * Returns tuple of [userId, workspaceId] for convenience.
  */
 export function requireServiceContext(
-  authContext: AuthContext | null | undefined,
+  authContext: CanonicalAuthContext | null | undefined,
   workspaceId: string | null | undefined
 ): [string, string] {
   const userId = requireServiceAuth(authContext);

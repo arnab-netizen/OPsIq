@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
@@ -10,7 +11,6 @@ import {
 import { ROLES, type RoleName } from "@/domain/constants/roles";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
-import type { AuthContext } from "@/lib/auth-guard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -41,11 +41,11 @@ function validateRoleName(role: string): asserts role is RoleName {
 
 export async function addMember(
   input: AddMemberInput,
-  authContext: AuthContext
+  authContext: CanonicalAuthContext
 ): Promise<{ id: string; isNew: boolean }> {
   validateRoleName(input.role);
 
-  const actorId = authContext.session.user.id;
+  const actorId = authContext.verifiedActorId;
 
   // Verify user exists, is active, and is member of the workspace
   const user = await db.user.findFirst({
@@ -169,11 +169,11 @@ export async function addMember(
 
 export async function removeMember(
   input: RemoveMemberInput,
-  authContext: AuthContext
+  authContext: CanonicalAuthContext
 ): Promise<void> {
   validateRoleName(input.role);
 
-  const actorId = authContext.session.user.id;
+  const actorId = authContext.verifiedActorId;
   const idempotencyKey = `membership-remove:${input.userId}:${input.engagementId}:${input.role}`;
 
   const membership = await db.engagementMembership.findFirst({

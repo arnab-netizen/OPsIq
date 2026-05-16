@@ -1,0 +1,154 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X9F-3",
+  "date": "2026-05-16",
+  "scanner_baseline": {
+    "total": 448,
+    "critical": 283,
+    "block_build": 165
+  },
+  "items": [
+    {
+      "file": "src/services/decision-validation/decision-acceptance.service.ts",
+      "service_or_function": "acceptDecision (lines 24-90)",
+      "current_auth_pattern": "Raw parameters from route context",
+      "current_auth_input": "DecisionAcceptanceInput {decisionId, engagementId, workspaceId, acceptedBy, rationale}",
+      "route_callers": [
+        {
+          "route_file": "src/app/api/decisions/[decisionId]/accept/route.ts",
+          "wrapper": "withCanonicalEnforcement",
+          "capability": "DECISION_ACCEPT",
+          "passes_verified_context": true,
+          "verified_fields": ["ctx.verifiedWorkspaceId", "ctx.verifiedActorId"]
+        }
+      ],
+      "service_callers": [],
+      "background_callers": [],
+      "uses_auth_context": false,
+      "uses_canonical_auth_context": false,
+      "uses_verified_input": false,
+      "uses_raw_capability_string": false,
+      "uses_domain_capability": true,
+      "requires_dual_format_support": false,
+      "scanner_entries": [],
+      "expected_reduction_if_refactored": 0,
+      "risk": "LOW",
+      "blocker_reason": "",
+      "recommended_action": "CANDIDATE FOR X9F-3 REFACTOR - Route already modern, verified context available, no shadow reads"
+    },
+    {
+      "file": "src/services/decision-validation/decision-acceptance.service.ts",
+      "service_or_function": "rejectDecision (lines 92-158)",
+      "current_auth_pattern": "Raw parameters from route context",
+      "current_auth_input": "DecisionRejectionInput {decisionId, engagementId, workspaceId, rejectedBy, reason}",
+      "route_callers": [
+        {
+          "route_file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+          "wrapper": "withCanonicalEnforcement",
+          "capability": "DECISION_REJECT",
+          "passes_verified_context": true,
+          "verified_fields": ["ctx.verifiedWorkspaceId", "ctx.verifiedActorId"]
+        }
+      ],
+      "service_callers": [],
+      "background_callers": [],
+      "uses_auth_context": false,
+      "uses_canonical_auth_context": false,
+      "uses_verified_input": false,
+      "uses_raw_capability_string": false,
+      "uses_domain_capability": true,
+      "requires_dual_format_support": false,
+      "scanner_entries": [],
+      "expected_reduction_if_refactored": 0,
+      "risk": "LOW",
+      "blocker_reason": "",
+      "recommended_action": "CANDIDATE FOR X9F-3 REFACTOR - Route already modern, verified context available, no shadow reads"
+    },
+    {
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "service_or_function": "closeDecision (lines 394-424)",
+      "current_auth_pattern": "Legacy role-based hasPermission check in route",
+      "current_auth_input": "Raw parameters {decisionId, workspaceId, actorId}",
+      "route_callers": [
+        {
+          "route_file": "src/app/api/decisions/[decisionId]/close/route.ts",
+          "wrapper": "withEnforcementFull",
+          "capability": "MISSING - uses hasPermission(role, 'close_decision')",
+          "passes_verified_context": false,
+          "verified_fields": [],
+          "shadow_reads": ["withAuth() on line 21"],
+          "legacy_pattern": true
+        }
+      ],
+      "service_callers": [],
+      "background_callers": [],
+      "uses_auth_context": false,
+      "uses_canonical_auth_context": false,
+      "uses_verified_input": false,
+      "uses_raw_capability_string": false,
+      "uses_domain_capability": false,
+      "requires_dual_format_support": false,
+      "scanner_entries": [
+        {
+          "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+          "line": 21,
+          "pattern": "withAuth()",
+          "type": "shadow_read"
+        },
+        {
+          "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+          "line": 2,
+          "pattern": "withAuth import",
+          "type": "auth_guard_import"
+        }
+      ],
+      "expected_reduction_if_refactored": 4,
+      "risk": "HIGH",
+      "blocker_reason": "MISSING DECISION_CLOSE capability - requires governance design before refactor",
+      "recommended_action": "BLOCKED - Deferred to X9G phase pending governance clarification of DECISION_CLOSE capability"
+    },
+    {
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "service_or_function": "rejectDecision (lines 182-199)",
+      "current_auth_pattern": "Raw parameters from generic route handler",
+      "current_auth_input": "Raw parameters {decisionId, workspaceId, reason, actorId}",
+      "route_callers": [
+        {
+          "route_file": "src/app/api/decisions/[decisionId]/route.ts",
+          "wrapper": "unknown",
+          "capability": "unclear",
+          "passes_verified_context": false,
+          "verified_fields": []
+        }
+      ],
+      "service_callers": [],
+      "background_callers": [],
+      "uses_auth_context": false,
+      "uses_canonical_auth_context": false,
+      "uses_verified_input": false,
+      "uses_raw_capability_string": false,
+      "uses_domain_capability": false,
+      "requires_dual_format_support": false,
+      "scanner_entries": [],
+      "expected_reduction_if_refactored": 0,
+      "risk": "MEDIUM",
+      "blocker_reason": "Used in generic decision handler, not a dedicated decision action route",
+      "recommended_action": "NOT_A_PRIORITY - Used in generic endpoint, not focused decision action. Accept/reject dedicated routes are preferred pilots."
+    }
+  ],
+  "summary": {
+    "total_items": 4,
+    "ready_service_refactor_candidates": 2,
+    "blocked_service_refactor_candidates": 1,
+    "auth_context_services": 0,
+    "canonical_auth_context_services": 0,
+    "verified_input_candidates": 2,
+    "dual_format_risk_candidates": 0,
+    "governance_blocked_items": 1,
+    "shadow_read_violations_by_service": {
+      "closeDecision": 4,
+      "acceptDecision": 0,
+      "rejectDecision": 0
+    }
+  }
+}

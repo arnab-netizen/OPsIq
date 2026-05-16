@@ -1,5 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { db } from "@/lib/db";
+import { withEnforcement } from "@/lib/enforced-route";
+import { db, getDbInstance } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { classifyError, reportError } from "@/infra/error-tracking";
 import { cleanupOldRecords } from "@/services/production/retention-cleanup";
@@ -10,7 +10,14 @@ export const runtime = "nodejs";
 let lastCleanupTime = 0;
 let applicationStartTime = Date.now();
 
-export const GET = withRequestContext(async () => {
+export const GET = withEnforcement(async (ctx) => {
+  // Ensure database is initialized before any operations
+  try {
+    await getDbInstance();
+  } catch (error) {
+    logger.error("Failed to initialize database on health check", { error });
+  }
+
   // Trigger retention cleanup periodically (every 6 hours)
   const now = Date.now();
   if (now - lastCleanupTime > 6 * 60 * 60 * 1000) {
@@ -24,18 +31,27 @@ export const GET = withRequestContext(async () => {
 
   const checks: Record<string, Record<string, string | number | boolean>> = {};
 
-  // Database check
+  // Database check (graceful fallback if DB unavailable)
   const dbStart = Date.now();
-  try {
-    await db.$queryRawUnsafe("SELECT 1");
-    checks.database = { status: "healthy", latencyMs: Date.now() - dbStart };
-  } catch (error) {
-    const classified = classifyError(error, { check: "database" });
-    reportError(classified);
+  if (process.env.DATABASE_URL) {
+    try {
+      await db.$queryRawUnsafe("SELECT 1");
+      checks.database = { status: "healthy", latencyMs: Date.now() - dbStart };
+    } catch (error) {
+      const classified = classifyError(error, { check: "database" });
+      reportError(classified);
+      checks.database = {
+        status: "unhealthy",
+        latencyMs: Date.now() - dbStart,
+        error: error instanceof Error ? error.message : "Unknown database error",
+      };
+    }
+  } else {
+    // Database not configured
     checks.database = {
-      status: "unhealthy",
+      status: "degraded",
       latencyMs: Date.now() - dbStart,
-      error: error instanceof Error ? error.message : "Unknown database error",
+      note: "DATABASE_URL not configured - database checks skipped",
     };
   }
 
@@ -73,17 +89,13 @@ export const GET = withRequestContext(async () => {
   );
   const overallStatus = allHealthy ? "healthy" : "degraded";
 
-  const response = {
+  logger.debug("Health check executed", { status: overallStatus });
+
+  return {
     status: overallStatus,
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version ?? "0.1.0",
     environment: process.env.NODE_ENV ?? "unknown",
     checks,
   };
-
-  logger.debug("Health check executed", { status: overallStatus });
-
-  return Response.json(response, {
-    status: allHealthy ? 200 : 503,
-  });
-});
+}, { bypass_health_check: true });

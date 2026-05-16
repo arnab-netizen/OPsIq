@@ -1,4 +1,5 @@
-import { withRequestContext } from "@/lib/api-handler";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -21,7 +22,7 @@ const detectEscalationSchema = z.object({
  *       escalation.detectKPIDeteriorationPattern()
  * Triggers: High-priority action overdue, KPI deterioration pattern detection
  */
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request) => {
   const { session } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_VIEW,
   });
@@ -37,7 +38,7 @@ export const POST = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   try {
@@ -108,7 +109,7 @@ export const POST = withRequestContext(async (request) => {
  *
  * Retrieve last escalation check status
  */
-export const GET = withRequestContext(async (request) => {
+export const GET = withEnforcementFull(async (request) => {
   await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_VIEW,
   });
@@ -124,7 +125,7 @@ export const GET = withRequestContext(async (request) => {
 
   const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
   if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+    throw new ForbiddenError("Unauthorized");
   }
 
   // TODO: Implement persistent escalation check history when schema is available

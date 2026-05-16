@@ -1,0 +1,856 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_boundary": {
+    "from_commit": "HEAD~4 (pre-G7D-C decision)",
+    "to_commit": "HEAD (latest continuation)",
+    "reason": "Audit all changes in G7D-C decision + continuation commits"
+  },
+  "changed_files": [
+    {
+      "file": "src/lib/canonical-route-enforcement.ts",
+      "commits": [
+        "f8b32d7_decision"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/services/re-evaluation.ts",
+      "commits": [
+        "f8b32d7_decision"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "reports/shadow-read/g7d_request_contract_audit.md",
+      "commits": [
+        "f8b32d7_decision"
+      ],
+      "primary_category": "REPORT_ONLY",
+      "change_summary": "Audit report or data artifact",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Documentation of decisions and findings"
+    },
+    {
+      "file": "reports/shadow-read/g7d_request_contract_decision.md",
+      "commits": [
+        "f8b32d7_decision"
+      ],
+      "primary_category": "REPORT_ONLY",
+      "change_summary": "Audit report or data artifact",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Documentation of decisions and findings"
+    },
+    {
+      "file": "reports/shadow-read/g7d_request_usage_inventory.json",
+      "commits": [
+        "f8b32d7_decision"
+      ],
+      "primary_category": "REPORT_ONLY",
+      "change_summary": "Audit report or data artifact",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Documentation of decisions and findings"
+    },
+    {
+      "file": "src/app/api/actions/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/admin/audit-log/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/admin/workspaces/[id]/members/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/admin/workspaces/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/audit/events/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/audit/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/billing/plan/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/business-impact/decision/[id]/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/business-impact/summary/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/contacts/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/clients/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/control/blocked-metrics/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/control/today/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/decision/export/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/deliverables/[deliverableId]/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/deliverables/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/actions/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/business-impact/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/decision-evidence/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/findings/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/recommendations/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "ACCEPT_REQUEST_CONTRACT_FIX",
+      "change_summary": "Added ctx.request! non-null assertions for route handler safety",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Safe to keep - wrapper always provides NextRequest at runtime"
+    },
+    {
+      "file": "src/app/api/evidence-bundles/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/evidence/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/leads/route.ts",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "shadow_read_violations.json",
+      "commits": [
+        "1d24ad1_typescript_fix"
+      ],
+      "primary_category": "REPORT_ONLY",
+      "change_summary": "Audit report or data artifact",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Documentation of decisions and findings"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/clients/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/control/blocked-metrics/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/control/today/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/deliverables/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/diagnosis/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/actions/[actionId]/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/condition/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/dashboard/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/intervention-state/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/intervention/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/recommendations/rerank/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/shock-events/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/engagements/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/evidence-bundles/[bundleId]/items/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/evidence-bundles/[bundleId]/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/evidence-bundles/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/evidence/[evidenceId]/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/evidence/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/execute/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/findings/[findingId]/evidence/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/findings/[findingId]/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/findings/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/leads/[leadId]/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/leads/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/opsiq/consulting-engine/run/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/recommendations/[recommendationId]/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/recommendations/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/users/[userId]/memberships/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/users/[userId]/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/app/api/users/route.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "UNAUTHORIZED_BRIDGE_EXPANSION",
+      "change_summary": "Added canonicalizeAuthContext() import and calls",
+      "allowed": false,
+      "risk": "MEDIUM",
+      "requires_revert": true,
+      "requires_quarantine": false,
+      "reason": "UNAUTHORIZED: Not part of approved G7D-C migration scope; extends auth bridge beyond accepted boundaries"
+    },
+    {
+      "file": "src/governance/auth-shadow-read-scanner.ts",
+      "commits": [
+        "7a1c819_continuation"
+      ],
+      "primary_category": "SCANNER_TYPE_ONLY_FIX",
+      "change_summary": "Changed export to export type (isolatedModules compliance)",
+      "allowed": true,
+      "risk": "LOW",
+      "requires_revert": false,
+      "requires_quarantine": false,
+      "reason": "Type-only change, no behavior impact"
+    }
+  ],
+  "summary": {
+    "total_changed_files": 64,
+    "accepted_request_contract_fixes": 19,
+    "accepted_previous_migrations": 0,
+    "unauthorized_bridge_expansions": 40,
+    "unauthorized_mutation_touches": 0,
+    "scanner_type_only_fixes": 1,
+    "scanner_behavior_changes": 0,
+    "unrelated_route_fixes": 0,
+    "service_compatibility_drift": 0,
+    "wrapper_or_auth_contract_drift": 0,
+    "report_only": 4,
+    "unknown": 0
+  }
+}

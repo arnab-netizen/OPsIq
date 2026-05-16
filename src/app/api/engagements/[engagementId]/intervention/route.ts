@@ -1,6 +1,8 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { ForbiddenError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   getInterventionState,
@@ -23,42 +25,28 @@ const updateInterventionModeSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withRequestContext(async (request, context) => {
-  // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({ capability: CAPABILITIES.INTERVENTION_VIEW });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const { engagementId } = params;
+    parseOrThrow(uuidSchema, engagementId);
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
+    await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
-  const { engagementId } = await context.params;
-  parseOrThrow(uuidSchema, engagementId);
+    const state = await getInterventionState(engagementId);
+    return Response.json(state);
+  },
+  { requireCapabilities: ["INTERVENTION_VIEW"], requireWorkspace: true }
+);
 
-  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
-
-  const state = await getInterventionState(engagementId);
-  return Response.json(state);
-});
-
-export const PATCH = withRequestContext(async (request, context) => {
+export const PATCH = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.INTERVENTION_MANAGE,
     internalOnly: true,
   });
 
-  // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
   const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
@@ -68,12 +56,7 @@ export const PATCH = withRequestContext(async (request, context) => {
     );
   }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
-  }
-
-  const { engagementId } = await context.params;
+  const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
 
   await assertEngagementAccess(session.user.id, engagementId, workspaceId);
@@ -88,10 +71,10 @@ export const PATCH = withRequestContext(async (request, context) => {
 
   if ("interventionPhase" in body) {
     const validatedBody = updateInterventionPhaseSchema.parse(body);
-    await updateInterventionPhase(engagementId, validatedBody, { session, policy }, workspaceId);
+    await updateInterventionPhase(engagementId, validatedBody, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
   } else if ("interventionMode" in body) {
     const validatedBody = updateInterventionModeSchema.parse(body);
-    await updateInterventionMode(engagementId, validatedBody, { session, policy }, workspaceId);
+    await updateInterventionMode(engagementId, validatedBody, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
   } else {
     return Response.json(
       {

@@ -1,5 +1,7 @@
-import { withRequestContext } from "@/lib/api-handler";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { withEnforcementFull } from "@/lib/enforced-route";
+import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -13,12 +15,13 @@ import { z } from "zod/v4";
 import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import type { NextRequest } from "next/server";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 const listBundlesSchema = z.object({
   engagementId: z.string().uuid(),
 });
 
-export const POST = withRequestContext(async (request) => {
+export const POST = withEnforcementFull(async (request: NextRequest) => {
   try {
     // Authenticate + authorize (fail-closed)
     const authContext = await withAuth({
@@ -37,7 +40,7 @@ export const POST = withRequestContext(async (request) => {
 
     const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
     if (!membership) {
-      return Response.json({ error: "Unauthorized" }, { status: 403 });
+      throw new ForbiddenError("Unauthorized");
     }
 
     const idempotencyKey = request.headers.get("idempotency-key");
@@ -64,7 +67,7 @@ export const POST = withRequestContext(async (request) => {
       });
     }
 
-    const result = await createEvidenceBundle(body, authContext, workspaceId);
+    const result = await createEvidenceBundle(body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
     await recordIdempotencyResponse(idempotencyKey, 201, result);
 
     return Response.json(result, { status: 201 });
@@ -78,34 +81,12 @@ export const POST = withRequestContext(async (request) => {
   }
 });
 
-export const GET = withRequestContext(async (request) => {
-  try {
-    // Authenticate + authorize (fail-closed)
-    await withAuth({
-      capability: CAPABILITIES.EVIDENCE_VIEW,
-    });
-
-    // Validate workspace membership (fail-closed)
-    const nextRequest = request as NextRequest;
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
-    if (!workspaceId) {
-      return Response.json(
-        { error: "Workspace ID required (x-workspace-id header)" },
-        { status: 400 }
-      );
-    }
-
-    const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-    if (!membership) {
-      return Response.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const params = parseSearchParams(request.url, listBundlesSchema);
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const params = parseSearchParams(ctx.request!.url, listBundlesSchema);
     const result = await listEvidenceBundles(params.engagementId, workspaceId);
-
     return Response.json({ bundles: result });
-  } catch (error) {
-    logger.error("Error listing evidence bundles", { error });
-    return errorToResponse(error);
-  }
-});
+  },
+  { requireWorkspace: true, requireCapabilities: ['EVIDENCE_VIEW'] }
+);
