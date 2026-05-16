@@ -3,7 +3,6 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -45,13 +44,11 @@ export const GET = withCanonicalEnforcement(
 );
 
 export const PATCH = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_UPDATE,
     internalOnly: true,
   });
 
-  // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
   const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
@@ -78,13 +75,11 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
 });
 
 export const POST = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.CLIENT_ARCHIVE,
     internalOnly: true,
   });
 
-  // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
   const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {

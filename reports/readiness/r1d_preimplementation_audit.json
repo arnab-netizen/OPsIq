@@ -1,0 +1,323 @@
+{
+  "analysis_date": "2026-05-16",
+  "phase": "R1-D-B",
+  "scope": "7 authorized R1-D routes handler-by-handler analysis",
+  "baseline": {
+    "totalViolations": 390,
+    "critical": 247,
+    "blockBuild": 143
+  },
+  "routes": [
+    {
+      "route": "src/app/api/notifications/[id]/route.ts",
+      "handlers": [
+        {
+          "method": "GET",
+          "current_auth_pattern": "withEnforcementFull + await withAuth() + enforceWorkspaceScoping",
+          "current_workspace_scoping": "request.headers.get('x-workspace-id'), then enforceWorkspaceScoping()",
+          "current_capability_semantics": "none - just authentication, no specific capability checked",
+          "current_service_calls": ["getNotification"],
+          "service_input_expectations": "getNotification(id) - takes notification ID only, no auth context expected",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Simple read-only, basic workspace scoping, no capabilities, no service changes needed"
+        },
+        {
+          "method": "PATCH",
+          "current_auth_pattern": "withEnforcementFull + await withAuth() + enforceWorkspaceScoping",
+          "current_workspace_scoping": "request.headers.get('x-workspace-id'), then enforceWorkspaceScoping()",
+          "current_capability_semantics": "none - just authentication",
+          "current_service_calls": ["getNotification", "markAsRead"],
+          "service_input_expectations": "getNotification(id), markAsRead(id) - no auth context expected",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Simple mutation, no capabilities, no service changes needed"
+        }
+      ],
+      "route_risk_score": 1,
+      "route_verdict": "SAFE_FOR_MODERNIZATION"
+    },
+    {
+      "route": "src/app/api/clients/[clientId]/route.ts",
+      "handlers": [
+        {
+          "method": "GET",
+          "current_auth_pattern": "withCanonicalEnforcement (ALREADY MODERN)",
+          "current_workspace_scoping": "ctx.verifiedWorkspaceId (canonical)",
+          "current_capability_semantics": "requireCapabilities: ['CLIENT_VIEW']",
+          "current_service_calls": ["getClientById"],
+          "service_input_expectations": "getClientById(clientId, workspaceId)",
+          "already_modernized": true,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "decision": "SKIP_ALREADY_MODERNIZED",
+          "reason": "Already using withCanonicalEnforcement - no work needed"
+        },
+        {
+          "method": "PATCH",
+          "current_auth_pattern": "withEnforcementFull + await withAuth({capability: CLIENT_UPDATE, internalOnly: true}) + canonicalizeAuthContext",
+          "current_workspace_scoping": "request.headers.get('x-workspace-id'), enforceWorkspaceScoping(), then canonicalizeAuthContext",
+          "current_capability_semantics": "CLIENT_UPDATE capability required, internalOnly flag set",
+          "current_service_calls": ["updateClient", "getClientById"],
+          "service_input_expectations": "updateClient expects canonicalContext (ServiceAuthEnvelope equivalent), getClientById(clientId, workspaceId)",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Can modernize to withCanonicalEnforcement with CLIENT_UPDATE capability, preserve internalOnly semantics via requireActorType if needed"
+        },
+        {
+          "method": "POST",
+          "current_auth_pattern": "withEnforcementFull + await withAuth({capability: CLIENT_ARCHIVE, internalOnly: true}) + canonicalizeAuthContext",
+          "current_workspace_scoping": "request.headers.get('x-workspace-id'), enforceWorkspaceScoping(), then canonicalizeAuthContext",
+          "current_capability_semantics": "CLIENT_ARCHIVE capability required, internalOnly flag set, idempotency-key header required",
+          "current_service_calls": ["archiveClient", "checkIdempotencyKey", "recordIdempotencyResponse", "recordIdempotencyError"],
+          "service_input_expectations": "archiveClient expects canonicalContext, checkIdempotencyKey/recordIdempotency expect simple parameters",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Can modernize with CLIENT_ARCHIVE capability, idempotency logic unchanged"
+        }
+      ],
+      "route_risk_score": 1,
+      "route_verdict": "SAFE_FOR_MODERNIZATION (1 already modern, 2 safe to modernize)"
+    },
+    {
+      "route": "src/app/api/governance/alerts/route.ts",
+      "handlers": [
+        {
+          "method": "GET",
+          "current_auth_pattern": "withEnforcementFull + await withAuth() (called twice) + requireWorkspaceContext()",
+          "current_workspace_scoping": "requireWorkspaceContext() - service layer call",
+          "current_capability_semantics": "none - just authentication",
+          "current_service_calls": ["requireWorkspaceContext", "calculateGovernanceMetrics", "getObservabilitySummary", "evaluateGovernanceAlerts", "logAuditEvent"],
+          "service_input_expectations": "All services expect workspace context passed from handler context, not auth wrapper",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Simple read-only aggregate, no capabilities, can switch to canonical enforcement with workspace requirement"
+        }
+      ],
+      "route_risk_score": 1,
+      "route_verdict": "SAFE_FOR_MODERNIZATION"
+    },
+    {
+      "route": "src/app/api/entitlement/quota/route.ts",
+      "handlers": [
+        {
+          "method": "GET",
+          "current_auth_pattern": "withEnforcementFull + await withAuth() + enforceWorkspaceScoping",
+          "current_workspace_scoping": "request.headers.get('x-workspace-id'), enforceWorkspaceScoping()",
+          "current_capability_semantics": "none - just authentication",
+          "current_service_calls": ["getQuotaUsage", "getSubscriptionTier", "getTierConfig"],
+          "service_input_expectations": "getQuotaUsage(workspaceId, userId), getSubscriptionTier(workspaceId), getTierConfig(tier) - no auth context expected",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "note": "Code contains existing 'any' type casts (line 98-99) - these are pre-existing, not added by modernization",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Simple read-only, no capabilities, no service changes needed - preserve existing code as-is"
+        },
+        {
+          "method": "POST",
+          "current_auth_pattern": "withEnforcementFull + await withAuth() + enforceWorkspaceScoping",
+          "current_workspace_scoping": "request.headers.get('x-workspace-id'), enforceWorkspaceScoping()",
+          "current_capability_semantics": "none - just authentication",
+          "current_service_calls": ["getQuotaUsage", "getSubscriptionTier", "getTierConfig", "incrementQuotaUsage"],
+          "service_input_expectations": "incrementQuotaUsage(workspaceId, userId, type) - no auth context expected",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "note": "Code contains existing 'any' type casts (line 98-99) - these are pre-existing, not added by modernization",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Simple mutation with validation, no capabilities, no service changes needed"
+        }
+      ],
+      "route_risk_score": 1,
+      "route_verdict": "SAFE_FOR_MODERNIZATION"
+    },
+    {
+      "route": "src/app/api/observability/summary/route.ts",
+      "handlers": [
+        {
+          "method": "GET",
+          "current_auth_pattern": "withEnforcementFull + await withAuth() (called twice) + requireWorkspaceContext()",
+          "current_workspace_scoping": "requireWorkspaceContext() - service layer call",
+          "current_capability_semantics": "none - just authentication",
+          "current_service_calls": ["requireWorkspaceContext", "getObservabilitySummary", "logAuditEvent"],
+          "service_input_expectations": "Services expect workspace context from handler, no auth context expected",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Simple read-only, no capabilities, basic workspace scoping"
+        }
+      ],
+      "route_risk_score": 1,
+      "route_verdict": "SAFE_FOR_MODERNIZATION"
+    },
+    {
+      "route": "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
+      "handlers": [
+        {
+          "method": "PATCH",
+          "current_auth_pattern": "withEnforcementFull + await withAuth({capability: CLIENT_UPDATE, internalOnly: true}) + canonicalizeAuthContext",
+          "current_workspace_scoping": "request.headers.get('x-workspace-id'), canonicalizeAuthContext",
+          "current_capability_semantics": "CLIENT_UPDATE capability required, internalOnly flag set",
+          "current_service_calls": ["updateContact"],
+          "service_input_expectations": "updateContact expects canonicalContext (ServiceAuthEnvelope), workspaceId",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Can modernize with CLIENT_UPDATE capability requirement"
+        },
+        {
+          "method": "DELETE",
+          "current_auth_pattern": "withEnforcementFull + await withAuth({capability: CLIENT_UPDATE, internalOnly: true}) + canonicalizeAuthContext",
+          "current_workspace_scoping": "request.headers.get('x-workspace-id'), canonicalizeAuthContext",
+          "current_capability_semantics": "CLIENT_UPDATE capability required, internalOnly flag set",
+          "current_service_calls": ["deactivateContact"],
+          "service_input_expectations": "deactivateContact expects canonicalContext (ServiceAuthEnvelope), workspaceId",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Can modernize with CLIENT_UPDATE capability requirement"
+        }
+      ],
+      "route_risk_score": 1,
+      "route_verdict": "SAFE_FOR_MODERNIZATION"
+    },
+    {
+      "route": "src/app/api/growth/revenue-streams/route.ts",
+      "handlers": [
+        {
+          "method": "POST",
+          "current_auth_pattern": "withEnforcementFull + await withAuth({capability: ENGAGEMENT_UPDATE}) + enforceWorkspaceScoping",
+          "current_workspace_scoping": "request.headers.get('x-workspace-id'), enforceWorkspaceScoping()",
+          "current_capability_semantics": "ENGAGEMENT_UPDATE capability required",
+          "current_service_calls": ["RevenueEngine.createRevenueStream"],
+          "service_input_expectations": "createRevenueStream(workspaceId, validated) - no auth context expected",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "MEDIUM",
+          "note": "Some validation logic and error handling, but straightforward",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Can modernize with ENGAGEMENT_UPDATE capability requirement, no service changes"
+        },
+        {
+          "method": "GET",
+          "current_auth_pattern": "withEnforcementFull + await withAuth({capability: ENGAGEMENT_VIEW}) + enforceWorkspaceScoping",
+          "current_workspace_scoping": "request.headers.get('x-workspace-id'), enforceWorkspaceScoping()",
+          "current_capability_semantics": "ENGAGEMENT_VIEW capability required",
+          "current_service_calls": ["RevenueEngine.analyzeStreamHealth"],
+          "service_input_expectations": "analyzeStreamHealth(workspaceId, sampleStream) - no auth context expected, sample data only (demo)",
+          "already_modernized": false,
+          "service_refactor_required": false,
+          "new_capability_required": false,
+          "entitlement_or_role_change_required": false,
+          "policy_wrapper_required": false,
+          "workspace_role_design_required": false,
+          "response_shape_risk": "LOW",
+          "business_logic_risk": "LOW",
+          "note": "Contains sample data with 'as any' casts (line 106-107) - pre-existing, not added by modernization",
+          "decision": "IMPLEMENT_NOW",
+          "reason": "Can modernize with ENGAGEMENT_VIEW capability requirement"
+        }
+      ],
+      "route_risk_score": 2,
+      "route_verdict": "SAFE_FOR_MODERNIZATION"
+    }
+  ],
+  "summary": {
+    "total_routes_audited": 7,
+    "total_handlers_audited": 14,
+    "handlers_to_implement": 13,
+    "handlers_already_modernized": 1,
+    "handlers_excluded": 0,
+    "routes_safe": 7,
+    "routes_unsafe": 0,
+    "implementation_confidence": "VERY HIGH",
+    "expected_violations_fixed": 40,
+    "expected_post_implementation_total": 350
+  },
+  "verdict": "✓ ALL 7 ROUTES SAFE FOR MODERNIZATION - 13 of 14 handlers ready to implement (1 already modern)",
+  "notes": [
+    "clients/[clientId]/route.ts GET handler already uses withCanonicalEnforcement - will skip",
+    "Handlers follow consistent patterns: legacy withEnforcementFull → canonical withCanonicalEnforcement",
+    "All service calls are simple and don't require service-side changes",
+    "No new capabilities need to be created (all use existing capabilities)",
+    "No entitlement or role changes required",
+    "No policy wrapper design needed",
+    "No workspace redesign needed",
+    "All response shapes remain unchanged",
+    "All business logic remains unchanged"
+  ]
+}

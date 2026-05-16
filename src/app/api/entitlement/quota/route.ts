@@ -4,11 +4,9 @@
  * Check and manage quota usage for workspace.
  */
 
-import { NextRequest } from "next/server";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { z } from "zod";
 import {
   getQuotaUsage,
@@ -25,23 +23,9 @@ const IncrementQuotaSchema = z.object({
  * GET /api/entitlement/quota
  * Get quota usage for workspace
  */
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate user (fail-closed)
-  const auth = await withAuth();
-
-  // Get workspace ID from header
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
-
-  // Verify user is member of workspace (fail-closed)
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new UnauthorizedError("Unauthorized");
-  }
-
-  const userId = auth.session.user.id;
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  const workspaceId = ctx.verifiedWorkspaceId;
+  const userId = ctx.verifiedActorId;
 
   const usage = getQuotaUsage(workspaceId, userId);
   const tier = getSubscriptionTier(workspaceId);
@@ -61,31 +45,18 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
       experiments: Math.max(0, config.experimentsPerMonth - usage.experimentsCreated),
     },
   };
-});
+}, { requireWorkspace: true });
 
 /**
  * POST /api/entitlement/quota/increment
  * Increment quota usage
  */
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate user (fail-closed)
-  const auth = await withAuth();
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  const workspaceId = ctx.verifiedWorkspaceId;
+  const userId = ctx.verifiedActorId;
 
-  // Get workspace ID from header
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
-
-  // Verify user is member of workspace (fail-closed)
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new UnauthorizedError("Unauthorized");
-  }
-
-  const userId = auth.session.user.id;
-
-  const body = await request.json();
+  const nextRequest = ctx.request as any;
+  const body = await nextRequest.json();
   const parsed = IncrementQuotaSchema.parse(body);
 
   // Check if quota available before incrementing
@@ -115,4 +86,4 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       experiments: Math.max(0, config.experimentsPerMonth - (updatedUsage.experimentsCreated || 0)),
     },
   };
-});
+}, { requireWorkspace: true });

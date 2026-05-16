@@ -1,24 +1,21 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { evaluateGovernanceAlerts } from "@/services/governance/alerts";
-import { withAuth } from "@/lib/auth-guard";
-import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
+import type { NextRequest } from "next/server";
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  await withAuth();
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   // Get workspace context (fail closed if missing)
   const workspace = await requireWorkspaceContext();
 
-  // Get authenticated user for audit
-  const { session } = await withAuth();
-  const userId = session?.user.id ?? null;
+  const userId = ctx.verifiedActorId;
 
   // Get period parameter from query
-  const periodParam = request.nextUrl.searchParams.get("period") as "last24h" | "last7d" | null;
+  const nextRequest = ctx.request as NextRequest;
+  const periodParam = nextRequest.nextUrl.searchParams.get("period") as "last24h" | "last7d" | null;
   const period = (periodParam === "last7d" ? "last7d" : "last24h") as "last24h" | "last7d";
 
   // Get governance metrics and observability summary
@@ -60,4 +57,4 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   });
 
   return alerts;
-});
+}, { requireWorkspace: true });

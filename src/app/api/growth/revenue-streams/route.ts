@@ -1,7 +1,6 @@
-import { withAuth } from "@/lib/auth-guard";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { ForbiddenError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { RevenueEngine } from "@/services/growth/revenue-engine";
 import { RevenueStream } from "@/domain/growth/growth-engines";
@@ -22,27 +21,11 @@ const createStreamSchema = z.object({
  * Create a new revenue stream (workspace-scoped)
  * Wire: RevenueEngine.createRevenueStream()
  */
-export const POST = withEnforcementFull(async (request) => {
-  const { session } = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_UPDATE,
-  });
-
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   try {
-    const body = await request.json();
+    const body = await (ctx.request as NextRequest).json();
     const validated = createStreamSchema.parse(body);
 
     const result = RevenueEngine.createRevenueStream(workspaceId, validated as Partial<RevenueStream>);
@@ -69,7 +52,7 @@ export const POST = withEnforcementFull(async (request) => {
       { status: 500 }
     );
   }
-});
+}, { requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE], requireWorkspace: true });
 
 /**
  * GET /api/growth/revenue-streams/health
@@ -77,24 +60,8 @@ export const POST = withEnforcementFull(async (request) => {
  * Analyze revenue stream health (requires stream data in body)
  * Wire: RevenueEngine.analyzeStreamHealth()
  */
-export const GET = withEnforcementFull(async (request) => {
-  const { session } = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_VIEW,
-  });
-
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   try {
     // For demo: analyze a sample stream
@@ -134,4 +101,4 @@ export const GET = withEnforcementFull(async (request) => {
       { status: 500 }
     );
   }
-});
+}, { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true });

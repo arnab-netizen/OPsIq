@@ -1,23 +1,19 @@
-import { withAuth } from "@/lib/auth-guard";
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import type { NextRequest } from "next/server";
 import { requireWorkspaceContext } from "@/services/workspace/context";
-import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { createEventLogger } from "@/lib/observability/log";
 
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  await withAuth();
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   // Get workspace context early (fail closed if missing)
   const workspace = await requireWorkspaceContext();
 
   // Initialize logger once workspace is available
   const logger = createEventLogger("api_observability_summary", workspace.workspaceId);
 
-  // Get session for user identity
-  const { session } = await withAuth();
-  const userId = session?.user.id ?? null;
+  const userId = ctx.verifiedActorId;
 
   // Get observability summary from persisted real data only
   const summary = await getObservabilitySummary(workspace.workspaceId);
@@ -48,4 +44,4 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
   });
 
   return summary;
-});
+}, { requireWorkspace: true });
