@@ -1,0 +1,274 @@
+{
+  "phase": "R1-SERVICE-0",
+  "date": "2026-05-16",
+  "purpose": "Inventory all services with auth input types and coupling patterns",
+  "total_services_audited": 27,
+  "services_expecting_service_auth_envelope": 3,
+  "services_expecting_canonical_auth_context": 18,
+  "services_mixed_or_legacy": 6,
+  "services": [
+    {
+      "file": "src/services/action.ts",
+      "functions": [
+        {
+          "function": "createAction",
+          "current_auth_input_type": "CanonicalAuthContext",
+          "current_fields_used": ["verifiedSessionSnapshot", "session.user.id"],
+          "called_by_routes": [
+            "src/app/api/actions/route.ts (POST - not yet modernized)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "MUTATION",
+          "workspace_required": true,
+          "capability_required": true,
+          "uses_policy": false,
+          "uses_audit": true,
+          "uses_idempotency": true,
+          "risk": "LOW",
+          "notes": "Uses requireServiceContext() to extract actorId and workspaceId. Service correctly designed for CanonicalAuthContext."
+        },
+        {
+          "function": "updateAction",
+          "current_auth_input_type": "CanonicalAuthContext",
+          "current_fields_used": ["verifiedSessionSnapshot"],
+          "called_by_routes": [
+            "src/app/api/actions/[actionId]/route.ts (PATCH - BLOCKED - uses withEnforcementFull)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "MUTATION",
+          "workspace_required": true,
+          "capability_required": true,
+          "uses_policy": false,
+          "uses_audit": true,
+          "uses_idempotency": false,
+          "risk": "LOW",
+          "notes": "Route PATCH handler still uses legacy withEnforcementFull + canonicalizeAuthContext(). Service ready for CanonicalAuthContext conversion."
+        },
+        {
+          "function": "getActionById",
+          "current_auth_input_type": "None (no auth param)",
+          "current_fields_used": [],
+          "called_by_routes": [
+            "src/app/api/actions/[actionId]/route.ts (GET - modernized to withCanonicalEnforcement)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "READ",
+          "workspace_required": true,
+          "capability_required": false,
+          "uses_policy": false,
+          "uses_audit": false,
+          "uses_idempotency": false,
+          "risk": "LOW",
+          "notes": "Read-only, no auth needed at service layer."
+        }
+      ]
+    },
+    {
+      "file": "src/services/findings.ts",
+      "functions": [
+        {
+          "function": "createFinding",
+          "current_auth_input_type": "ServiceAuthEnvelope",
+          "current_fields_used": ["verifiedActorId", "verifiedWorkspaceId"],
+          "called_by_routes": [
+            "src/app/api/findings/route.ts (POST)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "MUTATION",
+          "workspace_required": true,
+          "capability_required": true,
+          "uses_policy": false,
+          "uses_audit": true,
+          "uses_idempotency": false,
+          "risk": "BLOCKED",
+          "notes": "Expects ServiceAuthEnvelope. Route handler still uses legacy canonicalizeAuthContext() construction. Service needs either adapter or contract change."
+        },
+        {
+          "function": "updateFinding",
+          "current_auth_input_type": "ServiceAuthEnvelope",
+          "current_fields_used": ["verifiedActorId", "verifiedWorkspaceId"],
+          "called_by_routes": [
+            "src/app/api/findings/[findingId]/route.ts (PATCH - BLOCKED)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "MUTATION",
+          "workspace_required": true,
+          "capability_required": true,
+          "uses_policy": false,
+          "uses_audit": true,
+          "uses_idempotency": false,
+          "risk": "BLOCKED",
+          "notes": "Route PATCH handler still uses legacy withEnforcementFull + canonicalizeAuthContext(). Service expects ServiceAuthEnvelope type."
+        },
+        {
+          "function": "getFindingDetail",
+          "current_auth_input_type": "None (no auth param)",
+          "current_fields_used": [],
+          "called_by_routes": [
+            "src/app/api/findings/[findingId]/route.ts (GET - modernized)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "READ",
+          "workspace_required": true,
+          "capability_required": false,
+          "uses_policy": false,
+          "uses_audit": false,
+          "uses_idempotency": false,
+          "risk": "LOW",
+          "notes": "Read-only, no auth needed."
+        }
+      ]
+    },
+    {
+      "file": "src/services/diagnosis.ts",
+      "functions": [
+        {
+          "function": "diagnoseBusiness",
+          "current_auth_input_type": "CanonicalAuthContext",
+          "current_fields_used": ["verifiedSessionSnapshot"],
+          "called_by_routes": [
+            "src/app/api/diagnosis/route.ts (POST - BLOCKED with canonicalizeAuthContext)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "MUTATION",
+          "workspace_required": true,
+          "capability_required": true,
+          "uses_policy": false,
+          "uses_audit": true,
+          "uses_idempotency": false,
+          "risk": "MEDIUM",
+          "notes": "Service accepts CanonicalAuthContext. Route POST handler constructs ServiceAuthEnvelope via canonicalizeAuthContext(). Inconsistent contract."
+        }
+      ]
+    },
+    {
+      "file": "src/services/engagement.ts",
+      "functions": [
+        {
+          "function": "createEngagement",
+          "current_auth_input_type": "CanonicalAuthContext",
+          "current_fields_used": ["verifiedSessionSnapshot", "session", "policy"],
+          "called_by_routes": [
+            "src/app/api/engagements/route.ts (POST)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "MUTATION",
+          "workspace_required": true,
+          "capability_required": true,
+          "uses_policy": true,
+          "uses_audit": true,
+          "uses_idempotency": false,
+          "risk": "LOW",
+          "notes": "Service designed for CanonicalAuthContext. Route passes via canonicalizeAuthContext (legacy). Can be modernized with route wrapper change."
+        }
+      ]
+    },
+    {
+      "file": "src/services/evidence.ts",
+      "functions": [
+        {
+          "function": "createEvidenceBundle",
+          "current_auth_input_type": "CanonicalAuthContext",
+          "current_fields_used": ["verifiedSessionSnapshot"],
+          "called_by_routes": [
+            "src/app/api/evidence-bundles/route.ts (POST)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "MUTATION",
+          "workspace_required": true,
+          "capability_required": true,
+          "uses_policy": false,
+          "uses_audit": true,
+          "uses_idempotency": false,
+          "risk": "LOW",
+          "notes": "Service expects CanonicalAuthContext. Route still using legacy canonicalizeAuthContext()."
+        }
+      ]
+    },
+    {
+      "file": "src/services/deliverable.ts",
+      "functions": [
+        {
+          "function": "createDeliverable",
+          "current_auth_input_type": "ServiceAuthEnvelope",
+          "current_fields_used": ["verifiedActorId", "verifiedWorkspaceId"],
+          "called_by_routes": [
+            "src/app/api/deliverables/route.ts (POST)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "MUTATION",
+          "workspace_required": true,
+          "capability_required": true,
+          "uses_policy": false,
+          "uses_audit": true,
+          "uses_idempotency": false,
+          "risk": "BLOCKED",
+          "notes": "Expects ServiceAuthEnvelope. Route POST handler creates envelope via canonicalizeAuthContext()."
+        }
+      ]
+    },
+    {
+      "file": "src/services/execute.ts",
+      "functions": [
+        {
+          "function": "executeRecommendation",
+          "current_auth_input_type": "CanonicalAuthContext (but constructs ServiceAuthEnvelope internally)",
+          "current_fields_used": ["verifiedSessionSnapshot", "session", "policy"],
+          "called_by_routes": [
+            "src/app/api/execute/route.ts (POST)"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "MUTATION",
+          "workspace_required": true,
+          "capability_required": true,
+          "uses_policy": true,
+          "uses_audit": true,
+          "uses_idempotency": true,
+          "risk": "MEDIUM",
+          "notes": "Service internally constructs ServiceAuthEnvelope for downstream service calls. Mixed pattern - accepts CanonicalAuthContext but creates envelope internally."
+        }
+      ]
+    },
+    {
+      "file": "src/services/stage.ts",
+      "functions": [
+        {
+          "function": "getStage",
+          "current_auth_input_type": "CanonicalAuthContext",
+          "current_fields_used": ["verifiedSessionSnapshot"],
+          "called_by_routes": [
+            "src/app/api/stages/[stageId]/route.ts"
+          ],
+          "called_by_services": ["N/A"],
+          "mutation_or_read": "READ",
+          "workspace_required": true,
+          "capability_required": false,
+          "uses_policy": false,
+          "uses_audit": false,
+          "uses_idempotency": false,
+          "risk": "LOW",
+          "notes": "Read-only service accepting CanonicalAuthContext."
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_services_inventoried": 27,
+    "services_by_input_type": {
+      "ServiceAuthEnvelope": 3,
+      "CanonicalAuthContext": 18,
+      "Mixed (internal envelope construction)": 2,
+      "None (read-only, no auth)": 4
+    },
+    "critical_finding": "SERVICE CONTRACT INCONSISTENCY: Some services expect ServiceAuthEnvelope (findings, deliverable), others expect CanonicalAuthContext (action, diagnosis, engagement, evidence, execute, stage). Routes using legacy canonicalizeAuthContext() to construct ServiceAuthEnvelope for some, but trying to pass CanonicalAuthContext for others.",
+    "blocked_routes_by_service": {
+      "updateAction": 1,
+      "updateFinding": 1,
+      "diagnoseBusiness": 1,
+      "updateClient": 1,
+      "updateContact": 2,
+      "other_service_coupled": 35
+    },
+    "total_blocked_violations": 140
+  }
+}
