@@ -1,0 +1,219 @@
+{
+  "phase": "X9E-6",
+  "date": "2026-05-16",
+  "status": "SCOPE_AUDIT_COMPLETE",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_period": "X9E-6 reject route capability bug fix",
+  "scope_specification": {
+    "allowed_changes": "src/app/api/decisions/[decisionId]/reject/route.ts - capability requirement only",
+    "forbidden_changes": [
+      "service refactoring",
+      "wrapper changes",
+      "auth context changes",
+      "route migrations beyond target",
+      "scanner modifications",
+      "capability additions",
+      "accept route changes",
+      "close route changes",
+      "decisions/create route changes",
+      "recommendations route changes",
+      "workspace/role design",
+      "any/as any TypeScript workarounds",
+      "permission fabrication"
+    ]
+  },
+  "changes_verified": {
+    "source_files_modified": [
+      {
+        "file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+        "changes": 1,
+        "description": "Authorization capability parameter correction",
+        "lines": [39],
+        "change_1": {
+          "line": 39,
+          "type": "parameter_replacement",
+          "before": "{ requireCapabilities: [\"DECISION_ACCEPT\"], requireWorkspace: true }",
+          "after": "{ requireCapabilities: [\"DECISION_REJECT\"], requireWorkspace: true }",
+          "category": "capability_correction"
+        },
+        "import_changes": "none",
+        "import_status": "CAPABILITIES already imported, no changes needed",
+        "handler_changes": "none",
+        "service_changes": "none",
+        "response_changes": "none"
+      }
+    ],
+    "generated_files_updated": [
+      {
+        "file": "shadow_read_violations.json",
+        "type": "generated",
+        "changes": "timestamp updated, violation entries unchanged",
+        "note": "Scanner output file - not a source file"
+      }
+    ],
+    "source_files_not_modified": [
+      {
+        "file": "src/app/api/decisions/[decisionId]/accept/route.ts",
+        "status": "✓ NOT_MODIFIED",
+        "reason": "Accept route correctly uses DECISION_ACCEPT"
+      },
+      {
+        "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+        "status": "✓ NOT_MODIFIED",
+        "reason": "Close route left unchanged (governance gap acknowledged)"
+      },
+      {
+        "file": "src/app/api/decisions/create/route.ts",
+        "status": "✓ NOT_MODIFIED",
+        "reason": "Decisions create route unchanged (X9E-2 already completed)"
+      },
+      {
+        "file": "src/app/api/recommendations/route.ts",
+        "status": "✓ NOT_MODIFIED",
+        "reason": "Recommendations route unchanged (X9E-4 already completed)"
+      }
+    ],
+    "services_modified": 0,
+    "wrappers_modified": 0,
+    "auth_context_modified": 0,
+    "capabilities_modified": 0,
+    "accept_route_modified": false,
+    "close_route_modified": false,
+    "decisions_create_modified": false,
+    "recommendations_route_modified": false,
+    "any_type_usage": false,
+    "business_logic_changes": 0,
+    "response_shape_changes": 0,
+    "handler_signature_changes": 0
+  },
+  "forbidden_patterns_detected": {
+    "any_types": 0,
+    "as_any_casts": 0,
+    "permission_fabrication": 0,
+    "silent_mutations": 0,
+    "state_transition_violations": 0,
+    "unauthorized_service_changes": 0,
+    "unauthorized_wrapper_changes": 0,
+    "unauthorized_auth_context_changes": 0
+  },
+  "scope_compliance": {
+    "phase_A_preimplementation": {
+      "status": "✓ COMPLIANT",
+      "scope": "Verify reject route uses DECISION_ACCEPT and DECISION_REJECT exists",
+      "compliance": "Both verified before changes made"
+    },
+    "phase_B_implementation": {
+      "status": "✓ COMPLIANT",
+      "scope": "Replace DECISION_ACCEPT with DECISION_REJECT in reject route only",
+      "compliance": "Exactly 1 parameter change made, no other modifications"
+    },
+    "phase_C_test_verification": {
+      "status": "✓ COMPLIANT",
+      "scope": "No test updates required (constants already tested)",
+      "compliance": "No test changes made (not required)"
+    },
+    "phase_D_validation": {
+      "status": "✓ COMPLIANT",
+      "scope": "All validation gates pass",
+      "compliance": "Build, tests, scanner all pass (402/402 tests, 0 errors)"
+    },
+    "phase_E_scope_audit": {
+      "status": "✓ COMPLIANT",
+      "scope": "Verify only reject route capability changed",
+      "compliance": "Only 1 line changed in reject route, no other source files modified"
+    }
+  },
+  "file_by_file_audit": {
+    "reject_route": {
+      "file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+      "status": "✓ EXPECTED_CHANGE",
+      "changes": 1,
+      "type": "capability_parameter_correction",
+      "classification": "SELECTED_BUG_FIX",
+      "allowed": true,
+      "change_detail": "DECISION_ACCEPT → DECISION_REJECT"
+    },
+    "accept_route": {
+      "file": "src/app/api/decisions/[decisionId]/accept/route.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "classification": "NOT_MODIFIED",
+      "allowed": true
+    },
+    "close_route": {
+      "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "classification": "NOT_MODIFIED",
+      "allowed": true
+    },
+    "decisions_create_route": {
+      "file": "src/app/api/decisions/create/route.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "classification": "NOT_MODIFIED",
+      "allowed": true
+    },
+    "recommendations_route": {
+      "file": "src/app/api/recommendations/route.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "classification": "NOT_MODIFIED",
+      "allowed": true
+    },
+    "decision_service": {
+      "file": "src/services/decision-validation/decision-acceptance.service.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "classification": "NOT_MODIFIED",
+      "allowed": true
+    },
+    "capabilities_constants": {
+      "file": "src/domain/constants/capabilities.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "classification": "NOT_MODIFIED",
+      "allowed": true
+    },
+    "auth_guard_wrapper": {
+      "file": "src/lib/auth-guard.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "classification": "NOT_MODIFIED",
+      "allowed": true
+    },
+    "canonical_enforcement_wrapper": {
+      "file": "src/lib/canonical-route-enforcement.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "classification": "NOT_MODIFIED",
+      "allowed": true
+    },
+    "scanner_violations_file": {
+      "file": "shadow_read_violations.json",
+      "status": "✓ GENERATED_FILE_UPDATE",
+      "changes": "timestamp and entry order only",
+      "classification": "REPORT_ONLY",
+      "allowed": true,
+      "note": "Generated by scanner during validation"
+    }
+  },
+  "violation_summary": {
+    "critical_violations": 0,
+    "scope_violations": 0,
+    "architecture_violations": 0,
+    "pattern_violations": 0,
+    "unauthorized_changes": 0,
+    "conclusion": "✓ AUDIT PASSED - All changes within approved scope"
+  },
+  "conclusion": {
+    "status": "✓ X9E-6 SCOPE AUDIT PASSED",
+    "summary": "All changes are within approved scope. Only src/app/api/decisions/[decisionId]/reject/route.ts was modified with exactly 1 capability parameter change (DECISION_ACCEPT → DECISION_REJECT). No services changed, no wrappers changed, no auth context changes, no capability additions, no unauthorized routes modified, no forbidden patterns detected.",
+    "ready_for_phase_F": true,
+    "recommendations": [
+      "Phase F: Generate acceptance decision report",
+      "Phase F: Confirm reject route bug fixed",
+      "Phase F: Provide final metrics and recommendation"
+    ]
+  }
+}

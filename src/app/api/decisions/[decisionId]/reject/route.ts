@@ -36,5 +36,5 @@ export const POST = withCanonicalEnforcement(
 
     return result;
   },
-  { requireCapabilities: ["DECISION_ACCEPT"], requireWorkspace: true }
+  { requireCapabilities: ["DECISION_REJECT"], requireWorkspace: true }
 );
