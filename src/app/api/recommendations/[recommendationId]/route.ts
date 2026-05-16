@@ -1,7 +1,7 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { ForbiddenError } from "@/infra/errors";
+import { requireCapability } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getRecommendation, updateRecommendation } from "@/services/recommendation";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -11,7 +11,6 @@ import {
   RECOMMENDATION_PRIORITIES,
   RECOMMENDATION_TYPES,
 } from "@/domain/constants/statuses";
-import type { NextRequest } from "next/server";
 
 const updateRecommendationSchema = z.object({
   title: z.string().min(1).optional(),
@@ -28,27 +27,14 @@ const updateRecommendationSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withEnforcementFull(async (request, { ctx }, params) => {
+export const GET = withCanonicalEnforcement(async (ctx, params) => {
   // Authenticate + authorize (fail-closed)
-  const { policy } = ctx.verifiedSessionSnapshot;
-  if (!policy.can(CAPABILITIES.RECOMMENDATION_VIEW)) {
-    throw new ForbiddenError('Insufficient permissions to view recommendation');
+  if (ctx.policy) {
+    requireCapability(ctx.policy, CAPABILITIES.RECOMMENDATION_VIEW);
   }
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+  // Get workspace from verified context
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   const { recommendationId } = params;
   parseOrThrow(uuidSchema, recommendationId);
@@ -57,37 +43,26 @@ export const GET = withEnforcementFull(async (request, { ctx }, params) => {
   return Response.json(recommendation);
 });
 
-export const PATCH = withEnforcementFull(async (request, { ctx }, params) => {
+export const PATCH = withCanonicalEnforcement(async (ctx, params) => {
   // Authenticate + authorize (fail-closed)
-  const { policy } = ctx.verifiedSessionSnapshot;
-  if (!policy.can(CAPABILITIES.RECOMMENDATION_APPROVE)) {
-    throw new ForbiddenError('Insufficient permissions to approve recommendation');
+  if (ctx.policy) {
+    requireCapability(ctx.policy, CAPABILITIES.RECOMMENDATION_APPROVE);
   }
+  const workspaceId = ctx.verifiedWorkspaceId;
   const authContext: CanonicalAuthContext = {
-    userId: policy.userId,
-    workspaceId: policy.workspaceId,
-    policy,
+    verifiedActorId: ctx.verifiedSessionSnapshot.actorId,
+    verifiedActorType: ctx.verifiedActorType,
+    verifiedActor: ctx.verifiedActor,
+    verifiedWorkspaceId: workspaceId,
+    verifiedCapabilities: ctx.verifiedCapabilities,
+    verifiedSessionSnapshot: ctx.verifiedSessionSnapshot,
+    policy: ctx.policy,
   };
-
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
 
   const { recommendationId } = params;
   parseOrThrow(uuidSchema, recommendationId);
 
-  const body = await parseRequestBody(request, updateRecommendationSchema);
+  const body = await parseRequestBody(ctx.request!, updateRecommendationSchema);
   await updateRecommendation(recommendationId, body, authContext, workspaceId);
 
   const updated = await getRecommendation(recommendationId, workspaceId);

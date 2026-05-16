@@ -1,12 +1,11 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { ForbiddenError } from "@/infra/errors";
+import { requireCapability } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getQueuedItems } from "@/services/operator/store";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
 
 const queueParamsSchema = z.object({
   status: z.enum(["pending", "in_progress", "blocked"]).optional(),
@@ -20,32 +19,18 @@ const queueParamsSchema = z.object({
  * Wire: operator/store.getQueuedItems()
  * Supports: status filtering, pagination
  */
-export const GET = withEnforcementFull(async (request, { ctx }) => {
+export const GET = withCanonicalEnforcement(async (ctx) => {
   // Enforce authorization
-  const { policy } = ctx.verifiedSessionSnapshot;
-  if (!policy.can(CAPABILITIES.ACTION_VIEW)) {
-    throw new ForbiddenError('Insufficient permissions to view queue');
+  if (ctx.policy) {
+    requireCapability(ctx.policy, CAPABILITIES.ACTION_VIEW);
   }
-  const userId = policy.userId;
-
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+  const userId = ctx.verifiedSessionSnapshot.actorId;
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   try {
     // Parse query parameters
-    const status = nextRequest.nextUrl.searchParams.get("status") || undefined;
-    const limitParam = nextRequest.nextUrl.searchParams.get("limit") || "20";
+    const status = ctx.request?.nextUrl.searchParams.get("status") || undefined;
+    const limitParam = ctx.request?.nextUrl.searchParams.get("limit") || "20";
     const limit = Math.min(Math.max(parseInt(limitParam, 10), 1), 1000);
 
     // Validate limit

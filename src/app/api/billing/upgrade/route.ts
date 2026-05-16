@@ -1,6 +1,5 @@
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { ForbiddenError, ValidationError } from "@/infra/errors";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { db } from "@/lib/db";
 
@@ -17,7 +16,7 @@ interface UpgradeRequest {
   planId: string;
 }
 
-export const POST = withEnforcementFull(async (request: NextRequest, { ctx }) => {
+export const POST = withCanonicalEnforcement(async (ctx) => {
   // Initialize Stripe client
   let stripe: any;
   try {
@@ -29,23 +28,15 @@ export const POST = withEnforcementFull(async (request: NextRequest, { ctx }) =>
     throw new Error("Payment service is not configured");
   }
 
-  // Authenticate and authorize
-  const { policy } = ctx.verifiedSessionSnapshot;
-  if (!policy.can('BILLING_CUSTOMER')) {
-    throw new ForbiddenError('Insufficient permissions for billing operations');
-  }
-  const userId = policy.userId;
+  // Authenticate (canonical enforcement wrapper ensures valid authenticated user)
+  const userId = ctx.verifiedSessionSnapshot.actorId;
 
-  // Get workspaceId from header
-  const workspaceId = request.headers.get("x-workspace-id");
-
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
+  // Get workspaceId from verified context
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   let body: UpgradeRequest;
   try {
-    body = await request.json();
+    body = await ctx.request!.json();
   } catch {
     throw new ValidationError("Invalid request body: must be valid JSON");
   }

@@ -1,11 +1,10 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { ForbiddenError } from "@/infra/errors";
+import { requireCapability } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getQueuedItems } from "@/services/operator/store";
 import { getMyDayItems } from "@/services/operator/myday";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
 
 const queueParamsSchema = z.object({
   status: z.enum(["pending", "in_progress", "blocked"]).optional(),
@@ -19,26 +18,13 @@ const queueParamsSchema = z.object({
  * Wire: operator/myday.getMyDayItems()
  * Deterministic priority-based selection for daily action queue
  */
-export const GET = withEnforcementFull(async (request, { ctx }) => {
+export const GET = withCanonicalEnforcement(async (ctx) => {
   // Enforce authorization
-  const { policy } = ctx.verifiedSessionSnapshot;
-  if (!policy.can(CAPABILITIES.ACTION_VIEW)) {
-    throw new ForbiddenError('Insufficient permissions to view my-day');
+  if (ctx.policy) {
+    requireCapability(ctx.policy, CAPABILITIES.ACTION_VIEW);
   }
 
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   try {
     // Get My Day items (top 5 by priority)

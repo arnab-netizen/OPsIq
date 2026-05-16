@@ -1,10 +1,10 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
 import { getMyDayItems } from "@/services/operator/myday";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { logAuditEvent } from "@/services/audit/audit-log";
 
-export const GET = withEnforcementFull(async (request, { ctx }) => {
+export const GET = withCanonicalEnforcement(async (ctx) => {
   // Enforce server-side auth (fail-closed)
   const role = await resolveServerRole();
   if (!role) {
@@ -15,8 +15,7 @@ export const GET = withEnforcementFull(async (request, { ctx }) => {
   const items = await getMyDayItems();
 
   // Get actor ID for audit from verified context snapshot
-  const { policy } = ctx.verifiedSessionSnapshot;
-  const actorId = policy.userId;
+  const actorId = ctx.verifiedSessionSnapshot.actorId;
 
   // Emit audit event
   await logAuditEvent({
