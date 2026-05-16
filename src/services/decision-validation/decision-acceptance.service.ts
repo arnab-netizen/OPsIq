@@ -29,6 +29,14 @@ export interface RejectionRecord {
   auditEventId: string;
 }
 
+export interface VerifiedRejectionInput {
+  decisionId: string;
+  engagementId: string;
+  verifiedWorkspaceId: string;
+  verifiedActorId: string;
+  reason: string;
+}
+
 export async function acceptDecision(input: VerifiedAcceptanceInput): Promise<AcceptanceRecord> {
   // Validate decision can be accepted
   const validation = await validateDecisionForAcceptance({
@@ -97,7 +105,7 @@ export async function acceptDecision(input: VerifiedAcceptanceInput): Promise<Ac
   };
 }
 
-export async function rejectDecision(input: DecisionRejectionInput): Promise<RejectionRecord> {
+export async function rejectDecision(input: VerifiedRejectionInput): Promise<RejectionRecord> {
   // Validate decision exists
   const decision = await db.operatorItem.findUnique({
     where: { id: input.decisionId },
@@ -108,7 +116,7 @@ export async function rejectDecision(input: DecisionRejectionInput): Promise<Rej
   }
 
   // Verify workspace isolation
-  if (decision.workspaceId !== input.workspaceId) {
+  if (decision.workspaceId !== input.verifiedWorkspaceId) {
     throw new ForbiddenError("Workspace mismatch");
   }
 
@@ -125,7 +133,7 @@ export async function rejectDecision(input: DecisionRejectionInput): Promise<Rej
       status: "blocked",
       blockStage: "decision_gate",
       blockReason: input.reason,
-      lastUpdatedBy: input.rejectedBy,
+      lastUpdatedBy: input.verifiedActorId,
       updatedAt: now,
     },
   });
@@ -133,8 +141,8 @@ export async function rejectDecision(input: DecisionRejectionInput): Promise<Rej
   // Emit audit event
   const auditEventId = await emitAuditEvent({
     eventName: AUDIT_EVENTS.DECISION_REJECTED,
-    workspaceId: input.workspaceId,
-    actorId: input.rejectedBy,
+    workspaceId: input.verifiedWorkspaceId,
+    actorId: input.verifiedActorId,
     actorType: "user",
     entityType: "OperatorItem",
     entityId: input.decisionId,
@@ -151,14 +159,14 @@ export async function rejectDecision(input: DecisionRejectionInput): Promise<Rej
 
   logger.info("Decision rejected", {
     decisionId: input.decisionId,
-    rejectedBy: input.rejectedBy,
+    rejectedBy: input.verifiedActorId,
     reason: input.reason,
     auditEventId,
   });
 
   return {
     decisionId: input.decisionId,
-    rejectedBy: input.rejectedBy,
+    rejectedBy: input.verifiedActorId,
     rejectedAt: now,
     reason: input.reason,
     auditEventId,

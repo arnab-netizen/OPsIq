@@ -1,6 +1,6 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { rejectDecision } from "@/services/decision-validation/decision-acceptance.service";
+import { rejectDecision, type VerifiedRejectionInput } from "@/services/decision-validation/decision-acceptance.service";
 import { logger } from "@/infra/logger";
 import { z } from "zod";
 
@@ -19,13 +19,14 @@ export const POST = withCanonicalEnforcement(
     const parsed = RejectDecisionSchema.parse(body);
 
     // Reject decision
-    const result = await rejectDecision({
+    const verifiedInput: VerifiedRejectionInput = {
       decisionId,
       engagementId: parsed.engagementId,
-      workspaceId,
-      rejectedBy: ctx.verifiedActorId,
+      verifiedWorkspaceId: ctx.verifiedWorkspaceId,
+      verifiedActorId: ctx.verifiedActorId,
       reason: parsed.reason,
-    });
+    };
+    const result = await rejectDecision(verifiedInput);
 
     logger.info("Decision rejection recorded", {
       decisionId,
