@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
-import { ValidationError } from "@/infra/errors";
+import { ForbiddenError, ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { db } from "@/lib/db";
 
@@ -18,7 +17,7 @@ interface UpgradeRequest {
   planId: string;
 }
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
+export const POST = withEnforcementFull(async (request: NextRequest, { ctx }) => {
   // Initialize Stripe client
   let stripe: any;
   try {
@@ -30,9 +29,12 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     throw new Error("Payment service is not configured");
   }
 
-  // Authenticate
-  const authContext = await withAuth();
-  const userId = authContext.policy.userId;
+  // Authenticate and authorize
+  const { policy } = ctx.verifiedSessionSnapshot;
+  if (!policy.can('BILLING_CUSTOMER')) {
+    throw new ForbiddenError('Insufficient permissions for billing operations');
+  }
+  const userId = policy.userId;
 
   // Get workspaceId from header
   const workspaceId = request.headers.get("x-workspace-id");

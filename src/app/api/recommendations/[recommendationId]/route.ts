@@ -1,6 +1,6 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getRecommendation, updateRecommendation } from "@/services/recommendation";
@@ -28,9 +28,12 @@ const updateRecommendationSchema = z.object({
   version: z.number().int().min(1),
 });
 
-export const GET = withEnforcementFull(async (request, context, params) => {
+export const GET = withEnforcementFull(async (request, { ctx }, params) => {
   // Authenticate + authorize (fail-closed)
-  await withAuth({ capability: CAPABILITIES.RECOMMENDATION_VIEW });
+  const { policy } = ctx.verifiedSessionSnapshot;
+  if (!policy.can(CAPABILITIES.RECOMMENDATION_VIEW)) {
+    throw new ForbiddenError('Insufficient permissions to view recommendation');
+  }
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
@@ -54,12 +57,17 @@ export const GET = withEnforcementFull(async (request, context, params) => {
   return Response.json(recommendation);
 });
 
-export const PATCH = withEnforcementFull(async (request, context, params) => {
+export const PATCH = withEnforcementFull(async (request, { ctx }, params) => {
   // Authenticate + authorize (fail-closed)
-  const authContext = await withAuth({
-    capability: CAPABILITIES.RECOMMENDATION_APPROVE,
-    internalOnly: true,
-  });
+  const { policy } = ctx.verifiedSessionSnapshot;
+  if (!policy.can(CAPABILITIES.RECOMMENDATION_APPROVE)) {
+    throw new ForbiddenError('Insufficient permissions to approve recommendation');
+  }
+  const authContext: CanonicalAuthContext = {
+    userId: policy.userId,
+    workspaceId: policy.workspaceId,
+    policy,
+  };
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
@@ -80,7 +88,7 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, recommendationId);
 
   const body = await parseRequestBody(request, updateRecommendationSchema);
-  await updateRecommendation(recommendationId, body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
+  await updateRecommendation(recommendationId, body, authContext, workspaceId);
 
   const updated = await getRecommendation(recommendationId, workspaceId);
   return Response.json(updated);

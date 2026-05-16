@@ -1,6 +1,5 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getQueuedItems } from "@/services/operator/store";
@@ -20,10 +19,12 @@ const queueParamsSchema = z.object({
  * Wire: operator/myday.getMyDayItems()
  * Deterministic priority-based selection for daily action queue
  */
-export const GET = withEnforcementFull(async (request) => {
-  const { session } = await withAuth({
-    capability: CAPABILITIES.ACTION_VIEW,
-  });
+export const GET = withEnforcementFull(async (request, { ctx }) => {
+  // Enforce authorization
+  const { policy } = ctx.verifiedSessionSnapshot;
+  if (!policy.can(CAPABILITIES.ACTION_VIEW)) {
+    throw new ForbiddenError('Insufficient permissions to view my-day');
+  }
 
   const nextRequest = request as NextRequest;
   const workspaceId = nextRequest.headers.get("x-workspace-id");
