@@ -4,16 +4,13 @@
  * Owner-only access (requires workspace owner capability)
  */
 
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { ForbiddenError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { calculateWorkspaceHealth, summarizeActionQueue, buildOwnerDashboardView, DashboardServiceError } from "@/services/owner-mode/dashboard.service";
 import { OwnerDashboardConfig, HealthStatus, ActionQueuePriority } from "@/domain/owner-mode/owner-dashboard";
-import type { NextRequest } from "next/server";
 import { z } from "zod/v4";
 
 const querySchema = z.object({
@@ -41,33 +38,27 @@ function toOwnerDashboardDTO(data: any) {
   };
 }
 
-export const GET = withEnforcementFull(async (request) => {
-  const { session } = await withAuth({
-    capability: CAPABILITIES.OWNER_VIEW,
-  });
-
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  if (!ctx.request) {
+    throw new Error("Request object not available");
   }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  const workspaceId = ctx.verifiedWorkspaceId;
+  const userId = ctx.verifiedActorId;
+
+  const membership = await enforceWorkspaceScoping(ctx.request, workspaceId);
   if (!membership) {
     throw new ForbiddenError("Unauthorized");
   }
 
   try {
-    const url = new URL(request.url);
+    const url = new URL(ctx.request.url);
     const queryParams = querySchema.parse({
       includeKPIs: url.searchParams.get("includeKPIs"),
       daysOfHistory: url.searchParams.get("daysOfHistory"),
     });
 
-    const context = { workspaceId, userId: session.user.id };
+    const context = { workspaceId, userId };
 
     const mockEngagementSnapshots = [
       {
@@ -106,7 +97,7 @@ export const GET = withEnforcementFull(async (request) => {
 
     const config: OwnerDashboardConfig = {
       workspaceId,
-      ownerId: session.user.id,
+      ownerId: userId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       showCompletedActions: true,
@@ -135,7 +126,7 @@ export const GET = withEnforcementFull(async (request) => {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OWNER_DASHBOARD_VIEWED,
       workspaceId,
-      actorId: session.user.id,
+      actorId: userId,
       entityType: "dashboard",
       entityId: workspaceId,
       payload: {
@@ -167,4 +158,4 @@ export const GET = withEnforcementFull(async (request) => {
       { status: 500 }
     );
   }
-});
+}, { requireCapabilities: ["OWNER_VIEW"] });

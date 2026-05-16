@@ -1,7 +1,5 @@
-import { withAuth } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
   getItems,
   updateItem,
@@ -13,22 +11,18 @@ import { calculateDecisionAccuracy } from "@/services/operator/accuracy";
 import { evaluatePolicy, validateCompletion } from "@/services/policy/engine";
 import { canEdit } from "@/services/auth/access";
 import { resolveServerRole } from "@/services/auth/server-role";
-import { getSession } from "@/services/auth";
 import { sendWebhook } from "@/services/integration/webhook";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { validateStatusTransition, getStatusTransitionError } from "@/services/operator/validate";
 import { createEventLogger } from "@/lib/observability/log";
-import { requireWorkspaceContext } from "@/services/workspace/context";
 import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
-import type { PolicyRule } from "@/domain/policy/types";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 
-export const GET = withEnforcementFull(async () => {
-  await withAuth();
-  const workspace = await requireWorkspaceContext();
-  const logger = createEventLogger("api_operator_get", workspace.workspaceId);
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  const workspaceId = ctx.verifiedWorkspaceId;
+  const logger = createEventLogger("api_operator_get", workspaceId);
 
   const items = await getItems();
   const sorted = sortByPriority(items);
@@ -37,20 +31,23 @@ export const GET = withEnforcementFull(async () => {
   return sorted;
 });
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  await withAuth();
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  if (!ctx.request) {
+    throw new Error("Request object not available");
+  }
+
   let logger: ReturnType<typeof createEventLogger> | null = null;
   let workspaceId: string | null = null;
   let id: string | null = null;
   let idempotencyKey: string | null = null;
 
   // Check idempotency key (required)
-  idempotencyKey = request.headers.get("idempotency-key");
+  idempotencyKey = ctx.request.headers.get("idempotency-key");
   if (!idempotencyKey) {
     throw new Error("idempotency-key header required");
   }
 
-  const body = await request.json();
+  const body = await ctx.request.json();
   id = body.id;
   const { status, actualOutcome, approvalRequired } = body;
 
@@ -69,9 +66,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     throw new Error("Missing required field: id");
   }
 
-  // Get actor ID from session
-  const { session } = await withAuth();
-  const actorId = session?.user.id ?? null;
+  // Get actor ID from verified context
+  const actorId = ctx.verifiedActorId;
 
   // Check idempotency (need workspace context first)
   // Will be set after we get workspace from item

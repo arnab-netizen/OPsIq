@@ -4,15 +4,12 @@
  * Owner-only access (requires workspace owner capability)
  */
 
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { ForbiddenError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { validateOwnerDashboardConfig, ActionQueuePriority, HealthStatus, OwnerDashboardConfig } from "@/domain/owner-mode/owner-dashboard";
-import type { NextRequest } from "next/server";
 import { z } from "zod/v4";
 
 const configUpdateSchema = z.object({
@@ -56,28 +53,22 @@ const defaultConfig = (workspaceId: string, userId: string): OwnerDashboardConfi
 // In-memory store for demo (replace with DB in production)
 const configStore = new Map<string, OwnerDashboardConfig>();
 
-export const GET = withEnforcementFull(async (request) => {
-  const { session } = await withAuth({
-    capability: CAPABILITIES.OWNER_VIEW,
-  });
-
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  if (!ctx.request) {
+    throw new Error("Request object not available");
   }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  const workspaceId = ctx.verifiedWorkspaceId;
+  const userId = ctx.verifiedActorId;
+
+  const membership = await enforceWorkspaceScoping(ctx.request, workspaceId);
   if (!membership) {
     throw new ForbiddenError("Unauthorized");
   }
 
   try {
-    const stored = configStore.get(`${workspaceId}:${session.user.id}`);
-    const config = stored || defaultConfig(workspaceId, session.user.id);
+    const stored = configStore.get(`${workspaceId}:${userId}`);
+    const config = stored || defaultConfig(workspaceId, userId);
 
     return Response.json(toConfigDTO(config), { status: 200 });
   } catch (error) {
@@ -89,32 +80,26 @@ export const GET = withEnforcementFull(async (request) => {
       { status: 500 }
     );
   }
-});
+}, { requireCapabilities: ["OWNER_VIEW"] });
 
-export const POST = withEnforcementFull(async (request) => {
-  const { session } = await withAuth({
-    capability: CAPABILITIES.OWNER_MANAGE,
-  });
-
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  if (!ctx.request) {
+    throw new Error("Request object not available");
   }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+  const workspaceId = ctx.verifiedWorkspaceId;
+  const userId = ctx.verifiedActorId;
+
+  const membership = await enforceWorkspaceScoping(ctx.request, workspaceId);
   if (!membership) {
     throw new ForbiddenError("Unauthorized");
   }
 
   try {
-    const body = await request.json();
+    const body = await ctx.request.json();
     const validated = configUpdateSchema.parse(body);
 
-    const existing = configStore.get(`${workspaceId}:${session.user.id}`) || defaultConfig(workspaceId, session.user.id);
+    const existing = configStore.get(`${workspaceId}:${userId}`) || defaultConfig(workspaceId, userId);
 
     const priorityMap: Record<string, ActionQueuePriority> = {
       critical: ActionQueuePriority.CRITICAL,
@@ -144,7 +129,7 @@ export const POST = withEnforcementFull(async (request) => {
       enableAdvancedFiltering: validated.enableAdvancedFiltering ?? existing.enableAdvancedFiltering,
       customFilters: validated.customFilters ?? existing.customFilters,
       workspaceId,
-      ownerId: session.user.id,
+      ownerId: userId,
       createdAt: existing.createdAt,
       updatedAt: new Date().toISOString(),
     };
@@ -157,12 +142,12 @@ export const POST = withEnforcementFull(async (request) => {
       );
     }
 
-    configStore.set(`${workspaceId}:${session.user.id}`, updated);
+    configStore.set(`${workspaceId}:${userId}`, updated);
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OWNER_CONFIG_UPDATED,
       workspaceId,
-      actorId: session.user.id,
+      actorId: userId,
       entityType: "owner_config",
       entityId: workspaceId,
       payload: validated,
@@ -184,4 +169,4 @@ export const POST = withEnforcementFull(async (request) => {
       { status: 500 }
     );
   }
-});
+}, { requireCapabilities: ["OWNER_MANAGE"] });

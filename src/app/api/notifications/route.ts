@@ -5,9 +5,7 @@
  * Workspace-scoped, requires authentication.
  */
 
-import { NextRequest } from "next/server";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { z } from "zod";
 import {
   sendNotification,
@@ -39,18 +37,15 @@ const ListNotificationsSchema = z.object({
  * POST /api/notifications
  * Send a notification
  */
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate (fail-closed)
-  await withAuth();
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  if (!ctx.request) {
+    throw new Error("Request object not available");
+  }
 
-  const body = await request.json();
+  const body = await ctx.request.json();
   const parsed = SendNotificationSchema.parse(body);
 
-  // Extract workspace from auth context (fail closed if missing)
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   const notification = await sendNotification({
     ...parsed,
@@ -67,28 +62,25 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
  * GET /api/notifications
  * List user notifications
  */
-export const GET = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate (fail-closed)
-  await withAuth();
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
+  if (!ctx.request) {
+    throw new Error("Request object not available");
+  }
 
   const params = {
-    limit: request.nextUrl.searchParams.get("limit")
-      ? parseInt(request.nextUrl.searchParams.get("limit")!)
+    limit: ctx.request.nextUrl.searchParams.get("limit")
+      ? parseInt(ctx.request.nextUrl.searchParams.get("limit")!)
       : undefined,
-    offset: request.nextUrl.searchParams.get("offset")
-      ? parseInt(request.nextUrl.searchParams.get("offset")!)
+    offset: ctx.request.nextUrl.searchParams.get("offset")
+      ? parseInt(ctx.request.nextUrl.searchParams.get("offset")!)
       : undefined,
-    status: (request.nextUrl.searchParams.get("status") as any) || undefined,
+    status: (ctx.request.nextUrl.searchParams.get("status") as any) || undefined,
   };
 
   const parsed = ListNotificationsSchema.parse(params);
 
-  // Extract workspace and user from auth context (fail closed if missing)
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required (x-workspace-id header)");
-  }
-  const userId = request.headers.get("x-user-id") || "anonymous";
+  const workspaceId = ctx.verifiedWorkspaceId;
+  const userId = ctx.verifiedActorId;
 
   const result = await listUserNotifications(workspaceId, userId, parsed);
 
