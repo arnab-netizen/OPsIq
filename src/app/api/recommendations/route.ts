@@ -1,18 +1,16 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createRecommendation } from "@/services/recommendation";
 import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { assertCapability } from "@/services/entitlement.service";
-import { PlanLimitError, UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { PlanLimitError } from "@/infra/errors";
 import { z } from "zod/v4";
 import {
   RECOMMENDATION_PRIORITIES,
   RECOMMENDATION_TYPES,
 } from "@/domain/constants/statuses";
-import type { NextRequest } from "next/server";
 
 const createRecommendationSchema = z.object({
   engagementId: z.string().uuid(),
@@ -30,57 +28,49 @@ const createRecommendationSchema = z.object({
   dueAt: z.string().optional(),
 });
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate + authorize (fail-closed)
-  const authContext = await withAuth({
-    capability: CAPABILITIES.RECOMMENDATION_CREATE,
-    internalOnly: true,
-  });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Validate workspace membership (fail-closed)
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new UnauthorizedError("Workspace ID required (x-workspace-id header)");
-  }
+    // Check entitlement: decision_create (plan-based quota enforcement)
+    const capabilityCheck = await assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE);
+    if (!capabilityCheck.allowed) {
+      throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || "Plan limit exceeded");
+    }
 
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+    const idempotencyKey = ctx.request!.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      return Response.json(
+        { error: "idempotency-key header required" },
+        { status: 400 }
+      );
+    }
 
-  // Check entitlement: decision_create (plan-based quota enforcement)
-  // Recommendations consume decision quota in the permission model
-  const capabilityCheck = await assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE);
-  if (!capabilityCheck.allowed) {
-    throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || "Plan limit exceeded");
-  }
+    const body = await parseRequestBody(ctx.request!, createRecommendationSchema);
 
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    throw new UnauthorizedError("idempotency-key header required");
-  }
+    // Check idempotency
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "createRecommendation",
+      actorId: ctx.verifiedSessionSnapshot.actorId,
+      payload: body,
+    });
 
-  const body = await parseRequestBody(request, createRecommendationSchema);
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return Response.json(idempotencyCheck.cachedResponse.body, {
+        status: idempotencyCheck.cachedResponse.status,
+      });
+    }
 
-  // Check idempotency
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "createRecommendation",
-    actorId: authContext.session.user.id,
-    payload: body,
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return idempotencyCheck.cachedResponse.body;
-  }
-
-  try {
-    const result = await createRecommendation(body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
-    await recordIdempotencyResponse(idempotencyKey, 201, result);
-    return result;
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    throw error;
-  }
-});
+    try {
+      const result = await createRecommendation(body, ctx, workspaceId);
+      await recordIdempotencyResponse(idempotencyKey, 201, result);
+      return Response.json(result, { status: 201 });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
+    }
+  },
+  { requireWorkspace: true, requireCapabilities: ['RECOMMENDATION_CREATE'] }
+);

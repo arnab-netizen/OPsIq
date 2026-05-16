@@ -1,9 +1,7 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createFinding } from "@/services/findings";
-import type { ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { hasInternalAccess } from "@/policies/capability-check";
 import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
@@ -13,10 +11,8 @@ import {
   FINDING_SEVERITIES,
   FINDING_IMPACTS,
 } from "@/domain/constants/statuses";
-import type { NextRequest } from "next/server";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 const createFindingSchema = z.object({
   engagementId: z.string().uuid(),
@@ -34,74 +30,62 @@ const createFindingSchema = z.object({
   dueAt: z.string().optional(),
 });
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate + authorize (fail-closed)
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.FINDING_CREATE,
-    internalOnly: true,
-  });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const idempotencyKey = ctx.request!.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      return Response.json(
+        { error: "idempotency-key header required" },
+        { status: 400 }
+      );
+    }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+    // Check capability: generate_recommendation (plan-based quota enforcement)
+    const capabilityCheck = await assertCapability(workspaceId, "generate_recommendation");
+    if (!capabilityCheck.allowed) {
+      throw new PlanLimitError("generate_recommendation", capabilityCheck.reason || "Plan limit exceeded");
+    }
 
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    return Response.json(
-      { error: "idempotency-key header required" },
-      { status: 400 }
-    );
-  }
+    const body = await parseRequestBody(ctx.request!, createFindingSchema);
 
-  // Check capability: generate_recommendation
-  const capabilityCheck = await assertCapability(workspaceId, "generate_recommendation");
-  if (!capabilityCheck.allowed) {
-    throw new PlanLimitError("generate_recommendation", capabilityCheck.reason || "Plan limit exceeded");
-  }
-
-  const body = await parseRequestBody(request, createFindingSchema);
-
-  // Check idempotency
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "createFinding",
-    actorId: session.user.id,
-    payload: body,
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
-      status: idempotencyCheck.cachedResponse.status,
+    // Check idempotency
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "createFinding",
+      actorId: ctx.verifiedSessionSnapshot.actorId,
+      payload: body,
     });
-  }
 
-  try {
-    const canonicalCtx = canonicalizeAuthContext({ session, policy }, workspaceId);
-    const authEnvelope: ServiceAuthEnvelope = {
-      verifiedActorId: canonicalCtx.verifiedActorId,
-      verifiedActorType: canonicalCtx.verifiedActorType,
-      verifiedWorkspaceId: canonicalCtx.verifiedWorkspaceId,
-      verifiedCapabilities: canonicalCtx.verifiedCapabilities,
-      hasInternalAccess: policy ? hasInternalAccess(policy) : false,
-      verifiedActor: canonicalCtx.verifiedActor,
-    };
-    const result = await createFinding(body, authEnvelope);
-    await recordIdempotencyResponse(idempotencyKey, 201, result);
-    return Response.json(result, { status: 201 });
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    throw error;
-  }
-});
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return Response.json(idempotencyCheck.cachedResponse.body, {
+        status: idempotencyCheck.cachedResponse.status,
+      });
+    }
+
+    try {
+      const authEnvelope = {
+        verifiedActorId: ctx.verifiedSessionSnapshot.actorId,
+        verifiedActorType: 'user' as const,
+        verifiedWorkspaceId: ctx.verifiedWorkspaceId,
+        verifiedCapabilities: new Set(ctx.verifiedSessionSnapshot.capabilities),
+        hasInternalAccess: ctx.policy ? hasInternalAccess(ctx.policy) : false,
+        verifiedActor: {
+          id: ctx.verifiedSessionSnapshot.actorId,
+          email: '',
+          name: '',
+          isActive: true,
+        },
+      };
+      const result = await createFinding(body, authEnvelope);
+      await recordIdempotencyResponse(idempotencyKey, 201, result);
+      return Response.json(result, { status: 201 });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
+    }
+  },
+  { requireWorkspace: true, requireCapabilities: ['FINDING_CREATE'] }
+);
