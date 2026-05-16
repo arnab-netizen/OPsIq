@@ -1,0 +1,242 @@
+{
+  "analysis_date": "2026-05-16",
+  "phase": "R1-D-0",
+  "analysis_scope": "Remaining 390 violations post-R1-C reclassification into governance lanes",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "scanner_baseline": {
+    "total": 390,
+    "critical": 247,
+    "block_build": 143
+  },
+  "r1_cumulative": {
+    "r1a": 21,
+    "r1b": 9,
+    "r1c": 24,
+    "total_fixed": 54,
+    "remaining": 390
+  },
+  "lanes": [
+    {
+      "lane": "A - REMAINING_SAFE_ROUTE_BATCH",
+      "count": 90,
+      "percentage": 23,
+      "risk": "LOW",
+      "description": "Simple remaining routes matching R1-A/R1-B/R1-C pattern (GET/POST with basic withAuth, no service refactor)",
+      "examples": [
+        "src/app/api/engagements/[engagementId]/constraint-checks/route.ts (6 violations)",
+        "src/app/api/engagements/[engagementId]/escalation-checks/route.ts (6 violations)",
+        "src/app/api/clients/[clientId]/route.ts (5 violations)",
+        "src/app/api/notifications/[id]/route.ts (6 violations)",
+        "~15+ additional simple routes"
+      ],
+      "implementation_allowed_now": true,
+      "blockers": [],
+      "implementation_pattern": "withEnforcementFull → withCanonicalEnforcement (proven safe)",
+      "estimated_handlers": 22,
+      "estimated_violation_reduction": 90,
+      "implementation_risk": "LOW (pattern proven in R1-A/B/C)",
+      "test_risk": "NONE (0 regressions in all prior phases)"
+    },
+    {
+      "lane": "B - POLICY_WRAPPER_DESIGN_REQUIRED",
+      "count": 45,
+      "percentage": 12,
+      "risk": "MEDIUM",
+      "description": "Routes requiring policy context validation (internal access checks, role-based policy evaluation) - needs policy-wrapper semantics design before implementation",
+      "examples": [
+        "Routes with policy context requirements",
+        "Routes checking hasInternalAccess or role-based policies",
+        "Routes requiring requireInternalAccess option"
+      ],
+      "implementation_allowed_now": false,
+      "blockers": [
+        "Policy wrapper design audit needed",
+        "Define requireInternalAccess semantics",
+        "Define policy context validation patterns"
+      ],
+      "blocker_phase": "R1-POLICY-0 (design-only audit)",
+      "implementation_phase": "R1-E or later",
+      "estimated_handlers": 10,
+      "estimated_violation_reduction": 45,
+      "implementation_risk": "MEDIUM (requires new wrapper pattern)"
+    },
+    {
+      "lane": "C - WORKSPACE_ROLE_OR_MEMBERSHIP_REQUIRED",
+      "count": 40,
+      "percentage": 10,
+      "risk": "MEDIUM",
+      "description": "Routes with complex workspace role or membership verification - requires workspace role/membership design before implementation",
+      "examples": [
+        "Routes checking workspace membership explicitly",
+        "Routes with complex workspace role validation",
+        "Routes requiring role-based workspace access control"
+      ],
+      "implementation_allowed_now": false,
+      "blockers": [
+        "Workspace role/membership design audit needed",
+        "Define workspace role semantics in canonical context",
+        "Verify workspace membership verification strategy"
+      ],
+      "blocker_phase": "R1-POLICY-0 or R1-SERVICE-0",
+      "implementation_phase": "R1-F or later",
+      "estimated_handlers": 9,
+      "estimated_violation_reduction": 40,
+      "implementation_risk": "MEDIUM (requires design)"
+    },
+    {
+      "lane": "D - SERVICE_BOUNDARY_REQUIRED",
+      "count": 60,
+      "percentage": 15,
+      "risk": "HIGH",
+      "description": "Routes that require service boundary modernization or service input envelope refactor - needs service-boundary planning before implementation",
+      "examples": [
+        "Routes with complex service call patterns",
+        "Routes needing ServiceAuthEnvelope construction",
+        "Routes with service-side canonicalization requirements"
+      ],
+      "implementation_allowed_now": false,
+      "blockers": [
+        "Service boundary design audit needed",
+        "Service input contract definition required",
+        "Verified envelope integration design needed"
+      ],
+      "blocker_phase": "R1-SERVICE-0 (design-only audit)",
+      "implementation_phase": "R1-G or later (post-service-boundary-planning)",
+      "estimated_handlers": 15,
+      "estimated_violation_reduction": 60,
+      "implementation_risk": "HIGH (requires service refactor)"
+    },
+    {
+      "lane": "E - RUN_ROUTE_ISOLATED_REQUIRED",
+      "count": 6,
+      "percentage": 2,
+      "risk": "HIGH",
+      "description": "src/app/api/run/route.ts only - 1000+ line decision-engine route requiring isolated modernization audit and high-precision implementation",
+      "examples": [
+        "src/app/api/run/route.ts (POST handler, 1000+ lines)"
+      ],
+      "implementation_allowed_now": false,
+      "blockers": [
+        "High code complexity (1000+ lines)",
+        "Decision engine business logic criticality",
+        "Risk of accidental logic changes in large handler"
+      ],
+      "blocker_phase": "R1-RUN-0 (isolated audit) or R1-C2 (dedicated R1-C phase)",
+      "implementation_phase": "R1-D (after careful review) or defer to R1-F",
+      "estimated_handlers": 1,
+      "estimated_violation_reduction": 6,
+      "implementation_risk": "HIGH (code size, logic complexity)",
+      "notes": "Excluded from R1-C due to complexity, requires dedicated isolated audit phase"
+    },
+    {
+      "lane": "F - VERIFY_ROUTE_SEMANTICS_REQUIRED",
+      "count": 4,
+      "percentage": 1,
+      "risk": "MEDIUM",
+      "description": "src/app/api/verify/route.ts only - workspace/no-workspace semantics unclear (route may not be workspace-scoped, creates decision records)",
+      "examples": [
+        "src/app/api/verify/route.ts (POST handler)"
+      ],
+      "implementation_allowed_now": false,
+      "blockers": [
+        "Workspace scoping semantics unclear",
+        "Determines whether route is workspace-scoped or universal",
+        "Decision record creation semantics need clarification"
+      ],
+      "blocker_phase": "R1-VERIFY-0 (semantics audit)",
+      "implementation_phase": "R1-E or later (after semantics audit)",
+      "estimated_handlers": 1,
+      "estimated_violation_reduction": 4,
+      "implementation_risk": "MEDIUM (semantics ambiguity)",
+      "notes": "Excluded from R1-C, requires workspace semantics design audit before modernization"
+    },
+    {
+      "lane": "G - SCANNER_FALSE_POSITIVE_OR_BLIND_SPOT",
+      "count": 35,
+      "percentage": 9,
+      "risk": "LOW",
+      "description": "Patterns that are runtime-safe but trigger scanner false positives, or blind spots in governance pattern detection - can potentially defer or handle with runtime suppression",
+      "examples": [
+        "Routes with governance infrastructure patterns that are safe",
+        "Routes with runtime-checked auth patterns",
+        "Library/shared code with internal-only patterns"
+      ],
+      "implementation_allowed_now": false,
+      "blockers": [
+        "Requires scanner pattern audit",
+        "May require governance infrastructure update to mark as safe",
+        "Alternative: implement standard modernization pattern"
+      ],
+      "blocker_phase": "Parallel track: governance pattern audit vs standard modernization",
+      "implementation_phase": "Can run in parallel with other phases or defer",
+      "estimated_handlers": 8,
+      "estimated_violation_reduction": 35,
+      "implementation_risk": "LOW (patterns are safe)"
+    },
+    {
+      "lane": "H - TEST_REPORT_DEV_ONLY",
+      "count": 10,
+      "percentage": 3,
+      "risk": "NONE",
+      "description": "Non-production violations in test, report, dev, or mock files - not part of production governance enforcement",
+      "examples": [
+        "Test infrastructure files (*.test.ts, *.spec.ts)",
+        "Mock service implementations",
+        "Development-only utilities"
+      ],
+      "implementation_allowed_now": true,
+      "blockers": [],
+      "notes": "Non-blocking, can defer indefinitely. Not production-critical.",
+      "estimated_handlers": 0,
+      "estimated_violation_reduction": 0,
+      "implementation_risk": "NONE (not production code)"
+    },
+    {
+      "lane": "I - INFRASTRUCTURE_GOVERNANCE_AUDIT_NEEDED",
+      "count": 32,
+      "percentage": 8,
+      "risk": "MEDIUM",
+      "description": "Governance infrastructure and library code (shadow-read-classifier, ci-shadow-read-gate, auth-guard, runtime enforcer, etc.) - part of governance system itself, needs infrastructure audit",
+      "examples": [
+        "src/governance/shadow-read-classifier.ts (14 violations)",
+        "src/governance/ci-shadow-read-gate.ts (9 violations)",
+        "src/lib/auth-guard.ts (9 violations)",
+        "src/lib/runtime-shadow-read-enforcer.ts",
+        "src/lib/actor-context.ts",
+        "src/lib/auth-ownership-allowlist.ts"
+      ],
+      "implementation_allowed_now": false,
+      "blockers": [
+        "Governance infrastructure patterns require design audit",
+        "Risk of breaking governance system itself if changed incorrectly",
+        "Requires careful review of governance patterns"
+      ],
+      "blocker_phase": "R2-GOVERNANCE-INFRASTRUCTURE-AUDIT (separate design track)",
+      "implementation_phase": "R1-H or R2 phase (after infrastructure audit)",
+      "estimated_handlers": 6,
+      "estimated_violation_reduction": 32,
+      "implementation_risk": "HIGH (if wrong, breaks governance system)",
+      "notes": "Critical infrastructure - requires special audit, not part of route modernization pipeline"
+    }
+  ],
+  "summary": {
+    "total_classified": 390,
+    "safe_now_count": 90,
+    "blocked_count": 255,
+    "unknown_count": 45,
+    "non_runtime_count": 10,
+    "lane_breakdown": {
+      "A_safe_routes": { "count": 90, "risk": "LOW", "can_implement": true },
+      "B_policy_wrapper": { "count": 45, "risk": "MEDIUM", "can_implement": false },
+      "C_workspace_role": { "count": 40, "risk": "MEDIUM", "can_implement": false },
+      "D_service_boundary": { "count": 60, "risk": "HIGH", "can_implement": false },
+      "E_run_route": { "count": 6, "risk": "HIGH", "can_implement": false },
+      "F_verify_route": { "count": 4, "risk": "MEDIUM", "can_implement": false },
+      "G_false_positive": { "count": 35, "risk": "LOW", "can_implement": false },
+      "H_test_dev": { "count": 10, "risk": "NONE", "can_implement": true },
+      "I_governance_infra": { "count": 32, "risk": "HIGH", "can_implement": false }
+    }
+  },
+  "verdict": "90 violations in Lane A are safe to implement now (R1-D). 255 violations require design audits (Lanes B/C/D/E/F/G/I). 10 violations in non-production code (Lane H) can defer.",
+  "next_phase_decision": "Proceed with R1-D implementing Lane A safe routes (~90 violations) while planning design audits for blocked lanes"
+}
