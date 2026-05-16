@@ -1,0 +1,99 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_date": "2026-05-16",
+  "scanner_baseline": {
+    "total": 448,
+    "critical": 283,
+    "block_build": 165
+  },
+  "items": [
+    {
+      "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "handler_or_function": "POST handler (close route)",
+      "current_pattern": "Legacy auth pattern with withAuth() + role/permission check",
+      "current_auth_requirement": "Role-based: hasPermission(membership.role, 'close_decision')",
+      "operation": "CLOSE_DECISION",
+      "uses_legacy_role_permission": true,
+      "uses_domain_capability": false,
+      "uses_entitlement_string": false,
+      "capability_exists": false,
+      "service_called": "closeDecision (decision-lifecycle.service)",
+      "business_effect": "State transition: OUTCOME_RECORDED → CLOSED (terminal state)",
+      "audit_event": "Generated via getAuditEventName(OUTCOME_RECORDED, CLOSED)",
+      "scanner_entries": [
+        {
+          "line": 2,
+          "pattern": "auth-guard import",
+          "severity": "BLOCK_BUILD",
+          "detail": "import { withAuth } from '@/lib/auth-guard'"
+        },
+        {
+          "line": 21,
+          "pattern": "withAuth() call",
+          "severity": "CRITICAL",
+          "detail": "const { session } = await withAuth();"
+        }
+      ],
+      "risk": "MEDIUM",
+      "notes": "Route uses legacy auth pattern instead of canonical withEnforcementFull. Does not use verified input pattern. No domain capability for close decision (no DECISION_CLOSE). Legacy role/permission string based on unmodeled workspace/role design."
+    },
+    {
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "handler_or_function": "closeDecision function (line 394)",
+      "current_pattern": "Simple state transition function with no auth checking",
+      "current_auth_requirement": "None (assumes caller verified)",
+      "operation": "CLOSE_DECISION",
+      "uses_legacy_role_permission": false,
+      "uses_domain_capability": false,
+      "uses_entitlement_string": false,
+      "capability_exists": false,
+      "service_called": "Internal: transitionDecisionState",
+      "business_effect": "Transitions decision from OUTCOME_RECORDED to CLOSED, sets completedAt timestamp, sets executionStatus='completed'",
+      "audit_event": "Emitted by transitionDecisionState via getAuditEventName(OUTCOME_RECORDED, CLOSED)",
+      "scanner_entries": [],
+      "risk": "LOW",
+      "notes": "Service function is simple and correct. No auth checking (expected - auth is route responsibility). Does not accept AuthContext. Does not canonicalize. No issues with service itself."
+    },
+    {
+      "file": "src/domain/constants/capabilities.ts",
+      "handler_or_function": "CAPABILITIES constant",
+      "current_pattern": "No DECISION_CLOSE capability defined",
+      "current_auth_requirement": "N/A - capability does not exist",
+      "operation": "CLOSE_DECISION",
+      "uses_legacy_role_permission": false,
+      "uses_domain_capability": false,
+      "uses_entitlement_string": false,
+      "capability_exists": false,
+      "service_called": "N/A",
+      "business_effect": "N/A",
+      "audit_event": "N/A",
+      "scanner_entries": [],
+      "risk": "MEDIUM",
+      "notes": "No domain capability exists for closing decisions. Related capabilities exist: DECISION_CREATE, DECISION_UPDATE, DECISION_ACCEPT, DECISION_REJECT. Question: should DECISION_CLOSE be added as separate capability, or should closing use DECISION_UPDATE?"
+    }
+  ],
+  "summary": {
+    "total_items": 3,
+    "legacy_role_permission_items": 1,
+    "missing_capability_items": 1,
+    "service_refactor_candidates": 0,
+    "blocked_items": 0,
+    "key_findings": [
+      "Close route uses legacy withAuth() pattern (4 scanner violations: 1 import, 2 withAuth() calls, 1 import duplicate)",
+      "No domain capability for closing decisions (DECISION_CLOSE missing)",
+      "Service is correct (no auth checking, simple state transition)",
+      "Business semantics: close is terminal state transition (OUTCOME_RECORDED → CLOSED)",
+      "Governance question: is close equivalent to UPDATE, or should it have own capability?"
+    ]
+  },
+  "governance_questions": [
+    "What does 'close decision' semantically mean in the business context?",
+    "Is closing a decision a form of UPDATE (state transition), or a distinct operation?",
+    "Should closing require same permission as creating/updating, or stronger/different?",
+    "Should DECISION_CLOSE be added to CAPABILITIES, or should close use existing DECISION_UPDATE?",
+    "Does closing a decision require separate audit event classification?",
+    "Is closing restricted by role/workspace design, or should it be more permissive (e.g., owner-only)?",
+    "Should close route be modernized to use verified input pattern like create/accept/reject?",
+    "Is the close route expected to use canonical enforcement (withEnforcementFull), or is role/permission pattern intentional?"
+  ]
+}
