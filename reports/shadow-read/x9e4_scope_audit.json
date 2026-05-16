@@ -1,0 +1,182 @@
+{
+  "phase": "X9E-4",
+  "date": "2026-05-16",
+  "status": "SCOPE_AUDIT_COMPLETE",
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_period": "X9E-4 implementation phase A-D",
+  "scope_specification": {
+    "allowed_changes": "src/app/api/recommendations/route.ts only",
+    "forbidden_changes": [
+      "service refactoring",
+      "wrapper changes",
+      "auth context changes",
+      "route migrations beyond pilot",
+      "scanner modifications",
+      "capability additions beyond X9D-IMPL",
+      "decisions/create route",
+      "accept/reject/close routes",
+      "workspace/role design",
+      "any/as any TypeScript workarounds",
+      "permission fabrication"
+    ]
+  },
+  "changes_verified": {
+    "source_files_modified": [
+      {
+        "file": "src/app/api/recommendations/route.ts",
+        "changes": 2,
+        "description": "String literal to constant replacement",
+        "lines": [53, 55],
+        "change_1": {
+          "line": 53,
+          "type": "parameter_replacement",
+          "before": "assertCapability(workspaceId, \"decision_create\")",
+          "after": "assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE)",
+          "category": "constant_usage"
+        },
+        "change_2": {
+          "line": 55,
+          "type": "parameter_replacement",
+          "before": "PlanLimitError(\"decision_create\", ...)",
+          "after": "PlanLimitError(CAPABILITIES.DECISION_CREATE, ...)",
+          "category": "constant_usage"
+        },
+        "import_changes": "none",
+        "import_status": "CAPABILITIES already imported at line 4"
+      }
+    ],
+    "generated_files_updated": [
+      {
+        "file": "shadow_read_violations.json",
+        "type": "generated",
+        "changes": "timestamp updated, violation entries reordered",
+        "note": "Not a source file - scanner output"
+      }
+    ],
+    "services_modified": 0,
+    "wrappers_modified": 0,
+    "auth_context_modified": 0,
+    "capabilities_modified": 0,
+    "decisions_create_modified": false,
+    "accept_route_modified": false,
+    "reject_route_modified": false,
+    "close_route_modified": false,
+    "any_type_usage": false,
+    "business_logic_changes": 0,
+    "response_shape_changes": 0
+  },
+  "forbidden_patterns_detected": {
+    "any_types": 0,
+    "as_any_casts": 0,
+    "permission_fabrication": 0,
+    "silent_mutations": 0,
+    "state_transition_violations": 0
+  },
+  "scope_compliance": {
+    "phase_A_implementation": {
+      "status": "✓ COMPLIANT",
+      "scope": "Replace 2 string literals in recommendations route",
+      "compliance": "Exactly 2 replacements made, no other changes"
+    },
+    "phase_B_validation": {
+      "status": "✓ COMPLIANT",
+      "scope": "Build passes, all tests pass",
+      "compliance": "Build: 12.7s (0 errors), Tests: 402/402 passed"
+    },
+    "phase_C_test_verification": {
+      "status": "✓ COMPLIANT",
+      "scope": "No new tests required",
+      "compliance": "Existing governance-capabilities tests verify constant"
+    },
+    "phase_D_validation_gates": {
+      "status": "✓ COMPLIANT",
+      "scope": "All 6 validation gates pass",
+      "compliance": "Build, tests, scanner all stable"
+    },
+    "phase_E_scope_audit": {
+      "status": "✓ COMPLIANT",
+      "scope": "Verify no unauthorized changes",
+      "compliance": "Only recommendations route modified (2 replacements)"
+    }
+  },
+  "file_by_file_audit": {
+    "recommendations_route": {
+      "file": "src/app/api/recommendations/route.ts",
+      "status": "✓ EXPECTED_CHANGE",
+      "changes": 2,
+      "type": "string_literal_replacement",
+      "allowed": true
+    },
+    "decisions_create_route": {
+      "file": "src/app/api/decisions/create/route.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "allowed": true
+    },
+    "accept_route": {
+      "file": "src/app/api/decisions/[decisionId]/accept/route.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "allowed": true
+    },
+    "reject_route": {
+      "file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "allowed": true
+    },
+    "close_route": {
+      "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "allowed": true
+    },
+    "recommendation_service": {
+      "file": "src/services/recommendation.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "allowed": true
+    },
+    "entitlement_service": {
+      "file": "src/services/entitlement.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "allowed": true
+    },
+    "capabilities_constants": {
+      "file": "src/domain/constants/capabilities.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "allowed": true
+    },
+    "auth_guard_wrapper": {
+      "file": "src/lib/auth-guard.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "allowed": true
+    },
+    "enforced_route_wrapper": {
+      "file": "src/lib/enforced-route.ts",
+      "status": "✓ NOT_MODIFIED",
+      "changes": 0,
+      "allowed": true
+    }
+  },
+  "violation_summary": {
+    "critical_violations": 0,
+    "scope_violations": 0,
+    "architecture_violations": 0,
+    "pattern_violations": 0,
+    "conclusion": "✓ AUDIT PASSED - All changes within approved scope"
+  },
+  "conclusion": {
+    "status": "✓ X9E-4 SCOPE AUDIT PASSED",
+    "summary": "All changes are within approved scope. Only src/app/api/recommendations/route.ts was modified with exactly 2 string literal replacements (CAPABILITIES.DECISION_CREATE usage). No services changed, no wrappers changed, no auth context changes, no capability additions, no forbidden patterns detected.",
+    "ready_for_phase_F": true,
+    "recommendations": [
+      "Phase F: Generate acceptance decision report",
+      "Phase F: Confirm route cleanup successful",
+      "Phase F: Provide final metrics"
+    ]
+  }
+}

@@ -50,9 +50,9 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
   // Check entitlement: decision_create (plan-based quota enforcement)
   // Recommendations consume decision quota in the permission model
-  const capabilityCheck = await assertCapability(workspaceId, "decision_create");
+  const capabilityCheck = await assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE);
   if (!capabilityCheck.allowed) {
-    throw new PlanLimitError("decision_create", capabilityCheck.reason || "Plan limit exceeded");
+    throw new PlanLimitError(CAPABILITIES.DECISION_CREATE, capabilityCheck.reason || "Plan limit exceeded");
   }
 
   const idempotencyKey = request.headers.get("idempotency-key");
