@@ -102,6 +102,7 @@ export const CAPABILITIES = {
   DECISION_UPDATE: "decision:update",
   DECISION_ACCEPT: "decision:accept",
   DECISION_REJECT: "decision:reject",
+  DECISION_CLOSE: "decision:close",
 
   // Diagnosis
   DIAGNOSIS_READ: "diagnosis:read",
