@@ -1,10 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext, type ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { hasInternalAccess } from "@/policies/capability-check";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
-import type { NextRequest } from "next/server";
-import { ForbiddenError } from "@/infra/errors";
 
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getFindingDetail, updateFinding } from "@/services/findings";
@@ -45,43 +40,36 @@ export const GET = withCanonicalEnforcement(
   { requireCapabilities: ["FINDING_VIEW"], requireWorkspace: true }
 );
 
-export const PATCH = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.FINDING_UPDATE,
-    internalOnly: true,
-  });
+export const PATCH = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { findingId } = params;
+    parseOrThrow(uuidSchema, findingId);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
+    const body = await parseRequestBody(ctx.request!, updateFindingSchema);
+
+    // Create ServiceAuthEnvelope adapter from CanonicalAuthContext
+    const authEnvelope: ServiceAuthEnvelope = {
+      verifiedActorId: ctx.verifiedActorId,
+      verifiedActorType: ctx.verifiedActorType,
+      verifiedWorkspaceId: ctx.verifiedWorkspaceId,
+      verifiedCapabilities: ctx.verifiedCapabilities,
+      hasInternalAccess: ctx.policy ? hasInternalAccess(ctx.policy) : false,
+      verifiedActor: ctx.verifiedActor,
+      policy: ctx.policy,
+    };
+
+    await updateFinding(findingId, body, authEnvelope);
+
+    const updated = await getFindingDetail(
+      findingId,
+      undefined,
+      undefined,
+      ctx.verifiedWorkspaceId
     );
+    return Response.json(updated);
+  },
+  {
+    requireCapabilities: [CAPABILITIES.FINDING_UPDATE],
+    requireWorkspace: true,
   }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const { findingId } = params;
-  parseOrThrow(uuidSchema, findingId);
-
-  const body = await parseRequestBody(request, updateFindingSchema);
-  const canonicalCtx = canonicalizeAuthContext({ session, policy }, workspaceId);
-  const authEnvelope: ServiceAuthEnvelope = {
-    verifiedActorId: canonicalCtx.verifiedActorId,
-    verifiedActorType: canonicalCtx.verifiedActorType,
-    verifiedWorkspaceId: canonicalCtx.verifiedWorkspaceId,
-    verifiedCapabilities: canonicalCtx.verifiedCapabilities,
-    hasInternalAccess: policy ? hasInternalAccess(policy) : false,
-    verifiedActor: canonicalCtx.verifiedActor,
-  };
-  await updateFinding(findingId, body, authEnvelope);
-
-  const updated = await getFindingDetail(findingId, undefined, undefined, workspaceId);
-  return Response.json(updated);
-});
+);

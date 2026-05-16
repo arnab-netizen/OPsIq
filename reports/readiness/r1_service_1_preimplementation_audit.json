@@ -1,0 +1,148 @@
+{
+  "phase": "R1-SERVICE-1",
+  "date": "2026-05-16",
+  "purpose": "Pre-implementation audit for findings/[findingId] PATCH pilot",
+  "pilot_status": "READY_TO_IMPLEMENT",
+  "route_file": "src/app/api/findings/[findingId]/route.ts",
+  "service_file": "src/services/findings.ts",
+  "service_function": "updateFinding",
+  "current_route_auth_pattern": "withEnforcementFull(async (request, context, params) => { await withAuth() + enforceWorkspaceScoping() + canonicalizeAuthContext() + ServiceAuthEnvelope creation })",
+  "current_service_input_type": "ServiceAuthEnvelope",
+  "target_service_input_type": "ServiceAuthEnvelope (unchanged in pilot; will be VerifiedServiceContext in future phase)",
+  "adapter_required": true,
+  "new_type_required": false,
+  "new_helper_required": false,
+  "response_shape_risk": "LOW",
+  "business_logic_risk": "LOW",
+  "authorization_risk": "LOW",
+  "workspace_isolation_risk": "LOW",
+  "implementation_safe": true,
+  "implementation_confidence": "HIGH",
+  "audit_findings": [
+    {
+      "finding": "GET handler already modernized",
+      "detail": "GET handler at lines 36-46 already uses withCanonicalEnforcement and CanonicalAuthContext. No changes needed. Demonstrates working pattern.",
+      "risk": "NONE",
+      "action": "None - keep as-is"
+    },
+    {
+      "finding": "PATCH handler uses legacy pattern",
+      "detail": "PATCH handler at lines 48-87 uses withEnforcementFull + withAuth() + enforceWorkspaceScoping() + canonicalizeAuthContext(). This is the target for modernization.",
+      "risk": "NONE - pattern is known to be replaceable",
+      "action": "Replace with withCanonicalEnforcement + ctx-based adapter"
+    },
+    {
+      "finding": "Route already imports ServiceAuthEnvelope",
+      "detail": "Line 1 already imports ServiceAuthEnvelope, so no new imports needed for adapter type.",
+      "risk": "NONE",
+      "action": "None - imports already correct"
+    },
+    {
+      "finding": "Service is simple and well-isolated",
+      "detail": "updateFinding service (lines 148-232 in findings.ts) only uses auth.verifiedActorId, auth.verifiedWorkspaceId, and auth.verifiedCapabilities. No complex auth logic. Uses fields for: (1) database query filtering, (2) audit events. No re-verification.",
+      "risk": "LOW",
+      "action": "Service requires no changes for pilot; adapter is sufficient"
+    },
+    {
+      "finding": "Service validates workspace isolation correctly",
+      "detail": "Line 155 queries: 'where: { id: findingId, workspaceId: auth.verifiedWorkspaceId }' - correctly filters by verified workspace. Line 197 also uses workspaceId.",
+      "risk": "NONE",
+      "action": "Workspace isolation will be preserved by ServiceAuthEnvelope adapter"
+    },
+    {
+      "finding": "Service uses auth.verifiedActorId for audit events",
+      "detail": "Line 204: 'actorId: auth.verifiedActorId' - service correctly uses verified actor ID for audit trail.",
+      "risk": "NONE",
+      "action": "Audit trail will be preserved through adapter"
+    },
+    {
+      "finding": "Service checks capabilities via set membership",
+      "detail": "Line 239 (in validateFinding): 'if (!auth.verifiedCapabilities.has(CAPABILITIES.FINDING_VALIDATE))' - service checks capabilities. updateFinding doesn't do this (route declares requirements via wrapper options).",
+      "risk": "NONE - updateFinding doesn't need capability checks; wrapper provides via requireCapabilities option",
+      "action": "Route will declare requireCapabilities: [CAPABILITIES.FINDING_UPDATE]; service will trust this verification"
+    },
+    {
+      "finding": "Imports to remove from route",
+      "detail": "withEnforcementFull, withAuth, canonicalizeAuthContext, enforceWorkspaceScoping, hasInternalAccess are no longer needed after modernization.",
+      "risk": "NONE - safe to remove once handler updated",
+      "action": "Remove unused imports after PATCH implementation"
+    },
+    {
+      "finding": "Response shape unchanged",
+      "detail": "Current PATCH returns: Response.json(updated) where updated is the result of getFindingDetail. No changes to response shape.",
+      "risk": "NONE",
+      "action": "Keep response identical"
+    },
+    {
+      "finding": "Business logic unchanged",
+      "detail": "updateFinding service logic (input validation, database update, audit events, re-evaluation) is unchanged. Route only changes auth pattern.",
+      "risk": "NONE",
+      "action": "No business logic changes"
+    }
+  ],
+  "adapter_pattern": {
+    "description": "Route will create ServiceAuthEnvelope from CanonicalAuthContext immediately before calling updateFinding",
+    "location": "Inside PATCH handler, before updateFinding call",
+    "fields": [
+      "verifiedActorId (from ctx.verifiedActorId)",
+      "verifiedActorType (from ctx.verifiedActorType)",
+      "verifiedWorkspaceId (from ctx.verifiedWorkspaceId)",
+      "verifiedCapabilities (from ctx.verifiedCapabilities)",
+      "hasInternalAccess (derived from policy if available)",
+      "verifiedActor (from ctx.verifiedActor, optional)",
+      "policy (from ctx.policy, optional)"
+    ],
+    "safety": "All fields come directly from verified CanonicalAuthContext. Type checking ensures completeness."
+  },
+  "implementation_steps": [
+    {
+      "step": 1,
+      "action": "Update route imports",
+      "detail": "Change line 1-6 imports: remove withEnforcementFull, withAuth, canonicalizeAuthContext; keep withCanonicalEnforcement imports"
+    },
+    {
+      "step": 2,
+      "action": "Update PATCH handler signature and wrapper",
+      "detail": "Replace line 48 'export const PATCH = withEnforcementFull(async (request, context, params) => {' with 'export const PATCH = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params) => {' and add options: { requireCapabilities: [CAPABILITIES.FINDING_UPDATE], requireWorkspace: true }"
+    },
+    {
+      "step": 3,
+      "action": "Remove legacy auth calls",
+      "detail": "Remove lines 50-68 (withAuth, workspace validation logic)"
+    },
+    {
+      "step": 4,
+      "action": "Update request handling",
+      "detail": "Lines 56-73 need adjustment: nextRequest is no longer available; instead use ctx directly for verification"
+    },
+    {
+      "step": 5,
+      "action": "Create ServiceAuthEnvelope adapter",
+      "detail": "Create adapter from ctx: verifiedActorId, verifiedActorType, verifiedWorkspaceId, verifiedCapabilities, hasInternalAccess"
+    },
+    {
+      "step": 6,
+      "action": "Call updateFinding with adapter",
+      "detail": "Line 83 already calls updateFinding; keep this line, just pass adapter instead of canonicalCtx-based envelope"
+    },
+    {
+      "step": 7,
+      "action": "Use ctx.verifiedWorkspaceId for queries",
+      "detail": "Line 85 queries getFindingDetail; change to use ctx.verifiedWorkspaceId instead of nextRequest header"
+    },
+    {
+      "step": 8,
+      "action": "Clean up unused imports",
+      "detail": "Remove enforceWorkspaceScoping, hasInternalAccess imports if not used elsewhere"
+    }
+  ],
+  "tests_to_verify": [
+    "npm test -- findings (route tests must pass)",
+    "npm test -- governance-capabilities (wrapper tests must pass)",
+    "npx tsx src/governance/auth-shadow-read-scanner.ts (should show -4 violations)"
+  ],
+  "rollback_rule": "If any issues arise, revert PATCH handler to previous withEnforcementFull pattern. Service unchanged, so no service rollback needed.",
+  "authorization_boundary_impact": "PRESERVED - wrapper still enforces requireCapabilities and requireWorkspace; adapter passes verified data",
+  "workspace_isolation_impact": "PRESERVED - ctx.verifiedWorkspaceId guaranteed verified; adapter passes to service unchanged",
+  "conclusion": "Pilot is safe to implement. No unrelated services affected. No response shape changes. No business logic changes. No capability/entitlement/role changes. Pure auth pattern modernization."
+}
