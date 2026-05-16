@@ -7,6 +7,7 @@ import {
   createDecision,
   createDecisionsBulk,
   parseCSV,
+  type VerifiedDecisionInput,
 } from "@/services/decisions/decision-creation-service";
 import { logger } from "@/infra/logger";
 import { assertCapability } from "@/services/entitlement.service";
@@ -44,8 +45,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       // Bulk creation via JSON
       const decisions = body.decisions.map((d: any) => ({
         ...d,
-        workspaceId,
-        userId,
+        verifiedWorkspaceId: workspaceId,  // Verified at route level (enforcement)
+        verifiedActorId: userId,  // Verified at route level (session)
       }));
 
       const result = await createDecisionsBulk({ decisions });
@@ -62,16 +63,19 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       const { title, type, impact, confidence, problemType, expectedOutcome } =
         body;
 
-      const decision = await createDecision({
+      // Construct verified input with explicit auth boundary
+      const verifiedInput: VerifiedDecisionInput = {
         title,
         type,
         impact,
         confidence,
-        workspaceId,
-        userId,
+        verifiedActorId: userId,  // Verified at route level (session)
+        verifiedWorkspaceId: workspaceId,  // Verified at route level (enforcement)
         problemType,
         expectedOutcome,
-      });
+      };
+
+      const decision = await createDecision(verifiedInput);
 
       logger.info("Decision created via API", {
         decisionId: decision.id,
@@ -95,8 +99,14 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     const csvContent = await file.text();
 
     try {
-      const decisions = parseCSV(csvContent, workspaceId, userId);
-      const result = await createDecisionsBulk({ decisions });
+      // parseCSV expects legacy format - convert to verified format after parsing
+      const parsedDecisions = parseCSV(csvContent, workspaceId, userId);
+      const verifiedDecisions = parsedDecisions.map((d: any) => ({
+        ...d,
+        verifiedWorkspaceId: workspaceId,  // Verified at route level (enforcement)
+        verifiedActorId: userId,  // Verified at route level (session)
+      }));
+      const result = await createDecisionsBulk({ decisions: verifiedDecisions });
 
       logger.info("Bulk decisions created via CSV upload", {
         workspaceId,

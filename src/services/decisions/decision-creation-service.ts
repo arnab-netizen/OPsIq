@@ -13,6 +13,19 @@ export interface CreateDecisionInput {
   expectedOutcome?: string;
 }
 
+export interface VerifiedDecisionInput {
+  // Business data
+  title: string;
+  type: string;
+  impact: number;
+  confidence: number;
+  problemType?: string;
+  expectedOutcome?: string;
+  // Verified auth metadata
+  verifiedActorId: string;
+  verifiedWorkspaceId: string;
+}
+
 export interface CreateDecisionResult {
   id: string;
   title: string;
@@ -24,18 +37,19 @@ export interface CreateDecisionResult {
 }
 
 export async function createDecision(
-  input: CreateDecisionInput
+  input: VerifiedDecisionInput | CreateDecisionInput
 ): Promise<CreateDecisionResult> {
-  const {
-    title,
-    type,
-    impact,
-    confidence,
-    workspaceId,
-    userId,
-    problemType,
-    expectedOutcome,
-  } = input;
+  // Support both old and new input formats for backward compatibility
+  const isVerified = 'verifiedActorId' in input && 'verifiedWorkspaceId' in input;
+
+  const title = input.title;
+  const type = input.type;
+  const impact = input.impact;
+  const confidence = input.confidence;
+  const workspaceId = isVerified ? (input as VerifiedDecisionInput).verifiedWorkspaceId : (input as CreateDecisionInput).workspaceId;
+  const userId = isVerified ? (input as VerifiedDecisionInput).verifiedActorId : (input as CreateDecisionInput).userId;
+  const problemType = input.problemType;
+  const expectedOutcome = input.expectedOutcome;
 
   // Enforce workspace isolation
   enforceWorkspaceId(workspaceId, "createDecision", "OperatorItem");
@@ -111,7 +125,7 @@ export async function createDecision(
 }
 
 export interface BulkCreateInput {
-  decisions: CreateDecisionInput[];
+  decisions: (VerifiedDecisionInput | CreateDecisionInput)[];
 }
 
 export interface BulkCreateResult {
@@ -152,9 +166,10 @@ export async function createDecisionsBulk(
         title: decision.title,
         reason: error instanceof Error ? error.message : String(error),
       });
+      const workspaceId = 'verifiedWorkspaceId' in decision ? decision.verifiedWorkspaceId : decision.workspaceId;
       logger.warn("Failed to create decision in bulk", {
         title: decision.title,
-        workspaceId: decision.workspaceId,
+        workspaceId,
         reason: error instanceof Error ? error.message : String(error),
       });
     }
