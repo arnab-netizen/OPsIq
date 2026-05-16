@@ -1,0 +1,61 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "phase": "X9F-3",
+  "date": "2026-05-16",
+  "validation_status": "BASELINE_COMPLETE",
+  "git_status": "clean",
+  "baseline_metrics": {
+    "scanner_total": 448,
+    "scanner_critical": 283,
+    "scanner_block_build": 165
+  },
+  "build_status": {
+    "result": "PASS",
+    "duration_seconds": 8.2,
+    "static_pages": "99/99",
+    "typescript_errors": 0
+  },
+  "test_results": {
+    "governance_capabilities": {
+      "files": 1,
+      "tests": 32,
+      "status": "PASS",
+      "duration_seconds": 5.61
+    },
+    "policy_wrapper_enforcement": {
+      "files": 1,
+      "tests": 32,
+      "status": "PASS",
+      "duration_seconds": 3.48
+    },
+    "g6r_auth_bridge": {
+      "files": 1,
+      "tests": 14,
+      "status": "PASS",
+      "duration_seconds": 3.46
+    },
+    "phase_d_e_f": {
+      "files": 17,
+      "tests": 324,
+      "status": "PASS",
+      "duration_seconds": 9.85
+    },
+    "total_tests": 402,
+    "total_pass": 402,
+    "overall_status": "PASS"
+  },
+  "scanner_status": {
+    "violations_detected": 448,
+    "critical_count": 283,
+    "block_build_count": 165,
+    "decision_service_violations": 4,
+    "status": "STABLE_BASELINE"
+  },
+  "validation_gates": {
+    "git_clean": true,
+    "build_passes": true,
+    "tests_pass": true,
+    "scanner_baseline_matches": true,
+    "all_gates_pass": true
+  }
+}
