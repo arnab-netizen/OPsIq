@@ -1,0 +1,116 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_date": "2026-05-16",
+  "scanner_baseline": {
+    "total": 448,
+    "critical": 283,
+    "block_build": 165
+  },
+  "callers": [
+    {
+      "file": "src/app/api/decisions/create/route.ts",
+      "line": 78,
+      "caller_type": "ROUTE",
+      "function": "POST handler (single decision)",
+      "input_format_used": "VERIFIED",
+      "source_context": "const decision = await createDecision(verifiedInput);",
+      "input_construction": "const verifiedInput: VerifiedDecisionInput = { title, type, impact, confidence, verifiedActorId: userId, verifiedWorkspaceId: workspaceId, problemType, expectedOutcome };",
+      "safe": true,
+      "reason": "Route explicitly constructs VerifiedDecisionInput from verified context (userId from session, workspaceId from workspace enforcement)"
+    },
+    {
+      "file": "src/app/api/decisions/create/route.ts",
+      "line": 52,
+      "caller_type": "ROUTE",
+      "function": "POST handler (bulk JSON)",
+      "input_format_used": "VERIFIED",
+      "source_context": "const result = await createDecisionsBulk({ decisions });",
+      "input_construction": "const decisions = body.decisions.map((d: any) => ({ ...d, verifiedWorkspaceId: workspaceId, verifiedActorId: userId }));",
+      "safe": true,
+      "reason": "Route maps all decisions to verified format before bulk call"
+    },
+    {
+      "file": "src/app/api/decisions/create/route.ts",
+      "line": 109,
+      "caller_type": "ROUTE",
+      "function": "POST handler (CSV upload)",
+      "input_format_used": "VERIFIED",
+      "source_context": "const result = await createDecisionsBulk({ decisions: verifiedDecisions });",
+      "input_construction": "const parsedDecisions = parseCSV(csvContent, workspaceId, userId); const verifiedDecisions = parsedDecisions.map((d: any) => ({ ...d, verifiedWorkspaceId: workspaceId, verifiedActorId: userId }));",
+      "safe": true,
+      "reason": "parseCSV returns old format, but route converts all to verified format before bulk call. Verified format guaranteed at call site."
+    },
+    {
+      "file": "src/services/decisions/decision-creation-service.ts",
+      "line": 162,
+      "caller_type": "SERVICE",
+      "function": "createDecisionsBulk (internal loop)",
+      "input_format_used": "VERIFIED",
+      "source_context": "const result = await createDecision(decision);",
+      "input_construction": "for (const decision of decisions) { const result = await createDecision(decision); }",
+      "safe": true,
+      "reason": "createDecisionsBulk receives decisions array that must be verified format. Input union type VerifiedDecisionInput | CreateDecisionInput, but all callers pass verified format. Internal recursive call inherits verified format from caller."
+    }
+  ],
+  "intermediate_functions": [
+    {
+      "file": "src/services/decisions/decision-creation-service.ts",
+      "function": "parseCSV",
+      "line": 200,
+      "signature": "parseCSV(csvContent: string, workspaceId: string, userId: string): CreateDecisionInput[]",
+      "output_format": "OLD_RAW",
+      "note": "Returns old CreateDecisionInput format with workspaceId and userId fields",
+      "usage": "Called only from create/route.ts CSV handler, output always converted to verified format before passing to createDecisionsBulk"
+    }
+  ],
+  "summary": {
+    "total_callers": 4,
+    "production_callers": 4,
+    "verified_callers": 4,
+    "old_raw_callers": 0,
+    "test_only_old_raw_callers": 0,
+    "unsafe_production_callers": 0,
+    "unknown_callers": 0
+  },
+  "dual_format_support_status": {
+    "still_present": true,
+    "still_needed": false,
+    "reason": "Runtime format detection (lines 43-50) remains in createDecision, but no production callers use old raw format. All 4 callers explicitly use VerifiedDecisionInput or pass converted format.",
+    "evidence": [
+      "create/route.ts single: explicit VerifiedDecisionInput construction",
+      "create/route.ts bulk JSON: mapped to verifiedWorkspaceId/verifiedActorId",
+      "create/route.ts CSV: parseCSV output converted to verified format",
+      "createDecisionsBulk internal: receives already-verified format from route"
+    ]
+  },
+  "code_analysis": {
+    "old_format_interface": {
+      "exists": true,
+      "line": 5,
+      "exported": true,
+      "name": "CreateDecisionInput",
+      "fields": ["title", "type", "impact", "confidence", "workspaceId", "userId", "problemType", "expectedOutcome"]
+    },
+    "new_format_interface": {
+      "exists": true,
+      "line": 16,
+      "exported": true,
+      "name": "VerifiedDecisionInput",
+      "fields": ["title", "type", "impact", "confidence", "verifiedActorId", "verifiedWorkspaceId", "problemType", "expectedOutcome"]
+    },
+    "runtime_format_detection": {
+      "exists": true,
+      "line": 43,
+      "code": "const isVerified = 'verifiedActorId' in input && 'verifiedWorkspaceId' in input;",
+      "complexity": "Low (simple field check)",
+      "used_for": "Differentiating between old and new input at runtime"
+    },
+    "union_type_usage": {
+      "exists": true,
+      "line": 40,
+      "type": "VerifiedDecisionInput | CreateDecisionInput",
+      "why_union": "Backward compatibility for dual-format support"
+    }
+  },
+  "conclusion": "✓ ALL PRODUCTION CALLERS USE VERIFIED FORMAT - Dual-format support can be safely removed. No production code depends on old raw format."
+}
