@@ -1,6 +1,6 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { acceptDecision } from "@/services/decision-validation/decision-acceptance.service";
+import { acceptDecision, type VerifiedAcceptanceInput } from "@/services/decision-validation/decision-acceptance.service";
 import { logger } from "@/infra/logger";
 import { z } from "zod";
 
@@ -19,13 +19,14 @@ export const POST = withCanonicalEnforcement(
     const parsed = AcceptDecisionSchema.parse(body);
 
     // Accept decision
-    const result = await acceptDecision({
+    const verifiedInput: VerifiedAcceptanceInput = {
       decisionId,
       engagementId: parsed.engagementId,
-      workspaceId,
-      acceptedBy: ctx.verifiedActorId,
+      verifiedWorkspaceId: ctx.verifiedWorkspaceId,
+      verifiedActorId: ctx.verifiedActorId,
       rationale: parsed.rationale,
-    });
+    };
+    const result = await acceptDecision(verifiedInput);
 
     logger.info("Decision acceptance recorded", {
       decisionId,

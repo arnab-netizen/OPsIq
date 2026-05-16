@@ -5,6 +5,14 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { validateDecisionForAcceptance, type DecisionAcceptanceInput, type DecisionRejectionInput } from "./human-decision-validator";
 
+export interface VerifiedAcceptanceInput {
+  decisionId: string;
+  engagementId: string;
+  verifiedWorkspaceId: string;
+  verifiedActorId: string;
+  rationale?: string;
+}
+
 export interface AcceptanceRecord {
   decisionId: string;
   acceptedBy: string;
@@ -21,12 +29,12 @@ export interface RejectionRecord {
   auditEventId: string;
 }
 
-export async function acceptDecision(input: DecisionAcceptanceInput): Promise<AcceptanceRecord> {
+export async function acceptDecision(input: VerifiedAcceptanceInput): Promise<AcceptanceRecord> {
   // Validate decision can be accepted
   const validation = await validateDecisionForAcceptance({
     decisionId: input.decisionId,
     engagementId: input.engagementId,
-    workspaceId: input.workspaceId,
+    workspaceId: input.verifiedWorkspaceId,
   });
 
   if (!validation.isValid) {
@@ -49,7 +57,7 @@ export async function acceptDecision(input: DecisionAcceptanceInput): Promise<Ac
     where: { id: input.decisionId },
     data: {
       status: "in_progress",
-      lastUpdatedBy: input.acceptedBy,
+      lastUpdatedBy: input.verifiedActorId,
       updatedAt: now,
     },
   });
@@ -57,8 +65,8 @@ export async function acceptDecision(input: DecisionAcceptanceInput): Promise<Ac
   // Emit audit event
   const auditEventId = await emitAuditEvent({
     eventName: AUDIT_EVENTS.DECISION_ACCEPTED,
-    workspaceId: input.workspaceId,
-    actorId: input.acceptedBy,
+    workspaceId: input.verifiedWorkspaceId,
+    actorId: input.verifiedActorId,
     actorType: "user",
     entityType: "OperatorItem",
     entityId: input.decisionId,
@@ -75,14 +83,14 @@ export async function acceptDecision(input: DecisionAcceptanceInput): Promise<Ac
 
   logger.info("Decision accepted", {
     decisionId: input.decisionId,
-    acceptedBy: input.acceptedBy,
+    acceptedBy: input.verifiedActorId,
     auditEventId,
     expectedImpact: decision.impactExpected,
   });
 
   return {
     decisionId: input.decisionId,
-    acceptedBy: input.acceptedBy,
+    acceptedBy: input.verifiedActorId,
     acceptedAt: now,
     rationale: input.rationale,
     auditEventId,
