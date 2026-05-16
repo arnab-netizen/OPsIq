@@ -1,0 +1,146 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_date": "2026-05-16",
+  "checks": [
+    {
+      "item": "CAPABILITIES.DECISION_CREATE exists",
+      "file": "src/domain/constants/capabilities.ts",
+      "expected": "DECISION_CREATE: \"decision:create\"",
+      "actual": "DECISION_CREATE: \"decision:create\" (line 101)",
+      "status": "PASS",
+      "evidence": "Capability defined with correct string value"
+    },
+    {
+      "item": "CAPABILITIES.DECISION_UPDATE exists",
+      "file": "src/domain/constants/capabilities.ts",
+      "expected": "DECISION_UPDATE: \"decision:update\"",
+      "actual": "DECISION_UPDATE: \"decision:update\" (line 102)",
+      "status": "PASS",
+      "evidence": "Capability defined with correct string value"
+    },
+    {
+      "item": "CAPABILITIES.DECISION_ACCEPT exists",
+      "file": "src/domain/constants/capabilities.ts",
+      "expected": "DECISION_ACCEPT: \"decision:accept\"",
+      "actual": "DECISION_ACCEPT: \"decision:accept\" (line 103)",
+      "status": "PASS",
+      "evidence": "Capability defined with correct string value"
+    },
+    {
+      "item": "CAPABILITIES.DECISION_REJECT exists",
+      "file": "src/domain/constants/capabilities.ts",
+      "expected": "DECISION_REJECT: \"decision:reject\"",
+      "actual": "DECISION_REJECT: \"decision:reject\" (line 104)",
+      "status": "PASS",
+      "evidence": "Capability defined with correct string value"
+    },
+    {
+      "item": "CAPABILITIES.DECISION_CLOSE exists",
+      "file": "src/domain/constants/capabilities.ts",
+      "expected": "DECISION_CLOSE: \"decision:close\"",
+      "actual": "DECISION_CLOSE: \"decision:close\" (line 105)",
+      "status": "PASS",
+      "evidence": "Capability defined with correct string value"
+    },
+    {
+      "item": "No unauthorized capabilities added",
+      "file": "src/domain/constants/capabilities.ts",
+      "expected": "No EXPERIMENT_CREATE, ADMIN_SETTINGS, WORKSPACE_CREATE, etc.",
+      "actual": "Decision-only capabilities present in merged set",
+      "status": "PASS",
+      "evidence": "Grep search shows only expected decision capabilities"
+    },
+    {
+      "item": "decisions/create route uses DECISION_CREATE",
+      "file": "src/app/api/decisions/create/route.ts",
+      "expected": "assertCapability or requireCapabilities with DECISION_CREATE",
+      "actual": "assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE) on line 32",
+      "status": "PASS",
+      "evidence": "Route enforces DECISION_CREATE capability"
+    },
+    {
+      "item": "decisions/accept route uses DECISION_ACCEPT",
+      "file": "src/app/api/decisions/[decisionId]/accept/route.ts",
+      "expected": "requireCapabilities: [\"DECISION_ACCEPT\"]",
+      "actual": "requireCapabilities: [\"DECISION_ACCEPT\"] on line 39",
+      "status": "PASS",
+      "evidence": "Route enforcement specification correct"
+    },
+    {
+      "item": "decisions/reject route uses DECISION_REJECT",
+      "file": "src/app/api/decisions/[decisionId]/reject/route.ts",
+      "expected": "requireCapabilities: [\"DECISION_REJECT\"]",
+      "actual": "requireCapabilities: [\"DECISION_REJECT\"] on line 40",
+      "status": "PASS",
+      "evidence": "Route enforcement specification correct"
+    },
+    {
+      "item": "DECISION_CLOSE mapped to ADMIN_OR_PORTFOLIO_MANAGER",
+      "file": "src/policies/capability-check.ts",
+      "expected": "CAPABILITIES.DECISION_CLOSE in ADMIN_OR_PORTFOLIO_MANAGER array",
+      "actual": "CAPABILITIES.DECISION_CLOSE found on line 42",
+      "status": "PASS",
+      "evidence": "Role mapping correctly includes DECISION_CLOSE"
+    },
+    {
+      "item": "SYSTEM_ADMIN receives all capabilities",
+      "file": "src/policies/capability-check.ts",
+      "expected": "SYSTEM_ADMIN: Object.values(CAPABILITIES) or equivalent",
+      "actual": "SYSTEM_ADMIN: Object.values(CAPABILITIES) (line 9)",
+      "status": "PASS",
+      "evidence": "SYSTEM_ADMIN gets all capabilities including DECISION_CLOSE"
+    },
+    {
+      "item": "close route modernized with DECISION_CLOSE",
+      "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "expected": "requireCapabilities: [\"DECISION_CLOSE\"]",
+      "actual": "requireCapabilities: [\"DECISION_CLOSE\"] on line 35",
+      "status": "PASS",
+      "evidence": "Close route uses modern capability enforcement"
+    },
+    {
+      "item": "close route removed legacy close_decision check",
+      "file": "src/app/api/decisions/[decisionId]/close/route.ts",
+      "expected": "No hasPermission(role, 'close_decision') check",
+      "actual": "Legacy check not found; withCanonicalEnforcement used instead",
+      "status": "PASS",
+      "evidence": "Route modernized from legacy to modern pattern"
+    },
+    {
+      "item": "createDecision uses verified input only",
+      "file": "src/services/decisions/decision-creation-service.ts",
+      "expected": "VerifiedCreateDecisionInput pattern",
+      "actual": "Service signature verified in merge commits",
+      "status": "PASS",
+      "evidence": "X9F-2 commit implements verified input pattern"
+    },
+    {
+      "item": "acceptDecision uses verified input only",
+      "file": "src/services/decision-validation/decision-acceptance.service.ts",
+      "expected": "VerifiedAcceptanceInput pattern",
+      "actual": "Service signature verified in merge commits",
+      "status": "PASS",
+      "evidence": "X9F-4 commit implements verified input pattern"
+    },
+    {
+      "item": "rejectDecision uses verified input only",
+      "file": "src/services/decision-validation/decision-acceptance.service.ts",
+      "expected": "VerifiedRejectionInput pattern",
+      "actual": "Service signature verified in merge commits",
+      "status": "PASS",
+      "evidence": "X9F-6 commit implements verified input pattern"
+    }
+  ],
+  "summary": {
+    "checks_total": 16,
+    "pass": 16,
+    "fail": 0,
+    "unclear": 0
+  },
+  "close_route_status": {
+    "fixed": true,
+    "current_pattern": "withCanonicalEnforcement + requireCapabilities([DECISION_CLOSE])",
+    "live_blocker": false
+  },
+  "overall_status": "ALL_CHECKS_PASSED"
+}

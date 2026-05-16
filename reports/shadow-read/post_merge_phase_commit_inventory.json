@@ -1,0 +1,125 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_date": "2026-05-16",
+  "phase_commits": [
+    {
+      "phase": "X9D-IMPL",
+      "expected_change": "DECISION_CREATE and DECISION_UPDATE added to capabilities",
+      "commit_found_on_main": true,
+      "commit_hashes": ["dc63d68"],
+      "evidence": "X9D-IMPL: Complete minimal governance capability implementation",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9E-2",
+      "expected_change": "decisions/create route uses CAPABILITIES.DECISION_CREATE",
+      "commit_found_on_main": true,
+      "commit_hashes": ["4fd3277"],
+      "evidence": "X9E-2: Complete decision route cleanup pilot 1",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9E-4",
+      "expected_change": "recommendations route uses CAPABILITIES.DECISION_CREATE",
+      "commit_found_on_main": true,
+      "commit_hashes": ["856379f"],
+      "evidence": "X9E-4: Complete recommendations route governance cleanup",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9E-6",
+      "expected_change": "reject route uses DECISION_REJECT",
+      "commit_found_on_main": true,
+      "commit_hashes": ["b433727"],
+      "evidence": "X9E-6: Fix reject route authorization capability bug",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9F-2",
+      "expected_change": "createDecision verified input refactor",
+      "commit_found_on_main": true,
+      "commit_hashes": ["7d9349b"],
+      "evidence": "X9F-2: Refactor createDecision service to use verified auth input",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9F-2R",
+      "expected_change": "createDecision audit/reconciliation reports",
+      "commit_found_on_main": true,
+      "commit_hashes": ["2bc1099"],
+      "evidence": "X9F-2R: Reconciliation audit reports for createDecision refactoring",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9F-4",
+      "expected_change": "acceptDecision verified input refactor",
+      "commit_found_on_main": true,
+      "commit_hashes": ["f27e2a8"],
+      "evidence": "X9F-4: acceptDecision service refactoring complete",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9F-6",
+      "expected_change": "rejectDecision verified input refactor",
+      "commit_found_on_main": true,
+      "commit_hashes": ["6a87ced"],
+      "evidence": "X9F-6: Refactor rejectDecision to use VerifiedRejectionInput",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9F-8",
+      "expected_change": "createDecision dual-format support removed",
+      "commit_found_on_main": true,
+      "commit_hashes": ["f850909"],
+      "evidence": "X9F-8: Remove createDecision dual-format debt",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9G-2",
+      "expected_change": "DECISION_CLOSE added to domain capabilities",
+      "commit_found_on_main": true,
+      "commit_hashes": ["327a425"],
+      "evidence": "X9G-2: Add DECISION_CLOSE constant to domain capabilities (governance model update)",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9G-3",
+      "expected_change": "DECISION_CLOSE mapped to ADMIN_OR_PORTFOLIO_MANAGER role",
+      "commit_found_on_main": true,
+      "commit_hashes": ["c2d42b2"],
+      "evidence": "X9G-3: Add DECISION_CLOSE to ADMIN_OR_PORTFOLIO_MANAGER role mapping",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X8B-1R",
+      "expected_change": "role mapping reconciliation reports and acceptance",
+      "commit_found_on_main": true,
+      "commit_hashes": ["833755a"],
+      "evidence": "X8B-1R: Complete reconciliation audits and acceptance decision",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "X9G-4",
+      "expected_change": "close route modernized with DECISION_CLOSE capability enforcement",
+      "commit_found_on_main": true,
+      "commit_hashes": ["e4079b6"],
+      "evidence": "X9G-4: Modernize close route with DECISION_CLOSE capability enforcement",
+      "status": "PRESENT"
+    },
+    {
+      "phase": "Main Merge Completion",
+      "expected_change": "main merge completion report",
+      "commit_found_on_main": true,
+      "commit_hashes": ["59d6587"],
+      "evidence": "Add main merge completion report",
+      "status": "PRESENT"
+    }
+  ],
+  "summary": {
+    "required_phases": 14,
+    "present": 14,
+    "missing": 0,
+    "unclear": 0
+  },
+  "overall_status": "ALL_ACCEPTED_PHASES_PRESENT"
+}

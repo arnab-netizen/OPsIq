@@ -1,0 +1,97 @@
+{
+  "classification": "RUNTIME_ENFORCED_HYBRID",
+  "audit_date": "2026-05-16",
+  "primary_merge_status": "claude/verify-execution-hardening-LRoqi → main ✓ MERGED",
+  "local_unmerged_branches": {
+    "count": 7,
+    "branches": [
+      {
+        "name": "claude/phase-4-resilience-scorer-kL8pM",
+        "classification": "WRONG_SCOPE_DO_NOT_MERGE",
+        "reason": "Phase 4 resilience scoring (unrelated to X9 hardening)",
+        "action": "DEFER - separate merge track"
+      },
+      {
+        "name": "claude/phase-4-shock-detection-9xK2m",
+        "classification": "WRONG_SCOPE_DO_NOT_MERGE",
+        "reason": "Phase 4 shock detection (unrelated to X9 hardening)",
+        "action": "DEFER - separate merge track"
+      },
+      {
+        "name": "claude/phase-4-survival-intelligence-kT9xZ",
+        "classification": "WRONG_SCOPE_DO_NOT_MERGE",
+        "reason": "Phase 4 survival intelligence (unrelated to X9 hardening)",
+        "action": "DEFER - separate merge track"
+      },
+      {
+        "name": "claude/phase-5-financial-normalization-XJSDZ",
+        "classification": "WRONG_SCOPE_DO_NOT_MERGE",
+        "reason": "Phase 5 financial (unrelated to X9 hardening)",
+        "action": "DEFER - separate merge track"
+      },
+      {
+        "name": "claude/phase-6-recommendation-engine-6a3603",
+        "classification": "WRONG_SCOPE_DO_NOT_MERGE",
+        "reason": "Phase 6 recommendation engine (unrelated to X9 hardening)",
+        "action": "DEFER - separate merge track"
+      },
+      {
+        "name": "phase/3-event-temporal-fabric-stabilization",
+        "classification": "WRONG_SCOPE_DO_NOT_MERGE",
+        "reason": "Phase 3 event temporal (unrelated to X9 hardening)",
+        "action": "DEFER - separate merge track"
+      },
+      {
+        "name": "integration/recover-implemented-work",
+        "classification": "UNKNOWN_NEEDS_MANUAL_REVIEW",
+        "reason": "Integration recovery branch (unclear purpose)",
+        "action": "DEFER - needs manual audit"
+      }
+    ]
+  },
+  "remote_unmerged_branches": {
+    "count": 38,
+    "sample": [
+      {
+        "name": "origin/claude/phase-4-resilience-scorer-kL8pM",
+        "classification": "WRONG_SCOPE_DO_NOT_MERGE",
+        "reason": "Phase 4 work not part of current merge"
+      },
+      {
+        "name": "origin/claude/add-deliverable-reporting-bdLtp",
+        "classification": "WRONG_SCOPE_DO_NOT_MERGE",
+        "reason": "Module-specific work not part of current merge"
+      },
+      {
+        "name": "origin/claude/audit-opsiq-backend-QSkEd",
+        "classification": "STALE_DO_NOT_MERGE",
+        "reason": "Audit branch not part of current initiative"
+      },
+      {
+        "name": "origin/integration/v72-final",
+        "classification": "STALE_DO_NOT_MERGE",
+        "reason": "Old integration branch (not current)"
+      },
+      {
+        "name": "origin/opsiq/final-controlled-integration",
+        "classification": "STALE_DO_NOT_MERGE",
+        "reason": "Deprecated integration branch"
+      }
+    ]
+  },
+  "relevant_unmerged_branches": {
+    "count": 0,
+    "branches": [],
+    "reason": "All relevant X9 hardening work has been merged"
+  },
+  "summary": {
+    "total_unmerged_local": 7,
+    "total_unmerged_remote": 38,
+    "total_unmerged": 45,
+    "relevant_for_current_work": 0,
+    "safe_to_merge_now": 0,
+    "require_separate_audit": 7,
+    "stale_can_defer": 38
+  },
+  "merge_recommendation": "NO additional merges at this time. All X9 hardening work complete on main. Other branches should be evaluated separately."
+}
