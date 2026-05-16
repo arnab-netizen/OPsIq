@@ -1,0 +1,104 @@
+{
+  "date": "2026-05-16",
+  "phase": "R1-D2-0R",
+  "branch": "main",
+  "purpose": "Verify R1-D authorized routes contain expected modernization changes",
+  "r1d_authorized_routes": [
+    {
+      "file": "src/app/api/notifications/[id]/route.ts",
+      "r1d_expected_changes": "Modernize GET and PATCH handlers (2 handlers)",
+      "canonical_enforcement_count": 3,
+      "legacy_enforcement_count": 0,
+      "excluded_handlers_unchanged": "N/A (no deferred handlers)",
+      "with_canonical_present": true,
+      "legacy_auth_remains_where_deferred": false,
+      "service_files_untouched": true,
+      "source_status": "PASS",
+      "notes": "Both GET and PATCH modernized successfully"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/route.ts",
+      "r1d_expected_changes": "Modernize GET handler only; defer PATCH and POST (3 handlers, 1 modernized, 2 deferred)",
+      "canonical_enforcement_count": 2,
+      "legacy_enforcement_count": 3,
+      "excluded_handlers_unchanged": "YES (PATCH and POST remain with withEnforcementFull)",
+      "with_canonical_present": true,
+      "legacy_auth_remains_where_deferred": true,
+      "service_files_untouched": true,
+      "source_status": "PASS",
+      "notes": "GET modernized; PATCH/POST correctly deferred as per R1-D decision (service coupling issue)"
+    },
+    {
+      "file": "src/app/api/governance/alerts/route.ts",
+      "r1d_expected_changes": "Modernize GET handler (1 handler)",
+      "canonical_enforcement_count": 2,
+      "legacy_enforcement_count": 0,
+      "excluded_handlers_unchanged": "N/A",
+      "with_canonical_present": true,
+      "legacy_auth_remains_where_deferred": false,
+      "service_files_untouched": true,
+      "source_status": "PASS",
+      "notes": "GET handler modernized successfully"
+    },
+    {
+      "file": "src/app/api/entitlement/quota/route.ts",
+      "r1d_expected_changes": "Modernize GET and POST handlers (2 handlers)",
+      "canonical_enforcement_count": 3,
+      "legacy_enforcement_count": 0,
+      "excluded_handlers_unchanged": "N/A",
+      "with_canonical_present": true,
+      "legacy_auth_remains_where_deferred": false,
+      "service_files_untouched": true,
+      "source_status": "PASS",
+      "notes": "Both GET and POST handlers modernized successfully"
+    },
+    {
+      "file": "src/app/api/observability/summary/route.ts",
+      "r1d_expected_changes": "Modernize GET handler (1 handler)",
+      "canonical_enforcement_count": 2,
+      "legacy_enforcement_count": 0,
+      "excluded_handlers_unchanged": "N/A",
+      "with_canonical_present": true,
+      "legacy_auth_remains_where_deferred": false,
+      "service_files_untouched": true,
+      "source_status": "PASS",
+      "notes": "GET handler modernized successfully"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
+      "r1d_expected_changes": "Defer PATCH and DELETE handlers (2 handlers, both deferred per R1-D decision)",
+      "canonical_enforcement_count": 0,
+      "legacy_enforcement_count": 3,
+      "excluded_handlers_unchanged": "YES (both remain with withEnforcementFull)",
+      "with_canonical_present": false,
+      "legacy_auth_remains_where_deferred": true,
+      "service_files_untouched": true,
+      "source_status": "PASS",
+      "notes": "Both handlers correctly remain in legacy form per R1-D service-coupling deferral"
+    },
+    {
+      "file": "src/app/api/growth/revenue-streams/route.ts",
+      "r1d_expected_changes": "Modernize GET and POST handlers (2 handlers)",
+      "canonical_enforcement_count": 3,
+      "legacy_enforcement_count": 0,
+      "excluded_handlers_unchanged": "N/A",
+      "with_canonical_present": true,
+      "legacy_auth_remains_where_deferred": false,
+      "service_files_untouched": true,
+      "source_status": "PASS",
+      "notes": "Both GET and POST handlers modernized successfully"
+    }
+  ],
+  "summary": {
+    "total_r1d_routes_authorized": 7,
+    "total_routes_verified_on_main": 7,
+    "routes_with_expected_changes": 7,
+    "routes_with_correct_deferral": 2,
+    "routes_fully_modernized": 5,
+    "all_routes_pass": true,
+    "service_files_touched": false,
+    "unauthorized_changes": false
+  },
+  "overall_status": "PASS",
+  "conclusion": "All R1-D authorized routes on main contain expected source changes. Modernized routes use withCanonicalEnforcement. Deferred handlers correctly remain with legacy auth. No service files modified. R1-D implementation on main is verified as correct and complete."
+}
