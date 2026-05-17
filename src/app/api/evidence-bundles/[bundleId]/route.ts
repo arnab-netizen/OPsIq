@@ -1,7 +1,5 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { ForbiddenError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   getEvidenceBundleById,
@@ -11,74 +9,41 @@ import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { updateEvidenceBundleSchema } from "@/domain/validation/evidence";
 import { errorToResponse } from "@/infra/errors";
 import { logger } from "@/infra/logger";
-import type { NextRequest } from "next/server";
 
-export const GET = withEnforcementFull(async (request, context, params) => {
-  try {
-    // Authenticate + authorize (fail-closed)
-    await withAuth({
-      capability: CAPABILITIES.EVIDENCE_VIEW,
-    });
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    try {
+      const workspaceId = ctx.verifiedWorkspaceId;
+      const { bundleId } = params;
+      parseOrThrow(uuidSchema, bundleId);
 
-    // Validate workspace membership (fail-closed)
-    const nextRequest = request as NextRequest;
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
-    if (!workspaceId) {
-      return Response.json(
-        { error: "Workspace ID required (x-workspace-id header)" },
-        { status: 400 }
-      );
+      const result = await getEvidenceBundleById(bundleId, workspaceId);
+
+      return Response.json(result);
+    } catch (error) {
+      logger.error("Error getting evidence bundle", { error });
+      return errorToResponse(error);
     }
+  },
+  { requireCapabilities: [CAPABILITIES.EVIDENCE_VIEW], requireWorkspace: true }
+);
 
-    const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-    if (!membership) {
-      throw new ForbiddenError("Unauthorized");
+export const PUT = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    try {
+      const workspaceId = ctx.verifiedWorkspaceId;
+      const { bundleId } = params;
+      parseOrThrow(uuidSchema, bundleId);
+
+      const body = await parseRequestBody(ctx.request!, updateEvidenceBundleSchema);
+
+      await updateEvidenceBundle(bundleId, body, ctx, workspaceId);
+
+      return Response.json({ success: true });
+    } catch (error) {
+      logger.error("Error updating evidence bundle", { error });
+      return errorToResponse(error);
     }
-
-    const { bundleId } = params;
-    parseOrThrow(uuidSchema, bundleId);
-
-    const result = await getEvidenceBundleById(bundleId, workspaceId);
-
-    return Response.json(result);
-  } catch (error) {
-    logger.error("Error getting evidence bundle", { error });
-    return errorToResponse(error);
-  }
-});
-
-export const PUT = withEnforcementFull(async (request, context, params) => {
-  try {
-    // Authenticate + authorize (fail-closed)
-    const authContext = await withAuth({
-      capability: CAPABILITIES.EVIDENCE_SUBMIT,
-    });
-
-    // Validate workspace membership (fail-closed)
-    const nextRequest = request as NextRequest;
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
-    if (!workspaceId) {
-      return Response.json(
-        { error: "Workspace ID required (x-workspace-id header)" },
-        { status: 400 }
-      );
-    }
-
-    const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-    if (!membership) {
-      throw new ForbiddenError("Unauthorized");
-    }
-
-    const { bundleId } = params;
-    parseOrThrow(uuidSchema, bundleId);
-
-    const body = await parseRequestBody(request, updateEvidenceBundleSchema);
-
-    await updateEvidenceBundle(bundleId, body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
-
-    return Response.json({ success: true });
-  } catch (error) {
-    logger.error("Error updating evidence bundle", { error });
-    return errorToResponse(error);
-  }
-});
+  },
+  { requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT], requireWorkspace: true }
+);
