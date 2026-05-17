@@ -1,0 +1,212 @@
+{
+  "phase": "R1-SPECIAL-2E-SAFE-GROUPING",
+  "date": "2026-05-17",
+  "status": "SAFE GROUPING COMPLETE - BATCH SELECTION READY",
+
+  "grouping_strategy": "Handlers grouped by shared state semantics, idempotency model, and concurrency characteristics",
+
+  "modernization_groups": [
+    {
+      "group_id": "GROUP_1_SIMPLE_SESSION",
+      "group_name": "Session Lifecycle (E1 Safe)",
+      "risk_level": "E1_SAFE_STATEFUL",
+      "handler_count": 1,
+      "handlers": [
+        "auth/logout (POST)"
+      ],
+      "shared_characteristics": {
+        "idempotency": "Session invalidation idempotent",
+        "reversibility": "Session can be re-created",
+        "transactionality": "Single atomic mutation",
+        "concurrency": "No concurrency issues",
+        "external_effects": "None"
+      },
+      "modernization_pattern": "Simple wrapper replacement (withEnforcementFull → withCanonicalEnforcement)",
+      "safeguards": [
+        "Preserve session invalidation logic",
+        "Maintain audit logging"
+      ],
+      "estimated_scanner_reduction": 3,
+      "estimated_critical_reduction": 2,
+      "estimated_block_build_reduction": 1,
+      "batch_recommendation": "FIRST_BATCH",
+      "ready_now": true
+    },
+    {
+      "group_id": "GROUP_2_AUTH_SESSION",
+      "group_name": "Authentication (E2 Moderate)",
+      "risk_level": "E2_MODERATE_STATEFUL",
+      "handler_count": 1,
+      "handlers": [
+        "auth/login (POST)"
+      ],
+      "shared_characteristics": {
+        "idempotency": "Idempotency key required",
+        "reversibility": "Session deletion possible",
+        "transactionality": "Session creation atomic",
+        "concurrency": "Independent sessions (no conflict)",
+        "external_effects": "Session creation, login audit"
+      },
+      "modernization_pattern": "Wrapper replacement + idempotency preservation",
+      "safeguards": [
+        "Preserve idempotency key handling",
+        "Maintain session creation logic",
+        "Keep login audit events"
+      ],
+      "estimated_scanner_reduction": 3,
+      "estimated_critical_reduction": 2,
+      "estimated_block_build_reduction": 1,
+      "batch_recommendation": "FIRST_BATCH",
+      "ready_now": true
+    },
+    {
+      "group_id": "GROUP_3_WEBHOOKS",
+      "group_name": "Webhook Handlers (E2 Moderate)",
+      "risk_level": "E2_MODERATE_STATEFUL",
+      "handler_count": 1,
+      "handlers": [
+        "webhooks/stripe (POST)",
+        "webhooks/subscribe (POST)"
+      ],
+      "shared_characteristics": {
+        "idempotency": "Idempotency guaranteed by external system",
+        "reversibility": "Refunds/reversals possible",
+        "transactionality": "Payment mutations atomic",
+        "concurrency": "External system serializes (Stripe retries unique)",
+        "external_effects": "Payment processing, notification"
+      },
+      "modernization_pattern": "Wrapper replacement + webhook pattern preservation",
+      "safeguards": [
+        "Preserve webhook signature verification",
+        "Maintain idempotency tracking",
+        "Keep payment audit trail",
+        "Preserve external notification logic"
+      ],
+      "estimated_scanner_reduction": 6,
+      "estimated_critical_reduction": 4,
+      "estimated_block_build_reduction": 2,
+      "batch_recommendation": "SECOND_BATCH",
+      "ready_now": true
+    },
+    {
+      "group_id": "GROUP_4_GROWTH_METRICS",
+      "group_name": "Growth Metrics (E2 Moderate + Domain)",
+      "risk_level": "E2_MODERATE_STATEFUL",
+      "handler_count": 3,
+      "handlers": [
+        "growth/unit-economics (POST)",
+        "growth/acquisition-metrics (POST)",
+        "growth/sales-pipeline (POST)"
+      ],
+      "shared_characteristics": {
+        "idempotency": "Metrics calculation idempotent (add idempotency key)",
+        "reversibility": "Metrics recalculation possible",
+        "transactionality": "Metrics update atomic",
+        "concurrency": "No concurrency issues (independent metrics)",
+        "external_effects": "None (internal metrics only)"
+      },
+      "modernization_pattern": "Wrapper replacement + add idempotency key support",
+      "safeguards": [
+        "Add idempotency key parameter",
+        "Preserve metrics calculation logic",
+        "Maintain audit trail",
+        "Keep domain auth (growth-team)"
+      ],
+      "estimated_scanner_reduction": 9,
+      "estimated_critical_reduction": 6,
+      "estimated_block_build_reduction": 3,
+      "batch_recommendation": "SECOND_BATCH",
+      "ready_now": true
+    },
+    {
+      "group_id": "GROUP_5_OPTIMISTIC_LOCK",
+      "group_name": "Optimistic Lock State Transitions (E3 Moderate)",
+      "risk_level": "E3_COMPLEX_STATE_MACHINE",
+      "handler_count": 5,
+      "handlers": [
+        "engagements/[engagementId]/intervention (PATCH)",
+        "engagements/[engagementId] (PATCH - basic fields)",
+        "clients/[clientId] (PATCH)",
+        "decisions/[decisionId] (PATCH)",
+        "leads/[leadId] (PATCH)"
+      ],
+      "shared_characteristics": {
+        "idempotency": "Version field prevents double-application",
+        "reversibility": "State permanent, no rollback",
+        "transactionality": "Multi-step but version-gated",
+        "concurrency": "Version field handles conflicts (retry on mismatch)",
+        "external_effects": "Audit logging, status tracking"
+      },
+      "modernization_pattern": "Wrapper replacement + version field validation",
+      "safeguards": [
+        "Preserve version field check",
+        "Implement version conflict retry logic",
+        "Maintain state transition validation",
+        "Keep audit event logging"
+      ],
+      "estimated_scanner_reduction": 12,
+      "estimated_critical_reduction": 8,
+      "estimated_block_build_reduction": 4,
+      "batch_recommendation": "THIRD_BATCH",
+      "ready_now": true
+    },
+    {
+      "group_id": "GROUP_6_BLOCKED_COMPLEX",
+      "group_name": "Blocked: Complex State Machines",
+      "risk_level": "E3_COMPLEX_STATE_MACHINE",
+      "handler_count": 7,
+      "handlers": [
+        "engagements/[engagementId]/experiments/* (all)",
+        "engagements/[engagementId]/constraint-checks (POST)",
+        "engagements/[engagementId]/shock-events (GET)"
+      ],
+      "shared_characteristics": {
+        "blocking_reason": "Non-deterministic execution, cascading updates, async side-effects",
+        "requires": "Event sourcing redesign",
+        "idempotency": "Context-dependent (non-deterministic)"
+      },
+      "modernization_pattern": "BLOCKED - Requires separate event architecture redesign",
+      "status": "DEFERRED",
+      "ready_now": false
+    },
+    {
+      "group_id": "GROUP_7_BLOCKED_GOVERNANCE",
+      "group_name": "Blocked: Dangerous Side-Effects",
+      "risk_level": "E4_DANGEROUS_SIDE_EFFECT",
+      "handler_count": 3,
+      "handlers": [
+        "engagements/[engagementId]/shock-events (POST)",
+        "Governance triggers",
+        "External effect handlers"
+      ],
+      "shared_characteristics": {
+        "blocking_reason": "Irreversible external side-effects, governance re-evaluation async",
+        "requires": "Governance architecture redesign"
+      },
+      "modernization_pattern": "BLOCKED - Requires governance redesign",
+      "status": "DEFERRED",
+      "ready_now": false
+    }
+  ],
+
+  "safe_modernization_summary": {
+    "total_safe_groups": 5,
+    "total_safe_handlers": 13,
+    "total_blocked_groups": 2,
+    "total_blocked_handlers": 10,
+    "total_unknown_handlers": 23,
+    "estimated_safe_violations": "~35-40",
+    "estimated_blocked_violations": "~40-50",
+    "estimated_unknown_violations": "~40-50"
+  },
+
+  "batch_ready_groups": [
+    "GROUP_1_SIMPLE_SESSION",
+    "GROUP_2_AUTH_SESSION",
+    "GROUP_3_WEBHOOKS",
+    "GROUP_4_GROWTH_METRICS",
+    "GROUP_5_OPTIMISTIC_LOCK"
+  ],
+
+  "status": "✓ SAFE GROUPING COMPLETE - 5 GROUPS READY FOR BATCH SELECTION"
+}

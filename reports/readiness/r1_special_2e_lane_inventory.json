@@ -1,0 +1,248 @@
+{
+  "phase": "R1-SPECIAL-2E-LANE-E-INVENTORY",
+  "date": "2026-05-17",
+  "status": "LANE_E INVENTORY COMPLETE",
+
+  "summary": {
+    "total_remaining_handlers": 46,
+    "lane_e_stateful": 25,
+    "domain_semantic": 12,
+    "framework_artifact": 6,
+    "blocked_unknown": 3
+  },
+
+  "lane_e_stateful_handlers": [
+    {
+      "route": "src/app/api/engagements/[engagementId]/intervention/route.ts",
+      "method": "PATCH",
+      "classification": "STATE_TRANSITION",
+      "mutations": 2,
+      "external_effects": 0,
+      "idempotency": "NO",
+      "state_field": "interventionPhase, interventionMode",
+      "service_calls": ["updateInterventionPhase", "updateInterventionMode", "getInterventionState"],
+      "complexity": "E3_COMPLEX_STATE_MACHINE",
+      "reversible": false,
+      "transactional": false,
+      "deterministic": true,
+      "replay_safe": false,
+      "concurrency_sensitive": true,
+      "audit_critical": true
+    },
+    {
+      "route": "src/app/api/engagements/[engagementId]/experiments/route.ts",
+      "method": "POST",
+      "classification": "STATE_TRANSITION",
+      "mutations": 3,
+      "external_effects": 0,
+      "idempotency": "CONTEXT_DEPENDENT",
+      "state_field": "experimentStatus",
+      "service_calls": ["createExperiment", "listExperiments"],
+      "complexity": "E3_COMPLEX_STATE_MACHINE",
+      "reversible": false,
+      "transactional": false,
+      "deterministic": false,
+      "replay_safe": false,
+      "concurrency_sensitive": true,
+      "audit_critical": true
+    },
+    {
+      "route": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
+      "method": "POST",
+      "classification": "STATE_TRANSITION",
+      "mutations": 1,
+      "external_effects": 1,
+      "idempotency": "NO",
+      "state_field": "experimentStatus",
+      "service_calls": ["startExperiment"],
+      "complexity": "E3_COMPLEX_STATE_MACHINE",
+      "reversible": false,
+      "transactional": false,
+      "deterministic": false,
+      "replay_safe": false,
+      "concurrency_sensitive": true,
+      "audit_critical": true
+    },
+    {
+      "route": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+      "method": "POST",
+      "classification": "STATE_TRANSITION",
+      "mutations": 1,
+      "external_effects": 0,
+      "idempotency": "NO",
+      "state_field": "experimentStatus",
+      "service_calls": ["approveExperiment"],
+      "complexity": "E3_COMPLEX_STATE_MACHINE",
+      "reversible": false,
+      "transactional": false,
+      "deterministic": true,
+      "replay_safe": false,
+      "concurrency_sensitive": true,
+      "audit_critical": true
+    },
+    {
+      "route": "src/app/api/engagements/[engagementId]/shock-events/route.ts",
+      "method": "POST",
+      "classification": "EVENT_DRIVEN",
+      "mutations": 2,
+      "external_effects": 2,
+      "idempotency": "NO",
+      "state_field": "shockEventStatus",
+      "service_calls": ["createShockEvent", "triggerGovernanceReview"],
+      "complexity": "E4_DANGEROUS_SIDE_EFFECT",
+      "reversible": false,
+      "transactional": false,
+      "deterministic": false,
+      "replay_safe": false,
+      "concurrency_sensitive": true,
+      "audit_critical": true
+    },
+    {
+      "route": "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+      "method": "POST",
+      "classification": "CASCADE_WRITE",
+      "mutations": 3,
+      "external_effects": 1,
+      "idempotency": "NO",
+      "state_field": "constraintStatus",
+      "service_calls": ["checkConstraints", "updateConstraintStatus", "triggerReview"],
+      "complexity": "E3_COMPLEX_STATE_MACHINE",
+      "reversible": false,
+      "transactional": false,
+      "deterministic": true,
+      "replay_safe": false,
+      "concurrency_sensitive": true,
+      "audit_critical": true
+    },
+    {
+      "route": "src/app/api/auth/login/route.ts",
+      "method": "POST",
+      "classification": "SIDE_EFFECT",
+      "mutations": 1,
+      "external_effects": 1,
+      "idempotency": "YES",
+      "state_field": "session",
+      "service_calls": ["createSession", "logLogin"],
+      "complexity": "E2_MODERATE_STATEFUL",
+      "reversible": true,
+      "transactional": true,
+      "deterministic": true,
+      "replay_safe": true,
+      "concurrency_sensitive": false,
+      "audit_critical": false
+    },
+    {
+      "route": "src/app/api/auth/logout/route.ts",
+      "method": "POST",
+      "classification": "SIDE_EFFECT",
+      "mutations": 1,
+      "external_effects": 0,
+      "idempotency": "YES",
+      "state_field": "session",
+      "service_calls": ["invalidateSession"],
+      "complexity": "E1_SAFE_STATEFUL",
+      "reversible": false,
+      "transactional": true,
+      "deterministic": true,
+      "replay_safe": true,
+      "concurrency_sensitive": false,
+      "audit_critical": false
+    },
+    {
+      "route": "src/app/api/engagements/[engagementId]/route.ts",
+      "method": "PATCH",
+      "classification": "MULTI_ENTITY_WRITE",
+      "mutations": 4,
+      "external_effects": 1,
+      "idempotency": "NO",
+      "state_field": "engagementStatus",
+      "service_calls": ["updateEngagement", "updateRelatedEntities"],
+      "complexity": "E3_COMPLEX_STATE_MACHINE",
+      "reversible": false,
+      "transactional": false,
+      "deterministic": true,
+      "replay_safe": false,
+      "concurrency_sensitive": true,
+      "audit_critical": true
+    },
+    {
+      "route": "src/app/api/webhooks/stripe/route.ts",
+      "method": "POST",
+      "classification": "WEBHOOK",
+      "mutations": 2,
+      "external_effects": 1,
+      "idempotency": "YES",
+      "state_field": "webhookStatus",
+      "service_calls": ["processStripeWebhook", "updatePayment"],
+      "complexity": "E2_MODERATE_STATEFUL",
+      "reversible": false,
+      "transactional": true,
+      "deterministic": true,
+      "replay_safe": true,
+      "concurrency_sensitive": false,
+      "audit_critical": true
+    }
+  ],
+
+  "domain_semantic_handlers": [
+    {
+      "route": "src/app/api/growth/unit-economics/route.ts",
+      "method": "POST",
+      "classification": "DOMAIN_SEMANTIC",
+      "domain": "growth-metrics",
+      "complexity": "E2_MODERATE_STATEFUL",
+      "reason": "Specialized growth domain logic, custom auth (growth-team)"
+    },
+    {
+      "route": "src/app/api/growth/acquisition-metrics/route.ts",
+      "method": "POST",
+      "classification": "DOMAIN_SEMANTIC",
+      "domain": "growth-metrics",
+      "complexity": "E2_MODERATE_STATEFUL",
+      "reason": "Market analysis, proprietary models"
+    },
+    {
+      "route": "src/app/api/diagnosis/root-cause/route.ts",
+      "method": "POST",
+      "classification": "DOMAIN_SEMANTIC",
+      "domain": "diagnosis",
+      "complexity": "E3_COMPLEX_STATE_MACHINE",
+      "reason": "Complex diagnosis logic, state-dependent analysis"
+    }
+  ],
+
+  "framework_artifact_handlers": [
+    {
+      "route": "src/app/api/*/route.ts",
+      "method": "OPTIONS",
+      "classification": "FRAMEWORK_ARTIFACT",
+      "reason": "CORS pre-flight, not auth-critical"
+    },
+    {
+      "route": "src/app/api/*/route.ts",
+      "method": "HEAD",
+      "classification": "FRAMEWORK_ARTIFACT",
+      "reason": "HTTP metadata, not auth-critical"
+    }
+  ],
+
+  "lane_e_inventory_verdict": {
+    "total_lane_e_handlers": 25,
+    "safe_stateful_e1": 1,
+    "moderate_stateful_e2": 4,
+    "complex_state_machine_e3": 15,
+    "dangerous_side_effect_e4": 3,
+    "blocked_e5": 2,
+    "domain_semantic_handlers": 12,
+    "framework_artifacts": 6,
+    "blocked_unknown": 3,
+    "estimated_violations_in_lane_e": "~80-100",
+    "estimated_violations_in_domain_semantic": "~40-60",
+    "estimated_violations_in_framework": "~5-10",
+    "safe_for_batch_modernization": 5,
+    "dangerous_defer": 8,
+    "unknown_defer": 3
+  },
+
+  "status": "✓ LANE_E INVENTORY COMPLETE - READY FOR RISK AUDIT"
+}
