@@ -1,36 +1,22 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import { db } from "@/lib/db";
-import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export const GET = withEnforcementFull(async (request, context, params) => {
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
   const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
-  const { session } = await withAuth({ capability: CAPABILITIES.ENGAGEMENT_VIEW });
 
-  // Get workspace ID from request
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id") ||
-                       nextRequest.nextUrl.searchParams.get("workspaceId");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required" },
-      { status: 400 }
-    );
-  }
-
-  await assertEngagementAccess(session.user.id, engagementId, workspaceId);
+  await assertEngagementAccess(ctx.verifiedActorId, engagementId, ctx.verifiedWorkspaceId);
 
   // Fetch engagement with health status (scoped by workspace)
   const engagement = await db.engagement.findUnique({
-    where: { id: engagementId, workspaceId },
+    where: { id: engagementId, workspaceId: ctx.verifiedWorkspaceId },
   });
 
   if (!engagement) {
@@ -43,16 +29,16 @@ export const GET = withEnforcementFull(async (request, context, params) => {
   // Fetch all required data in parallel (all scoped by workspace)
   const [findings, recommendations, actions, condition] = await Promise.all([
     db.finding.findMany({
-      where: { engagementId, workspaceId },
+      where: { engagementId, workspaceId: ctx.verifiedWorkspaceId },
     }),
     db.recommendation.findMany({
-      where: { engagementId, workspaceId },
+      where: { engagementId, workspaceId: ctx.verifiedWorkspaceId },
     }),
     db.action.findMany({
-      where: { engagementId, workspaceId },
+      where: { engagementId, workspaceId: ctx.verifiedWorkspaceId },
     }),
     db.businessConditionProfile.findFirst({
-      where: { engagementId, isCurrent: true, workspaceId },
+      where: { engagementId, isCurrent: true, workspaceId: ctx.verifiedWorkspaceId },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -103,4 +89,7 @@ export const GET = withEnforcementFull(async (request, context, params) => {
     risks: result.risks,
     reasons: result.reasons,
   });
+}, {
+  requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
+  requireWorkspace: true,
 });

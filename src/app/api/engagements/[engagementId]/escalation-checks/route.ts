@@ -1,14 +1,10 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   detectHighPriorityOverdueActions,
   detectKPIDeteriorationPattern,
 } from "@/services/escalation";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
 
 const detectEscalationSchema = z.object({
   engagementId: z.string().uuid(),
@@ -22,54 +18,21 @@ const detectEscalationSchema = z.object({
  *       escalation.detectKPIDeteriorationPattern()
  * Triggers: High-priority action overdue, KPI deterioration pattern detection
  */
-export const POST = withEnforcementFull(async (request) => {
-  const { session } = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_VIEW,
-  });
-
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
   try {
-    const pathSegments = nextRequest.nextUrl.pathname.split("/");
-    const engagementId = pathSegments[pathSegments.length - 3]; // Extract from /engagements/[id]/escalation-checks
-
-    if (!engagementId) {
-      return Response.json(
-        { error: "Engagement ID required in path" },
-        { status: 400 }
-      );
-    }
-
-    const validated = detectEscalationSchema.parse({ engagementId });
+    const validated = detectEscalationSchema.parse({ engagementId: params.engagementId });
 
     // Run both escalation checks
-    const authContext = {
-      session,
-      policy: { canAccess: true, canMutate: true },
-    } as any; // Type-safe enough for service layer
-
     const overdueAlert = await detectHighPriorityOverdueActions(
       validated.engagementId,
-      authContext,
-      workspaceId
+      ctx,
+      ctx.verifiedWorkspaceId
     );
 
     const deteriorationAlert = await detectKPIDeteriorationPattern(
       validated.engagementId,
-      authContext,
-      workspaceId
+      ctx,
+      ctx.verifiedWorkspaceId
     );
 
     const alerts = [];
@@ -102,6 +65,9 @@ export const POST = withEnforcementFull(async (request) => {
       { status: 500 }
     );
   }
+}, {
+  requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
+  requireWorkspace: true,
 });
 
 /**
@@ -109,29 +75,14 @@ export const POST = withEnforcementFull(async (request) => {
  *
  * Retrieve last escalation check status
  */
-export const GET = withEnforcementFull(async (request) => {
-  await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_VIEW,
-  });
-
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
   // TODO: Implement persistent escalation check history when schema is available
   // For now, return current status indicating no history available
   return Response.json({
     note: "Escalation check history not yet persisted",
     lastCheck: null,
   });
+}, {
+  requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
+  requireWorkspace: true,
 });

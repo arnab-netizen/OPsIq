@@ -1,7 +1,4 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import { db } from "@/lib/db";
@@ -9,33 +6,12 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
-import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export const POST = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session } = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_UPDATE,
-  });
-
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const idempotencyKey = request.headers.get("idempotency-key");
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+  const idempotencyKey = ctx.request?.headers.get("idempotency-key");
   if (!idempotencyKey) {
     return Response.json(
       { error: "idempotency-key header required" },
@@ -49,7 +25,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "acknowledgeEngagement",
-    actorId: session.user.id,
+    actorId: ctx.verifiedActorId,
     payload: { engagementId },
   });
 
@@ -61,7 +37,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
   try {
     const engagement = await db.engagement.findUnique({
-      where: { id: engagementId, workspaceId },
+      where: { id: engagementId, workspaceId: ctx.verifiedWorkspaceId },
     });
 
     if (!engagement) throw new NotFoundError("Engagement", engagementId);
@@ -70,7 +46,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.EXECUTION_ACKNOWLEDGED,
-      actorId: session.user.id,
+      actorId: ctx.verifiedActorId,
       entityType: "engagement",
       entityId: engagementId,
       payload: {
@@ -91,4 +67,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
     await recordIdempotencyError(idempotencyKey, err);
     throw error;
   }
+}, {
+  requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE],
+  requireWorkspace: true,
 });

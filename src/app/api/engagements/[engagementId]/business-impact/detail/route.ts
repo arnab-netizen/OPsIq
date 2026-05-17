@@ -1,5 +1,4 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import { generateBusinessImpact } from "@/services/business-impact/business-impact.service";
@@ -7,7 +6,6 @@ import { detectExecutionDrift } from "@/services/execution-drift/execution-drift
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
-import type { NextRequest } from "next/server";
 
 interface ActionAffectingImpact {
   actionId: string;
@@ -33,30 +31,17 @@ interface DetailResponse {
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export const GET = withEnforcementFull(async (request, context, params) => {
+export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
   const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
 
-  const { session } = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_VIEW,
-  });
-
-  // Get workspace ID from request
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id") ||
-                       nextRequest.nextUrl.searchParams.get("workspaceId");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required" },
-      { status: 400 }
-    );
-  }
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   // Fetch all required data WITH workspace scoping
   const [engagement, businessImpact, drift, findings, recommendations, actions] =
     await Promise.all([
       db.engagement.findUnique({ where: { id: engagementId, workspaceId } }),  // Scoped
-      generateBusinessImpact(engagementId, session.user.id, workspaceId),
+      generateBusinessImpact(engagementId, ctx.verifiedActorId, workspaceId),
       detectExecutionDrift(engagementId, workspaceId),
       db.finding.findMany({ where: { engagementId, workspaceId } }),  // Scoped
       db.recommendation.findMany({ where: { engagementId, workspaceId } }),  // Scoped
@@ -250,4 +235,7 @@ export const GET = withEnforcementFull(async (request, context, params) => {
   };
 
   return Response.json(response);
+}, {
+  requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
+  requireWorkspace: true,
 });
