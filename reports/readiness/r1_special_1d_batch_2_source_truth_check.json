@@ -1,0 +1,174 @@
+{
+  "phase": "R1-SPECIAL-1D-BATCH-2-SOURCE-TRUTH-CHECK",
+  "date": "2026-05-17",
+  "status": "SOURCE TRUTH VERIFIED - ALL HANDLERS READY",
+
+  "handlers_verified": 5,
+  "handlers_ready": 5,
+  "handlers_excluded": 0,
+
+  "verification_results": [
+    {
+      "route": "src/app/api/override/route.ts",
+      "method": "POST",
+      "exists": true,
+      "current_wrapper": "withEnforcementFull",
+      "target_wrapper": "withCanonicalEnforcement",
+      "handler_signature_current": "async (request: NextRequest)",
+      "handler_signature_target": "async (ctx: CanonicalAuthContext)",
+      "route_local_logic": [
+        "resolveServerRole()",
+        "canEdit(role) — used as canOverride(role)",
+        "logAuditEvent with AUTH_FAILED, PERMISSION_DENIED, OVERRIDE_DENIED",
+        "withAuth() call for actorId at line 75"
+      ],
+      "service_calls": [
+        "getItems()",
+        "addOverride()",
+        "applyOverride()"
+      ],
+      "d4_compatible": true,
+      "service_signature_change": false,
+      "semantic_redesign_required": false,
+      "ready": true,
+      "reason": "Route-local policy logic (resolveServerRole, canEdit) can remain intact. Multi-point audit (AUTH_FAILED, PERMISSION_DENIED, OVERRIDE_DENIED) preserved exactly. withAuth() call replaced with ctx.verifiedActorId."
+    },
+    {
+      "route": "src/app/api/users/[userId]/roles/route.ts",
+      "method": "POST",
+      "exists": true,
+      "current_wrapper": "withEnforcementFull",
+      "target_wrapper": "withCanonicalEnforcement",
+      "handler_signature_current": "async (request, context, params)",
+      "handler_signature_target": "async (ctx: CanonicalAuthContext, params: Record<string, string>)",
+      "route_local_logic": [
+        "getActorHierarchyLevel(policy) — hierarchy-based authorization",
+        "canManageRoles(actorLevel, targetLevel) — implied in assignRole call",
+        "idempotency key handling preserved",
+        "workspace scoping via x-workspace-id header (will use ctx.verifiedWorkspaceId)"
+      ],
+      "service_calls": [
+        "assignRole()",
+        "checkIdempotencyKey()",
+        "recordIdempotencyResponse()"
+      ],
+      "d4_compatible": true,
+      "service_signature_change": false,
+      "semantic_redesign_required": false,
+      "ready": true,
+      "reason": "Hierarchy checks (getActorHierarchyLevel) are pure route-local logic. D4 wrapper does not affect role management semantics. Idempotency pattern preserved. Workspace ID goes from unverified header to verified context."
+    },
+    {
+      "route": "src/app/api/users/[userId]/roles/route.ts",
+      "method": "DELETE",
+      "exists": true,
+      "current_wrapper": "withEnforcementFull",
+      "target_wrapper": "withCanonicalEnforcement",
+      "handler_signature_current": "async (request, context, params)",
+      "handler_signature_target": "async (ctx: CanonicalAuthContext, params: Record<string, string>)",
+      "route_local_logic": [
+        "getActorHierarchyLevel(policy) — hierarchy-based authorization",
+        "canManageRoles(actorLevel, targetLevel) — implied in revokeRole call",
+        "workspace scoping via x-workspace-id header (will use ctx.verifiedWorkspaceId)"
+      ],
+      "service_calls": [
+        "revokeRole()"
+      ],
+      "d4_compatible": true,
+      "service_signature_change": false,
+      "semantic_redesign_required": false,
+      "ready": true,
+      "reason": "Same as POST — hierarchy checks are route-local, D4 wrapper preserves semantics, workspace ID verified."
+    },
+    {
+      "route": "src/app/api/users/[userId]/memberships/route.ts",
+      "method": "POST",
+      "exists": true,
+      "current_wrapper": "withEnforcementFull",
+      "target_wrapper": "withCanonicalEnforcement",
+      "handler_signature_current": "async (request, context, params)",
+      "handler_signature_target": "async (ctx: CanonicalAuthContext, params: Record<string, string>)",
+      "route_local_logic": [
+        "canonicalizeAuthContext({ session, policy }, workspaceId) — helper used",
+        "idempotency key handling preserved",
+        "workspace scoping via x-workspace-id header (will use ctx.verifiedWorkspaceId)"
+      ],
+      "service_calls": [
+        "addMember()",
+        "checkIdempotencyKey()",
+        "recordIdempotencyResponse()"
+      ],
+      "d4_compatible": true,
+      "service_signature_change": false,
+      "semantic_redesign_required": false,
+      "ready": true,
+      "reason": "Bridge pattern (workspace membership) unaffected by D4. canonicalizeAuthContext helper replaced with native ctx at wrapper level. Idempotency preserved. Workspace ID verified."
+    },
+    {
+      "route": "src/app/api/users/[userId]/memberships/route.ts",
+      "method": "DELETE",
+      "exists": true,
+      "current_wrapper": "withEnforcementFull",
+      "target_wrapper": "withCanonicalEnforcement",
+      "handler_signature_current": "async (request, context, params)",
+      "handler_signature_target": "async (ctx: CanonicalAuthContext, params: Record<string, string>)",
+      "route_local_logic": [
+        "canonicalizeAuthContext({ session, policy }, workspaceId) — helper used",
+        "workspace scoping via x-workspace-id header (will use ctx.verifiedWorkspaceId)"
+      ],
+      "service_calls": [
+        "removeMember()"
+      ],
+      "d4_compatible": true,
+      "service_signature_change": false,
+      "semantic_redesign_required": false,
+      "ready": true,
+      "reason": "Same as POST — bridge pattern preserved, canonicalizeAuthContext replaced, workspace ID verified."
+    }
+  ],
+
+  "d4_strategy_verification": {
+    "all_handlers_use_same_strategy": true,
+    "strategy_name": "D4_OUTER_CANONICAL_WITH_ROUTE_LOCAL_ROLE_CHECK",
+    "outer_wrapper_pattern": "withCanonicalEnforcement",
+    "handler_signature_pattern": "(ctx: CanonicalAuthContext, params?: Record<string, string>)",
+    "verified_context_usage": [
+      "ctx.verifiedActorId (replaces session.user.id)",
+      "ctx.verifiedWorkspaceId (replaces x-workspace-id header)",
+      "ctx.verifiedCapabilities (replaces withAuth capability check)"
+    ],
+    "route_local_preservation": [
+      "resolveServerRole() + policy checks (override, roles)",
+      "getActorHierarchyLevel() + hierarchy-based checks (roles)",
+      "canonicalizeAuthContext usage (memberships — converted to native ctx)",
+      "All audit logic preserved exactly",
+      "All idempotency logic preserved exactly"
+    ]
+  },
+
+  "no_infrastructure_changes": {
+    "service_files": "✓ NO CHANGES REQUIRED",
+    "service_signatures": "✓ NO CHANGES REQUIRED",
+    "capabilities": "✓ NO CHANGES REQUIRED",
+    "roles": "✓ NO CHANGES REQUIRED",
+    "entitlements": "✓ NO CHANGES REQUIRED",
+    "wrappers": "✓ ALREADY EXIST (only application in handlers)",
+    "auth_context": "✓ ALREADY EXIST (only usage in handlers)",
+    "database": "✓ NO CHANGES REQUIRED"
+  },
+
+  "source_truth_verdict": {
+    "all_handlers_exist": true,
+    "all_handlers_d4_compatible": true,
+    "route_local_logic_can_remain_intact": true,
+    "no_service_change_required": true,
+    "no_capability_change_required": true,
+    "no_role_change_required": true,
+    "no_entitlement_change_required": true,
+    "no_response_change_required": true,
+    "no_business_logic_change_required": true,
+    "ready_for_implementation": true
+  },
+
+  "status": "✓ SOURCE TRUTH VERIFIED - ALL 5 HANDLERS READY FOR D4 MODERNIZATION"
+}

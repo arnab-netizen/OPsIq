@@ -1,7 +1,6 @@
-import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { addOverride } from "@/services/override/store";
 import { getItems, applyOverride } from "@/services/operator/store";
 import { resolveServerRole } from "@/services/auth/server-role";
@@ -9,7 +8,7 @@ import { canEdit } from "@/services/auth/access";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { randomUUID } from "crypto";
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   // Enforce server-side auth
   const role = await resolveServerRole();
   if (!role) {
@@ -18,12 +17,12 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       eventName: "AUTH_FAILED",
       entityType: "OperatorItem",
       entityId: "unknown",
-      actorId: null,
+      actorId: ctx.verifiedActorId,
       role: null,
       before: null,
       after: null,
       metadata: {
-        reason: "Session not found or invalid",
+        reason: "Role resolution failed",
         action: "override_attempt",
       },
     }).catch((auditError) => {
@@ -35,12 +34,11 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
   if (!canEdit(role)) {
     // Log PERMISSION_DENIED audit event
-    // Note: userId is available from the session if needed, but role is just a string
     await logAuditEvent({
       eventName: "PERMISSION_DENIED",
       entityType: "OperatorItem",
       entityId: "unknown",
-      actorId: null, // Would need session context to get actual userId
+      actorId: ctx.verifiedActorId,
       role,
       before: null,
       after: null,
@@ -55,7 +53,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     throw new Error("Insufficient permissions");
   }
 
-  const body = await request.json();
+  const body = await ctx.request!.json();
   const { operatorItemId, overriddenAction, reason, overrideAllowed } = body;
 
   // Validate required fields
@@ -71,9 +69,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     throw new Error("Operator item not found");
   }
 
-  // Get actor ID for audit
-  const { session } = await withAuth();
-  const actorId = session?.user.id ?? null;
+  const actorId = ctx.verifiedActorId;
 
   // Check if override is allowed
   if (overrideAllowed === false) {
@@ -136,4 +132,4 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   });
 
   return { success: true };
-});
+}, { requireWorkspace: true });

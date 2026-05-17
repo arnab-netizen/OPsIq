@@ -1,9 +1,8 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, getActorHierarchyLevel } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { getActorHierarchyLevel } from "@/lib/auth-guard";
+import { resolveServerRole } from "@/services/auth/server-role";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   assignRole,
@@ -13,7 +12,7 @@ import {
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
-import { ROLES } from "@/domain/constants/roles";
+import { ROLES, type RoleName } from "@/domain/constants/roles";
 import type { NextRequest } from "next/server";
 
 const roleValues = Object.values(ROLES) as [string, ...string[]];
@@ -42,29 +41,9 @@ export const GET = withCanonicalEnforcement(
   { requireWorkspace: true, requireCapabilities: ['USER_VIEW'] }
 );
 
-export const POST = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.USER_ASSIGN_ROLE,
-    internalOnly: true,
-  });
-
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membershipCheck = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membershipCheck) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const idempotencyKey = request.headers.get("idempotency-key");
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+  const workspaceId = ctx.verifiedWorkspaceId;
+  const idempotencyKey = ctx.request?.headers.get("idempotency-key");
   if (!idempotencyKey) {
     return Response.json(
       { error: "idempotency-key header required" },
@@ -75,13 +54,19 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
-  const body = await parseRequestBody(request, assignRoleSchema);
+  const body = await parseRequestBody(ctx.request!, assignRoleSchema);
+
+  const role = await resolveServerRole();
+  const policy = {
+    userId: ctx.verifiedActorId,
+    roles: role ? [{ role: role as RoleName, scope: undefined, scopeId: undefined }] : [],
+  };
   const actorLevel = getActorHierarchyLevel(policy);
 
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "assignRole",
-    actorId: session.user.id,
+    actorId: ctx.verifiedActorId,
     payload: { userId, ...body },
     workspaceId,
   });
@@ -95,7 +80,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   try {
     const result = await assignRole(
       { userId, ...body } as Parameters<typeof assignRole>[0],
-      session.user.id,
+      ctx.verifiedActorId,
       actorLevel,
       workspaceId
     );
@@ -106,42 +91,29 @@ export const POST = withEnforcementFull(async (request, context, params) => {
     await recordIdempotencyError(idempotencyKey, err);
     throw error;
   }
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.USER_ASSIGN_ROLE] });
 
-export const DELETE = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.USER_ASSIGN_ROLE,
-    internalOnly: true,
-  });
-
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membershipCheck = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membershipCheck) {
-    throw new ForbiddenError("Unauthorized");
-  }
+export const DELETE = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
-  const body = await parseRequestBody(request, revokeRoleSchema);
+  const body = await parseRequestBody(ctx.request!, revokeRoleSchema);
+
+  const role = await resolveServerRole();
+  const policy = {
+    userId: ctx.verifiedActorId,
+    roles: role ? [{ role: role as RoleName, scope: undefined, scopeId: undefined }] : [],
+  };
   const actorLevel = getActorHierarchyLevel(policy);
 
   await revokeRole(
     { userId, ...body } as Parameters<typeof revokeRole>[0],
-    session.user.id,
+    ctx.verifiedActorId,
     actorLevel,
     workspaceId
   );
 
   return Response.json({ status: "revoked" });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.USER_ASSIGN_ROLE] });

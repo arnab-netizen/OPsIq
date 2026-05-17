@@ -1,9 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   addMember,
@@ -40,25 +37,11 @@ export const GET = withCanonicalEnforcement(
   { requireWorkspace: true, requireCapabilities: ['USER_VIEW'] }
 );
 
-export const POST = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
-    internalOnly: true,
-  });
-
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   // Require Idempotency-Key (fail-closed)
-  const idempotencyKey = nextRequest.headers.get("idempotency-key");
+  const idempotencyKey = ctx.request?.headers.get("idempotency-key");
   if (!idempotencyKey) {
     return Response.json(
       { error: "idempotency-key header required" },
@@ -66,20 +49,15 @@ export const POST = withEnforcementFull(async (request, context, params) => {
     );
   }
 
-  const membershipCheck = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membershipCheck) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
   const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
-  const body = await parseRequestBody(request, addMemberSchema);
+  const body = await parseRequestBody(ctx.request!, addMemberSchema);
 
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "addMember",
-    actorId: session.user.id,
+    actorId: ctx.verifiedActorId,
     payload: { userId, ...body },
   });
 
@@ -92,7 +70,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   try {
     const result = await addMember(
       { userId, ...body, workspaceId } as Parameters<typeof addMember>[0],
-      canonicalizeAuthContext({ session, policy }, workspaceId)
+      ctx
     );
 
     await recordIdempotencyResponse(idempotencyKey, result.isNew ? 201 : 200, result);
@@ -102,39 +80,20 @@ export const POST = withEnforcementFull(async (request, context, params) => {
     await recordIdempotencyError(idempotencyKey, err);
     throw error;
   }
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS] });
 
-export const DELETE = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
-    internalOnly: true,
-  });
-
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membershipCheck = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membershipCheck) {
-    throw new ForbiddenError("Unauthorized");
-  }
+export const DELETE = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   const { userId } = params;
   parseOrThrow(uuidSchema, userId);
 
-  const body = await parseRequestBody(request, removeMemberSchema);
+  const body = await parseRequestBody(ctx.request!, removeMemberSchema);
 
   await removeMember(
     { userId, ...body, workspaceId } as Parameters<typeof removeMember>[0],
-    canonicalizeAuthContext({ session, policy }, workspaceId)
+    ctx
   );
 
   return Response.json({ status: "removed" });
-});
+}, { requireWorkspace: true, requireCapabilities: [CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS] });
