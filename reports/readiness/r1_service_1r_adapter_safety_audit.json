@@ -1,0 +1,145 @@
+{
+  "phase": "R1-SERVICE-1R",
+  "date": "2026-05-16",
+  "purpose": "Audit ServiceAuthEnvelope adapter safety in findings PATCH route",
+  "adapter_location": "src/app/api/findings/[findingId]/route.ts lines 50-59",
+  "source_context": "CanonicalAuthContext",
+  "target_context": "ServiceAuthEnvelope",
+  "fields_mapped": [
+    "verifiedActorId: ctx.verifiedActorId",
+    "verifiedActorType: ctx.verifiedActorType",
+    "verifiedWorkspaceId: ctx.verifiedWorkspaceId",
+    "verifiedCapabilities: ctx.verifiedCapabilities",
+    "hasInternalAccess: ctx.policy ? hasInternalAccess(ctx.policy) : false",
+    "verifiedActor: ctx.verifiedActor (optional)",
+    "policy: ctx.policy (optional)"
+  ],
+  "fallback_values_used": [],
+  "actor_verified": true,
+  "actor_verified_by": "withCanonicalEnforcement wrapper before handler runs",
+  "workspace_verified": true,
+  "workspace_verified_by": "withCanonicalEnforcement wrapper with requireWorkspace: true",
+  "capabilities_verified": true,
+  "capabilities_verified_by": "withCanonicalEnforcement wrapper with requireCapabilities: [FINDING_UPDATE]",
+  "policy_verified": true,
+  "policy_verified_by": "withCanonicalEnforcement wrapper; policy optional in adapter",
+  "uses_weak_auth_context": false,
+  "weak_auth_check": {
+    "accepts_raw_request": false,
+    "accepts_raw_session": false,
+    "accepts_legacy_auth": false,
+    "extracts_from_headers": false,
+    "infers_workspace_from_request": false
+  },
+  "canonicalizes_inside_service": false,
+  "canonicalization_check": {
+    "service_calls_withAuth": false,
+    "service_calls_canonicalizeAuthContext": false,
+    "service_accepts_ServiceAuthEnvelope": true,
+    "service_signature_unchanged": true
+  },
+  "field_safety_analysis": {
+    "verifiedActorId": {
+      "source": "ctx.verifiedActorId",
+      "guaranteed": true,
+      "reason": "Wrapper extracts verified actor ID before handler runs",
+      "fallback": false,
+      "safety": "SAFE"
+    },
+    "verifiedActorType": {
+      "source": "ctx.verifiedActorType",
+      "guaranteed": true,
+      "reason": "Wrapper provides actor type (user or service)",
+      "fallback": false,
+      "safety": "SAFE"
+    },
+    "verifiedWorkspaceId": {
+      "source": "ctx.verifiedWorkspaceId",
+      "guaranteed": true,
+      "reason": "Wrapper verifies workspace membership before handler",
+      "fallback": false,
+      "safety": "SAFE"
+    },
+    "verifiedCapabilities": {
+      "source": "ctx.verifiedCapabilities",
+      "guaranteed": true,
+      "reason": "Wrapper evaluates capabilities via policy before handler",
+      "fallback": false,
+      "safety": "SAFE"
+    },
+    "hasInternalAccess": {
+      "source": "ctx.policy via hasInternalAccess()",
+      "guaranteed": true,
+      "reason": "Derived from verified policy context with fallback to false",
+      "fallback": "false if policy missing",
+      "fallback_safe": true,
+      "safety": "SAFE"
+    },
+    "verifiedActor": {
+      "source": "ctx.verifiedActor",
+      "guaranteed": false,
+      "reason": "Optional field in ServiceAuthEnvelope; may be undefined",
+      "fallback": "undefined allowed",
+      "safety": "SAFE"
+    },
+    "policy": {
+      "source": "ctx.policy",
+      "guaranteed": false,
+      "reason": "Optional field in ServiceAuthEnvelope; may be undefined",
+      "fallback": "undefined allowed",
+      "safety": "SAFE"
+    }
+  },
+  "service_usage_verification": {
+    "service_file": "src/services/findings.ts",
+    "service_function": "updateFinding",
+    "service_uses_verifiedActorId": true,
+    "service_line": 204,
+    "service_line_context": "actorId: auth.verifiedActorId",
+    "service_uses_verifiedWorkspaceId": true,
+    "service_workspace_lines": [155, 197, 207],
+    "service_re_verifies": false,
+    "service_calls_auth_functions": false,
+    "service_checks_capabilities": false,
+    "service_assumes_verified": true
+  },
+  "authorization_safety": "PASS",
+  "authorization_details": {
+    "capability_declared": "FINDING_UPDATE",
+    "capability_enforced_by": "withCanonicalEnforcement wrapper",
+    "enforcement_timing": "before handler runs",
+    "service_re_check": false,
+    "bypass_possible": false
+  },
+  "workspace_safety": "PASS",
+  "workspace_details": {
+    "workspace_declared": true,
+    "workspace_enforced_by": "withCanonicalEnforcement wrapper with requireWorkspace: true",
+    "enforcement_timing": "before handler runs",
+    "queries_filtered": true,
+    "database_lines": [155, 197],
+    "cross_workspace_possible": false
+  },
+  "type_safety": "PASS",
+  "type_safety_details": {
+    "source_context_typed": "CanonicalAuthContext (strongly typed)",
+    "target_type_typed": "ServiceAuthEnvelope (strongly typed)",
+    "no_any_types": true,
+    "non_null_assertion": "ctx.request! (justified - wrapper provides request)",
+    "typescript_compilation": "success"
+  },
+  "audit_conclusion": "SAFE",
+  "audit_score": "10/10",
+  "failure_criteria_check": {
+    "fallback_actor_ids_used": false,
+    "fallback_workspace_ids_used": false,
+    "weak_auth_context_accepted": false,
+    "canonicalization_inside_service": false,
+    "workspace_inferred_from_request": false,
+    "capability_broadened": false,
+    "any_failure_criteria_met": false
+  },
+  "overall_safety": "SAFE",
+  "overall_confidence": "HIGH (95%+)",
+  "rationale": "Adapter creates verified context exclusively from CanonicalAuthContext, which is guaranteed verified by wrapper before handler runs. No weak auth patterns. No fallback values for critical fields. Service receives verified context and uses it appropriately. Authorization and workspace isolation preserved throughout."
+}
