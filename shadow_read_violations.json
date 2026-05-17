@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-05-17T06:15:59.355Z",
+  "timestamp": "2026-05-17T06:21:08.392Z",
   "totalViolations": 326,
   "critical": 199,
   "blockBuild": 127,
@@ -644,15 +644,6 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/evidence-bundles/route.ts",
-      "line": 4,
-      "column": 1,
-      "pattern": "auth-guard import",
-      "severity": "BLOCK_BUILD",
-      "replacement": "Remove import - use ctx.verifiedSessionSnapshot",
-      "context": "import { withAuth, canonicalizeAuthContext } from \"@/lib/auth-guard\";"
-    },
-    {
       "file": "src/app/api/execute/route.ts",
       "line": 21,
       "column": 23,
@@ -673,6 +664,15 @@
     {
       "file": "src/app/api/execute/route.ts",
       "line": 3,
+      "column": 1,
+      "pattern": "auth-guard import",
+      "severity": "BLOCK_BUILD",
+      "replacement": "Remove import - use ctx.verifiedSessionSnapshot",
+      "context": "import { withAuth, canonicalizeAuthContext } from \"@/lib/auth-guard\";"
+    },
+    {
+      "file": "src/app/api/evidence-bundles/route.ts",
+      "line": 4,
       "column": 1,
       "pattern": "auth-guard import",
       "severity": "BLOCK_BUILD",
@@ -1490,8 +1490,8 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/diagnosis/bottleneck/route.ts",
-      "line": 32,
+      "file": "src/app/api/diagnosis/archetype/route.ts",
+      "line": 28,
       "column": 23,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -1499,8 +1499,8 @@
       "context": "const authContext = await withAuth({"
     },
     {
-      "file": "src/app/api/diagnosis/bottleneck/route.ts",
-      "line": 32,
+      "file": "src/app/api/diagnosis/archetype/route.ts",
+      "line": 28,
       "column": 29,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -1508,7 +1508,7 @@
       "context": "const authContext = await withAuth({"
     },
     {
-      "file": "src/app/api/diagnosis/bottleneck/route.ts",
+      "file": "src/app/api/diagnosis/archetype/route.ts",
       "line": 3,
       "column": 1,
       "pattern": "auth-guard import",
@@ -1517,7 +1517,7 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/diagnosis/bottleneck/route.ts",
+      "file": "src/app/api/diagnosis/archetype/route.ts",
       "line": 3,
       "column": 1,
       "pattern": "withAuth import",
@@ -1526,8 +1526,8 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/diagnosis/archetype/route.ts",
-      "line": 28,
+      "file": "src/app/api/diagnosis/bottleneck/route.ts",
+      "line": 32,
       "column": 23,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -1535,8 +1535,8 @@
       "context": "const authContext = await withAuth({"
     },
     {
-      "file": "src/app/api/diagnosis/archetype/route.ts",
-      "line": 28,
+      "file": "src/app/api/diagnosis/bottleneck/route.ts",
+      "line": 32,
       "column": 29,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -1544,7 +1544,7 @@
       "context": "const authContext = await withAuth({"
     },
     {
-      "file": "src/app/api/diagnosis/archetype/route.ts",
+      "file": "src/app/api/diagnosis/bottleneck/route.ts",
       "line": 3,
       "column": 1,
       "pattern": "auth-guard import",
@@ -1553,7 +1553,7 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/diagnosis/archetype/route.ts",
+      "file": "src/app/api/diagnosis/bottleneck/route.ts",
       "line": 3,
       "column": 1,
       "pattern": "withAuth import",
@@ -2471,8 +2471,8 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
-      "line": 33,
+      "file": "src/app/api/decisions/[decisionId]/fail/route.ts",
+      "line": 29,
       "column": 25,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -2480,8 +2480,8 @@
       "context": "const { session } = await withAuth();"
     },
     {
-      "file": "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
-      "line": 33,
+      "file": "src/app/api/decisions/[decisionId]/fail/route.ts",
+      "line": 29,
       "column": 31,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -2489,7 +2489,7 @@
       "context": "const { session } = await withAuth();"
     },
     {
-      "file": "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
+      "file": "src/app/api/decisions/[decisionId]/fail/route.ts",
       "line": 2,
       "column": 1,
       "pattern": "auth-guard import",
@@ -2498,7 +2498,7 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
+      "file": "src/app/api/decisions/[decisionId]/fail/route.ts",
       "line": 2,
       "column": 1,
       "pattern": "withAuth import",
@@ -2507,8 +2507,8 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/decisions/[decisionId]/fail/route.ts",
-      "line": 29,
+      "file": "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
+      "line": 33,
       "column": 25,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -2516,8 +2516,8 @@
       "context": "const { session } = await withAuth();"
     },
     {
-      "file": "src/app/api/decisions/[decisionId]/fail/route.ts",
-      "line": 29,
+      "file": "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
+      "line": 33,
       "column": 31,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -2525,7 +2525,7 @@
       "context": "const { session } = await withAuth();"
     },
     {
-      "file": "src/app/api/decisions/[decisionId]/fail/route.ts",
+      "file": "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
       "line": 2,
       "column": 1,
       "pattern": "auth-guard import",
@@ -2534,7 +2534,7 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/decisions/[decisionId]/fail/route.ts",
+      "file": "src/app/api/decisions/[decisionId]/record-outcome/route.ts",
       "line": 2,
       "column": 1,
       "pattern": "withAuth import",
@@ -2867,8 +2867,8 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
-      "line": 37,
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "line": 46,
       "column": 23,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -2876,8 +2876,8 @@
       "context": "const { session } = await withAuth({"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
-      "line": 37,
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "line": 46,
       "column": 29,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -2885,7 +2885,7 @@
       "context": "const { session } = await withAuth({"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
       "line": 8,
       "column": 1,
       "pattern": "auth-guard import",
@@ -2894,7 +2894,7 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
       "line": 8,
       "column": 1,
       "pattern": "withAuth import",
@@ -2903,8 +2903,8 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
-      "line": 46,
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+      "line": 37,
       "column": 23,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -2912,8 +2912,8 @@
       "context": "const { session } = await withAuth({"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
-      "line": 46,
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+      "line": 37,
       "column": 29,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -2921,7 +2921,7 @@
       "context": "const { session } = await withAuth({"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
       "line": 8,
       "column": 1,
       "pattern": "auth-guard import",
@@ -2930,7 +2930,7 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
       "line": 8,
       "column": 1,
       "pattern": "withAuth import",
