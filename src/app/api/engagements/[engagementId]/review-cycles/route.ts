@@ -1,12 +1,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
-import { ForbiddenError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { generateReviewCycle } from "@/services/review-cycle";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
 
 const generateReviewSchema = z.object({
   engagementId: z.string().uuid(),
@@ -70,29 +65,15 @@ export const POST = withCanonicalEnforcement(
  * List historical review cycles for engagement
  * Note: Currently review cycles are not persisted; returns empty array
  */
-export const GET = withEnforcementFull(async (request) => {
-  await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_VIEW,
-  });
-
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    return Response.json({
+      cycles: [],
+      note: "Review cycle history not yet implemented - cycles are generated on-demand",
+    });
+  },
+  {
+    requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
+    requireWorkspace: true,
   }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  // TODO: Implement history retrieval when ReviewCycle persistence is added to schema
-  // For now, return empty array indicating no persisted cycles yet
-  return Response.json({
-    cycles: [],
-    note: "Review cycle history not yet implemented - cycles are generated on-demand",
-  });
-});
+);

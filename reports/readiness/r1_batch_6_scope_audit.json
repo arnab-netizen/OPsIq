@@ -1,0 +1,235 @@
+{
+  "phase": "R1-BATCH-6",
+  "date": "2026-05-17",
+  "purpose": "Scope audit of R1-BATCH-6 implementation changes",
+  "audit_type": "COMPREHENSIVE_SCOPE_VERIFICATION",
+  "status": "PASSED",
+  "files_changed": [
+    "shadow_read_violations.json",
+    "src/app/api/engagements/[engagementId]/intervention-state/route.ts",
+    "src/app/api/engagements/[engagementId]/recommendations/rerank/route.ts",
+    "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
+    "src/app/api/findings/[findingId]/evidence/route.ts"
+  ],
+  "file_changes_detail": [
+    {
+      "file": "shadow_read_violations.json",
+      "type": "scanner_artifact",
+      "change_type": "updated",
+      "is_authorized": true,
+      "reason": "Scanner output update - expected artifact"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/intervention-state/route.ts",
+      "type": "route_handler",
+      "change_type": "modernized",
+      "handlers_changed": ["GET", "PUT"],
+      "is_authorized": true,
+      "reason": "Authorized route - LANE_A handlers modernized to withCanonicalEnforcement"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/recommendations/rerank/route.ts",
+      "type": "route_handler",
+      "change_type": "modernized",
+      "handlers_changed": ["POST"],
+      "is_authorized": true,
+      "reason": "Authorized route - LANE_A handler modernized to withCanonicalEnforcement"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
+      "type": "route_handler",
+      "change_type": "modernized",
+      "handlers_changed": ["GET"],
+      "is_authorized": true,
+      "reason": "Authorized route - LANE_A handler modernized to withCanonicalEnforcement"
+    },
+    {
+      "file": "src/app/api/findings/[findingId]/evidence/route.ts",
+      "type": "route_handler",
+      "change_type": "modernized",
+      "handlers_changed": ["POST", "DELETE"],
+      "is_authorized": true,
+      "reason": "Authorized route - LANE_B handlers modernized with ServiceAuthEnvelope adapters"
+    }
+  ],
+  "forbidden_file_checks": {
+    "service_files_modified": {
+      "check": "git diff --name-only | grep src/services/",
+      "result": "NO MATCHES",
+      "status": "PASSED",
+      "severity": "CRITICAL"
+    },
+    "wrapper_modified": {
+      "check": "git diff --name-only | grep canonical-route-enforcement",
+      "result": "NO MATCHES",
+      "status": "PASSED",
+      "severity": "CRITICAL"
+    },
+    "auth_context_modified": {
+      "check": "git diff --name-only | grep auth-context",
+      "result": "NO MATCHES",
+      "status": "PASSED",
+      "severity": "CRITICAL"
+    },
+    "capabilities_modified": {
+      "check": "git diff --name-only | grep governance/capabilities",
+      "result": "NO MATCHES",
+      "status": "PASSED",
+      "severity": "CRITICAL"
+    },
+    "schema_modified": {
+      "check": "git diff --name-only | grep schema.prisma || git diff --name-only | grep migration",
+      "result": "NO MATCHES",
+      "status": "PASSED",
+      "severity": "CRITICAL"
+    }
+  },
+  "handler_modifications_audit": [
+    {
+      "route": "intervention-state",
+      "changes": [
+        "GET: Replaced withEnforcementFull with withCanonicalEnforcement",
+        "GET: Changed signature from (request, context, params) to (ctx: CanonicalAuthContext, params: Record<string, string>)",
+        "GET: Removed legacy withAuth() call",
+        "GET: Changed workspace extraction from headers to ctx.verifiedWorkspaceId",
+        "GET: Removed assertEngagementAccess call (authorization now in wrapper)",
+        "PUT: Replaced withEnforcementFull with withCanonicalEnforcement",
+        "PUT: Changed signature from (request, context, params) to (ctx: CanonicalAuthContext, params: Record<string, string>)",
+        "PUT: Removed legacy withAuth() and canonicalizeAuthContext() calls",
+        "PUT: Changed workspace extraction from headers to ctx.verifiedWorkspaceId",
+        "PUT: Changed actorId extraction from session.user.id to ctx.verifiedActorId",
+        "PUT: Removed assertEngagementAccess call (authorization now in wrapper)"
+      ],
+      "status": "PASSED",
+      "unrelated_changes": "NONE"
+    },
+    {
+      "route": "review-cycles",
+      "changes": [
+        "GET: Replaced withEnforcementFull with withCanonicalEnforcement",
+        "GET: Removed legacy withAuth() call",
+        "GET: Removed workspace enforcement checks (now in wrapper)",
+        "GET: Simplified to direct response generation"
+      ],
+      "status": "PASSED",
+      "unrelated_changes": "NONE"
+    },
+    {
+      "route": "recommendations/rerank",
+      "changes": [
+        "POST: Replaced withEnforcementFull with withCanonicalEnforcement",
+        "POST: Changed signature from (request, context, params) to (ctx: CanonicalAuthContext, params: Record<string, string>)",
+        "POST: Removed legacy withAuth() and canonicalizeAuthContext() calls",
+        "POST: Changed workspace extraction from headers to ctx.verifiedWorkspaceId",
+        "POST: Changed actorId extraction from authContext.session.user.id to ctx.verifiedActorId"
+      ],
+      "status": "PASSED",
+      "unrelated_changes": "NONE"
+    },
+    {
+      "route": "findings/[findingId]/evidence",
+      "changes": [
+        "POST: Replaced withEnforcementFull with withCanonicalEnforcement",
+        "POST: Created ServiceAuthEnvelope adapter from verified ctx fields",
+        "POST: Removed canonicalizeAuthContext() call",
+        "POST: Changed actorId extraction to ctx.verifiedActorId",
+        "DELETE: Replaced withEnforcementFull with withCanonicalEnforcement",
+        "DELETE: Created ServiceAuthEnvelope adapter from verified ctx fields",
+        "DELETE: Removed canonicalizeAuthContext() call"
+      ],
+      "status": "PASSED",
+      "unrelated_changes": "NONE"
+    }
+  ],
+  "response_shape_audit": {
+    "intervention_state_get": {
+      "handler": "GET",
+      "response_type": "Response.json(state)",
+      "changed": false,
+      "status": "PASSED"
+    },
+    "intervention_state_put": {
+      "handler": "PUT",
+      "response_type": "Response.json(result)",
+      "changed": false,
+      "status": "PASSED"
+    },
+    "review_cycles_get": {
+      "handler": "GET",
+      "response_type": "Response.json({cycles, note})",
+      "changed": false,
+      "status": "PASSED"
+    },
+    "recommendations_rerank_post": {
+      "handler": "POST",
+      "response_type": "Response.json(result)",
+      "changed": false,
+      "status": "PASSED"
+    },
+    "evidence_post": {
+      "handler": "POST",
+      "response_type": "Response.json(result, {status: 201})",
+      "changed": false,
+      "status": "PASSED"
+    },
+    "evidence_delete": {
+      "handler": "DELETE",
+      "response_type": "Response.json(result, {status: 200})",
+      "changed": false,
+      "status": "PASSED"
+    }
+  },
+  "business_logic_audit": {
+    "changes_detected": "NONE",
+    "service_calls_preserved": "ALL",
+    "idempotency_preserved": "YES",
+    "capability_semantics_preserved": "YES",
+    "workspace_isolation_preserved": "YES",
+    "status": "PASSED"
+  },
+  "code_quality_audit": {
+    "any_types_added": false,
+    "as_any_added": false,
+    "unsafe_casts": false,
+    "weak_auth_context": false,
+    "fallback_values_used": false,
+    "status": "PASSED"
+  },
+  "scope_audit_summary": {
+    "total_files_changed": 5,
+    "authorized_route_files_changed": 4,
+    "scanner_artifact_updated": 1,
+    "service_files_changed": 0,
+    "wrapper_modified": false,
+    "auth_context_modified": false,
+    "capabilities_modified": false,
+    "schema_modified": false,
+    "unrelated_handlers_modified": 0,
+    "unrelated_routes_modified": 0,
+    "any_types_added": 0,
+    "as_any_added": 0,
+    "response_shapes_changed": 0,
+    "business_logic_changed": 0,
+    "unauthorized_changes": 0,
+    "status": "PASSED"
+  },
+  "audit_verdict": "PASSED",
+  "authorization_status": "ALL CHANGES AUTHORIZED",
+  "findings": [
+    "✓ Exactly 4 authorized route files modified (intervention-state, review-cycles, recommendations/rerank, findings evidence)",
+    "✓ All 6 handlers modernized correctly (4 LANE_A + 2 LANE_B)",
+    "✓ Service files untouched",
+    "✓ Wrapper implementation untouched",
+    "✓ Auth context definitions untouched",
+    "✓ Capability definitions untouched",
+    "✓ Database schema untouched",
+    "✓ No unrelated routes modified",
+    "✓ No unrelated handlers modified",
+    "✓ Response shapes preserved",
+    "✓ Business logic preserved",
+    "✓ No unsafe code patterns added",
+    "✓ Scanner artifact updated (expected)",
+    "✓ All changes authorized for implementation"
+  ],
+  "status_final": "SCOPE AUDIT PASSED - READY FOR ACCEPTANCE DECISION"
+}
