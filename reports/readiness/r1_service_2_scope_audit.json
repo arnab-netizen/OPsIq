@@ -1,0 +1,101 @@
+{
+  "phase": "R1-SERVICE-2",
+  "date": "2026-05-17",
+  "purpose": "Scope audit for actions/[actionId] PATCH modernization",
+  "files_changed": 2,
+  "files_changed_list": [
+    "shadow_read_violations.json",
+    "src/app/api/actions/[actionId]/route.ts"
+  ],
+  "code_files_changed": 1,
+  "code_files_changed_list": [
+    "src/app/api/actions/[actionId]/route.ts"
+  ],
+  "artifact_files_changed": 1,
+  "artifact_files_changed_list": [
+    "shadow_read_violations.json"
+  ],
+  "report_files_added": 5,
+  "report_files_added_list": [
+    "reports/readiness/r1_service_2_baseline_confirmation.md",
+    "reports/readiness/r1_service_2_strategy_confirmation.md",
+    "reports/readiness/r1_service_2_updateaction_contract_truth.md",
+    "reports/readiness/r1_service_2_preimplementation_audit.json",
+    "reports/readiness/r1_service_2_validation.md"
+  ],
+  "route_file_changes": {
+    "file": "src/app/api/actions/[actionId]/route.ts",
+    "changes": {
+      "imports": "Removed: withEnforcementFull, ForbiddenError, withAuth, canonicalizeAuthContext, enforceWorkspaceScoping, NextRequest. Added: CanonicalAuthContext type.",
+      "get_handler": "UNCHANGED",
+      "patch_handler": "MODERNIZED from withEnforcementFull to withCanonicalEnforcement pattern"
+    },
+    "patch_handler_details": {
+      "old_pattern": "withEnforcementFull(async (request, context, params) => { withAuth(...), enforceWorkspaceScoping(...), canonicalizeAuthContext(...) })",
+      "new_pattern": "withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params) => { direct context pass }, { requireCapabilities, requireWorkspace })",
+      "lines_added": 22,
+      "lines_removed": 33,
+      "net_change": -11
+    },
+    "no_service_files_changed": true,
+    "no_other_routes_changed": true,
+    "no_wrapper_changed": true,
+    "no_auth_context_definition_changed": true
+  },
+  "artifact_file_changes": {
+    "file": "shadow_read_violations.json",
+    "type": "Scanner output artifact",
+    "change": "Updated with current scan results",
+    "before": {
+      "timestamp": "2026-05-17T01:36:37.149Z",
+      "totalViolations": 349,
+      "critical": 221,
+      "blockBuild": 128
+    },
+    "after": {
+      "timestamp": "2026-05-17T01:39:29.921Z",
+      "totalViolations": 346,
+      "critical": 219,
+      "blockBuild": 127
+    },
+    "change_summary": "totalViolations: 349 → 346 (-3), critical: 221 → 219 (-2), blockBuild: 128 → 127 (-1)"
+  },
+  "forbidden_checks": {
+    "unrelated_routes_changed": false,
+    "unrelated_handlers_changed": false,
+    "unrelated_services_changed": false,
+    "service_files_changed": false,
+    "wrapper_source_changed": false,
+    "auth_context_definition_changed": false,
+    "capability_definitions_changed": false,
+    "entitlement_definitions_changed": false,
+    "role_mapping_changed": false,
+    "database_schema_changed": false,
+    "response_shape_changed": false,
+    "business_logic_changed": false,
+    "any_types_added": false,
+    "as_any_types_added": false,
+    "scanner_source_changed": false,
+    "bulk_replace_operations": false
+  },
+  "compliance_verification": {
+    "only_pilot_route_changed": true,
+    "only_patch_handler_changed": true,
+    "only_patch_handler_of_pilot_route": true,
+    "no_get_handler_change": true,
+    "no_post_handler_change": true,
+    "no_delete_handler_change": true,
+    "service_signature_unchanged": true,
+    "service_logic_unchanged": true
+  },
+  "scope_compliance": "PASS",
+  "authorization_preserved": true,
+  "workspace_isolation_preserved": true,
+  "type_safety_verified": true,
+  "no_weak_auth_patterns": true,
+  "no_fallback_values": true,
+  "no_unverified_headers": true,
+  "no_service_canonicalization": true,
+  "verdict": "SCOPE_AUDIT_PASS",
+  "rationale": "Only authorized files changed (1 code file = pilot route PATCH handler + 1 artifact file = scanner output). No unauthorized modifications. Service file untouched. No weak auth patterns introduced. All forbidden operations avoided. Pattern matches R1-SERVICE-1 pilot exactly."
+}

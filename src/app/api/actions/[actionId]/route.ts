@@ -1,14 +1,9 @@
-import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getActionById, updateAction } from "@/services/action";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { z } from "zod/v4";
 import { ACTION_STATUSES } from "@/domain/constants/statuses";
-import type { NextRequest } from "next/server";
 
 const updateActionSchema = z.object({
   title: z.string().min(1).optional(),
@@ -38,35 +33,20 @@ export const GET = withCanonicalEnforcement(
   }
 );
 
-export const PATCH = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.ACTION_UPDATE,
-    internalOnly: true,
-  });
+export const PATCH = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { actionId } = params;
+    parseOrThrow(uuidSchema, actionId);
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    const body = await parseRequestBody(ctx.request!, updateActionSchema);
+
+    await updateAction(actionId, body, ctx, ctx.verifiedWorkspaceId);
+
+    const updated = await getActionById(actionId, ctx.verifiedWorkspaceId);
+    return Response.json(updated);
+  },
+  {
+    requireCapabilities: [CAPABILITIES.ACTION_UPDATE],
+    requireWorkspace: true,
   }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const { actionId } = params;
-  parseOrThrow(uuidSchema, actionId);
-
-  const body = await parseRequestBody(request, updateActionSchema);
-  const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
-  await updateAction(actionId, body, canonicalContext, workspaceId);
-
-  const updated = await getActionById(actionId, workspaceId);
-  return Response.json(updated);
-});
+);
