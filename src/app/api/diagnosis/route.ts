@@ -1,3 +1,4 @@
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
@@ -25,40 +26,41 @@ const diagnosisSchema = z.object({
   customerCount: z.number().min(0).optional(),
 });
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  const authContext = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_CREATE,
-    internalOnly: true,
-  });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new UnauthorizedError("idempotency-key header required");
+    }
 
-  const workspaceId = request.headers.get("x-workspace-id") || "";
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    throw new UnauthorizedError("idempotency-key header required");
+    const body = await parseRequestBody(ctx.request!, diagnosisSchema);
+
+    // Check idempotency
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "diagnoseBusiness",
+      authContext: ctx,
+      payload: body,
+    });
+
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return idempotencyCheck.cachedResponse.body;
+    }
+
+    try {
+      validateBusinessProblem(body);
+      const result = await diagnoseBusiness(body, ctx, workspaceId);
+      await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>);
+      return result;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
+    }
+  },
+  {
+    requireCapabilities: [CAPABILITIES.ENGAGEMENT_CREATE],
+    requireWorkspace: true,
   }
-
-  const body = await parseRequestBody(request, diagnosisSchema);
-
-  // Check idempotency
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "diagnoseBusiness",
-    authContext,
-    payload: body,
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return idempotencyCheck.cachedResponse.body;
-  }
-
-  try {
-    validateBusinessProblem(body);
-    const result = await diagnoseBusiness(body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
-    await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>);
-    return result;
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    throw error;
-  }
-});
+);

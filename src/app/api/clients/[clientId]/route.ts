@@ -60,61 +60,48 @@ export const PATCH = withCanonicalEnforcement(
   }
 );
 
-export const POST = withEnforcementFull(async (request, context, params) => {
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.CLIENT_ARCHIVE,
-    internalOnly: true,
-  });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { clientId } = params;
+    parseOrThrow(uuidSchema, clientId);
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      return Response.json(
+        { error: "idempotency-key header required" },
+        { status: 400 }
+      );
+    }
 
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+    const body = await parseRequestBody(ctx.request!, archiveSchema);
 
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    return Response.json(
-      { error: "idempotency-key header required" },
-      { status: 400 }
-    );
-  }
-
-  const { clientId } = params;
-  parseOrThrow(uuidSchema, clientId);
-
-  const body = await parseRequestBody(request, archiveSchema);
-
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "archiveClient",
-    actorId: session.user.id,
-    payload: { clientId, version: body.version },
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
-      status: idempotencyCheck.cachedResponse.status,
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "archiveClient",
+      actorId: ctx.verifiedActorId,
+      payload: { clientId, version: body.version },
     });
-  }
 
-  try {
-    const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
-    await archiveClient(clientId, canonicalContext, body.version, workspaceId);
-    const result = { status: "archived" };
-    await recordIdempotencyResponse(idempotencyKey, 200, result);
-    return Response.json(result);
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    throw error;
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return Response.json(idempotencyCheck.cachedResponse.body, {
+        status: idempotencyCheck.cachedResponse.status,
+      });
+    }
+
+    try {
+      await archiveClient(clientId, ctx, body.version, workspaceId);
+      const result = { status: "archived" };
+      await recordIdempotencyResponse(idempotencyKey, 200, result);
+      return Response.json(result);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
+    }
+  },
+  {
+    requireCapabilities: [CAPABILITIES.CLIENT_ARCHIVE],
+    requireWorkspace: true,
   }
-});
+);

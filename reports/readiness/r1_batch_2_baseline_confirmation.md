@@ -1,8 +1,8 @@
-# R1-BATCH-2: Baseline Confirmation
+# R1-BATCH-2: Baseline Confirmation (Reselected Batch Implementation)
 
 **Date:** 2026-05-17  
 **Phase:** R1-BATCH-2 Controlled Accelerated Batch Implementation  
-**Status:** BASELINE CONFIRMED - READY FOR AUTHORIZATION
+**Status:** BASELINE CONFIRMED - READY FOR IMPLEMENTATION
 
 ---
 
@@ -12,7 +12,7 @@
 
 **Working Tree:** Clean (no uncommitted changes)
 
-**Current Commit:** c186c72 "R1-BATCH-1R: Complete Batch 1 Reconciliation"
+**Current Commit:** cb944e7 "Update scanner artifact baseline"
 
 **Pull Status:** Already up to date with origin/main ✓
 
@@ -49,15 +49,15 @@
 
 ## D. Scanner Baseline
 
-**Current Results (R1-BATCH-1R Reconciliation Complete):**
+**Current Results (R1-BATCH-2R-RESELECT Complete):**
 - Total violations: 338
 - Critical: 211
 - Block-build: 127
 
-**Progress from R1-BATCH-1:**
-- Violations fixed: 6 (344 → 338)
-- Critical fixed: 6 (217 → 211)
-- Block-build: 127 (no change expected)
+**Progress:**
+- From R1-BATCH-1: 6 violations fixed (344 → 338)
+- Expected from R1-BATCH-2: ~12 violations to fix (338 → 326)
+- Running total: 18 violations fixed overall
 
 ---
 
@@ -71,4 +71,13 @@
 
 ---
 
-**Status: ✓ R1-BATCH-2 BASELINE CONFIRMED - READY FOR AUTHORIZATION**
+## F. Reselected Batch Summary
+
+**Total handlers authorized:** 6  
+**All handlers lane:** LANE_A_EXISTING_CANONICAL_SERVICE_INPUT  
+**Expected reduction:** ~12 violations  
+**Confidence level:** HIGH (100% source-verified)
+
+---
+
+**Status: ✓ R1-BATCH-2 BASELINE CONFIRMED - READY FOR IMPLEMENTATION**

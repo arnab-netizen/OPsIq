@@ -43,37 +43,23 @@ export const GET = withCanonicalEnforcement(
   { requireWorkspace: true, requireCapabilities: ['LEAD_VIEW'] }
 );
 
-export const PATCH = withEnforcementFull(async (request, context, params) => {
-  // Authenticate + authorize (fail-closed)
-  const authContext = await withAuth({
-    capability: CAPABILITIES.LEAD_UPDATE,
-    internalOnly: true,
-  });
+export const PATCH = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { leadId } = params;
+    parseOrThrow(uuidSchema, leadId);
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    const body = await parseRequestBody(ctx.request!, updateLeadSchema);
+    await updateLead(leadId, body, ctx, workspaceId);
+
+    const updated = await getLeadById(leadId, workspaceId);
+    return Response.json(updated);
+  },
+  {
+    requireCapabilities: [CAPABILITIES.LEAD_UPDATE],
+    requireWorkspace: true,
   }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const { leadId } = params;
-  parseOrThrow(uuidSchema, leadId);
-
-  const body = await parseRequestBody(request, updateLeadSchema);
-  await updateLead(leadId, body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
-
-  const updated = await getLeadById(leadId, workspaceId);
-  return Response.json(updated);
-});
+);
 
 export const POST = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)

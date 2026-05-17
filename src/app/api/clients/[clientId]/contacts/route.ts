@@ -30,58 +30,51 @@ export const GET = withCanonicalEnforcement(
   { requireWorkspace: true, requireCapabilities: ['CLIENT_VIEW'] }
 );
 
-export const POST = withEnforcementFull(async (request, context, params) => {
-  const { clientId } = params;
-  parseOrThrow(uuidSchema, clientId);
-  const authContext = await withAuth({
-    capability: CAPABILITIES.CLIENT_UPDATE,
-    internalOnly: true,
-  });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { clientId } = params;
+    parseOrThrow(uuidSchema, clientId);
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      return Response.json(
+        { error: "idempotency-key header required" },
+        { status: 400 }
+      );
+    }
 
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    return Response.json(
-      { error: "idempotency-key header required" },
-      { status: 400 }
-    );
-  }
+    const body = await parseRequestBody(ctx.request!, createContactSchema);
 
-  const body = await parseRequestBody(request, createContactSchema);
-
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "createContact",
-    actorId: authContext.session.user.id,
-    payload: { ...body, clientId },
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
-      status: idempotencyCheck.cachedResponse.status,
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "createContact",
+      actorId: ctx.verifiedActorId,
+      payload: { ...body, clientId },
     });
-  }
 
-  try {
-    const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-    const result = await createContact(
-      { ...body, clientId },
-      canonicalContext,
-      workspaceId
-    );
-    await recordIdempotencyResponse(idempotencyKey, 201, result);
-    return Response.json(result, { status: 201 });
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    throw error;
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return Response.json(idempotencyCheck.cachedResponse.body, {
+        status: idempotencyCheck.cachedResponse.status,
+      });
+    }
+
+    try {
+      const result = await createContact(
+        { ...body, clientId },
+        ctx,
+        workspaceId
+      );
+      await recordIdempotencyResponse(idempotencyKey, 201, result);
+      return Response.json(result, { status: 201 });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      throw error;
+    }
+  },
+  {
+    requireCapabilities: [CAPABILITIES.CLIENT_UPDATE],
+    requireWorkspace: true,
   }
-});
+);
