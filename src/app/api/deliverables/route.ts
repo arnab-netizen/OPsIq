@@ -1,17 +1,11 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext, ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
-import { hasInternalAccess } from "@/policies/capability-check";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createDeliverable, getDeliverablesForEngagement } from "@/services/deliverable";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { parseOrThrow, parseRequestBody, uuidSchema } from "@/lib/validation";
 import { withIdempotency } from "@/infra/idempotency";
 import { z } from "zod/v4";
-import type { NextRequest } from "next/server";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
 const createDeliverableSchema = z.object({
   engagementId: z.string().uuid(),
@@ -43,61 +37,44 @@ export const GET = withCanonicalEnforcement(
   { requireWorkspace: true, requireCapabilities: ['DELIVERABLE_VIEW'] }
 );
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate + authorize (fail-closed)
-  const authContext = await withAuth({
-    capability: CAPABILITIES.DELIVERABLE_CREATE,
-    internalOnly: true,
-  });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const idempotencyKey = ctx.request!.headers.get("Idempotency-Key");
+    if (!idempotencyKey) {
+      return Response.json(
+        { error: "Idempotency-Key header required" },
+        { status: 400 }
+      );
+    }
 
-  // Validate workspace membership (fail-closed)
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
+    const body = await parseRequestBody(ctx.request!, createDeliverableSchema);
+    parseOrThrow(uuidSchema, body.engagementId);
+    parseOrThrow(uuidSchema, body.stageId);
+
+    await assertEngagementAccess(ctx.verifiedActorId, body.engagementId, ctx.verifiedWorkspaceId);
+
+    const { isNew, result } = await withIdempotency(
+      idempotencyKey,
+      "deliverable.create",
+      async () => {
+        const authEnvelope: ServiceAuthEnvelope = {
+          verifiedActorId: ctx.verifiedActorId,
+          verifiedActorType: ctx.verifiedActorType,
+          verifiedWorkspaceId: ctx.verifiedWorkspaceId,
+          verifiedCapabilities: ctx.verifiedCapabilities,
+          hasInternalAccess: false,
+          verifiedActor: ctx.verifiedActor,
+        };
+        return createDeliverable(body, authEnvelope);
+      },
+      body,
+      ctx.verifiedActorId
     );
+
+    return Response.json(result, { status: isNew ? 201 : 200 });
+  },
+  {
+    requireCapabilities: [CAPABILITIES.DELIVERABLE_CREATE],
+    requireWorkspace: true,
   }
-
-  // Require Idempotency-Key (fail-closed)
-  const idempotencyKey = nextRequest.headers.get("Idempotency-Key");
-  if (!idempotencyKey) {
-    return Response.json(
-      { error: "Idempotency-Key header required" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const body = await parseRequestBody(request, createDeliverableSchema);
-  parseOrThrow(uuidSchema, body.engagementId);
-  parseOrThrow(uuidSchema, body.stageId);
-
-  await assertEngagementAccess(authContext.session.user.id, body.engagementId, workspaceId);
-
-  const { isNew, result } = await withIdempotency(
-    idempotencyKey,
-    "deliverable.create",
-    async () => {
-      const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-      const authEnvelope: ServiceAuthEnvelope = {
-        verifiedActorId: canonicalContext.verifiedActorId,
-        verifiedActorType: canonicalContext.verifiedActorType,
-        verifiedWorkspaceId: canonicalContext.verifiedWorkspaceId,
-        verifiedCapabilities: canonicalContext.verifiedCapabilities,
-        hasInternalAccess: authContext.policy ? hasInternalAccess(authContext.policy) : false,
-        verifiedActor: canonicalContext.verifiedActor,
-      };
-      return createDeliverable(body, authEnvelope);
-    },
-    body,
-    authContext.session.user.id
-  );
-
-  return Response.json(result, { status: isNew ? 201 : 200 });
-});
+);

@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
-import { UnauthorizedError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   createExportPackage,
@@ -104,61 +99,47 @@ export const GET = withCanonicalEnforcement(
  * POST /api/export/gdpr
  * Create GDPR data portability export for authenticated user
  */
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  // Authenticate
-  const authContext = await withAuth({ capability: CAPABILITIES.ACTION_VIEW });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const body = await ctx.request!.json();
+    const format = body.format || "json";
 
-  // Get workspace ID
-  const workspaceId = request.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    throw new Error("Workspace ID required");
+    if (format !== "json" && format !== "csv") {
+      throw new Error("Invalid format");
+    }
+
+    const exportedData: ExportedData = {
+      workspaceId: ctx.verifiedWorkspaceId,
+      exportedAt: new Date(),
+      format,
+      tables: [
+        {
+          name: "workspace_data",
+          rowCount: 0,
+          columns: ["id", "type", "data", "createdAt"],
+          data: [],
+        },
+      ],
+    };
+
+    const errors = validateExportData(exportedData);
+    if (errors.length > 0) {
+      throw new Error(`Export failed: ${errors.join(', ')}`);
+    }
+
+    const exportPackage = createExportPackage(exportedData);
+
+    return Response.json({
+      success: true,
+      exportId: `export_${Date.now()}`,
+      format,
+      fileName: exportPackage.fileName,
+      createdAt: new Date().toISOString(),
+      downloadUrl: `/api/export/download?id=export_${Date.now()}`,
+    });
+  },
+  {
+    requireCapabilities: [CAPABILITIES.ACTION_VIEW],
+    requireWorkspace: true,
   }
-
-  // Verify membership
-  const membership = await enforceWorkspaceScoping(request, workspaceId);
-  if (!membership) {
-    throw new UnauthorizedError("Unauthorized");
-  }
-
-  // Validate request body
-  const body = await request.json();
-  const format = body.format || "json";
-
-  if (format !== "json" && format !== "csv") {
-    throw new Error("Invalid format");
-  }
-
-  // Build export (would query database in real implementation)
-  const exportedData: ExportedData = {
-    workspaceId,
-    exportedAt: new Date(),
-    format,
-    tables: [
-      {
-        name: "workspace_data",
-        rowCount: 0,
-        columns: ["id", "type", "data", "createdAt"],
-        data: [],
-      },
-    ],
-  };
-
-  // Validate
-  const errors = validateExportData(exportedData);
-  if (errors.length > 0) {
-    throw new Error(`Export failed: ${errors.join(', ')}`);
-  }
-
-  // Create package
-  const exportPackage = createExportPackage(exportedData);
-
-  // Return response
-  return {
-    success: true,
-    exportId: `export_${Date.now()}`,
-    format,
-    fileName: exportPackage.fileName,
-    createdAt: new Date().toISOString(),
-    downloadUrl: `/api/export/download?id=export_${Date.now()}`,
-  };
-});
+);
