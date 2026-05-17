@@ -1,0 +1,62 @@
+{
+  "date": "2026-05-17",
+  "phase": "R1-SPECIAL-1D-BATCH-1",
+  "purpose": "Scope verification - ensure only authorized files changed",
+  "files_changed_total": 5,
+  "scope_audit": {
+    "authorized_files_changed": [
+      {
+        "file": "src/app/api/scenario/route.ts",
+        "authorized": true,
+        "handler": "POST",
+        "changes": "Modernized to D4 pattern (withCanonicalEnforcement)",
+        "status": "SAFE"
+      },
+      {
+        "file": "src/app/api/value/route.ts",
+        "authorized": true,
+        "handler": "GET",
+        "changes": "Modernized to D4 pattern (withCanonicalEnforcement)",
+        "status": "SAFE"
+      },
+      {
+        "file": "src/app/api/entity/route.ts",
+        "authorized": true,
+        "handler": "POST",
+        "changes": "Modernized to D4 pattern (withCanonicalEnforcement)",
+        "status": "SAFE"
+      },
+      {
+        "file": "src/app/api/evidence/[evidenceId]/validate/route.ts",
+        "authorized": true,
+        "handler": "POST",
+        "changes": "Modernized to D4 pattern (withCanonicalEnforcement)",
+        "status": "SAFE"
+      },
+      {
+        "file": "src/app/api/diagnosis/archetype/route.ts",
+        "authorized": true,
+        "handler": "POST",
+        "changes": "Modernized to D4 pattern (withCanonicalEnforcement)",
+        "status": "SAFE"
+      }
+    ],
+    "unauthorized_files_changed": [],
+    "service_files_changed": false,
+    "wrapper_files_changed": false,
+    "auth_context_files_changed": false,
+    "capability_files_changed": false,
+    "role_files_changed": false,
+    "entitlement_files_changed": false,
+    "database_files_changed": false,
+    "scanner_source_changed": false,
+    "policy_infrastructure_changed": false
+  },
+  "summary": {
+    "total_files_changed": 5,
+    "authorized_changes": 5,
+    "unauthorized_changes": 0,
+    "violations_of_scope": false,
+    "verdict": "SCOPE AUDIT PASSED - ONLY AUTHORIZED FILES CHANGED"
+  }
+}

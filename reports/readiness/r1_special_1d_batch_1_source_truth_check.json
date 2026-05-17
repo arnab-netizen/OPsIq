@@ -1,0 +1,96 @@
+{
+  "date": "2026-05-17",
+  "phase": "R1-SPECIAL-1D-BATCH-1",
+  "purpose": "Source truth verification before implementation",
+  "handlers_checked": 5,
+  "handlers": [
+    {
+      "route_file": "src/app/api/scenario/route.ts",
+      "handler_method": "POST",
+      "handler_exists": true,
+      "current_wrapper": "withEnforcementFull",
+      "current_role_or_policy_logic": "await resolveServerRole(); if (!role) throw UnauthorizedError;",
+      "current_service_calls": "runScenario(baseRevenue, baseCost, deltaRevenue, deltaCost)",
+      "current_audit_logic": "logAuditEvent with ANALYZE event",
+      "d4_compatible": true,
+      "d4_compatibility_reason": "Simple role resolution with implicit check. Route-local policy logic can remain exactly. Service call unchanged.",
+      "implementation_risk": "LOW",
+      "stop_condition_triggered": false,
+      "safe_to_proceed": true
+    },
+    {
+      "route_file": "src/app/api/value/route.ts",
+      "handler_method": "GET",
+      "handler_exists": true,
+      "current_wrapper": "withEnforcementFull",
+      "current_role_or_policy_logic": "await resolveServerRole(); if (!role) throw; if (!canView(role)) throw;",
+      "current_service_calls": "getItems(); calculateValue(items);",
+      "current_audit_logic": "logAuditEvent with VALUE_VIEWED event + metrics metadata",
+      "d4_compatible": true,
+      "d4_compatibility_reason": "Role resolution + canView() policy check. Both can stay in handler. Services unchanged.",
+      "implementation_risk": "LOW",
+      "stop_condition_triggered": false,
+      "safe_to_proceed": true
+    },
+    {
+      "route_file": "src/app/api/entity/route.ts",
+      "handler_method": "POST",
+      "handler_exists": true,
+      "current_wrapper": "withEnforcementFull",
+      "current_role_or_policy_logic": "await resolveServerRole(); if (!role) throw; if (!canEdit(role)) throw;",
+      "current_service_calls": "createEntity(entity); logAuditEvent();",
+      "current_audit_logic": "logAuditEvent with CREATE event",
+      "d4_compatible": true,
+      "d4_compatibility_reason": "Same file has GET already modernized (uses withCanonicalEnforcement). POST should follow GET pattern. Role + canEdit logic can remain in handler.",
+      "implementation_risk": "LOW",
+      "stop_condition_triggered": false,
+      "safe_to_proceed": true,
+      "note": "GET method already modernized - POST completes the mixed-state handler pattern"
+    },
+    {
+      "route_file": "src/app/api/evidence/[evidenceId]/validate/route.ts",
+      "handler_method": "POST",
+      "handler_exists": true,
+      "current_wrapper": "withEnforcementFull",
+      "current_role_or_policy_logic": "withAuth({ capability: EVIDENCE_VALIDATE, internalOnly: true }); enforceWorkspaceScoping();",
+      "current_service_calls": "validateEvidence(bodyData, session.user.id, workspaceId)",
+      "current_audit_logic": "idempotency caching, no explicit audit events",
+      "d4_compatible": true,
+      "d4_compatibility_reason": "internalOnly is route-local policy flag (not capability). Workspace enforcement can move to wrapper. Service call can use verified context.",
+      "implementation_risk": "MEDIUM",
+      "stop_condition_triggered": false,
+      "safe_to_proceed": true,
+      "note": "Manual workspace enforcement via header (x-workspace-id) will be replaced with ctx.verifiedWorkspaceId"
+    },
+    {
+      "route_file": "src/app/api/diagnosis/archetype/route.ts",
+      "handler_method": "POST",
+      "handler_exists": true,
+      "current_wrapper": "withEnforcementFull",
+      "current_role_or_policy_logic": "withAuth({ capability: DIAGNOSIS_READ, internalOnly: false })",
+      "current_service_calls": "archetypeEngine.analyzeArchetype(engagementId, workspaceId, indicators)",
+      "current_audit_logic": "idempotency caching, logging via logger",
+      "d4_compatible": true,
+      "d4_compatibility_reason": "internalOnly flag can stay as route-local policy. Workspace from body can move to wrapper. Service call signatures match.",
+      "implementation_risk": "MEDIUM",
+      "stop_condition_triggered": false,
+      "safe_to_proceed": true,
+      "note": "diagnosis/route.ts is already modernized (good template). Workspace from body (unverified) will be replaced with ctx.verifiedWorkspaceId"
+    }
+  ],
+  "summary": {
+    "total_checked": 5,
+    "all_exist": true,
+    "all_d4_compatible": true,
+    "stop_conditions_triggered": 0,
+    "handlers_safe_to_proceed": 5,
+    "handlers_to_exclude": 0,
+    "implementation_risk_distribution": {
+      "LOW": 3,
+      "MEDIUM": 2,
+      "HIGH": 0,
+      "BLOCKED": 0
+    },
+    "verdict": "ALL HANDLERS VERIFIED SAFE - PROCEED WITH FULL BATCH IMPLEMENTATION"
+  }
+}

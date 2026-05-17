@@ -1,6 +1,4 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
-import type { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { archetypeEngine } from "@/services/diagnostic-core/archetype-engine";
 import { parseRequestBody } from "@/lib/validation";
@@ -24,48 +22,44 @@ const archetypeSchema = z.object({
   }),
 });
 
-export const POST = withEnforcementFull(async (request) => {
-  const authContext = await withAuth({
-    capability: CAPABILITIES.DIAGNOSIS_READ,
-    internalOnly: false,
-  });
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      return Response.json(
+        { error: "idempotency-key header required" },
+        { status: 400 }
+      );
+    }
 
-  const idempotencyKey = request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    return Response.json(
-      { error: "idempotency-key header required" },
-      { status: 400 }
-    );
-  }
+    const body = await parseRequestBody(ctx.request!, archetypeSchema);
 
-  const body = await parseRequestBody(request, archetypeSchema);
-
-  // Check idempotency
-  const idempotencyCheck = await checkIdempotencyKey({
-    idempotencyKey,
-    operationName: "analyzeArchetype",
-    authContext,
-    payload: body,
-  });
-
-  if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
-      status: idempotencyCheck.cachedResponse.status,
-    });
-  }
-
-  try {
-    logger.info("Archetype analysis requested", {
-      engagementId: body.engagementId,
-      workspaceId: body.workspaceId,
-      userId: authContext.session.user.id,
+    // Check idempotency
+    const idempotencyCheck = await checkIdempotencyKey({
+      idempotencyKey,
+      operationName: "analyzeArchetype",
+      authContext: ctx,
+      payload: body,
     });
 
-    const result = await archetypeEngine.analyzeArchetype(
-      body.engagementId,
-      body.workspaceId,
-      body.indicators
-    );
+    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+      return Response.json(idempotencyCheck.cachedResponse.body, {
+        status: idempotencyCheck.cachedResponse.status,
+      });
+    }
+
+    try {
+      logger.info("Archetype analysis requested", {
+        engagementId: body.engagementId,
+        workspaceId: ctx.verifiedWorkspaceId,
+        userId: ctx.verifiedActorId,
+      });
+
+      const result = await archetypeEngine.analyzeArchetype(
+        body.engagementId,
+        ctx.verifiedWorkspaceId,
+        body.indicators
+      );
 
     if (!result) {
       await recordIdempotencyError(idempotencyKey, new Error("Insufficient data for archetype analysis"));
@@ -92,5 +86,7 @@ export const POST = withEnforcementFull(async (request) => {
       { error: err.message || "Archetype analysis failed" },
       { status: 500 }
     );
-  }
-});
+    }
+  },
+  { requireWorkspace: true, requireCapabilities: [CAPABILITIES.DIAGNOSIS_READ] }
+);

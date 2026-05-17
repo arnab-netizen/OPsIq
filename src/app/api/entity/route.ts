@@ -1,6 +1,3 @@
-import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
 import { createEntity, getEntities } from "@/services/entity/store";
@@ -19,53 +16,55 @@ export const GET = withCanonicalEnforcement(
   { requireWorkspace: true }
 );
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  // Enforce server-side auth
-  const role = await resolveServerRole();
-  if (!role) {
-    throw new UnauthorizedError("Unauthorized");
-  }
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    // Enforce server-side auth
+    const role = await resolveServerRole();
+    if (!role) {
+      throw new UnauthorizedError("Unauthorized");
+    }
 
-  if (!canEdit(role)) {
-    throw new Error("Insufficient permissions");
-  }
+    if (!canEdit(role)) {
+      throw new Error("Insufficient permissions");
+    }
 
-  const body = await request.json();
-  const { name, type } = body;
+    const body = await ctx.request!.json();
+    const { name, type } = body;
 
-  if (!name || !type) {
-    throw new Error("Missing required fields: name, type");
-  }
+    if (!name || !type) {
+      throw new Error("Missing required fields: name, type");
+    }
 
-  const validTypes = ["business_unit", "client", "project"];
-  if (!validTypes.includes(type)) {
-    throw new Error("Invalid type: must be business_unit, client, or project");
-  }
+    const validTypes = ["business_unit", "client", "project"];
+    if (!validTypes.includes(type)) {
+      throw new Error("Invalid type: must be business_unit, client, or project");
+    }
 
-  const entityId = randomUUID();
-  const entity = {
-    id: entityId,
-    name,
-    type,
-    createdAt: new Date().toISOString(),
-  };
+    const entityId = randomUUID();
+    const entity = {
+      id: entityId,
+      name,
+      type,
+      createdAt: new Date().toISOString(),
+    };
 
-  // Get actor ID for audit
-  const { session } = await withAuth();
-  const actorId = session?.user.id ?? null;
+    // Get actor ID for audit
+    const actorId = ctx.verifiedActorId;
 
-  createEntity(entity);
+    createEntity(entity);
 
-  // Log audit event (fail-closed if audit fails)
-  await logAuditEvent({
-    eventName: "CREATE",
-    entityType: "Entity",
-    entityId,
-    actorId,
-    role,
-    before: null,
-    after: entity,
-  });
+    // Log audit event (fail-closed if audit fails)
+    await logAuditEvent({
+      eventName: "CREATE",
+      entityType: "Entity",
+      entityId,
+      actorId,
+      role,
+      before: null,
+      after: entity,
+    });
 
-  return entity;
-});
+    return entity;
+  },
+  { requireWorkspace: true }
+);

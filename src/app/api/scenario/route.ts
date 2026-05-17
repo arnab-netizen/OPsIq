@@ -1,25 +1,22 @@
-import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { runScenario } from "@/services/scenario/engine";
 import { resolveServerRole } from "@/services/auth/server-role";
-import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { randomUUID } from "crypto";
 
-export const POST = withEnforcementFull(async (request: NextRequest) => {
-  // Enforce server-side auth (scenario analysis affects decisions)
-  const role = await resolveServerRole();
-  if (!role) {
-    throw new UnauthorizedError("Unauthorized");
-  }
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    // Enforce server-side auth (scenario analysis affects decisions)
+    const role = await resolveServerRole();
+    if (!role) {
+      throw new UnauthorizedError("Unauthorized");
+    }
 
-  // Get actor ID for audit
-  const { session } = await withAuth();
-  const actorId = session?.user.id ?? null;
+    // Get actor ID for audit
+    const actorId = ctx.verifiedActorId;
 
-  const body = await request.json();
+  const body = await ctx.request!.json();
   const { baseRevenue, baseCost, deltaRevenue, deltaCost } = body;
 
   // Validate input types
@@ -60,4 +57,6 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   });
 
   return result;
-});
+  },
+  { requireWorkspace: true }
+);
