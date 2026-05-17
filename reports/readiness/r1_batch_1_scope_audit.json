@@ -1,0 +1,107 @@
+{
+  "phase": "R1-BATCH-1",
+  "date": "2026-05-17",
+  "purpose": "Scope audit for R1-BATCH-1 batch implementation",
+  "files_changed": 4,
+  "files_changed_list": [
+    {
+      "file": "shadow_read_violations.json",
+      "status": "EXPECTED_ARTIFACT_UPDATE",
+      "reason": "Scanner artifact reflecting violation reduction after batch"
+    },
+    {
+      "file": "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts",
+      "status": "AUTHORIZED_CHANGE",
+      "handlers_changed": ["PATCH"],
+      "handlers_unchanged": ["DELETE"],
+      "changes": "PATCH handler modernized (withEnforcementFull → withCanonicalEnforcement)"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/route.ts",
+      "status": "AUTHORIZED_CHANGE",
+      "handlers_changed": ["PATCH"],
+      "handlers_unchanged": ["GET"],
+      "changes": "PATCH handler modernized (withEnforcementFull → withCanonicalEnforcement)"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/actions/[actionId]/route.ts",
+      "status": "AUTHORIZED_CHANGE",
+      "handlers_changed": ["PATCH"],
+      "handlers_unchanged": [],
+      "changes": "PATCH handler modernized (withEnforcementFull → withCanonicalEnforcement)"
+    }
+  ],
+  "verification_checklist": {
+    "only_authorized_routes_changed": true,
+    "no_service_files_changed": true,
+    "no_scanner_source_changed": true,
+    "no_wrapper_implementation_changed": true,
+    "no_auth_context_changed": true,
+    "no_capability_added": true,
+    "no_entitlement_changed": true,
+    "no_role_mapping_changed": true,
+    "no_database_schema_changed": true,
+    "no_response_shape_changed": true,
+    "no_business_logic_changed": true,
+    "no_any_types_added": true,
+    "no_unauthorized_files_changed": true,
+    "only_patch_handlers_modified": true
+  },
+  "file_level_audit": {
+    "src/app/api/clients/[clientId]/contacts/[contactId]/route.ts": {
+      "authorized": true,
+      "patch_handler_modified": true,
+      "delete_handler_unchanged": true,
+      "imports_added": "withCanonicalEnforcement, CanonicalAuthContext",
+      "imports_preserved": "withEnforcementFull, withAuth, canonicalizeAuthContext (for DELETE)",
+      "service_files_accessed": false,
+      "wrapper_implementation_accessed": false,
+      "scope_compliant": true
+    },
+    "src/app/api/engagements/[engagementId]/route.ts": {
+      "authorized": true,
+      "patch_handler_modified": true,
+      "get_handler_unchanged": true,
+      "imports_added": "withCanonicalEnforcement, CanonicalAuthContext (added to existing import)",
+      "imports_preserved": "All existing imports",
+      "service_files_accessed": false,
+      "wrapper_implementation_accessed": false,
+      "scope_compliant": true
+    },
+    "src/app/api/engagements/[engagementId]/actions/[actionId]/route.ts": {
+      "authorized": true,
+      "patch_handler_modified": true,
+      "imports_added": "withCanonicalEnforcement, CanonicalAuthContext, CAPABILITIES, parseOrThrow, uuidSchema",
+      "imports_removed": "NextRequest (no longer needed)",
+      "service_files_accessed": false,
+      "wrapper_implementation_accessed": false,
+      "scope_compliant": true
+    },
+    "shadow_read_violations.json": {
+      "authorized": true,
+      "type": "ARTIFACT_UPDATE",
+      "reason": "Scanner output reflecting batch implementation results"
+    }
+  },
+  "forbidden_file_checks": {
+    "service_files_modified": false,
+    "wrapper_implementation_modified": false,
+    "auth_guard_modified": false,
+    "middleware_modified": false,
+    "policy_files_modified": false,
+    "capability_constants_modified": false,
+    "database_files_modified": false,
+    "package_files_modified": false,
+    "infrastructure_files_modified": false,
+    "other_route_files_modified": false
+  },
+  "overall_assessment": "SCOPE_AUDIT_PASSED",
+  "summary": {
+    "authorized_routes_changed": 3,
+    "unauthorized_routes_changed": 0,
+    "service_files_changed": 0,
+    "infrastructure_files_changed": 0,
+    "artifact_updates": 1,
+    "compliance": "FULL"
+  }
+}

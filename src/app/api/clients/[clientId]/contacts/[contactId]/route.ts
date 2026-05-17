@@ -1,3 +1,4 @@
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -22,30 +23,21 @@ const deactivateContactSchema = z.object({
   action: z.literal("deactivate"),
 });
 
-export const PATCH = withEnforcementFull(async (request, context, params) => {
-  const { clientId, contactId } = params;
-  parseOrThrow(uuidSchema, clientId);
-  parseOrThrow(uuidSchema, contactId);
-  const authContext = await withAuth({
-    capability: CAPABILITIES.CLIENT_UPDATE,
-    internalOnly: true,
-  });
+export const PATCH = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { contactId } = params;
+    parseOrThrow(uuidSchema, contactId);
 
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    const body = await parseRequestBody(ctx.request!, updateContactSchema);
+    await updateContact(contactId, body, ctx, ctx.verifiedWorkspaceId);
+
+    return Response.json({ status: "updated" });
+  },
+  {
+    requireCapabilities: [CAPABILITIES.CLIENT_UPDATE],
+    requireWorkspace: true,
   }
-
-  const body = await parseRequestBody(request, updateContactSchema);
-  const canonicalContext = canonicalizeAuthContext(authContext, workspaceId);
-  await updateContact(contactId, body, canonicalContext, workspaceId);
-
-  return Response.json({ status: "updated" });
-});
+);
 
 export const DELETE = withEnforcementFull(async (request, context, params) => {
   const { clientId, contactId } = params;

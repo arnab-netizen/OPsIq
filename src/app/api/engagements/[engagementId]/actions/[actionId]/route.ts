@@ -1,8 +1,9 @@
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import type { NextRequest } from "next/server";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { updateActionStatus } from "@/services/action";
-import { parseRequestBody } from "@/lib/validation";
+import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
@@ -17,21 +18,27 @@ const updateActionSchema = z.object({
   version: z.number().int(),
 });
 
-export const PATCH = withEnforcementFull(async (request, context, params) => {
-  const workspaceId = request.headers.get("x-workspace-id") || "";
-  const { actionId } = params;
-  const { session, policy } = await withAuth();
-  const body = await parseRequestBody(request, updateActionSchema);
+export const PATCH = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { actionId } = params;
+    parseOrThrow(uuidSchema, actionId);
 
-  // Fetch action to verify engagement access
-  const action = await db.action.findUnique({
-    where: { id: actionId, workspaceId },
-    select: { engagementId: true },
-  });
-  if (!action) throw new NotFoundError("Action", actionId);
+    const body = await parseRequestBody(ctx.request!, updateActionSchema);
 
-  await assertEngagementAccess(session.user.id, action.engagementId, workspaceId);
+    // Fetch action to verify engagement access
+    const action = await db.action.findUnique({
+      where: { id: actionId, workspaceId: ctx.verifiedWorkspaceId },
+      select: { engagementId: true },
+    });
+    if (!action) throw new NotFoundError("Action", actionId);
 
-  const updated = await updateActionStatus(actionId, body, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
-  return Response.json(updated);
-});
+    await assertEngagementAccess(ctx.verifiedActorId, action.engagementId, ctx.verifiedWorkspaceId);
+
+    const updated = await updateActionStatus(actionId, body, ctx, ctx.verifiedWorkspaceId);
+    return Response.json(updated);
+  },
+  {
+    requireCapabilities: [CAPABILITIES.ACTION_UPDATE],
+    requireWorkspace: true,
+  }
+);
