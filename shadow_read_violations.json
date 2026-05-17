@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-05-17T01:46:45.319Z",
-  "totalViolations": 346,
-  "critical": 219,
+  "timestamp": "2026-05-17T01:59:26.521Z",
+  "totalViolations": 344,
+  "critical": 217,
   "blockBuild": 127,
   "violations": [
     {
@@ -356,6 +356,24 @@
       "context": "BEFORE: import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
+      "file": "src/__ignored_tests__/services/engagement.test.ts",
+      "line": 7,
+      "column": 1,
+      "pattern": "auth-guard import",
+      "severity": "BLOCK_BUILD",
+      "replacement": "Remove import - use ctx.verifiedSessionSnapshot",
+      "context": "import type { AuthContext } from \"@/lib/auth-guard\";"
+    },
+    {
+      "file": "src/__ignored_tests__/services/client-account.test.ts",
+      "line": 6,
+      "column": 1,
+      "pattern": "auth-guard import",
+      "severity": "BLOCK_BUILD",
+      "replacement": "Remove import - use ctx.verifiedSessionSnapshot",
+      "context": "import type { AuthContext } from \"@/lib/auth-guard\";"
+    },
+    {
       "file": "src/__ignored_tests__/lib/auth-guard.test.ts",
       "line": 101,
       "column": 20,
@@ -390,24 +408,6 @@
       "severity": "CRITICAL",
       "replacement": "ctx.verifiedSessionSnapshot",
       "context": "const auth = await getServerAuthContext();"
-    },
-    {
-      "file": "src/__ignored_tests__/services/engagement.test.ts",
-      "line": 7,
-      "column": 1,
-      "pattern": "auth-guard import",
-      "severity": "BLOCK_BUILD",
-      "replacement": "Remove import - use ctx.verifiedSessionSnapshot",
-      "context": "import type { AuthContext } from \"@/lib/auth-guard\";"
-    },
-    {
-      "file": "src/__ignored_tests__/services/client-account.test.ts",
-      "line": 6,
-      "column": 1,
-      "pattern": "auth-guard import",
-      "severity": "BLOCK_BUILD",
-      "replacement": "Remove import - use ctx.verifiedSessionSnapshot",
-      "context": "import type { AuthContext } from \"@/lib/auth-guard\";"
     },
     {
       "file": "src/app/api/verify/route.ts",
@@ -1761,7 +1761,7 @@
     },
     {
       "file": "src/app/api/clients/[clientId]/route.ts",
-      "line": 47,
+      "line": 64,
       "column": 31,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -1770,7 +1770,7 @@
     },
     {
       "file": "src/app/api/clients/[clientId]/route.ts",
-      "line": 47,
+      "line": 64,
       "column": 37,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -1779,25 +1779,7 @@
     },
     {
       "file": "src/app/api/clients/[clientId]/route.ts",
-      "line": 78,
-      "column": 31,
-      "pattern": "withAuth()",
-      "severity": "CRITICAL",
-      "replacement": "ctx.verifiedSessionSnapshot",
-      "context": "const { session, policy } = await withAuth({"
-    },
-    {
-      "file": "src/app/api/clients/[clientId]/route.ts",
-      "line": 78,
-      "column": 37,
-      "pattern": "withAuth()",
-      "severity": "CRITICAL",
-      "replacement": "ctx.verifiedSessionSnapshot",
-      "context": "const { session, policy } = await withAuth({"
-    },
-    {
-      "file": "src/app/api/clients/[clientId]/route.ts",
-      "line": 5,
+      "line": 4,
       "column": 1,
       "pattern": "auth-guard import",
       "severity": "BLOCK_BUILD",
@@ -2975,8 +2957,8 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
-      "line": 46,
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+      "line": 54,
       "column": 23,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -2984,8 +2966,8 @@
       "context": "const { session } = await withAuth({"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
-      "line": 46,
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+      "line": 54,
       "column": 29,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -2993,7 +2975,7 @@
       "context": "const { session } = await withAuth({"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
       "line": 8,
       "column": 1,
       "pattern": "auth-guard import",
@@ -3002,7 +2984,7 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
       "line": 8,
       "column": 1,
       "pattern": "withAuth import",
@@ -3011,8 +2993,8 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
-      "line": 54,
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "line": 46,
       "column": 23,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -3020,8 +3002,8 @@
       "context": "const { session } = await withAuth({"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
-      "line": 54,
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "line": 46,
       "column": 29,
       "pattern": "withAuth()",
       "severity": "CRITICAL",
@@ -3029,7 +3011,7 @@
       "context": "const { session } = await withAuth({"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
       "line": 8,
       "column": 1,
       "pattern": "auth-guard import",
@@ -3038,7 +3020,7 @@
       "context": "import { withAuth } from \"@/lib/auth-guard\";"
     },
     {
-      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
       "line": 8,
       "column": 1,
       "pattern": "withAuth import",

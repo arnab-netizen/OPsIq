@@ -1,7 +1,6 @@
-import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { ForbiddenError } from "@/infra/errors";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -43,36 +42,23 @@ export const GET = withCanonicalEnforcement(
   { requireWorkspace: true, requireCapabilities: ['CLIENT_VIEW'] }
 );
 
-export const PATCH = withEnforcementFull(async (request, context, params) => {
-  const { session, policy } = await withAuth({
-    capability: CAPABILITIES.CLIENT_UPDATE,
-    internalOnly: true,
-  });
+export const PATCH = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
+    const { clientId } = params;
+    parseOrThrow(uuidSchema, clientId);
 
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
+    const body = await parseRequestBody(ctx.request!, updateClientSchema);
+
+    await updateClient(clientId, body, ctx, ctx.verifiedWorkspaceId);
+
+    const updated = await getClientById(clientId, ctx.verifiedWorkspaceId);
+    return Response.json(updated);
+  },
+  {
+    requireCapabilities: [CAPABILITIES.CLIENT_UPDATE],
+    requireWorkspace: true,
   }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  const { clientId } = params;
-  parseOrThrow(uuidSchema, clientId);
-
-  const body = await parseRequestBody(request, updateClientSchema);
-  const canonicalContext = canonicalizeAuthContext({ session, policy }, workspaceId);
-  await updateClient(clientId, body, canonicalContext, workspaceId);
-
-  const updated = await getClientById(clientId, workspaceId);
-  return Response.json(updated);
-});
+);
 
 export const POST = withEnforcementFull(async (request, context, params) => {
   const { session, policy } = await withAuth({
