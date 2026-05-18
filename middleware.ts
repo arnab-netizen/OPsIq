@@ -1,14 +1,15 @@
 /**
  * Root Middleware: Startup Gate
  *
- * Blocks all requests until application startup is complete.
+ * Reads durable startup status from database.
+ * Blocks protected routes until startup complete.
  * This is a Next.js middleware that runs for every request.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { isStartupComplete, getStartupError } from "@/infra/startup-state";
+import { getStartupStatus } from "@/services/startup-status";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = new URL(request.url).pathname;
 
   // Allow health/readiness/startup probes even before startup
@@ -34,19 +35,30 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // For protected/API routes, require startup to be complete
-  const startupComplete = isStartupComplete();
-  if (!startupComplete) {
-    const error = getStartupError();
-    console.warn(`[MIDDLEWARE] Blocking ${pathname}: startup not complete`, {
-      startupComplete,
-      error: error?.message,
-    });
+  // For protected/API routes, check durable startup status
+  try {
+    const status = await getStartupStatus();
+
+    if (status.status !== "READY") {
+      console.warn(`[MIDDLEWARE] Blocking ${pathname}: status=${status.status}`, {
+        error: status.error,
+      });
+      return NextResponse.json(
+        {
+          error: "SERVICE_UNAVAILABLE",
+          message: "Application starting up",
+          details: status.error || `Status: ${status.status}`,
+        },
+        { status: 503 }
+      );
+    }
+  } catch (error) {
+    // If we can't read status, fail closed
+    console.error(`[MIDDLEWARE] Failed to read startup status for ${pathname}`, { error });
     return NextResponse.json(
       {
         error: "SERVICE_UNAVAILABLE",
-        message: "Application starting up",
-        details: error ? error.message : "Startup checks in progress",
+        message: "Unable to verify startup status",
       },
       { status: 503 }
     );

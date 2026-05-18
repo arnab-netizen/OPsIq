@@ -1222,3 +1222,18 @@ model AggregateLock {
   @@unique([aggregateId, aggregateType, workspaceId])
   @@map("aggregate_locks")
 }
+
+model StartupStatus {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  status      String    // NOT_STARTED | STARTING | READY | FAILED
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  error       String?
+  version     String    // app version that started up
+  instanceId  String    @default("unknown") @map("instance_id")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([instanceId])
+  @@index([instanceId, updatedAt(sort: Desc)])
+  @@map("startup_status")
+}

@@ -1,36 +1,34 @@
 /**
  * NODE-RUNTIME STARTUP ORCHESTRATOR
  *
- * SINGLE SOURCE OF TRUTH for startup state.
- * This module ONLY runs in Node.js runtime (not Edge).
- * It EXCLUSIVELY mutates startup-state.ts.
- * No other module mutates startup state.
- * Middleware imports startup-state (read-only).
+ * Performs startup checks and updates durable startup status.
+ * Uses database as single source of truth (not memory).
+ * Works across middleware, handlers, instances, restarts.
  */
 
-import { setStartupState, setStartupError, StartupState, getStartupState } from "@/infra/startup-state";
+import { setStartupStatus, getStartupStatus } from "@/services/startup-status";
 
 let startupPromise: Promise<void> | null = null;
 const STARTUP_TIMEOUT_MS = 30000;
 
 /**
- * Orchestrate startup checks (runs ONCE, in Node context).
- * This is the ONLY code that mutates startup state.
+ * Orchestrate startup checks (runs ONCE per instance).
+ * Reads durable status from database, updates it after checks.
  *
  * State transitions:
  * NOT_STARTED → STARTING → READY (success)
  *            → STARTING → FAILED (error)
  */
 export async function ensureStartupComplete(): Promise<void> {
-  const state = getStartupState();
+  const status = await getStartupStatus();
 
   // Terminal states - no retry
-  if (state === StartupState.READY) {
+  if (status.status === "READY") {
     return; // Already ready
   }
 
-  if (state === StartupState.FAILED) {
-    throw new Error("Startup previously failed - cannot retry");
+  if (status.status === "FAILED") {
+    throw new Error(`Startup previously failed: ${status.error || "unknown error"}`);
   }
 
   // Already starting - wait for in-flight promise
@@ -41,11 +39,11 @@ export async function ensureStartupComplete(): Promise<void> {
         setTimeout(() => reject(new Error("Startup checks timed out")), STARTUP_TIMEOUT_MS)
       ),
     ]);
-    return; // startupPromise completed, now check state
+    return; // startupPromise completed, now check status
   }
 
   // Not started yet - initiate startup
-  setStartupState(StartupState.STARTING);
+  await setStartupStatus("STARTING");
 
   startupPromise = performStartupChecks();
   try {
@@ -55,11 +53,13 @@ export async function ensureStartupComplete(): Promise<void> {
         setTimeout(() => reject(new Error("Startup checks timed out")), STARTUP_TIMEOUT_MS)
       ),
     ]);
-    // Success
-    setStartupState(StartupState.READY);
+    // Success - persist to DB
+    await setStartupStatus("READY", { completedAt: new Date() });
   } catch (error) {
     const errorObj = error instanceof Error ? error : new Error(String(error));
-    setStartupError(errorObj);
+    const errorMsg = errorObj.message;
+    // Persist failure to DB
+    await setStartupStatus("FAILED", { error: errorMsg });
     throw errorObj;
   }
 }
@@ -122,7 +122,6 @@ async function performStartupChecks(): Promise<void> {
       }, null, 2));
     }
 
-    setStartupError(errorObj);
     throw errorObj;
   }
 }
