@@ -23,6 +23,7 @@ export function middleware(request: NextRequest) {
   const allowedPublic = [
     "/login",
     "/auth",
+    "/api/auth",
     "/public",
   ];
 
