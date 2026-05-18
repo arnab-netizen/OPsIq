@@ -9,6 +9,7 @@
 import { setStartupComplete, setStartupError } from "@/infra/startup-state";
 
 let startupPromise: Promise<boolean> | null = null;
+const STARTUP_TIMEOUT_MS = 30000; // 30 second timeout
 
 /**
  * Orchestrate startup checks (runs ONCE, in Node context)
@@ -16,13 +17,29 @@ let startupPromise: Promise<boolean> | null = null;
 export async function ensureStartupComplete(): Promise<void> {
   // Return existing promise if already running
   if (startupPromise) {
-    await startupPromise;
+    await Promise.race([
+      startupPromise,
+      new Promise<boolean>((_, reject) =>
+        setTimeout(() => reject(new Error("Startup checks timed out")), STARTUP_TIMEOUT_MS)
+      ),
+    ]);
     return;
   }
 
   // Prevent concurrent startup
   startupPromise = performStartupChecks();
-  await startupPromise;
+  try {
+    await Promise.race([
+      startupPromise,
+      new Promise<boolean>((_, reject) =>
+        setTimeout(() => reject(new Error("Startup checks timed out")), STARTUP_TIMEOUT_MS)
+      ),
+    ]);
+  } catch (error) {
+    // Reset promise on failure so retries can occur
+    startupPromise = null;
+    throw error;
+  }
 }
 
 async function performStartupChecks(): Promise<boolean> {
@@ -67,19 +84,22 @@ async function performStartupChecks(): Promise<boolean> {
     return true;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
     const errorObj = error instanceof Error ? error : new Error(errorMsg);
 
     try {
       const { logger } = await import("@/infra/logger");
       logger.error("✗ Application startup checks FAILED", {
-        error: errorMsg,
+        error_message: errorMsg,
+        error_stack: errorStack,
         duration_ms: Date.now() - startTime,
       });
     } catch {
-      console.error("✗ Application startup checks FAILED", {
-        error: errorMsg,
+      console.error("✗ Application startup checks FAILED", JSON.stringify({
+        error_message: errorMsg,
+        error_stack: errorStack,
         duration_ms: Date.now() - startTime,
-      });
+      }, null, 2));
     }
 
     setStartupError(errorObj);
@@ -89,10 +109,16 @@ async function performStartupChecks(): Promise<boolean> {
 
 async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
   try {
-    await dbInstance.$queryRawUnsafe("SELECT 1");
+    await Promise.race([
+      dbInstance.$queryRawUnsafe("SELECT 1"),
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error("Database connectivity check timed out after 5s")), 5000)
+      ),
+    ]);
     return true;
   } catch (error) {
-    logger.error("Database connectivity check failed", { error });
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.error("Database connectivity check failed", { error: msg });
     return false;
   }
 }
@@ -102,9 +128,14 @@ async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolea
     const requiredTables = ["workspace", "user", "decision", "action", "auditEvent", "webhookEvent"];
 
     for (const table of requiredTables) {
-      const result = await dbInstance.$queryRawUnsafe(
-        `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '${table}')`
-      );
+      const result = await Promise.race([
+        dbInstance.$queryRawUnsafe(
+          `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '${table}')`
+        ),
+        new Promise<any>((_, reject) =>
+          setTimeout(() => reject(new Error(`Schema check for ${table} timed out after 5s`)), 5000)
+        ),
+      ]);
 
       if (!result || !result[0]?.exists) {
         logger.error(`Required table missing: ${table}`);
@@ -114,7 +145,8 @@ async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolea
 
     return true;
   } catch (error) {
-    logger.error("Database schema check failed", { error });
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.error("Database schema check failed", { error: msg });
     return false;
   }
 }
