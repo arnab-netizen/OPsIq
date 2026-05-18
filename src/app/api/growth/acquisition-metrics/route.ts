@@ -1,6 +1,5 @@
-import { withAuth } from "@/lib/auth-guard";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withEnforcementFull } from "@/lib/enforced-route";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { AcquisitionEngine } from "@/services/growth/acquisition-engine";
@@ -36,54 +35,57 @@ const analyzeConversionSchema = z.object({
  * Record acquisition metrics for a channel (workspace-scoped)
  * Wire: AcquisitionEngine.recordMetrics()
  */
-export const POST = withEnforcementFull(async (request) => {
-  const { session } = await withAuth({
-    capability: CAPABILITIES.ENGAGEMENT_UPDATE,
-  });
-
-  const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
-  if (!workspaceId) {
-    return Response.json(
-      { error: "Workspace ID required (x-workspace-id header)" },
-      { status: 400 }
-    );
-  }
-
-  const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
-
-  try {
-    const body = await request.json();
-    const validated = recordMetricsSchema.parse(body);
-
-    const result = AcquisitionEngine.recordMetrics(workspaceId, validated);
-
-    if (result.error) {
-      return Response.json({ error: result.error }, { status: 400 });
-    }
-
-    return Response.json(result.metrics, { status: 201 });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    if (!workspaceId) {
       return Response.json(
-        { error: "Validation error", details: error.issues },
+        { error: "Workspace ID required" },
         { status: 400 }
       );
     }
 
-    if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+    const nextRequest = ctx.request as NextRequest;
+    const membership = await enforceWorkspaceScoping(nextRequest, workspaceId);
+    if (!membership) {
+      throw new ForbiddenError("Unauthorized");
     }
 
-    return Response.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    try {
+      const body = await ctx.request?.json() || {};
+      const validated = recordMetricsSchema.parse(body);
+
+      const result = AcquisitionEngine.recordMetrics(workspaceId, validated);
+
+      if (result.error) {
+        return Response.json({ error: result.error }, { status: 400 });
+      }
+
+      return Response.json(result.metrics, { status: 201 });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return Response.json(
+          { error: "Validation error", details: error.issues },
+          { status: 400 }
+        );
+      }
+
+      if (error instanceof Error) {
+        return Response.json({ error: error.message }, { status: 400 });
+      }
+
+      return Response.json(
+        { error: "Internal server error" },
+        { status: 500 }
+      );
+    }
+  },
+  {
+    requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE],
+    requireWorkspace: true,
   }
-});
+);
 
 /**
  * POST /api/growth/acquisition-metrics/analyze-conversion
