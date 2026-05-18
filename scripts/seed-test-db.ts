@@ -1,10 +1,15 @@
 import { v4 as uuidv4 } from "uuid";
+import * as bcrypt from "bcryptjs";
 
 // Deterministic test IDs (not random)
 const TEST_USER_ID = "10000000-0000-0000-0000-000000000001";
 const TEST_WORKSPACE_ID = "20000000-0000-0000-0000-000000000001";
+const TEST_WORKSPACE_MEMBERSHIP_ID = "21000000-0000-0000-0000-000000000001";
 const TEST_CLIENT_ID = "30000000-0000-0000-0000-000000000001";
 const TEST_ENGAGEMENT_ID = "40000000-0000-0000-0000-000000000001";
+const TEST_ENGAGEMENT_MEMBERSHIP_ID = "41000000-0000-0000-0000-000000000001";
+const TEST_PASSWORD = "test-password-123";
+const TEST_PASSWORD_HASH = bcrypt.hashSync(TEST_PASSWORD, 10);
 
 // Validation: Ensure all required fields are provided
 function validateSeedData() {
@@ -43,25 +48,38 @@ async function seedTestDb() {
     // Validate seed data before Prisma operations
     validateSeedData();
 
-    // Dynamically import PrismaClient and adapter to avoid top-level await issues
+    // Dynamically import PrismaClient to avoid top-level await issues
     const { PrismaClient } = await import("../src/generated/prisma/client");
-    const { Pool, neonConfig } = await import("@neondatabase/serverless");
-    const { PrismaNeon } = await import("@prisma/adapter-neon");
 
     const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
     if (!databaseUrl) {
       throw new Error("DATABASE_URL or TEST_DATABASE_URL environment variable is not set");
     }
 
-    const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
-    // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
-    const adapter = new PrismaNeon(pool);
-    const prisma = new PrismaClient({ adapter });
+    let prisma: any;
+
+    // Use appropriate adapter based on database URL
+    if (databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1")) {
+      // Local PostgreSQL - use native pg adapter
+      const { PrismaPg } = await import("@prisma/adapter-pg");
+      const { Pool } = await import("pg");
+      const pool = new Pool({ connectionString: databaseUrl });
+      const adapter = new PrismaPg(pool);
+      prisma = new PrismaClient({ adapter });
+    } else {
+      // Remote (Neon or other) - use serverless adapter
+      const { Pool, neonConfig } = await import("@neondatabase/serverless");
+      const { PrismaNeon } = await import("@prisma/adapter-neon");
+      const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
+      // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
+      const adapter = new PrismaNeon(pool);
+      prisma = new PrismaClient({ adapter });
+    }
 
     console.log("🌱 Seeding test database...");
 
     // Create test user first (required for createdBy references)
-    // Required: email
+    // Required: id, email, updatedAt
     const user = await prisma.user.upsert({
       where: { id: TEST_USER_ID },
       update: {},
@@ -69,6 +87,8 @@ async function seedTestDb() {
         id: TEST_USER_ID,
         email: "test-seed@example.com",
         name: "Test Seed User",
+        hashedPassword: TEST_PASSWORD_HASH,
+        updatedAt: new Date(),
       },
     });
     console.log(`  ✓ Created user: ${user.id} (${user.email})`);
@@ -107,7 +127,7 @@ async function seedTestDb() {
     console.log(`  ✓ Created workspace membership: ${membership.id}`);
 
     // Create test client account
-    // Required: name
+    // Required: id, name, updatedAt
     const client = await prisma.clientAccount.upsert({
       where: { id: TEST_CLIENT_ID },
       update: {},
@@ -116,12 +136,13 @@ async function seedTestDb() {
         name: "Test Seed Client",
         industry: "Technology",
         status: "active",
+        updatedAt: new Date(),
       },
     });
     console.log(`  ✓ Created client: ${client.id} (${client.name})`);
 
     // Create test engagement with all required fields
-    // Required: code, title, clientId, workspaceId, serviceTier, engagementMode
+    // Required: code, title, clientId, workspaceId, serviceTier, engagementMode, updatedAt
     const engagement = await prisma.engagement.upsert({
       where: { code: "TEST-SEED-001" },
       update: {},
@@ -136,12 +157,13 @@ async function seedTestDb() {
         description: "Test engagement for seed verification",
         status: "draft",
         healthStatus: "healthy",
+        updatedAt: new Date(),
       },
     });
     console.log(`  ✓ Created engagement: ${engagement.id} (${engagement.code})`);
 
     // Create engagement membership with required role
-    // Required: userId, engagementId, role
+    // Required: id, userId, engagementId, role
     const engagementMembership = await prisma.engagementMembership.upsert({
       where: {
         userId_engagementId_role: {
@@ -152,6 +174,7 @@ async function seedTestDb() {
       },
       update: {},
       create: {
+        id: TEST_ENGAGEMENT_MEMBERSHIP_ID,
         userId: TEST_USER_ID,
         engagementId: TEST_ENGAGEMENT_ID,
         role: "lead",
