@@ -9,12 +9,19 @@
 import { setStartupComplete, setStartupError } from "@/infra/startup-state";
 
 let startupPromise: Promise<boolean> | null = null;
-const STARTUP_TIMEOUT_MS = 30000; // 30 second timeout
+let startupResult: { success: boolean; error?: Error } | null = null;
+const STARTUP_TIMEOUT_MS = 30000;
 
 /**
  * Orchestrate startup checks (runs ONCE, in Node context)
  */
 export async function ensureStartupComplete(): Promise<void> {
+  // Return cached result if already completed
+  if (startupResult) {
+    if (startupResult.success) return;
+    throw startupResult.error || new Error("Startup checks failed");
+  }
+
   // Return existing promise if already running
   if (startupPromise) {
     await Promise.race([
@@ -26,7 +33,7 @@ export async function ensureStartupComplete(): Promise<void> {
     return;
   }
 
-  // Prevent concurrent startup
+  // Prevent concurrent startup - start new orchestration
   startupPromise = performStartupChecks();
   try {
     await Promise.race([
@@ -35,10 +42,14 @@ export async function ensureStartupComplete(): Promise<void> {
         setTimeout(() => reject(new Error("Startup checks timed out")), STARTUP_TIMEOUT_MS)
       ),
     ]);
+    // Success - cache it
+    startupResult = { success: true };
   } catch (error) {
-    // Reset promise on failure so retries can occur
+    // Cache failure but allow retry on next call after timeout
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    startupResult = { success: false, error: errorObj };
     startupPromise = null;
-    throw error;
+    throw errorObj;
   }
 }
 

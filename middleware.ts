@@ -9,21 +9,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { isStartupComplete, getStartupError } from "@/infra/startup-state";
 
 export function middleware(request: NextRequest) {
-  // Allow health/readiness/startup probes even before startup
   const pathname = new URL(request.url).pathname;
-  const allowedBeforeStartup = [
+
+  // Allow health/readiness/startup probes even before startup
+  const allowedProbes = [
     "/api/health",
     "/api/readiness",
     "/api/liveness",
     "/api/startup",
   ];
 
-  if (allowedBeforeStartup.includes(pathname)) {
-    // Let health checks through
+  // Allow public routes (login, signup, public content) even before startup
+  const allowedPublic = [
+    "/login",
+    "/auth",
+    "/public",
+  ];
+
+  const isProbe = allowedProbes.includes(pathname);
+  const isPublic = allowedPublic.some(p => pathname.startsWith(p));
+
+  if (isProbe || isPublic) {
     return NextResponse.next();
   }
 
-  // For all other requests, require startup to be complete
+  // For protected/API routes, require startup to be complete
   if (!isStartupComplete()) {
     const error = getStartupError();
     return NextResponse.json(
