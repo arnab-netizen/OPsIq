@@ -53,8 +53,11 @@ export const POST = withEnforcementFull(
     }
 
     try {
-      // Get idempotency key from request header (optional)
-      const idempotencyKey = request.headers.get("idempotency-key") || undefined;
+      // Get idempotency key from request header (required)
+      const idempotencyKey = request.headers.get("idempotency-key");
+      if (!idempotencyKey) {
+        throw new Error("idempotency-key header is required", { cause: 400 });
+      }
 
       // Execute via lifecycle service
       const updated = await executeDecision(decisionId, workspaceId, userId, idempotencyKey);
