@@ -212,7 +212,7 @@ export const MONITORING_ASSERTIONS = {
     check: async (dbInstance: any) => {
       try {
         const result = await dbInstance.$queryRawUnsafe(
-          "SELECT COUNT(*) as count FROM webhookEvent WHERE status='pending' OR status='retrying'"
+          "SELECT COUNT(*) as count FROM webhook_events WHERE status='pending' OR status='retrying'"
         );
         const depth = result[0]?.count || 0;
         return {

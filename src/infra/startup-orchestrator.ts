@@ -125,7 +125,7 @@ async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
 
 async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolean> {
   try {
-    const requiredTables = ["workspace", "user", "decision", "action", "auditEvent", "webhookEvent"];
+    const requiredTables = ["workspaces", "users", "actions", "audit_events", "webhook_events"];
 
     for (const table of requiredTables) {
       const result = await Promise.race([
