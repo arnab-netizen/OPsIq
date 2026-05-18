@@ -1,10 +1,19 @@
 import { getMonitoringServiceInstance } from "@/middleware/monitoring.middleware";
 import { logger } from "@/infra/logger";
+import { ensureStartupComplete } from "@/infra/startup-orchestrator";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const GET = async () => {
+  // Ensure startup checks have run
+  try {
+    await ensureStartupComplete();
+  } catch (error) {
+    logger.error("Startup checks failed", { error });
+    // Fall through to readiness check - it will reflect the startup failure
+  }
+
   const monitoringService = getMonitoringServiceInstance();
   const readinessCheck = await monitoringService.checkReadiness();
 
