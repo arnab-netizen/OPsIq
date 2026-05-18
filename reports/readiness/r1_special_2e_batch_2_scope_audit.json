@@ -1,0 +1,64 @@
+{
+  "phase": "R1-SPECIAL-2E-BATCH-2 Scope Audit",
+  "date": "2026-05-18",
+  "status": "✓ SCOPE AUDIT PASSED",
+
+  "files_modified": [
+    "src/app/api/auth/logout/route.ts"
+  ],
+
+  "file_count": 1,
+  "authorized_files": 1,
+  "unauthorized_files": 0,
+
+  "authorized_verification": {
+    "src/app/api/auth/logout/route.ts": {
+      "authorized": true,
+      "changes": [
+        "Wrapper: withEnforcementFull → withCanonicalEnforcement",
+        "Handler signature: async () → async (ctx: CanonicalAuthContext)",
+        "Import changes: Remove withAuth/canonicalizeAuthContext, add withCanonicalEnforcement",
+        "Context switching: headers/db → verified context"
+      ],
+      "preserved": [
+        "Session invalidation logic",
+        "Service call (revokeSession)",
+        "Audit event emission",
+        "Cookie deletion",
+        "Response shape"
+      ]
+    }
+  },
+
+  "forbidden_files_verification": {
+    "auth_login_unchanged": true,
+    "webhook_routes_unchanged": true,
+    "growth_metrics_unchanged": true,
+    "service_files_unchanged": true,
+    "wrapper_files_unchanged": true,
+    "middleware_unchanged": true,
+    "database_schema_unchanged": true
+  },
+
+  "git_diff_summary": {
+    "files_changed": 1,
+    "insertions": 12,
+    "deletions": 24,
+    "net_change": -12,
+    "import_lines_changed": 4,
+    "function_body_changed": true,
+    "service_calls_preserved": true
+  },
+
+  "authorization_compliance": {
+    "only_authorized_files_modified": true,
+    "no_forbidden_files_touched": true,
+    "service_signatures_unchanged": true,
+    "wrapper_architecture_unchanged": true,
+    "auth_context_unchanged": true,
+    "middleware_unchanged": true,
+    "database_unchanged": true
+  },
+
+  "scope_audit_verdict": "✓ PASSED - AUTHORIZED CHANGES ONLY"
+}
