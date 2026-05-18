@@ -266,8 +266,8 @@ export function withCanonicalEnforcement(
       // STEP 1: EXTRACT WORKSPACE ID
       // ========================================
 
-      const workspaceId = req.headers.get("x-workspace-id") || "system";
-      traceManager.recordStage("WORKSPACE_EXTRACTED", "success", workspaceId);
+      const workspaceId: string | undefined = req.headers.get("x-workspace-id") ?? undefined;
+      traceManager.recordStage("WORKSPACE_EXTRACTED", "success", workspaceId || "not_specified");
 
       // ========================================
       // STEP 2: GATHER AUTH FACTS (NO ERRORS THROWN)
@@ -298,7 +298,7 @@ export function withCanonicalEnforcement(
       const authState = await buildAuthState({
         correlationId,
         requestId,
-        workspaceId,
+        workspaceId: workspaceId || null,
         workspaceRequired: options?.requireWorkspace ?? false,
         sessionFact,
         policyFact,
@@ -387,7 +387,7 @@ export function withCanonicalEnforcement(
         correlationId,
         sessionInfo: session,
         policyContext: policy,
-        workspaceId,
+        workspaceId: decision.context!.verifiedWorkspaceId,
         capabilities: decision.context!.verifiedCapabilities as Set<CapabilityName>,
       });
 
@@ -416,7 +416,7 @@ export function withCanonicalEnforcement(
         verifiedActorId: session.user.id,
         verifiedActorType: "user",
         verifiedActor: session.user,
-        verifiedWorkspaceId: workspaceId,
+        verifiedWorkspaceId: decision.context!.verifiedWorkspaceId,
         verifiedCapabilities: decision.context!.verifiedCapabilities,
         // PHASE D: Trace is ROOT container (read-only)
         traceId: traceManager.getTrace().traceId,

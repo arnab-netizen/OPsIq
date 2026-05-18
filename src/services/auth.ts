@@ -40,7 +40,7 @@ export interface SessionInfo {
  * after PHASE F when legacy is fully stripped down.
  */
 
-export async function getSession(workspaceId: string = "system"): Promise<SessionInfo | null> {
+export async function getSession(): Promise<SessionInfo | null> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("getSession");
 
@@ -54,7 +54,7 @@ export async function getSession(workspaceId: string = "system"): Promise<Sessio
   if (!sessionToken) return null;
 
   const session = await db.session.findUnique({
-    where: { token: sessionToken, user: { workspaceMemberships: { some: { workspaceId } } } },
+    where: { token: sessionToken },
     include: { user: true },
   });
 
@@ -84,26 +84,46 @@ export async function getSession(workspaceId: string = "system"): Promise<Sessio
   };
 }
 
-export async function requireSession(workspaceId: string = "system"): Promise<SessionInfo> {
+export async function requireSession(workspaceId?: string): Promise<SessionInfo> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("requireSession");
 
-  const session = await getSession(workspaceId);
+  const session = await getSession();
   if (!session) {
     throw new UnauthorizedError("Valid session required");
   }
   return session;
 }
 
-export async function getPolicyContext(workspaceId: string = "system"): Promise<PolicyContext | null> {
+export async function getPolicyContext(workspaceId?: string): Promise<PolicyContext | null> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("getPolicyContext");
 
   // Ensure database is initialized (getSession does this too, but be explicit)
   await getDbInstance();
 
-  const session = await getSession(workspaceId);
+  const session = await getSession();
   if (!session) return null;
+
+  // If no explicit workspace provided, use user's first workspace membership
+  let resolvedWorkspaceId = workspaceId;
+  if (!resolvedWorkspaceId) {
+    const membership = await db.workspaceMembership.findFirst({
+      where: { userId: session.user.id, isActive: true },
+      orderBy: { addedAt: "asc" },
+    });
+    resolvedWorkspaceId = membership?.workspaceId;
+  }
+
+  // Cannot determine policy without workspace scope
+  if (!resolvedWorkspaceId) return null;
+
+  // Verify user has membership in the target workspace
+  const membership = await db.workspaceMembership.findUnique({
+    where: { workspaceId_userId: { workspaceId: resolvedWorkspaceId, userId: session.user.id } },
+  });
+
+  if (!membership || !membership.isActive) return null;
 
   const [roleAssignments, engagementMemberships] = await Promise.all([
     db.userRoleAssignment.findMany({
@@ -112,14 +132,14 @@ export async function getPolicyContext(workspaceId: string = "system"): Promise<
         isActive: true,
         revokedAt: null,
         scope: "workspace",
-        scopeId: workspaceId,
+        scopeId: resolvedWorkspaceId,
       },
     }),
     db.engagementMembership.findMany({
       where: {
         userId: session.user.id,
         isActive: true,
-        engagement: { workspaceId },
+        engagement: { workspaceId: resolvedWorkspaceId },
       },
     }),
   ]);
@@ -138,11 +158,11 @@ export async function getPolicyContext(workspaceId: string = "system"): Promise<
   };
 }
 
-export async function requirePolicyContext(workspaceId: string = "system"): Promise<PolicyContext> {
+export async function requirePolicyContext(workspaceId?: string): Promise<PolicyContext> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("requirePolicyContext");
 
-  const ctx = await getPolicyContext(workspaceId);
+  const ctx = await getPolicyContext(workspaceId || undefined);
   if (!ctx) {
     throw new UnauthorizedError("Authentication required");
   }
@@ -173,8 +193,8 @@ export function getSessionCookieName(): string {
  * Get session and return raw facts (not throwing).
  * Used by canonical wrapper to evaluate auth state.
  */
-export async function getSessionFact(workspaceId: string = "system"): Promise<SessionFact> {
-  const session = await getSession(workspaceId);
+export async function getSessionFact(workspaceId?: string): Promise<SessionFact> {
+  const session = await getSession();
 
   if (!session) {
     const cookieStore = await cookies();
@@ -194,7 +214,7 @@ export async function getSessionFact(workspaceId: string = "system"): Promise<Se
  * Get policy context and return raw facts (not throwing).
  * Used by canonical wrapper to evaluate auth state.
  */
-export async function getPolicyContextFact(workspaceId: string = "system"): Promise<PolicyFact> {
+export async function getPolicyContextFact(workspaceId?: string): Promise<PolicyFact> {
   const policy = await getPolicyContext(workspaceId);
 
   if (!policy) {
