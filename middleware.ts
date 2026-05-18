@@ -1,80 +1,51 @@
 /**
- * Root Middleware: Startup Gate
+ * Root Middleware: Lightweight Routing
  *
- * Reads durable startup status from database.
- * Blocks protected routes until startup complete.
- * This is a Next.js middleware that runs for every request.
+ * ZERO Node.js imports - Edge Runtime safe.
+ * Only routes requests. Does NOT check readiness.
+ * Readiness enforcement belongs in Node handlers.
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getStartupStatus } from "@/services/startup-status";
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const pathname = new URL(request.url).pathname;
 
-  // Allow health/readiness/startup probes even before startup
-  const allowedProbes = [
+  // Public routes that are always allowed (no checks needed)
+  const alwaysAllow = [
+    "/login",
+    "/auth",
+    "/api/auth",
     "/api/health",
     "/api/readiness",
     "/api/liveness",
     "/api/startup",
-  ];
-
-  // Allow public routes (login, signup, public content) even before startup
-  const allowedPublic = [
-    "/login",
-    "/auth",
-    "/api/auth",
+    "/_next",
     "/public",
+    "/favicon.ico"
   ];
 
-  const isProbe = allowedProbes.includes(pathname);
-  const isPublic = allowedPublic.some(p => pathname.startsWith(p));
+  // Check if this is a public route
+  const isPublic = alwaysAllow.some(allowed => pathname.startsWith(allowed));
 
-  if (isProbe || isPublic) {
+  if (isPublic) {
+    // Public routes pass through without checks
     return NextResponse.next();
   }
 
-  // For protected/API routes, check durable startup status
-  try {
-    const status = await getStartupStatus();
-
-    if (status.status !== "READY") {
-      console.warn(`[MIDDLEWARE] Blocking ${pathname}: status=${status.status}`, {
-        error: status.error,
-      });
-      return NextResponse.json(
-        {
-          error: "SERVICE_UNAVAILABLE",
-          message: "Application starting up",
-          details: status.error || `Status: ${status.status}`,
-        },
-        { status: 503 }
-      );
-    }
-  } catch (error) {
-    // If we can't read status, fail closed
-    console.error(`[MIDDLEWARE] Failed to read startup status for ${pathname}`, { error });
-    return NextResponse.json(
-      {
-        error: "SERVICE_UNAVAILABLE",
-        message: "Unable to verify startup status",
-      },
-      { status: 503 }
-    );
-  }
-
+  // Protected routes pass through to handlers
+  // Handlers will check readiness and auth
   return NextResponse.next();
 }
 
-// Configure which routes this middleware applies to
+// Apply middleware to all routes
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
+     * Match all request paths except:
+     * - Static files (_next/static)
+     * - Image optimization (_next/image)
+     * - Favicon
      */
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
