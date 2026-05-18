@@ -3,6 +3,7 @@ import { db, getDbInstance } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { classifyError, reportError } from "@/infra/error-tracking";
 import { cleanupOldRecords } from "@/services/production/retention-cleanup";
+import { isStartupComplete } from "@/infra/startup-state";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,9 +19,9 @@ export const GET = withEnforcement(async (ctx) => {
     logger.error("Failed to initialize database on health check", { error });
   }
 
-  // Trigger retention cleanup periodically (every 6 hours)
+  // Trigger retention cleanup periodically (every 6 hours) - ONLY after startup complete
   const now = Date.now();
-  if (now - lastCleanupTime > 6 * 60 * 60 * 1000) {
+  if (isStartupComplete() && now - lastCleanupTime > 6 * 60 * 60 * 1000) {
     lastCleanupTime = now;
     cleanupOldRecords().catch((err) => {
       const classified = classifyError(err, { operation: "retention-cleanup" });

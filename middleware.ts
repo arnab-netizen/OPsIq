@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { isStartupComplete, getStartupError } from "@/infra/startup-blocking";
+import { isStartupComplete, getStartupError } from "@/infra/startup-state";
 
 export function middleware(request: NextRequest) {
   // Allow health/readiness/startup probes even before startup
