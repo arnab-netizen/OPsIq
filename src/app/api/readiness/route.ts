@@ -1,31 +1,51 @@
 import { getMonitoringServiceInstance } from "@/middleware/monitoring.middleware";
 import { logger } from "@/infra/logger";
 import { ensureStartupComplete } from "@/infra/startup-orchestrator";
+import { isStartupComplete, getStartupError } from "@/infra/startup-state";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export const GET = async () => {
-  // Ensure startup checks have run
+  // Trigger startup sequence (but don't block on failure)
   try {
     await ensureStartupComplete();
   } catch (error) {
     logger.error("Startup checks failed", { error });
-    // Fall through to readiness check - it will reflect the startup failure
+    // Fall through - readiness will report startup as failed
   }
 
+  // Check runtime health via monitoring service
   const monitoringService = getMonitoringServiceInstance();
-  const readinessCheck = await monitoringService.checkReadiness();
+  const monitoringCheck = await monitoringService.checkReadiness();
 
-  const statusCode = readinessCheck.is_ready ? 200 : 503;
+  // Readiness requires startup complete AND no critical failures
+  const startupComplete = isStartupComplete();
+  const startupFailed = getStartupError() !== null;
+
+  const is_ready = startupComplete && !startupFailed && monitoringCheck.database_healthy && monitoringCheck.queue_healthy;
+  const statusCode = is_ready ? 200 : 503;
 
   logger.debug("Readiness probe executed", {
-    is_ready: readinessCheck.is_ready,
-    database_healthy: readinessCheck.database_healthy,
-    queue_healthy: readinessCheck.queue_healthy,
+    startup_complete: startupComplete,
+    startup_failed: startupFailed,
+    database_healthy: monitoringCheck.database_healthy,
+    queue_healthy: monitoringCheck.queue_healthy,
+    is_ready,
   });
 
-  return new Response(JSON.stringify({ ...readinessCheck, status: statusCode }), {
+  return new Response(JSON.stringify({
+    startup_complete: startupComplete,
+    startup_error: startupFailed ? getStartupError()?.message : null,
+    database_healthy: monitoringCheck.database_healthy,
+    database_latency_ms: monitoringCheck.database_latency_ms,
+    queue_healthy: monitoringCheck.queue_healthy,
+    queue_depth: monitoringCheck.queue_depth,
+    cache_healthy: monitoringCheck.cache_healthy,
+    external_services: monitoringCheck.external_services,
+    is_ready,
+    status: statusCode,
+  }), {
     status: statusCode,
     headers: { "content-type": "application/json" },
   });

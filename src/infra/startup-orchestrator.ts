@@ -1,59 +1,70 @@
 /**
  * NODE-RUNTIME STARTUP ORCHESTRATOR
  *
+ * SINGLE SOURCE OF TRUTH for startup state.
  * This module ONLY runs in Node.js runtime (not Edge).
- * It performs actual startup checks and updates the global startup state.
- * Middleware imports startup-state, not this module.
+ * It EXCLUSIVELY mutates startup-state.ts.
+ * No other module mutates startup state.
+ * Middleware imports startup-state (read-only).
  */
 
-import { setStartupComplete, setStartupError } from "@/infra/startup-state";
+import { setStartupState, setStartupError, StartupState, getStartupState } from "@/infra/startup-state";
 
-let startupPromise: Promise<boolean> | null = null;
-let startupResult: { success: boolean; error?: Error } | null = null;
+let startupPromise: Promise<void> | null = null;
 const STARTUP_TIMEOUT_MS = 30000;
 
 /**
- * Orchestrate startup checks (runs ONCE, in Node context)
+ * Orchestrate startup checks (runs ONCE, in Node context).
+ * This is the ONLY code that mutates startup state.
+ *
+ * State transitions:
+ * NOT_STARTED → STARTING → READY (success)
+ *            → STARTING → FAILED (error)
  */
 export async function ensureStartupComplete(): Promise<void> {
-  // Return cached result if already completed
-  if (startupResult) {
-    if (startupResult.success) return;
-    throw startupResult.error || new Error("Startup checks failed");
+  const state = getStartupState();
+
+  // Terminal states - no retry
+  if (state === StartupState.READY) {
+    return; // Already ready
   }
 
-  // Return existing promise if already running
+  if (state === StartupState.FAILED) {
+    throw new Error("Startup previously failed - cannot retry");
+  }
+
+  // Already starting - wait for in-flight promise
   if (startupPromise) {
     await Promise.race([
       startupPromise,
-      new Promise<boolean>((_, reject) =>
+      new Promise<void>((_, reject) =>
         setTimeout(() => reject(new Error("Startup checks timed out")), STARTUP_TIMEOUT_MS)
       ),
     ]);
-    return;
+    return; // startupPromise completed, now check state
   }
 
-  // Prevent concurrent startup - start new orchestration
+  // Not started yet - initiate startup
+  setStartupState(StartupState.STARTING);
+
   startupPromise = performStartupChecks();
   try {
     await Promise.race([
       startupPromise,
-      new Promise<boolean>((_, reject) =>
+      new Promise<void>((_, reject) =>
         setTimeout(() => reject(new Error("Startup checks timed out")), STARTUP_TIMEOUT_MS)
       ),
     ]);
-    // Success - cache it
-    startupResult = { success: true };
+    // Success
+    setStartupState(StartupState.READY);
   } catch (error) {
-    // Cache failure but allow retry on next call after timeout
     const errorObj = error instanceof Error ? error : new Error(String(error));
-    startupResult = { success: false, error: errorObj };
-    startupPromise = null;
+    setStartupError(errorObj);
     throw errorObj;
   }
 }
 
-async function performStartupChecks(): Promise<boolean> {
+async function performStartupChecks(): Promise<void> {
   const startTime = Date.now();
 
   try {
@@ -61,38 +72,36 @@ async function performStartupChecks(): Promise<boolean> {
     const { getDbInstance } = await import("@/lib/db");
     const { logger } = await import("@/infra/logger");
 
-    logger.info("Starting application startup checks...");
+    logger.info("✓ STARTUP: Starting application startup checks...");
 
     // Check 1: Database connectivity
-    logger.debug("Checking database connectivity...");
+    logger.debug("STARTUP: Checking database connectivity...");
     const dbInstance = await getDbInstance();
     const dbReachable = await checkDatabase(dbInstance, logger);
     if (!dbReachable) {
       throw new Error("Database is not reachable");
     }
-    logger.debug("✓ Database connectivity verified");
+    logger.debug("✓ STARTUP: Database connectivity verified");
 
     // Check 2: Schema validation
-    logger.debug("Checking database schema...");
+    logger.debug("STARTUP: Checking database schema...");
     const schemaValid = await checkDatabaseSchema(dbInstance, logger);
     if (!schemaValid) {
       throw new Error("Database schema is invalid or migrations not applied");
     }
-    logger.debug("✓ Database schema verified");
+    logger.debug("✓ STARTUP: Database schema verified");
 
     // Check 3: Configuration validation
-    logger.debug("Checking configuration...");
+    logger.debug("STARTUP: Checking configuration...");
     const configValid = checkConfiguration(logger);
     if (!configValid) {
       throw new Error("Configuration is invalid");
     }
-    logger.debug("✓ Configuration verified");
+    logger.debug("✓ STARTUP: Configuration verified");
 
     const duration = Date.now() - startTime;
-    logger.info("✓ Application startup checks passed", { duration_ms: duration });
-
-    setStartupComplete(true);
-    return true;
+    logger.info("✓ STARTUP: All checks passed", { duration_ms: duration });
+    // NOTE: setStartupState(READY) is called in ensureStartupComplete(), not here
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
@@ -100,13 +109,13 @@ async function performStartupChecks(): Promise<boolean> {
 
     try {
       const { logger } = await import("@/infra/logger");
-      logger.error("✗ Application startup checks FAILED", {
+      logger.error("✗ STARTUP: Checks FAILED", {
         error_message: errorMsg,
         error_stack: errorStack,
         duration_ms: Date.now() - startTime,
       });
     } catch {
-      console.error("✗ Application startup checks FAILED", JSON.stringify({
+      console.error("✗ STARTUP: Checks FAILED", JSON.stringify({
         error_message: errorMsg,
         error_stack: errorStack,
         duration_ms: Date.now() - startTime,

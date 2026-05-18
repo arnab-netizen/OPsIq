@@ -21,7 +21,8 @@ export const GET = withEnforcement(async (ctx) => {
 
   // Trigger retention cleanup periodically (every 6 hours) - ONLY after startup complete
   const now = Date.now();
-  if (isStartupComplete() && now - lastCleanupTime > 6 * 60 * 60 * 1000) {
+  const startup_complete = isStartupComplete();
+  if (startup_complete && now - lastCleanupTime > 6 * 60 * 60 * 1000) {
     lastCleanupTime = now;
     cleanupOldRecords().catch((err) => {
       const classified = classifyError(err, { operation: "retention-cleanup" });
