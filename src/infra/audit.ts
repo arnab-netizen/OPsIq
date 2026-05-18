@@ -3,6 +3,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import type { AuditEventName } from "@/domain/constants/audit-events";
 import { createHash } from "crypto";
+import { v4 as uuidv4 } from "uuid";
 
 export type Visibility = "internal" | "client_visible";
 
@@ -41,8 +42,10 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
     select: { id: true, previousHash: true },
   });
 
+  const eventId = uuidv4();
   const event = await db.auditEvent.create({
     data: {
+      id: eventId,
       workspaceId: input.workspaceId,
       eventName: input.eventName,
       actorId: input.actorId ?? null,
