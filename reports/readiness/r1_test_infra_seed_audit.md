@@ -376,15 +376,48 @@ curl -X POST http://localhost:3000/api/auth/login \
 
 ---
 
-## Next Step: Phase C
+## Phase C: Seed Script Fixes — COMPLETED ✓
 
 **Objective**: Fix seed script to successfully create test user + bootstrap data.
 
-**Work**:
-1. Read User model schema completely
-2. Identify all required fields (no @default)
-3. Modify scripts/seed-test-db.ts to provide all required fields
-4. Test: `npx tsx scripts/seed-test-db.ts`
-5. Verify: `psql ... SELECT * FROM users;`
+**Work completed**:
+1. ✓ Identified all required fields missing in seed script
+2. ✓ Added bcrypt password hashing for User model
+3. ✓ Added `updatedAt: new Date()` to User, ClientAccount, Engagement
+4. ✓ Added `id` field to EngagementMembership
+5. ✓ Fixed adapter selection (PrismaPg for localhost, PrismaNeon for remote)
+6. ✓ Tested: `DATABASE_URL="..." npx tsx scripts/seed-test-db.ts`
 
-**Expected outcome**: Seed script runs successfully, test user exists in database, ready for browser auth testing (Phase E).
+**Test result**: ✅ Seed script completes successfully
+
+```
+🌱 Seeding test database...
+  ✓ Created user: 10000000-0000-0000-0000-000000000001 (test-seed@example.com)
+  ✓ Created workspace: 20000000-0000-0000-0000-000000000001 (test-seed-workspace)
+  ✓ Created workspace membership: 4f22f554-11f5-4b45-bcc1-49240eca485f
+  ✓ Created client: 30000000-0000-0000-0000-000000000001 (Test Seed Client)
+  ✓ Created engagement: 40000000-0000-0000-0000-000000000001 (TEST-SEED-001)
+  ✓ Created engagement membership: 41000000-0000-0000-0000-000000000001
+✓ Test database seeded successfully
+```
+
+**Data created**:
+- **User**: test-seed@example.com (password: test-password-123, hashed)
+- **Workspace**: test-seed-workspace (owner: test user)
+- **Client**: Test Seed Client
+- **Engagement**: TEST-SEED-001 (Premium level)
+- **Memberships**: User linked to workspace (owner) and engagement (lead)
+
+**Readiness check after seed**: ✓ is_ready=true
+- Database: healthy
+- Queue: healthy (depth: 0)
+- Cache: healthy
+- External services: reachable (Stripe, HubSpot)
+
+---
+
+## Next Step: Phase D
+
+**Objective**: Install Playwright for browser automation testing.
+
+**Expected**: npm install @playwright/test, configure playwright.config.ts, prepare for Phase E auth flow testing.
