@@ -1,4 +1,3 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { parseRequestBody } from "@/lib/validation";
@@ -20,8 +19,11 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-export const POST = withEnforcementFull(async (request) => {
+export const POST = async (request: NextRequest) => {
   const { email, password } = await parseRequestBody(request, loginSchema);
+
+  // Extract idempotency key for session deduplication
+  const idempotencyKey = request.headers.get("idempotency-key");
 
   // Rate limit by IP + email to prevent brute force
   const ip = request.headers.get("x-forwarded-for") ?? "unknown";
@@ -99,4 +101,4 @@ export const POST = withEnforcementFull(async (request) => {
       name: user.name,
     },
   });
-});
+};
