@@ -63,6 +63,7 @@ export async function enforceRequest<T>(
     require_workspace_id?: boolean;
     require_execution_id?: boolean;
     bypass_health_check?: boolean;
+    skipReadinessCheck?: boolean;
   },
 ): Promise<NextResponse> {
   const start = Date.now();
@@ -89,7 +90,47 @@ export async function enforceRequest<T>(
       }
     }
 
-    // 2. MANDATORY: Request shedding (backpressure)
+    // 2. MANDATORY: Verify startup readiness (fail-closed)
+    if (!options?.skipReadinessCheck) {
+      try {
+        const { getStartupStatus } = await import("@/services/startup-status");
+        const status = await getStartupStatus();
+
+        if (status.status !== "READY") {
+          runtimeLogger.log({
+            level: "WARN",
+            category: "EXECUTION",
+            message: `Request blocked: service not ready`,
+            correlation_id: requestContext.generateCorrelationId(),
+            context: {
+              status: status.status,
+              error: status.error,
+              endpoint: req.nextUrl.pathname,
+              method: req.method,
+            },
+            tags: ["readiness_blocked", "startup"],
+          });
+
+          throw createInfrastructureError(
+            `Service starting up (${status.status})`,
+            requestContext.createErrorContext(),
+            false,
+          );
+        }
+      } catch (error) {
+        // If readiness check itself fails, treat as infrastructure error
+        if (error instanceof RuntimeError) {
+          throw error;
+        }
+        throw createInfrastructureError(
+          "Failed to verify service readiness",
+          requestContext.createErrorContext(),
+          false,
+        );
+      }
+    }
+
+    // 3. MANDATORY: Request shedding (backpressure)
     if (!requestShedding.canAccept()) {
       throw createInfrastructureError(
         "Request queue full - shedding request",
@@ -99,7 +140,7 @@ export async function enforceRequest<T>(
     }
     requestShedding.enqueue();
 
-    // 3. MANDATORY: Circuit breaker enforcement
+    // 4. MANDATORY: Circuit breaker enforcement
     if (requestCircuitBreaker.getState() === "OPEN") {
       throw createInfrastructureError(
         "Circuit breaker OPEN - requests blocked",
@@ -108,7 +149,7 @@ export async function enforceRequest<T>(
       );
     }
 
-    // 4. MANDATORY: Create runtime context
+    // 5. MANDATORY: Create runtime context
     correlation_id = requestContext.generateCorrelationId();
     const workspace_id = req.headers.get("x-workspace-id") || undefined;
     const execution_id = req.headers.get("x-execution-id") || undefined;
@@ -137,7 +178,7 @@ export async function enforceRequest<T>(
       started_at: new Date(),
     };
 
-    // 5. MANDATORY: Run handler within context
+    // 6. MANDATORY: Run handler within context
     const result = await requestContext.runWithContext(
       {
         correlation_id,
@@ -150,7 +191,7 @@ export async function enforceRequest<T>(
         trace_depth: 0,
       },
       async () => {
-        // 6. MANDATORY: Log request start
+        // 7. MANDATORY: Log request start
         runtimeLogger.log({
           level: "INFO",
           category: "EXECUTION",
@@ -169,11 +210,11 @@ export async function enforceRequest<T>(
       },
     );
 
-    // 7. MANDATORY: Record success metrics
+    // 8. MANDATORY: Record success metrics
     const duration_ms = Date.now() - start;
     runtimeMetricsCollector.recordRequestLatency(duration_ms);
 
-    // 8. MANDATORY: Log request completion
+    // 9. MANDATORY: Log request completion
     runtimeLogger.log({
       level: "INFO",
       category: "EXECUTION",
@@ -189,7 +230,7 @@ export async function enforceRequest<T>(
       tags: ["api_request", "request_success"],
     });
 
-    // 9. MANDATORY: Return response with context headers
+    // 10. MANDATORY: Return response with context headers
     return NextResponse.json(result, {
       status: 200,
       headers: {

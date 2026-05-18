@@ -151,6 +151,7 @@ export function withCanonicalEnforcement(
     requireWorkspace?: boolean;
     requireCapabilities?: string[];
     requireActorType?: "user" | "service" | ("user" | "service")[];
+    skipReadinessCheck?: boolean;
   }
 ): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
   return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
@@ -163,7 +164,50 @@ export function withCanonicalEnforcement(
     const correlationId = req.headers.get("x-correlation-id") || `corr-${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const requestId = req.headers.get("x-request-id") || `req-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
+    // Skip readiness check for auth routes
+    const skipReadinessCheck = options?.skipReadinessCheck || false;
+
     try {
+      // ========================================
+      // STARTUP READINESS CHECK (fail-closed)
+      // ========================================
+      if (!skipReadinessCheck) {
+        try {
+          const { getStartupStatus } = await import("@/services/startup-status");
+          const status = await getStartupStatus();
+
+          if (status.status !== "READY") {
+            logger.warn("Service not ready - request blocked", {
+              status: status.status,
+              error: status.error,
+              endpoint: req.nextUrl.pathname,
+              method: req.method,
+              correlationId,
+            });
+            return new NextResponse(
+              JSON.stringify({
+                error: "SERVICE_UNAVAILABLE",
+                message: `Service starting up (${status.status})`,
+              }),
+              { status: 503 }
+            );
+          }
+        } catch (error) {
+          logger.error("Failed to check startup status", {
+            error: error instanceof Error ? error.message : String(error),
+            endpoint: req.nextUrl.pathname,
+            method: req.method,
+            correlationId,
+          });
+          return new NextResponse(
+            JSON.stringify({
+              error: "SERVICE_UNAVAILABLE",
+              message: "Unable to verify service readiness",
+            }),
+            { status: 503 }
+          );
+        }
+      }
 
       // ========================================
       // PHASE D: ROOT CONTAINER - Initialize execution trace
@@ -508,6 +552,7 @@ export function withCanonicalPolicyEnforcement(
     requirePolicyContext?: boolean;
     requireCapabilities?: string[];
     requireActorType?: "user" | "service" | ("user" | "service")[];
+    skipReadinessCheck?: boolean;
   }
 ): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
   return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
@@ -543,6 +588,7 @@ export function withCanonicalPolicyEnforcement(
       {
         requireCapabilities: options?.requireCapabilities,
         requireActorType: options?.requireActorType,
+        skipReadinessCheck: options?.skipReadinessCheck,
       }
     );
 

@@ -48,7 +48,8 @@ import { logger } from "@/infra/logger";
  * - Dead-letter events return 400 (no more retries)
  * - Alert to ops for manual investigation
  */
-export const POST = withEnforcementFull(async (request: Request) => {
+export const POST = withEnforcementFull(
+  async (request: Request) => {
   try {
     // Step 1: Get raw body for signature verification
     const body = await request.text();
@@ -216,7 +217,9 @@ export const POST = withEnforcementFull(async (request: Request) => {
       { status: 500 }
     );
   }
-});
+  },
+  { skipReadinessCheck: true }
+);
 
 /**
  * Health check endpoint
