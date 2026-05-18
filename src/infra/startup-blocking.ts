@@ -6,10 +6,11 @@
  * - Blocks until migrations are applied
  * - Blocks until all checks pass
  * - HTTP server cannot listen until this passes
+ *
+ * NOTE: Uses dynamic imports to avoid loading Node.js modules in Edge Runtime
+ * when middleware.ts imports this file. The heavy imports only happen when
+ * blockUntilStartupComplete() is actually called from server context.
  */
-
-import { getDbInstance } from "@/lib/db";
-import { logger } from "@/infra/logger";
 
 let startupPromise: Promise<boolean> | null = null;
 let startupComplete = false;
@@ -31,6 +32,7 @@ export function getStartupError(): Error | null {
 
 /**
  * Block until startup is complete
+ * Dynamically imports Node.js modules to avoid Edge Runtime issues
  */
 export async function blockUntilStartupComplete(): Promise<void> {
   if (startupComplete) return;
@@ -47,17 +49,22 @@ export async function blockUntilStartupComplete(): Promise<void> {
 /**
  * Perform all startup checks
  * This MUST pass before accepting traffic
+ * Uses dynamic imports to stay compatible with Edge Runtime in middleware
  */
 async function performStartupChecks(): Promise<boolean> {
   const startTime = Date.now();
 
   try {
+    // Dynamic imports - only loaded when actually called from server context
+    const { getDbInstance } = await import("@/lib/db");
+    const { logger } = await import("@/infra/logger");
+
     logger.info("Starting application startup checks...");
 
     // Check 1: Database connectivity
     logger.debug("Checking database connectivity...");
     const dbInstance = await getDbInstance();
-    const dbReachable = await checkDatabase(dbInstance);
+    const dbReachable = await checkDatabase(dbInstance, logger);
     if (!dbReachable) {
       throw new Error("Database is not reachable");
     }
@@ -65,7 +72,7 @@ async function performStartupChecks(): Promise<boolean> {
 
     // Check 2: Database schema validation
     logger.debug("Checking database schema...");
-    const schemaValid = await checkDatabaseSchema(dbInstance);
+    const schemaValid = await checkDatabaseSchema(dbInstance, logger);
     if (!schemaValid) {
       throw new Error("Database schema is invalid or migrations not applied");
     }
@@ -73,7 +80,7 @@ async function performStartupChecks(): Promise<boolean> {
 
     // Check 3: Configuration validation
     logger.debug("Checking configuration...");
-    const configValid = checkConfiguration();
+    const configValid = checkConfiguration(logger);
     if (!configValid) {
       throw new Error("Configuration is invalid");
     }
@@ -88,10 +95,19 @@ async function performStartupChecks(): Promise<boolean> {
     const errorMsg = error instanceof Error ? error.message : String(error);
     startupError = error instanceof Error ? error : new Error(errorMsg);
 
-    logger.error("✗ Application startup checks FAILED", {
-      error: errorMsg,
-      duration_ms: Date.now() - startTime,
-    });
+    // Use console if logger not available (during early startup failure)
+    try {
+      const { logger } = await import("@/infra/logger");
+      logger.error("✗ Application startup checks FAILED", {
+        error: errorMsg,
+        duration_ms: Date.now() - startTime,
+      });
+    } catch {
+      console.error("✗ Application startup checks FAILED", {
+        error: errorMsg,
+        duration_ms: Date.now() - startTime,
+      });
+    }
 
     // Do NOT attempt to recover - fail-closed
     throw startupError;
@@ -101,7 +117,7 @@ async function performStartupChecks(): Promise<boolean> {
 /**
  * Verify database connectivity with basic query
  */
-async function checkDatabase(dbInstance: any): Promise<boolean> {
+async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
   try {
     await dbInstance.$queryRawUnsafe("SELECT 1");
     return true;
@@ -115,7 +131,7 @@ async function checkDatabase(dbInstance: any): Promise<boolean> {
  * Verify database schema matches expectations
  * This prevents silent schema divergence
  */
-async function checkDatabaseSchema(dbInstance: any): Promise<boolean> {
+async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolean> {
   try {
     // Check 1: Verify critical tables exist
     const requiredTables = [
@@ -164,7 +180,7 @@ async function checkDatabaseSchema(dbInstance: any): Promise<boolean> {
 /**
  * Verify critical configuration is present
  */
-function checkConfiguration(): boolean {
+function checkConfiguration(logger: any): boolean {
   const requiredEnvVars = ["DATABASE_URL", "STRIPE_API_KEY", "STRIPE_WEBHOOK_SECRET"];
 
   for (const envVar of requiredEnvVars) {
@@ -181,7 +197,12 @@ function checkConfiguration(): boolean {
 if (typeof globalThis !== "undefined" && typeof window === "undefined") {
   // Only run in server environment, not browser
   blockUntilStartupComplete().catch((error) => {
-    logger.error("Startup initialization failed (non-recoverable)", { error });
+    // Try to log, but don't fail if logger not available
+    import("@/infra/logger").then(({ logger }) => {
+      logger.error("Startup initialization failed (non-recoverable)", { error });
+    }).catch(() => {
+      console.error("Startup initialization failed (non-recoverable)", error);
+    });
     // Note: Cannot call process.exit() in Edge Runtime (middleware)
     // Error is captured in startupError and will be returned as 503 by middleware
   });

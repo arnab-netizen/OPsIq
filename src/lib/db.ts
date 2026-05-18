@@ -115,13 +115,10 @@ export async function getDbInstance() {
   return dbInitPromise;
 }
 
-// Start initialization immediately on module load (server startup)
-if (typeof globalThis !== "undefined" && !globalForPrisma.prisma) {
-  // Non-blocking initialization - doesn't throw
-  getDbInstance().catch((error) => {
-    console.error("[DB] Failed to initialize database on module load:", error);
-  });
-}
+// NOTE: Removed auto-initialization on module load
+// Reason: This was causing issues when db.ts is imported in Edge Runtime (middleware context)
+// Auto-initialization now happens explicitly in app startup (see src/app/route.ts or startup sequence)
+// This allows middleware to import db.ts without triggering Prisma initialization
 
 // Export db as a lazy-loading proxy that waits for initialization if needed
 export const db = new Proxy({} as any, {
