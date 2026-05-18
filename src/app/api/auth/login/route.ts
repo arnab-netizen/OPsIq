@@ -63,11 +63,13 @@ export const POST = async (request: NextRequest) => {
     throw new UnauthorizedError("Invalid email or password");
   }
 
+  const sessionId = uuidv4();
   const token = uuidv4();
   const expiresAt = new Date(Date.now() + getSessionDurationMs());
 
   const session = await db.session.create({
     data: {
+      id: sessionId,
       userId: user.id,
       token,
       expiresAt,
