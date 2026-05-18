@@ -35,8 +35,13 @@ export function middleware(request: NextRequest) {
   }
 
   // For protected/API routes, require startup to be complete
-  if (!isStartupComplete()) {
+  const startupComplete = isStartupComplete();
+  if (!startupComplete) {
     const error = getStartupError();
+    console.warn(`[MIDDLEWARE] Blocking ${pathname}: startup not complete`, {
+      startupComplete,
+      error: error?.message,
+    });
     return NextResponse.json(
       {
         error: "SERVICE_UNAVAILABLE",
