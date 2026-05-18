@@ -199,7 +199,7 @@ export const MONITORING_ASSERTIONS = {
     check: async (dbInstance: any) => {
       const start = Date.now();
       try {
-        await dbInstance.query("SELECT 1");
+        await dbInstance.$queryRawUnsafe("SELECT 1");
         return { healthy: true, latency_ms: Date.now() - start };
       } catch (e) {
         return { healthy: false, latency_ms: Date.now() - start, error: String(e) };
@@ -211,8 +211,8 @@ export const MONITORING_ASSERTIONS = {
   QUEUE_HEALTHY: {
     check: async (dbInstance: any) => {
       try {
-        const result = await dbInstance.query(
-          "SELECT COUNT(*) as count FROM webhook_jobs WHERE status='pending' OR status='retrying'"
+        const result = await dbInstance.$queryRawUnsafe(
+          "SELECT COUNT(*) as count FROM webhookEvent WHERE status='pending' OR status='retrying'"
         );
         const depth = result[0]?.count || 0;
         return {
