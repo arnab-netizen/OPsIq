@@ -1,6 +1,4 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import { ForbiddenError } from "@/infra/errors";
-import { requireCapability } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getQueuedItems } from "@/services/operator/store";
 import { emitAuditEvent } from "@/infra/audit";
@@ -20,10 +18,6 @@ const queueParamsSchema = z.object({
  * Supports: status filtering, pagination
  */
 export const GET = withCanonicalEnforcement(async (ctx) => {
-  // Enforce authorization
-  if (ctx.policy) {
-    requireCapability(ctx.policy, CAPABILITIES.ACTION_VIEW);
-  }
   const userId = ctx.verifiedSessionSnapshot.actorId;
   const workspaceId = ctx.verifiedWorkspaceId;
 
@@ -88,4 +82,4 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
       { status: 500 }
     );
   }
-});
+}, { requireCapabilities: [CAPABILITIES.ACTION_VIEW], requireWorkspace: true });

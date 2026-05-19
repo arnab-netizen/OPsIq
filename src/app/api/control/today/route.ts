@@ -2,6 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { getControlSurface } from "@/services/control/control-surface.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -17,5 +18,6 @@ export const GET = withCanonicalEnforcement(
 
     const surface = await getControlSurface(workspaceIdParam);
     return surface;
-  }
+  },
+  { requireCapabilities: [CAPABILITIES.DECISION_VIEW], requireWorkspace: true }
 );

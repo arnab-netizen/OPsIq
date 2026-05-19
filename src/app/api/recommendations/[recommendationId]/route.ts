@@ -1,7 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { ForbiddenError } from "@/infra/errors";
-import { requireCapability } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getRecommendation, updateRecommendation } from "@/services/recommendation";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -28,11 +26,6 @@ const updateRecommendationSchema = z.object({
 });
 
 export const GET = withCanonicalEnforcement(async (ctx, params) => {
-  // Authenticate + authorize (fail-closed)
-  if (ctx.policy) {
-    requireCapability(ctx.policy, CAPABILITIES.RECOMMENDATION_VIEW);
-  }
-
   // Get workspace from verified context
   const workspaceId = ctx.verifiedWorkspaceId;
 
@@ -41,13 +34,9 @@ export const GET = withCanonicalEnforcement(async (ctx, params) => {
 
   const recommendation = await getRecommendation(recommendationId, workspaceId);
   return Response.json(recommendation);
-});
+}, { requireCapabilities: [CAPABILITIES.RECOMMENDATION_VIEW], requireWorkspace: true });
 
 export const PATCH = withCanonicalEnforcement(async (ctx, params) => {
-  // Authenticate + authorize (fail-closed)
-  if (ctx.policy) {
-    requireCapability(ctx.policy, CAPABILITIES.RECOMMENDATION_APPROVE);
-  }
   const workspaceId = ctx.verifiedWorkspaceId;
   const authContext: CanonicalAuthContext = {
     verifiedActorId: ctx.verifiedSessionSnapshot.actorId,
@@ -67,4 +56,4 @@ export const PATCH = withCanonicalEnforcement(async (ctx, params) => {
 
   const updated = await getRecommendation(recommendationId, workspaceId);
   return Response.json(updated);
-});
+}, { requireCapabilities: [CAPABILITIES.RECOMMENDATION_APPROVE], requireWorkspace: true });

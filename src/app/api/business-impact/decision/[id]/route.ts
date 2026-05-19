@@ -2,6 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { calculateDecisionImpact } from "@/services/business-impact/decision-impact.service";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
@@ -19,5 +20,6 @@ export const GET = withCanonicalEnforcement(
     const metrics = await calculateDecisionImpact(decisionId, workspaceIdParam);
 
     return metrics;
-  }
+  },
+  { requireCapabilities: [CAPABILITIES.DECISION_VIEW], requireWorkspace: true }
 );

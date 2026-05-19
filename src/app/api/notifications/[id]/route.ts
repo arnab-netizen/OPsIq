@@ -7,6 +7,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   getNotification,
   markAsRead,
@@ -43,7 +44,7 @@ export const GET = withCanonicalEnforcement(async (
     success: true,
     notification,
   };
-});
+}, { requireCapabilities: [CAPABILITIES.USER_VIEW], requireWorkspace: true });
 
 /**
  * PATCH /api/notifications/[id]/read
@@ -78,4 +79,4 @@ export const PATCH = withCanonicalEnforcement(async (
     success: true,
     message: "Notification marked as read",
   };
-});
+}, { requireCapabilities: [CAPABILITIES.USER_VIEW], requireWorkspace: true });

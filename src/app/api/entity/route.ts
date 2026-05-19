@@ -3,6 +3,7 @@ import { withAuth } from "@/lib/auth-guard";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createEntity, getEntities } from "@/services/entity/store";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { getSession } from "@/services/auth";
@@ -16,7 +17,7 @@ export const GET = withCanonicalEnforcement(
     const entities = getEntities();
     return entities;
   },
-  { requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.CLIENT_VIEW], requireWorkspace: true }
 );
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {

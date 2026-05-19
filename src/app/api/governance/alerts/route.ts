@@ -1,6 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { requireWorkspaceContext } from "@/services/workspace/context";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { evaluateGovernanceAlerts } from "@/services/governance/alerts";
@@ -57,4 +58,4 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   });
 
   return alerts;
-}, { requireWorkspace: true });
+}, { requireCapabilities: [CAPABILITIES.RISK_VIEW], requireWorkspace: true });

@@ -20,5 +20,5 @@ export const GET = withCanonicalEnforcement(
       isInternal: ctx.policy ? hasInternalAccess(ctx.policy) : false,
     };
   },
-  { requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.USER_VIEW], requireWorkspace: true }
 );

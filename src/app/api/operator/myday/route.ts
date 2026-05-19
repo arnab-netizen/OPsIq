@@ -3,6 +3,7 @@ import { UnauthorizedError } from "@/infra/errors";
 import { getMyDayItems } from "@/services/operator/myday";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { logAuditEvent } from "@/services/audit/audit-log";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const GET = withCanonicalEnforcement(async (ctx) => {
   // Enforce server-side auth (fail-closed)
@@ -31,4 +32,4 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
   });
 
   return { items };
-});
+}, { requireCapabilities: [CAPABILITIES.ACTION_VIEW], requireWorkspace: true });

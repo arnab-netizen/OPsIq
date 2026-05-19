@@ -1,7 +1,8 @@
-import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { db } from "@/lib/db";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 async function getStripe() {
   const apiKey = process.env.STRIPE_API_KEY;
@@ -16,7 +17,7 @@ interface UpgradeRequest {
   planId: string;
 }
 
-export const POST = withCanonicalEnforcement(async (ctx) => {
+export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   // Initialize Stripe client
   let stripe: any;
   try {
@@ -132,4 +133,4 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
     });
     throw new Error("Failed to create checkout session");
   }
-});
+}, { requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN], requireWorkspace: true });

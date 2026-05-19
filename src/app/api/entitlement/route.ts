@@ -8,6 +8,7 @@
 import { z } from "zod";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   getSubscriptionTier,
   getTierConfig,
@@ -48,7 +49,7 @@ export const GET = withCanonicalEnforcement(
       config,
     };
   },
-  { requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN], requireWorkspace: true }
 );
 
 /**
@@ -73,5 +74,5 @@ export const POST = withCanonicalEnforcement(
       capability: parsed.capability,
     };
   },
-  { requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN], requireWorkspace: true }
 );

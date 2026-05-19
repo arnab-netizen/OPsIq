@@ -6,6 +6,7 @@
  */
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { z } from "zod";
 import {
   sendNotification,
@@ -56,7 +57,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     success: true,
     notification,
   };
-});
+}, { requireCapabilities: [CAPABILITIES.USER_VIEW], requireWorkspace: true });
 
 /**
  * GET /api/notifications
@@ -94,4 +95,4 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       hasMore: (parsed.offset || 0) + (parsed.limit || 50) < result.total,
     },
   };
-});
+}, { requireCapabilities: [CAPABILITIES.USER_VIEW], requireWorkspace: true });

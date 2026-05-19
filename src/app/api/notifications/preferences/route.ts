@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   setPreferences,
   getPreferences,
@@ -55,7 +56,7 @@ export const GET = withCanonicalEnforcement(
       },
     };
   },
-  { requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.USER_VIEW], requireWorkspace: true }
 );
 
 /**
@@ -81,5 +82,5 @@ export const PATCH = withCanonicalEnforcement(
       preferences,
     };
   },
-  { requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.USER_VIEW], requireWorkspace: true }
 );

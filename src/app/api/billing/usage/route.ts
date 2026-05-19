@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { resolveEntitlements } from "@/services/entitlement.service";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 interface UsageDetail {
   key: string;
@@ -51,6 +52,7 @@ export const GET = withCanonicalEnforcement(
     };
   },
   {
+    requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN],
     requireWorkspace: true,
   }
 );

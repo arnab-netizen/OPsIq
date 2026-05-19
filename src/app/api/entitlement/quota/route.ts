@@ -7,6 +7,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { z } from "zod";
 import {
   getQuotaUsage,
@@ -45,7 +46,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       experiments: Math.max(0, config.experimentsPerMonth - usage.experimentsCreated),
     },
   };
-}, { requireWorkspace: true });
+}, { requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN], requireWorkspace: true });
 
 /**
  * POST /api/entitlement/quota/increment
@@ -86,4 +87,4 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       experiments: Math.max(0, config.experimentsPerMonth - (updatedUsage.experimentsCreated || 0)),
     },
   };
-}, { requireWorkspace: true });
+}, { requireCapabilities: [CAPABILITIES.SYSTEM_ADMIN], requireWorkspace: true });

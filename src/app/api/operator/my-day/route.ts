@@ -1,15 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import { ForbiddenError } from "@/infra/errors";
-import { requireCapability } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { getQueuedItems } from "@/services/operator/store";
 import { getMyDayItems } from "@/services/operator/myday";
-import { z } from "zod/v4";
-
-const queueParamsSchema = z.object({
-  status: z.enum(["pending", "in_progress", "blocked"]).optional(),
-  limit: z.number().min(1).max(1000).default(20),
-});
 
 /**
  * GET /api/operator/my-day
@@ -19,11 +10,6 @@ const queueParamsSchema = z.object({
  * Deterministic priority-based selection for daily action queue
  */
 export const GET = withCanonicalEnforcement(async (ctx) => {
-  // Enforce authorization
-  if (ctx.policy) {
-    requireCapability(ctx.policy, CAPABILITIES.ACTION_VIEW);
-  }
-
   const workspaceId = ctx.verifiedWorkspaceId;
 
   try {
@@ -49,4 +35,4 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
       { status: 500 }
     );
   }
-});
+}, { requireCapabilities: [CAPABILITIES.ACTION_VIEW], requireWorkspace: true });

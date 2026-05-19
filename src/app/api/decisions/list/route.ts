@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -62,5 +63,5 @@ export const GET = withCanonicalEnforcement(
       offset,
     };
   },
-  { requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.DECISION_VIEW], requireWorkspace: true }
 );

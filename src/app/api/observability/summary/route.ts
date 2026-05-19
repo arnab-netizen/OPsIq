@@ -2,6 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import type { NextRequest } from "next/server";
 import { requireWorkspaceContext } from "@/services/workspace/context";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { createEventLogger } from "@/lib/observability/log";
@@ -44,4 +45,4 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   });
 
   return summary;
-}, { requireWorkspace: true });
+}, { requireCapabilities: [CAPABILITIES.OWNER_VIEW], requireWorkspace: true });
