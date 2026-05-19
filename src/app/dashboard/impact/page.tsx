@@ -6,6 +6,7 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
 } from "@/lib/operator-error-governance";
+import { operatorTelemetry } from "@/infra/operator-telemetry";
 
 interface Metrics {
   summary: {
@@ -41,6 +42,28 @@ export default function DashboardImpactPage() {
   const [blockedDecisions, setBlockedDecisions] = useState<Decision[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pageVisitId, setPageVisitId] = useState<string>('');
+
+  useEffect(() => {
+    // Track page visit
+    const visitId = operatorTelemetry.trackPageVisit({
+      actorId: 'operator-unknown',
+      workspaceId: 'workspace-unknown',
+      page: '/dashboard/impact',
+    });
+    setPageVisitId(visitId);
+
+    return () => {
+      if (pageVisitId) {
+        operatorTelemetry.trackPageExit({
+          actorId: 'operator-unknown',
+          workspaceId: 'workspace-unknown',
+          page: '/dashboard/impact',
+          visitId: pageVisitId,
+        });
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {

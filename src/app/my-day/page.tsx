@@ -6,6 +6,8 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
 } from '@/lib/operator-error-governance';
+import { operatorTelemetry } from '@/infra/operator-telemetry';
+import { operatorFeedback } from '@/infra/operator-feedback';
 
 interface MyDayResponse {
   items: OperatorItem[];
@@ -28,11 +30,16 @@ export default function MyDayPage() {
   const [actingItemId, setActingItemId] = useState<string | null>(null);
   const [completingItemId, setCompletingItemId] = useState<string | null>(null);
   const [actualOutcome, setActualOutcome] = useState<string>('');
+  const [pageVisitId, setPageVisitId] = useState<string>('');
+  const [actionCountLocal, setActionCountLocal] = useState(0);
+  const [errorCountLocal, setErrorCountLocal] = useState(0);
 
   const fetchMyDay = async () => {
     try {
       setLoading(true);
       setError(null);
+      setActionCountLocal(0);
+      setErrorCountLocal(0);
 
       const response = await fetch('/api/operator/myday');
       const data = (await response.json()) as MyDayResponse | MyDayError;
@@ -57,7 +64,29 @@ export default function MyDayPage() {
   };
 
   useEffect(() => {
+    // Track page visit
+    const visitId = operatorTelemetry.trackPageVisit({
+      actorId: 'operator-unknown',
+      workspaceId: 'workspace-unknown',
+      page: '/my-day',
+    });
+    setPageVisitId(visitId);
+
     fetchMyDay();
+
+    // Track page exit on unmount
+    return () => {
+      if (pageVisitId) {
+        operatorTelemetry.trackPageExit({
+          actorId: 'operator-unknown',
+          workspaceId: 'workspace-unknown',
+          page: '/my-day',
+          visitId: pageVisitId,
+          actionCount: actionCountLocal,
+          errorCount: errorCountLocal,
+        });
+      }
+    };
   }, []);
 
   const handleAction = async (
@@ -68,6 +97,7 @@ export default function MyDayPage() {
     try {
       setActingItemId(itemId);
       setError(null);
+      setActionCountLocal((prev) => prev + 1);
 
       const payload: ActionRequest = {
         id: itemId,
@@ -86,11 +116,28 @@ export default function MyDayPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        setError(
-          errorData.error || `Failed to update item status to ${status}`
-        );
+        const errorMsg = errorData.error || `Failed to update item status to ${status}`;
+        setError(errorMsg);
+        setErrorCountLocal((prev) => prev + 1);
+        await operatorTelemetry.trackAction({
+          actorId: 'operator-unknown',
+          workspaceId: 'workspace-unknown',
+          actionType: `action_${status}`,
+          result: 'failure',
+          page: '/my-day',
+          errorMessage: errorMsg,
+        });
         return;
       }
+
+      // Track successful action
+      await operatorTelemetry.trackAction({
+        actorId: 'operator-unknown',
+        workspaceId: 'workspace-unknown',
+        actionType: `action_${status}`,
+        result: 'success',
+        page: '/my-day',
+      });
 
       // Reset completion form
       setCompletingItemId(null);
@@ -102,6 +149,15 @@ export default function MyDayPage() {
       const ctx: ErrorGovernanceContext = { context: 'save' };
       const govErr = classifyOperatorError(err, ctx);
       setError(govErr.operatorMessage);
+      setErrorCountLocal((prev) => prev + 1);
+      await operatorTelemetry.trackAction({
+        actorId: 'operator-unknown',
+        workspaceId: 'workspace-unknown',
+        actionType: `action_${status}`,
+        result: 'failure',
+        page: '/my-day',
+        errorMessage: govErr.operatorMessage,
+      });
     } finally {
       setActingItemId(null);
     }
@@ -337,6 +393,73 @@ export default function MyDayPage() {
             </p>
           </div>
         )}
+
+        {/* Feedback Section */}
+        <div className="mt-6 md:mt-8 rounded-lg border border-border bg-background p-3 md:p-4">
+          <p className="text-xs font-medium text-foreground mb-3">Help us improve</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={async () => {
+                await operatorFeedback.capture({
+                  feedbackType: 'confusing',
+                  actorId: 'operator-unknown',
+                  workspaceId: 'workspace-unknown',
+                  page: '/my-day',
+                  context: 'Queue interface or workflow unclear',
+                });
+                alert('Thank you for the feedback');
+              }}
+              className="px-3 py-1.5 rounded text-xs border border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
+            >
+              Confusing
+            </button>
+            <button
+              onClick={async () => {
+                await operatorFeedback.capture({
+                  feedbackType: 'not_sure',
+                  actorId: 'operator-unknown',
+                  workspaceId: 'workspace-unknown',
+                  page: '/my-day',
+                  context: 'Not clear what to do next',
+                });
+                alert('Thank you for the feedback');
+              }}
+              className="px-3 py-1.5 rounded text-xs border border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100"
+            >
+              Not Sure
+            </button>
+            <button
+              onClick={async () => {
+                await operatorFeedback.capture({
+                  feedbackType: 'need_help',
+                  actorId: 'operator-unknown',
+                  workspaceId: 'workspace-unknown',
+                  page: '/my-day',
+                  context: 'Need guidance or help',
+                });
+                alert('Support team notified');
+              }}
+              className="px-3 py-1.5 rounded text-xs border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+            >
+              Need Help
+            </button>
+            <button
+              onClick={async () => {
+                await operatorFeedback.capture({
+                  feedbackType: 'unexpected',
+                  actorId: 'operator-unknown',
+                  workspaceId: 'workspace-unknown',
+                  page: '/my-day',
+                  context: 'Result or behavior was unexpected',
+                });
+                alert('Thank you for the feedback');
+              }}
+              className="px-3 py-1.5 rounded text-xs border border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+            >
+              Unexpected
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

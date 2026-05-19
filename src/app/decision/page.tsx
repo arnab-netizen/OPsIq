@@ -11,6 +11,8 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
 } from '@/lib/operator-error-governance';
+import { operatorTelemetry } from '@/infra/operator-telemetry';
+import { operatorFeedback } from '@/infra/operator-feedback';
 
 interface FormValues {
   baselineRevenue: string;
@@ -66,6 +68,30 @@ export default function DecisionPage() {
 
   const [smartInsights, setSmartInsights] = useState<any>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  const [pageVisitId, setPageVisitId] = useState<string>('');
+  const [actionCountLocal, setActionCountLocal] = useState(0);
+
+  useEffect(() => {
+    // Track page visit
+    const visitId = operatorTelemetry.trackPageVisit({
+      actorId: 'operator-unknown',
+      workspaceId: 'workspace-unknown',
+      page: '/decision',
+    });
+    setPageVisitId(visitId);
+
+    return () => {
+      if (pageVisitId) {
+        operatorTelemetry.trackPageExit({
+          actorId: 'operator-unknown',
+          workspaceId: 'workspace-unknown',
+          page: '/decision',
+          visitId: pageVisitId,
+          actionCount: actionCountLocal,
+        });
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const fetchMetrics = async () => {
@@ -259,6 +285,17 @@ export default function DecisionPage() {
       console.log('Decision API response:', data);
       setResult(data);
       setError(null);
+      setActionCountLocal((prev) => prev + 1);
+
+      // Track successful decision creation
+      await operatorTelemetry.trackAction({
+        actorId: 'operator-unknown',
+        workspaceId: 'workspace-unknown',
+        actionType: 'decision_created',
+        result: 'success',
+        page: '/decision',
+      });
+
       // Set approved if decision was APPROVED and no violations
       const isApprovedDecision = data.decision?.decision === 'APPROVED' &&
                                  !data.guardrails?.blocked &&
@@ -271,6 +308,15 @@ export default function DecisionPage() {
       setError(govErr.operatorMessage);
       setResult(null);
       setIsApproved(false);
+
+      await operatorTelemetry.trackAction({
+        actorId: 'operator-unknown',
+        workspaceId: 'workspace-unknown',
+        actionType: 'decision_created',
+        result: 'failure',
+        page: '/decision',
+        errorMessage: govErr.operatorMessage,
+      });
     } finally {
       setLoading(false);
     }
