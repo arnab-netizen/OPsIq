@@ -1,8 +1,53 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { alphaDailyReview } from '@/infra/alpha-daily-review';
-import type { AlphaDailySummary } from '@/infra/alpha-daily-review';
+
+interface AlphaDailySummary {
+  date: string;
+  reportGeneratedAt: string;
+  operators: {
+    active: number;
+    totalSessionTime: number;
+    stats: Array<{
+      actorId: string;
+      actorName: string;
+      sessionTimeSeconds: number;
+      pagesVisited: number;
+      actionsCompleted: number;
+      actionsInitiated: number;
+      errorsEncountered: number;
+    }>;
+  };
+  workflows: {
+    completionRate: number;
+    stats: Array<{
+      workflow: string;
+      completions: number;
+      initiations: number;
+      completionRate: number;
+    }>;
+  };
+  support: {
+    totalIncidents: number;
+  };
+  errors: {
+    totalEncountered: number;
+    topErrors: Array<{
+      message: string;
+      count: number;
+      pages: string[];
+    }>;
+  };
+  feedback: {
+    totalSubmitted: number;
+    hotspots: Array<{
+      page: string;
+      feedbackCount: number;
+      topFeedbackTypes: string[];
+    }>;
+  };
+  recommendations: string[];
+}
 
 export default function AlphaReportPage() {
   const [report, setReport] = useState<AlphaDailySummary | null>(null);
@@ -14,11 +59,13 @@ export default function AlphaReportPage() {
       setLoading(true);
       setError(null);
 
-      const dailyReport = await alphaDailyReview.generateReport({
-        workspaceId: 'alpha-workspace-01',
-        date: new Date(),
-      });
+      const response = await fetch('/api/alpha/report?workspaceId=alpha-workspace-01');
 
+      if (!response.ok) {
+        throw new Error('Failed to fetch report');
+      }
+
+      const dailyReport = await response.json();
       setReport(dailyReport);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate report');

@@ -6,8 +6,6 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
 } from '@/lib/operator-error-governance';
-import { operatorTelemetry } from '@/infra/operator-telemetry';
-import { operatorFeedback } from '@/infra/operator-feedback';
 
 interface MyDayResponse {
   items: OperatorItem[];
@@ -64,27 +62,48 @@ export default function MyDayPage() {
   };
 
   useEffect(() => {
-    // Track page visit
-    const visitId = operatorTelemetry.trackPageVisit({
-      actorId: 'operator-unknown',
-      workspaceId: 'workspace-unknown',
-      page: '/my-day',
-    });
-    setPageVisitId(visitId);
+    const trackPageVisit = async () => {
+      try {
+        const res = await fetch('/api/telemetry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'pageVisit',
+            payload: {
+              actorId: 'operator-unknown',
+              workspaceId: 'workspace-unknown',
+              page: '/my-day',
+            },
+          }),
+        });
+        const data = await res.json();
+        setPageVisitId(data.visitId);
+      } catch (err) {
+        console.error('Failed to track page visit:', err);
+      }
+    };
 
+    trackPageVisit();
     fetchMyDay();
 
     // Track page exit on unmount
     return () => {
       if (pageVisitId) {
-        operatorTelemetry.trackPageExit({
-          actorId: 'operator-unknown',
-          workspaceId: 'workspace-unknown',
-          page: '/my-day',
-          visitId: pageVisitId,
-          actionCount: actionCountLocal,
-          errorCount: errorCountLocal,
-        });
+        fetch('/api/telemetry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'pageExit',
+            payload: {
+              actorId: 'operator-unknown',
+              workspaceId: 'workspace-unknown',
+              page: '/my-day',
+              visitId: pageVisitId,
+              actionCount: actionCountLocal,
+              errorCount: errorCountLocal,
+            },
+          }),
+        }).catch((err) => console.error('Failed to track page exit:', err));
       }
     };
   }, []);
@@ -119,24 +138,38 @@ export default function MyDayPage() {
         const errorMsg = errorData.error || `Failed to update item status to ${status}`;
         setError(errorMsg);
         setErrorCountLocal((prev) => prev + 1);
-        await operatorTelemetry.trackAction({
-          actorId: 'operator-unknown',
-          workspaceId: 'workspace-unknown',
-          actionType: `action_${status}`,
-          result: 'failure',
-          page: '/my-day',
-          errorMessage: errorMsg,
+        await fetch('/api/telemetry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'trackAction',
+            payload: {
+              actorId: 'operator-unknown',
+              workspaceId: 'workspace-unknown',
+              actionType: `action_${status}`,
+              result: 'failure',
+              page: '/my-day',
+              errorMessage: errorMsg,
+            },
+          }),
         });
         return;
       }
 
       // Track successful action
-      await operatorTelemetry.trackAction({
-        actorId: 'operator-unknown',
-        workspaceId: 'workspace-unknown',
-        actionType: `action_${status}`,
-        result: 'success',
-        page: '/my-day',
+      await fetch('/api/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'trackAction',
+          payload: {
+            actorId: 'operator-unknown',
+            workspaceId: 'workspace-unknown',
+            actionType: `action_${status}`,
+            result: 'success',
+            page: '/my-day',
+          },
+        }),
       });
 
       // Reset completion form
@@ -400,12 +433,16 @@ export default function MyDayPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={async () => {
-                await operatorFeedback.capture({
-                  feedbackType: 'confusing',
-                  actorId: 'operator-unknown',
-                  workspaceId: 'workspace-unknown',
-                  page: '/my-day',
-                  context: 'Queue interface or workflow unclear',
+                await fetch('/api/feedback', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    feedbackType: 'confusing',
+                    actorId: 'operator-unknown',
+                    workspaceId: 'workspace-unknown',
+                    page: '/my-day',
+                    context: 'Queue interface or workflow unclear',
+                  }),
                 });
                 alert('Thank you for the feedback');
               }}
@@ -415,12 +452,16 @@ export default function MyDayPage() {
             </button>
             <button
               onClick={async () => {
-                await operatorFeedback.capture({
-                  feedbackType: 'not_sure',
-                  actorId: 'operator-unknown',
-                  workspaceId: 'workspace-unknown',
-                  page: '/my-day',
-                  context: 'Not clear what to do next',
+                await fetch('/api/feedback', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    feedbackType: 'not_sure',
+                    actorId: 'operator-unknown',
+                    workspaceId: 'workspace-unknown',
+                    page: '/my-day',
+                    context: 'Not clear what to do next',
+                  }),
                 });
                 alert('Thank you for the feedback');
               }}
@@ -430,12 +471,16 @@ export default function MyDayPage() {
             </button>
             <button
               onClick={async () => {
-                await operatorFeedback.capture({
-                  feedbackType: 'need_help',
-                  actorId: 'operator-unknown',
-                  workspaceId: 'workspace-unknown',
-                  page: '/my-day',
-                  context: 'Need guidance or help',
+                await fetch('/api/feedback', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    feedbackType: 'need_help',
+                    actorId: 'operator-unknown',
+                    workspaceId: 'workspace-unknown',
+                    page: '/my-day',
+                    context: 'Need guidance or help',
+                  }),
                 });
                 alert('Support team notified');
               }}
@@ -445,12 +490,16 @@ export default function MyDayPage() {
             </button>
             <button
               onClick={async () => {
-                await operatorFeedback.capture({
-                  feedbackType: 'unexpected',
-                  actorId: 'operator-unknown',
-                  workspaceId: 'workspace-unknown',
-                  page: '/my-day',
-                  context: 'Result or behavior was unexpected',
+                await fetch('/api/feedback', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    feedbackType: 'unexpected',
+                    actorId: 'operator-unknown',
+                    workspaceId: 'workspace-unknown',
+                    page: '/my-day',
+                    context: 'Result or behavior was unexpected',
+                  }),
                 });
                 alert('Thank you for the feedback');
               }}
