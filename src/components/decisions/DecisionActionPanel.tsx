@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toOperatorSafeError } from "@/src/lib/operator-safe-errors";
 
 interface DecisionActionPanelProps {
   decisionId: string;
@@ -27,7 +28,8 @@ async function evaluateDecision(decisionId: string): Promise<{ success: boolean;
     const data = await res.json();
     return { success: true, data: data as EvaluationResult };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Error evaluating decision" };
+    const safeError = toOperatorSafeError(err, "decision");
+    return { success: false, error: safeError.error };
   }
 }
 
@@ -42,7 +44,8 @@ async function approveDecision(decisionId: string) {
     if (!res.ok) throw new Error("Failed to approve decision");
     return { success: true };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Error approving decision" };
+    const safeError = toOperatorSafeError(err, "decision");
+    return { success: false, error: safeError.error };
   }
 }
 
@@ -61,7 +64,8 @@ async function overrideDecision(decisionId: string, reason: string) {
     if (!res.ok) throw new Error("Failed to override decision");
     return { success: true };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Error overriding decision" };
+    const safeError = toOperatorSafeError(err, "decision");
+    return { success: false, error: safeError.error };
   }
 }
 
@@ -76,7 +80,8 @@ async function rejectDecision(decisionId: string) {
     if (!res.ok) throw new Error("Failed to reject decision");
     return { success: true };
   } catch (err) {
-    return { success: false, error: err instanceof Error ? err.message : "Error rejecting decision" };
+    const safeError = toOperatorSafeError(err, "decision");
+    return { success: false, error: safeError.error };
   }
 }
 
