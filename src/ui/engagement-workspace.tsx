@@ -1,4 +1,5 @@
 "use client";
+import { classifyOperatorError, type ErrorGovernanceContext } from "@/src/lib/operator-error-governance";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -96,7 +97,7 @@ export function EngagementWorkspace({
       setKPIs(kpisData);
       setEvidence(evidenceData.items ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const ctx: ErrorGovernanceContext = { context: "load" }; setError(classifyOperatorError(err, ctx).operatorMessage);
     } finally {
       setIsLoading(false);
     }

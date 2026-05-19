@@ -45,7 +45,7 @@ export default function SettingsPage() {
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        setError(classifyOperatorError(err, { context: "load" }).operatorMessage);
         setLoading(false);
       });
   }, []);
