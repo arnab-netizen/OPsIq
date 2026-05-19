@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { Badge, Button } from "@/ui/primitives";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/src/lib/operator-error-governance";
 
 interface Recommendation {
   id: string;
@@ -74,8 +78,13 @@ export function RecommendationsManager({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        const errorMessage = errorData?.error?.message || "Failed to update recommendation";
-        setErrors({ [recommendationId]: errorMessage });
+        const error = new Error(errorData?.error?.message || "Failed to update recommendation");
+        const context: ErrorGovernanceContext = {
+          context: "action",
+          resourceId: recommendationId,
+        };
+        const governed = classifyOperatorError(error, context);
+        setErrors({ [recommendationId]: governed.operatorMessage });
         return;
       }
 
@@ -95,8 +104,12 @@ export function RecommendationsManager({
 
       onRecommendationUpdated?.();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to update recommendation";
-      setErrors({ [recommendationId]: errorMessage });
+      const context: ErrorGovernanceContext = {
+        context: "action",
+        resourceId: recommendationId,
+      };
+      const governed = classifyOperatorError(err, context);
+      setErrors({ [recommendationId]: governed.operatorMessage });
     } finally {
       setUpdating(null);
     }

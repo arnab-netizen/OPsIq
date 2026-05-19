@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { Badge, Button } from "@/ui/primitives";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/src/lib/operator-error-governance";
 
 interface Action {
   id: string;
@@ -134,8 +138,13 @@ export function ActionCenter({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        const errorMessage = errorData?.error?.message || "Failed to update action";
-        setErrors({ [actionId]: errorMessage });
+        const error = new Error(errorData?.error?.message || "Failed to update action");
+        const context: ErrorGovernanceContext = {
+          context: "action",
+          resourceId: actionId,
+        };
+        const governed = classifyOperatorError(error, context);
+        setErrors({ [actionId]: governed.operatorMessage });
         return;
       }
 
