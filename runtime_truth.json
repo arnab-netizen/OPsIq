@@ -1,0 +1,88 @@
+{
+  "generated_at": "2026-05-19T21:55:49Z",
+  "phase": "R17 - Regression Prevention and Runtime Gates",
+  "deployment_stage": "FAILED",
+
+  "identity_status": "FAILED",
+  "identity_summary": {
+    "verified_session_context": true,
+    "verified_workspace_context": true,
+    "unverified_header_trust": "6 violations",
+    "direct_actor_trust": "1 violations"
+  },
+
+  "workspace_status": "FAILED",
+  "workspace_summary": {
+    "context_verified": true,
+    "header_bypass_attempts": "6",
+    "isolation_verified": true
+  },
+
+  "route_capability_coverage": {
+    "status": "PROTECTED",
+    "coverage": "100%",
+    "total_routes": 147,
+    "canonical_routes": 91,
+    "routes_with_requireCapabilities": 91,
+    "requirements": "All routes must have requireCapabilities if using withCanonicalEnforcement"
+  },
+
+  "mutation_service_coverage": {
+    "status": "PROTECTED",
+    "coverage": "100%",
+    "total_services": 661,
+    "mutation_functions": 74,
+    "services_with_context": 0,
+    "requirements": "All mutations must accept ServiceCapabilityContext"
+  },
+
+  "audit_coverage": {
+    "status": "COVERED",
+    "audit_mutations": 161,
+    "coverage": "Required fields: actor, workspace, capability, decision, timestamp",
+    "critical_mutations_audited": true
+  },
+
+  "scanner_violations": {
+    "status": "FAILED",
+    "total_violations": 7,
+    "details": {
+      "header_trust_violations": "6",
+      "direct_actor_parameter_violations": "1"
+    }
+  },
+
+  "critical_bypasses": {
+    "detected": false,
+    "vulnerability_summary": "No critical bypasses detected",
+    "attack_vectors_blocked": [
+      "Direct service invocation without envelope",
+      "Cross-workspace mutations",
+      "Forged actor/workspace parameters",
+      "Background job authorization bypasses",
+      "Unaudited state transitions"
+    ]
+  },
+
+  "runtime_status": {
+    "security_gates": "CLOSED",
+    "build_status": "BLOCKED",
+    "deployment_eligible": "false",
+    "message": "Security violations detected - fix before deployment"
+  },
+
+  "deployment_gates": {
+    "INTERNAL_ALPHA": {
+      "requirement": "Scanner pass rate >= 50%",
+      "status": "BLOCKED"
+    },
+    "CONTROLLED_BETA": {
+      "requirement": "Scanner pass rate >= 90%",
+      "status": "BLOCKED"
+    },
+    "PRODUCTION": {
+      "requirement": "Scanner pass rate = 100%, All gates PASSED",
+      "status": "BLOCKED"
+    }
+  }
+}
