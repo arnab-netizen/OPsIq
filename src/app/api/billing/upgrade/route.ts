@@ -3,6 +3,8 @@ import { ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { db } from "@/lib/db";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { emitAuditEvent } from "@/infra/audit";
+import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 
 async function getStripe() {
   const apiKey = process.env.STRIPE_API_KEY;
@@ -92,6 +94,21 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         where: { id: billingAccount.id },
         data: { stripeCustomerId },
       });
+
+      // Audit: Billing account setup with Stripe customer
+      await emitAuditEvent({
+        eventName: AUDIT_EVENTS.BILLING_UPDATED,
+        actorId: userId,
+        entityType: "billingAccount",
+        entityId: billingAccount.id,
+        workspaceId,
+        payload: {
+          action: "stripe_customer_created",
+          stripeCustomerId,
+          planId: plan.id,
+        },
+        visibility: "internal",
+      });
     } catch (stripeError) {
       logger.error("Failed to create Stripe customer", {
         workspaceId,
@@ -120,6 +137,22 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       workspaceId,
       sessionId: session.id,
       planId: plan.id,
+    });
+
+    // Audit: Checkout session initiated
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.BILLING_UPDATED,
+      actorId: userId,
+      entityType: "checkoutSession",
+      entityId: session.id,
+      workspaceId,
+      payload: {
+        action: "checkout_session_created",
+        planId: plan.id,
+        amount: plan.monthlyPrice,
+        currency: plan.currency,
+      },
+      visibility: "internal",
     });
 
     return {
