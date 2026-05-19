@@ -1,5 +1,6 @@
 import { UnauthorizedError } from "@/infra/errors";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   getItems,
   updateItem,
@@ -20,34 +21,39 @@ import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError 
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 
-export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  const workspaceId = ctx.verifiedWorkspaceId;
-  const logger = createEventLogger("api_operator_get", workspaceId);
+export const GET = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    const workspaceId = ctx.verifiedWorkspaceId;
+    const logger = createEventLogger("api_operator_get", workspaceId);
 
-  const items = await getItems();
-  const sorted = sortByPriority(items);
+    const items = await getItems();
+    const sorted = sortByPriority(items);
 
-  logger.success({ itemCount: sorted.length });
-  return sorted;
-});
+    logger.success({ itemCount: sorted.length });
+    return sorted;
+  },
+  // R15: Require ACTION_VIEW capability
+  { requireCapabilities: [CAPABILITIES.ACTION_VIEW], requireWorkspace: true }
+);
 
-export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  if (!ctx.request) {
-    throw new Error("Request object not available");
-  }
+export const POST = withCanonicalEnforcement(
+  async (ctx: CanonicalAuthContext) => {
+    if (!ctx.request) {
+      throw new Error("Request object not available");
+    }
 
-  let logger: ReturnType<typeof createEventLogger> | null = null;
-  let workspaceId: string | null = null;
-  let id: string | null = null;
-  let idempotencyKey: string | null = null;
+    let logger: ReturnType<typeof createEventLogger> | null = null;
+    let workspaceId: string | null = null;
+    let id: string | null = null;
+    let idempotencyKey: string | null = null;
 
-  // Check idempotency key (required)
-  idempotencyKey = ctx.request.headers.get("idempotency-key");
-  if (!idempotencyKey) {
-    throw new Error("idempotency-key header required");
-  }
+    // Check idempotency key (required)
+    idempotencyKey = ctx.request.headers.get("idempotency-key");
+    if (!idempotencyKey) {
+      throw new Error("idempotency-key header required");
+    }
 
-  const body = await ctx.request.json();
+    const body = await ctx.request.json();
   id = body.id;
   const { status, actualOutcome, approvalRequired } = body;
 

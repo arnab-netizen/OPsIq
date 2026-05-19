@@ -9,7 +9,7 @@ export const GET = withCanonicalEnforcement(
     const { engagementId } = params;
     parseOrThrow(uuidSchema, engagementId);
 
-    const workspaceId = ctx.request!.headers.get("x-workspace-id") ||
+    const workspaceId = ctx.verifiedWorkspaceId ||
                         ctx.request!.nextUrl.searchParams.get("workspaceId");
     if (!workspaceId) {
       throw new Error("Workspace ID required");

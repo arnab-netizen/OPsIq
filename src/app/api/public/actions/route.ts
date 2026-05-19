@@ -22,7 +22,7 @@ const querySchema = z.object({
 
 export const GET = withEnforcementFull(async (request) => {
   const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   if (!workspaceId) {
     return Response.json(

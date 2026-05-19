@@ -17,7 +17,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate user with capability (fail-closed)
   await withAuth({ capability: CAPABILITIES.WEBHOOK_MANAGE });
 
-  const workspaceId = request.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
   if (!workspaceId) {
     throw new Error("Workspace ID required");
   }

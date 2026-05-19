@@ -23,7 +23,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     internalOnly: true,
   });
 
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  const workspaceId = ctx.verifiedWorkspaceId || "";
 
   // Check capability: decision_engine
   const capabilityCheck = await assertCapability(workspaceId, "decision_engine");

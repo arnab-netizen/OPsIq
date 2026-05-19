@@ -28,7 +28,7 @@ export const POST = withEnforcementFull(async (request) => {
   const body = await parseRequestBody(request, runConsultingEngineSchema);
   parseOrThrow(uuidSchema, body.engagementId);
 
-  const workspaceId = request.headers.get("x-workspace-id") || "";
+  const workspaceId = ctx.verifiedWorkspaceId || "";
 
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,

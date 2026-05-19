@@ -18,7 +18,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   const { session } = await withAuth();
 
   // Validate workspace membership (fail-closed)
-  const workspaceId = request.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
   if (!workspaceId) {
     throw new UnauthorizedError("Workspace ID is required (x-workspace-id header)");
   }
