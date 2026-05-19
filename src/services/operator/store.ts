@@ -97,9 +97,12 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OPERATOR_ITEM_CREATED,
       actorId: item.createdBy,
+      workspaceId: item.workspaceId,
+      capability: "OPERATOR_CREATE",
+      decision: "operator_item_created",
+      requestId: context?.requestId,
       entityType: "operator_item",
       entityId: created.id,
-      workspaceId: item.workspaceId,
       payload: {
         problem: item.problem,
         action: item.action,
@@ -243,12 +246,14 @@ export async function updateItem(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OPERATOR_ITEM_UPDATED,
     actorId: item.lastUpdatedBy || item.createdBy || "system",
+    workspaceId: item.workspaceId,
+    capability: 'OPERATOR_UPDATE',
+    decision: 'operator_item_updated',
+    requestId: context?.requestId,
     entityType: "operator_item",
     entityId: id,
-    workspaceId: item.workspaceId,
     payload: payloadFields,
     visibility: 'internal',
-    capability: 'mutation',
   ,
     requestId: randomUUID()
   }.catch((error) => {
@@ -365,9 +370,12 @@ export async function applyOverride(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OPERATOR_ITEM_OVERRIDDEN,
     actorId: resolvedActorId,
+    workspaceId: resolvedWorkspaceId,
+    capability: 'OPERATOR_OVERRIDE',
+    decision: 'operator_item_overridden',
+    requestId: context?.requestId,
     entityType: "operator_item",
     entityId: id,
-    workspaceId: resolvedWorkspaceId,
     payload: {
       previousAction: item.action,
       newAction,
@@ -525,9 +533,12 @@ export async function addBlockedDecision(params: {
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.OPERATOR_ITEM_BLOCKED,
     actorId: params.createdBy,
+    workspaceId: params.workspaceId,
+    capability: 'OPERATOR_BLOCK',
+    decision: 'operator_item_blocked',
+    requestId: params.requestId,
     entityType: "operator_item",
     entityId: created.id,
-    workspaceId: params.workspaceId,
     payload: {
       blockStage: params.blockStage,
       blockReason: params.blockReason,

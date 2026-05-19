@@ -216,9 +216,12 @@ export async function recordImpactWithGating(
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.DECISION_IMPACT_PROJECTED,
         actorId: authContext.verifiedActorId,
+        workspaceId,
+        capability: "DECISION_MANAGE",
+        decision: "impact_projected",
+        requestId: authContext.requestId,
         entityType: "decision",
         entityId: decisionId,
-        workspaceId,
         payload: { expectedValue: request.expectedOutcomeValue },
         visibility: "internal",
       });
@@ -265,9 +268,12 @@ export async function recordImpactWithGating(
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.DECISION_IMPACT_REALIZED,
         actorId: authContext.verifiedActorId,
+        workspaceId,
+        capability: "DECISION_MANAGE",
+        decision: "impact_realized",
+        requestId: authContext.requestId,
         entityType: "decision",
         entityId: decisionId,
-        workspaceId,
         payload: { actualValue: actualOutcomeValue, actualOutcome },
         visibility: "internal",
       });
@@ -360,9 +366,12 @@ export async function recordROIWithGating(
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.DECISION_ROI_RECORDED,
       actorId: authContext.verifiedActorId,
+      workspaceId,
+      capability: "DECISION_MANAGE",
+      decision: "roi_recorded",
+      requestId: authContext.requestId,
       entityType: "decision",
       entityId: decisionId,
-      workspaceId,
       payload: { roiValue, isFinal: markFinal },
       visibility: "internal",
     });

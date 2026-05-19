@@ -50,9 +50,12 @@ export async function createDeliverable(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.DELIVERABLE_CREATED,
     actorId: auth.verifiedActorId,
+    workspaceId: auth.verifiedWorkspaceId,
+    capability: "DELIVERABLE_CREATE",
+    decision: "deliverable_created",
+    requestId: auth.requestId,
     entityType: "deliverable",
     entityId: deliverable.id,
-    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       engagementId: input.engagementId,
       title: input.title,
@@ -139,9 +142,12 @@ export async function updateDeliverableReviewStatus(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.DELIVERABLE_APPROVED,
     actorId: auth.verifiedActorId,
+    workspaceId: auth.verifiedWorkspaceId,
+    capability: "DELIVERABLE_APPROVE",
+    decision: "deliverable_approved",
+    requestId: auth.requestId,
     entityType: "deliverable",
     entityId: deliverableId,
-    workspaceId: auth.verifiedWorkspaceId,
     payload: {
       status: "approved",
     },

@@ -789,9 +789,12 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
   emitAuditEvent({
     eventName: AUDIT_EVENTS.DIAGNOSIS_COMPLETED,
     actorId,
+    workspaceId: validatedWorkspaceId,
+    capability: "DIAGNOSIS_CREATE",
+    decision: "diagnosis_completed",
+    requestId: authContext?.requestId,
     entityType: "Engagement",
     entityId: engagement.id,
-    workspaceId: validatedWorkspaceId,
     payload: {
       businessProblem: input,
       severity,

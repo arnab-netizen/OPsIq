@@ -136,9 +136,12 @@ export async function addMember(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ENGAGEMENT_MEMBER_ADDED,
     actorId,
+    workspaceId: engagement?.workspaceId,
+    capability: 'ENGAGEMENT_MEMBER_ADD',
+    decision: 'engagement_member_added',
+    requestId: authContext?.requestId,
     entityType: "engagement_membership",
     entityId: result.result.id,
-    workspaceId: engagement?.workspaceId,
     payload: {
       userId: input.userId,
       engagementId: input.engagementId,
@@ -223,9 +226,12 @@ export async function removeMember(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ENGAGEMENT_MEMBER_REMOVED,
     actorId,
+    workspaceId: engagement?.workspaceId,
+    capability: 'ENGAGEMENT_MEMBER_REMOVE',
+    decision: 'engagement_member_removed',
+    requestId: authContext?.requestId,
     entityType: "engagement_membership",
     entityId: membership.id,
-    workspaceId: engagement?.workspaceId,
     payload: {
       userId: input.userId,
       engagementId: input.engagementId,
