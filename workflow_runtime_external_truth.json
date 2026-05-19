@@ -1,0 +1,1041 @@
+{
+  "generated_at": "2026-05-19T22:39:59.739Z",
+  "phase": "R22 - External Truth Closure",
+  "execution_mode": "FAIL_CLOSED",
+  "total_dependencies": 10,
+  "infrastructure_ready": 7,
+  "production_verified": 0,
+  "dependencies": [
+    {
+      "dependency": "Real Session Login",
+      "status": "NOT_VERIFIED",
+      "infrastructure": {
+        "code_exists": true,
+        "handlers_implemented": true,
+        "error_handling": false,
+        "logging": true
+      },
+      "evidence": {
+        "real_execution_tested": false,
+        "actual_ids_captured": false,
+        "actual_timestamps": false,
+        "actual_logs": false,
+        "actual_traces": false
+      },
+      "required_for_closure": [
+        "actual_ids_captured",
+        "actual_timestamps",
+        "actual_logs",
+        "real_execution_tested"
+      ],
+      "failures": [
+        "requires_production_execution"
+      ],
+      "pass": false,
+      "notes": [
+        "Requires production/staging execution",
+        "Real IDs, timestamps, logs, and traces must be captured",
+        "Cannot pass without actual execution evidence"
+      ]
+    },
+    {
+      "dependency": "Real Browser Rendering",
+      "status": "NOT_VERIFIED",
+      "infrastructure": {
+        "code_exists": true,
+        "handlers_implemented": true,
+        "error_handling": false,
+        "logging": false
+      },
+      "evidence": {
+        "real_execution_tested": false,
+        "actual_ids_captured": false,
+        "actual_timestamps": false,
+        "actual_logs": false,
+        "actual_traces": false
+      },
+      "required_for_closure": [
+        "actual_ids_captured",
+        "actual_timestamps",
+        "actual_logs",
+        "real_execution_tested"
+      ],
+      "failures": [
+        "requires_production_execution"
+      ],
+      "pass": false,
+      "notes": [
+        "Requires production/staging execution",
+        "Real IDs, timestamps, logs, and traces must be captured",
+        "Cannot pass without actual execution evidence"
+      ]
+    },
+    {
+      "dependency": "Real Page Hydration",
+      "status": "NOT_VERIFIED",
+      "infrastructure": {
+        "code_exists": true,
+        "handlers_implemented": false,
+        "error_handling": false,
+        "logging": false
+      },
+      "evidence": {
+        "real_execution_tested": false,
+        "actual_ids_captured": false,
+        "actual_timestamps": false,
+        "actual_logs": false,
+        "actual_traces": false
+      },
+      "required_for_closure": [
+        "actual_ids_captured",
+        "actual_timestamps",
+        "actual_logs",
+        "real_execution_tested"
+      ],
+      "failures": [
+        "requires_production_execution"
+      ],
+      "pass": false,
+      "notes": [
+        "Requires production/staging execution",
+        "Real IDs, timestamps, logs, and traces must be captured",
+        "Cannot pass without actual execution evidence"
+      ]
+    },
+    {
+      "dependency": "Real Stripe Webhook",
+      "status": "NOT_VERIFIED",
+      "infrastructure": {
+        "code_exists": true,
+        "handlers_implemented": true,
+        "error_handling": true,
+        "logging": true
+      },
+      "evidence": {
+        "real_execution_tested": false,
+        "actual_ids_captured": false,
+        "actual_timestamps": false,
+        "actual_logs": false,
+        "actual_traces": false
+      },
+      "required_for_closure": [
+        "actual_ids_captured",
+        "actual_timestamps",
+        "actual_logs",
+        "real_execution_tested"
+      ],
+      "failures": [
+        "requires_production_execution"
+      ],
+      "pass": false,
+      "notes": [
+        "Requires production/staging execution",
+        "Real IDs, timestamps, logs, and traces must be captured",
+        "Cannot pass without actual execution evidence"
+      ]
+    },
+    {
+      "dependency": "Real Subscription Lifecycle",
+      "status": "NOT_VERIFIED",
+      "infrastructure": {
+        "code_exists": true,
+        "handlers_implemented": false,
+        "error_handling": true,
+        "logging": true
+      },
+      "evidence": {
+        "real_execution_tested": false,
+        "actual_ids_captured": false,
+        "actual_timestamps": false,
+        "actual_logs": false,
+        "actual_traces": false
+      },
+      "required_for_closure": [
+        "actual_ids_captured",
+        "actual_timestamps",
+        "actual_logs",
+        "real_execution_tested"
+      ],
+      "failures": [
+        "requires_production_execution"
+      ],
+      "pass": false,
+      "notes": [
+        "Requires production/staging execution",
+        "Real IDs, timestamps, logs, and traces must be captured",
+        "Cannot pass without actual execution evidence"
+      ]
+    },
+    {
+      "dependency": "Real Scheduled Jobs",
+      "status": "NOT_VERIFIED",
+      "infrastructure": {
+        "code_exists": false,
+        "handlers_implemented": true,
+        "error_handling": false,
+        "logging": false
+      },
+      "evidence": {
+        "real_execution_tested": false,
+        "actual_ids_captured": false,
+        "actual_timestamps": false,
+        "actual_logs": false,
+        "actual_traces": false
+      },
+      "required_for_closure": [
+        "actual_ids_captured",
+        "actual_timestamps",
+        "actual_logs",
+        "real_execution_tested"
+      ],
+      "failures": [
+        "requires_production_execution"
+      ],
+      "pass": false,
+      "notes": [
+        "Requires production/staging execution",
+        "Real IDs, timestamps, logs, and traces must be captured",
+        "Cannot pass without actual execution evidence"
+      ]
+    },
+    {
+      "dependency": "Real Deployment Health",
+      "status": "NOT_VERIFIED",
+      "infrastructure": {
+        "code_exists": true,
+        "handlers_implemented": true,
+        "error_handling": true,
+        "logging": true
+      },
+      "evidence": {
+        "real_execution_tested": false,
+        "actual_ids_captured": false,
+        "actual_timestamps": false,
+        "actual_logs": false,
+        "actual_traces": false
+      },
+      "required_for_closure": [
+        "actual_ids_captured",
+        "actual_timestamps",
+        "actual_logs",
+        "real_execution_tested"
+      ],
+      "failures": [
+        "requires_production_execution"
+      ],
+      "pass": false,
+      "notes": [
+        "Requires production/staging execution",
+        "Real IDs, timestamps, logs, and traces must be captured",
+        "Cannot pass without actual execution evidence"
+      ]
+    },
+    {
+      "dependency": "Real Database Persistence",
+      "status": "NOT_VERIFIED",
+      "infrastructure": {
+        "code_exists": true,
+        "handlers_implemented": true,
+        "error_handling": true,
+        "logging": false
+      },
+      "evidence": {
+        "real_execution_tested": false,
+        "actual_ids_captured": false,
+        "actual_timestamps": false,
+        "actual_logs": false,
+        "actual_traces": false
+      },
+      "required_for_closure": [
+        "actual_ids_captured",
+        "actual_timestamps",
+        "actual_logs",
+        "real_execution_tested"
+      ],
+      "failures": [
+        "requires_production_execution"
+      ],
+      "pass": false,
+      "notes": [
+        "Requires production/staging execution",
+        "Real IDs, timestamps, logs, and traces must be captured",
+        "Cannot pass without actual execution evidence"
+      ]
+    },
+    {
+      "dependency": "Real Restart Recovery",
+      "status": "NOT_VERIFIED",
+      "infrastructure": {
+        "code_exists": false,
+        "handlers_implemented": true,
+        "error_handling": false,
+        "logging": false
+      },
+      "evidence": {
+        "real_execution_tested": false,
+        "actual_ids_captured": false,
+        "actual_timestamps": false,
+        "actual_logs": false,
+        "actual_traces": false
+      },
+      "required_for_closure": [
+        "actual_ids_captured",
+        "actual_timestamps",
+        "actual_logs",
+        "real_execution_tested"
+      ],
+      "failures": [
+        "requires_production_execution"
+      ],
+      "pass": false,
+      "notes": [
+        "Requires production/staging execution",
+        "Real IDs, timestamps, logs, and traces must be captured",
+        "Cannot pass without actual execution evidence"
+      ]
+    },
+    {
+      "dependency": "Real Operator Session Replay",
+      "status": "NOT_VERIFIED",
+      "infrastructure": {
+        "code_exists": false,
+        "handlers_implemented": true,
+        "error_handling": false,
+        "logging": false
+      },
+      "evidence": {
+        "real_execution_tested": false,
+        "actual_ids_captured": false,
+        "actual_timestamps": false,
+        "actual_logs": false,
+        "actual_traces": false
+      },
+      "required_for_closure": [
+        "actual_ids_captured",
+        "actual_timestamps",
+        "actual_logs",
+        "real_execution_tested"
+      ],
+      "failures": [
+        "requires_production_execution"
+      ],
+      "pass": false,
+      "notes": [
+        "Requires production/staging execution",
+        "Real IDs, timestamps, logs, and traces must be captured",
+        "Cannot pass without actual execution evidence"
+      ]
+    }
+  ],
+  "summary": {
+    "all_infrastructure_ready": false,
+    "production_execution_needed": 10,
+    "production_verified_count": 0,
+    "evidence_template_available": true,
+    "fail_closed_enforced": true
+  },
+  "next_steps": [
+    "1. Deploy to production/staging environment",
+    "2. Execute each test scenario with real data",
+    "3. Capture actual IDs from database",
+    "4. Capture actual timestamps from system clock",
+    "5. Capture actual logs from application",
+    "6. Capture actual request traces from HTTP layer",
+    "7. Capture actual database rows",
+    "8. Verify all evidence matches requirements",
+    "9. Record evidence in workflow_runtime_external_truth.json",
+    "10. Mark dependency as verified only if all evidence present"
+  ],
+  "evidence_templates": [
+    {
+      "dependency": "Real Session Login",
+      "execution_timestamp": "2026-05-19T00:00:00.000Z",
+      "evidence": {
+        "session_login": {
+          "request_id": "actual-request-id-from-http-logs",
+          "user_id": "actual-user-id-from-db",
+          "session_id": "actual-session-id-from-db",
+          "session_token": "***redacted***",
+          "created_at": "timestamp-from-session-table",
+          "ip_address": "actual-ip-from-request",
+          "user_agent": "actual-user-agent",
+          "cookies_set": true,
+          "audit_event_id": "actual-audit-event-id",
+          "source": "database_query"
+        },
+        "webhook_execution": {
+          "webhook_id": "actual-webhook-id",
+          "event_type": "charge.succeeded",
+          "timestamp": "actual-webhook-timestamp",
+          "request_signature": "verified-stripe-signature",
+          "http_status": 200,
+          "response_time_ms": "actual-milliseconds",
+          "audit_trail": "actual-audit-event-id",
+          "source": "stripe-webhook-logs"
+        },
+        "stripe_lifecycle": {
+          "customer_id": "actual-stripe-customer-id",
+          "subscription_id": "actual-stripe-subscription-id",
+          "invoice_id": "actual-stripe-invoice-id",
+          "status_changes": [
+            {
+              "from": "trialing",
+              "to": "active",
+              "timestamp": "actual"
+            },
+            {
+              "from": "active",
+              "to": "past_due",
+              "timestamp": "actual"
+            }
+          ],
+          "payment_method_id": "actual-payment-method-id",
+          "source": "stripe-api-responses"
+        },
+        "database_persistence": {
+          "table": "workspace",
+          "row_id": "actual-workspace-id",
+          "pre_restart_checksum": "actual-data-hash",
+          "post_restart_checksum": "actual-data-hash",
+          "data_integrity": "verified",
+          "restart_timestamp": "actual-timestamp",
+          "source": "database_snapshot"
+        },
+        "deployment_health": {
+          "instance_id": "actual-deployment-id",
+          "health_check_url": "/api/health",
+          "response_code": 200,
+          "response_time_ms": "actual-ms",
+          "dependencies_healthy": {
+            "database": true,
+            "cache": true,
+            "auth_service": true
+          },
+          "timestamp": "actual-timestamp",
+          "source": "health-check-endpoint"
+        }
+      }
+    },
+    {
+      "dependency": "Real Browser Rendering",
+      "execution_timestamp": "2026-05-19T00:00:00.000Z",
+      "evidence": {
+        "session_login": {
+          "request_id": "actual-request-id-from-http-logs",
+          "user_id": "actual-user-id-from-db",
+          "session_id": "actual-session-id-from-db",
+          "session_token": "***redacted***",
+          "created_at": "timestamp-from-session-table",
+          "ip_address": "actual-ip-from-request",
+          "user_agent": "actual-user-agent",
+          "cookies_set": true,
+          "audit_event_id": "actual-audit-event-id",
+          "source": "database_query"
+        },
+        "webhook_execution": {
+          "webhook_id": "actual-webhook-id",
+          "event_type": "charge.succeeded",
+          "timestamp": "actual-webhook-timestamp",
+          "request_signature": "verified-stripe-signature",
+          "http_status": 200,
+          "response_time_ms": "actual-milliseconds",
+          "audit_trail": "actual-audit-event-id",
+          "source": "stripe-webhook-logs"
+        },
+        "stripe_lifecycle": {
+          "customer_id": "actual-stripe-customer-id",
+          "subscription_id": "actual-stripe-subscription-id",
+          "invoice_id": "actual-stripe-invoice-id",
+          "status_changes": [
+            {
+              "from": "trialing",
+              "to": "active",
+              "timestamp": "actual"
+            },
+            {
+              "from": "active",
+              "to": "past_due",
+              "timestamp": "actual"
+            }
+          ],
+          "payment_method_id": "actual-payment-method-id",
+          "source": "stripe-api-responses"
+        },
+        "database_persistence": {
+          "table": "workspace",
+          "row_id": "actual-workspace-id",
+          "pre_restart_checksum": "actual-data-hash",
+          "post_restart_checksum": "actual-data-hash",
+          "data_integrity": "verified",
+          "restart_timestamp": "actual-timestamp",
+          "source": "database_snapshot"
+        },
+        "deployment_health": {
+          "instance_id": "actual-deployment-id",
+          "health_check_url": "/api/health",
+          "response_code": 200,
+          "response_time_ms": "actual-ms",
+          "dependencies_healthy": {
+            "database": true,
+            "cache": true,
+            "auth_service": true
+          },
+          "timestamp": "actual-timestamp",
+          "source": "health-check-endpoint"
+        }
+      }
+    },
+    {
+      "dependency": "Real Page Hydration",
+      "execution_timestamp": "2026-05-19T00:00:00.000Z",
+      "evidence": {
+        "session_login": {
+          "request_id": "actual-request-id-from-http-logs",
+          "user_id": "actual-user-id-from-db",
+          "session_id": "actual-session-id-from-db",
+          "session_token": "***redacted***",
+          "created_at": "timestamp-from-session-table",
+          "ip_address": "actual-ip-from-request",
+          "user_agent": "actual-user-agent",
+          "cookies_set": true,
+          "audit_event_id": "actual-audit-event-id",
+          "source": "database_query"
+        },
+        "webhook_execution": {
+          "webhook_id": "actual-webhook-id",
+          "event_type": "charge.succeeded",
+          "timestamp": "actual-webhook-timestamp",
+          "request_signature": "verified-stripe-signature",
+          "http_status": 200,
+          "response_time_ms": "actual-milliseconds",
+          "audit_trail": "actual-audit-event-id",
+          "source": "stripe-webhook-logs"
+        },
+        "stripe_lifecycle": {
+          "customer_id": "actual-stripe-customer-id",
+          "subscription_id": "actual-stripe-subscription-id",
+          "invoice_id": "actual-stripe-invoice-id",
+          "status_changes": [
+            {
+              "from": "trialing",
+              "to": "active",
+              "timestamp": "actual"
+            },
+            {
+              "from": "active",
+              "to": "past_due",
+              "timestamp": "actual"
+            }
+          ],
+          "payment_method_id": "actual-payment-method-id",
+          "source": "stripe-api-responses"
+        },
+        "database_persistence": {
+          "table": "workspace",
+          "row_id": "actual-workspace-id",
+          "pre_restart_checksum": "actual-data-hash",
+          "post_restart_checksum": "actual-data-hash",
+          "data_integrity": "verified",
+          "restart_timestamp": "actual-timestamp",
+          "source": "database_snapshot"
+        },
+        "deployment_health": {
+          "instance_id": "actual-deployment-id",
+          "health_check_url": "/api/health",
+          "response_code": 200,
+          "response_time_ms": "actual-ms",
+          "dependencies_healthy": {
+            "database": true,
+            "cache": true,
+            "auth_service": true
+          },
+          "timestamp": "actual-timestamp",
+          "source": "health-check-endpoint"
+        }
+      }
+    },
+    {
+      "dependency": "Real Stripe Webhook",
+      "execution_timestamp": "2026-05-19T00:00:00.000Z",
+      "evidence": {
+        "session_login": {
+          "request_id": "actual-request-id-from-http-logs",
+          "user_id": "actual-user-id-from-db",
+          "session_id": "actual-session-id-from-db",
+          "session_token": "***redacted***",
+          "created_at": "timestamp-from-session-table",
+          "ip_address": "actual-ip-from-request",
+          "user_agent": "actual-user-agent",
+          "cookies_set": true,
+          "audit_event_id": "actual-audit-event-id",
+          "source": "database_query"
+        },
+        "webhook_execution": {
+          "webhook_id": "actual-webhook-id",
+          "event_type": "charge.succeeded",
+          "timestamp": "actual-webhook-timestamp",
+          "request_signature": "verified-stripe-signature",
+          "http_status": 200,
+          "response_time_ms": "actual-milliseconds",
+          "audit_trail": "actual-audit-event-id",
+          "source": "stripe-webhook-logs"
+        },
+        "stripe_lifecycle": {
+          "customer_id": "actual-stripe-customer-id",
+          "subscription_id": "actual-stripe-subscription-id",
+          "invoice_id": "actual-stripe-invoice-id",
+          "status_changes": [
+            {
+              "from": "trialing",
+              "to": "active",
+              "timestamp": "actual"
+            },
+            {
+              "from": "active",
+              "to": "past_due",
+              "timestamp": "actual"
+            }
+          ],
+          "payment_method_id": "actual-payment-method-id",
+          "source": "stripe-api-responses"
+        },
+        "database_persistence": {
+          "table": "workspace",
+          "row_id": "actual-workspace-id",
+          "pre_restart_checksum": "actual-data-hash",
+          "post_restart_checksum": "actual-data-hash",
+          "data_integrity": "verified",
+          "restart_timestamp": "actual-timestamp",
+          "source": "database_snapshot"
+        },
+        "deployment_health": {
+          "instance_id": "actual-deployment-id",
+          "health_check_url": "/api/health",
+          "response_code": 200,
+          "response_time_ms": "actual-ms",
+          "dependencies_healthy": {
+            "database": true,
+            "cache": true,
+            "auth_service": true
+          },
+          "timestamp": "actual-timestamp",
+          "source": "health-check-endpoint"
+        }
+      }
+    },
+    {
+      "dependency": "Real Subscription Lifecycle",
+      "execution_timestamp": "2026-05-19T00:00:00.000Z",
+      "evidence": {
+        "session_login": {
+          "request_id": "actual-request-id-from-http-logs",
+          "user_id": "actual-user-id-from-db",
+          "session_id": "actual-session-id-from-db",
+          "session_token": "***redacted***",
+          "created_at": "timestamp-from-session-table",
+          "ip_address": "actual-ip-from-request",
+          "user_agent": "actual-user-agent",
+          "cookies_set": true,
+          "audit_event_id": "actual-audit-event-id",
+          "source": "database_query"
+        },
+        "webhook_execution": {
+          "webhook_id": "actual-webhook-id",
+          "event_type": "charge.succeeded",
+          "timestamp": "actual-webhook-timestamp",
+          "request_signature": "verified-stripe-signature",
+          "http_status": 200,
+          "response_time_ms": "actual-milliseconds",
+          "audit_trail": "actual-audit-event-id",
+          "source": "stripe-webhook-logs"
+        },
+        "stripe_lifecycle": {
+          "customer_id": "actual-stripe-customer-id",
+          "subscription_id": "actual-stripe-subscription-id",
+          "invoice_id": "actual-stripe-invoice-id",
+          "status_changes": [
+            {
+              "from": "trialing",
+              "to": "active",
+              "timestamp": "actual"
+            },
+            {
+              "from": "active",
+              "to": "past_due",
+              "timestamp": "actual"
+            }
+          ],
+          "payment_method_id": "actual-payment-method-id",
+          "source": "stripe-api-responses"
+        },
+        "database_persistence": {
+          "table": "workspace",
+          "row_id": "actual-workspace-id",
+          "pre_restart_checksum": "actual-data-hash",
+          "post_restart_checksum": "actual-data-hash",
+          "data_integrity": "verified",
+          "restart_timestamp": "actual-timestamp",
+          "source": "database_snapshot"
+        },
+        "deployment_health": {
+          "instance_id": "actual-deployment-id",
+          "health_check_url": "/api/health",
+          "response_code": 200,
+          "response_time_ms": "actual-ms",
+          "dependencies_healthy": {
+            "database": true,
+            "cache": true,
+            "auth_service": true
+          },
+          "timestamp": "actual-timestamp",
+          "source": "health-check-endpoint"
+        }
+      }
+    },
+    {
+      "dependency": "Real Scheduled Jobs",
+      "execution_timestamp": "2026-05-19T00:00:00.000Z",
+      "evidence": {
+        "session_login": {
+          "request_id": "actual-request-id-from-http-logs",
+          "user_id": "actual-user-id-from-db",
+          "session_id": "actual-session-id-from-db",
+          "session_token": "***redacted***",
+          "created_at": "timestamp-from-session-table",
+          "ip_address": "actual-ip-from-request",
+          "user_agent": "actual-user-agent",
+          "cookies_set": true,
+          "audit_event_id": "actual-audit-event-id",
+          "source": "database_query"
+        },
+        "webhook_execution": {
+          "webhook_id": "actual-webhook-id",
+          "event_type": "charge.succeeded",
+          "timestamp": "actual-webhook-timestamp",
+          "request_signature": "verified-stripe-signature",
+          "http_status": 200,
+          "response_time_ms": "actual-milliseconds",
+          "audit_trail": "actual-audit-event-id",
+          "source": "stripe-webhook-logs"
+        },
+        "stripe_lifecycle": {
+          "customer_id": "actual-stripe-customer-id",
+          "subscription_id": "actual-stripe-subscription-id",
+          "invoice_id": "actual-stripe-invoice-id",
+          "status_changes": [
+            {
+              "from": "trialing",
+              "to": "active",
+              "timestamp": "actual"
+            },
+            {
+              "from": "active",
+              "to": "past_due",
+              "timestamp": "actual"
+            }
+          ],
+          "payment_method_id": "actual-payment-method-id",
+          "source": "stripe-api-responses"
+        },
+        "database_persistence": {
+          "table": "workspace",
+          "row_id": "actual-workspace-id",
+          "pre_restart_checksum": "actual-data-hash",
+          "post_restart_checksum": "actual-data-hash",
+          "data_integrity": "verified",
+          "restart_timestamp": "actual-timestamp",
+          "source": "database_snapshot"
+        },
+        "deployment_health": {
+          "instance_id": "actual-deployment-id",
+          "health_check_url": "/api/health",
+          "response_code": 200,
+          "response_time_ms": "actual-ms",
+          "dependencies_healthy": {
+            "database": true,
+            "cache": true,
+            "auth_service": true
+          },
+          "timestamp": "actual-timestamp",
+          "source": "health-check-endpoint"
+        }
+      }
+    },
+    {
+      "dependency": "Real Deployment Health",
+      "execution_timestamp": "2026-05-19T00:00:00.000Z",
+      "evidence": {
+        "session_login": {
+          "request_id": "actual-request-id-from-http-logs",
+          "user_id": "actual-user-id-from-db",
+          "session_id": "actual-session-id-from-db",
+          "session_token": "***redacted***",
+          "created_at": "timestamp-from-session-table",
+          "ip_address": "actual-ip-from-request",
+          "user_agent": "actual-user-agent",
+          "cookies_set": true,
+          "audit_event_id": "actual-audit-event-id",
+          "source": "database_query"
+        },
+        "webhook_execution": {
+          "webhook_id": "actual-webhook-id",
+          "event_type": "charge.succeeded",
+          "timestamp": "actual-webhook-timestamp",
+          "request_signature": "verified-stripe-signature",
+          "http_status": 200,
+          "response_time_ms": "actual-milliseconds",
+          "audit_trail": "actual-audit-event-id",
+          "source": "stripe-webhook-logs"
+        },
+        "stripe_lifecycle": {
+          "customer_id": "actual-stripe-customer-id",
+          "subscription_id": "actual-stripe-subscription-id",
+          "invoice_id": "actual-stripe-invoice-id",
+          "status_changes": [
+            {
+              "from": "trialing",
+              "to": "active",
+              "timestamp": "actual"
+            },
+            {
+              "from": "active",
+              "to": "past_due",
+              "timestamp": "actual"
+            }
+          ],
+          "payment_method_id": "actual-payment-method-id",
+          "source": "stripe-api-responses"
+        },
+        "database_persistence": {
+          "table": "workspace",
+          "row_id": "actual-workspace-id",
+          "pre_restart_checksum": "actual-data-hash",
+          "post_restart_checksum": "actual-data-hash",
+          "data_integrity": "verified",
+          "restart_timestamp": "actual-timestamp",
+          "source": "database_snapshot"
+        },
+        "deployment_health": {
+          "instance_id": "actual-deployment-id",
+          "health_check_url": "/api/health",
+          "response_code": 200,
+          "response_time_ms": "actual-ms",
+          "dependencies_healthy": {
+            "database": true,
+            "cache": true,
+            "auth_service": true
+          },
+          "timestamp": "actual-timestamp",
+          "source": "health-check-endpoint"
+        }
+      }
+    },
+    {
+      "dependency": "Real Database Persistence",
+      "execution_timestamp": "2026-05-19T00:00:00.000Z",
+      "evidence": {
+        "session_login": {
+          "request_id": "actual-request-id-from-http-logs",
+          "user_id": "actual-user-id-from-db",
+          "session_id": "actual-session-id-from-db",
+          "session_token": "***redacted***",
+          "created_at": "timestamp-from-session-table",
+          "ip_address": "actual-ip-from-request",
+          "user_agent": "actual-user-agent",
+          "cookies_set": true,
+          "audit_event_id": "actual-audit-event-id",
+          "source": "database_query"
+        },
+        "webhook_execution": {
+          "webhook_id": "actual-webhook-id",
+          "event_type": "charge.succeeded",
+          "timestamp": "actual-webhook-timestamp",
+          "request_signature": "verified-stripe-signature",
+          "http_status": 200,
+          "response_time_ms": "actual-milliseconds",
+          "audit_trail": "actual-audit-event-id",
+          "source": "stripe-webhook-logs"
+        },
+        "stripe_lifecycle": {
+          "customer_id": "actual-stripe-customer-id",
+          "subscription_id": "actual-stripe-subscription-id",
+          "invoice_id": "actual-stripe-invoice-id",
+          "status_changes": [
+            {
+              "from": "trialing",
+              "to": "active",
+              "timestamp": "actual"
+            },
+            {
+              "from": "active",
+              "to": "past_due",
+              "timestamp": "actual"
+            }
+          ],
+          "payment_method_id": "actual-payment-method-id",
+          "source": "stripe-api-responses"
+        },
+        "database_persistence": {
+          "table": "workspace",
+          "row_id": "actual-workspace-id",
+          "pre_restart_checksum": "actual-data-hash",
+          "post_restart_checksum": "actual-data-hash",
+          "data_integrity": "verified",
+          "restart_timestamp": "actual-timestamp",
+          "source": "database_snapshot"
+        },
+        "deployment_health": {
+          "instance_id": "actual-deployment-id",
+          "health_check_url": "/api/health",
+          "response_code": 200,
+          "response_time_ms": "actual-ms",
+          "dependencies_healthy": {
+            "database": true,
+            "cache": true,
+            "auth_service": true
+          },
+          "timestamp": "actual-timestamp",
+          "source": "health-check-endpoint"
+        }
+      }
+    },
+    {
+      "dependency": "Real Restart Recovery",
+      "execution_timestamp": "2026-05-19T00:00:00.000Z",
+      "evidence": {
+        "session_login": {
+          "request_id": "actual-request-id-from-http-logs",
+          "user_id": "actual-user-id-from-db",
+          "session_id": "actual-session-id-from-db",
+          "session_token": "***redacted***",
+          "created_at": "timestamp-from-session-table",
+          "ip_address": "actual-ip-from-request",
+          "user_agent": "actual-user-agent",
+          "cookies_set": true,
+          "audit_event_id": "actual-audit-event-id",
+          "source": "database_query"
+        },
+        "webhook_execution": {
+          "webhook_id": "actual-webhook-id",
+          "event_type": "charge.succeeded",
+          "timestamp": "actual-webhook-timestamp",
+          "request_signature": "verified-stripe-signature",
+          "http_status": 200,
+          "response_time_ms": "actual-milliseconds",
+          "audit_trail": "actual-audit-event-id",
+          "source": "stripe-webhook-logs"
+        },
+        "stripe_lifecycle": {
+          "customer_id": "actual-stripe-customer-id",
+          "subscription_id": "actual-stripe-subscription-id",
+          "invoice_id": "actual-stripe-invoice-id",
+          "status_changes": [
+            {
+              "from": "trialing",
+              "to": "active",
+              "timestamp": "actual"
+            },
+            {
+              "from": "active",
+              "to": "past_due",
+              "timestamp": "actual"
+            }
+          ],
+          "payment_method_id": "actual-payment-method-id",
+          "source": "stripe-api-responses"
+        },
+        "database_persistence": {
+          "table": "workspace",
+          "row_id": "actual-workspace-id",
+          "pre_restart_checksum": "actual-data-hash",
+          "post_restart_checksum": "actual-data-hash",
+          "data_integrity": "verified",
+          "restart_timestamp": "actual-timestamp",
+          "source": "database_snapshot"
+        },
+        "deployment_health": {
+          "instance_id": "actual-deployment-id",
+          "health_check_url": "/api/health",
+          "response_code": 200,
+          "response_time_ms": "actual-ms",
+          "dependencies_healthy": {
+            "database": true,
+            "cache": true,
+            "auth_service": true
+          },
+          "timestamp": "actual-timestamp",
+          "source": "health-check-endpoint"
+        }
+      }
+    },
+    {
+      "dependency": "Real Operator Session Replay",
+      "execution_timestamp": "2026-05-19T00:00:00.000Z",
+      "evidence": {
+        "session_login": {
+          "request_id": "actual-request-id-from-http-logs",
+          "user_id": "actual-user-id-from-db",
+          "session_id": "actual-session-id-from-db",
+          "session_token": "***redacted***",
+          "created_at": "timestamp-from-session-table",
+          "ip_address": "actual-ip-from-request",
+          "user_agent": "actual-user-agent",
+          "cookies_set": true,
+          "audit_event_id": "actual-audit-event-id",
+          "source": "database_query"
+        },
+        "webhook_execution": {
+          "webhook_id": "actual-webhook-id",
+          "event_type": "charge.succeeded",
+          "timestamp": "actual-webhook-timestamp",
+          "request_signature": "verified-stripe-signature",
+          "http_status": 200,
+          "response_time_ms": "actual-milliseconds",
+          "audit_trail": "actual-audit-event-id",
+          "source": "stripe-webhook-logs"
+        },
+        "stripe_lifecycle": {
+          "customer_id": "actual-stripe-customer-id",
+          "subscription_id": "actual-stripe-subscription-id",
+          "invoice_id": "actual-stripe-invoice-id",
+          "status_changes": [
+            {
+              "from": "trialing",
+              "to": "active",
+              "timestamp": "actual"
+            },
+            {
+              "from": "active",
+              "to": "past_due",
+              "timestamp": "actual"
+            }
+          ],
+          "payment_method_id": "actual-payment-method-id",
+          "source": "stripe-api-responses"
+        },
+        "database_persistence": {
+          "table": "workspace",
+          "row_id": "actual-workspace-id",
+          "pre_restart_checksum": "actual-data-hash",
+          "post_restart_checksum": "actual-data-hash",
+          "data_integrity": "verified",
+          "restart_timestamp": "actual-timestamp",
+          "source": "database_snapshot"
+        },
+        "deployment_health": {
+          "instance_id": "actual-deployment-id",
+          "health_check_url": "/api/health",
+          "response_code": 200,
+          "response_time_ms": "actual-ms",
+          "dependencies_healthy": {
+            "database": true,
+            "cache": true,
+            "auth_service": true
+          },
+          "timestamp": "actual-timestamp",
+          "source": "health-check-endpoint"
+        }
+      }
+    }
+  ]
+}
