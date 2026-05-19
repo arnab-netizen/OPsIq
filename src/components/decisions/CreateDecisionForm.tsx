@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/src/lib/operator-error-governance";
 import { useRouter } from "next/navigation";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/src/lib/operator-error-governance";
 
 export function CreateDecisionForm() {
   const router = useRouter();
@@ -59,7 +67,9 @@ export function CreateDecisionForm() {
       // Redirect to new decision detail page
       router.push(`/decisions/${data.decisionId}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating decision");
+      const ctx: ErrorGovernanceContext = { context: "load" };
+      const govErr = classifyOperatorError(err, ctx);
+      setError(govErr.operatorMessage);
       setLoading(false);
     }
   };

@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Badge } from "@/ui/primitives";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/src/lib/operator-error-governance";
 
 interface ExecutionCertaintyData {
   score: number;
@@ -45,7 +49,9 @@ export function ExecutionCertaintyCard({ engagementId }: ExecutionCertaintyCardP
         const certaintyData = await response.json();
         setData(certaintyData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        const ctx: ErrorGovernanceContext = { context: "load" };
+        const govErr = classifyOperatorError(err, ctx);
+        setError(govErr.operatorMessage);
         setData({
           score: 0,
           level: "blocked",
