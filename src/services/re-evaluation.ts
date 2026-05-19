@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -741,7 +742,8 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       workspaceId,
       correlationId: event.correlationId,
       payload: auditPayload,
-      visibility: "internal",
+      visibility: 'internal',
+    capability: 'mutation',
     });
 
     return eventId;

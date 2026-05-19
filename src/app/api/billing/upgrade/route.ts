@@ -1,6 +1,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { emitAuditEvent } from "@/infra/audit";
@@ -99,9 +100,12 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.BILLING_UPDATED,
         actorId: userId,
+        workspaceId,
+        capability: CAPABILITIES.SYSTEM_ADMIN,
+        decision: "billing_account_created",
+        requestId: ctx.requestId || ctx.correlationId,
         entityType: "billingAccount",
         entityId: billingAccount.id,
-        workspaceId,
         payload: {
           action: "stripe_customer_created",
           stripeCustomerId,
@@ -143,9 +147,12 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.BILLING_UPDATED,
       actorId: userId,
+      workspaceId,
+      capability: CAPABILITIES.SYSTEM_ADMIN,
+      decision: "checkout_session_created",
+      requestId: ctx.requestId || ctx.correlationId,
       entityType: "checkoutSession",
       entityId: session.id,
-      workspaceId,
       payload: {
         action: "checkout_session_created",
         planId: plan.id,

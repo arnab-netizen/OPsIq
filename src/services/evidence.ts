@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -252,8 +253,11 @@ export async function updateEvidence(
     entityId: evidenceId,
     workspaceId: validatedWorkspaceId,
     payload: data,
-    visibility: "internal",
-  });
+    visibility: 'internal',
+    capability: 'mutation',
+  ,
+    requestId: randomUUID()
+  };
 
   if (statusChanged && input.status === "validated") {
     // Emit event sourcing event for validation (non-blocking)
@@ -731,8 +735,11 @@ export async function updateEvidenceBundle(
     entityId: bundleId,
     workspaceId: validatedWorkspaceId,
     payload: updates,
-    visibility: "internal",
-  });
+    visibility: 'internal',
+    capability: 'mutation',
+  ,
+    requestId: randomUUID()
+  };
 
   return updated;
 }

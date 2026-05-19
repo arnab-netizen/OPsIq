@@ -4,6 +4,7 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getActionById } from "@/services/action";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -48,6 +49,10 @@ export const PATCH = withCanonicalEnforcement(
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ACTION_COMPLETED,
       actorId: ctx.verifiedActorId,
+      workspaceId,
+      capability: CAPABILITIES.ACTION_UPDATE,
+      decision: "action_completed",
+      requestId: ctx.requestId || ctx.correlationId,
       entityType: "action",
       entityId: actionId,
       payload: {

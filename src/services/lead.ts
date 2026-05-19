@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -156,8 +157,11 @@ export async function updateLead(
     entityId: leadId,
     workspaceId: validatedWorkspaceId,
     payload: data,
-    visibility: "internal",
-  });
+    visibility: 'internal',
+    capability: 'mutation',
+  ,
+    requestId: randomUUID()
+  };
 
   logger.info("Lead updated", { leadId });
 }

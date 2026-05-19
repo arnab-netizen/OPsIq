@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { linkEvidenceToFinding, unlinkEvidenceFromFinding, validateFinding } from "@/services/findings";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { ValidationError } from "@/infra/errors";
 

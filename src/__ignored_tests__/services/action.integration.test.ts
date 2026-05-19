@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createAction, updateActionStatus } from "./action";
 import { ValidationError, ConflictError } from "@/infra/errors";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { TEST_IDS } from "@/domain/constants/test-ids";

@@ -3,6 +3,7 @@ import { detectOverdueActions } from "@/services/action";
 import { updateKPIValue } from "@/services/kpi";
 import { checkEngagementEscalations } from "@/services/escalation";
 import { computeNextReviewDate } from "@/services/engagement";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { createHash } from "crypto";

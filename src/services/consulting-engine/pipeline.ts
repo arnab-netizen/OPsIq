@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { runConsultingEngine } from "./orchestrator";
 import type { ConsultingEngineInput, ConsultingEngineOutput } from "@/domain/consulting-engine/types";

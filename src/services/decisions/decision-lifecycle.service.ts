@@ -5,6 +5,7 @@
  * Every mutation must route through lifecycle validation.
  */
 
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";

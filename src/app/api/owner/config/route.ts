@@ -151,7 +151,9 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       entityType: "owner_config",
       entityId: workspaceId,
       payload: validated,
-    });
+    ,
+    requestId: randomUUID()
+  };
 
     return Response.json(toConfigDTO(updated), { status: 201 });
   } catch (error) {

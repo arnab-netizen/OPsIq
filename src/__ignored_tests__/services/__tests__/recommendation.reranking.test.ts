@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { reRankRecommendationsInEngagement } from "@/services/recommendation";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 
 vi.mock("@/infra/audit", () => ({

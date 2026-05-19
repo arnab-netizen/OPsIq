@@ -158,7 +158,9 @@ describe("Actions API Route", () => {
 
     it("should emit ACTION_CREATED audit event on workspace", async () => {
       // Critical invariant: All actions creation must emit audit event with correct workspace
-      // Service calls: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_CREATED, workspaceId, ... })
+      // Service calls: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_CREATED, workspaceId, ... ,
+    requestId: randomUUID()
+  }
       expect(AUDIT_EVENTS).toBeDefined();
     });
   });
@@ -701,31 +703,41 @@ describe("Actions API Route", () => {
   describe("Action Route Audit & Event Emission (Critical Invariants)", () => {
     it("should emit ACTION_CREATED event on creation", () => {
       // Critical invariant: All creates emit AUDIT_EVENTS.ACTION_CREATED
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_CREATED, workspaceId, ... })
+      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_CREATED, workspaceId, ... ,
+    requestId: randomUUID()
+  }
       expect(true).toBe(true);
     });
 
     it("should emit ACTION_UPDATED event on status change", () => {
       // Critical invariant: State transitions emit ACTION_UPDATED
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_UPDATED, ... })
+      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_UPDATED, ... ,
+    requestId: randomUUID()
+  }
       expect(true).toBe(true);
     });
 
     it("should emit ACTION_COMPLETED event on completion", () => {
       // Critical invariant: Completion transitions emit ACTION_COMPLETED
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_COMPLETED, workspaceId, ... })
+      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_COMPLETED, workspaceId, ... ,
+    requestId: randomUUID()
+  }
       expect(true).toBe(true);
     });
 
     it("should record audit trail with actor ID", () => {
       // Critical invariant: All events include actorId
-      // Service: emitAuditEvent({ ..., actorId: authContext.session.user.id })
+      // Service: emitAuditEvent({ ..., actorId: authContext.session.user.id ,
+    requestId: randomUUID()
+  }
       expect(true).toBe(true);
     });
 
     it("should record audit trail with workspace context", () => {
       // Critical invariant: All events include workspaceId
-      // Service: emitAuditEvent({ ..., workspaceId: validatedWorkspaceId })
+      // Service: emitAuditEvent({ ..., workspaceId: validatedWorkspaceId ,
+    requestId: randomUUID()
+  }
       expect(true).toBe(true);
     });
   });

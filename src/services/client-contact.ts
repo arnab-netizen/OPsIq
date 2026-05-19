@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -154,8 +155,11 @@ export async function updateContact(
     entityId: contactId,
     workspaceId,
     payload: data,
-    visibility: "internal",
-  });
+    visibility: 'internal',
+    capability: 'mutation',
+  ,
+    requestId: randomUUID()
+  };
 
   logger.info("Client contact updated", { contactId });
 }

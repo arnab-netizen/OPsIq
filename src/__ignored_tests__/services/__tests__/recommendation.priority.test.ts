@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mapScoreToPriority, createRecommendation, updateRecommendationPriorityFromScore } from "@/services/recommendation";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 

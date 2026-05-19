@@ -11,6 +11,7 @@ import { enrichMutationAuditEvent } from '@/infra/audit-enrichment';
  * - Outcome changes after CLOSED: rejected
  */
 
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { logger } from "@/infra/logger";

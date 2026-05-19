@@ -187,7 +187,9 @@ describe("Decisions API Routes", () => {
 
     it("should emit DECISION_CREATED audit event with workspace context", () => {
       // Critical: Audit trail emission
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_CREATED, workspaceId, ... })
+      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_CREATED, workspaceId, ... ,
+    requestId: randomUUID()
+  }
       expect(true).toBe(true);
     });
 
@@ -283,7 +285,9 @@ describe("Decisions API Routes", () => {
 
     it("should emit DECISION_APPROVED audit event with workspace", () => {
       // Critical: Audit trail
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_APPROVED, workspaceId, ... })
+      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_APPROVED, workspaceId, ... ,
+    requestId: randomUUID()
+  }
       expect(true).toBe(true);
     });
 
@@ -345,7 +349,9 @@ describe("Decisions API Routes", () => {
 
     it("should emit DECISION_BLOCKED audit event with workspace", () => {
       // Critical: Audit trail
-      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_BLOCKED, workspaceId, ... })
+      // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_BLOCKED, workspaceId, ... ,
+    requestId: randomUUID()
+  }
       expect(true).toBe(true);
     });
 
@@ -442,13 +448,17 @@ describe("Decisions API Routes", () => {
 
     it("should include actor ID in all audit events", () => {
       // Critical: Audit trail includes userId
-      // Service: emitAuditEvent({ actorId: authContext.session.user.id, ... })
+      // Service: emitAuditEvent({ actorId: authContext.session.user.id, ... ,
+    requestId: randomUUID()
+  }
       expect(true).toBe(true);
     });
 
     it("should include workspace context in all audit events", () => {
       // Critical: All events include workspaceId
-      // Service: emitAuditEvent({ workspaceId: validatedWorkspaceId, ... })
+      // Service: emitAuditEvent({ workspaceId: validatedWorkspaceId, ... ,
+    requestId: randomUUID()
+  }
       expect(true).toBe(true);
     });
 

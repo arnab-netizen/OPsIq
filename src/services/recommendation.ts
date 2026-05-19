@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -1199,8 +1200,11 @@ export async function updateRecommendation(
     entityId: recommendationId,
     workspaceId: validatedWorkspaceId,
     payload: updates,
-    visibility: "internal",
-  });
+    visibility: 'internal',
+    capability: 'mutation',
+  ,
+    requestId: randomUUID()
+  };
 
   // Emit canonical event to maintain event sourcing trail
   const eventPayload: Record<string, string | undefined> = {};

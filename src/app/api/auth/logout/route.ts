@@ -1,6 +1,7 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import type { NextRequest } from "next/server";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -27,8 +28,11 @@ export const POST = withEnforcementFull(async () => {
       entityType: "session",
       entityId: session.sessionId,
       workspaceId,
-      visibility: "internal",
-    });
+      visibility: 'internal',
+    capability: 'mutation',
+    ,
+    requestId: randomUUID()
+  };
   }
 
   const cookieStore = await cookies();

@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";

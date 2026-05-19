@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";

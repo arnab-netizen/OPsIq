@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { detectExecutionDrift } from "@/services/execution-drift/execution-drift.service";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";

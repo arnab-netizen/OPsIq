@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -135,7 +136,9 @@ export async function updateUser(
     entityId: userId,
     workspaceId: validatedWorkspaceId,
     payload: {
-      ...(input.name !== undefined && { name: input.name }),
+      ...(input.name !== undefined && { name: input.name ,
+    requestId: randomUUID()
+  },
       ...(input.email !== undefined && { email: input.email }),
     },
     visibility: "internal",

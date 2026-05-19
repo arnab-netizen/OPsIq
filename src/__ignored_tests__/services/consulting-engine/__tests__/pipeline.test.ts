@@ -45,6 +45,7 @@ vi.mock("@/services/entitlement.service", () => ({
 
 // Now import the pipeline
 import { runConsultingPipeline } from "../pipeline";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { runConsultingEngine } from "@/services/consulting-engine/orchestrator";
 import { createRecommendationsFromInterventions } from "@/services/recommendation";

@@ -1,4 +1,5 @@
 import { enrichMutationAuditEvent } from '@/infra/audit-enrichment';
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext, ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { hasInternalAccess } from "@/policies/capability-check";

@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -124,8 +125,11 @@ export async function updateClient(
     entityId: clientId,
     workspaceId: validatedWorkspaceId,
     payload: data,
-    visibility: "internal",
-  });
+    visibility: 'internal',
+    capability: 'mutation',
+  ,
+    requestId: randomUUID()
+  };
 
   logger.info("Client account updated", { clientId });
 }
@@ -166,8 +170,11 @@ export async function archiveClient(
     entityType: "client_account",
     entityId: clientId,
     workspaceId: validatedWorkspaceId,
-    visibility: "internal",
-  });
+    visibility: 'internal',
+    capability: 'mutation',
+  ,
+    requestId: randomUUID()
+  };
 
   logger.info("Client account archived", { clientId });
 }
