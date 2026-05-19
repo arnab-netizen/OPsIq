@@ -528,6 +528,10 @@ export async function createRecommendation(
     actorId: userId,
     entityType: "recommendation",
     entityId: recommendation.id,
+    workspaceId: validatedWorkspaceId,
+    capability: 'RECOMMENDATION_CREATE',
+    decision: 'recommendation_created',
+    requestId: authContext?.requestId,
     payload: {
       engagementId: input.engagementId,
       priority: input.priority,
@@ -813,6 +817,10 @@ export async function updateRecommendationStatus(
               actorId: userId,
               entityType: "recommendation",
               entityId: recommendationId,
+              workspaceId: validatedWorkspaceId,
+              capability: 'mutation',
+              decision: 'execution_certainty_override',
+              requestId: randomUUID(),
               payload: {
                 engagementId: rec.engagementId,
                 score: certaintyResult.score,
@@ -842,6 +850,10 @@ export async function updateRecommendationStatus(
               actorId: userId,
               entityType: "recommendation",
               entityId: recommendationId,
+              workspaceId: validatedWorkspaceId,
+              capability: 'mutation',
+              decision: 'execution_certainty_warning',
+              requestId: randomUUID(),
               payload: {
                 engagementId: rec.engagementId,
                 score: certaintyResult.score,
@@ -918,6 +930,10 @@ export async function updateRecommendationStatus(
     actorId: userId,
     entityType: "recommendation",
     entityId: recommendationId,
+    workspaceId: validatedWorkspaceId,
+    capability: 'mutation',
+    decision: 'recommendation_approved',
+    requestId: randomUUID(),
     payload: {
       status: input.status,
     },
@@ -985,6 +1001,10 @@ export async function updateRecommendationPriorityFromScore(
     actorId: userId,
     entityType: "recommendation",
     entityId: recommendationId,
+    workspaceId: validatedWorkspaceId,
+    capability: 'mutation',
+    decision: 'recommendation_approved',
+    requestId: randomUUID(),
     payload: {
       score,
       priority: newPriority,
@@ -1089,6 +1109,10 @@ export async function reRankRecommendationsInEngagement(
           actorId: userId,
           entityType: "recommendation",
           entityId: rec.id,
+          workspaceId: validatedWorkspaceId,
+          capability: 'mutation',
+          decision: 'recommendation_updated',
+          requestId: randomUUID(),
           payload: {
             oldPriority,
             newPriority,
@@ -1207,9 +1231,9 @@ export async function updateRecommendation(
     payload: updates,
     visibility: 'internal',
     capability: 'mutation',
-  ,
+    decision: 'recommendation_updated',
     requestId: randomUUID()
-  };
+  });
 
   // Emit canonical event to maintain event sourcing trail
   const eventPayload: Record<string, string | undefined> = {};
