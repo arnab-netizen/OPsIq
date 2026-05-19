@@ -15,17 +15,7 @@
 import { toOperatorSafeError } from "./operator-safe-errors";
 
 export interface ErrorGovernanceContext {
-  context:
-    | "decision"
-    | "action"
-    | "form"
-    | "load"
-    | "save"
-    | "network"
-    | "mutation"
-    | "auth"
-    | "permission"
-    | "validation";
+  context: "decision" | "action" | "form" | "load" | "save" | "network";
   userId?: string;
   workspaceId?: string;
   resourceId?: string;

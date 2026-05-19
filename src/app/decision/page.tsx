@@ -7,6 +7,10 @@ import { TrustCard } from '@/components/decision/TrustCard';
 import { DecisionResult } from '@/domain/decision/types';
 import type { CalibrationMetrics } from '@/services/calibration/engine';
 import type { ValueMetrics } from '@/services/value/tracker';
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from '@/lib/operator-error-governance';
 
 interface FormValues {
   baselineRevenue: string;
@@ -97,7 +101,9 @@ export default function DecisionPage() {
         }
       } catch (err) {
         console.error('Failed to fetch metrics:', err);
-        setMetricsError('Failed to load trust metrics');
+        const ctx: ErrorGovernanceContext = { context: 'load' };
+        const govErr = classifyOperatorError(err, ctx);
+        setMetricsError(govErr.operatorMessage);
       } finally {
         setMetricsLoading(false);
       }
@@ -124,7 +130,9 @@ export default function DecisionPage() {
         }
       } catch (err) {
         console.error('Failed to fetch smart insights:', err);
-        // Silently fail - insights are optional
+        // Insights optional - log but don't block UX
+        const ctx: ErrorGovernanceContext = { context: 'load' };
+        classifyOperatorError(err, ctx);
       } finally {
         setInsightsLoading(false);
       }
@@ -257,10 +265,10 @@ export default function DecisionPage() {
                                  (!data.gate || data.gate.allowed);
       setIsApproved(isApprovedDecision);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to get decision';
       console.error('Decision API error:', err);
-      setError(`Network error: ${errorMessage}`);
+      const ctx: ErrorGovernanceContext = { context: 'action' };
+      const govErr = classifyOperatorError(err, ctx);
+      setError(govErr.operatorMessage);
       setResult(null);
       setIsApproved(false);
     } finally {

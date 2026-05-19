@@ -49,6 +49,7 @@ export default function LoginPage() {
             placeholder="you@company.com"
             required
             autoComplete="email"
+            disabled={loginMutation.isLoading}
           />
           <Input
             label="Password"
@@ -58,18 +59,34 @@ export default function LoginPage() {
             placeholder="Enter your password"
             required
             autoComplete="current-password"
+            disabled={loginMutation.isLoading}
           />
 
           {loginMutation.isError && loginMutation.error && (
-            <div className="space-y-2">
-              <p className="text-sm text-destructive">{loginMutation.error.operatorMessage}</p>
-              <p className="text-xs text-muted-foreground">{loginMutation.error.recovery}</p>
+            <div className="rounded-lg border border-destructive bg-destructive/5 p-3 space-y-2">
+              <p className="text-sm font-medium text-destructive">{loginMutation.error.operatorMessage}</p>
+              {loginMutation.error.recovery && (
+                <p className="text-xs text-muted-foreground">{loginMutation.error.recovery}</p>
+              )}
+            </div>
+          )}
+
+          {loginMutation.isLoading && (
+            <div className="rounded-lg border border-border bg-muted p-3">
+              <p className="text-xs text-muted-foreground">Authenticating... this may take a moment.</p>
             </div>
           )}
 
           <Button type="submit" isLoading={loginMutation.isLoading} className="w-full">
-            Sign in
+            {loginMutation.isLoading ? "Signing in..." : "Sign in"}
           </Button>
+
+          <div className="rounded-lg border border-border bg-muted p-3 space-y-2">
+            <p className="text-xs font-medium text-foreground">Need help?</p>
+            <p className="text-xs text-muted-foreground">
+              If you don't have login credentials, contact your system administrator. For account recovery, reach out to support.
+            </p>
+          </div>
         </form>
       </div>
     </div>

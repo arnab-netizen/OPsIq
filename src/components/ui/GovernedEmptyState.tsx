@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 /**
  * Governed Empty State Component
  *
@@ -167,24 +169,36 @@ export function GovernedEmptyState({
 
       {/* Actions */}
       <div className="flex gap-3">
-        {primaryAction && (
-          <button
-            onClick={primaryAction.onClick}
+        {primaryAction && primaryAction.href ? (
+          <Link
             href={primaryAction.href}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition"
           >
             {primaryAction.label}
-          </button>
-        )}
-        {secondaryAction && (
+          </Link>
+        ) : primaryAction ? (
           <button
-            onClick={secondaryAction.onClick}
+            onClick={primaryAction.onClick}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition"
+          >
+            {primaryAction.label}
+          </button>
+        ) : null}
+        {secondaryAction && secondaryAction.href ? (
+          <Link
             href={secondaryAction.href}
             className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition"
           >
             {secondaryAction.label}
+          </Link>
+        ) : secondaryAction ? (
+          <button
+            onClick={secondaryAction.onClick}
+            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition"
+          >
+            {secondaryAction.label}
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );

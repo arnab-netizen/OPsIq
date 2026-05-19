@@ -147,7 +147,7 @@ export function useOperatorMutation<TData, TVariables = unknown>(
 
         // Classify error with governance
         const errorContext: ErrorGovernanceContext = {
-          context: "mutation",
+          context: "save",
           userId: options.userId,
           workspaceId: options.workspaceId,
         };

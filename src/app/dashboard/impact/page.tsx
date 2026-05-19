@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/lib/operator-error-governance";
 
 interface Metrics {
   summary: {
@@ -56,7 +60,9 @@ export default function DashboardImpactPage() {
         const decisionsData = await decisionsRes.json();
         setBlockedDecisions(decisionsData.decisions || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error loading data");
+        const ctx: ErrorGovernanceContext = { context: 'load' };
+        const govErr = classifyOperatorError(err, ctx);
+        setError(govErr.operatorMessage);
       } finally {
         setLoading(false);
       }
@@ -69,7 +75,10 @@ export default function DashboardImpactPage() {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Impact Dashboard</h1>
-        <div className="text-gray-500">Loading...</div>
+        <div className="bg-blue-50 border border-blue-200 rounded p-6 text-center">
+          <div className="text-gray-600 mb-2">Loading impact metrics...</div>
+          <div className="text-xs text-gray-500">This includes decision history and governance data. Should complete in a few seconds.</div>
+        </div>
       </div>
     );
   }
@@ -78,8 +87,9 @@ export default function DashboardImpactPage() {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Impact Dashboard</h1>
-        <div className="bg-red-50 border border-red-200 rounded p-4 text-red-800">
-          {error || "Failed to load metrics"}
+        <div className="bg-red-50 border border-red-200 rounded p-4">
+          <p className="text-red-800 font-medium text-sm mb-2">{error || "Unable to load metrics"}</p>
+          <p className="text-red-700 text-xs">Try refreshing the page. If the problem continues, contact support.</p>
         </div>
       </div>
     );

@@ -99,7 +99,7 @@ export default function MyDayPage() {
       // Refresh queue
       await fetchMyDay();
     } catch (err) {
-      const ctx: ErrorGovernanceContext = { context: 'mutation' };
+      const ctx: ErrorGovernanceContext = { context: 'save' };
       const govErr = classifyOperatorError(err, ctx);
       setError(govErr.operatorMessage);
     } finally {
