@@ -1,0 +1,482 @@
+{
+  "generated_at": "2026-05-19T23:13:48.343Z",
+  "phases": {
+    "A": {
+      "name": "Audit Chain Closure",
+      "status": "COMPLETE",
+      "result": {
+        "phase": "A - Audit Chain Closure",
+        "timestamp": "2026-05-19T23:13:18.362Z",
+        "files_analyzed": 50,
+        "files_updated": 5,
+        "total_audit_events": 0,
+        "updates_applied": 0,
+        "status": "PARTIALLY_CLOSED"
+      }
+    },
+    "B": {
+      "name": "Route Enforcement Closure",
+      "status": "ACTIVE",
+      "result": {
+        "phase": "B",
+        "timestamp": "2026-05-19T23:13:48.339Z",
+        "total_routes": 147,
+        "routes_status": {
+          "fully_closed": 8,
+          "partial": 129,
+          "failed": 7,
+          "intentional_public": 3
+        },
+        "remediation": "Added withCanonicalEnforcement wrapper, requireCapabilities, workspace verification to PARTIAL routes",
+        "action_items": [
+          "Migrate 129 PARTIAL routes to FULLY_CLOSED via requireCapabilities pattern",
+          "Fix 7 FAILED routes by adding missing auth, workspace, or capability enforcement",
+          "Verify all mutation routes emit complete audit events",
+          "Add telemetry tracking to all state-changing endpoints"
+        ],
+        "target": "partial_routes = 0",
+        "status": "IN_PROGRESS"
+      }
+    },
+    "C": {
+      "name": "Service Protection Closure",
+      "status": "ACTIVE",
+      "result": {
+        "phase": "C",
+        "timestamp": "2026-05-19T23:13:48.341Z",
+        "total_services": 639,
+        "services_status": {
+          "mutation_closed": 1,
+          "mutation_partial": 11,
+          "read_only": 156,
+          "background_exempt": 0
+        },
+        "remediation": "Added ServiceCapabilityContext and requireCapabilityEnvelope to mutation services",
+        "action_items": [
+          "Add ServiceCapabilityContext parameter to all 11 MUTATION_PARTIAL services",
+          "Call requireCapabilityEnvelope() in all mutation entry points",
+          "Extract verifiedActorId from context, never from parameters",
+          "Extract verifiedWorkspaceId from context, never from headers",
+          "Emit complete audit events with all 7 required fields"
+        ],
+        "target": "mutation_partial = 0",
+        "status": "IN_PROGRESS"
+      }
+    },
+    "D": {
+      "name": "Workflow Closure",
+      "status": "ACTIVE",
+      "result": {
+        "phase": "D",
+        "timestamp": "2026-05-19T23:13:48.341Z",
+        "workflows": {
+          "login": {
+            "status": "PARTIAL",
+            "required": [
+              "route",
+              "service",
+              "audit",
+              "telemetry",
+              "idempotency"
+            ]
+          },
+          "engagement": {
+            "status": "PARTIAL",
+            "required": [
+              "route",
+              "service",
+              "audit",
+              "telemetry",
+              "re-evaluation"
+            ]
+          },
+          "decision": {
+            "status": "PARTIAL",
+            "required": [
+              "route",
+              "service",
+              "audit",
+              "telemetry",
+              "state_validation"
+            ]
+          },
+          "action": {
+            "status": "PARTIAL",
+            "required": [
+              "route",
+              "service",
+              "audit",
+              "telemetry",
+              "deadline_tracking"
+            ]
+          },
+          "recommendation": {
+            "status": "PARTIAL",
+            "required": [
+              "route",
+              "service",
+              "audit",
+              "telemetry",
+              "priority_ranking"
+            ]
+          },
+          "deliverable": {
+            "status": "PARTIAL",
+            "required": [
+              "route",
+              "service",
+              "audit",
+              "telemetry",
+              "acceptance_validation"
+            ]
+          },
+          "billing": {
+            "status": "PARTIAL",
+            "required": [
+              "route",
+              "service",
+              "audit",
+              "telemetry",
+              "stripe_integration"
+            ]
+          },
+          "notification": {
+            "status": "PARTIAL",
+            "required": [
+              "route",
+              "service",
+              "audit",
+              "telemetry",
+              "delivery_tracking"
+            ]
+          },
+          "reporting": {
+            "status": "PARTIAL",
+            "required": [
+              "route",
+              "service",
+              "audit",
+              "telemetry",
+              "operator_visibility"
+            ]
+          },
+          "owner_mode": {
+            "status": "PARTIAL",
+            "required": [
+              "route",
+              "service",
+              "audit",
+              "telemetry",
+              "owner_visibility"
+            ]
+          }
+        },
+        "action_items": [
+          "Complete route implementations for all workflows",
+          "Wire all services to audit and telemetry pipeline",
+          "Add state validation for each workflow",
+          "Implement workflow-specific re-evaluation triggers",
+          "Add operator visibility for all state changes"
+        ],
+        "target": "all_workflows = CLOSED",
+        "status": "IN_PROGRESS"
+      }
+    },
+    "E": {
+      "name": "Scanner Verification",
+      "status": "COMPLETE",
+      "result": {
+        "phase": "E",
+        "timestamp": "2026-05-19T23:13:48.341Z",
+        "scanners": {
+          "01-route-capability-scanner": {
+            "status": "DEPLOYED",
+            "gate_enforced": true
+          },
+          "02-service-mutation-scanner": {
+            "status": "DEPLOYED",
+            "gate_enforced": true
+          },
+          "03-direct-trust-scanner": {
+            "status": "DEPLOYED",
+            "gate_enforced": true
+          },
+          "04-audit-coverage-scanner": {
+            "status": "DEPLOYED",
+            "gate_enforced": true
+          },
+          "05-semantic-capability-scanner": {
+            "status": "DEPLOYED",
+            "gate_enforced": true
+          }
+        },
+        "regression_gates": {
+          "route_partial": {
+            "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+            "active": true
+          },
+          "service_partial": {
+            "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+            "active": true
+          },
+          "missing_audit": {
+            "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+            "active": true
+          },
+          "missing_capability": {
+            "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+            "active": true
+          },
+          "missing_telemetry": {
+            "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+            "active": true
+          },
+          "direct_trust": {
+            "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+            "active": true
+          },
+          "false_green_claim": {
+            "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+            "active": true
+          }
+        },
+        "status": "ALL_GATES_ARMED"
+      }
+    }
+  },
+  "closures": {
+    "audit_closure": {
+      "phase": "A - Audit Chain Closure",
+      "timestamp": "2026-05-19T23:13:18.362Z",
+      "files_analyzed": 50,
+      "files_updated": 5,
+      "total_audit_events": 0,
+      "updates_applied": 0,
+      "status": "PARTIALLY_CLOSED"
+    },
+    "route_closure": {
+      "phase": "B",
+      "timestamp": "2026-05-19T23:13:48.339Z",
+      "total_routes": 147,
+      "routes_status": {
+        "fully_closed": 8,
+        "partial": 129,
+        "failed": 7,
+        "intentional_public": 3
+      },
+      "remediation": "Added withCanonicalEnforcement wrapper, requireCapabilities, workspace verification to PARTIAL routes",
+      "action_items": [
+        "Migrate 129 PARTIAL routes to FULLY_CLOSED via requireCapabilities pattern",
+        "Fix 7 FAILED routes by adding missing auth, workspace, or capability enforcement",
+        "Verify all mutation routes emit complete audit events",
+        "Add telemetry tracking to all state-changing endpoints"
+      ],
+      "target": "partial_routes = 0",
+      "status": "IN_PROGRESS"
+    },
+    "service_closure": {
+      "phase": "C",
+      "timestamp": "2026-05-19T23:13:48.341Z",
+      "total_services": 639,
+      "services_status": {
+        "mutation_closed": 1,
+        "mutation_partial": 11,
+        "read_only": 156,
+        "background_exempt": 0
+      },
+      "remediation": "Added ServiceCapabilityContext and requireCapabilityEnvelope to mutation services",
+      "action_items": [
+        "Add ServiceCapabilityContext parameter to all 11 MUTATION_PARTIAL services",
+        "Call requireCapabilityEnvelope() in all mutation entry points",
+        "Extract verifiedActorId from context, never from parameters",
+        "Extract verifiedWorkspaceId from context, never from headers",
+        "Emit complete audit events with all 7 required fields"
+      ],
+      "target": "mutation_partial = 0",
+      "status": "IN_PROGRESS"
+    },
+    "workflow_closure": {
+      "phase": "D",
+      "timestamp": "2026-05-19T23:13:48.341Z",
+      "workflows": {
+        "login": {
+          "status": "PARTIAL",
+          "required": [
+            "route",
+            "service",
+            "audit",
+            "telemetry",
+            "idempotency"
+          ]
+        },
+        "engagement": {
+          "status": "PARTIAL",
+          "required": [
+            "route",
+            "service",
+            "audit",
+            "telemetry",
+            "re-evaluation"
+          ]
+        },
+        "decision": {
+          "status": "PARTIAL",
+          "required": [
+            "route",
+            "service",
+            "audit",
+            "telemetry",
+            "state_validation"
+          ]
+        },
+        "action": {
+          "status": "PARTIAL",
+          "required": [
+            "route",
+            "service",
+            "audit",
+            "telemetry",
+            "deadline_tracking"
+          ]
+        },
+        "recommendation": {
+          "status": "PARTIAL",
+          "required": [
+            "route",
+            "service",
+            "audit",
+            "telemetry",
+            "priority_ranking"
+          ]
+        },
+        "deliverable": {
+          "status": "PARTIAL",
+          "required": [
+            "route",
+            "service",
+            "audit",
+            "telemetry",
+            "acceptance_validation"
+          ]
+        },
+        "billing": {
+          "status": "PARTIAL",
+          "required": [
+            "route",
+            "service",
+            "audit",
+            "telemetry",
+            "stripe_integration"
+          ]
+        },
+        "notification": {
+          "status": "PARTIAL",
+          "required": [
+            "route",
+            "service",
+            "audit",
+            "telemetry",
+            "delivery_tracking"
+          ]
+        },
+        "reporting": {
+          "status": "PARTIAL",
+          "required": [
+            "route",
+            "service",
+            "audit",
+            "telemetry",
+            "operator_visibility"
+          ]
+        },
+        "owner_mode": {
+          "status": "PARTIAL",
+          "required": [
+            "route",
+            "service",
+            "audit",
+            "telemetry",
+            "owner_visibility"
+          ]
+        }
+      },
+      "action_items": [
+        "Complete route implementations for all workflows",
+        "Wire all services to audit and telemetry pipeline",
+        "Add state validation for each workflow",
+        "Implement workflow-specific re-evaluation triggers",
+        "Add operator visibility for all state changes"
+      ],
+      "target": "all_workflows = CLOSED",
+      "status": "IN_PROGRESS"
+    },
+    "final_closure": {
+      "phase": "E",
+      "timestamp": "2026-05-19T23:13:48.341Z",
+      "scanners": {
+        "01-route-capability-scanner": {
+          "status": "DEPLOYED",
+          "gate_enforced": true
+        },
+        "02-service-mutation-scanner": {
+          "status": "DEPLOYED",
+          "gate_enforced": true
+        },
+        "03-direct-trust-scanner": {
+          "status": "DEPLOYED",
+          "gate_enforced": true
+        },
+        "04-audit-coverage-scanner": {
+          "status": "DEPLOYED",
+          "gate_enforced": true
+        },
+        "05-semantic-capability-scanner": {
+          "status": "DEPLOYED",
+          "gate_enforced": true
+        }
+      },
+      "regression_gates": {
+        "route_partial": {
+          "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+          "active": true
+        },
+        "service_partial": {
+          "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+          "active": true
+        },
+        "missing_audit": {
+          "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+          "active": true
+        },
+        "missing_capability": {
+          "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+          "active": true
+        },
+        "missing_telemetry": {
+          "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+          "active": true
+        },
+        "direct_trust": {
+          "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+          "active": true
+        },
+        "false_green_claim": {
+          "blocks": "INTERNAL_ALPHA, CONTROLLED_BETA, PRODUCTION",
+          "active": true
+        }
+      },
+      "status": "ALL_GATES_ARMED"
+    }
+  },
+  "final_metrics": {
+    "routes_closed_percent": 5,
+    "services_closed_percent": 8,
+    "audit_closure_percent": 0,
+    "workflow_closure_percent": 20
+  },
+  "deployment_status": {
+    "internal_alpha": "BLOCKED",
+    "controlled_beta": "BLOCKED",
+    "production": "BLOCKED"
+  }
+}

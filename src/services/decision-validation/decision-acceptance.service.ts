@@ -1,3 +1,4 @@
+import { enrichMutationAuditEvent } from '@/infra/audit-enrichment';
 import { db } from "@/lib/db";
 import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
 import { logger } from "@/infra/logger";

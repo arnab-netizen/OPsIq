@@ -1,0 +1,21 @@
+{
+  "total_audit_events": 1,
+  "with_actor": 1,
+  "with_workspace": 1,
+  "with_capability": 1,
+  "with_decision": 1,
+  "with_entity": 0,
+  "with_timestamp": 1,
+  "with_request_id": 0,
+  "complete_chains": 0,
+  "incomplete": [
+    {
+      "file": "",
+      "line": 0,
+      "missing": [
+        "entity",
+        "requestId"
+      ]
+    }
+  ]
+}

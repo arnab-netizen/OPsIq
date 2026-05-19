@@ -1,3 +1,4 @@
+import { enrichMutationAuditEvent } from '@/infra/audit-enrichment';
 import { db } from "@/lib/db";
 import type { ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { emitAuditEvent } from "@/infra/audit";

@@ -1,3 +1,4 @@
+import { enrichMutationAuditEvent } from '@/infra/audit-enrichment';
 /**
  * ROI/Impact Lifecycle Gating Service
  *

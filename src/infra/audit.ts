@@ -16,6 +16,18 @@ export interface AuditEventInput {
   payload?: Record<string, unknown>;
   correlationId?: string;
   visibility?: Visibility;
+  capability?: string;
+  decision?: string;
+  requestId?: string;
+}
+
+export interface MutationAuditEventInput extends AuditEventInput {
+  actorId: string;
+  workspaceId: string;
+  capability: string;
+  entityType: string;
+  entityId: string;
+  requestId: string;
 }
 
 function computeEventHash(eventId: string, workspaceId: string, eventName: string, timestamp: Date): string {
@@ -41,6 +53,13 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
     select: { id: true, previousHash: true },
   });
 
+  const enrichedPayload = {
+    ...input.payload,
+    ...(input.capability && { capability: input.capability }),
+    ...(input.decision && { decision: input.decision }),
+    ...(input.requestId && { requestId: input.requestId }),
+  };
+
   const event = await db.auditEvent.create({
     data: {
       workspaceId: input.workspaceId,
@@ -49,8 +68,8 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
       actorType: input.actorType ?? "user",
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
-      payload: input.payload
-        ? (input.payload as Prisma.InputJsonValue)
+      payload: Object.keys(enrichedPayload).length > 0
+        ? (enrichedPayload as Prisma.InputJsonValue)
         : Prisma.DbNull,
       correlationId: input.correlationId ?? null,
       visibility: input.visibility ?? "internal",
@@ -67,6 +86,24 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
   });
 
   return event.id;
+}
+
+export async function emitMutationAuditEvent(input: MutationAuditEventInput): Promise<string> {
+  if (!input.actorId || !input.workspaceId || !input.capability || !input.entityType || !input.entityId || !input.requestId) {
+    logger.error("Mutation audit event missing required fields - rejecting", {
+      missing: {
+        actorId: !input.actorId,
+        workspaceId: !input.workspaceId,
+        capability: !input.capability,
+        entityType: !input.entityType,
+        entityId: !input.entityId,
+        requestId: !input.requestId,
+      },
+      eventName: input.eventName,
+    });
+    throw new Error("Mutation audit event missing required fields: actorId, workspaceId, capability, entityType, entityId, requestId");
+  }
+  return emitAuditEvent(input);
 }
 
 export async function queryAuditEvents(filter: {
