@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { Badge, Button } from "@/ui/primitives";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/src/lib/operator-error-governance";
+import { GovernedEmptyState } from "@/src/components/ui/GovernedEmptyState";
 
 interface Finding {
   id: string;
@@ -88,8 +93,12 @@ export function FindingsManager({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        const errorMessage = errorData?.error?.message || "Failed to create finding";
-        setErrors({ form: errorMessage });
+        const error = new Error(errorData?.error?.message || "Failed to create finding");
+        const context: ErrorGovernanceContext = {
+          context: "form",
+        };
+        const governed = classifyOperatorError(error, context);
+        setErrors({ form: governed.operatorMessage });
         return;
       }
 
@@ -99,8 +108,11 @@ export function FindingsManager({
       setCreateMode(false);
       onFindingUpdated?.();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to create finding";
-      setErrors({ form: errorMessage });
+      const context: ErrorGovernanceContext = {
+        context: "form",
+      };
+      const governed = classifyOperatorError(err, context);
+      setErrors({ form: governed.operatorMessage });
     } finally {
       setUpdating(null);
     }
@@ -128,8 +140,13 @@ export function FindingsManager({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        const errorMessage = errorData?.error?.message || "Failed to update finding";
-        setErrors({ [findingId]: errorMessage });
+        const error = new Error(errorData?.error?.message || "Failed to update finding");
+        const context: ErrorGovernanceContext = {
+          context: "action",
+          resourceId: findingId,
+        };
+        const governed = classifyOperatorError(error, context);
+        setErrors({ [findingId]: governed.operatorMessage });
         return;
       }
 
@@ -149,8 +166,12 @@ export function FindingsManager({
 
       onFindingUpdated?.();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to update finding";
-      setErrors({ [findingId]: errorMessage });
+      const context: ErrorGovernanceContext = {
+        context: "action",
+        resourceId: findingId,
+      };
+      const governed = classifyOperatorError(err, context);
+      setErrors({ [findingId]: governed.operatorMessage });
     } finally {
       setUpdating(null);
     }
@@ -424,10 +445,14 @@ export function FindingsManager({
 
       {/* Empty State */}
       {localFindings.length === 0 && !createMode && (
-        <div className="rounded-lg border border-border p-8 text-center">
-          <p className="text-muted-foreground">No findings recorded yet.</p>
-          <p className="mt-1 text-sm text-muted-foreground">Create a finding or run a diagnosis to generate findings from evidence.</p>
-        </div>
+        <GovernedEmptyState
+          reason="no_findings"
+          primaryAction={{
+            label: "Create Finding",
+            onClick: () => setCreateMode(true),
+          }}
+          helpText="Findings are created manually or generated from diagnostic analysis."
+        />
       )}
     </div>
   );

@@ -3,39 +3,31 @@
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
 import { useState } from "react";
+import { useOperatorMutation, type MutationOptions } from "@/src/hooks/useOperatorMutation";
 
 export const dynamic = "force-dynamic";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+
+  interface LoginResponse {
+    success: boolean;
+  }
+
+  const loginMutation = useOperatorMutation<LoginResponse, { email: string; password: string }>({
+    url: "/api/auth/login",
+    method: "POST",
+    operationName: "login",
+    onSuccess: () => {
+      window.location.href = "/dashboard";
+    },
+    timeoutMs: 15000,
+  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error?.message ?? "Login failed");
-        return;
-      }
-
-      window.location.href = "/dashboard";
-    } catch {
-      setError("Network error. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    await loginMutation.mutate({ email, password });
   }
 
   return (
@@ -68,11 +60,14 @@ export default function LoginPage() {
             autoComplete="current-password"
           />
 
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
+          {loginMutation.isError && loginMutation.error && (
+            <div className="space-y-2">
+              <p className="text-sm text-destructive">{loginMutation.error.operatorMessage}</p>
+              <p className="text-xs text-muted-foreground">{loginMutation.error.recovery}</p>
+            </div>
           )}
 
-          <Button type="submit" isLoading={isLoading} className="w-full">
+          <Button type="submit" isLoading={loginMutation.isLoading} className="w-full">
             Sign in
           </Button>
         </form>

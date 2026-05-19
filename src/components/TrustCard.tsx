@@ -1,9 +1,14 @@
+import { GovMetric } from "@/src/components/ui/GovMetric";
+
 interface TrustCardProps {
   ruleId: string;
   confidence: number;
 }
 
 export function TrustCard({ ruleId, confidence }: TrustCardProps) {
+  // Convert confidence (0-1 scale) to percentage (0-100) for GovMetric
+  const confidencePercentage = Math.round(confidence * 100);
+
   return (
     <div
       style={{
@@ -19,9 +24,15 @@ export function TrustCard({ ruleId, confidence }: TrustCardProps) {
         <strong>Rule ID:</strong> {ruleId}
       </p>
 
-      <p style={{ margin: "5px 0" }}>
-        <strong>Confidence:</strong> {(confidence * 100).toFixed(0)}%
-      </p>
+      <div style={{ margin: "10px 0" }}>
+        <GovMetric
+          name="confidence"
+          value={confidencePercentage}
+          size="md"
+          showInterpretation={true}
+          showAction={false}
+        />
+      </div>
 
       <p
         style={{

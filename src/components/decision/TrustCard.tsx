@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import type { CalibrationMetrics } from '@/services/calibration/engine';
 import type { ValueMetrics } from '@/services/value/tracker';
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from '@/src/lib/operator-error-governance';
 
 interface TrustCardProps {
   calibrationMetrics?: CalibrationMetrics | null;
@@ -48,7 +52,11 @@ export function TrustCard({
         setCalibration(calibMetrics);
         setValue(valueData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load metrics');
+        const context: ErrorGovernanceContext = {
+          context: "load",
+        };
+        const governed = classifyOperatorError(err, context);
+        setError(governed.operatorMessage);
       } finally {
         setLoading(false);
       }

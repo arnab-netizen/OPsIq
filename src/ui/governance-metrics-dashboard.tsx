@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Badge } from "@/ui/primitives";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/src/lib/operator-error-governance";
 
 interface GovernanceMetrics {
   workspace: { workspaceId: string };
@@ -135,7 +139,9 @@ export function GovernanceMetricsDashboard() {
         setSummary(summaryData);
         setAlerts(alertsData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        const context: ErrorGovernanceContext = { context: "load" };
+        const governed = classifyOperatorError(err, context);
+        setError(governed.operatorMessage);
       } finally {
         setLoading(false);
       }

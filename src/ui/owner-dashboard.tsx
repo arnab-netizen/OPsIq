@@ -3,6 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/ui/primitives";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/src/lib/operator-error-governance";
 
 interface DashboardAction {
   id: string;
@@ -226,7 +230,9 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
       const dashboardData = await response.json();
       setData(dashboardData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const ctx: ErrorGovernanceContext = { context: "load" };
+      const govErr = classifyOperatorError(err, ctx);
+      setError(govErr.operatorMessage);
     }
   };
 
@@ -302,7 +308,9 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
       }
       await fetchDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const ctx: ErrorGovernanceContext = { context: "load" };
+      const govErr = classifyOperatorError(err, ctx);
+      setError(govErr.operatorMessage);
     } finally {
       setIsMutating(false);
     }
@@ -321,7 +329,9 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
       }
       await fetchDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const ctx: ErrorGovernanceContext = { context: "load" };
+      const govErr = classifyOperatorError(err, ctx);
+      setError(govErr.operatorMessage);
     } finally {
       setIsMutating(false);
     }
@@ -340,7 +350,9 @@ export function OwnerDashboard({ engagementId }: OwnerDashboardProps) {
       }
       await fetchDashboard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const ctx: ErrorGovernanceContext = { context: "load" };
+      const govErr = classifyOperatorError(err, ctx);
+      setError(govErr.operatorMessage);
     } finally {
       setIsMutating(false);
     }

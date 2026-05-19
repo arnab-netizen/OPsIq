@@ -165,7 +165,7 @@ export default function EvidenceVaultPage({
                     setError(null);
                   })
                   .catch((err) => {
-                    setError(err.message);
+                    setError(classifyOperatorError(err, { context: "load" }).operatorMessage);
                   });
               }
             }}
