@@ -20,130 +20,91 @@
       {
         "file": "src/services/roi-lifecycle-gating.ts",
         "missing": [
-          "capability",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/roi-lifecycle-gating.ts",
         "missing": [
-          "capability",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/roi-lifecycle-gating.ts",
         "missing": [
-          "capability",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/decision-validation/decision-acceptance.service.ts",
         "missing": [
-          "capability",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/decision-validation/decision-acceptance.service.ts",
         "missing": [
-          "capability",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/deliverable.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/deliverable.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/diagnosis.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/operator/store.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/operator/store.ts",
-        "missing": [
-          "decision",
           "timestamp"
         ]
       },
       {
         "file": "src/services/operator/store.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/operator/store.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
+        ]
+      },
+      {
+        "file": "src/services/operator/store.ts",
+        "missing": [
+          "timestamp"
+        ]
+      },
+      {
+        "file": "src/services/operator/store.ts",
+        "missing": [
+          "timestamp"
         ]
       },
       {
         "file": "src/services/engagement-membership.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/engagement-membership.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/stage.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -203,28 +164,19 @@
       {
         "file": "src/services/business-condition.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/action.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/action.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -276,10 +228,7 @@
       {
         "file": "src/services/webhook.service.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -313,11 +262,7 @@
       {
         "file": "src/services/evidence.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -382,13 +327,6 @@
           "decision",
           "timestamp",
           "requestId"
-        ]
-      },
-      {
-        "file": "src/services/evidence.ts",
-        "missing": [
-          "decision",
-          "timestamp"
         ]
       },
       {
@@ -466,11 +404,7 @@
       {
         "file": "src/services/recommendation.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -543,10 +477,7 @@
       {
         "file": "src/services/engagement.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -572,15 +503,6 @@
         "missing": [
           "decision",
           "timestamp"
-        ]
-      },
-      {
-        "file": "src/services/engagement.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
         ]
       },
       {
@@ -667,11 +589,7 @@
       {
         "file": "src/services/client-account.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -829,16 +747,6 @@
         "missing": [
           "capability",
           "decision",
-          "timestamp",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/webhooks.service.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "timestamp",
           "requestId"
         ]
       },
@@ -899,10 +807,7 @@
       {
         "file": "src/services/alerts/alert-service.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -917,10 +822,7 @@
       {
         "file": "src/services/client-contact.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1016,8 +918,7 @@
         "file": "src/services/re-evaluation.ts",
         "missing": [
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1089,7 +990,6 @@
       {
         "file": "src/app/api/auth/login/route.ts",
         "missing": [
-          "entity",
           "timestamp"
         ]
       },
@@ -1294,11 +1194,7 @@
       {
         "file": "src/lib/capability-enforcement.ts",
         "missing": [
-          "actor",
-          "workspace",
-          "capability",
           "entity",
-          "decision",
           "requestId"
         ]
       },
@@ -1306,9 +1202,7 @@
         "file": "src/infra/audit.ts",
         "missing": [
           "actor",
-          "workspace",
           "capability",
-          "entity",
           "decision",
           "timestamp",
           "requestId"
@@ -1317,10 +1211,7 @@
       {
         "file": "src/infra/audit.ts",
         "missing": [
-          "actor",
-          "workspace",
           "capability",
-          "entity",
           "decision",
           "timestamp",
           "requestId"
@@ -1517,9 +1408,7 @@
       "type": "incomplete_audit",
       "file": "src/services/roi-lifecycle-gating.ts",
       "missing": [
-        "capability",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1527,9 +1416,7 @@
       "type": "incomplete_audit",
       "file": "src/services/roi-lifecycle-gating.ts",
       "missing": [
-        "capability",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1537,9 +1424,7 @@
       "type": "incomplete_audit",
       "file": "src/services/roi-lifecycle-gating.ts",
       "missing": [
-        "capability",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1547,9 +1432,7 @@
       "type": "incomplete_audit",
       "file": "src/services/decision-validation/decision-acceptance.service.ts",
       "missing": [
-        "capability",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1557,9 +1440,7 @@
       "type": "incomplete_audit",
       "file": "src/services/decision-validation/decision-acceptance.service.ts",
       "missing": [
-        "capability",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1567,10 +1448,7 @@
       "type": "incomplete_audit",
       "file": "src/services/deliverable.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1578,10 +1456,7 @@
       "type": "incomplete_audit",
       "file": "src/services/deliverable.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1589,29 +1464,6 @@
       "type": "incomplete_audit",
       "file": "src/services/diagnosis.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/operator/store.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/operator/store.ts",
-      "missing": [
-        "decision",
         "timestamp"
       ]
     },
@@ -1620,10 +1472,7 @@
       "type": "incomplete_audit",
       "file": "src/services/operator/store.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1631,10 +1480,23 @@
       "type": "incomplete_audit",
       "file": "src/services/operator/store.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
+      ]
+    },
+    {
+      "phase": "C",
+      "type": "incomplete_audit",
+      "file": "src/services/operator/store.ts",
+      "missing": [
+        "timestamp"
+      ]
+    },
+    {
+      "phase": "C",
+      "type": "incomplete_audit",
+      "file": "src/services/operator/store.ts",
+      "missing": [
+        "timestamp"
       ]
     },
     {
@@ -1642,10 +1504,7 @@
       "type": "incomplete_audit",
       "file": "src/services/engagement-membership.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1653,10 +1512,7 @@
       "type": "incomplete_audit",
       "file": "src/services/engagement-membership.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1664,11 +1520,7 @@
       "type": "incomplete_audit",
       "file": "src/services/stage.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1742,10 +1594,7 @@
       "type": "incomplete_audit",
       "file": "src/services/business-condition.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1753,10 +1602,7 @@
       "type": "incomplete_audit",
       "file": "src/services/action.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1764,10 +1610,7 @@
       "type": "incomplete_audit",
       "file": "src/services/action.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1831,10 +1674,7 @@
       "type": "incomplete_audit",
       "file": "src/services/webhook.service.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1876,11 +1716,7 @@
       "type": "incomplete_audit",
       "file": "src/services/evidence.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1959,15 +1795,6 @@
         "decision",
         "timestamp",
         "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/evidence.ts",
-      "missing": [
-        "decision",
-        "timestamp"
       ]
     },
     {
@@ -2063,11 +1890,7 @@
       "type": "incomplete_audit",
       "file": "src/services/recommendation.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2156,10 +1979,7 @@
       "type": "incomplete_audit",
       "file": "src/services/engagement.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2191,17 +2011,6 @@
       "missing": [
         "decision",
         "timestamp"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/engagement.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
       ]
     },
     {
@@ -2308,11 +2117,7 @@
       "type": "incomplete_audit",
       "file": "src/services/client-account.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2506,18 +2311,6 @@
       "missing": [
         "capability",
         "decision",
-        "timestamp",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/webhooks.service.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "timestamp",
         "requestId"
       ]
     },
@@ -2592,10 +2385,7 @@
       "type": "incomplete_audit",
       "file": "src/services/alerts/alert-service.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2614,10 +2404,7 @@
       "type": "incomplete_audit",
       "file": "src/services/client-contact.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2735,8 +2522,7 @@
       "file": "src/services/re-evaluation.ts",
       "missing": [
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2826,7 +2612,6 @@
       "type": "incomplete_audit",
       "file": "src/app/api/auth/login/route.ts",
       "missing": [
-        "entity",
         "timestamp"
       ]
     },
@@ -3077,11 +2862,7 @@
       "type": "incomplete_audit",
       "file": "src/lib/capability-enforcement.ts",
       "missing": [
-        "actor",
-        "workspace",
-        "capability",
         "entity",
-        "decision",
         "requestId"
       ]
     },
@@ -3091,9 +2872,7 @@
       "file": "src/infra/audit.ts",
       "missing": [
         "actor",
-        "workspace",
         "capability",
-        "entity",
         "decision",
         "timestamp",
         "requestId"
@@ -3104,10 +2883,7 @@
       "type": "incomplete_audit",
       "file": "src/infra/audit.ts",
       "missing": [
-        "actor",
-        "workspace",
         "capability",
-        "entity",
         "decision",
         "timestamp",
         "requestId"

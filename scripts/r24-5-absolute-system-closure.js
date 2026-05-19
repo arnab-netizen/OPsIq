@@ -254,7 +254,15 @@ class AbsoluteSystemClosureAuditor {
     console.log('╚════════════════════════════════════════════════════════════╝\n');
 
     try {
-      const requiredFields = ['actor', 'workspace', 'capability', 'entity', 'decision', 'timestamp', 'requestId'];
+      const requiredFields = [
+        { pattern: ['actor', 'actorId'], name: 'actor' },
+        { pattern: ['workspace', 'workspaceId'], name: 'workspace' },
+        { pattern: ['capability'], name: 'capability' },
+        { pattern: ['entity', 'entityType', 'entityId'], name: 'entity' },
+        { pattern: ['decision'], name: 'decision' },
+        { pattern: ['timestamp', 'occurredAt'], name: 'timestamp' },
+        { pattern: ['requestId', 'correlationId'], name: 'requestId' }
+      ];
       let auditEventCalls = 0;
       let completeAuditCalls = 0;
 
@@ -264,7 +272,7 @@ class AbsoluteSystemClosureAuditor {
 
       for (const file of auditFiles) {
         const content = fs.readFileSync(file, 'utf8');
-        const auditMatches = content.match(/emitAuditEvent\s*\([^)]+\)/g) || [];
+        const auditMatches = content.match(/emitAuditEvent\s*\([\s\S]*?\}\s*\)/g) || [];
 
         for (const auditCall of auditMatches) {
           auditEventCalls++;
@@ -272,9 +280,10 @@ class AbsoluteSystemClosureAuditor {
           const missingFields = [];
 
           for (const field of requiredFields) {
-            if (!auditCall.includes(field)) {
+            const hasField = field.pattern.some(p => auditCall.includes(p));
+            if (!hasField) {
               hasAllFields = false;
-              missingFields.push(field);
+              missingFields.push(field.name);
             }
           }
 
