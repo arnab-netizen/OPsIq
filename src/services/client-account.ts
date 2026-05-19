@@ -131,9 +131,8 @@ export async function updateClient(
     payload: data,
     visibility: 'internal',
     capability: 'mutation',
-  ,
     requestId: randomUUID()
-  };
+  });
 
   logger.info("Client account updated", { clientId });
 }
@@ -176,9 +175,8 @@ export async function archiveClient(
     workspaceId: validatedWorkspaceId,
     visibility: 'internal',
     capability: 'mutation',
-  ,
     requestId: randomUUID()
-  };
+  });
 
   logger.info("Client account archived", { clientId });
 }

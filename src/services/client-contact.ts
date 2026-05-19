@@ -160,9 +160,8 @@ export async function updateContact(
     payload: data,
     visibility: 'internal',
     capability: 'mutation',
-  ,
     requestId: randomUUID()
-  };
+  });
 
   logger.info("Client contact updated", { contactId });
 }
