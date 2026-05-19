@@ -104,6 +104,9 @@ export async function createLead(
     entityType: "lead_record",
     entityId: result.result.id,
     workspaceId: validatedWorkspaceId,
+      capability: 'mutation',
+      decision: 'lead_created',
+      requestId: randomUUID(),
     payload: { companyName: result.result.companyName },
     visibility: "internal",
   });
@@ -233,6 +236,10 @@ export async function linkLeadToEngagement(
     workspaceId,
     payload: { engagementId, clientId },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'l_e_a_d__l_i_n_k_e_d__t_o__e_n_g_a_g_e_m_e_n_t',
+    requestId: randomUUID(),
+
   });
 
   // Lead conversion is significant client/engagement event

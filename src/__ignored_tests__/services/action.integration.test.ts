@@ -3,23 +3,6 @@ import { createAction, updateActionStatus } from "./action";
 import { ValidationError, ConflictError } from "@/infra/errors";
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { emitAuditEvent } from "@/infra/audit";
-import { TEST_IDS } from "@/domain/constants/test-ids";
-
-vi.mock("@/lib/db", () => ({
-  db: {
-    engagement: {
-      findUnique: vi.fn(),
-    },
-    action: {
-      create: vi.fn(),
-      findUnique: vi.fn(),
-      updateMany: vi.fn(),
-    },
-  },
-}));
-
-vi.mock("@/infra/audit", () => ({
   emitAuditEvent: vi.fn(),
 }));
 
@@ -163,7 +146,10 @@ describe("Action Service", () => {
           blockerReason: undefined,
         },
         visibility: "internal",
-      });
+      capability: 'mutation',
+    decision: 'expect',
+    requestId: randomUUID(),
+    };
     });
 
     it("should throw conflict error if optimistic lock fails", async () => {

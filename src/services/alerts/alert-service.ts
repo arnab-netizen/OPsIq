@@ -147,7 +147,15 @@ export async function markAlertAsRead(
       logger.warn("Failed to emit audit event for alert update", {
         alertId,
         error: error instanceof Error ? error.message : String(error),
+    capability: 'mutation',
+    decision: 'a_l_e_r_t__u_p_d_a_t_e_d',
+    requestId: randomUUID(),
+
       });
+    capability: 'mutation',
+    decision: 'a_l_e_r_t__u_p_d_a_t_e_d',
+    requestId: randomUUID(),
+
     });
 
     logger.info("Alert marked as read", { alertId, workspaceId });

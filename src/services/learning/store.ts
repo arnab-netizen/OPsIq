@@ -49,7 +49,10 @@ export async function recordLearning(input: LearningRecordInput): Promise<void> 
     logger.warn("Failed to emit audit event for learning record", {
       workspaceId: input.workspaceId,
       error: error instanceof Error ? error.message : String(error),
-    });
+    capability: 'mutation',
+    decision: 'learning_recorded',
+    requestId: randomUUID(),
+    };
   });
 }
 

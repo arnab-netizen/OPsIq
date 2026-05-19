@@ -43,7 +43,10 @@ export async function emitAuditEvent(input: AuditEventInput): Promise<string> {
       entityType: input.entityType,
       entityId: input.entityId,
       reason: "workspaceId is required for workspace isolation",
-    });
+    capability: 'mutation',
+    decision: 'input',
+    requestId: randomUUID(),
+    };
     return "fail-safe-no-workspace-id";
   }
 

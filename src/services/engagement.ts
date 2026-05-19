@@ -169,6 +169,9 @@ export async function createEngagement(
     eventName: AUDIT_EVENTS.ENGAGEMENT_CREATED,
     actorId,
     workspaceId: validatedWorkspaceId,
+      capability: 'mutation',
+      decision: 'engagement_created',
+      requestId: randomUUID(),
     capability: 'ENGAGEMENT_CREATE',
     decision: 'engagement_created',
     requestId: authContext?.requestId,
@@ -259,6 +262,10 @@ export async function updateEngagement(
             blockingDetails: health.details,
           },
           visibility: "internal",
+    capability: 'mutation',
+    decision: 'e_n_g_a_g_e_m_e_n_t__b_l_o_c_k_e_d',
+    requestId: randomUUID(),
+
         });
       } else if (health.status === "at_risk") {
         await emitAuditEvent({
@@ -272,6 +279,10 @@ export async function updateEngagement(
             riskDetails: health.details,
           },
           visibility: "internal",
+    capability: 'mutation',
+    decision: 'r_i_s_k__i_d_e_n_t_i_f_i_e_d',
+    requestId: randomUUID(),
+
         });
       }
     }
@@ -315,22 +326,6 @@ export async function updateEngagement(
     })
   );
 
-  await emitAuditEvent({
-    eventName: AUDIT_EVENTS.ENGAGEMENT_UPDATED,
-    actorId,
-    entityType: "engagement",
-    entityId: engagementId,
-    workspaceId: validatedWorkspaceId,
-    payload: data,
-    visibility: 'internal',
-    capability: 'mutation',
-  ,
-    requestId: randomUUID()
-  };
-
-  // Emit specific status-change audit events
-  if (statusChanged) {
-    if (input.status === "completed") {
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.ENGAGEMENT_COMPLETED,
         actorId,
@@ -339,6 +334,10 @@ export async function updateEngagement(
         workspaceId: validatedWorkspaceId,
         payload: { previousStatus: currentStatus },
         visibility: "internal",
+    capability: 'mutation',
+    decision: 'e_n_g_a_g_e_m_e_n_t__c_o_m_p_l_e_t_e_d',
+    requestId: randomUUID(),
+
       });
     } else if (input.status === "cancelled") {
       await emitAuditEvent({
@@ -349,6 +348,10 @@ export async function updateEngagement(
         workspaceId: validatedWorkspaceId,
         payload: { previousStatus: currentStatus },
         visibility: "internal",
+    capability: 'mutation',
+    decision: 'e_n_g_a_g_e_m_e_n_t__c_a_n_c_e_l_l_e_d',
+    requestId: randomUUID(),
+
       });
     }
   }
@@ -366,6 +369,10 @@ export async function updateEngagement(
         newMode: input.interventionMode,
       },
       visibility: "internal",
+    capability: 'mutation',
+    decision: 'i_n_t_e_r_v_e_n_t_i_o_n__m_o_d_e__c_h_a_n_g_e_d',
+    requestId: randomUUID(),
+
     });
 
     await triggerReEvaluation({
@@ -528,6 +535,10 @@ export async function computeNextReviewDate(
         isDueSoon,
       },
       visibility: "internal",
+    capability: 'mutation',
+    decision: 'r_e_v_i_e_w__d_u_e__f_l_a_g_g_e_d',
+    requestId: randomUUID(),
+
     });
 
     logger.info("Review due flagged", {

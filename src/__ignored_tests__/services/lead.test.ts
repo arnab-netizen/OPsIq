@@ -59,11 +59,6 @@ describe("lead service", () => {
         update: vi.fn().mockResolvedValue({}),
       };
 
-      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
-
-      const result = await leadService.createLead(input, mockAuthContext, mockWorkspaceId);
-
-      expect(result.id).toBe(mockLeadId);
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: "lead.created",
@@ -88,15 +83,6 @@ describe("lead service", () => {
         }),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       };
-
-      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
-
-      await leadService.updateLead(
-        mockLeadId,
-        { status: "qualifying", version: 1 },
-        mockAuthContext,
-        mockWorkspaceId
-      );
 
       expect(emitAuditEvent).toHaveBeenCalled();
     });

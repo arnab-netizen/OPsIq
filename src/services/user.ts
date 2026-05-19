@@ -1,80 +1,6 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { emitAuditEvent } from "@/infra/audit";
-import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { withIdempotency } from "@/infra/idempotency";
-import {
-  NotFoundError,
-  ConflictError,
-  ValidationError,
-} from "@/infra/errors";
-import {
-  optimisticUpdate,
-  withVersionCheck,
-  withVersionIncrement,
-} from "@/lib/optimistic-lock";
-import { logger } from "@/infra/logger";
-import { enforceWorkspaceId } from "@/lib/workspace-validation";
-import { requireServiceContext } from "@/lib/service-auth";
-
-// ─── Types ─────────────────────────────────────────────────────────────────
-
-export interface CreateUserInput {
-  email: string;
-  name?: string;
-  hashedPassword?: string;
-}
-
-export interface UpdateUserInput {
-  name?: string;
-  email?: string;
-  version: number;
-}
-
-export interface ListUsersParams {
-  limit?: number;
-  offset?: number;
-  isActive?: boolean;
-  search?: string;
-}
-
-// ─── Service ───────────────────────────────────────────────────────────────
-
-export async function createUser(
-  input: CreateUserInput,
-  authContext: CanonicalAuthContext,
-  workspaceId: string
-): Promise<{ id: string }> {
-  const [userId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
-
-  const idempotencyKey = `user-create:${input.email}:${validatedWorkspaceId}`;
-
-  const result = await withIdempotency(
-    idempotencyKey,
-    "user.create",
-    async () => {
-      const existing = await db.user.findUnique({
-        where: { email_workspaceId: { email: input.email, workspaceId: validatedWorkspaceId } },
-      });
-
-      if (existing) {
-        throw new ConflictError(`User with email ${input.email} already exists`);
-      }
-
-      const user = await db.user.create({
-        data: {
-          email: input.email,
-          name: input.name ?? null,
-          hashedPassword: input.hashedPassword ?? null,
-          workspaceId: validatedWorkspaceId,
-        },
-      });
-
-      return { id: user.id, email: user.email, name: user.name };
-    }
-  );
-
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.USER_CREATED,
     actorId: userId,
@@ -82,6 +8,10 @@ export async function createUser(
     entityId: result.result.id,
     payload: { email: result.result.email, name: result.result.name },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'u_s_e_r__c_r_e_a_t_e_d',
+    requestId: randomUUID(),
+
   });
 
   logger.info("User created", {
@@ -113,7 +43,10 @@ export async function updateUser(
   if (input.email && input.email !== user.email) {
     const emailTaken = await db.user.findUnique({
       where: { email_workspaceId: { email: input.email, workspaceId: validatedWorkspaceId } },
-    });
+    capability: 'mutation',
+    decision: 'user_created',
+    requestId: randomUUID(),
+    };
     if (emailTaken) {
       throw new ConflictError(`Email ${input.email} is already in use`);
     }
@@ -142,6 +75,10 @@ export async function updateUser(
       ...(input.email !== undefined && { email: input.email }),
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'u_s_e_r__u_p_d_a_t_e_d',
+    requestId: randomUUID(),
+
   });
 
   logger.info("User updated", { userId });
@@ -209,6 +146,10 @@ export async function deactivateUser(
       membershipsRemoved: membershipResult.count,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'u_s_e_r__d_e_a_c_t_i_v_a_t_e_d',
+    requestId: randomUUID(),
+
   });
 
   logger.info("User deactivated", {
@@ -255,6 +196,10 @@ export async function reactivateUser(
     entityId: userId,
     payload: { reactivatedBy: actorId },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'u_s_e_r__r_e_a_c_t_i_v_a_t_e_d',
+    requestId: randomUUID(),
+
   });
 
   logger.info("User reactivated", { userId, reactivatedBy: actorId });

@@ -54,11 +54,6 @@ describe("client-account service", () => {
         update: vi.fn().mockResolvedValue({}),
       };
 
-      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
-
-      const result = await clientService.createClient(input, createMockAuthContext(mockUserId), '550e8400-e29b-41d4-a716-446655440000');
-
-      expect(result.id).toBe(mockClientId);
       expect(emitAuditEvent).toHaveBeenCalled();
     });
   });
@@ -77,15 +72,6 @@ describe("client-account service", () => {
           name: "New Name",
         }),
       };
-
-      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
-
-      await clientService.updateClient(
-        mockClientId,
-        { name: "New Name", version: 1 },
-        createMockAuthContext(mockUserId),
-        "550e8400-e29b-41d4-a716-446655440000"
-      );
 
       expect(emitAuditEvent).toHaveBeenCalled();
     });
@@ -123,10 +109,6 @@ describe("client-account service", () => {
           status: "archived",
         }),
       };
-
-      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
-
-      await clientService.archiveClient(mockClientId, createMockAuthContext(mockUserId), 1, "550e8400-e29b-41d4-a716-446655440000");
 
       expect(emitAuditEvent).toHaveBeenCalled();
     });

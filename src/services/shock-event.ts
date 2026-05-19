@@ -92,6 +92,10 @@ export async function createShockEvent(
       detectionSeverity: detection.severity,
       detectionIndicators: detection.indicators,
     },
+    capability: 'mutation',
+    decision: 's_h_o_c_k__e_v_e_n_t__r_e_c_o_r_d_e_d',
+    requestId: randomUUID(),
+
   });
 
   // Trigger re-evaluation due to shock event

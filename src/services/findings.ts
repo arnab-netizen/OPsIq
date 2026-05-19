@@ -124,6 +124,9 @@ export async function createFinding(
     entityType: "Finding",
     entityId: finding.id,
     workspaceId: auth.verifiedWorkspaceId,
+    capability: 'mutation',
+    decision: 'finding_created',
+    requestId: randomUUID(),
     payload: {
       engagementId: input.engagementId,
       severity: input.severity,
@@ -206,6 +209,9 @@ export async function updateFinding(
     entityType: "Finding",
     entityId: findingId,
     workspaceId: auth.verifiedWorkspaceId,
+    capability: 'mutation',
+    decision: 'finding_updated',
+    requestId: randomUUID(),
     payload: {
       engagementId: updated.engagementId,
       severity: input.severity,
@@ -263,6 +269,9 @@ export async function validateFinding(
     entityType: "Finding",
     entityId: findingId,
     workspaceId: auth.verifiedWorkspaceId,
+    capability: 'mutation',
+    decision: 'finding_validated',
+    requestId: randomUUID(),
     payload: {
       engagementId: existing.engagementId,
     },
@@ -311,6 +320,9 @@ export async function disputeFinding(
     entityType: "Finding",
     entityId: findingId,
     workspaceId: auth.verifiedWorkspaceId,
+    capability: 'mutation',
+    decision: 'finding_disputed',
+    requestId: randomUUID(),
     payload: {
       engagementId: existing.engagementId,
     },
@@ -369,6 +381,9 @@ export async function supersedeFinding(
     entityType: "Finding",
     entityId: newFinding.id,
     workspaceId: auth.verifiedWorkspaceId,
+    capability: 'mutation',
+    decision: 'finding_superseded',
+    requestId: randomUUID(),
     payload: {
       engagementId: newFinding.engagementId,
       supersedes: oldFindingId,
@@ -458,6 +473,9 @@ export async function linkEvidenceToFinding(
     entityType: "Finding",
     entityId: findingId,
     workspaceId: auth.verifiedWorkspaceId,
+    capability: 'mutation',
+    decision: 'finding_evidence_linked',
+    requestId: randomUUID(),
     payload: {
       findingId,
       evidenceId,
@@ -523,6 +541,9 @@ export async function unlinkEvidenceFromFinding(
     entityType: "Finding",
     entityId: findingId,
     workspaceId: auth.verifiedWorkspaceId,
+    capability: 'mutation',
+    decision: 'finding_evidence_unlinked',
+    requestId: randomUUID(),
     payload: {
       findingId,
       evidenceId,

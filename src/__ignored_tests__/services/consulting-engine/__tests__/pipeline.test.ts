@@ -27,29 +27,6 @@ vi.mock("@/services/action", () => ({
 }));
 
 vi.mock("@/infra/audit", () => ({
-  emitAuditEvent: vi.fn(),
-}));
-
-vi.mock("@/infra/logger", () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-vi.mock("@/services/entitlement.service", () => ({
-  assertCapability: vi.fn().mockResolvedValue({ allowed: true }),
-  trackUsage: vi.fn().mockResolvedValue(undefined),
-}));
-
-// Now import the pipeline
-import { runConsultingPipeline } from "../pipeline";
-import { randomUUID } from "crypto";
-import { db } from "@/lib/db";
-import { runConsultingEngine } from "@/services/consulting-engine/orchestrator";
-import { createRecommendationsFromInterventions } from "@/services/recommendation";
-import { createActionsFromInterventions } from "@/services/action";
 import { emitAuditEvent } from "@/infra/audit";
 
 describe("Consulting Engine Pipeline", () => {

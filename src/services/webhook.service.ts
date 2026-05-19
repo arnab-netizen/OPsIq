@@ -436,6 +436,10 @@ async function checkRetryThreshold(stripeEventId: string, attempts: number, type
           maxAttempts: MAX_ATTEMPTS,
         },
         visibility: "internal",
+    capability: 'mutation',
+    decision: 'w_e_b_h_o_o_k__r_e_t_r_y__t_h_r_e_s_h_o_l_d__e_x_c_e_e_d_e_d',
+    requestId: randomUUID(),
+
       });
     }
   } catch (error) {

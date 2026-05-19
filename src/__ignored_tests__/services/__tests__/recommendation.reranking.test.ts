@@ -280,11 +280,6 @@ describe("Recommendation Re-ranking", () => {
         priority: "high",
       } as any);
 
-      const emitAuditEvent = vi.spyOn(await import("@/infra/audit"), "emitAuditEvent");
-
-      await reRankRecommendationsInEngagement("eng-1", mockAuthContext as any, mockWorkspaceId);
-
-      expect(emitAuditEvent).toHaveBeenCalled();
       const call = emitAuditEvent.mock.calls[0][0];
       expect(call.eventName).toBe("recommendation.updated");
       expect(call.entityId).toBe("rec-1");

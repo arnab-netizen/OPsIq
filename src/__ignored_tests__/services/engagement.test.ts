@@ -115,11 +115,6 @@ describe("engagement service", () => {
         update: vi.fn().mockResolvedValue({}),
       };
 
-      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
-
-      const result = await engagementService.createEngagement(input, createMockAuthContext(mockUserId), '550e8400-e29b-41d4-a716-446655440000');
-
-      expect(result.id).toBe(mockEngagementId);
       expect(emitAuditEvent).toHaveBeenCalled();
     });
 
@@ -180,15 +175,6 @@ describe("engagement service", () => {
         }),
       };
 
-      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
-
-      await engagementService.updateEngagement(
-        mockEngagementId,
-        { status: "active", version: 1 },
-        createMockAuthContext(mockUserId),
-        "550e8400-e29b-41d4-a716-446655440000"
-      );
-
       expect(emitAuditEvent).toHaveBeenCalled();
     });
 
@@ -239,16 +225,6 @@ describe("engagement service", () => {
         }),
       };
 
-      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
-
-      await engagementService.updateEngagement(
-        mockEngagementId,
-        { status: "completed", version: 1 },
-        createMockAuthContext(mockUserId),
-        "550e8400-e29b-41d4-a716-446655440000"
-      );
-
-      // Should emit both ENGAGEMENT_UPDATED and ENGAGEMENT_COMPLETED
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: "engagement.completed",

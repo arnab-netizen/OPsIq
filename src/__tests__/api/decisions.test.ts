@@ -191,7 +191,10 @@ describe("Decisions API Routes", () => {
     requestId: randomUUID()
   }
       expect(true).toBe(true);
-    });
+    capability: 'mutation',
+    decision: 'd_e_c_i_s_i_o_n__c_r_e_a_t_e_d',
+    requestId: randomUUID(),
+    };
 
     it("should prevent cross-workspace decision creation (critical isolation)", () => {
       // Critical: User from ws-2 cannot create decision in ws-1
@@ -289,7 +292,10 @@ describe("Decisions API Routes", () => {
     requestId: randomUUID()
   }
       expect(true).toBe(true);
-    });
+    capability: 'mutation',
+    decision: 'd_e_c_i_s_i_o_n__a_p_p_r_o_v_e_d',
+    requestId: randomUUID(),
+    };
 
     it("should require authentication", () => {
       // TODO_A2_FAKE_TEST_QUARANTINED: withAuth middleware
@@ -353,7 +359,10 @@ describe("Decisions API Routes", () => {
     requestId: randomUUID()
   }
       expect(true).toBe(true);
-    });
+    capability: 'mutation',
+    decision: 'd_e_c_i_s_i_o_n__b_l_o_c_k_e_d',
+    requestId: randomUUID(),
+    };
 
     it("should require authentication", () => {
       // TODO_A2_FAKE_TEST_QUARANTINED: withAuth middleware

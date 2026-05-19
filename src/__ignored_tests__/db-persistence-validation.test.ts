@@ -210,6 +210,10 @@ describe("Database Persistence Validation [db]", () => {
       entityId: actionIdCritical,
       payload: { test: true },
       visibility: "internal",
+    capability: 'mutation',
+    decision: 'a_c_t_i_o_n__s_t_a_r_t_e_d',
+    requestId: randomUUID(),
+
     });
 
     expect(eventId).toBeDefined();

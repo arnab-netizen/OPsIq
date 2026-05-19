@@ -122,7 +122,6 @@ describe("Experiment Lifecycle Service", () => {
         "user-100"
       );
 
-      const { emitAuditEvent } = await import("@/infra/audit");
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: "experiment.created",
@@ -171,7 +170,6 @@ describe("Experiment Lifecycle Service", () => {
       const experiment = await createExperiment("ws-123", "eng-456", basePlan, "Test Exp", undefined, undefined, undefined, undefined, "user-100");
       await approveExperiment(experiment, "ws-123", "user-100");
 
-      const { emitAuditEvent } = await import("@/infra/audit");
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: "experiment.approved",
@@ -215,7 +213,6 @@ describe("Experiment Lifecycle Service", () => {
       experiment = await approveExperiment(experiment, "ws-123", "user-100");
       await startExperiment(experiment, "ws-123", "user-100");
 
-      const { emitAuditEvent } = await import("@/infra/audit");
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: "experiment.started",
@@ -270,7 +267,6 @@ describe("Experiment Lifecycle Service", () => {
 
       await updateExecution(experiment, { percentComplete: 50 }, "ws-123", "user-100");
 
-      const { emitAuditEvent } = await import("@/infra/audit");
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: "experiment.progress_updated",
@@ -349,7 +345,6 @@ describe("Experiment Lifecycle Service", () => {
 
       await recordResult(experiment, result, "ws-123", "user-100");
 
-      const { emitAuditEvent } = await import("@/infra/audit");
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: "experiment.result_recorded",
@@ -467,7 +462,6 @@ describe("Experiment Lifecycle Service", () => {
 
       await captureLearning(experiment, learning, "ws-123", "user-100");
 
-      const { emitAuditEvent } = await import("@/infra/audit");
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: "experiment.learning_recorded",

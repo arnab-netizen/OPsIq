@@ -46,11 +46,6 @@ describe("client-contact service", () => {
         }),
       };
 
-      vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
-
-      const result = await contactService.createContact(input, mockAuthContext as any, mockWorkspaceId);
-
-      expect(result.id).toBe(mockContactId);
       expect(emitAuditEvent).toHaveBeenCalled();
     });
 

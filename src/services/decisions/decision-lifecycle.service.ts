@@ -119,7 +119,10 @@ export async function transitionDecisionState(
       fromState,
       toState,
       error: error instanceof Error ? error.message : String(error),
-    });
+    capability: 'mutation',
+    decision: 'eventname',
+    requestId: randomUUID(),
+    };
   });
 
   logger.info("Decision transitioned", {
@@ -247,7 +250,10 @@ export async function executeDecision(
       operationName: "executeDecision",
       actorId,
       payload: { decisionId, workspaceId },
-    });
+    capability: 'mutation',
+    decision: 'eventname',
+    requestId: randomUUID(),
+    };
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
       return idempotencyCheck.cachedResponse.body as { id: string; status: string };
@@ -262,7 +268,10 @@ export async function executeDecision(
     // Fetch to verify state
     const decision = await db.operatorItem.findFirst({
       where: { id: decisionId, workspaceId },
-    });
+    capability: 'mutation',
+    decision: 'eventname',
+    requestId: randomUUID(),
+    };
 
     if (!decision) {
       throw new NotFoundError("Decision", decisionId);
@@ -370,7 +379,10 @@ export async function recordDecisionOutcome(
     logger.warn("Failed to emit audit event for outcome recording", {
       decisionId,
       error: error instanceof Error ? error.message : String(error),
-    });
+    capability: 'mutation',
+    decision: 'eventname',
+    requestId: randomUUID(),
+    };
   });
 
   logger.info("Decision outcome recorded", {

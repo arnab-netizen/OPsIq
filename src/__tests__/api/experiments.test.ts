@@ -139,7 +139,10 @@ describe("Experiment API Routes", () => {
     it("should emit EXPERIMENT_CREATED audit event on creation", () => {
       expect(AUDIT_EVENTS.EXPERIMENT_CREATED).toBeDefined();
       // emitAuditEvent called with eventName: AUDIT_EVENTS.EXPERIMENT_CREATED
-    });
+    capability: 'mutation',
+    decision: 'e_x_p_e_r_i_m_e_n_t__c_r_e_a_t_e_d',
+    requestId: randomUUID(),
+    };
 
     it("should include userId and workspace context in audit event", () => {
       expect(userId).toBeDefined();

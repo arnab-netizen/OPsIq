@@ -157,6 +157,10 @@ export async function assignRole(
       scopeId: input.scopeId ?? null,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'r_o_l_e__a_s_s_i_g_n_e_d',
+    requestId: randomUUID(),
+
   });
 
   // V3 adaptive: engagement-scoped role changes trigger re-evaluation
@@ -240,6 +244,10 @@ export async function revokeRole(
       scopeId: input.scopeId ?? null,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'r_o_l_e__r_e_v_o_k_e_d',
+    requestId: randomUUID(),
+
   });
 
   // V3 adaptive: engagement-scoped role changes trigger re-evaluation

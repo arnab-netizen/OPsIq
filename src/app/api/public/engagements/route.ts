@@ -41,7 +41,10 @@ export const GET = withEnforcementFull(async (request) => {
       status: url.searchParams.get("status"),
       limit: url.searchParams.get("limit"),
       offset: url.searchParams.get("offset"),
-    });
+    capability: 'mutation',
+    decision: 'operator_queue_viewed',
+    requestId: randomUUID(),
+    };
 
     const limit = Math.min(parseInt(queryParams.limit), 1000);
     const offset = parseInt(queryParams.offset);
@@ -84,7 +87,10 @@ export const GET = withEnforcementFull(async (request) => {
         total: filtered.length,
         status: queryParams.status,
       },
-    });
+    capability: 'mutation',
+    decision: 'operator_queue_viewed',
+    requestId: randomUUID(),
+    };
 
     return Response.json(
       {

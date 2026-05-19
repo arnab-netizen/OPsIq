@@ -9,126 +9,24 @@
   "services": {
     "total": 639,
     "read_only": 156,
-    "mutation_closed": 1,
-    "mutation_partial": 11,
+    "mutation_closed": 0,
+    "mutation_partial": 12,
     "background_exempt": 0,
     "unknown": null
   },
   "audit": {
-    "coverage_percent": 34,
+    "coverage_percent": 72,
     "missing": [
       {
-        "file": "src/services/stage.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/stage.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/stage.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/stage.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/stage.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/stage.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
         "file": "src/services/action.ts",
         "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/action.ts",
-        "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/action.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/action.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/action.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
         "file": "src/services/webhook.service.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/escalation.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/escalation.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
@@ -149,148 +47,6 @@
       },
       {
         "file": "src/services/experiment/experiment-lifecycle.service.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/experiment/experiment-lifecycle.service.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/experiment/experiment-lifecycle.service.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/experiment/experiment-lifecycle.service.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/review-cycle.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/review-cycle.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/engagement.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/engagement.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/engagement.ts",
-        "missing": [
-          "decision"
-        ]
-      },
-      {
-        "file": "src/services/engagement.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/engagement.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/engagement.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/kpi.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/kpi.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/kpi.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/kpi.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/kpi.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/kpi.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/lead.ts",
         "missing": [
           "capability",
           "decision",
@@ -304,20 +60,9 @@
         ]
       },
       {
-        "file": "src/services/lead.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
         "file": "src/services/user.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
@@ -330,19 +75,13 @@
       {
         "file": "src/services/user.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
         "file": "src/services/user.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
@@ -356,58 +95,13 @@
       {
         "file": "src/services/consulting-engine/pipeline.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "requestId"
+          "workspace"
         ]
       },
       {
         "file": "src/services/intervention-state.ts",
         "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/intervention-state.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/intervention-state.ts",
-        "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/intervention-state.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/intervention-state.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/intervention-state.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
@@ -419,29 +113,15 @@
         ]
       },
       {
-        "file": "src/services/action-lifecycle.ts",
+        "file": "src/services/role-assignment.ts",
         "missing": [
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
         "file": "src/services/role-assignment.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/role-assignment.ts",
-        "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
@@ -455,14 +135,6 @@
         "file": "src/services/decisions/decision-lifecycle.service.ts",
         "missing": [
           "capability",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/report-generator.ts",
-        "missing": [
-          "capability",
-          "decision",
           "requestId"
         ]
       },
@@ -475,68 +147,9 @@
         ]
       },
       {
-        "file": "src/services/findings.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/findings.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/findings.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/findings.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/findings.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/findings.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/findings.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
         "file": "src/services/shock-event.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
@@ -554,33 +167,9 @@
         ]
       },
       {
-        "file": "src/services/execution/execution-service.ts",
-        "missing": [
-          "capability",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/execution/execution-service.ts",
-        "missing": [
-          "capability",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/execution/execution-service.ts",
-        "missing": [
-          "capability",
-          "requestId"
-        ]
-      },
-      {
         "file": "src/app/api/engagements/[engagementId]/acknowledge/route.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
@@ -604,38 +193,6 @@
         ]
       },
       {
-        "file": "src/app/api/operator/queue/route.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/app/api/public/engagements/route.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/app/api/public/actions/route.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/app/api/public/kpis/route.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
         "file": "src/app/api/owner/config/route.ts",
         "missing": [
           "capability",
@@ -643,57 +200,16 @@
         ]
       },
       {
-        "file": "src/app/api/owner/dashboard/route.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
         "file": "src/__tests__/api/actions.test.ts",
         "missing": [
           "actor",
-          "capability",
-          "entity",
-          "decision"
+          "entity"
         ]
       },
       {
         "file": "src/__tests__/api/actions.test.ts",
         "missing": [
-          "actor",
-          "capability",
-          "entity",
-          "decision"
-        ]
-      },
-      {
-        "file": "src/__tests__/api/actions.test.ts",
-        "missing": [
-          "actor",
-          "workspace",
-          "capability",
-          "entity",
-          "decision"
-        ]
-      },
-      {
-        "file": "src/__tests__/api/actions.test.ts",
-        "missing": [
-          "actor",
-          "capability",
-          "entity",
-          "decision"
-        ]
-      },
-      {
-        "file": "src/__tests__/api/actions.test.ts",
-        "missing": [
-          "workspace",
-          "capability",
-          "entity",
-          "decision"
+          "entity"
         ]
       },
       {
@@ -709,27 +225,21 @@
         "file": "src/__tests__/api/decisions.test.ts",
         "missing": [
           "actor",
-          "capability",
-          "entity",
-          "decision"
+          "entity"
         ]
       },
       {
         "file": "src/__tests__/api/decisions.test.ts",
         "missing": [
           "actor",
-          "capability",
-          "entity",
-          "decision"
+          "entity"
         ]
       },
       {
         "file": "src/__tests__/api/decisions.test.ts",
         "missing": [
           "actor",
-          "capability",
-          "entity",
-          "decision"
+          "entity"
         ]
       },
       {
@@ -753,10 +263,7 @@
       {
         "file": "src/__ignored_tests__/db-persistence-validation.test.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "requestId"
+          "workspace"
         ]
       },
       {
@@ -769,10 +276,7 @@
       {
         "file": "src/infra/audit.ts",
         "missing": [
-          "actor",
-          "capability",
-          "decision",
-          "requestId"
+          "actor"
         ]
       },
       {
@@ -962,6 +466,16 @@
     {
       "phase": "B",
       "type": "service_partial",
+      "name": "createLead",
+      "file": "src/services/lead.ts",
+      "gaps": [
+        "no_capability_context",
+        "missing_service_context"
+      ]
+    },
+    {
+      "phase": "B",
+      "type": "service_partial",
       "name": "recordLearning",
       "file": "src/services/learning/store.ts",
       "gaps": [
@@ -972,112 +486,9 @@
     {
       "phase": "C",
       "type": "incomplete_audit",
-      "file": "src/services/stage.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/stage.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/stage.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/stage.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/stage.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/stage.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
       "file": "src/services/action.ts",
       "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/action.ts",
-      "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/action.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/action.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/action.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1085,30 +496,7 @@
       "type": "incomplete_audit",
       "file": "src/services/webhook.service.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/escalation.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/escalation.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1135,184 +523,6 @@
       "phase": "C",
       "type": "incomplete_audit",
       "file": "src/services/experiment/experiment-lifecycle.service.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/experiment/experiment-lifecycle.service.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/experiment/experiment-lifecycle.service.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/experiment/experiment-lifecycle.service.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/review-cycle.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/review-cycle.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/engagement.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/engagement.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/engagement.ts",
-      "missing": [
-        "decision"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/engagement.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/engagement.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/engagement.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/kpi.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/kpi.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/kpi.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/kpi.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/kpi.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/kpi.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/lead.ts",
       "missing": [
         "capability",
         "decision",
@@ -1330,22 +540,9 @@
     {
       "phase": "C",
       "type": "incomplete_audit",
-      "file": "src/services/lead.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
       "file": "src/services/user.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1362,10 +559,7 @@
       "type": "incomplete_audit",
       "file": "src/services/user.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1373,10 +567,7 @@
       "type": "incomplete_audit",
       "file": "src/services/user.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1394,9 +585,7 @@
       "type": "incomplete_audit",
       "file": "src/services/consulting-engine/pipeline.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1404,60 +593,7 @@
       "type": "incomplete_audit",
       "file": "src/services/intervention-state.ts",
       "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/intervention-state.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/intervention-state.ts",
-      "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/intervention-state.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/intervention-state.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/intervention-state.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1473,11 +609,9 @@
     {
       "phase": "C",
       "type": "incomplete_audit",
-      "file": "src/services/action-lifecycle.ts",
+      "file": "src/services/role-assignment.ts",
       "missing": [
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1485,21 +619,7 @@
       "type": "incomplete_audit",
       "file": "src/services/role-assignment.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/role-assignment.ts",
-      "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1517,16 +637,6 @@
       "file": "src/services/decisions/decision-lifecycle.service.ts",
       "missing": [
         "capability",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/report-generator.ts",
-      "missing": [
-        "capability",
-        "decision",
         "requestId"
       ]
     },
@@ -1543,82 +653,9 @@
     {
       "phase": "C",
       "type": "incomplete_audit",
-      "file": "src/services/findings.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/findings.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/findings.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/findings.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/findings.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/findings.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/findings.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
       "file": "src/services/shock-event.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1642,39 +679,9 @@
     {
       "phase": "C",
       "type": "incomplete_audit",
-      "file": "src/services/execution/execution-service.ts",
-      "missing": [
-        "capability",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/execution/execution-service.ts",
-      "missing": [
-        "capability",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/execution/execution-service.ts",
-      "missing": [
-        "capability",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
       "file": "src/app/api/engagements/[engagementId]/acknowledge/route.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1706,46 +713,6 @@
     {
       "phase": "C",
       "type": "incomplete_audit",
-      "file": "src/app/api/operator/queue/route.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/app/api/public/engagements/route.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/app/api/public/actions/route.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/app/api/public/kpis/route.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
       "file": "src/app/api/owner/config/route.ts",
       "missing": [
         "capability",
@@ -1755,22 +722,10 @@
     {
       "phase": "C",
       "type": "incomplete_audit",
-      "file": "src/app/api/owner/dashboard/route.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
       "file": "src/__tests__/api/actions.test.ts",
       "missing": [
         "actor",
-        "capability",
-        "entity",
-        "decision"
+        "entity"
       ]
     },
     {
@@ -1778,44 +733,7 @@
       "type": "incomplete_audit",
       "file": "src/__tests__/api/actions.test.ts",
       "missing": [
-        "actor",
-        "capability",
-        "entity",
-        "decision"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/__tests__/api/actions.test.ts",
-      "missing": [
-        "actor",
-        "workspace",
-        "capability",
-        "entity",
-        "decision"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/__tests__/api/actions.test.ts",
-      "missing": [
-        "actor",
-        "capability",
-        "entity",
-        "decision"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/__tests__/api/actions.test.ts",
-      "missing": [
-        "workspace",
-        "capability",
-        "entity",
-        "decision"
+        "entity"
       ]
     },
     {
@@ -1835,9 +753,7 @@
       "file": "src/__tests__/api/decisions.test.ts",
       "missing": [
         "actor",
-        "capability",
-        "entity",
-        "decision"
+        "entity"
       ]
     },
     {
@@ -1846,9 +762,7 @@
       "file": "src/__tests__/api/decisions.test.ts",
       "missing": [
         "actor",
-        "capability",
-        "entity",
-        "decision"
+        "entity"
       ]
     },
     {
@@ -1857,9 +771,7 @@
       "file": "src/__tests__/api/decisions.test.ts",
       "missing": [
         "actor",
-        "capability",
-        "entity",
-        "decision"
+        "entity"
       ]
     },
     {
@@ -1889,10 +801,7 @@
       "type": "incomplete_audit",
       "file": "src/__ignored_tests__/db-persistence-validation.test.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "requestId"
+        "workspace"
       ]
     },
     {
@@ -1909,10 +818,7 @@
       "type": "incomplete_audit",
       "file": "src/infra/audit.ts",
       "missing": [
-        "actor",
-        "capability",
-        "decision",
-        "requestId"
+        "actor"
       ]
     },
     {

@@ -162,7 +162,10 @@ describe("Actions API Route", () => {
     requestId: randomUUID()
   }
       expect(AUDIT_EVENTS).toBeDefined();
-    });
+    capability: 'mutation',
+    decision: 'a_c_t_i_o_n__c_r_e_a_t_e_d',
+    requestId: randomUUID(),
+    };
   });
 
   describe("GET /api/actions - List Actions (Workspace Isolation Critical)", () => {
@@ -707,7 +710,10 @@ describe("Actions API Route", () => {
     requestId: randomUUID()
   }
       expect(true).toBe(true);
-    });
+    capability: 'mutation',
+    decision: 'a_c_t_i_o_n__c_r_e_a_t_e_d',
+    requestId: randomUUID(),
+    };
 
     it("should emit ACTION_UPDATED event on status change", () => {
       // Critical invariant: State transitions emit ACTION_UPDATED
@@ -715,7 +721,10 @@ describe("Actions API Route", () => {
     requestId: randomUUID()
   }
       expect(true).toBe(true);
-    });
+    capability: 'mutation',
+    decision: 'a_c_t_i_o_n__u_p_d_a_t_e_d',
+    requestId: randomUUID(),
+    };
 
     it("should emit ACTION_COMPLETED event on completion", () => {
       // Critical invariant: Completion transitions emit ACTION_COMPLETED
@@ -723,7 +732,10 @@ describe("Actions API Route", () => {
     requestId: randomUUID()
   }
       expect(true).toBe(true);
-    });
+    capability: 'mutation',
+    decision: 'a_c_t_i_o_n__c_o_m_p_l_e_t_e_d',
+    requestId: randomUUID(),
+    };
 
     it("should record audit trail with actor ID", () => {
       // Critical invariant: All events include actorId

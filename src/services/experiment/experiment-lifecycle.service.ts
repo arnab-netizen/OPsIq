@@ -103,6 +103,9 @@ export async function createExperiment(
       entityType: "Experiment",
       entityId: experimentId,
       workspaceId,
+      capability: 'mutation',
+      decision: 'experiment_created',
+      requestId: randomUUID(),
       payload: {
         name,
         hypothesisType: plan.hypothesis.type,
@@ -234,6 +237,9 @@ export async function startExperiment(
       entityType: "Experiment",
       entityId: experiment.id,
       workspaceId,
+      capability: 'mutation',
+      decision: 'experiment_started',
+      requestId: randomUUID(),
       payload: {
         name: experiment.name,
         targetEndDate: targetEndDate.toISOString(),
@@ -448,115 +454,3 @@ export async function captureLearning(
 
   // Emit audit event
   if (userId) {
-    await emitAuditEvent({
-      eventName: AUDIT_EVENTS.EXPERIMENT_LEARNING_RECORDED,
-      actorId: userId,
-      entityType: "Experiment",
-      entityId: experiment.id,
-      workspaceId,
-      payload: {
-        keyFinding: learning.keyFinding.substring(0, 100),
-        nextAction: learning.nextAction,
-        confidence: learning.confidence,
-      },
-    }).catch((err) => logger.warn("Failed to emit audit event", { error: err.message }));
-  }
-
-  return updatedExperiment;
-}
-
-/**
- * Analyze experiment outcome: compare result to hypothesis success criterion
- */
-export function analyzeOutcome(experiment: Experiment): {
-  classification: OutcomeClassification;
-  interpretation: string;
-  nextSteps: string[];
-} {
-  if (!experiment.result) {
-    return {
-      classification: "inconclusive",
-      interpretation: "No result recorded yet",
-      nextSteps: ["Record experiment result before analysis"],
-    };
-  }
-
-  const result = experiment.result;
-  const hypothesis = experiment.plan.hypothesis;
-
-  // Determine classification based on success threshold
-  let classification: OutcomeClassification;
-  let interpretation: string;
-  const nextSteps: string[] = [];
-
-  if (result.successThresholdMet) {
-    if (result.primaryMetricChange >= hypothesis.successThreshold * 1.5) {
-      classification = "success";
-      interpretation = `Exceeded success threshold: ${result.primaryMetricChange.toFixed(1)}% change (needed ${hypothesis.successThreshold}%)`;
-      nextSteps.push("Consider scaling this approach to wider audience");
-      nextSteps.push("Document success factors for replication");
-    } else {
-      classification = "success";
-      interpretation = `Met success threshold: ${result.primaryMetricChange.toFixed(1)}% change`;
-      nextSteps.push("Evaluate cost-benefit ratio (ROI: " + result.roi.toFixed(1) + "%)");
-      nextSteps.push("Plan rollout or scaling strategy");
-    }
-  } else if (result.primaryMetricChange > hypothesis.failureThreshold) {
-    classification = "partial";
-    interpretation = `Partial success: ${result.primaryMetricChange.toFixed(1)}% change (needed ${hypothesis.successThreshold}%, but avoided failure)`;
-    nextSteps.push("Analyze secondary metrics for alternative benefits");
-    nextSteps.push("Refine approach and retry with modifications");
-    nextSteps.push("Interview users for qualitative feedback");
-  } else if (result.primaryMetricChange >= hypothesis.failureThreshold) {
-    classification = "partial";
-    interpretation = `Inconclusive: metric changed by ${result.primaryMetricChange.toFixed(1)}% (between failure and success thresholds)`;
-    nextSteps.push("Extend experiment duration for more data");
-    nextSteps.push("Increase sample size");
-    nextSteps.push("Check for confounding factors");
-  } else {
-    classification = "failure";
-    interpretation = `Failed: ${result.primaryMetricChange.toFixed(1)}% change is below failure threshold of ${hypothesis.failureThreshold}%`;
-    nextSteps.push("Analyze root causes of failure");
-    nextSteps.push("Consider alternative approaches");
-    nextSteps.push("Document lessons learned");
-  }
-
-  // Factor in confidence level
-  if (result.confidenceLevel && result.confidenceLevel < 70) {
-    classification = "inconclusive";
-    nextSteps.push(`Note: Confidence level is low (${result.confidenceLevel}%). Collect more data before making decisions.`);
-  }
-
-  return { classification, interpretation, nextSteps };
-}
-
-/**
- * Generate experiment summary for reporting
- */
-export function generateSummary(experiment: Experiment): string {
-  const lines = [
-    `Experiment: ${experiment.name}`,
-    `Status: ${experiment.status}`,
-    `Hypothesis: ${experiment.plan.hypothesis.statement}`,
-  ];
-
-  if (experiment.execution) {
-    lines.push(`Progress: ${experiment.execution.percentComplete}%`);
-    if (experiment.execution.startedAt) {
-      lines.push(`Started: ${experiment.execution.startedAt.toISOString()}`);
-    }
-  }
-
-  if (experiment.result) {
-    const analysis = analyzeOutcome(experiment);
-    lines.push(`Result: ${analysis.classification}`);
-    lines.push(`Analysis: ${analysis.interpretation}`);
-  }
-
-  if (experiment.learning) {
-    lines.push(`Key Finding: ${experiment.learning.keyFinding}`);
-    lines.push(`Next Action: ${experiment.learning.nextAction || "TBD"}`);
-  }
-
-  return lines.join("\n");
-}

@@ -43,7 +43,10 @@ export const GET = withEnforcementFull(async (request) => {
       trend: url.searchParams.get("trend"),
       limit: url.searchParams.get("limit"),
       offset: url.searchParams.get("offset"),
-    });
+    capability: 'mutation',
+    decision: 'kpi_snapshot_recorded',
+    requestId: randomUUID(),
+    };
 
     const limit = Math.min(parseInt(queryParams.limit), 1000);
     const offset = parseInt(queryParams.offset);
@@ -107,7 +110,10 @@ export const GET = withEnforcementFull(async (request) => {
         engagementId: queryParams.engagementId,
         trend: queryParams.trend,
       },
-    });
+    capability: 'mutation',
+    decision: 'kpi_snapshot_recorded',
+    requestId: randomUUID(),
+    };
 
     return Response.json(
       {

@@ -148,6 +148,9 @@ export async function generateReviewCycle(
     entityType: "ReviewCycle",
     entityId: cycle.id,
     workspaceId,
+      capability: 'mutation',
+      decision: 'review_cycle_started',
+      requestId: randomUUID(),
     payload: {
       engagementId,
       status: cycleStatus,
@@ -182,6 +185,10 @@ export async function generateReviewCycle(
         status: cycleStatus,
         rationale,
       },
+    capability: 'mutation',
+    decision: 'r_e_v_i_e_w__c_y_c_l_e__c_o_m_p_l_e_t_e_d',
+    requestId: randomUUID(),
+
     });
   }
 

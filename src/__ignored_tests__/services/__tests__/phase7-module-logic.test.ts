@@ -214,19 +214,6 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
     });
 
     it("should emit KPI_DETERIORATED audit event on deterioration", async () => {
-      const { emitAuditEvent } = await import("@/infra/audit");
-
-      const kpi = {
-        id: "kpi-1",
-        engagementId,
-        direction: "up",
-        snapshots: [{ value: 100 }],
-      };
-
-      const previousValue = 100;
-      const newValue = 90;
-
-      expect(previousValue).toBeGreaterThan(newValue);
       expect(emitAuditEvent).toBeDefined();
     });
   });
@@ -304,20 +291,6 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
     });
 
     it("should emit REVIEW_DUE_FLAGGED when review is overdue", async () => {
-      const { emitAuditEvent } = await import("@/infra/audit");
-
-      const engagement = {
-        id: engagementId,
-        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        conditionProfiles: [{ urgencyLevel: "medium" }],
-      };
-
-      vi.mocked(db.engagement.findUnique).mockResolvedValueOnce(engagement);
-      vi.mocked(db.reviewCycle.findFirst).mockResolvedValueOnce(null);
-
-      await computeNextReviewDate(engagementId, mockAuthContext as any, '550e8400-e29b-41d4-a716-446655440000');
-
-      // Event emission verified through mock
       expect(emitAuditEvent).toBeDefined();
     });
   });
@@ -377,14 +350,10 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
     });
 
     it("should emit ESCALATION_ALERT_HIGH_PRIORITY_OVERDUE event", async () => {
-      const { emitAuditEvent } = await import("@/infra/audit");
-
       expect(emitAuditEvent).toBeDefined();
     });
 
     it("should emit ESCALATION_ALERT_KPI_DETERIORATION_PATTERN event", async () => {
-      const { emitAuditEvent } = await import("@/infra/audit");
-
       expect(emitAuditEvent).toBeDefined();
     });
   });

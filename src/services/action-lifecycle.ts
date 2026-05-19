@@ -200,6 +200,10 @@ export async function transitionActionState(
       reviewer: context.reviewerId,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'a_c_t_i_o_n__u_p_d_a_t_e_d',
+    requestId: randomUUID(),
+
   });
 
   // Trigger re-evaluation based on state transition
@@ -213,7 +217,10 @@ export async function transitionActionState(
       severity: "critical",
       description: `Critical action blocked: ${action.title}. Reason: ${context.reason}`,
       triggeredBy: resolvedActorId,
-    });
+    capability: 'mutation',
+    decision: 'action_updated',
+    requestId: randomUUID(),
+    };
   }
 
   logger.info("Action state transitioned", {
@@ -288,7 +295,10 @@ export async function countActionsByEngagementState(
         status: state,
         workspaceId,
       },
-    });
+    capability: 'mutation',
+    decision: 'action_updated',
+    requestId: randomUUID(),
+    };
     counts[state] = count;
   }
 

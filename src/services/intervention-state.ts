@@ -179,6 +179,10 @@ export async function updateInterventionPhase(
       mode: engagement.interventionMode,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'i_n_t_e_r_v_e_n_t_i_o_n__p_h_a_s_e__c_h_a_n_g_e_d',
+    requestId: randomUUID(),
+
   });
 
   // Trigger re-evaluation when phase changes
@@ -259,6 +263,9 @@ export async function updateInterventionMode(
     entityType: "engagement",
     entityId: engagementId,
     workspaceId: engagement.workspaceId,
+      capability: 'mutation',
+      decision: 'intervention_mode_changed',
+      requestId: randomUUID(),
     payload: {
       previousMode,
       newMode: input.interventionMode,
@@ -323,6 +330,10 @@ export async function initializeInterventionState(
       interventionPhase: "triage",
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'i_n_t_e_r_v_e_n_t_i_o_n__s_t_a_t_e__i_n_i_t_i_a_l_i_z_e_d',
+    requestId: randomUUID(),
+
   });
 
   return updated;
@@ -368,6 +379,10 @@ export async function transitionPhase(
       toPhase: newPhase,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'i_n_t_e_r_v_e_n_t_i_o_n__p_h_a_s_e__c_h_a_n_g_e_d',
+    requestId: randomUUID(),
+
   });
 
   return updated;
@@ -422,6 +437,10 @@ export async function blockEngagement(
       blockerReason,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'e_n_g_a_g_e_m_e_n_t__b_l_o_c_k_e_d',
+    requestId: randomUUID(),
+
   });
 
   // Trigger re-evaluation due to engagement block
@@ -484,6 +503,10 @@ export async function unblockEngagement(
     workspaceId: engagement.workspaceId,
     payload: {},
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'e_n_g_a_g_e_m_e_n_t__u_n_b_l_o_c_k_e_d',
+    requestId: randomUUID(),
+
   });
 
   logger.info("Engagement unblocked", {
