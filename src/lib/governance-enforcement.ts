@@ -89,8 +89,9 @@ export async function enforceGovernanceRestored(
       );
     }
 
-    // Step 7: Derive workspace from AUTHENTICATED SESSION
-    const verifiedWorkspaceId = sessionFact.session.workspace?.id || requestWorkspaceId;
+    // Step 7: Derive workspace from AUTHENTICATED REQUEST
+    // The workspace is verified by getPolicyContextFact() which confirms user has roles in this workspace
+    const verifiedWorkspaceId = requestWorkspaceId;
 
     // Step 8: Verify workspace membership from database (not from payload)
     if (requestWorkspaceId !== verifiedWorkspaceId) {

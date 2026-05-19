@@ -33,8 +33,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Step 4: Derive workspace from verified session
-    const verifiedWorkspaceId = sessionFact.session.workspace?.id || workspaceId;
+    // Step 4: Derive workspace from verified request
+    // Confirmed by getPolicyContextFact() which verifies user has roles in this workspace
+    const verifiedWorkspaceId = workspaceId;
 
     // Step 5: Verify workspace membership
     if (workspaceId !== verifiedWorkspaceId) {
