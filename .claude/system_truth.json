@@ -96,10 +96,8 @@
       {
         "file": "src/services/operator/store.ts",
         "missing": [
-          "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -325,10 +323,8 @@
       {
         "file": "src/services/evidence.ts",
         "missing": [
-          "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -391,10 +387,8 @@
       {
         "file": "src/services/evidence.ts",
         "missing": [
-          "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -542,10 +536,8 @@
       {
         "file": "src/services/recommendation.ts",
         "missing": [
-          "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -578,10 +570,8 @@
       {
         "file": "src/services/engagement.ts",
         "missing": [
-          "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -687,19 +677,15 @@
       {
         "file": "src/services/client-account.ts",
         "missing": [
-          "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/services/client-account.ts",
         "missing": [
-          "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -714,10 +700,8 @@
       {
         "file": "src/services/lead.ts",
         "missing": [
-          "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -744,8 +728,7 @@
         "missing": [
           "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -952,10 +935,8 @@
       {
         "file": "src/services/client-contact.ts",
         "missing": [
-          "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1034,7 +1015,6 @@
       {
         "file": "src/services/re-evaluation.ts",
         "missing": [
-          "capability",
           "decision",
           "timestamp",
           "requestId"
@@ -1086,10 +1066,8 @@
       {
         "file": "src/app/api/auth/logout/route.ts",
         "missing": [
-          "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1097,30 +1075,22 @@
         "missing": [
           "actor",
           "workspace",
-          "capability",
           "entity",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/app/api/auth/login/route.ts",
         "missing": [
-          "capability",
           "entity",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/app/api/auth/login/route.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "entity",
+          "timestamp"
         ]
       },
       {
@@ -1162,39 +1132,25 @@
       {
         "file": "src/app/api/actions/[actionId]/start/route.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/app/api/actions/[actionId]/complete/route.ts",
         "missing": [
-          "workspace",
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/app/api/billing/upgrade/route.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
         "file": "src/app/api/billing/upgrade/route.ts",
         "missing": [
-          "capability",
-          "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1202,8 +1158,7 @@
         "missing": [
           "capability",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1222,8 +1177,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1233,8 +1187,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1245,8 +1198,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1256,8 +1208,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1267,8 +1218,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1278,8 +1228,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1289,8 +1238,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1300,8 +1248,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1311,8 +1258,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1322,8 +1268,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1333,8 +1278,7 @@
           "capability",
           "entity",
           "decision",
-          "timestamp",
-          "requestId"
+          "timestamp"
         ]
       },
       {
@@ -1355,6 +1299,18 @@
           "capability",
           "entity",
           "decision",
+          "requestId"
+        ]
+      },
+      {
+        "file": "src/infra/audit.ts",
+        "missing": [
+          "actor",
+          "workspace",
+          "capability",
+          "entity",
+          "decision",
+          "timestamp",
           "requestId"
         ]
       },
@@ -1687,10 +1643,8 @@
       "type": "incomplete_audit",
       "file": "src/services/operator/store.ts",
       "missing": [
-        "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -1966,10 +1920,8 @@
       "type": "incomplete_audit",
       "file": "src/services/evidence.ts",
       "missing": [
-        "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2046,10 +1998,8 @@
       "type": "incomplete_audit",
       "file": "src/services/evidence.ts",
       "missing": [
-        "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2229,10 +2179,8 @@
       "type": "incomplete_audit",
       "file": "src/services/recommendation.ts",
       "missing": [
-        "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2273,10 +2221,8 @@
       "type": "incomplete_audit",
       "file": "src/services/engagement.ts",
       "missing": [
-        "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2406,10 +2352,8 @@
       "type": "incomplete_audit",
       "file": "src/services/client-account.ts",
       "missing": [
-        "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2417,10 +2361,8 @@
       "type": "incomplete_audit",
       "file": "src/services/client-account.ts",
       "missing": [
-        "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2439,10 +2381,8 @@
       "type": "incomplete_audit",
       "file": "src/services/lead.ts",
       "missing": [
-        "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2475,8 +2415,7 @@
       "missing": [
         "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2729,10 +2668,8 @@
       "type": "incomplete_audit",
       "file": "src/services/client-contact.ts",
       "missing": [
-        "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2829,7 +2766,6 @@
       "type": "incomplete_audit",
       "file": "src/services/re-evaluation.ts",
       "missing": [
-        "capability",
         "decision",
         "timestamp",
         "requestId"
@@ -2893,10 +2829,8 @@
       "type": "incomplete_audit",
       "file": "src/app/api/auth/logout/route.ts",
       "missing": [
-        "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2906,11 +2840,8 @@
       "missing": [
         "actor",
         "workspace",
-        "capability",
         "entity",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2918,11 +2849,8 @@
       "type": "incomplete_audit",
       "file": "src/app/api/auth/login/route.ts",
       "missing": [
-        "capability",
         "entity",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2930,10 +2858,8 @@
       "type": "incomplete_audit",
       "file": "src/app/api/auth/login/route.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "entity",
+        "timestamp"
       ]
     },
     {
@@ -2985,11 +2911,7 @@
       "type": "incomplete_audit",
       "file": "src/app/api/actions/[actionId]/start/route.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -2997,11 +2919,7 @@
       "type": "incomplete_audit",
       "file": "src/app/api/actions/[actionId]/complete/route.ts",
       "missing": [
-        "workspace",
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3009,10 +2927,7 @@
       "type": "incomplete_audit",
       "file": "src/app/api/billing/upgrade/route.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3020,10 +2935,7 @@
       "type": "incomplete_audit",
       "file": "src/app/api/billing/upgrade/route.ts",
       "missing": [
-        "capability",
-        "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3033,8 +2945,7 @@
       "missing": [
         "capability",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3057,8 +2968,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3070,8 +2980,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3084,8 +2993,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3097,8 +3005,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3110,8 +3017,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3123,8 +3029,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3136,8 +3041,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3149,8 +3053,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3162,8 +3065,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3175,8 +3077,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3188,8 +3089,7 @@
         "capability",
         "entity",
         "decision",
-        "timestamp",
-        "requestId"
+        "timestamp"
       ]
     },
     {
@@ -3214,6 +3114,20 @@
         "capability",
         "entity",
         "decision",
+        "requestId"
+      ]
+    },
+    {
+      "phase": "C",
+      "type": "incomplete_audit",
+      "file": "src/infra/audit.ts",
+      "missing": [
+        "actor",
+        "workspace",
+        "capability",
+        "entity",
+        "decision",
+        "timestamp",
         "requestId"
       ]
     },

@@ -3,6 +3,8 @@
  * Record experiment result and transition to analyzed
  */
 
+import { emitAuditEvent } from '@/infra/audit';
+import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";

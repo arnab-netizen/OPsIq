@@ -5,6 +5,8 @@
  * Requires workspace context and WEBHOOK_MANAGE capability.
  */
 
+import { emitAuditEvent } from '@/infra/audit';
+import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { NextRequest } from "next/server";
 import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";

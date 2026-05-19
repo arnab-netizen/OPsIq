@@ -1,3 +1,5 @@
+import { emitAuditEvent } from '@/infra/audit';
+import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement, type CanonicalAuthContext, type ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
 import { hasInternalAccess } from "@/policies/capability-check";
 

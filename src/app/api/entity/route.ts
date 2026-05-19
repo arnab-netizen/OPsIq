@@ -1,3 +1,5 @@
+import { emitAuditEvent } from '@/infra/audit';
+import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { NextRequest } from "next/server";
 import { withAuth } from "@/lib/auth-guard";
 import { withEnforcementFull } from "@/lib/enforced-route";

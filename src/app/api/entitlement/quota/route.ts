@@ -4,6 +4,8 @@
  * Check and manage quota usage for workspace.
  */
 
+import { emitAuditEvent } from '@/infra/audit';
+import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
