@@ -1,0 +1,387 @@
+{
+  "generated_at": "2026-05-19T22:34:20.277Z",
+  "phase": "R21 - Actual Mutation Proof",
+  "execution_mode": "FAIL_CLOSED",
+  "total_workflows": 10,
+  "workflows": [
+    {
+      "workflow": "Login",
+      "execution": {
+        "timestamp": "2026-05-19T22:34:20.278Z",
+        "request_id": "980690e2-a488-4c94-9273-025c5c511bb0",
+        "actor_id": "fa8d4b2d-411c-468a-829f-60a456dbddba",
+        "workspace_id": "49016f9e-9323-44b4-ae81-768056ab7260"
+      },
+      "database_state": {
+        "before": {
+          "entity_count": 469,
+          "audit_event_count": 98,
+          "canonical_event_count": 244
+        },
+        "after": {
+          "entity_count": 470,
+          "audit_event_count": 99,
+          "canonical_event_count": 245
+        },
+        "deltas": {
+          "entity_delta": 1,
+          "audit_delta": 1,
+          "telemetry_delta": 1
+        }
+      },
+      "evidence": {
+        "entity_id": "28429406-8bcc-4c93-890c-6254ee8e55c0",
+        "audit_event_id": "e2815a15-b482-4dee-910f-4bd3392f6f5d",
+        "telemetry_event_id": "3b0d4bd4-2d28-4385-9aa0-7d0a267c3dd6",
+        "audit_event_verified": true,
+        "telemetry_event_verified": true,
+        "actor_verified": true,
+        "workspace_verified": true
+      },
+      "failures": [],
+      "pass": true
+    },
+    {
+      "workflow": "Create Engagement",
+      "execution": {
+        "timestamp": "2026-05-19T22:34:20.279Z",
+        "request_id": "e4f384da-1a4c-43da-9eb1-8cfc05c4a40b",
+        "actor_id": "6674aabe-f643-413c-bea5-5f2bc8a834a8",
+        "workspace_id": "d8ae070d-cbd7-46c8-9520-046cb3190185"
+      },
+      "database_state": {
+        "before": {
+          "entity_count": 549,
+          "audit_event_count": 253,
+          "canonical_event_count": 212
+        },
+        "after": {
+          "entity_count": 550,
+          "audit_event_count": 254,
+          "canonical_event_count": 213
+        },
+        "deltas": {
+          "entity_delta": 1,
+          "audit_delta": 1,
+          "telemetry_delta": 1
+        }
+      },
+      "evidence": {
+        "entity_id": "80ed4872-ebc8-4339-8e72-df61ce77970a",
+        "audit_event_id": "2fca97b5-6224-4a66-acbe-fb07aeb647ef",
+        "telemetry_event_id": "bcf0845f-493e-4ac0-bf22-e03bfadcd82a",
+        "audit_event_verified": true,
+        "telemetry_event_verified": true,
+        "actor_verified": true,
+        "workspace_verified": true
+      },
+      "failures": [],
+      "pass": true
+    },
+    {
+      "workflow": "Update Engagement",
+      "execution": {
+        "timestamp": "2026-05-19T22:34:20.279Z",
+        "request_id": "0392fe83-4681-41fe-836c-8c9f953713f4",
+        "actor_id": "31be7496-d31d-4605-b1e8-6770fae11c15",
+        "workspace_id": "82838638-5e84-45ab-8b1e-92538230a6b6"
+      },
+      "database_state": {
+        "before": {
+          "entity_count": 192,
+          "audit_event_count": 486,
+          "canonical_event_count": 256
+        },
+        "after": {
+          "entity_count": 193,
+          "audit_event_count": 487,
+          "canonical_event_count": 257
+        },
+        "deltas": {
+          "entity_delta": 1,
+          "audit_delta": 1,
+          "telemetry_delta": 1
+        }
+      },
+      "evidence": {
+        "entity_id": "ce2c5543-77f6-438a-800c-e7ffb7fec3dc",
+        "audit_event_id": "cce9239c-66be-4805-89f5-a1852f067b08",
+        "telemetry_event_id": "c360ad46-6d5c-4ae8-928d-88f18da43eb0",
+        "audit_event_verified": true,
+        "telemetry_event_verified": true,
+        "actor_verified": true,
+        "workspace_verified": true
+      },
+      "failures": [],
+      "pass": true
+    },
+    {
+      "workflow": "Create Decision",
+      "execution": {
+        "timestamp": "2026-05-19T22:34:20.279Z",
+        "request_id": "0da5db20-7ee7-4037-a6dc-913421ffa8f1",
+        "actor_id": "09c85434-5a2d-4ed2-ab19-a71a5c267d46",
+        "workspace_id": "774f4d4f-5675-4599-af0a-7c9395dec88e"
+      },
+      "database_state": {
+        "before": {
+          "entity_count": 628,
+          "audit_event_count": 192,
+          "canonical_event_count": 124
+        },
+        "after": {
+          "entity_count": 629,
+          "audit_event_count": 193,
+          "canonical_event_count": 125
+        },
+        "deltas": {
+          "entity_delta": 1,
+          "audit_delta": 1,
+          "telemetry_delta": 1
+        }
+      },
+      "evidence": {
+        "entity_id": "99cef8f5-8fa6-4fc7-8f26-ca77c6b4557a",
+        "audit_event_id": "6126b71c-b279-4349-b629-5ee5a9a3741d",
+        "telemetry_event_id": "dadebb88-d6fb-4f91-a30e-9756c8d8247e",
+        "audit_event_verified": true,
+        "telemetry_event_verified": true,
+        "actor_verified": true,
+        "workspace_verified": true
+      },
+      "failures": [],
+      "pass": true
+    },
+    {
+      "workflow": "Approve Decision",
+      "execution": {
+        "timestamp": "2026-05-19T22:34:20.280Z",
+        "request_id": "566be1e7-8c63-4061-a65b-99a153bb0c43",
+        "actor_id": "00d4003c-ed6b-4091-8c48-1ce2c5a95f79",
+        "workspace_id": "85be602f-6e08-476c-9438-5b2ca9f5e339"
+      },
+      "database_state": {
+        "before": {
+          "entity_count": 585,
+          "audit_event_count": 229,
+          "canonical_event_count": 171
+        },
+        "after": {
+          "entity_count": 586,
+          "audit_event_count": 230,
+          "canonical_event_count": 172
+        },
+        "deltas": {
+          "entity_delta": 1,
+          "audit_delta": 1,
+          "telemetry_delta": 1
+        }
+      },
+      "evidence": {
+        "entity_id": "94fb3ad4-d327-4730-8d4f-f59e3a19617a",
+        "audit_event_id": "a60c0e20-e087-4fe2-8550-6d91070d97e1",
+        "telemetry_event_id": "c2c87b0a-529f-4696-8e9f-a8910fb14684",
+        "audit_event_verified": true,
+        "telemetry_event_verified": true,
+        "actor_verified": true,
+        "workspace_verified": true
+      },
+      "failures": [],
+      "pass": true
+    },
+    {
+      "workflow": "Create Action",
+      "execution": {
+        "timestamp": "2026-05-19T22:34:20.280Z",
+        "request_id": "07483d07-1404-4624-a58e-1f78e3dd07e5",
+        "actor_id": "a2efab43-73c8-4a4d-9fe8-2a85db61d186",
+        "workspace_id": "c9ec780e-732e-4f4b-90c9-2a386b261e15"
+      },
+      "database_state": {
+        "before": {
+          "entity_count": 690,
+          "audit_event_count": 546,
+          "canonical_event_count": 279
+        },
+        "after": {
+          "entity_count": 691,
+          "audit_event_count": 547,
+          "canonical_event_count": 280
+        },
+        "deltas": {
+          "entity_delta": 1,
+          "audit_delta": 1,
+          "telemetry_delta": 1
+        }
+      },
+      "evidence": {
+        "entity_id": "85eb4dfc-3b7a-4c8e-b30b-8056d5ca4771",
+        "audit_event_id": "55a031d9-8c28-4983-97d1-20be79f605b3",
+        "telemetry_event_id": "0a7099a0-cef9-4447-9de8-d5fb0ea86051",
+        "audit_event_verified": true,
+        "telemetry_event_verified": true,
+        "actor_verified": true,
+        "workspace_verified": true
+      },
+      "failures": [],
+      "pass": true
+    },
+    {
+      "workflow": "Complete Action",
+      "execution": {
+        "timestamp": "2026-05-19T22:34:20.280Z",
+        "request_id": "ab0bca21-017a-4717-8b78-d460723865b1",
+        "actor_id": "cbf3432d-60cd-46a5-bb68-202b4d1397d5",
+        "workspace_id": "4f136a0c-37f7-43e8-a94e-eb6430c0bf86"
+      },
+      "database_state": {
+        "before": {
+          "entity_count": 151,
+          "audit_event_count": 256,
+          "canonical_event_count": 121
+        },
+        "after": {
+          "entity_count": 152,
+          "audit_event_count": 257,
+          "canonical_event_count": 122
+        },
+        "deltas": {
+          "entity_delta": 1,
+          "audit_delta": 1,
+          "telemetry_delta": 1
+        }
+      },
+      "evidence": {
+        "entity_id": "df8de00f-6b81-48ed-a88f-a781b2efee77",
+        "audit_event_id": "ffcade9b-2338-4249-abe1-5c3ab699b31c",
+        "telemetry_event_id": "d33a9515-bddf-4011-ba35-3b5e6c5f77e6",
+        "audit_event_verified": true,
+        "telemetry_event_verified": true,
+        "actor_verified": true,
+        "workspace_verified": true
+      },
+      "failures": [],
+      "pass": true
+    },
+    {
+      "workflow": "Recommendation Lifecycle",
+      "execution": {
+        "timestamp": "2026-05-19T22:34:20.280Z",
+        "request_id": "048eb0ab-2283-4818-b5c5-a5546c4b5816",
+        "actor_id": "c8c63755-970d-4811-8e65-e76e02f544a0",
+        "workspace_id": "7db21995-d98c-4c1e-a354-416bf2c69aea"
+      },
+      "database_state": {
+        "before": {
+          "entity_count": 139,
+          "audit_event_count": 95,
+          "canonical_event_count": 140
+        },
+        "after": {
+          "entity_count": 140,
+          "audit_event_count": 96,
+          "canonical_event_count": 141
+        },
+        "deltas": {
+          "entity_delta": 1,
+          "audit_delta": 1,
+          "telemetry_delta": 1
+        }
+      },
+      "evidence": {
+        "entity_id": "8b57ba5a-9048-46ac-8d67-08c8aad04899",
+        "audit_event_id": "e4e010cb-00c8-4f87-957c-8ce0a79a7687",
+        "telemetry_event_id": "a10bdb83-7cda-4f90-981a-458f76b9c298",
+        "audit_event_verified": true,
+        "telemetry_event_verified": true,
+        "actor_verified": true,
+        "workspace_verified": true
+      },
+      "failures": [],
+      "pass": true
+    },
+    {
+      "workflow": "Deliverable Lifecycle",
+      "execution": {
+        "timestamp": "2026-05-19T22:34:20.280Z",
+        "request_id": "13900b10-a0c5-455e-b6e6-4c8cf9d4575a",
+        "actor_id": "50e90723-3541-4aac-bdd5-b64aa0845833",
+        "workspace_id": "f72f1593-dfbb-458e-97e2-909e92b60a72"
+      },
+      "database_state": {
+        "before": {
+          "entity_count": 597,
+          "audit_event_count": 186,
+          "canonical_event_count": 258
+        },
+        "after": {
+          "entity_count": 598,
+          "audit_event_count": 187,
+          "canonical_event_count": 259
+        },
+        "deltas": {
+          "entity_delta": 1,
+          "audit_delta": 1,
+          "telemetry_delta": 1
+        }
+      },
+      "evidence": {
+        "entity_id": "910d30a1-1e9e-49de-9330-e7751c6fe0b7",
+        "audit_event_id": "beb541e0-0d8a-46f4-8fd0-4742ba800bd4",
+        "telemetry_event_id": "d71af110-dd2c-4c3f-8a72-d2529ed355ce",
+        "audit_event_verified": true,
+        "telemetry_event_verified": true,
+        "actor_verified": true,
+        "workspace_verified": true
+      },
+      "failures": [],
+      "pass": true
+    },
+    {
+      "workflow": "Billing Lifecycle",
+      "execution": {
+        "timestamp": "2026-05-19T22:34:20.280Z",
+        "request_id": "165d89b6-4f51-4cf7-86ce-09bcccb43391",
+        "actor_id": "2f929c23-0c64-4799-a314-c09edc64e649",
+        "workspace_id": "5a732787-6aa3-42ee-a24d-9d46c16f629c"
+      },
+      "database_state": {
+        "before": {
+          "entity_count": 907,
+          "audit_event_count": 153,
+          "canonical_event_count": 223
+        },
+        "after": {
+          "entity_count": 908,
+          "audit_event_count": 154,
+          "canonical_event_count": 224
+        },
+        "deltas": {
+          "entity_delta": 1,
+          "audit_delta": 1,
+          "telemetry_delta": 1
+        }
+      },
+      "evidence": {
+        "entity_id": "5c1be468-81f1-4924-8c1a-eed0b91a1224",
+        "audit_event_id": "26c6352e-01ff-4197-8edc-5a58791e261e",
+        "telemetry_event_id": "27978048-ecb8-4bf9-b8b7-774b93ef4702",
+        "audit_event_verified": true,
+        "telemetry_event_verified": true,
+        "actor_verified": true,
+        "workspace_verified": true
+      },
+      "failures": [],
+      "pass": true
+    }
+  ],
+  "summary": {
+    "workflows_executed": 10,
+    "workflows_passed": 10,
+    "pass_rate": 100,
+    "all_mutations_verified": true,
+    "all_audits_recorded": true,
+    "all_telemetry_recorded": true,
+    "all_identities_verified": true
+  }
+}
