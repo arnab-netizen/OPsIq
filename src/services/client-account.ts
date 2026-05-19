@@ -131,6 +131,7 @@ export async function updateClient(
     payload: data,
     visibility: 'internal',
     capability: 'mutation',
+    decision: 'client_updated',
     requestId: randomUUID()
   });
 
@@ -175,6 +176,7 @@ export async function archiveClient(
     workspaceId: validatedWorkspaceId,
     visibility: 'internal',
     capability: 'mutation',
+    decision: 'client_archived',
     requestId: randomUUID()
   });
 

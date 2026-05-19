@@ -113,6 +113,9 @@ export async function deactivateContact(
     workspaceId,
     payload: { clientId: contact.clientId },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'contact_deactivated',
+    requestId: randomUUID()
   });
 
   logger.info("Client contact deactivated", {
@@ -160,6 +163,7 @@ export async function updateContact(
     payload: data,
     visibility: 'internal',
     capability: 'mutation',
+    decision: 'contact_updated',
     requestId: randomUUID()
   });
 

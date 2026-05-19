@@ -260,9 +260,9 @@ export async function updateEvidence(
     payload: data,
     visibility: 'internal',
     capability: 'mutation',
-  ,
+    decision: 'evidence_submitted',
     requestId: randomUUID()
-  };
+  });
 
   if (statusChanged && input.status === "validated") {
     // Emit event sourcing event for validation (non-blocking)
@@ -295,6 +295,9 @@ export async function updateEvidence(
       workspaceId: validatedWorkspaceId,
       payload: { previousStatus: evidence.status },
       visibility: "internal",
+      capability: 'mutation',
+      decision: 'evidence_validated',
+      requestId: randomUUID()
     });
   } else if (statusChanged && input.status === "rejected") {
     await emitAuditEvent({
@@ -305,6 +308,9 @@ export async function updateEvidence(
       workspaceId: validatedWorkspaceId,
       payload: { previousStatus: evidence.status, reason: input.rejectionReason },
       visibility: "internal",
+      capability: 'mutation',
+      decision: 'evidence_rejected',
+      requestId: randomUUID()
     });
   }
 
@@ -510,6 +516,9 @@ export async function validateEvidence(
       engagementId: evidence.engagementId,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'evidence_validated',
+    requestId: randomUUID()
   });
 
   return updated;
@@ -565,11 +574,15 @@ export async function createEvidenceBundle(
     actorId: userId,
     entityType: "evidence_bundle",
     entityId: bundle.id,
+    workspaceId: validatedWorkspaceId,
     payload: {
       engagementId: input.engagementId,
       title: input.title,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'evidence_bundle_created',
+    requestId: randomUUID()
   });
 
   return bundle;
@@ -656,11 +669,15 @@ export async function addEvidenceToBundle(
     actorId: userId,
     entityType: "evidence_bundle_item",
     entityId: item.id,
+    workspaceId: validatedWorkspaceId,
     payload: {
       bundleId: input.bundleId,
       evidenceId: input.evidenceItemId,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'evidence_bundle_item_added',
+    requestId: randomUUID()
   });
 
   return item;
@@ -696,11 +713,15 @@ export async function removeEvidenceFromBundle(
     actorId: userId,
     entityType: "evidence_bundle_item",
     entityId: item.id,
+    workspaceId: validatedWorkspaceId,
     payload: {
       bundleId: item.bundleId,
       evidenceId: item.evidenceId,
     },
     visibility: "internal",
+    capability: 'mutation',
+    decision: 'evidence_bundle_item_removed',
+    requestId: randomUUID()
   });
 
   return updated;
@@ -742,9 +763,9 @@ export async function updateEvidenceBundle(
     payload: updates,
     visibility: 'internal',
     capability: 'mutation',
-  ,
+    decision: 'evidence_bundle_updated',
     requestId: randomUUID()
-  };
+  });
 
   return updated;
 }
