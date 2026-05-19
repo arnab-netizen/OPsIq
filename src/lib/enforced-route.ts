@@ -39,6 +39,7 @@ export function withEnforcement(
     require_workspace_id?: boolean;
     require_execution_id?: boolean;
     bypass_health_check?: boolean;
+    requireCapabilities?: string[];
   }
 ): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
   return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
@@ -76,6 +77,7 @@ export function withEnforcementFull(
     require_workspace_id?: boolean;
     require_execution_id?: boolean;
     bypass_health_check?: boolean;
+    requireCapabilities?: string[];
   }
 ): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
   return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
