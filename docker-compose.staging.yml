@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: opsiq-staging-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: opsiq_staging
+    ports:
+      - "5433:5432"
+    volumes:
+      - opsiq_staging_pgdata:/var/lib/postgresql/data
+      - ./scripts/staging-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - opsiq-staging
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.staging
+    container_name: opsiq-staging-app
+    environment:
+      NODE_ENV: staging
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/opsiq_staging
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - opsiq-staging
+    command: npm run dev
+
+volumes:
+  opsiq_staging_pgdata:
+
+networks:
+  opsiq-staging:
+    driver: bridge
