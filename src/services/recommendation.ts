@@ -440,6 +440,10 @@ export async function createRecommendation(
           await emitAuditEvent({
             eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
             actorId: userId,
+            workspaceId: validatedWorkspaceId,
+            capability: 'RECOMMENDATION_CREATE',
+            decision: 'recommendation_created',
+            requestId: authContext?.requestId,
             entityType: "recommendation",
             entityId: recommendation.id,
             payload: {

@@ -72,6 +72,10 @@ export async function createClient(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.CLIENT_ACCOUNT_CREATED,
     actorId,
+    workspaceId: validatedWorkspaceId,
+    capability: 'CLIENT_CREATE',
+    decision: 'client_account_created',
+    requestId: authContext?.requestId,
     entityType: "client_account",
     entityId: result.result.id,
     payload: { name: result.result.name },

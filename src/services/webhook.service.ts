@@ -343,6 +343,10 @@ async function syncEntitlementsForSubscription(
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.SUBSCRIPTION_ACTIVATED,
       actorId: "webhook-system",
+      workspaceId,
+      capability: 'SUBSCRIPTION_ACTIVATE',
+      decision: 'subscription_activated',
+      requestId: context?.requestId,
       entityType: "Subscription",
       entityId: subscription.id,
       payload: {

@@ -57,9 +57,12 @@ export async function createContact(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.CLIENT_CONTACT_CREATED,
     actorId,
+    workspaceId,
+    capability: 'CLIENT_CONTACT_CREATE',
+    decision: 'client_contact_created',
+    requestId: authContext?.requestId,
     entityType: "client_contact",
     entityId: contact.id,
-    workspaceId,
     payload: {
       clientId: input.clientId,
       name: contact.name,

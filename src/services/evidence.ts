@@ -165,6 +165,10 @@ export async function createEvidence(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.EVIDENCE_SUBMITTED,
     actorId: userId,
+    workspaceId: validatedWorkspaceId,
+    capability: 'EVIDENCE_SUBMIT',
+    decision: 'evidence_submitted',
+    requestId: authContext?.requestId,
     entityType: "evidence",
     entityId: result.result.id,
     payload: {

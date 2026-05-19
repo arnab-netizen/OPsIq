@@ -128,9 +128,12 @@ export async function createAction(
           await emitAuditEvent({
             eventName: AUDIT_EVENTS.ACTION_CREATED,
             actorId,
+            workspaceId: validatedWorkspaceId,
+            capability: 'ACTION_CREATE',
+            decision: 'action_created',
+            requestId: authContext?.requestId,
             entityType: "action",
             entityId: action.id,
-            workspaceId: validatedWorkspaceId,
             payload: {
               engagementId: input.engagementId,
               priority: input.priority,
@@ -218,9 +221,12 @@ export async function createAction(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ACTION_CREATED,
     actorId,
+    workspaceId: validatedWorkspaceId,
+    capability: 'ACTION_CREATE',
+    decision: 'action_created',
+    requestId: authContext?.requestId,
     entityType: "action",
     entityId: action.id,
-    workspaceId: validatedWorkspaceId,
     payload: {
       engagementId: input.engagementId,
       priority: input.priority,

@@ -173,9 +173,12 @@ export async function assessCondition(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.CONDITION_ASSESSED,
     actorId,
+    workspaceId: engagement.workspaceId,
+    capability: 'CONDITION_ASSESS',
+    decision: 'condition_assessed',
+    requestId: authContext?.requestId,
     entityType: "business_condition_profile",
     entityId: result.result.id,
-    workspaceId: engagement.workspaceId,
     payload: {
       engagementId: input.engagementId,
       businessStatus: result.result.businessStatus,

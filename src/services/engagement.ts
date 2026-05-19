@@ -168,9 +168,12 @@ export async function createEngagement(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ENGAGEMENT_CREATED,
     actorId,
+    workspaceId: validatedWorkspaceId,
+    capability: 'ENGAGEMENT_CREATE',
+    decision: 'engagement_created',
+    requestId: authContext?.requestId,
     entityType: "engagement",
     entityId: result.result.id,
-    workspaceId: validatedWorkspaceId,
     payload: {
       code: result.result.code,
       title: result.result.title,

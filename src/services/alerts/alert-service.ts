@@ -57,9 +57,12 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ALERT_CREATED,
       actorId: userId,
+      workspaceId,
+      capability: 'ALERT_CREATE',
+      decision: 'alert_created',
+      requestId: context?.requestId,
       entityType: "alert",
       entityId: alert.id,
-      workspaceId,
       payload: {
         type,
         channel,
