@@ -6,6 +6,7 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
 } from "@/src/lib/operator-error-governance";
+import { GovernedEmptyState } from "@/src/components/ui/GovernedEmptyState";
 
 interface Action {
   id: string;
@@ -409,9 +410,10 @@ export function ActionCenter({
 
       {/* Empty State */}
       {localActions.length === 0 && (
-        <div className="rounded-lg border border-border p-8 text-center">
-          <p className="text-muted-foreground">No actions defined yet.</p>
-        </div>
+        <GovernedEmptyState
+          reason="no_actions"
+          helpText="Actions are automatically generated based on your engagement's recommendations."
+        />
       )}
     </div>
   );

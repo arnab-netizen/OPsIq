@@ -6,6 +6,7 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
 } from "@/src/lib/operator-error-governance";
+import { GovernedEmptyState } from "@/src/components/ui/GovernedEmptyState";
 
 interface Recommendation {
   id: string;
@@ -426,9 +427,10 @@ export function RecommendationsManager({
 
       {/* Empty State */}
       {localRecommendations.length === 0 && (
-        <div className="rounded-lg border border-border p-8 text-center">
-          <p className="text-muted-foreground">No recommendations yet.</p>
-        </div>
+        <GovernedEmptyState
+          reason="no_recommendations"
+          helpText="The system will generate recommendations as you provide more engagement data."
+        />
       )}
     </div>
   );

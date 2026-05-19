@@ -6,6 +6,7 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
 } from "@/src/lib/operator-error-governance";
+import { GovernedEmptyState } from "@/src/components/ui/GovernedEmptyState";
 
 interface Finding {
   id: string;
@@ -444,10 +445,14 @@ export function FindingsManager({
 
       {/* Empty State */}
       {localFindings.length === 0 && !createMode && (
-        <div className="rounded-lg border border-border p-8 text-center">
-          <p className="text-muted-foreground">No findings recorded yet.</p>
-          <p className="mt-1 text-sm text-muted-foreground">Create a finding or run a diagnosis to generate findings from evidence.</p>
-        </div>
+        <GovernedEmptyState
+          reason="no_findings"
+          primaryAction={{
+            label: "Create Finding",
+            onClick: () => setCreateMode(true),
+          }}
+          helpText="Findings are created manually or generated from diagnostic analysis."
+        />
       )}
     </div>
   );
