@@ -3,6 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button, Table, LoadingState, EmptyState, ErrorState } from "@/ui/primitives";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/lib/operator-error-governance";
 import { CreateBundleForm } from "./create-bundle-form";
 
 interface BundleItem {

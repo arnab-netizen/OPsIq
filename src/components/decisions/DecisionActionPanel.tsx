@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toOperatorSafeError } from "@/src/lib/operator-safe-errors";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface DecisionActionPanelProps {
   decisionId: string;

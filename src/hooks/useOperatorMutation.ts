@@ -19,7 +19,7 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
   type GovernedErrorResponse,
-} from "@/src/lib/operator-error-governance";
+} from "@/lib/operator-error-governance";
 
 export interface MutationOptions<TData, TVariables> {
   // API configuration
@@ -217,28 +217,6 @@ export interface MutationUIProps<TData> {
   renderSuccess?: (data?: TData) => React.ReactNode;
 }
 
-export function MutationUI<TData>({
-  state,
-  onRetry,
-  renderLoading,
-  renderError,
-  renderSuccess,
-}: MutationUIProps<TData>) {
-  if (state.isLoading && renderLoading) {
-    return <>{ renderLoading()}</>;
-  }
-
-  if (state.isError && state.error && renderError) {
-    return <>{renderError(state.error)}</>;
-  }
-
-  if (state.isSuccess && renderSuccess) {
-    return <>{renderSuccess(state.data)}</>;
-  }
-
-  return null;
-}
-
 /**
  * Mutation button UI component
  * Automatically manages disabled, loading, error states
@@ -252,64 +230,4 @@ export interface GovMutationButtonProps {
   children: React.ReactNode;
   variant?: "primary" | "secondary" | "danger";
   disabled?: boolean;
-}
-
-export function GovMutationButton({
-  onClick,
-  isLoading = false,
-  isError = false,
-  error,
-  onRetry,
-  children,
-  variant = "primary",
-  disabled = false,
-}: GovMutationButtonProps) {
-  const [localLoading, setLocalLoading] = useState(false);
-
-  const handleClick = async () => {
-    setLocalLoading(true);
-    try {
-      await onClick();
-    } finally {
-      setLocalLoading(false);
-    }
-  };
-
-  const isButtonLoading = isLoading || localLoading;
-  const isButtonDisabled = disabled || isButtonLoading;
-
-  if (isError && error && onRetry) {
-    return (
-      <div className="space-y-2">
-        <div className="text-sm text-red-600">{error.operatorMessage}</div>
-        <button
-          onClick={onRetry}
-          disabled={isButtonDisabled}
-          className={`px-4 py-2 text-sm font-medium rounded transition ${
-            variant === "primary"
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
-        >
-          {isButtonLoading ? "Retrying..." : "Try again"}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={isButtonDisabled}
-      className={`px-4 py-2 text-sm font-medium rounded transition ${
-        variant === "primary"
-          ? "bg-blue-600 text-white hover:bg-blue-700"
-          : variant === "danger"
-            ? "bg-red-600 text-white hover:bg-red-700"
-            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-      } disabled:opacity-50 disabled:cursor-not-allowed`}
-    >
-      {isButtonLoading ? "Saving..." : children}
-    </button>
-  );
 }

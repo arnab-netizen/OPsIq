@@ -1,4 +1,4 @@
-import { GovMetric } from "@/src/components/ui/GovMetric";
+import { GovMetric } from "@/components/ui/GovMetric";
 
 interface TrustCardProps {
   ruleId: string;

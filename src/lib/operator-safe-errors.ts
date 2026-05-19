@@ -9,7 +9,7 @@
  * - No dead-end errors
  */
 
-import { RuntimeError } from "@/src/runtime/runtime-errors";
+import { RuntimeError } from "@/runtime/runtime-errors";
 
 export interface OperatorSafeErrorResponse {
   success: false;

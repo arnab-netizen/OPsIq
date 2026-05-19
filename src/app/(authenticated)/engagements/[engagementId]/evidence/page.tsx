@@ -1,7 +1,13 @@
 "use client";
+"use client";
+
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from "@/lib/operator-error-governance";
 import { Button, Badge, Table, LoadingState, EmptyState, ErrorState } from "@/ui/primitives";
 import { ManualEvidenceForm } from "./manual-evidence-form";
 import { FileUploadForm } from "./file-upload-form";

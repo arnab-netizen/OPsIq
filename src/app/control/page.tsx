@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import {
+  classifyOperatorError,
+  type ErrorGovernanceContext,
+} from '@/lib/operator-error-governance';
 
 interface BlockedDecision {
   id: string;
@@ -194,10 +198,10 @@ export default function ControlPage() {
 
         setLastUpdate(new Date().toLocaleTimeString());
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load dashboard data'
-        );
         console.error('Dashboard error:', err);
+        const ctx: ErrorGovernanceContext = { context: 'load' };
+        const govErr = classifyOperatorError(err, ctx);
+        setError(govErr.operatorMessage);
       } finally {
         setLoading(false);
       }

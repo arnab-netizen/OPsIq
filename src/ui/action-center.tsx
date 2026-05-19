@@ -5,8 +5,8 @@ import { Badge, Button } from "@/ui/primitives";
 import {
   classifyOperatorError,
   type ErrorGovernanceContext,
-} from "@/src/lib/operator-error-governance";
-import { GovernedEmptyState } from "@/src/components/ui/GovernedEmptyState";
+} from "@/lib/operator-error-governance";
+import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
 
 interface Action {
   id: string;
@@ -171,8 +171,12 @@ export function ActionCenter({
       });
       onActionUpdated?.();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to update action";
-      setErrors({ [actionId]: errorMessage });
+      const context: ErrorGovernanceContext = {
+        context: "action",
+        resourceId: actionId,
+      };
+      const governed = classifyOperatorError(err, context);
+      setErrors({ [actionId]: governed.operatorMessage });
     } finally {
       setUpdating(null);
     }
