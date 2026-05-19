@@ -1,9 +1,9 @@
 {
   "routes": {
     "total": 147,
-    "fully_closed": 8,
-    "partial": 129,
-    "failed": 7,
+    "fully_closed": 66,
+    "partial": 74,
+    "failed": 4,
     "intentional_public": 3
   },
   "services": {
@@ -1360,8 +1360,7 @@
       "gaps": [
         "NO_AUTH_ENFORCED",
         "NO_WORKSPACE_VERIFIED",
-        "NO_CAPABILITY_ENFORCED",
-        "NO_AUDIT_EMITTED"
+        "NO_CAPABILITY_ENFORCED"
       ]
     },
     {
@@ -1370,26 +1369,6 @@
       "path": "/feedback",
       "gaps": [
         "NO_AUTH_ENFORCED",
-        "NO_CAPABILITY_ENFORCED",
-        "NO_AUDIT_EMITTED"
-      ]
-    },
-    {
-      "phase": "A",
-      "type": "route_failed",
-      "path": "/override",
-      "gaps": [
-        "NO_WORKSPACE_VERIFIED",
-        "NO_CAPABILITY_ENFORCED",
-        "NO_AUDIT_EMITTED"
-      ]
-    },
-    {
-      "phase": "A",
-      "type": "route_failed",
-      "path": "/scenario",
-      "gaps": [
-        "NO_WORKSPACE_VERIFIED",
         "NO_CAPABILITY_ENFORCED",
         "NO_AUDIT_EMITTED"
       ]
@@ -1407,22 +1386,11 @@
     {
       "phase": "A",
       "type": "route_failed",
-      "path": "/verify",
-      "gaps": [
-        "NO_WORKSPACE_VERIFIED",
-        "NO_CAPABILITY_ENFORCED",
-        "NO_AUDIT_EMITTED"
-      ]
-    },
-    {
-      "phase": "A",
-      "type": "route_failed",
       "path": "/webhooks/stripe",
       "gaps": [
         "NO_AUTH_ENFORCED",
         "NO_WORKSPACE_VERIFIED",
-        "NO_CAPABILITY_ENFORCED",
-        "NO_AUDIT_EMITTED"
+        "NO_CAPABILITY_ENFORCED"
       ]
     },
     {
