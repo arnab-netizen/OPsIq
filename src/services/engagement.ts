@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
@@ -98,6 +99,7 @@ export async function createEngagement(
   }
 
   // Service-layer auth: require authContext, extract userId from it (never from parameters)
+  const capabilityValidated = context.capabilityEnvelope?.capability;
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   // Validate client exists

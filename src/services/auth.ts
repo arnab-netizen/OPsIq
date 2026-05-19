@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { db, getDbInstance } from "@/lib/db";
 import type { UserRoleAssignment } from "@/generated/prisma/client";
 import { UnauthorizedError } from "@/infra/errors";

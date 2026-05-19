@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { db } from "@/lib/db";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { calculateDecisionImpact, calculateWorkspaceImpactSummary } from "@/services/business-impact/decision-impact.service";

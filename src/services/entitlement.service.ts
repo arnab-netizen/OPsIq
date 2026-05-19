@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { db } from "@/lib/db";
 import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
 

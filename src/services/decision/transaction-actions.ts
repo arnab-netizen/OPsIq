@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 

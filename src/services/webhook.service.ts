@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";

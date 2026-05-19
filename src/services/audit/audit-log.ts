@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import type { UserRole } from "@/domain/auth/types";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { randomUUID } from "crypto";

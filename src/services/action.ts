@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
@@ -75,6 +76,7 @@ export async function createAction(
   workspaceId: string,
   idempotencyKey?: string
 ) {
+  const capabilityValidated = context.capabilityEnvelope?.capability;
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const engagement = await db.engagement.findUnique({

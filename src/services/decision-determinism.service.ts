@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { db } from "@/lib/db";
 import type { PrimaryDecision } from "./decision-control/decision-control.service";
 

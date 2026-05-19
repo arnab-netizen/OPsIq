@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { enrichMutationAuditEvent } from '@/infra/audit-enrichment';
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
@@ -609,6 +610,7 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
 // ─── Main Diagnosis Function ───────────────────────────────────────────────
 
 export async function diagnoseBusiness(input: BusinessProblemInput, authContext: CanonicalAuthContext, workspaceId: string): Promise<DiagnosisResult> {
+  const capabilityValidated = context.capabilityEnvelope?.capability;
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
   enforceWorkspaceId(validatedWorkspaceId, "diagnoseBusiness", "diagnosis");
 

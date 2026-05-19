@@ -1,3 +1,4 @@
+import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { enrichMutationAuditEvent } from '@/infra/audit-enrichment';
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
