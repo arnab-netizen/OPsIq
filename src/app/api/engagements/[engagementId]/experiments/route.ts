@@ -20,7 +20,6 @@ import {
   updateExecution,
   recordResult,
   captureLearning,
-  analyzeOutcome,
   ExperimentLifecycleError,
 } from "@/services/experiment/experiment-lifecycle.service";
 import { assertCapability } from "@/services/entitlement.service";

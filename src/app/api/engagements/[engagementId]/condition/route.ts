@@ -1,6 +1,7 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   assessCondition,
@@ -67,10 +68,15 @@ export const POST = withCanonicalEnforcement(
 
     const body = await parseRequestBody(ctx.request!, assessConditionSchema);
 
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.CONDITION_ASSESS,
+    });
+
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "assessCondition",
       actorId: ctx.verifiedActorId,
+      workspaceId: ctx.verifiedWorkspaceId,
       payload: { engagementId, ...body },
     });
 
@@ -85,14 +91,14 @@ export const POST = withCanonicalEnforcement(
         { ...body, engagementId, workspaceId: ctx.verifiedWorkspaceId },
         ctx
       );
-      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, ctx.verifiedWorkspaceId);
       return Response.json(result, { status: 201 });
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyError(idempotencyKey, err, auditContext, ctx.verifiedWorkspaceId);
       throw error;
     }
-  }, auditContext, {
+  }, {
     requireCapabilities: [CAPABILITIES.CONDITION_ASSESS],
     requireWorkspace: true,
   }
