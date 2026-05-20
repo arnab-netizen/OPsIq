@@ -120,10 +120,15 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
   const body = await parseRequestBody(request, actionSchema);
 
+  const auditContext = createServiceCapabilityContext({
+    capability: body.action === "deactivate" ? CAPABILITIES.USER_DEACTIVATE : CAPABILITIES.USER_UPDATE,
+  });
+
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "userAction",
     actorId: authContext.session.user.id,
+    workspaceId,
     payload: { userId, action: body.action, version: body.version },
   });
 
