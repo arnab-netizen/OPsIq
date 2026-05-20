@@ -1,0 +1,80 @@
+{
+  "phase": "P2 — UNSAFE_ERROR_RENDER PATTERNS",
+  "timestamp": "2026-05-20",
+  "patterns": [
+    {
+      "pattern_id": "P2-PATTERN-1",
+      "name": "RuntimeError Factory Function Message Classification",
+      "affected_count": 12,
+      "files": ["src/runtime/runtime-errors.ts"],
+      "root_cause": "Factory functions createValidationError, createAuthError, etc. accept message parameter and pass to RuntimeError constructor without classifying the message first. The message could be raw, unvetted input.",
+      "unsafe_render_path": "RuntimeError constructor → Error.message → potential exposure if error object is serialized or logged",
+      "current_pattern": "export function createValidationError(message: string, context: RuntimeErrorContext, ...): RuntimeError { return new RuntimeError(message, {...}); }",
+      "approved_fix": "Classify message via classifyOperatorError before passing to RuntimeError:\n\nexport function createValidationError(message: string, context: RuntimeErrorContext, ...): RuntimeError {\n  const classified = classifyOperatorError(new Error(message), { context: 'validation' });\n  const safeMessage = classified.operatorMessage;\n  return new RuntimeError(safeMessage, {...});\n}",
+      "validation_commands": ["npm run build", "npx tsc --noEmit", "npm run governance:scan:strict"],
+      "risk_level": "HIGH",
+      "notes": "All 12 factory functions in runtime-errors.ts follow the same pattern. Single batch fix can resolve all 12."
+    },
+    {
+      "pattern_id": "P2-PATTERN-2",
+      "name": "Custom Error Class Throw with Unclassified Message",
+      "affected_count": 33,
+      "files": [
+        "src/services/roi-lifecycle-gating.ts",
+        "src/services/owner-dashboard.service.ts",
+        "src/services/finding.ts",
+        "src/services/engagement-health.ts",
+        "src/services/replay-failure-handler.ts",
+        "src/services/deliverable.ts",
+        "src/services/entitlement.service.ts",
+        "src/services/projection-rebuild-engine.ts",
+        "src/services/stage.ts",
+        "src/services/event-numbering-validator.ts",
+        "src/services/engagement-membership.ts",
+        "src/services/public-api.service.ts",
+        "src/services/escalation.ts",
+        "src/services/action.ts",
+        "src/services/diagnosis.ts",
+        "src/services/webhook.service.ts"
+      ],
+      "root_cause": "Services throw custom error classes (NotFoundError, ValidationError, ConflictError, etc.) with unclassified message strings. The messages could be raw from user input, DB results, or external services.",
+      "unsafe_render_path": "throw new CustomError(rawMessage) → Error.message → exposure if error is logged, serialized, or reaches operator",
+      "current_pattern_examples": [
+        "throw new NotFoundError('Decision', decisionId);",
+        "throw new ValidationError(validation.reason || 'Invalid state...');",
+        "throw new Error(`Engagement ${engagementId} not found`);",
+        "throw new Error(`Invalid finding: ${parsed.error.message}`);"
+      ],
+      "approved_fix_strategy": "Option A (Recommended): Update custom error class constructors to accept message and classify internally:\n\nclass NotFoundError extends Error {\n  constructor(entityType: string, entityId: string) {\n    const message = `${entityType} not found`;\n    const classified = classifyOperatorError(new Error(message), { context: 'not_found' });\n    super(classified.operatorMessage);\n    this.name = 'NotFoundError';\n  }\n}\n\nOption B: Classify at throw site:\n\nconst classified = classifyOperatorError(new Error(...), { context: '...' });\nthrow new NotFoundError(classified.operatorMessage);",
+      "validation_commands": ["npm run build", "npx tsc --noEmit", "npm run governance:scan:strict"],
+      "risk_level": "MEDIUM",
+      "notes": "Distributed across 16 service files. Batch by similar error class patterns to parallelize fixes."
+    }
+  ],
+  "batch_strategy": {
+    "batch_1": {
+      "target": "P2-PATTERN-1 (RuntimeError factories)",
+      "files": ["src/runtime/runtime-errors.ts"],
+      "violations": 12,
+      "approach": "Single file, 12 factory functions. Add classification to each function. replace_all safe within function bodies."
+    },
+    "batch_2": {
+      "target": "Services using throw Error() directly",
+      "files": ["src/services/finding.ts", "src/services/escalation.ts"],
+      "violations": 8,
+      "approach": "Fix throw Error(...) statements by adding getSafeErrorMessage wrapper or classifyOperatorError"
+    },
+    "batch_3": {
+      "target": "Services throwing NotFoundError / ValidationError",
+      "files": ["src/services/roi-lifecycle-gating.ts", "src/services/entitlement.service.ts", "src/services/action.ts"],
+      "violations": 15,
+      "approach": "Update custom error class constructors or call sites"
+    },
+    "batch_4": {
+      "target": "Remaining services",
+      "files": ["src/services/public-api.service.ts", "src/services/diagnosis.ts", "src/services/engagement-health.ts"],
+      "violations": 10,
+      "approach": "Fix remaining unclassified error throws"
+    }
+  }
+}

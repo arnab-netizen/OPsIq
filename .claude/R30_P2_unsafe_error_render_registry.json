@@ -1,0 +1,138 @@
+{
+  "phase": "P2 — UNSAFE_ERROR_RENDER SERVICE CLOSURE",
+  "timestamp": "2026-05-20",
+  "total_violations": 45,
+  "violation_categories": {
+    "runtime_error_factory_functions": {
+      "file": "src/runtime/runtime-errors.ts",
+      "description": "RuntimeError factory functions creating errors with unclassified message parameters",
+      "violations": [
+        {
+          "line": 108,
+          "function": "createValidationError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter passed directly without classification",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 126,
+          "function": "createAuthError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 144,
+          "function": "createPermissionError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 163,
+          "function": "createRateLimitError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 183,
+          "function": "createEntitlementError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 202,
+          "function": "createDBError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 222,
+          "function": "createQueueError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 242,
+          "function": "createExternalServiceError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 279,
+          "function": "createExecutionBlockedError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 297,
+          "function": "createStaleDataError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 316,
+          "function": "createConflictError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        },
+        {
+          "line": 335,
+          "function": "createInfrastructureError",
+          "pattern": "return new RuntimeError(message, {...})",
+          "issue": "message parameter unclassified",
+          "unsafe_render_path": "Error.message stored in Error object without governance",
+          "fix_strategy": "Classify message via classifyOperatorError before RuntimeError construction"
+        }
+      ],
+      "count": 12
+    },
+    "custom_error_classes": {
+      "description": "Custom error classes (NotFoundError, ValidationError, etc.) thrown with unclassified messages",
+      "estimated_violations": 33,
+      "affected_services": [
+        "src/services/roi-lifecycle-gating.ts",
+        "src/services/owner-dashboard.service.ts",
+        "src/services/finding.ts",
+        "src/services/engagement-health.ts",
+        "src/services/replay-failure-handler.ts",
+        "src/services/deliverable.ts",
+        "src/services/entitlement.service.ts",
+        "src/services/projection-rebuild-engine.ts",
+        "src/services/stage.ts",
+        "src/services/event-numbering-validator.ts",
+        "src/services/engagement-membership.ts",
+        "src/services/public-api.service.ts",
+        "src/services/escalation.ts",
+        "src/services/action.ts",
+        "src/services/diagnosis.ts",
+        "src/services/webhook.service.ts"
+      ],
+      "fix_strategy": "Identify all custom error class definitions and update constructors to classify message parameters, or ensure callers classify messages before passing"
+    }
+  },
+  "fix_approach": {
+    "phase_1": "Fix RuntimeError factory functions in src/runtime/runtime-errors.ts (12 violations)",
+    "phase_2": "Fix custom error class throw sites across services (33 violations)"
+  },
+  "safe_render_rule": "All error messages must be classified through classifyOperatorError before being stored in Error objects or rendered to operators. Internal diagnostics separate from operator-facing messages."
+}
