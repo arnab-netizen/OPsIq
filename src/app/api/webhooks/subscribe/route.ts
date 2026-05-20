@@ -25,7 +25,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     throw new UnauthorizedError("Unauthorized");
   }
 
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
     throw new Error("Workspace ID required");
   }
