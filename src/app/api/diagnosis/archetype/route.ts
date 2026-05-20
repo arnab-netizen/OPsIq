@@ -92,7 +92,7 @@ export const POST = withEnforcementFull(async (request) => {
     return Response.json(result, { status: 201 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
+    await recordIdempotencyError(idempotencyKey, err, auditContext, body.workspaceId);
     logger.error("Archetype analysis error", auditContext, { error: err.message });
     return Response.json(
       { error: err.message || "Archetype analysis failed" },

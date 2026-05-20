@@ -72,11 +72,13 @@ export const POST = withCanonicalEnforcement(
       capability: CAPABILITIES.CONDITION_ASSESS,
     });
 
+    const workspaceId = ctx.verifiedWorkspaceId;
+
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "assessCondition",
       actorId: ctx.verifiedActorId,
-      workspaceId: ctx.verifiedWorkspaceId,
+      workspaceId,
       payload: { engagementId, ...body },
     });
 
@@ -88,7 +90,7 @@ export const POST = withCanonicalEnforcement(
 
     try {
       const result = await assessCondition(
-        { ...body, engagementId, workspaceId: ctx.verifiedWorkspaceId },
+        { ...body, engagementId, workspaceId },
         ctx
       );
       await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspaceId);
