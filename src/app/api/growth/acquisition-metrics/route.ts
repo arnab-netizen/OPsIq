@@ -9,6 +9,7 @@ import { AcquisitionEngine } from "@/services/growth/acquisition-engine";
 import { AcquisitionChannel } from "@/domain/growth/growth-engines";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const recordMetricsSchema = z.object({
   channel: z.nativeEnum(AcquisitionChannel),
@@ -77,7 +78,8 @@ export const POST = withEnforcementFull(async (request) => {
     }
 
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
 
     return Response.json(
