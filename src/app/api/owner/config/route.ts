@@ -75,7 +75,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   } catch (error) {
     if (error instanceof Error) {
       const classified = classifyOperatorError(error, { context: "load" });
-      return Response.json({ error: classified.operatorMessage }, { status: 400 });
+      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },
@@ -165,7 +165,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     }
     if (error instanceof Error) {
       const classified = classifyOperatorError(error, { context: "save" });
-      return Response.json({ error: classified.operatorMessage }, { status: 400 });
+      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },

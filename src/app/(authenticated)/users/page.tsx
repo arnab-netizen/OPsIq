@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Table, Badge, LoadingState, ErrorState } from "@/ui/primitives";
 import { formatRole } from "@/domain/constants/role-labels";
 import { toOperatorSafeError } from "@/lib/operator-safe-errors";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface UserRow {
   id: string;
@@ -85,7 +86,7 @@ export default function UsersPage() {
   }, [fetchUsers]);
 
   if (loading) return <LoadingState message="Loading users..." />;
-  if (error) return <ErrorState message={error} onRetry={fetchUsers} />;
+  if (error) return <ErrorState message={classifyOperatorError(new Error(error), { context: "load" }).operatorMessage} onRetry={fetchUsers} />;
 
   const users = data?.users ?? [];
 

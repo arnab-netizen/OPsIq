@@ -45,7 +45,9 @@ export default function MyDayPage() {
 
       if (!response.ok) {
         const errorData = data as MyDayError;
-        setError(errorData.error || 'Failed to fetch My Day items');
+        const ctx: ErrorGovernanceContext = { context: 'load' };
+        const govErr = classifyOperatorError(new Error(errorData.error || 'Failed to fetch My Day items'), ctx);
+        setError(govErr.operatorMessage);
         setItems([]);
         return;
       }
@@ -137,7 +139,9 @@ export default function MyDayPage() {
       if (!response.ok) {
         const errorData = await response.json();
         const errorMsg = errorData.error || `Failed to update item status to ${status}`;
-        setError(errorMsg);
+        const ctx: ErrorGovernanceContext = { context: 'load' };
+        const govErr = classifyOperatorError(new Error(errorMsg), ctx);
+        setError(govErr.operatorMessage);
         setErrorCountLocal((prev) => prev + 1);
         await fetch('/api/telemetry', {
           method: 'POST',

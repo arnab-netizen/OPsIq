@@ -18,6 +18,8 @@
  * - infrastructure internals
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 /**
  * Sensitive patterns to redact
  */
@@ -160,25 +162,25 @@ export function redactErrorDetails(error: unknown): unknown {
   if (error instanceof Error) {
     return {
       name: error.name,
-      message: "[ERROR MESSAGE REDACTED]", // Don't expose raw message
+      message: classifyOperatorError(new Error("[ERROR MESSAGE REDACTED]"), { context: "load" }).operatorMessage,
       // Never include stack trace
     };
   }
 
   if (typeof error === "string") {
-    return "[ERROR MESSAGE REDACTED]";
+    return classifyOperatorError(new Error("[ERROR MESSAGE REDACTED]"), { context: "load" }).operatorMessage;
   }
 
   if (typeof error === "object" && error !== null) {
     const obj = error as Record<string, unknown>;
     return {
       name: obj.name,
-      message: "[ERROR MESSAGE REDACTED]",
+      message: classifyOperatorError(new Error("[ERROR MESSAGE REDACTED]"), { context: "load" }).operatorMessage,
       // Remove stack, code, any internal details
     };
   }
 
-  return "[ERROR REDACTED]";
+  return classifyOperatorError(new Error("[ERROR REDACTED]"), { context: "load" }).operatorMessage;
 }
 
 /**

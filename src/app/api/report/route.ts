@@ -15,8 +15,7 @@ export const GET = withCanonicalEnforcement(
       const report = await generateReport();
       return Response.json(report);
     } catch (error) {
-      const classified = classifyOperatorError(error, { context: "load" });
-      return Response.json({ error: classified.operatorMessage }, { status: 400 });
+      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
     }
   },
   { requireCapabilities: ["SYSTEM_VIEW_AUDIT"], requireWorkspace: true }

@@ -55,7 +55,7 @@ export default function SettingsPage() {
   }, []);
 
   if (loading) return <LoadingState message="Loading profile..." />;
-  if (error) return <ErrorState message={error} />;
+  if (error) return <ErrorState message={classifyOperatorError(new Error(error), { context: "load" }).operatorMessage} />;
   if (!me) return null;
 
   return (
