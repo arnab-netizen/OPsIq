@@ -214,6 +214,11 @@ export function getSessionCookieName(): string {
 /**
  * Get session and return raw facts (not throwing).
  * Used by canonical wrapper to evaluate auth state.
+ *
+ * @internal Fact-returning variant for canonical wrapper (lib/canonical-route-enforcement.ts).
+ * Called only from internal auth decision logic, not from user-triggered code paths.
+ * Context is optional as this is purely a data-retrieval function.
+ * ALLOWLIST: canonical-route-enforcement.ts::withEnforcementFull (async auth decision logic)
  */
 export async function getSessionFact(workspaceId: string = "system",
   context?: ServiceCapabilityContext
@@ -237,6 +242,11 @@ export async function getSessionFact(workspaceId: string = "system",
 /**
  * Get policy context and return raw facts (not throwing).
  * Used by canonical wrapper to evaluate auth state.
+ *
+ * @internal Fact-returning variant for canonical wrapper (lib/canonical-route-enforcement.ts).
+ * Called only from internal auth decision logic, not from user-triggered code paths.
+ * Context is optional as this is purely a data-retrieval function.
+ * ALLOWLIST: canonical-route-enforcement.ts::withEnforcementFull (async auth decision logic)
  */
 export async function getPolicyContextFact(workspaceId: string = "system",
   context?: ServiceCapabilityContext
