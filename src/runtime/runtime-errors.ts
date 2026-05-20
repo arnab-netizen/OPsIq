@@ -5,6 +5,13 @@
  * NO silent failures. All runtime errors tracked, logged, and recoverable.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 export type RuntimeErrorClassification =
   | "VALIDATION"
   | "AUTH"
@@ -333,7 +340,7 @@ export function createUnknownError(
     internal_diagnostic: {
       original_message: message,
       error_type: error instanceof Error ? error.constructor.name : typeof error,
-      error_details: error instanceof Error ? error.message : String(error),
+      error_details: getSafeErrorMessage(error),
     },
     context,
     error_code: "ERR_UNKNOWN_001",
