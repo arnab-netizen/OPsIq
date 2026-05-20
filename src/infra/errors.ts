@@ -127,7 +127,8 @@ export class AppError extends Error {
     details?: Record<string, unknown>,
     correlationId?: string
   ) {
-    super(message);
+    // Classify message through governance before passing to Error constructor
+    super(classifyOperatorError(new Error(message), { context: "load" }).operatorMessage);
     this.name = "AppError";
     this.code = code;
     this.statusCode = statusCode;
