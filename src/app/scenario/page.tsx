@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface ScenarioResult {
   impactExpected: number;
@@ -41,7 +42,7 @@ export default function ScenarioPage() {
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setLoading(false);
     }

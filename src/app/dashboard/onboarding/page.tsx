@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 type Step = "workspace" | "decision" | "evaluate" | "dashboard";
 
@@ -51,7 +52,7 @@ export default function OnboardingFlow() {
       setData({ workspace: result });
       setCurrentStep("decision");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating workspace");
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setLoading(false);
     }
@@ -90,7 +91,7 @@ export default function OnboardingFlow() {
       setData({ ...data, decision: result });
       setCurrentStep("evaluate");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating decision");
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setLoading(false);
     }
@@ -123,7 +124,7 @@ export default function OnboardingFlow() {
       });
       setCurrentStep("dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error evaluating decision");
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setLoading(false);
     }

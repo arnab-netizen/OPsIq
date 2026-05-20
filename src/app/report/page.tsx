@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface ReportData {
   totalImpact: number;
@@ -25,7 +26,7 @@ export default function ReportPage() {
         const data = await response.json();
         setReport(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setLoading(false);
       }

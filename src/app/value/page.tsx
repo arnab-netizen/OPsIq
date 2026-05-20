@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface ValueMetrics {
   totalGain: number;
@@ -32,7 +33,7 @@ export default function ValuePage() {
         const data: ApiResponse = await response.json();
         setMetrics(data.metrics);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'An error occurred';
+        const message = toOperatorSafeError(err, "load").error;
         setError(message);
         setMetrics(null);
       } finally {

@@ -11,6 +11,7 @@ import {
 import { Button, Badge, Table, LoadingState, EmptyState, ErrorState } from "@/ui/primitives";
 import { ManualEvidenceForm } from "./manual-evidence-form";
 import { FileUploadForm } from "./file-upload-form";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface EvidenceItem {
   id: string;
@@ -75,7 +76,7 @@ export default function EvidenceVaultPage({
         const data = await res.json();
         setEvidence(data.items ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setIsLoading(false);
       }

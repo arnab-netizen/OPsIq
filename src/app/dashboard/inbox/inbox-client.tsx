@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface Decision {
   id: string;
@@ -75,7 +76,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
       setDecisions(data.decisions);
       setTotal(data.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch decisions");
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setLoading(false);
     }

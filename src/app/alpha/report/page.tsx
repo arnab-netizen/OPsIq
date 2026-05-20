@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface AlphaDailySummary {
   date: string;
@@ -68,7 +69,7 @@ export default function AlphaReportPage() {
       const dailyReport = await response.json();
       setReport(dailyReport);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate report');
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setLoading(false);
     }

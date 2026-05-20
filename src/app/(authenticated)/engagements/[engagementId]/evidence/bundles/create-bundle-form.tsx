@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input, Textarea } from "@/ui/primitives";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface CreateBundleFormProps {
   engagementId: string;
@@ -44,7 +45,7 @@ export function CreateBundleForm({
 
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(toOperatorSafeError(err, "load").error);
       setIsSubmitting(false);
     }
   }

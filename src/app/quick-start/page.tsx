@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { OutputPanel } from "@/components/OutputPanel";
 import { TrustCard } from "@/components/TrustCard";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface DecisionOutput {
   problem: string;
@@ -53,7 +54,7 @@ export default function QuickStartPage() {
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setLoading(false);
     }

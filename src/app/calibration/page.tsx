@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AccuracyPanel } from "@/components/AccuracyPanel";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface CalibrationRecord {
   id: string;
@@ -39,7 +40,7 @@ export default function CalibrationPage() {
         const data = await response.json();
         setData(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setLoading(false);
       }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button, Input, Badge } from "@/ui/primitives";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface ConsultingEngineResponse {
   success: boolean;
@@ -141,7 +142,7 @@ export default function ConsultingEnginePage() {
 
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setIsSubmitting(false);
     }

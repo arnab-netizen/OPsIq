@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Badge } from "@/ui/primitives";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface DecisionEvidencePage {
   params: {
@@ -100,7 +101,7 @@ export default function DecisionEvidencePage({ params }: DecisionEvidencePage) {
         const data = await response.json();
         setEvidence(data.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setIsLoading(false);
       }

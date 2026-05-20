@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface Entity {
   id: string;
@@ -24,7 +25,7 @@ export default function EntityPage() {
         const data = await response.json();
         setEntities(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setLoading(false);
       }

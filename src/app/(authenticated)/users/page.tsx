@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Table, Badge, LoadingState, ErrorState } from "@/ui/primitives";
 import { formatRole } from "@/domain/constants/role-labels";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface UserRow {
   id: string;
@@ -73,7 +74,7 @@ export default function UsersPage() {
       const json = await res.json();
       setData(json);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load users");
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setLoading(false);
     }

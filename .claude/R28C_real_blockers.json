@@ -1,0 +1,760 @@
+[
+  {
+    "id": 1,
+    "pattern": "PAGE_ERROR_MESSAGE",
+    "classification": "ROOT",
+    "priority": 1,
+    "total_violations": 38,
+    "unique_files": 29,
+    "top_files": [
+      "src/app/(authenticated)/clients/new/page.tsx",
+      "src/app/(authenticated)/diagnosis/page.tsx",
+      "src/app/(authenticated)/engagements/[engagementId]/business-impact/page.tsx"
+    ],
+    "violation_type": "raw-error-message",
+    "fix_strategy": "Wrap error.message with toOperatorSafeError(error, context)",
+    "violations": [
+      {
+        "file": "src/app/value/page.tsx",
+        "line": 35,
+        "type": "raw-error-message",
+        "code": "const message = err instanceof Error ? err.message : 'An error occurred';"
+      },
+      {
+        "file": "src/app/scenario/page.tsx",
+        "line": 44,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Unknown error\");"
+      },
+      {
+        "file": "src/app/report/page.tsx",
+        "line": 28,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Unknown error\");"
+      },
+      {
+        "file": "src/app/quick-start/page.tsx",
+        "line": 56,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Unknown error\");"
+      },
+      {
+        "file": "src/app/operator/page.tsx",
+        "line": 40,
+        "type": "raw-error-message",
+        "code": "const message = err instanceof Error ? err.message : 'Network error';"
+      },
+      {
+        "file": "src/app/onboarding/page.tsx",
+        "line": 48,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Error creating workspace\");"
+      },
+      {
+        "file": "src/app/onboarding/page.tsx",
+        "line": 96,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Error inviting team members\");"
+      },
+      {
+        "file": "src/app/entity/page.tsx",
+        "line": 27,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Unknown error\");"
+      },
+      {
+        "file": "src/app/calibration/page.tsx",
+        "line": 42,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Unknown error\");"
+      },
+      {
+        "file": "src/app/dashboard/onboarding/page.tsx",
+        "line": 54,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Error creating workspace\");"
+      },
+      {
+        "file": "src/app/dashboard/onboarding/page.tsx",
+        "line": 93,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Error creating decision\");"
+      },
+      {
+        "file": "src/app/dashboard/onboarding/page.tsx",
+        "line": 126,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Error evaluating decision\");"
+      },
+      {
+        "file": "src/app/dashboard/inbox/inbox-client.tsx",
+        "line": 78,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Failed to fetch decisions\");"
+      },
+      {
+        "file": "src/app/control/today/page.tsx",
+        "line": 69,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : 'Failed to load');"
+      },
+      {
+        "file": "src/app/alpha/report/page.tsx",
+        "line": 71,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : 'Failed to generate report');"
+      },
+      {
+        "file": "src/app/(authenticated)/users/page.tsx",
+        "line": 76,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"Failed to load users\");"
+      },
+      {
+        "file": "src/app/(authenticated)/diagnosis/page.tsx",
+        "line": 101,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+        "line": 91,
+        "type": "raw-error-message",
+        "code": "err instanceof Error ? err.message : \"Error approving decision\""
+      },
+      {
+        "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+        "line": 121,
+        "type": "raw-error-message",
+        "code": "err instanceof Error ? err.message : \"Error rejecting decision\""
+      },
+      {
+        "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+        "line": 165,
+        "type": "raw-error-message",
+        "code": "err instanceof Error ? err.message : \"Error overriding decision\""
+      },
+      {
+        "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+        "line": 196,
+        "type": "raw-error-message",
+        "code": "err instanceof Error ? err.message : \"Error executing decision\""
+      },
+      {
+        "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+        "line": 239,
+        "type": "raw-error-message",
+        "code": "err instanceof Error ? err.message : \"Error marking decision successful\""
+      },
+      {
+        "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+        "line": 281,
+        "type": "raw-error-message",
+        "code": "err instanceof Error ? err.message : \"Error marking decision failed\""
+      },
+      {
+        "file": "src/app/(authenticated)/opsiq/consulting-engine/page.tsx",
+        "line": 144,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/leads/new/page.tsx",
+        "line": 50,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/new/page.tsx",
+        "line": 59,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/clients/new/page.tsx",
+        "line": 52,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/page.tsx",
+        "line": 78,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/manual-evidence-form.tsx",
+        "line": 105,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/file-upload-form.tsx",
+        "line": 111,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/decision-evidence/page.tsx",
+        "line": 103,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/business-impact/page.tsx",
+        "line": 55,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/page.tsx",
+        "line": 50,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/create-bundle-form.tsx",
+        "line": 47,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/[evidenceId]/page.tsx",
+        "line": 83,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/page.tsx",
+        "line": 75,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/add-evidence-form.tsx",
+        "line": 43,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/add-evidence-form.tsx",
+        "line": 85,
+        "type": "raw-error-message",
+        "code": "setError(err instanceof Error ? err.message : \"An error occurred\");"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "pattern": "API_ERROR_RENDER",
+    "classification": "ROOT",
+    "priority": 1,
+    "total_violations": 27,
+    "unique_files": 24,
+    "top_files": [
+      "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+      "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
+      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts"
+    ],
+    "violation_type": "unsafe-error-render",
+    "fix_strategy": "Use classifyOperatorError() for error responses",
+    "violations": [
+      {
+        "file": "src/app/api/report/route.ts",
+        "line": 18,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/public/kpis/route.ts",
+        "line": 137,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/public/engagements/route.ts",
+        "line": 114,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/public/actions/route.ts",
+        "line": 128,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/owner/dashboard/route.ts",
+        "line": 154,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/owner/config/route.ts",
+        "line": 76,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/owner/config/route.ts",
+        "line": 165,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/operator/queue/route.ts",
+        "line": 77,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/operator/my-day/route.ts",
+        "line": 30,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/growth/unit-economics/route.ts",
+        "line": 116,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/growth/sales-pipeline/route.ts",
+        "line": 88,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/growth/revenue-streams/route.ts",
+        "line": 49,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/growth/revenue-streams/route.ts",
+        "line": 98,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/growth/retention-metrics/route.ts",
+        "line": 82,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/growth/pricing-tiers/route.ts",
+        "line": 68,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/growth/offers/route.ts",
+        "line": 82,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/growth/acquisition-metrics/route.ts",
+        "line": 80,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
+        "line": 49,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/engagements/[engagementId]/experiments/route.ts",
+        "line": 194,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/engagements/[engagementId]/experiments/route.ts",
+        "line": 236,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
+        "line": 62,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+        "line": 97,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+        "line": 106,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
+        "line": 77,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+        "line": 96,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
+        "line": 96,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      },
+      {
+        "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+        "line": 78,
+        "type": "unsafe-error-render",
+        "code": "return Response.json({ error: error.message }, { status: 400 });"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "pattern": "PAGE_EMPTY_STATE",
+    "classification": "ROOT",
+    "priority": 1,
+    "total_violations": 17,
+    "unique_files": 7,
+    "top_files": [
+      "src/app/(authenticated)/clients/[clientId]/page.tsx",
+      "src/app/(authenticated)/deliverables/[deliverableId]/page.tsx",
+      "src/app/(authenticated)/engagements/[engagementId]/page.tsx"
+    ],
+    "violation_type": "dead-empty-state",
+    "fix_strategy": "Replace return null with <GovernedEmptyState />",
+    "violations": [
+      {
+        "file": "src/app/(authenticated)/settings/page.tsx",
+        "line": 59,
+        "type": "dead-empty-state",
+        "code": "if (!me) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/settings/page.tsx",
+        "line": 59,
+        "type": "dead-empty-state",
+        "code": "if (!me) return null;"
+      },
+      {
+        "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+        "line": 291,
+        "type": "dead-empty-state",
+        "code": "if (!decision.guardrailResult) return null;"
+      },
+      {
+        "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+        "line": 291,
+        "type": "dead-empty-state",
+        "code": "if (!decision.guardrailResult) return null;"
+      },
+      {
+        "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+        "line": 297,
+        "type": "dead-empty-state",
+        "code": "return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/leads/[leadId]/page.tsx",
+        "line": 18,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/leads/[leadId]/page.tsx",
+        "line": 18,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/page.tsx",
+        "line": 37,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/page.tsx",
+        "line": 37,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/deliverables/[deliverableId]/page.tsx",
+        "line": 17,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/deliverables/[deliverableId]/page.tsx",
+        "line": 17,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/clients/[clientId]/page.tsx",
+        "line": 16,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/clients/[clientId]/page.tsx",
+        "line": 16,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/report/page.tsx",
+        "line": 113,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/report/page.tsx",
+        "line": 113,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/report/page.tsx",
+        "line": 122,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      },
+      {
+        "file": "src/app/(authenticated)/engagements/[engagementId]/report/page.tsx",
+        "line": 122,
+        "type": "dead-empty-state",
+        "code": "if (!res.ok) return null;"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "pattern": "UI_EMPTY_STATE",
+    "classification": "ROOT",
+    "priority": 1,
+    "total_violations": 7,
+    "unique_files": 5,
+    "top_files": [
+      "src/components/ui/GovernedEmptyState.tsx",
+      "src/ui/alerts-panel.tsx",
+      "src/ui/decision-acceptance-modal.tsx"
+    ],
+    "violation_type": "dead-empty-state",
+    "fix_strategy": "Replace return null with <GovernedEmptyState />",
+    "violations": [
+      {
+        "file": "src/ui/kpi-trend.tsx",
+        "line": 57,
+        "type": "dead-empty-state",
+        "code": "if (!kpi.snapshots || kpi.snapshots.length < 2) return null;"
+      },
+      {
+        "file": "src/ui/kpi-trend.tsx",
+        "line": 57,
+        "type": "dead-empty-state",
+        "code": "if (!kpi.snapshots || kpi.snapshots.length < 2) return null;"
+      },
+      {
+        "file": "src/ui/decision-acceptance-modal.tsx",
+        "line": 108,
+        "type": "dead-empty-state",
+        "code": "return null;"
+      },
+      {
+        "file": "src/ui/alerts-panel.tsx",
+        "line": 75,
+        "type": "dead-empty-state",
+        "code": "return null;"
+      },
+      {
+        "file": "src/ui/primitives/modal.tsx",
+        "line": 32,
+        "type": "dead-empty-state",
+        "code": "if (!isOpen) return null;"
+      },
+      {
+        "file": "src/ui/primitives/modal.tsx",
+        "line": 32,
+        "type": "dead-empty-state",
+        "code": "if (!isOpen) return null;"
+      },
+      {
+        "file": "src/components/ui/GovernedEmptyState.tsx",
+        "line": 146,
+        "type": "dead-empty-state",
+        "code": "return null;"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "pattern": "UI_ERROR_MESSAGE",
+    "classification": "BRANCH",
+    "priority": 2,
+    "total_violations": 4,
+    "unique_files": 3,
+    "top_files": [
+      "src/ui/decision-acceptance-modal.tsx",
+      "src/ui/decision-creation-form.tsx",
+      "src/ui/decision-csv-upload.tsx"
+    ],
+    "violation_type": "raw-error-message",
+    "fix_strategy": "Wrap error.message with toOperatorSafeError(error, context)",
+    "violations": [
+      {
+        "file": "src/ui/decision-csv-upload.tsx",
+        "line": 78,
+        "type": "raw-error-message",
+        "code": "const errorMsg = error instanceof Error ? error.message : String(error);"
+      },
+      {
+        "file": "src/ui/decision-creation-form.tsx",
+        "line": 94,
+        "type": "raw-error-message",
+        "code": "const errorMsg = error instanceof Error ? error.message : String(error);"
+      },
+      {
+        "file": "src/ui/decision-acceptance-modal.tsx",
+        "line": 54,
+        "type": "raw-error-message",
+        "code": "const message = err instanceof Error ? err.message : \"Failed to accept decision\";"
+      },
+      {
+        "file": "src/ui/decision-acceptance-modal.tsx",
+        "line": 81,
+        "type": "raw-error-message",
+        "code": "const message = err instanceof Error ? err.message : \"Failed to reject decision\";"
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "pattern": "OTHER_PAGE_ERROR_RENDER",
+    "classification": "BRANCH",
+    "priority": 2,
+    "total_violations": 2,
+    "unique_files": 2,
+    "top_files": [
+      "src/app/(authenticated)/settings/page.tsx",
+      "src/app/(authenticated)/users/page.tsx"
+    ],
+    "violation_type": "unsafe-error-render",
+    "fix_strategy": "Use classifyOperatorError() for error responses",
+    "violations": [
+      {
+        "file": "src/app/(authenticated)/users/page.tsx",
+        "line": 87,
+        "type": "unsafe-error-render",
+        "code": "if (error) return <ErrorState message={error} onRetry={fetchUsers} />;"
+      },
+      {
+        "file": "src/app/(authenticated)/settings/page.tsx",
+        "line": 58,
+        "type": "unsafe-error-render",
+        "code": "if (error) return <ErrorState message={error} />;"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "pattern": "SHARED_ERROR_EXTRACTOR",
+    "classification": "LEAF",
+    "priority": 3,
+    "total_violations": 3,
+    "unique_files": 1,
+    "top_files": [
+      "src/lib/shared-error-extractor.ts"
+    ],
+    "violation_type": "unsafe-error-render",
+    "fix_strategy": "Fix governance pattern",
+    "violations": [
+      {
+        "file": "src/lib/shared-error-extractor.ts",
+        "line": 34,
+        "type": "unsafe-error-render",
+        "code": "return error.message;"
+      },
+      {
+        "file": "src/lib/shared-error-extractor.ts",
+        "line": 41,
+        "type": "unsafe-error-render",
+        "code": "* Returns error message without routing through governance"
+      },
+      {
+        "file": "src/lib/shared-error-extractor.ts",
+        "line": 45,
+        "type": "unsafe-error-render",
+        "code": "return error instanceof Error ? error.message : String(error);"
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "pattern": "OTHER_COMPONENT_ERROR",
+    "classification": "LEAF",
+    "priority": 3,
+    "total_violations": 3,
+    "unique_files": 1,
+    "top_files": [
+      "src/components/OperatorItem.tsx"
+    ],
+    "violation_type": "raw-error-message",
+    "fix_strategy": "Fix governance pattern",
+    "violations": [
+      {
+        "file": "src/components/OperatorItem.tsx",
+        "line": 36,
+        "type": "raw-error-message",
+        "code": "alert(error instanceof Error ? error.message : \"Unknown error\");"
+      },
+      {
+        "file": "src/components/OperatorItem.tsx",
+        "line": 61,
+        "type": "raw-error-message",
+        "code": "alert(error instanceof Error ? error.message : \"Unknown error\");"
+      },
+      {
+        "file": "src/components/OperatorItem.tsx",
+        "line": 93,
+        "type": "raw-error-message",
+        "code": "alert(error instanceof Error ? error.message : \"Unknown error\");"
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "pattern": "OTHER_INFRA_ERROR",
+    "classification": "LEAF",
+    "priority": 3,
+    "total_violations": 1,
+    "unique_files": 1,
+    "top_files": [
+      "src/infra/telemetry-sanitizer.ts"
+    ],
+    "violation_type": "unsafe-error-render",
+    "fix_strategy": "Fix governance pattern",
+    "violations": [
+      {
+        "file": "src/infra/telemetry-sanitizer.ts",
+        "line": 169,
+        "type": "unsafe-error-render",
+        "code": "return \"[ERROR MESSAGE REDACTED]\";"
+      }
+    ]
+  }
+]

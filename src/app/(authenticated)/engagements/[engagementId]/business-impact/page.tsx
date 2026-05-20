@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface DetailData {
   impactLevel: string;
@@ -52,7 +53,7 @@ export default function BusinessImpactPage() {
         const result = await response.json();
         setData(result.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setIsLoading(false);
       }

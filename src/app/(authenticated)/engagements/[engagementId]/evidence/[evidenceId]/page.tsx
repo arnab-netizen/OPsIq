@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button, Badge, LoadingState, ErrorState } from "@/ui/primitives";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface EvidenceDetail {
   id: string;
@@ -80,7 +81,7 @@ export default function EvidenceDetailPage({
         const data = await res.json();
         setEvidence(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setIsLoading(false);
       }

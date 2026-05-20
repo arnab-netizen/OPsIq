@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button, Input, Textarea, Select, LoadingState } from "@/ui/primitives";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface FileUploadFormProps {
   engagementId: string;
@@ -108,7 +109,7 @@ export function FileUploadForm({
 
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(toOperatorSafeError(err, "load").error);
       setIsSubmitting(false);
     }
   }

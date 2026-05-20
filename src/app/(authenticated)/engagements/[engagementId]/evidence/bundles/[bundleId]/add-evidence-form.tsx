@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button, Select, LoadingState, ErrorState } from "@/ui/primitives";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface EvidenceOption {
   id: string;
@@ -40,7 +41,7 @@ export function AddEvidenceToBundleForm({
         const data = await res.json();
         setEvidence(data.items ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setIsLoading(false);
       }
@@ -82,7 +83,7 @@ export function AddEvidenceToBundleForm({
 
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(toOperatorSafeError(err, "load").error);
       setIsSubmitting(false);
     }
   }

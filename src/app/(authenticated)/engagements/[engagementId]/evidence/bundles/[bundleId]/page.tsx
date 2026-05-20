@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button, Badge, Table, LoadingState, ErrorState } from "@/ui/primitives";
 import { AddEvidenceToBundleForm } from "./add-evidence-form";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface BundleDetail {
   id: string;
@@ -72,7 +73,7 @@ export default function BundleDetailPage({
         const data = await res.json();
         setBundle(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setIsLoading(false);
       }

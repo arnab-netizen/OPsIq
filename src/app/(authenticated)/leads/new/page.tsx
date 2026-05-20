@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Textarea, Select } from "@/ui/primitives";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 export default function NewLeadPage() {
   const router = useRouter();
@@ -47,7 +48,7 @@ export default function NewLeadPage() {
       const { id } = await res.json();
       router.push(`/leads/${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(toOperatorSafeError(err, "load").error);
       setIsSubmitting(false);
     }
   }

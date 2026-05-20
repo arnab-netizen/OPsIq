@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { OperatorItem } from '@/domain/operator/types';
 import { calculateBadges, getBadgeVariant } from '@/services/badges/engine';
 import { Badge } from '@/ui/primitives';
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface QueueResponse {
   items: OperatorItem[];
@@ -37,7 +38,7 @@ export default function OperatorQueuePage() {
         const queueData = data as QueueResponse;
         setItems(queueData.items);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Network error';
+        const message = toOperatorSafeError(err, "load").error;
         setError(`Error: ${message}`);
         setItems([]);
       } finally {

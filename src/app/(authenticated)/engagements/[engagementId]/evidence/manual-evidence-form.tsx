@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button, Input, Textarea, Select, LoadingState } from "@/ui/primitives";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface ManualEvidenceFormProps {
   engagementId: string;
@@ -102,7 +103,7 @@ export function ManualEvidenceForm({
 
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(toOperatorSafeError(err, "load").error);
       setIsSubmitting(false);
     }
   }

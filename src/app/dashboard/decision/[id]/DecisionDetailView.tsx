@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface DecisionData {
   id: string;
@@ -88,7 +89,7 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
       router.refresh();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error approving decision"
+        toOperatorSafeError(err, "load").error
       );
     } finally {
       setLoading(false);
@@ -118,7 +119,7 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
       router.refresh();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error rejecting decision"
+        toOperatorSafeError(err, "load").error
       );
     } finally {
       setLoading(false);
@@ -162,7 +163,7 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
       router.refresh();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error overriding decision"
+        toOperatorSafeError(err, "load").error
       );
     } finally {
       setLoading(false);
@@ -193,7 +194,7 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
       router.refresh();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error executing decision"
+        toOperatorSafeError(err, "load").error
       );
     } finally {
       setLoading(false);
@@ -236,7 +237,7 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
       router.refresh();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error marking decision successful"
+        toOperatorSafeError(err, "load").error
       );
     } finally {
       setLoading(false);
@@ -278,7 +279,7 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
       router.refresh();
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Error marking decision failed"
+        toOperatorSafeError(err, "load").error
       );
     } finally {
       setLoading(false);

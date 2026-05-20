@@ -8,6 +8,7 @@ import {
   type ErrorGovernanceContext,
 } from "@/lib/operator-error-governance";
 import { CreateBundleForm } from "./create-bundle-form";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface BundleItem {
   id: string;
@@ -47,7 +48,7 @@ export default function BundlesPage({
         const data = await res.json();
         setBundles(data.bundles ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setIsLoading(false);
       }

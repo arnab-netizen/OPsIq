@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface ActionItem {
   decisionId: string;
@@ -66,7 +67,7 @@ export default function ControlTodayPage() {
         const surface = await response.json();
         setData(surface);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load');
+        setError(toOperatorSafeError(err, "load").error);
       } finally {
         setLoading(false);
       }

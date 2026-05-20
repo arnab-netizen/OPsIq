@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Textarea, Select } from "@/ui/primitives";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export default function NewClientPage() {
       const { id } = await res.json();
       router.push(`/clients/${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(toOperatorSafeError(err, "load").error);
       setIsSubmitting(false);
     }
   }

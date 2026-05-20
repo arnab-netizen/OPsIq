@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -45,7 +46,7 @@ export default function OnboardingPage() {
 
       setStep("team");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating workspace");
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setLoading(false);
     }
@@ -93,7 +94,7 @@ export default function OnboardingPage() {
 
       setStep("complete");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error inviting team members");
+      setError(toOperatorSafeError(err, "load").error);
     } finally {
       setLoading(false);
     }

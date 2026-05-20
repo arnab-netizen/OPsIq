@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button, Input, Textarea, Select, Badge } from "@/ui/primitives";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 interface DiagnosisResult {
   id: string;
@@ -98,7 +99,7 @@ export default function DiagnosisPage() {
       const data = await res.json();
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(toOperatorSafeError(err, "load").error);
       setIsSubmitting(false);
     }
   }
