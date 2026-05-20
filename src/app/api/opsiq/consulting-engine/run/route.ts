@@ -2,7 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
+import { withAuth, createServiceCapabilityContext, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { runConsultingPipeline } from "@/services/consulting-engine/pipeline";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -15,9 +15,18 @@ const runConsultingEngineSchema = z.object({
 });
 
 export const POST = withEnforcementFull(async (request) => {
-  const authContext = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.RECOMMENDATION_CREATE,
   });
+
+  const nextRequest = request as NextRequest;
+  const workspaceIdHeader = nextRequest.headers.get("x-workspace-id");
+  if (!workspaceIdHeader) {
+    return Response.json(
+      { error: "Workspace ID required (x-workspace-id header)" },
+      { status: 400 }
+    );
+  }
 
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {
@@ -30,14 +39,18 @@ export const POST = withEnforcementFull(async (request) => {
   const body = await parseRequestBody(request, runConsultingEngineSchema);
   parseOrThrow(uuidSchema, body.engagementId);
 
-  const workspaceId = ctx.verifiedWorkspaceId || "";
+  const workspaceId = workspaceIdHeader;
+
+  const auditContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.RECOMMENDATION_CREATE,
+  });
 
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "runConsultingPipeline",
-    actorId: authContext.session.user.id,
-    payload: body,
+    actorId: session.user.id,
     workspaceId,
+    payload: body,
   });
 
   if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
@@ -46,12 +59,12 @@ export const POST = withEnforcementFull(async (request) => {
     });
   }
 
-  await assertEngagementAccess(authContext.session.user.id, body.engagementId, workspaceId);
+  await assertEngagementAccess(session.user.id, body.engagementId, workspaceId);
 
   try {
     const result = await runConsultingPipeline(
       body.engagementId,
-      canonicalizeAuthContext(authContext, workspaceId),
+      canonicalizeAuthContext({ session, policy }, workspaceId),
       workspaceId
     );
 
@@ -67,7 +80,7 @@ export const POST = withEnforcementFull(async (request) => {
     };
 
     const statusCode = result.status === "SUCCESS" ? 200 : 400;
-    await recordIdempotencyResponse(idempotencyKey, statusCode, response);
+    await recordIdempotencyResponse(idempotencyKey, statusCode, response, auditContext, workspaceId);
 
     return Response.json(response, { status: statusCode });
   } catch (error) {
@@ -88,8 +101,9 @@ export const POST = withEnforcementFull(async (request) => {
         data: { decisionMemo: null, recommendations: [], actions: [] },
         warnings: [],
       };
-      await recordIdempotencyError(idempotencyKey, new Error("Engagement not found", auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown"));
-      return Response.json(errorResponse, auditContext, { status: 404 });
+      const err = new Error("Engagement not found");
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
+      return Response.json(errorResponse, { status: 404 });
     }
 
     const err = error instanceof Error ? error : new Error("Unknown error");

@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
 import { getMyDayItems } from "@/services/operator/myday";
 import { resolveServerRole } from "@/services/auth/server-role";
@@ -19,6 +20,10 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
   const actorId = ctx.verifiedSessionSnapshot.actorId;
 
   // Emit audit event
+  const auditContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.ACTION_VIEW,
+  });
+
   await logAuditEvent({
     eventName: "MYDAY_VIEWED",
     entityType: "MyDay",
@@ -29,6 +34,8 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
     after: {
       itemCount: items.length,
     },
+    context: auditContext,
+    workspaceId: ctx.verifiedWorkspaceId,
   });
 
   return { items };
