@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { ValidationError } from "@/infra/errors";
+import type { ServiceCapabilityContext } from "@/lib/auth-guard";
 import crypto from "crypto";
 
 export interface IdempotencyOptions {
@@ -205,7 +206,8 @@ export async function recordIdempotencyResponse(
   idempotencyKey: string,
   statusCode: number,
   responseBody: Record<string, unknown>,
-  workspaceId?: string
+  workspaceId?: string,
+  context?: ServiceCapabilityContext
 ): Promise<void> {
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace-scoped idempotency");
@@ -225,7 +227,8 @@ export async function recordIdempotencyResponse(
 export async function recordIdempotencyError(
   idempotencyKey: string,
   error: Error,
-  workspaceId?: string
+  workspaceId?: string,
+  context?: ServiceCapabilityContext
 ): Promise<void> {
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace-scoped idempotency");
