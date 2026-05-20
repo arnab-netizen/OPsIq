@@ -29,7 +29,10 @@
     "governance:ci-gate": "tsx src/governance/ci-shadow-read-gate.ts",
     "governance:phase-g2": "node scripts/phase-g2-compiler-hardening.js",
     "governance:scan": "tsx scripts/governance-scan.ts",
-    "governance:scan:strict": "tsx scripts/governance-scan.ts --strict"
+    "governance:scan:strict": "tsx scripts/governance-scan.ts --strict",
+    "check:optional-context": "node .claude/optional-context-scanner.js",
+    "check:security": "npm run governance:scan:strict && npm run governance:ci-gate",
+    "check:all-gates": "npm run build && npx tsc --noEmit && npx prisma validate && npm run check:optional-context && npm run check:security"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
