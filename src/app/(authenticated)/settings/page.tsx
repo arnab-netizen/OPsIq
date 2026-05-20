@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Badge, LoadingState, ErrorState } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { formatRole } from "@/domain/constants/role-labels";
 
 interface MeResponse {

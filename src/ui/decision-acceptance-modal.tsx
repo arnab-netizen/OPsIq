@@ -6,20 +6,8 @@ import {
   type ErrorGovernanceContext,
 } from "@/lib/operator-error-governance";
 import { Modal } from "@/ui/primitives/modal";
-import {
-  classifyOperatorError,
-  type ErrorGovernanceContext,
-} from "@/lib/operator-error-governance";
 import { Button } from "@/ui/primitives/button";
-import {
-  classifyOperatorError,
-  type ErrorGovernanceContext,
-} from "@/lib/operator-error-governance";
 import { logger } from "@/infra/logger";
-import {
-  classifyOperatorError,
-  type ErrorGovernanceContext,
-} from "@/lib/operator-error-governance";
 
 export interface DecisionAcceptanceModalProps {
   decisionId: string;

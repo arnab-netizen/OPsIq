@@ -167,24 +167,36 @@ export function GovernedEmptyState({
 
       {/* Actions */}
       <div className="flex gap-3">
-        {primaryAction && (
+        {primaryAction && primaryAction.href ? (
+          <a
+            href={primaryAction.href}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition inline-block"
+          >
+            {primaryAction.label}
+          </a>
+        ) : primaryAction ? (
           <button
             onClick={primaryAction.onClick}
-            href={primaryAction.href}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition"
           >
             {primaryAction.label}
           </button>
-        )}
-        {secondaryAction && (
+        ) : null}
+        {secondaryAction && secondaryAction.href ? (
+          <a
+            href={secondaryAction.href}
+            className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition inline-block"
+          >
+            {secondaryAction.label}
+          </a>
+        ) : secondaryAction ? (
           <button
             onClick={secondaryAction.onClick}
-            href={secondaryAction.href}
             className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition"
           >
             {secondaryAction.label}
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );

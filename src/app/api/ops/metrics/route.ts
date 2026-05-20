@@ -64,7 +64,6 @@ export async function GET(request: NextRequest) {
         },
       },
       errors_by_classification: errorsByClassification,
-      db_operations_tracked: metrics.dbLatencies.length,
     });
   } catch (error) {
     return NextResponse.json(

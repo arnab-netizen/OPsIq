@@ -12,6 +12,28 @@
 
 import { toOperatorSafeError } from "./operator-safe-errors";
 
+function mapContextType(context: string): "decision" | "action" | "form" | "load" | "save" | "network" {
+  switch (context) {
+    case "mutation":
+      return "save";
+    case "auth":
+      return "load";
+    case "permission":
+      return "action";
+    case "validation":
+      return "form";
+    case "decision":
+    case "action":
+    case "form":
+    case "load":
+    case "save":
+    case "network":
+      return context as "decision" | "action" | "form" | "load" | "save" | "network";
+    default:
+      return "load";
+  }
+}
+
 export interface ErrorGovernanceContext {
   context:
     | "decision"
@@ -47,7 +69,9 @@ export function classifyOperatorError(
   error: unknown,
   context: ErrorGovernanceContext
 ): GovernedErrorResponse {
-  const safeError = toOperatorSafeError(error, context.context);
+  // Map extended context types to supported types for toOperatorSafeError
+  const mappedContext = mapContextType(context.context);
+  const safeError = toOperatorSafeError(error, mappedContext);
   const technicalDetails = extractTechnicalDetails(error);
   const shouldEscalate = determineShouldEscalate(error, context);
 
