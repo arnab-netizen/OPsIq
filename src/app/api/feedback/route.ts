@@ -1,3 +1,10 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { enforceGovernanceRestored } from '@/lib/governance-enforcement';

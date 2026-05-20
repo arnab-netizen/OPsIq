@@ -11,6 +11,12 @@ import {
   handleWebhookEvent,
 } from "@/services/webhook.service";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 /**
  * Handle Stripe webhook events - FINAL LOCK for production
@@ -66,7 +72,7 @@ export const POST = withEnforcementFull(async (request: Request) => {
       timestamp = verified.timestamp;
     } catch (error) {
       logger.warn("Webhook signature verification failed", {
-        error: error instanceof Error ? error.message : "unknown error",
+        error: getSafeErrorMessage(error),
       });
       throw new UnauthorizedError("Invalid signature");
     }
@@ -76,7 +82,7 @@ export const POST = withEnforcementFull(async (request: Request) => {
       checkSignatureTimestamp(timestamp);
     } catch (error) {
       logger.warn("Webhook replay protection check failed", {
-        error: error instanceof Error ? error.message : "unknown error",
+        error: getSafeErrorMessage(error),
       });
       throw new UnauthorizedError("Invalid timestamp");
     }
@@ -144,7 +150,7 @@ export const POST = withEnforcementFull(async (request: Request) => {
       // DB error getting/creating event
       logger.error("Failed to get or create webhook event", {
         stripeEventId: event.id,
-        error: error instanceof Error ? error.message : "unknown error",
+        error: getSafeErrorMessage(error),
       });
       return Response.json(
         { error: "Internal error" },
@@ -167,7 +173,7 @@ export const POST = withEnforcementFull(async (request: Request) => {
         } catch (error) {
           logger.error("Failed to mark webhook event as processed after successful handling", {
             stripeEventId: event.id,
-            error: error instanceof Error ? error.message : "unknown error",
+            error: getSafeErrorMessage(error),
           });
           // Don't fail - event was processed, just couldn't mark it
           // Stripe will retry, idempotency will prevent reprocessing
@@ -178,7 +184,7 @@ export const POST = withEnforcementFull(async (request: Request) => {
         logger.error("Webhook event processing failed", {
           stripeEventId: event.id,
           type: event.type,
-          error: error instanceof Error ? error.message : "unknown error",
+          error: getSafeErrorMessage(error),
         });
 
         try {
@@ -189,7 +195,7 @@ export const POST = withEnforcementFull(async (request: Request) => {
         } catch (dbError) {
           logger.error("Failed to record webhook event failure", {
             stripeEventId: event.id,
-            error: dbError instanceof Error ? dbError.message : "unknown error",
+            error: getSafeErrorMessage(dbError),
           });
           // Even if recording failure fails, the error is logged
         }
@@ -208,7 +214,7 @@ export const POST = withEnforcementFull(async (request: Request) => {
   } catch (error) {
     // Catch-all for any unexpected errors
     logger.error("Webhook handler error", {
-      error: error instanceof Error ? error.message : "unknown error",
+      error: getSafeErrorMessage(error),
     });
 
     return Response.json(
