@@ -49,7 +49,7 @@ export const PATCH = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { leadId } = params;
     parseOrThrow(uuidSchema, leadId);
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const body = await parseRequestBody(ctx.request!, updateLeadSchema);
     await updateLead(leadId, body, ctx, workspaceId);

@@ -94,6 +94,7 @@ export const GET = withCanonicalEnforcement(
 
   // Convert decision to DecisionResult format for recommendation
   const decisionResult = {
+    decision: decision.id,
     workspaceId: decision.workspaceId,
     ownerUserId: decision.ownerUserId,
     createdBy: decision.createdBy,

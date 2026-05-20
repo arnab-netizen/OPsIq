@@ -57,6 +57,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
         blockedCount: metrics.summary.blockedCount,
       },
     },
+    context: auditContext,
     workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only

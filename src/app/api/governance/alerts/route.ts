@@ -39,7 +39,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
 
   // Log audit event for alerts access
   const auditContext = createServiceCapabilityContext({
-    capability: CAPABILITIES.GOVERNANCE_VIEW,
+    capability: CAPABILITIES.RISK_VIEW,
   });
 
   await logAuditEvent({
