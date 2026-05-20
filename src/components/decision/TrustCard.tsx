@@ -6,7 +6,7 @@ import type { ValueMetrics } from '@/services/value/tracker';
 import {
   classifyOperatorError,
   type ErrorGovernanceContext,
-} from '@/src/lib/operator-error-governance';
+} from '@/lib/operator-error-governance';
 
 interface TrustCardProps {
   calibrationMetrics?: CalibrationMetrics | null;

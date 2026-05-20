@@ -5,7 +5,7 @@ import { Badge } from "@/ui/primitives";
 import {
   classifyOperatorError,
   type ErrorGovernanceContext,
-} from "@/src/lib/operator-error-governance";
+} from "@/lib/operator-error-governance";
 
 interface ExecutionCertaintyData {
   score: number;

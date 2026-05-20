@@ -3,7 +3,7 @@
 import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
 import { useState } from "react";
-import { useOperatorMutation, type MutationOptions } from "@/src/hooks/useOperatorMutation";
+import { useOperatorMutation, type MutationOptions } from "@/hooks/useOperatorMutation";
 
 export const dynamic = "force-dynamic";
 
