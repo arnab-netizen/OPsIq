@@ -46,7 +46,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   const { url, events, secret } = validationResult.data;
 
   // Register webhook
-  const webhook = await registerWebhook(workspaceId, url, events, session.user.id, secret);
+  const webhook = await registerWebhook(workspaceId, url, events);
 
   const response = {
     id: webhook.id,
