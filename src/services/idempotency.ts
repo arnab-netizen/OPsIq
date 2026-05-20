@@ -206,11 +206,14 @@ export async function recordIdempotencyResponse(
   idempotencyKey: string,
   statusCode: number,
   responseBody: Record<string, unknown>,
-  workspaceId?: string,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext,
+  workspaceId: string
 ): Promise<void> {
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace-scoped idempotency");
+  }
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("recordIdempotencyResponse requires ServiceCapabilityContext with capabilityEnvelope");
   }
 
   await db.idempotencyRecord.updateMany({
@@ -227,11 +230,14 @@ export async function recordIdempotencyResponse(
 export async function recordIdempotencyError(
   idempotencyKey: string,
   error: Error,
-  workspaceId?: string,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext,
+  workspaceId: string
 ): Promise<void> {
   if (!workspaceId) {
     throw new Error("workspaceId is required for workspace-scoped idempotency");
+  }
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("recordIdempotencyError requires ServiceCapabilityContext with capabilityEnvelope");
   }
 
   await db.idempotencyRecord.updateMany({

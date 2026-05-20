@@ -34,8 +34,11 @@ export interface Alert {
 }
 
 export async function createAlert(input: CreateAlertInput,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext
 ): Promise<Alert> {
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("Function requires ServiceCapabilityContext with capabilityEnvelope");
+  }
   const { workspaceId, userId, type, channel, message, entityType, entityId } =
     input;
 
@@ -116,8 +119,11 @@ export async function markAlertAsRead(
   workspaceId: string,
   actorId: string
 ,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext
 ): Promise<Alert> {
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("Function requires ServiceCapabilityContext with capabilityEnvelope");
+  }
   try {
     // Verify alert exists and belongs to workspace
     const existingAlert = await db.alert.findFirst({
@@ -181,8 +187,11 @@ export async function getAlerts(
     limit?: number;
   } = {}
 ,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext
 ): Promise<Alert[]> {
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("Function requires ServiceCapabilityContext with capabilityEnvelope");
+  }
   const { unreadOnly = false, limit = 50 } = options;
 
   try {
@@ -215,8 +224,11 @@ export async function triggerBlockedAlert(
   decisionId: string,
   reason: string
 ,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext
 ): Promise<Alert> {
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("Function requires ServiceCapabilityContext with capabilityEnvelope");
+  }
   return createAlert({
     workspaceId,
     userId,
@@ -235,8 +247,11 @@ export async function triggerThresholdBreachAlert(
   currentValue: number,
   threshold: number
 ,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext
 ): Promise<Alert> {
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("Function requires ServiceCapabilityContext with capabilityEnvelope");
+  }
   return createAlert({
     workspaceId,
     userId,
@@ -252,8 +267,11 @@ export async function triggerExecutionFailureAlert(
   decisionId: string,
   failureReason: string
 ,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext
 ): Promise<Alert> {
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("Function requires ServiceCapabilityContext with capabilityEnvelope");
+  }
   return createAlert({
     workspaceId,
     userId,
@@ -266,6 +284,9 @@ export async function triggerExecutionFailureAlert(
 }
 
 async function deliverEmailAlert(alert: Alert): Promise<void> {
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("Function requires ServiceCapabilityContext with capabilityEnvelope");
+  }
   // Email stub: log instead of actually sending
   logger.info("Email alert delivered (stub)", {
     alertId: alert.id,
@@ -279,8 +300,11 @@ export async function getUnreadAlertCount(
   workspaceId: string,
   userId: string
 ,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext
 ): Promise<number> {
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("Function requires ServiceCapabilityContext with capabilityEnvelope");
+  }
   try {
     const count = await db.alert.count({
       where: {

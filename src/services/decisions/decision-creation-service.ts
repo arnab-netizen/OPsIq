@@ -28,8 +28,11 @@ export interface CreateDecisionResult {
 
 export async function createDecision(
   input: VerifiedDecisionInput,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext
 ): Promise<CreateDecisionResult> {
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("createDecision requires ServiceCapabilityContext with capabilityEnvelope");
+  }
   const { title, type, impact, confidence, verifiedWorkspaceId, verifiedActorId, problemType, expectedOutcome } = input;
   const workspaceId = verifiedWorkspaceId;
   const userId = verifiedActorId;
@@ -127,7 +130,7 @@ export interface BulkCreateResult {
 export async function createDecisionsBulk(
   input: BulkCreateInput
 ,
-  context?: ServiceCapabilityContext
+  context: ServiceCapabilityContext
 ): Promise<BulkCreateResult> {
   const { decisions } = input;
 
