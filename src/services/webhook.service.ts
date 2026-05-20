@@ -412,7 +412,7 @@ async function checkEventOrdering(
 /**
  * Check retry threshold and emit alert if needed
  */
-async function checkRetryThreshold(stripeEventId: string, attempts: number, type: string): Promise<void> {
+async function checkRetryThreshold(stripeEventId: string, attempts: number, type: string, workspaceId: string = "webhook-system"): Promise<void> {
   try {
     if (attempts >= RETRY_ALERT_THRESHOLD) {
       logger.warn("Webhook event exceeded retry threshold", {
@@ -427,6 +427,7 @@ async function checkRetryThreshold(stripeEventId: string, attempts: number, type
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.WEBHOOK_RETRY_THRESHOLD_EXCEEDED,
         actorId: "webhook-system",
+        workspaceId,
         entityType: "WebhookEvent",
         entityId: stripeEventId,
         payload: {

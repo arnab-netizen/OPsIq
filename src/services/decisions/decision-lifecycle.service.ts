@@ -101,12 +101,16 @@ export async function transitionDecisionState(
 
   // Emit audit event for state transition
   const eventName = getAuditEventName(fromState, toState);
+  const requestId = randomUUID();
   await emitAuditEvent({
     eventName: eventName as any,
     entityType: "OperatorItem",
     entityId: decisionId,
     workspaceId,
     actorId: actorId || undefined,
+    capability: 'mutation',
+    decision: 'decision_transitioned',
+    requestId: requestId,
     payload: {
       fromState,
       toState,
@@ -119,10 +123,7 @@ export async function transitionDecisionState(
       fromState,
       toState,
       error: error instanceof Error ? error.message : String(error),
-    capability: 'mutation',
-    decision: 'eventname',
-    requestId: randomUUID(),
-    };
+    });
   });
 
   logger.info("Decision transitioned", {
@@ -363,12 +364,16 @@ export async function recordDecisionOutcome(
   });
 
   // Emit audit event
+  const requestId = randomUUID();
   await emitAuditEvent({
     eventName: "outcome.recorded" as any,
     entityType: "OperatorItem",
     entityId: decisionId,
     workspaceId,
     actorId,
+    capability: 'mutation',
+    decision: 'outcome_recorded',
+    requestId: requestId,
     payload: {
       fromState: "EXECUTED",
       toState: "OUTCOME_RECORDED",
@@ -379,10 +384,7 @@ export async function recordDecisionOutcome(
     logger.warn("Failed to emit audit event for outcome recording", {
       decisionId,
       error: error instanceof Error ? error.message : String(error),
-    capability: 'mutation',
-    decision: 'eventname',
-    requestId: randomUUID(),
-    };
+    });
   });
 
   logger.info("Decision outcome recorded", {

@@ -411,6 +411,7 @@ export async function detectOverdueActions(engagementId: string, authContext: Ca
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.ACTION_OVERDUE,
       actorId,
+      workspaceId,
       entityType: "action",
       entityId: action.id,
       payload: {
