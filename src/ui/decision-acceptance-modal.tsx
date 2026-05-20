@@ -5,6 +5,7 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
 } from "@/lib/operator-error-governance";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 import { Modal } from "@/ui/primitives/modal";
 import { Button } from "@/ui/primitives/button";
 import { logger } from "@/infra/logger";
@@ -51,7 +52,7 @@ export function DecisionAcceptanceModal({
       });
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to accept decision";
+      const message = toOperatorSafeError(err, "decision").error;
       setError(message);
       logger.error("Error accepting decision", {
         decisionId,
@@ -78,7 +79,7 @@ export function DecisionAcceptanceModal({
       });
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to reject decision";
+      const message = toOperatorSafeError(err, "decision").error;
       setError(message);
       logger.error("Error rejecting decision", {
         decisionId,

@@ -1,5 +1,6 @@
 "use client";
 import { classifyOperatorError, type ErrorGovernanceContext } from "@/lib/operator-error-governance";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 import { useState } from "react";
 
@@ -75,7 +76,7 @@ export function DecisionCSVUpload({
         onSuccess(data);
       }
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorMsg = toOperatorSafeError(error, "action").error;
       setMessageType("error");
       setMessage(errorMsg);
 

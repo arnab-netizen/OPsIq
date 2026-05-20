@@ -1,5 +1,6 @@
 "use client";
 import { classifyOperatorError, type ErrorGovernanceContext } from "@/lib/operator-error-governance";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 import { useState } from "react";
 
@@ -91,7 +92,7 @@ export function DecisionCreationForm({
 
       setTimeout(() => setMessage(""), 3000);
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorMsg = toOperatorSafeError(error, "form").error;
       setMessageType("error");
       setMessage(errorMsg);
 

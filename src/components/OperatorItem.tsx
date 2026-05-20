@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 import { OperatorItem as OperatorItemType } from "@/domain/operator/types";
 
 interface OperatorItemProps {
@@ -33,7 +34,8 @@ export function OperatorItem({ item, onUpdate }: OperatorItemProps) {
 
       onUpdate?.({ ...item, status: "in_progress" });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Unknown error");
+      const safe = toOperatorSafeError(error, "action");
+      alert(safe.error);
     } finally {
       setLoading(false);
     }
@@ -58,7 +60,8 @@ export function OperatorItem({ item, onUpdate }: OperatorItemProps) {
 
       onUpdate?.({ ...item, status: "done" });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Unknown error");
+      const safe = toOperatorSafeError(error, "action");
+      alert(safe.error);
     } finally {
       setLoading(false);
     }
@@ -90,7 +93,8 @@ export function OperatorItem({ item, onUpdate }: OperatorItemProps) {
       setOverrideReason("");
       alert("Override applied successfully");
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Unknown error");
+      const safe = toOperatorSafeError(error, "action");
+      alert(safe.error);
     } finally {
       setOverrideLoading(false);
     }

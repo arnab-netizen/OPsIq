@@ -27,20 +27,17 @@ export function extractOperatorMessage(
 }
 
 /**
- * Extract raw message (for logging only, NOT for operator display)
+ * Extract technical message for internal logging (routes through governance)
  */
 export function extractTechnicalMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
+  const governed = classifyOperatorError(error, { context: "load" });
+  return governed.operatorMessage || String(error);
 }
 
 /**
- * Simple synchronous version for non-async contexts
- * Returns error message without routing through governance
- * Use only for non-operator-facing contexts (logging, internal)
+ * Simple synchronous version for non-async contexts (routes through governance)
  */
 export function extractRawMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  const governed = classifyOperatorError(error, { context: "load" });
+  return governed.operatorMessage || String(error);
 }
