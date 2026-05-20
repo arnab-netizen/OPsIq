@@ -1,0 +1,29 @@
+{
+  "total_remaining": 4,
+  "violations": [
+    {
+      "file": "src/ui/decision-acceptance-modal.tsx",
+      "line": 54,
+      "type": "raw-error-message",
+      "pattern": "UI_ERROR_MESSAGE"
+    },
+    {
+      "file": "src/ui/decision-acceptance-modal.tsx",
+      "line": 81,
+      "type": "raw-error-message",
+      "pattern": "UI_ERROR_MESSAGE"
+    },
+    {
+      "file": "src/ui/decision-creation-form.tsx",
+      "line": 94,
+      "type": "raw-error-message",
+      "pattern": "UI_ERROR_MESSAGE"
+    },
+    {
+      "file": "src/ui/decision-csv-upload.tsx",
+      "line": 78,
+      "type": "raw-error-message",
+      "pattern": "UI_ERROR_MESSAGE"
+    }
+  ]
+}
