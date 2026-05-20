@@ -170,7 +170,7 @@ export async function testWebhookDelivery(
       message: success ? "Test delivery successful" : `HTTP ${response.status}: ${responseBody}`,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = getSafeErrorMessage(error);
 
     // Record failed delivery attempt
     const delivery: WebhookDelivery = {

@@ -749,7 +749,7 @@ export async function syncSubscriptionStatus(
     });
   } catch (error) {
     logger.error("Failed to sync subscription status", {
-      error: error instanceof Error ? error.message : "unknown error",
+      error: getSafeErrorMessage(error),
       eventId: event.id,
       providerCustomerId,
     });
@@ -812,7 +812,7 @@ export async function handleWebhookEvent(event: any): Promise<void> {
     } catch (error) {
       logger.error("Error handling webhook event", {
         eventType: event.type,
-        error: error instanceof Error ? error.message : "unknown error",
+        error: getSafeErrorMessage(error),
       });
       throw error;
     }
