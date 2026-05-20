@@ -33,7 +33,9 @@ export interface Alert {
   updatedAt: Date;
 }
 
-export async function createAlert(input: CreateAlertInput): Promise<Alert> {
+export async function createAlert(input: CreateAlertInput,
+  context?: ServiceCapabilityContext
+): Promise<Alert> {
   const { workspaceId, userId, type, channel, message, entityType, entityId } =
     input;
 
@@ -113,6 +115,8 @@ export async function markAlertAsRead(
   alertId: string,
   workspaceId: string,
   actorId: string
+,
+  context?: ServiceCapabilityContext
 ): Promise<Alert> {
   try {
     // Verify alert exists and belongs to workspace
@@ -176,6 +180,8 @@ export async function getAlerts(
     unreadOnly?: boolean;
     limit?: number;
   } = {}
+,
+  context?: ServiceCapabilityContext
 ): Promise<Alert[]> {
   const { unreadOnly = false, limit = 50 } = options;
 
@@ -208,6 +214,8 @@ export async function triggerBlockedAlert(
   userId: string,
   decisionId: string,
   reason: string
+,
+  context?: ServiceCapabilityContext
 ): Promise<Alert> {
   return createAlert({
     workspaceId,
@@ -226,6 +234,8 @@ export async function triggerThresholdBreachAlert(
   thresholdName: string,
   currentValue: number,
   threshold: number
+,
+  context?: ServiceCapabilityContext
 ): Promise<Alert> {
   return createAlert({
     workspaceId,
@@ -241,6 +251,8 @@ export async function triggerExecutionFailureAlert(
   userId: string,
   decisionId: string,
   failureReason: string
+,
+  context?: ServiceCapabilityContext
 ): Promise<Alert> {
   return createAlert({
     workspaceId,
@@ -266,6 +278,8 @@ async function deliverEmailAlert(alert: Alert): Promise<void> {
 export async function getUnreadAlertCount(
   workspaceId: string,
   userId: string
+,
+  context?: ServiceCapabilityContext
 ): Promise<number> {
   try {
     const count = await db.alert.count({

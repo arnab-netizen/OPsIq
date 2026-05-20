@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import type { ServiceCapabilityContext } from "@/lib/auth-guard";
 
 export interface VerifiedDecisionInput {
   // Business data
@@ -26,7 +27,8 @@ export interface CreateDecisionResult {
 }
 
 export async function createDecision(
-  input: VerifiedDecisionInput
+  input: VerifiedDecisionInput,
+  context?: ServiceCapabilityContext
 ): Promise<CreateDecisionResult> {
   const { title, type, impact, confidence, verifiedWorkspaceId, verifiedActorId, problemType, expectedOutcome } = input;
   const workspaceId = verifiedWorkspaceId;
@@ -124,6 +126,8 @@ export interface BulkCreateResult {
 
 export async function createDecisionsBulk(
   input: BulkCreateInput
+,
+  context?: ServiceCapabilityContext
 ): Promise<BulkCreateResult> {
   const { decisions } = input;
 

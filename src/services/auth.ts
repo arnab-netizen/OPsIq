@@ -41,7 +41,9 @@ export interface SessionInfo {
  * after PHASE F when legacy is fully stripped down.
  */
 
-export async function getSession(workspaceId: string = "system"): Promise<SessionInfo | null> {
+export async function getSession(workspaceId: string = "system",
+  context?: ServiceCapabilityContext
+): Promise<SessionInfo | null> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("getSession");
 
@@ -85,7 +87,9 @@ export async function getSession(workspaceId: string = "system"): Promise<Sessio
   };
 }
 
-export async function requireSession(workspaceId: string = "system"): Promise<SessionInfo> {
+export async function requireSession(workspaceId: string = "system",
+  context?: ServiceCapabilityContext
+): Promise<SessionInfo> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("requireSession");
 
@@ -96,7 +100,9 @@ export async function requireSession(workspaceId: string = "system"): Promise<Se
   return session;
 }
 
-export async function getPolicyContext(workspaceId: string = "system"): Promise<PolicyContext | null> {
+export async function getPolicyContext(workspaceId: string = "system",
+  context?: ServiceCapabilityContext
+): Promise<PolicyContext | null> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("getPolicyContext");
 
@@ -139,7 +145,9 @@ export async function getPolicyContext(workspaceId: string = "system"): Promise<
   };
 }
 
-export async function requirePolicyContext(workspaceId: string = "system"): Promise<PolicyContext> {
+export async function requirePolicyContext(workspaceId: string = "system",
+  context?: ServiceCapabilityContext
+): Promise<PolicyContext> {
   // PHASE F: Check for shadow reads after snapshot finalized
   checkShadowRead("requirePolicyContext");
 
@@ -157,6 +165,8 @@ export function getSessionDurationMs(): number {
 export async function revokeSession(
   sessionId: string,
   authContext: CanonicalAuthContext
+,
+  context?: ServiceCapabilityContext
 ): Promise<void> {
   await db.session.update({
     where: { id: sessionId },
@@ -174,7 +184,9 @@ export function getSessionCookieName(): string {
  * Get session and return raw facts (not throwing).
  * Used by canonical wrapper to evaluate auth state.
  */
-export async function getSessionFact(workspaceId: string = "system"): Promise<SessionFact> {
+export async function getSessionFact(workspaceId: string = "system",
+  context?: ServiceCapabilityContext
+): Promise<SessionFact> {
   const session = await getSession(workspaceId);
 
   if (!session) {
@@ -195,7 +207,9 @@ export async function getSessionFact(workspaceId: string = "system"): Promise<Se
  * Get policy context and return raw facts (not throwing).
  * Used by canonical wrapper to evaluate auth state.
  */
-export async function getPolicyContextFact(workspaceId: string = "system"): Promise<PolicyFact> {
+export async function getPolicyContextFact(workspaceId: string = "system",
+  context?: ServiceCapabilityContext
+): Promise<PolicyFact> {
   const policy = await getPolicyContext(workspaceId);
 
   if (!policy) {
