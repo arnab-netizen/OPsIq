@@ -234,11 +234,11 @@ export class RootCauseEngine {
 
   private createFalsifier(
     hypothesis: string,
-    metric: string
+    metricName: string
   ): Falsifier {
     return {
-      condition: `${metric} returns to baseline or improves by >20%`,
-      testMethod: `Track ${metric} over 4-week period`,
+      condition: `${metricName} returns to baseline or improves by >20%`,
+      testMethod: `Track ${metricName} over 4-week period`,
       expectedResult: "Sustained improvement disproves hypothesis",
       disproveThreshold: 0.2,
     };

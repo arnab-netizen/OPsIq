@@ -524,8 +524,8 @@ export function formatInterventions(interventions: Intervention[]): string {
     }
 
     lines.push(`\n**Success Metrics**:`);
-    for (const metric of intervention.successMetrics) {
-      lines.push(`  - ${metric}`);
+    for (const metricDesc of intervention.successMetrics) {
+      lines.push(`  - ${metricDesc}`);
     }
 
     lines.push(`\n**Risks & Fallback**:`);

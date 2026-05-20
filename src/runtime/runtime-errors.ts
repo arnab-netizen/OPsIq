@@ -5,6 +5,13 @@
  * NO silent failures. All runtime errors tracked, logged, and recoverable.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 export type RuntimeErrorClassification =
   | "VALIDATION"
   | "AUTH"
@@ -57,7 +64,8 @@ export class RuntimeError extends Error {
     message: string,
     metadataInput: Omit<RuntimeErrorMetadata, "timestamp">,
   ) {
-    super(message);
+    const safeMsg = classifyOperatorError(new Error(message), { context: "load" }).operatorMessage;
+    super(safeMsg);
     this.name = "RuntimeError";
     this.metadata = {
       ...(metadataInput as any),
