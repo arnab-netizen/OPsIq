@@ -1,0 +1,3698 @@
+{
+  "timestamp": "2026-05-20T09:32:16.864Z",
+  "total_violations": 369,
+  "errors": 257,
+  "warnings": 112,
+  "violations": [
+    {
+      "file": "src/ui/kpi-trend.tsx",
+      "line": 57,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!kpi.snapshots || kpi.snapshots.length < 2) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/ui/kpi-trend.tsx",
+      "line": 57,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!kpi.snapshots || kpi.snapshots.length < 2) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/ui/decision-csv-upload.tsx",
+      "line": 78,
+      "column": 48,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/ui/decision-creation-form.tsx",
+      "line": 94,
+      "column": 48,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/ui/decision-acceptance-modal.tsx",
+      "line": 54,
+      "column": 45,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = err instanceof Error ? err.message : \"Failed to accept decision\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/ui/decision-acceptance-modal.tsx",
+      "line": 81,
+      "column": 45,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = err instanceof Error ? err.message : \"Failed to reject decision\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/ui/decision-acceptance-modal.tsx",
+      "line": 108,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/ui/alerts-panel.tsx",
+      "line": 75,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/webhooks.service.ts",
+      "line": 167,
+      "column": 45,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = error instanceof Error ? error.message : \"Unknown error\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhooks.service.ts",
+      "line": 226,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhooks.service.ts",
+      "line": 290,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhooks.service.ts",
+      "line": 303,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 72,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 138,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 144,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 275,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 361,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 406,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 445,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 468,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 507,
+      "column": 44,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "dbError: dbError instanceof Error ? dbError.message : String(dbError),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 553,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 610,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 647,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 746,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "line": 809,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/usage.service.ts",
+      "line": 42,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/snapshot-optimization-engine.ts",
+      "line": 88,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/snapshot-optimization-engine.ts",
+      "line": 109,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/snapshot-optimization-engine.ts",
+      "line": 125,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/snapshot-engine.ts",
+      "line": 67,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null; // No persistent snapshots yet",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/roi-lifecycle-gating.ts",
+      "line": 297,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/roi-lifecycle-gating.ts",
+      "line": 392,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/review-cycle.ts",
+      "line": 227,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/recommendation.ts",
+      "line": 888,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"Unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/recommendation.ts",
+      "line": 894,
+      "column": 50,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "originalError: error instanceof Error ? error.message : \"Unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/re-evaluation.ts",
+      "line": 797,
+      "column": 60,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: escalationError instanceof Error ? escalationError.message : String(escalationError),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/re-evaluation.ts",
+      "line": 834,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/projection-rebuild-engine.ts",
+      "line": 58,
+      "column": 63,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "`Replay failed: ${replayErr instanceof Error ? replayErr.message : String(replayErr)}`",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/projection-rebuild-engine.ts",
+      "line": 124,
+      "column": 48,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/projection-rebuild-engine.ts",
+      "line": 266,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/projection-engine.ts",
+      "line": 66,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/projection-engine.ts",
+      "line": 224,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/evidence.ts",
+      "line": 157,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/evidence.ts",
+      "line": 283,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/event-replay-engine.ts",
+      "line": 152,
+      "column": 56,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: snapshotErr instanceof Error ? snapshotErr.message : String(snapshotErr),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/event-emitter.ts",
+      "line": 252,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/escalation.ts",
+      "line": 71,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/escalation.ts",
+      "line": 149,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/entitlement.service.ts",
+      "line": 314,
+      "column": 68,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "reason: `Entitlement check failed: ${error instanceof Error ? error.message : \"unknown error\"}`,",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/diagnosis.ts",
+      "line": 103,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!input.monthlyRevenue || !input.monthlyCosts) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/diagnosis.ts",
+      "line": 103,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!input.monthlyRevenue || !input.monthlyCosts) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/diagnosis.ts",
+      "line": 107,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (loss <= 0) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/decision-lifecycle-integrity.ts",
+      "line": 351,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "line": 68,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!sessionToken) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "line": 68,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!sessionToken) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "line": 75,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!session) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "line": 75,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!session) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "line": 78,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "line": 82,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "line": 86,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "line": 134,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!session) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/auth.ts",
+      "line": 134,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!session) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/action.ts",
+      "line": 124,
+      "column": 46,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/action.ts",
+      "line": 217,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 101,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 119,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 137,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 156,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 176,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 195,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 215,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 235,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 272,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 290,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 309,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 328,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return new RuntimeError(message, {",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/runtime/runtime-errors.ts",
+      "line": 336,
+      "column": 46,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error_details: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/middleware/workspace-enforcement.ts",
+      "line": 24,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/middleware/workspace-enforcement.ts",
+      "line": 33,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/middleware/workspace-enforcement.ts",
+      "line": 47,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/middleware/workspace-enforcement.ts",
+      "line": 60,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/middleware/status-transition-guard.ts",
+      "line": 40,
+      "column": 47,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/middleware/rate-limit-middleware.ts",
+      "line": 60,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/middleware/rate-limit-middleware.ts",
+      "line": 84,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/middleware/monitoring.middleware.ts",
+      "line": 79,
+      "column": 33,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error instanceof Error ? error.message : String(error)",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/shared-error-extractor.ts",
+      "line": 5,
+      "column": 28,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "*   err instanceof Error ? err.message : \"fallback\"",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/shared-error-extractor.ts",
+      "line": 34,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return error.message;",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/lib/shared-error-extractor.ts",
+      "line": 41,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "* Returns error message without routing through governance",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/lib/shared-error-extractor.ts",
+      "line": 45,
+      "column": 34,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "return error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/shared-error-extractor.ts",
+      "line": 45,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return error instanceof Error ? error.message : String(error);",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/lib/prisma-workspace-enforcement.ts",
+      "line": 231,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/lib/prisma-workspace-enforcement.ts",
+      "line": 248,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/lib/enforced-queue-worker.ts",
+      "line": 105,
+      "column": 48,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/enforced-queue-worker.ts",
+      "line": 132,
+      "column": 46,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/enforced-queue-worker.ts",
+      "line": 184,
+      "column": 37,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/enforced-queue-worker.ts",
+      "line": 204,
+      "column": 44,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/db.ts",
+      "line": 74,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!event.payload) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/lib/db.ts",
+      "line": 74,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!event.payload) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/lib/db.ts",
+      "line": 79,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/lib/db.ts",
+      "line": 90,
+      "column": 70,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "`Failed to initialize Prisma client: ${error instanceof Error ? error.message : String(error)}`",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/auth-guard.ts",
+      "line": 128,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/hooks/useOperatorMutation.ts",
+      "line": 168,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/infra/telemetry-sanitizer.ts",
+      "line": 169,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return \"[ERROR MESSAGE REDACTED]\";",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/infra/scheduler.ts",
+      "line": 99,
+      "column": 33,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "err instanceof Error ? err.message : \"Unknown error\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/infra/scheduler.ts",
+      "line": 180,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: err instanceof Error ? err.message : \"Unknown\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/infra/rate-limiter.ts",
+      "line": 122,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/infra/idempotency.ts",
+      "line": 216,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/infra/idempotency-store-memory.ts",
+      "line": 41,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!entry) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/infra/idempotency-store-memory.ts",
+      "line": 41,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!entry) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/infra/idempotency-store-memory.ts",
+      "line": 48,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/infra/health-check.ts",
+      "line": 90,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"Unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/infra/health-check.ts",
+      "line": 118,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"Unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/infra/errors.ts",
+      "line": 801,
+      "column": 29,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error instanceof Error ? error.message : \"An unexpected error occurred\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/infra/error-tracking.ts",
+      "line": 43,
+      "column": 43,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/infra/error-handler.ts",
+      "line": 184,
+      "column": 43,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/governance/ci-shadow-read-gate.ts",
+      "line": 33,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/governance/ci-shadow-read-gate.ts",
+      "line": 39,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/domain/decision-lifecycle.ts",
+      "line": 245,
+      "column": 33,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error instanceof Error ? error.message : `Unknown error at step ${i}`",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/components/OperatorItem.tsx",
+      "line": 36,
+      "column": 37,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "alert(error instanceof Error ? error.message : \"Unknown error\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/components/OperatorItem.tsx",
+      "line": 61,
+      "column": 37,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "alert(error instanceof Error ? error.message : \"Unknown error\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/components/OperatorItem.tsx",
+      "line": 93,
+      "column": 37,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "alert(error instanceof Error ? error.message : \"Unknown error\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/ui/primitives/modal.tsx",
+      "line": 32,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!isOpen) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/ui/primitives/modal.tsx",
+      "line": 32,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!isOpen) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/tests/stripe-sim/simulateWebhookDelivery.ts",
+      "line": 63,
+      "column": 46,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/tests/stripe-sim/simulateWebhookDelivery.ts",
+      "line": 150,
+      "column": 48,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/workspace/context.ts",
+      "line": 18,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/validation-contracts/contract-validator.ts",
+      "line": 41,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "message: err instanceof Error ? err.message : String(err),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/system/run.ts",
+      "line": 69,
+      "column": 62,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const errorMsg = scenarioError instanceof Error ? scenarioError.message : \"Unknown scenario error\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/segmentation/impact.ts",
+      "line": 21,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/production/retention-cleanup.ts",
+      "line": 58,
+      "column": 71,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "logger.error(`Retention cleanup failed: ${error instanceof Error ? error.message : String(error)}`);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/outcome-core/outcome-auditor.ts",
+      "line": 17,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/operator/validate.ts",
+      "line": 40,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/operator/validate.ts",
+      "line": 50,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/operator/store.ts",
+      "line": 114,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/operator/store.ts",
+      "line": 256,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/operator/store.ts",
+      "line": 379,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/operator/store.ts",
+      "line": 541,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/operator/outcome.ts",
+      "line": 106,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null; // Cannot calculate percentage with zero expected impact",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/metrics/decision-metrics-service.ts",
+      "line": 42,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/metrics/decision-metrics-service.ts",
+      "line": 134,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: err instanceof Error ? err.message : String(err),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/metrics/decision-metrics-service.ts",
+      "line": 144,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: err instanceof Error ? err.message : String(err),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/metrics/decision-metrics-service.ts",
+      "line": 157,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: err instanceof Error ? err.message : String(err),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/learning/store.ts",
+      "line": 51,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/intelligence/recommendation.ts",
+      "line": 41,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (items.length === 0) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/growth/acquisition-engine.ts",
+      "line": 239,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/firstwin/detector.ts",
+      "line": 30,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-drift/next-action.service.ts",
+      "line": 208,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-drift/next-action.service.ts",
+      "line": 214,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-drift/next-action.service.ts",
+      "line": 276,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-core/sequencer.ts",
+      "line": 16,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-core/sequencer.ts",
+      "line": 30,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-core/dependency-graph.ts",
+      "line": 18,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-core/dependency-graph.ts",
+      "line": 28,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-core/dependency-graph.ts",
+      "line": 37,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-core/dependency-graph.ts",
+      "line": 46,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-core/dependency-graph.ts",
+      "line": 131,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!action) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-core/dependency-graph.ts",
+      "line": 131,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!action) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution-core/dependency-graph.ts",
+      "line": 145,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution/execution-service.ts",
+      "line": 160,
+      "column": 52,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: metricsError instanceof Error ? metricsError.message : String(metricsError),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/execution/execution-service.ts",
+      "line": 248,
+      "column": 52,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: metricsError instanceof Error ? metricsError.message : String(metricsError),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/execution/blocker-engine.ts",
+      "line": 88,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null; // No blocker",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution/action-handlers.ts",
+      "line": 25,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution/action-handlers.ts",
+      "line": 47,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/execution/action-handlers.ts",
+      "line": 72,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/execution/action-handlers.ts",
+      "line": 79,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/execution/action-handlers.ts",
+      "line": 167,
+      "column": 46,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/execution/action-handlers.ts",
+      "line": 226,
+      "column": 46,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const errorMsg = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/diagnostic-core/root-cause-engine.ts",
+      "line": 39,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/diagnostic-core/root-cause-engine.ts",
+      "line": 55,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/diagnostic-core/root-cause-engine.ts",
+      "line": 77,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/diagnostic-core/root-cause-engine.ts",
+      "line": 240,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-metric",
+      "message": "Raw metric display without governance - use <GovMetric /> component",
+      "code": "condition: `${metric} returns to baseline or improves by >20%`,",
+      "suggestion": "Replace with: <GovMetric name=\"confidence\" value={confidence} />"
+    },
+    {
+      "file": "src/services/diagnostic-core/root-cause-engine.ts",
+      "line": 241,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-metric",
+      "message": "Raw metric display without governance - use <GovMetric /> component",
+      "code": "testMethod: `Track ${metric} over 4-week period`,",
+      "suggestion": "Replace with: <GovMetric name=\"confidence\" value={confidence} />"
+    },
+    {
+      "file": "src/services/diagnostic-core/maturity-engine.ts",
+      "line": 45,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/diagnostic-core/bottleneck-engine.ts",
+      "line": 36,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/diagnostic-core/bottleneck-engine.ts",
+      "line": 50,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/diagnostic-core/archetype-engine.ts",
+      "line": 47,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/diagnostic-core/archetype-engine.ts",
+      "line": 58,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/decisions/outcome-tracker.ts",
+      "line": 259,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-metric",
+      "message": "Raw metric display without governance - use <GovMetric /> component",
+      "code": "reason_parts.push(`${metric}: +${adj.toFixed(1)}`);",
+      "suggestion": "Replace with: <GovMetric name=\"confidence\" value={confidence} />"
+    },
+    {
+      "file": "src/services/decisions/outcome-tracker.ts",
+      "line": 261,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-metric",
+      "message": "Raw metric display without governance - use <GovMetric /> component",
+      "code": "reason_parts.push(`${metric}: ${adj.toFixed(1)}`);",
+      "suggestion": "Replace with: <GovMetric name=\"confidence\" value={confidence} />"
+    },
+    {
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "line": 62,
+      "column": 31,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error instanceof Error ? error.message : String(error)",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "line": 124,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "line": 281,
+      "column": 33,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error instanceof Error ? error.message : String(error)",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "line": 346,
+      "column": 31,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error instanceof Error ? error.message : String(error)",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decisions/decision-lifecycle.service.ts",
+      "line": 379,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decisions/decision-creation-service.ts",
+      "line": 107,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decisions/decision-creation-service.ts",
+      "line": 157,
+      "column": 41,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "reason: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decisions/decision-creation-service.ts",
+      "line": 162,
+      "column": 41,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "reason: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decision-core/best-path-selector.ts",
+      "line": 30,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/decision-core/best-path-selector.ts",
+      "line": 42,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/decision-core/best-path-selector.ts",
+      "line": 54,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/decision-core/best-path-selector.ts",
+      "line": 61,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/decision-control/enforcement.service.ts",
+      "line": 170,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decision-control/enforcement.service.ts",
+      "line": 172,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/decision-control/enforcement.service.ts",
+      "line": 259,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/decision/transaction-execution.ts",
+      "line": 72,
+      "column": 54,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "`Audit logging failed: ${err instanceof Error ? err.message : String(err)}`",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decision/transaction-actions.ts",
+      "line": 89,
+      "column": 54,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "`Audit logging failed: ${err instanceof Error ? err.message : String(err)}`",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decision/status-management.ts",
+      "line": 205,
+      "column": 54,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "`Audit logging failed: ${err instanceof Error ? err.message : String(err)}`",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decision/execution-stub.ts",
+      "line": 88,
+      "column": 54,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "`Audit logging failed: ${err instanceof Error ? err.message : String(err)}`",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/decision/decision-timeline.ts",
+      "line": 246,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!fromEvent || !toEvent) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/decision/decision-timeline.ts",
+      "line": 246,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!fromEvent || !toEvent) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/control/scenario-comparison.ts",
+      "line": 174,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/control/control-surface.service.ts",
+      "line": 129,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/control/control-surface.service.ts",
+      "line": 131,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/consulting-engine/pipeline.ts",
+      "line": 188,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/consulting-engine/pipeline.ts",
+      "line": 196,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/consulting-engine/intervention-design-engine.ts",
+      "line": 528,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-metric",
+      "message": "Raw metric display without governance - use <GovMetric /> component",
+      "code": "lines.push(`  - ${metric}`);",
+      "suggestion": "Replace with: <GovMetric name=\"confidence\" value={confidence} />"
+    },
+    {
+      "file": "src/services/cache/in-memory-cache.ts",
+      "line": 25,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/cache/in-memory-cache.ts",
+      "line": 31,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/best-path-engine/orchestrator.ts",
+      "line": 99,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/best-path-engine/orchestrator.ts",
+      "line": 130,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"Unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/best-path-engine/orchestrator.ts",
+      "line": 132,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/auth/server-role.ts",
+      "line": 9,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/auth/pipeline-executor.ts",
+      "line": 252,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/services/alerts/alert-service.ts",
+      "line": 82,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/alerts/alert-service.ts",
+      "line": 92,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/alerts/alert-service.ts",
+      "line": 111,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/alerts/alert-service.ts",
+      "line": 159,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/alerts/alert-service.ts",
+      "line": 168,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/alerts/alert-service.ts",
+      "line": 207,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/services/alerts/alert-service.ts",
+      "line": 313,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/runtime/queue/queue-durability.ts",
+      "line": 109,
+      "column": 51,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "job.error_message = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/runtime/health/health-system.ts",
+      "line": 65,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/runtime/health/health-system.ts",
+      "line": 98,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/runtime/enforcement/request-enforcer.ts",
+      "line": 262,
+      "column": 50,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error_message: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/integrations/webhook.ts",
+      "line": 45,
+      "column": 50,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const errorMessage = error instanceof Error ? error.message : \"Unknown error\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/observability/log.ts",
+      "line": 30,
+      "column": 52,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const errorMessage = error instanceof Error ? error.message : String(error);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/ingestion/csv.ts",
+      "line": 163,
+      "column": 47,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = err instanceof Error ? err.message : \"Unknown error\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/lib/ingestion/csv.ts",
+      "line": 168,
+      "column": 43,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = err instanceof Error ? err.message : \"CSV parsing failed\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/components/ui/GovernedEmptyState.tsx",
+      "line": 146,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/value/page.tsx",
+      "line": 35,
+      "column": 47,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = err instanceof Error ? err.message : 'An error occurred';",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/scenario/page.tsx",
+      "line": 44,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Unknown error\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/scenario/page.tsx",
+      "line": 44,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Unknown error\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/report/page.tsx",
+      "line": 28,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Unknown error\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/report/page.tsx",
+      "line": 28,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Unknown error\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/quick-start/page.tsx",
+      "line": 56,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Unknown error\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/quick-start/page.tsx",
+      "line": 56,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Unknown error\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/operator/page.tsx",
+      "line": 32,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(errorData.error || 'Failed to fetch queue');",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/operator/page.tsx",
+      "line": 40,
+      "column": 47,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = err instanceof Error ? err.message : 'Network error';",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/onboarding/page.tsx",
+      "line": 48,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Error creating workspace\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/onboarding/page.tsx",
+      "line": 48,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Error creating workspace\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/onboarding/page.tsx",
+      "line": 96,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Error inviting team members\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/onboarding/page.tsx",
+      "line": 96,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Error inviting team members\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/my-day/page.tsx",
+      "line": 48,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(errorData.error || 'Failed to fetch My Day items');",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/my-day/page.tsx",
+      "line": 140,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(errorMsg);",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/entity/page.tsx",
+      "line": 27,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Unknown error\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/entity/page.tsx",
+      "line": 27,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Unknown error\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/calibration/page.tsx",
+      "line": 42,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Unknown error\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/calibration/page.tsx",
+      "line": 42,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Unknown error\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/dashboard/onboarding/page.tsx",
+      "line": 54,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Error creating workspace\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/dashboard/onboarding/page.tsx",
+      "line": 54,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Error creating workspace\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/dashboard/onboarding/page.tsx",
+      "line": 93,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Error creating decision\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/dashboard/onboarding/page.tsx",
+      "line": 93,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Error creating decision\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/dashboard/onboarding/page.tsx",
+      "line": 126,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Error evaluating decision\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/dashboard/onboarding/page.tsx",
+      "line": 126,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Error evaluating decision\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/dashboard/inbox/inbox-client.tsx",
+      "line": 78,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Failed to fetch decisions\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/dashboard/inbox/inbox-client.tsx",
+      "line": 78,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Failed to fetch decisions\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/control/today/page.tsx",
+      "line": 69,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : 'Failed to load');",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/control/today/page.tsx",
+      "line": 69,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : 'Failed to load');",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/startup/route.ts",
+      "line": 37,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"Unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/run/route.ts",
+      "line": 693,
+      "column": 45,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "systemError instanceof Error ? systemError.message : \"Unknown error\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/report/route.ts",
+      "line": 17,
+      "column": 47,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = error instanceof Error ? error.message : \"Unknown error\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/report/route.ts",
+      "line": 18,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/liveness/route.ts",
+      "line": 46,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"Unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/health/route.ts",
+      "line": 46,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"Unknown database error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/alpha/report/page.tsx",
+      "line": 71,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : 'Failed to generate report');",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/alpha/report/page.tsx",
+      "line": 71,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : 'Failed to generate report');",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/users/page.tsx",
+      "line": 76,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"Failed to load users\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/users/page.tsx",
+      "line": 76,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"Failed to load users\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/users/page.tsx",
+      "line": 87,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "if (error) return <ErrorState message={error} onRetry={fetchUsers} />;",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/settings/page.tsx",
+      "line": 58,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "if (error) return <ErrorState message={error} />;",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/settings/page.tsx",
+      "line": 59,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!me) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/settings/page.tsx",
+      "line": 59,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!me) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/diagnosis/page.tsx",
+      "line": 101,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/diagnosis/page.tsx",
+      "line": 101,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+      "line": 91,
+      "column": 31,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "err instanceof Error ? err.message : \"Error approving decision\"",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+      "line": 121,
+      "column": 31,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "err instanceof Error ? err.message : \"Error rejecting decision\"",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+      "line": 165,
+      "column": 31,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "err instanceof Error ? err.message : \"Error overriding decision\"",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+      "line": 196,
+      "column": 31,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "err instanceof Error ? err.message : \"Error executing decision\"",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+      "line": 239,
+      "column": 31,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "err instanceof Error ? err.message : \"Error marking decision successful\"",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+      "line": 281,
+      "column": 31,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "err instanceof Error ? err.message : \"Error marking decision failed\"",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+      "line": 291,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!decision.guardrailResult) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+      "line": 291,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!decision.guardrailResult) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+      "line": 297,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/api/webhooks/stripe/route.ts",
+      "line": 69,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/webhooks/stripe/route.ts",
+      "line": 79,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/webhooks/stripe/route.ts",
+      "line": 147,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/webhooks/stripe/route.ts",
+      "line": 170,
+      "column": 44,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/webhooks/stripe/route.ts",
+      "line": 181,
+      "column": 42,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/webhooks/stripe/route.ts",
+      "line": 192,
+      "column": 48,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: dbError instanceof Error ? dbError.message : \"unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/webhooks/stripe/route.ts",
+      "line": 211,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : \"unknown error\",",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/public/kpis/route.ts",
+      "line": 137,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/public/engagements/route.ts",
+      "line": 114,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/public/actions/route.ts",
+      "line": 128,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/owner/dashboard/route.ts",
+      "line": 154,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/owner/config/route.ts",
+      "line": 76,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/owner/config/route.ts",
+      "line": 165,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/operator/queue/route.ts",
+      "line": 77,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/operator/my-day/route.ts",
+      "line": 30,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/observability/summary/route.ts",
+      "line": 45,
+      "column": 77,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "logger.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/metrics/decision-latency/route.ts",
+      "line": 176,
+      "column": 78,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "console.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/metrics/control-effectiveness/route.ts",
+      "line": 265,
+      "column": 78,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "console.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/growth/unit-economics/route.ts",
+      "line": 116,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/growth/sales-pipeline/route.ts",
+      "line": 88,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/growth/revenue-streams/route.ts",
+      "line": 49,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/growth/revenue-streams/route.ts",
+      "line": 98,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/growth/retention-metrics/route.ts",
+      "line": 82,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/growth/pricing-tiers/route.ts",
+      "line": 68,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/growth/offers/route.ts",
+      "line": 82,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/growth/acquisition-metrics/route.ts",
+      "line": 80,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/governance/metrics/route.ts",
+      "line": 64,
+      "column": 78,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "console.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/decisions/create/route.ts",
+      "line": 128,
+      "column": 43,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "parseError instanceof Error ? parseError.message : String(parseError)",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/billing/upgrade/route.ts",
+      "line": 30,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: error instanceof Error ? error.message : String(error),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/billing/upgrade/route.ts",
+      "line": 119,
+      "column": 52,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: stripeError instanceof Error ? stripeError.message : String(stripeError),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/billing/upgrade/route.ts",
+      "line": 172,
+      "column": 50,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "error: stripeError instanceof Error ? stripeError.message : String(stripeError),",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/opsiq/consulting-engine/page.tsx",
+      "line": 144,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/opsiq/consulting-engine/page.tsx",
+      "line": 144,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/leads/[leadId]/page.tsx",
+      "line": 18,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/leads/[leadId]/page.tsx",
+      "line": 18,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/leads/new/page.tsx",
+      "line": 50,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/leads/new/page.tsx",
+      "line": 50,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/new/page.tsx",
+      "line": 59,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/new/page.tsx",
+      "line": 59,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/page.tsx",
+      "line": 37,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/page.tsx",
+      "line": 37,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/deliverables/[deliverableId]/page.tsx",
+      "line": 17,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/deliverables/[deliverableId]/page.tsx",
+      "line": 17,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/clients/new/page.tsx",
+      "line": 52,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/clients/new/page.tsx",
+      "line": 52,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/clients/[clientId]/page.tsx",
+      "line": 16,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/clients/[clientId]/page.tsx",
+      "line": 16,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/api/opsiq/consulting-engine/run/route.ts",
+      "line": 87,
+      "column": 45,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "const message = error instanceof Error ? error.message : \"Unknown error\";",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
+      "line": 49,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/experiments/route.ts",
+      "line": 194,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/experiments/route.ts",
+      "line": 236,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
+      "line": 62,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+      "line": 97,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/report/page.tsx",
+      "line": 113,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/report/page.tsx",
+      "line": 113,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/report/page.tsx",
+      "line": 122,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/report/page.tsx",
+      "line": 122,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "if (!res.ok) return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/page.tsx",
+      "line": 78,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/page.tsx",
+      "line": 78,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/manual-evidence-form.tsx",
+      "line": 105,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/manual-evidence-form.tsx",
+      "line": 105,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/file-upload-form.tsx",
+      "line": 111,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/file-upload-form.tsx",
+      "line": 111,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/decision-evidence/page.tsx",
+      "line": 103,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/decision-evidence/page.tsx",
+      "line": 103,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/business-impact/page.tsx",
+      "line": 55,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/business-impact/page.tsx",
+      "line": 55,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/page.tsx",
+      "line": 50,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/page.tsx",
+      "line": 50,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/create-bundle-form.tsx",
+      "line": 47,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/create-bundle-form.tsx",
+      "line": 47,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/[evidenceId]/page.tsx",
+      "line": 83,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/[evidenceId]/page.tsx",
+      "line": 83,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/__ignored_tests__/app/api/opsiq/consulting-engine/__tests__/route.test.ts",
+      "line": 52,
+      "column": 0,
+      "severity": "warning",
+      "type": "dead-empty-state",
+      "message": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
+      "code": "return null;",
+      "suggestion": "Use: <GovernedEmptyState reason=\"no_data\" primaryAction={{...}} />"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+      "line": 106,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
+      "line": 77,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+      "line": 96,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
+      "line": 96,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
+      "line": 78,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "return Response.json({ error: error.message }, { status: 400 });",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/page.tsx",
+      "line": 75,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/page.tsx",
+      "line": 75,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/add-evidence-form.tsx",
+      "line": 43,
+      "column": 40,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/add-evidence-form.tsx",
+      "line": 43,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/add-evidence-form.tsx",
+      "line": 85,
+      "column": 38,
+      "severity": "error",
+      "type": "raw-error-message",
+      "message": "Raw error.message exposed - use toOperatorSafeError()",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Replace with: const safeError = toOperatorSafeError(err, context);"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/add-evidence-form.tsx",
+      "line": 85,
+      "column": 0,
+      "severity": "error",
+      "type": "unsafe-error-render",
+      "message": "Error rendered without governance - use operator-error-governance",
+      "code": "setError(err instanceof Error ? err.message : \"An error occurred\");",
+      "suggestion": "Use: const governed = classifyOperatorError(error, context);"
+    }
+  ]
+}

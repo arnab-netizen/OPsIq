@@ -277,6 +277,21 @@ class GovernanceScanner {
       process.exit(0);
     }
 
+    // Export full dataset to JSON for audit
+    const dataset = {
+      timestamp: new Date().toISOString(),
+      total_violations: this.violations.length,
+      errors: errorCount,
+      warnings: warningCount,
+      violations: this.violations,
+    };
+
+    const fs = require("fs");
+    fs.writeFileSync(
+      ".claude/governance_violations_dataset.json",
+      JSON.stringify(dataset, null, 2)
+    );
+
     // Group by type
     const byType: Record<string, Violation[]> = {};
     this.violations.forEach((v) => {
@@ -312,6 +327,7 @@ class GovernanceScanner {
     console.log(`   Errors: ${errorCount}`);
     console.log(`   Warnings: ${warningCount}`);
     console.log(`   Total: ${this.violations.length}\n`);
+    console.log(`   Full dataset: .claude/governance_violations_dataset.json\n`);
 
     if (this.strictMode && errorCount > 0) {
       console.log("❌ Strict mode: Build failed due to governance errors\n");
