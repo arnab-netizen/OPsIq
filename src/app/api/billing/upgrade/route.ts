@@ -1,10 +1,3 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
-
-function getSafeErrorMessage(error: unknown): string {
-  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-  return classified.operatorMessage;
-}
-
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
@@ -34,7 +27,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     stripe = await getStripe();
   } catch (error) {
     logger.error("Failed to initialize Stripe client", {
-      error: getSafeErrorMessage(error),
+      error: error instanceof Error ? error.message : String(error),
     });
     throw new Error("Payment service is not configured");
   }
@@ -123,7 +116,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     } catch (stripeError) {
       logger.error("Failed to create Stripe customer", {
         workspaceId,
-        error: getSafeErrorMessage(stripeError),
+        error: stripeError instanceof Error ? stripeError.message : String(stripeError),
       });
       throw new Error("Failed to initialize payment");
     }
@@ -176,7 +169,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     logger.error("Failed to create checkout session", {
       workspaceId,
       planId: plan.id,
-      error: getSafeErrorMessage(stripeError),
+      error: stripeError instanceof Error ? stripeError.message : String(stripeError),
     });
     throw new Error("Failed to create checkout session");
   }

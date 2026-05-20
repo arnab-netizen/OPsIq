@@ -1,10 +1,3 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
-
-function getSafeErrorMessage(error: unknown): string {
-  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-  return classified.operatorMessage;
-}
-
 /**
  * Test factories for creating mock OperatorItem records
  * Used to eliminate database dependencies in unit tests

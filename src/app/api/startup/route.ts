@@ -1,10 +1,3 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
-
-function getSafeErrorMessage(error: unknown): string {
-  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-  return classified.operatorMessage;
-}
-
 import { getMonitoringServiceInstance } from "@/middleware/monitoring.middleware";
 import { logger } from "@/infra/logger";
 
@@ -41,7 +34,7 @@ export const GET = async () => {
         database_migrated: false,
         routes_registered: 0,
         test_request_successful: false,
-        error: getSafeErrorMessage(error),
+        error: error instanceof Error ? error.message : "Unknown error",
       },
       {
         status: 503,

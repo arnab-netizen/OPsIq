@@ -262,7 +262,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     workspaceId: workspace.workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only
-    console.error(`Audit logging failed: ${getSafeErrorMessage(auditError)}`);
+    console.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
   });
 
   return metrics;

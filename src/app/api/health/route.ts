@@ -1,10 +1,3 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
-
-function getSafeErrorMessage(error: unknown): string {
-  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-  return classified.operatorMessage;
-}
-
 import { withEnforcement } from "@/lib/enforced-route";
 import { db, getDbInstance } from "@/lib/db";
 import { logger } from "@/infra/logger";
@@ -50,7 +43,7 @@ export const GET = withEnforcement(async (ctx) => {
       checks.database = {
         status: "unhealthy",
         latencyMs: Date.now() - dbStart,
-        error: getSafeErrorMessage(error),
+        error: error instanceof Error ? error.message : "Unknown database error",
       };
     }
   } else {

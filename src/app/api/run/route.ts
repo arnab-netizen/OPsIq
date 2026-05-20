@@ -1,10 +1,3 @@
-import { classifyOperatorError } from "@/lib/operator-error-governance";
-
-function getSafeErrorMessage(error: unknown): string {
-  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-  return classified.operatorMessage;
-}
-
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
@@ -697,7 +690,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       executedValidations.push("data_sufficiency");
     } catch (systemError) {
       const errorMsg =
-        getSafeErrorMessage(systemError);
+        systemError instanceof Error ? systemError.message : "Unknown error";
 
       if (errorMsg === "LOW_CONFIDENCE_BLOCKED") {
         const lowConfResult = createDecisionResult(
