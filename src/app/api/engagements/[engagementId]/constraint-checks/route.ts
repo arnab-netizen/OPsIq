@@ -8,6 +8,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { ConstraintEnforcer } from "@/services/decision-core/constraint-enforcer";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const constraintCheckSchema = z.object({
   engagementId: z.string().uuid(),
@@ -94,7 +95,8 @@ export const POST = withEnforcementFull(async (request) => {
     }
 
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
 
     return Response.json(

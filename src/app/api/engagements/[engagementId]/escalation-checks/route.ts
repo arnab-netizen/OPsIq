@@ -7,6 +7,7 @@ import {
   detectKPIDeteriorationPattern,
 } from "@/services/escalation";
 import { z } from "zod/v4";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const detectEscalationSchema = z.object({
   engagementId: z.string().uuid(),
@@ -59,7 +60,8 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
     }
 
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
 
     return Response.json(

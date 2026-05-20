@@ -4,6 +4,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { generateReviewCycle } from "@/services/review-cycle";
 import { z } from "zod/v4";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const generateReviewSchema = z.object({
   engagementId: z.string().uuid(),
@@ -46,7 +47,8 @@ export const POST = withCanonicalEnforcement(
       }
 
       if (error instanceof Error) {
-        return Response.json({ error: error.message }, { status: 400 });
+        const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
       }
 
       return Response.json(

@@ -14,6 +14,7 @@ import { updateExecution, ExperimentLifecycleError } from "@/services/experiment
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
 import type { Experiment } from "@/domain/experiment/experiment";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const progressSchema = z.object({
   percentComplete: z.number().min(0).max(100).optional(),
@@ -93,7 +94,8 @@ export const POST = withEnforcementFull(async (request, context, params) => {
       );
     }
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },

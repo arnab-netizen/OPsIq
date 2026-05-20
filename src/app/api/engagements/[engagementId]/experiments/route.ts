@@ -13,6 +13,7 @@ import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   createExperiment,
   approveExperiment,
