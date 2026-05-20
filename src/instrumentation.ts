@@ -6,6 +6,8 @@
  * is ready before the first request arrives.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     // Dynamic import in Node context only
@@ -18,7 +20,7 @@ export async function register() {
       const state = getStartupState();
       console.log(`✓ [INSTRUMENTATION] Server startup complete. State: ${state}`);
     } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+      const msg = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage;
       console.error(`✗ [INSTRUMENTATION] Startup failed: ${msg}`);
       // Don't exit - allow requests to fail gracefully
     }
