@@ -5,6 +5,7 @@
  */
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { ForbiddenError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -151,7 +152,8 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       );
     }
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },

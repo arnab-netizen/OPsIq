@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { generateReport } from "@/services/report/engine";
 import { UnauthorizedError } from "@/infra/errors";
@@ -14,8 +15,8 @@ export const GET = withCanonicalEnforcement(
       const report = await generateReport();
       return Response.json(report);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return Response.json({ error: message }, { status: 400 });
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
   },
   { requireCapabilities: ["SYSTEM_VIEW_AUDIT"], requireWorkspace: true }

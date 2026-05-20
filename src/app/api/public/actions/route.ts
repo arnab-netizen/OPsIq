@@ -5,6 +5,7 @@
  */
 
 import { withEnforcementFull } from "@/lib/enforced-route";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
@@ -125,7 +126,8 @@ export const GET = withEnforcementFull(async (request) => {
       );
     }
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },
