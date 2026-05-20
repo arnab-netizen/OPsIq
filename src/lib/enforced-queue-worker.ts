@@ -15,6 +15,12 @@ import {
   QueueJob,
 } from "@/runtime/queue/queue-durability";
 import { createInfrastructureError } from "@/runtime/runtime-errors";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export type QueueJobProcessor = (job: QueueJob) => Promise<Record<string, unknown>>;
 
@@ -102,7 +108,7 @@ export async function withEnforcedQueueWorker(
                 queue_name: job.queue_name,
                 retry_count: job.retry_count,
                 max_retries: job.max_retries,
-                error: error instanceof Error ? error.message : String(error),
+                error: getSafeErrorMessage(error),
               },
               tags: ["queue_poison_job", "queue_dead_letter"],
             });
@@ -129,7 +135,7 @@ export async function withEnforcedQueueWorker(
               job_id: job.job_id,
               retry_count: job.retry_count,
               max_retries: job.max_retries,
-              error: error instanceof Error ? error.message : String(error),
+              error: getSafeErrorMessage(error),
             },
             tags: ["queue_job_failure", "queue_will_retry"],
           });
@@ -181,7 +187,7 @@ export async function withEnforcedQueueWorker(
           executionEnforcer.emitExecutionBlocked(
             job.execution_id,
             job.workspace_id || "system",
-            error instanceof Error ? error.message : String(error),
+            getSafeErrorMessage(error),
             {
               recommendation_id: "queue_job",
               job_id: job.job_id,
@@ -201,7 +207,7 @@ export async function withEnforcedQueueWorker(
           context: {
             job_id: job.job_id,
             queue_name: job.queue_name,
-            error: error instanceof Error ? error.message : String(error),
+            error: getSafeErrorMessage(error),
             duration_ms: durationMs,
           },
           tags: ["queue_job_error"],

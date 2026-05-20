@@ -5,6 +5,12 @@ import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import type { ServiceCapabilityContext } from "@/lib/auth-guard";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export type AlertType = "blocked" | "threshold_breach" | "execution_failure";
 export type AlertChannel = "in_app" | "email";
@@ -79,7 +85,7 @@ export async function createAlert(input: CreateAlertInput,
     }).catch((error) => {
       logger.warn("Failed to emit audit event for alert creation", {
         alertId: alert.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: getSafeErrorMessage(error),
       });
     });
 
@@ -89,7 +95,7 @@ export async function createAlert(input: CreateAlertInput,
         logger.warn("Failed to deliver email alert", {
           alertId: alert.id,
           userId,
-          error: error instanceof Error ? error.message : String(error),
+          error: getSafeErrorMessage(error),
         });
       });
     }
@@ -108,7 +114,7 @@ export async function createAlert(input: CreateAlertInput,
       workspaceId,
       userId,
       type,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
@@ -156,7 +162,7 @@ export async function markAlertAsRead(
     }).catch((error) => {
       logger.warn("Failed to emit audit event for alert update", {
         alertId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getSafeErrorMessage(error),
       });
     });
 
@@ -165,7 +171,7 @@ export async function markAlertAsRead(
   } catch (error) {
     logger.error("Failed to mark alert as read", {
       alertId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
@@ -204,7 +210,7 @@ export async function getAlerts(
     logger.error("Failed to fetch alerts", {
       workspaceId,
       userId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
@@ -310,7 +316,7 @@ export async function getUnreadAlertCount(
     logger.error("Failed to get unread alert count", {
       workspaceId,
       userId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     return 0;
   }

@@ -2,6 +2,12 @@ import { db } from "@/lib/db";
 import { getCache } from "@/services/cache/cache-factory";
 import { logger } from "@/infra/logger";
 import { recordLearning } from "@/services/learning/store";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface MetricsUpdate {
   problemType: string;
@@ -39,7 +45,7 @@ export async function recordDecisionMetrics(
     logger.error("Failed to record decision metrics", {
       workspaceId,
       problemType: metrics.problemType,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }

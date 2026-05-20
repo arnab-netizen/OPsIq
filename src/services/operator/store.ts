@@ -12,6 +12,12 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import type { Prisma } from "@/generated/prisma/client";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 const SYSTEM_USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 
@@ -111,7 +117,7 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
     }).catch((error) => {
       logger.warn("Failed to emit audit event for operator item creation", {
         itemId: created.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: getSafeErrorMessage(error),
       });
     });
   }
@@ -253,7 +259,7 @@ export async function updateItem(
   }).catch((error) => {
     logger.warn("Failed to emit audit event for operator item update", {
       itemId: id,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
   });
 
@@ -376,7 +382,7 @@ export async function applyOverride(
   }).catch((error) => {
     logger.warn("Failed to emit audit event for operator item override", {
       itemId: id,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
   });
 }
@@ -538,7 +544,7 @@ export async function addBlockedDecision(params: {
   }).catch((error) => {
     logger.warn("Failed to emit audit event for blocked decision", {
       itemId: created.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
   });
 

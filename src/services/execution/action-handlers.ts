@@ -1,5 +1,11 @@
 import { logger } from "@/infra/logger";
 import { db } from "@/lib/db";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export type ActionType = "email" | "webhook" | "task";
 
@@ -69,14 +75,14 @@ export async function triggerAction(
       actionType,
       decisionId,
       workspaceId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
 
     return {
       success: false,
       actionType,
       message: "Action trigger failed",
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     };
   }
 }
@@ -164,7 +170,7 @@ async function handleWebhookAction(
       message: `Webhook triggered: ${url}`,
     };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getSafeErrorMessage(error);
     return {
       success: false,
       actionType: "webhook",
@@ -223,7 +229,7 @@ async function handleTaskAction(
       message: `Task created: ${title}`,
     };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getSafeErrorMessage(error);
     return {
       success: false,
       actionType: "task",

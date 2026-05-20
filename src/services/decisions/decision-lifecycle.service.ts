@@ -11,6 +11,12 @@ import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { createServiceCapabilityContext } from "@/lib/auth-guard";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 import {
   DecisionState,
   requireTransitionAllowed,
@@ -59,7 +65,7 @@ export async function transitionDecisionState(
     requireTransitionAllowed(fromState, toState, reason || null);
   } catch (error) {
     throw new ValidationError(
-      error instanceof Error ? error.message : String(error)
+      getSafeErrorMessage(error)
     );
   }
 
@@ -121,7 +127,7 @@ export async function transitionDecisionState(
       decisionId,
       fromState,
       toState,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
   });
 
@@ -278,7 +284,7 @@ export async function executeDecision(
       requireExecutable(currentState);
     } catch (error) {
       throw new ValidationError(
-        error instanceof Error ? error.message : String(error)
+        getSafeErrorMessage(error)
       );
     }
 
@@ -343,7 +349,7 @@ export async function recordDecisionOutcome(
     requireOutcomeRecordable(currentState);
   } catch (error) {
     throw new ValidationError(
-      error instanceof Error ? error.message : String(error)
+      getSafeErrorMessage(error)
     );
   }
 
@@ -376,7 +382,7 @@ export async function recordDecisionOutcome(
   }).catch((error) => {
     logger.warn("Failed to emit audit event for outcome recording", {
       decisionId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
   });
 

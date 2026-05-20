@@ -2,6 +2,12 @@ import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import type { ServiceCapabilityContext } from "@/lib/auth-guard";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface VerifiedDecisionInput {
   // Business data
@@ -104,7 +110,7 @@ export async function createDecision(
       workspaceId,
       userId,
       title,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
@@ -154,12 +160,12 @@ export async function createDecisionsBulk(
     } catch (error) {
       failed.push({
         title: decision.title,
-        reason: error instanceof Error ? error.message : String(error),
+        reason: getSafeErrorMessage(error),
       });
       logger.warn("Failed to create decision in bulk", {
         title: decision.title,
         workspaceId: decision.verifiedWorkspaceId,
-        reason: error instanceof Error ? error.message : String(error),
+        reason: getSafeErrorMessage(error),
       });
     }
   }
