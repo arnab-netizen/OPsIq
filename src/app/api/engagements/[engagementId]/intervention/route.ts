@@ -30,7 +30,7 @@ const updateInterventionModeSchema = z.object({
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
 
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const { engagementId } = params;
     parseOrThrow(uuidSchema, engagementId);
 
@@ -50,7 +50,7 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   });
 
   const nextRequest = request as NextRequest;
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },

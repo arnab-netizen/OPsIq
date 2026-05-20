@@ -43,7 +43,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     throw new Error("Request object not available");
   }
 
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
   const userId = ctx.verifiedActorId;
 
   const membership = await enforceWorkspaceScoping(ctx.request, workspaceId);

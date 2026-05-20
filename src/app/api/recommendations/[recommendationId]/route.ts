@@ -29,7 +29,7 @@ const updateRecommendationSchema = z.object({
 
 export const GET = withCanonicalEnforcement(async (ctx, params) => {
   // Get workspace from verified context
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
 
   const { recommendationId } = params;
   parseOrThrow(uuidSchema, recommendationId);
@@ -39,7 +39,7 @@ export const GET = withCanonicalEnforcement(async (ctx, params) => {
 }, { requireCapabilities: [CAPABILITIES.RECOMMENDATION_VIEW], requireWorkspace: true });
 
 export const PATCH = withCanonicalEnforcement(async (ctx, params) => {
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
   const authContext: CanonicalAuthContext = {
     verifiedActorId: ctx.verifiedSessionSnapshot.actorId,
     verifiedActorType: ctx.verifiedActorType,

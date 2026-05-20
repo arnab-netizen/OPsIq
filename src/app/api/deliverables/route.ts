@@ -18,7 +18,7 @@ const createDeliverableSchema = z.object({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const url = new URL(ctx.request!.url);
     const engagementId = url.searchParams.get("engagementId");
 

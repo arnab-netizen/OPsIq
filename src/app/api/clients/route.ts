@@ -28,7 +28,7 @@ const listClientsSchema = paginationSchema.extend({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const params = parseSearchParams(ctx.request!.url, listClientsSchema);
     const result = await listClients(workspaceId, params);
     return result;
@@ -38,7 +38,7 @@ export const GET = withCanonicalEnforcement(
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {

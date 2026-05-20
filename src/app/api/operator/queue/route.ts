@@ -19,7 +19,7 @@ const queueParamsSchema = z.object({
  */
 export const GET = withCanonicalEnforcement(async (ctx) => {
   const userId = ctx.verifiedSessionSnapshot.actorId;
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
 
   try {
     // Parse query parameters

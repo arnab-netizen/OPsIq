@@ -12,7 +12,7 @@ import { db } from "@/lib/db";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     // Initialize logger
     const logger = createEventLogger("api_intelligence_summary", workspaceId);

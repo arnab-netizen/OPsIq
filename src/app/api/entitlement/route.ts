@@ -40,7 +40,7 @@ const GetQuotaSchema = z.object({
  */
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     const tier = getSubscriptionTier(workspaceId);
     const config = getTierConfig(tier);
@@ -60,7 +60,7 @@ export const GET = withCanonicalEnforcement(
  */
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     const body = await ctx.request!.json();
     const parsed = CheckCapabilitySchema.parse(body);

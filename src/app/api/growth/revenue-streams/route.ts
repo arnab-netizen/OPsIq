@@ -24,7 +24,7 @@ const createStreamSchema = z.object({
  * Wire: RevenueEngine.createRevenueStream()
  */
 export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
 
   try {
     const body = await (ctx.request as NextRequest).json();
@@ -63,7 +63,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
  * Wire: RevenueEngine.analyzeStreamHealth()
  */
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
 
   try {
     // For demo: analyze a sample stream

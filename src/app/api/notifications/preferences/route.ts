@@ -38,7 +38,7 @@ const SetPreferencesSchema = z.object({
  */
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const userId = ctx.verifiedActorId;
 
     const preferences = await getPreferences(workspaceId, userId);
@@ -67,7 +67,7 @@ export const GET = withCanonicalEnforcement(
  */
 export const PATCH = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const userId = ctx.verifiedActorId;
 
     const body = await ctx.request!.json();

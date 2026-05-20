@@ -52,7 +52,7 @@ export const POST = withEnforcementFull(async (request) => {
   });
 
   const nextRequest = request as NextRequest;
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },

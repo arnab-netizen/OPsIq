@@ -29,7 +29,7 @@ export const GET = withCanonicalEnforcement(async (
     throw new Error("Notification ID is required");
   }
 
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
 
   const notification = await getNotification(id);
 
@@ -62,7 +62,7 @@ export const PATCH = withCanonicalEnforcement(async (
     throw new Error("Notification ID is required");
   }
 
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
 
   const notification = await getNotification(id);
 

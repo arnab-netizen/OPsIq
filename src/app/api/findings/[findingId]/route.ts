@@ -32,7 +32,7 @@ const updateFindingSchema = z.object({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const { findingId } = params;
     parseOrThrow(uuidSchema, findingId);
 

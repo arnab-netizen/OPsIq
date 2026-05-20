@@ -35,7 +35,7 @@ interface ValueSummary {
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     // Fetch all completed items with outcome data
     const items = await db.operatorItem.findMany({

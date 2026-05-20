@@ -6,7 +6,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const { engagementId } = params;
 
     await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);

@@ -8,7 +8,7 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     // R14: Use verified workspace from context, not x-workspace-id header
     const { engagementId } = params;
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 

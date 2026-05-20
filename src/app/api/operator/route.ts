@@ -26,7 +26,7 @@ import { PlanLimitError } from "@/infra/errors";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const logger = createEventLogger("api_operator_get", workspaceId);
 
     const items = await getItems();

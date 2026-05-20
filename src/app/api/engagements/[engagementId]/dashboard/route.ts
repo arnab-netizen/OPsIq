@@ -9,7 +9,7 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { engagementId } = params;
     parseOrThrow(uuidSchema, engagementId);
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 

@@ -14,7 +14,7 @@ const RejectDecisionSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params) => {
     const decisionId = params.decisionId;
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     // Parse and validate request body
     const body = await ctx.request!.json();

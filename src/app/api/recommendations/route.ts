@@ -32,7 +32,7 @@ const createRecommendationSchema = z.object({
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     // Check entitlement: decision_create (plan-based quota enforcement)
     const capabilityCheck = await assertCapability(workspaceId, CAPABILITIES.DECISION_CREATE);

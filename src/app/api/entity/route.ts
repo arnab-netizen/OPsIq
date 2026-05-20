@@ -15,7 +15,7 @@ import { randomUUID } from "crypto";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const entities = getEntities();
     return entities;
   },
