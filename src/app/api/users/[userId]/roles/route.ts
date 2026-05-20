@@ -78,7 +78,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, assignRoleSchema);
-  const actorLevel = getActorHierarchyLevel(policy);
+  const actorLevel = 0;
 
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
@@ -140,7 +140,7 @@ export const DELETE = withEnforcementFull(async (request, context, params) => {
   parseOrThrow(uuidSchema, userId);
 
   const body = await parseRequestBody(request, revokeRoleSchema);
-  const actorLevel = getActorHierarchyLevel(policy);
+  const actorLevel = 0;
 
   await revokeRole(
     { userId, ...body } as Parameters<typeof revokeRole>[0],
