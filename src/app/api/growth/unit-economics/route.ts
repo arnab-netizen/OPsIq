@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withAuth } from "@/lib/auth-guard";
@@ -113,7 +114,8 @@ export const POST = withEnforcementFull(async (request) => {
     }
 
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
 
     return Response.json(

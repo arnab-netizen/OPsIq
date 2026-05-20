@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getMyDayItems } from "@/services/operator/myday";
@@ -27,7 +28,8 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
     );
   } catch (error) {
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
 
     return Response.json(
