@@ -1,0 +1,335 @@
+{
+  "version": "1.0.0",
+  "description": "Machine-readable registry of allowed optional ServiceCapabilityContext parameters",
+  "generated_date": "2026-05-20",
+  "last_audit": "R26M",
+  "exemptions": [
+    {
+      "id": "AUTH_GETSESSION",
+      "file": "src/services/auth.ts",
+      "function": "getSession",
+      "line": 56,
+      "classification": "LEGACY_DEPRECATED_INTERNAL",
+      "reason": "Legacy auth function in transition to getSessionFact during PHASE A-F. Read-only, no mutations. Optional context for backward compatibility with deprecated auth-guard.ts.",
+      "allowed_callers": [
+        "src/services/auth.ts (internal calls)",
+        "src/services/auth/server-role.ts",
+        "src/middleware/workspace-enforcement.ts",
+        "src/services/workspace/context.ts",
+        "src/services/workspace/activation-context.ts"
+      ],
+      "forbidden_callers": [
+        "API routes (must use canonical wrapper)",
+        "User-triggered handlers (must use canonical wrapper)"
+      ],
+      "is_mutation": false,
+      "is_user_triggered": false,
+      "can_change_critical_state": false,
+      "expiry_phase": "PHASE_F_REMOVAL",
+      "expiry_description": "After PHASE F, this function and all calling code will be removed. Callers must migrate to canonical wrapper + getSessionFact.",
+      "owner": "Auth System (deprecated)",
+      "risk_level": "LOW",
+      "audit_notes": "Read-only session lookup, no security impact from optional context"
+    },
+    {
+      "id": "AUTH_REQUIRESESSION",
+      "file": "src/services/auth.ts",
+      "function": "requireSession",
+      "line": 107,
+      "classification": "LEGACY_DEPRECATED_INTERNAL",
+      "reason": "Legacy auth function in transition to getSessionFact during PHASE A-F. Read-only, no mutations. Optional context for backward compatibility with deprecated auth-guard.ts.",
+      "allowed_callers": [
+        "src/lib/auth-guard.ts (legacy wrapper)",
+        "src/services/auth.ts (requirePolicyContext calls this)"
+      ],
+      "forbidden_callers": [
+        "API routes (must use canonical wrapper)",
+        "User-triggered handlers (must use canonical wrapper)"
+      ],
+      "is_mutation": false,
+      "is_user_triggered": false,
+      "can_change_critical_state": false,
+      "expiry_phase": "PHASE_F_REMOVAL",
+      "expiry_description": "After PHASE F, this function and auth-guard.ts will be removed. Callers must migrate to canonical wrapper + getSessionFact.",
+      "owner": "Auth System (deprecated)",
+      "risk_level": "LOW",
+      "audit_notes": "Read-only session requirement check, throws if missing but no mutations"
+    },
+    {
+      "id": "AUTH_GETPOLICYCONTEXT",
+      "file": "src/services/auth.ts",
+      "function": "getPolicyContext",
+      "line": 125,
+      "classification": "LEGACY_DEPRECATED_INTERNAL",
+      "reason": "Legacy auth function in transition to getPolicyContextFact during PHASE A-F. Read-only, no mutations. Optional context for backward compatibility with deprecated auth-guard.ts.",
+      "allowed_callers": [
+        "src/lib/auth-guard.ts (legacy wrapper)",
+        "src/services/auth.ts (requirePolicyContext calls this)"
+      ],
+      "forbidden_callers": [
+        "API routes (must use canonical wrapper)",
+        "User-triggered handlers (must use canonical wrapper)"
+      ],
+      "is_mutation": false,
+      "is_user_triggered": false,
+      "can_change_critical_state": false,
+      "expiry_phase": "PHASE_F_REMOVAL",
+      "expiry_description": "After PHASE F, this function and all calling code will be removed. Callers must migrate to canonical wrapper + getPolicyContextFact.",
+      "owner": "Auth System (deprecated)",
+      "risk_level": "LOW",
+      "audit_notes": "Read-only policy context retrieval, no security impact from optional context"
+    },
+    {
+      "id": "AUTH_REQUIREPOLICYCONTEXT",
+      "file": "src/services/auth.ts",
+      "function": "requirePolicyContext",
+      "line": 175,
+      "classification": "LEGACY_DEPRECATED_INTERNAL",
+      "reason": "Legacy auth function in transition to getPolicyContextFact during PHASE A-F. Read-only, no mutations. Optional context for backward compatibility with deprecated auth-guard.ts.",
+      "allowed_callers": [
+        "src/lib/auth-guard.ts (legacy wrapper)",
+        "src/services/auth.ts (internal calls)"
+      ],
+      "forbidden_callers": [
+        "API routes (must use canonical wrapper)",
+        "User-triggered handlers (must use canonical wrapper)"
+      ],
+      "is_mutation": false,
+      "is_user_triggered": false,
+      "can_change_critical_state": false,
+      "expiry_phase": "PHASE_F_REMOVAL",
+      "expiry_description": "After PHASE F, this function and auth-guard.ts will be removed. Callers must migrate to canonical wrapper + getPolicyContextFact.",
+      "owner": "Auth System (deprecated)",
+      "risk_level": "LOW",
+      "audit_notes": "Read-only policy requirement check, throws if missing but no mutations"
+    },
+    {
+      "id": "AUTH_REVOKESESSION",
+      "file": "src/services/auth.ts",
+      "function": "revokeSession",
+      "line": 200,
+      "classification": "LEGACY_DEPRECATED_INTERNAL",
+      "reason": "Legacy auth function in transition. Mutation (session revocation) but called only from deprecated logout flows. Context optional for backward compatibility. Audit handling via caller.",
+      "allowed_callers": [
+        "Legacy logout handlers (being deprecated)"
+      ],
+      "forbidden_callers": [
+        "New API routes (must use canonical wrapper)",
+        "User-triggered handlers (must use canonical wrapper + proper audit)"
+      ],
+      "is_mutation": true,
+      "is_user_triggered": false,
+      "can_change_critical_state": true,
+      "expiry_phase": "PHASE_F_REMOVAL",
+      "expiry_description": "After PHASE F, this function and all calling logout flows will be removed/refactored to use canonical wrapper.",
+      "owner": "Auth System (deprecated)",
+      "risk_level": "MEDIUM",
+      "audit_notes": "Session revocation is a material mutation. Caller must handle audit event emission. No context parameter means audit trail may lack capability envelope."
+    },
+    {
+      "id": "AUTH_GETSESSIONFACT",
+      "file": "src/services/auth.ts",
+      "function": "getSessionFact",
+      "line": 219,
+      "classification": "INTERNAL_FACT_PROVIDER",
+      "reason": "Internal fact-returning variant for canonical wrapper. Used by canonical route enforcement to gather auth facts. Pure data provider, no mutations. Context is optional as this is background/internal only.",
+      "allowed_callers": [
+        "src/lib/canonical-route-enforcement.ts (async auth decision logic only)"
+      ],
+      "forbidden_callers": [
+        "User-triggered handlers (indirect only, via canonical wrapper)",
+        "Service-to-service calls (not allowed)",
+        "API routes (not allowed)"
+      ],
+      "is_mutation": false,
+      "is_user_triggered": false,
+      "can_change_critical_state": false,
+      "expiry_phase": "INDEFINITE",
+      "expiry_description": "This is the preferred fact-returning variant. Will remain for PHASE F+ as core auth infrastructure.",
+      "owner": "Auth System (canonical path)",
+      "risk_level": "LOW",
+      "audit_notes": "Pure data provider, no mutations, no user access, no security impact from optional context"
+    },
+    {
+      "id": "AUTH_GETPOLICYCONTEXTFACT",
+      "file": "src/services/auth.ts",
+      "function": "getPolicyContextFact",
+      "line": 242,
+      "classification": "INTERNAL_FACT_PROVIDER",
+      "reason": "Internal fact-returning variant for canonical wrapper. Used by canonical route enforcement to gather policy facts. Pure data provider, no mutations. Context is optional as this is background/internal only.",
+      "allowed_callers": [
+        "src/lib/canonical-route-enforcement.ts (async auth decision logic only)"
+      ],
+      "forbidden_callers": [
+        "User-triggered handlers (indirect only, via canonical wrapper)",
+        "Service-to-service calls (not allowed)",
+        "API routes (not allowed)"
+      ],
+      "is_mutation": false,
+      "is_user_triggered": false,
+      "can_change_critical_state": false,
+      "expiry_phase": "INDEFINITE",
+      "expiry_description": "This is the preferred fact-returning variant. Will remain for PHASE F+ as core auth infrastructure.",
+      "owner": "Auth System (canonical path)",
+      "risk_level": "LOW",
+      "audit_notes": "Pure data provider, no mutations, no user access, no security impact from optional context"
+    },
+    {
+      "id": "DECISION_EXECUTESTUB",
+      "file": "src/services/decision/execution-stub.ts",
+      "function": "executeDecisionStub",
+      "line": 18,
+      "classification": "WIRED_NOT_CALLED_INTERNAL",
+      "reason": "Internal service-to-service orchestration. Called only by transaction-layer.ts::startDecisionExecution (which itself has no callers - WIRED_NOT_CALLED status). Context optional as internal call. Audit emitted within function.",
+      "allowed_callers": [
+        "src/services/decision/transaction-layer.ts (not currently called in production)"
+      ],
+      "forbidden_callers": [
+        "API routes (not allowed)",
+        "User-triggered handlers (not allowed)"
+      ],
+      "is_mutation": true,
+      "is_user_triggered": false,
+      "can_change_critical_state": true,
+      "expiry_phase": "PENDING_ACTIVATION",
+      "expiry_description": "Awaiting transaction-layer.ts activation. When activated, context should be passed from caller with proper audit context.",
+      "owner": "Decision Service (stub)",
+      "risk_level": "MEDIUM",
+      "audit_notes": "Decision status mutation. Audit event emitted within function. No caller responsibility for audit if context not provided."
+    },
+    {
+      "id": "DECISION_CHANGESTATUS",
+      "file": "src/services/decision/status-management.ts",
+      "function": "changeDecisionStatus",
+      "line": 131,
+      "classification": "WIRED_NOT_CALLED_INTERNAL",
+      "reason": "Internal service-to-service orchestration. Called only by transaction-layer.ts (which itself has no callers - WIRED_NOT_CALLED status). Context optional as internal call. Audit emitted within function.",
+      "allowed_callers": [
+        "src/services/decision/transaction-layer.ts (not currently called in production)"
+      ],
+      "forbidden_callers": [
+        "API routes (not allowed)",
+        "User-triggered handlers (not allowed)"
+      ],
+      "is_mutation": true,
+      "is_user_triggered": false,
+      "can_change_critical_state": true,
+      "expiry_phase": "PENDING_ACTIVATION",
+      "expiry_description": "Awaiting transaction-layer.ts activation. When activated, context should be passed from caller with proper audit context.",
+      "owner": "Decision Service (orchestration)",
+      "risk_level": "MEDIUM",
+      "audit_notes": "Decision status transition mutation. Audit event emitted within function. No caller responsibility for audit if context not provided."
+    },
+    {
+      "id": "DECISION_EXECUTEACTION",
+      "file": "src/services/decision/transaction-actions.ts",
+      "function": "executeDecisionAction",
+      "line": 19,
+      "classification": "WIRED_NOT_CALLED_INTERNAL",
+      "reason": "Internal service-to-service orchestration. Called only by transaction-layer.ts::executeDecisionTransaction (line 77). Transaction-layer has no callers - WIRED_NOT_CALLED status. Context optional as internal call. Audit emitted within function.",
+      "allowed_callers": [
+        "src/services/decision/transaction-layer.ts::executeDecisionTransaction (line 77)"
+      ],
+      "forbidden_callers": [
+        "API routes (not allowed)",
+        "User-triggered handlers (not allowed)"
+      ],
+      "is_mutation": true,
+      "is_user_triggered": false,
+      "can_change_critical_state": true,
+      "expiry_phase": "PENDING_ACTIVATION",
+      "expiry_description": "Awaiting transaction-layer.ts activation. When activated, context should be passed from caller with proper audit context.",
+      "owner": "Decision Service (actions)",
+      "risk_level": "MEDIUM",
+      "audit_notes": "Decision approval/rejection mutation. Audit event emitted within function. No caller responsibility for audit if context not provided."
+    },
+    {
+      "id": "DECISION_UPDATEEXECUTION",
+      "file": "src/services/decision/transaction-execution.ts",
+      "function": "updateExecutionStatus",
+      "line": 27,
+      "classification": "WIRED_NOT_CALLED_INTERNAL",
+      "reason": "Internal service-to-service orchestration. Called by transaction-layer.ts functions (startDecisionExecution, completeDecisionExecution). Transaction-layer has no callers - WIRED_NOT_CALLED status. Context optional as internal call. Audit emitted within function.",
+      "allowed_callers": [
+        "src/services/decision/transaction-layer.ts::startDecisionExecution (line 108)",
+        "src/services/decision/transaction-layer.ts::completeDecisionExecution (line 130)",
+        "src/services/decision/transaction-layer.ts::failDecisionExecution (pattern)"
+      ],
+      "forbidden_callers": [
+        "API routes (not allowed)",
+        "User-triggered handlers (not allowed)"
+      ],
+      "is_mutation": true,
+      "is_user_triggered": false,
+      "can_change_critical_state": true,
+      "expiry_phase": "PENDING_ACTIVATION",
+      "expiry_description": "Awaiting transaction-layer.ts activation. When activated, context should be passed from caller with proper audit context.",
+      "owner": "Decision Service (execution)",
+      "risk_level": "MEDIUM",
+      "audit_notes": "Decision execution status mutation. Audit event emitted within function. No caller responsibility for audit if context not provided."
+    },
+    {
+      "id": "AUDIT_LOGAUDIT",
+      "file": "src/services/audit/audit-log.ts",
+      "function": "AuditEventParams",
+      "line": 17,
+      "classification": "APPEND_ONLY_AUDIT",
+      "reason": "Audit trail function. Context optional for internal audit paths that don't have user/capability context. Append-only operation, immutable, no reversals. All calls use context when available; optional for internal background operations.",
+      "allowed_callers": [
+        "All services (unrestricted - audit must be accessible from anywhere)"
+      ],
+      "forbidden_callers": [],
+      "is_mutation": true,
+      "is_user_triggered": false,
+      "can_change_critical_state": false,
+      "expiry_phase": "INDEFINITE",
+      "expiry_description": "Audit trail is permanent. Context optional parameter will remain as this enables audit from any code path.",
+      "owner": "Audit System",
+      "risk_level": "LOW",
+      "audit_notes": "Append-only audit trail. No reversals possible. Optional context parameter is intentional - audit must be callable from any code path including background jobs."
+    }
+  ],
+  "validation_rules": {
+    "required_fields": [
+      "id",
+      "file",
+      "function",
+      "line",
+      "classification",
+      "reason",
+      "allowed_callers",
+      "forbidden_callers",
+      "is_mutation",
+      "is_user_triggered",
+      "can_change_critical_state",
+      "expiry_phase",
+      "owner",
+      "risk_level",
+      "audit_notes"
+    ],
+    "forbidden_combinations": [
+      {
+        "name": "user_triggered_without_context",
+        "description": "Function marked is_user_triggered=true cannot have optional context",
+        "check": "is_user_triggered=true AND context optional => FAIL"
+      },
+      {
+        "name": "material_mutation_without_context",
+        "description": "Material mutation (can_change_critical_state=true) should have context or audit",
+        "check": "can_change_critical_state=true AND context optional AND no audit => WARNING"
+      }
+    ]
+  },
+  "scanner_instructions": {
+    "description": "Instructions for optional_context_exemption_scanner.ts",
+    "rules": [
+      "Find all 'context?: ServiceCapabilityContext' in src/",
+      "For each, check if an exemption exists in this registry (by file + function)",
+      "If not in registry => FAIL with 'unregistered optional context'",
+      "If in registry but is_user_triggered=true => FAIL with 'user-triggered requires context'",
+      "If in registry but can_change_critical_state=true and no audit in code => WARNING with 'material mutation audit check'",
+      "If in registry and all validations pass => PASS",
+      "If any exemption violates validation_rules => FAIL"
+    ]
+  }
+}
