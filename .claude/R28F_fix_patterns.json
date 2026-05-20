@@ -1,0 +1,253 @@
+{
+  "phase": "R28F FIX PATTERN NORMALIZATION",
+  "objective": "Convert 38 real defects into unique fix patterns for systematic elimination",
+  "execution_date": "2026-05-20",
+  "status": "ANALYSIS_COMPLETE",
+
+  "fix_patterns": [
+    {
+      "pattern_id": 1,
+      "pattern_name": "UI_ERROR_MESSAGE_ASSIGNMENT",
+      "description": "Component assigning raw error.message to local variable for display",
+      "violation_type": "raw-error-message",
+      "affected_files": [
+        "src/ui/decision-csv-upload.tsx",
+        "src/ui/decision-creation-form.tsx",
+        "src/ui/decision-acceptance-modal.tsx"
+      ],
+      "affected_lines": [
+        "src/ui/decision-csv-upload.tsx:78",
+        "src/ui/decision-creation-form.tsx:94",
+        "src/ui/decision-acceptance-modal.tsx:54",
+        "src/ui/decision-acceptance-modal.tsx:81"
+      ],
+      "affected_count": 4,
+      "current_code_pattern": "const errorMsg = error instanceof Error ? error.message : String(error);",
+      "shared_fix": "Import { toOperatorSafeError }; Replace with: const errorMsg = toOperatorSafeError(error, 'context').error;",
+      "severity": "REAL_OPERATOR_UI",
+      "blocker": true,
+      "unique_files": 3,
+      "effort_per_file": "2 min",
+      "total_effort": "6 min"
+    },
+    {
+      "pattern_id": 2,
+      "pattern_name": "COMPONENT_ALERT_ERROR_DISPLAY",
+      "description": "Component showing raw error.message in browser alert() calls",
+      "violation_type": "raw-error-message",
+      "affected_files": [
+        "src/components/OperatorItem.tsx"
+      ],
+      "affected_lines": [
+        "src/components/OperatorItem.tsx:36",
+        "src/components/OperatorItem.tsx:61",
+        "src/components/OperatorItem.tsx:93"
+      ],
+      "affected_count": 3,
+      "current_code_pattern": "alert(error instanceof Error ? error.message : \"Unknown error\");",
+      "shared_fix": "Import { toOperatorSafeError }; Replace with: const safe = toOperatorSafeError(error, 'operator_item'); alert(safe.error);",
+      "severity": "REAL_OPERATOR_UI",
+      "blocker": true,
+      "unique_files": 1,
+      "effort_per_file": "3 min",
+      "total_effort": "3 min"
+    },
+    {
+      "pattern_id": 3,
+      "pattern_name": "PAGE_ERROR_STATE_RENDER",
+      "description": "Page component passing raw error to ErrorState component without governance",
+      "violation_type": "unsafe-error-render",
+      "affected_files": [
+        "src/app/(authenticated)/settings/page.tsx",
+        "src/app/(authenticated)/users/page.tsx"
+      ],
+      "affected_lines": [
+        "src/app/(authenticated)/settings/page.tsx:58",
+        "src/app/(authenticated)/users/page.tsx:87"
+      ],
+      "affected_count": 2,
+      "current_code_pattern": "if (error) return <ErrorState message={error} />;",
+      "shared_fix": "Import { classifyOperatorError }; Wrap error: const classified = classifyOperatorError(error, { context: 'page' }); return <ErrorState message={classified.message} />;",
+      "severity": "REAL_OPERATOR_UI",
+      "blocker": true,
+      "unique_files": 2,
+      "effort_per_file": "3 min",
+      "total_effort": "6 min"
+    },
+    {
+      "pattern_id": 4,
+      "pattern_name": "API_ERROR_RESPONSE_RENDER",
+      "description": "API route returning raw error.message in JSON response to operators",
+      "violation_type": "unsafe-error-render",
+      "affected_files": [
+        "src/app/api/report/route.ts",
+        "src/app/api/public/kpis/route.ts",
+        "src/app/api/public/engagements/route.ts",
+        "src/app/api/public/actions/route.ts",
+        "src/app/api/owner/dashboard/route.ts",
+        "src/app/api/owner/config/route.ts",
+        "src/app/api/operator/queue/route.ts",
+        "src/app/api/operator/my-day/route.ts",
+        "src/app/api/growth/unit-economics/route.ts",
+        "src/app/api/growth/sales-pipeline/route.ts",
+        "src/app/api/growth/revenue-streams/route.ts",
+        "src/app/api/growth/retention-metrics/route.ts",
+        "src/app/api/growth/pricing-tiers/route.ts",
+        "src/app/api/growth/offers/route.ts",
+        "src/app/api/growth/acquisition-metrics/route.ts",
+        "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/route.ts",
+        "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
+        "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts"
+      ],
+      "affected_lines": [
+        "src/app/api/report/route.ts:18",
+        "src/app/api/public/kpis/route.ts:137",
+        "src/app/api/public/engagements/route.ts:114",
+        "src/app/api/public/actions/route.ts:128",
+        "src/app/api/owner/dashboard/route.ts:154",
+        "src/app/api/owner/config/route.ts:76",
+        "src/app/api/owner/config/route.ts:165",
+        "src/app/api/operator/queue/route.ts:77",
+        "src/app/api/operator/my-day/route.ts:30",
+        "src/app/api/growth/unit-economics/route.ts:116",
+        "src/app/api/growth/sales-pipeline/route.ts:88",
+        "src/app/api/growth/revenue-streams/route.ts:49",
+        "src/app/api/growth/revenue-streams/route.ts:98",
+        "src/app/api/growth/retention-metrics/route.ts:82",
+        "src/app/api/growth/pricing-tiers/route.ts:68",
+        "src/app/api/growth/offers/route.ts:82",
+        "src/app/api/growth/acquisition-metrics/route.ts:80",
+        "src/app/api/engagements/[engagementId]/review-cycles/route.ts:49",
+        "src/app/api/engagements/[engagementId]/experiments/route.ts:194",
+        "src/app/api/engagements/[engagementId]/experiments/route.ts:236",
+        "src/app/api/engagements/[engagementId]/escalation-checks/route.ts:62",
+        "src/app/api/engagements/[engagementId]/constraint-checks/route.ts:97",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts:106",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts:77",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts:96",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts:96",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts:78"
+      ],
+      "affected_count": 27,
+      "current_code_pattern": "return Response.json({ error: error.message }, { status: 400 });",
+      "shared_fix": "Import { classifyOperatorError }; In catch block wrap: const classified = classifyOperatorError(error, { context: 'route_name', route: request.url }); return Response.json({ error: classified.message, errorCode: classified.code }, { status: classified.httpStatus || 400 });",
+      "severity": "REAL_API_RESPONSE",
+      "blocker": true,
+      "unique_files": 17,
+      "effort_per_file": "3-5 min",
+      "total_effort": "60 min"
+    },
+    {
+      "pattern_id": 5,
+      "pattern_name": "UTILITY_ERROR_EXTRACTION",
+      "description": "Utility function extracting and returning raw error.message without governance",
+      "violation_type": "unsafe-error-render",
+      "affected_files": [
+        "src/lib/shared-error-extractor.ts"
+      ],
+      "affected_lines": [
+        "src/lib/shared-error-extractor.ts:34",
+        "src/lib/shared-error-extractor.ts:45"
+      ],
+      "affected_count": 2,
+      "current_code_pattern": "return error.message; | return error instanceof Error ? error.message : String(error);",
+      "shared_fix": "Import { classifyOperatorError }; Refactor function: export function extractErrorMessage(error: unknown, context?: string): string { const classified = classifyOperatorError(error, { context }); return classified.message; }",
+      "severity": "UTILITY_SHARED_ERROR",
+      "blocker": true,
+      "unique_files": 1,
+      "effort_per_file": "5 min",
+      "total_effort": "5 min"
+    }
+  ],
+
+  "pattern_summary": {
+    "total_real_defects": 38,
+    "unique_fix_patterns": 5,
+    "pattern_1_count": 4,
+    "pattern_1_name": "UI_ERROR_MESSAGE_ASSIGNMENT",
+    "pattern_1_files": 3,
+    "pattern_2_count": 3,
+    "pattern_2_name": "COMPONENT_ALERT_ERROR_DISPLAY",
+    "pattern_2_files": 1,
+    "pattern_3_count": 2,
+    "pattern_3_name": "PAGE_ERROR_STATE_RENDER",
+    "pattern_3_files": 2,
+    "pattern_4_count": 27,
+    "pattern_4_name": "API_ERROR_RESPONSE_RENDER",
+    "pattern_4_files": 17,
+    "pattern_5_count": 2,
+    "pattern_5_name": "UTILITY_ERROR_EXTRACTION",
+    "pattern_5_files": 1
+  },
+
+  "files_to_modify": {
+    "ui_components": 3,
+    "page_components": 2,
+    "api_routes": 17,
+    "utility_files": 1,
+    "total_unique_files": 23,
+    "detail": {
+      "ui_components": [
+        "src/ui/decision-csv-upload.tsx",
+        "src/ui/decision-creation-form.tsx",
+        "src/ui/decision-acceptance-modal.tsx"
+      ],
+      "page_components": [
+        "src/app/(authenticated)/settings/page.tsx",
+        "src/app/(authenticated)/users/page.tsx"
+      ],
+      "component_files": [
+        "src/components/OperatorItem.tsx"
+      ],
+      "api_routes": [
+        "src/app/api/report/route.ts",
+        "src/app/api/public/kpis/route.ts",
+        "src/app/api/public/engagements/route.ts",
+        "src/app/api/public/actions/route.ts",
+        "src/app/api/owner/dashboard/route.ts",
+        "src/app/api/owner/config/route.ts",
+        "src/app/api/operator/queue/route.ts",
+        "src/app/api/operator/my-day/route.ts",
+        "src/app/api/growth/unit-economics/route.ts",
+        "src/app/api/growth/sales-pipeline/route.ts",
+        "src/app/api/growth/revenue-streams/route.ts",
+        "src/app/api/growth/retention-metrics/route.ts",
+        "src/app/api/growth/pricing-tiers/route.ts",
+        "src/app/api/growth/offers/route.ts",
+        "src/app/api/growth/acquisition-metrics/route.ts",
+        "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/route.ts",
+        "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
+        "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
+        "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts"
+      ],
+      "utility_files": [
+        "src/lib/shared-error-extractor.ts"
+      ]
+    }
+  },
+
+  "estimated_actual_work": {
+    "pattern_1_effort": "6 min (4 lines in 3 files, same pattern)",
+    "pattern_2_effort": "3 min (3 lines in 1 file, same pattern)",
+    "pattern_3_effort": "6 min (2 lines in 2 files, same pattern)",
+    "pattern_4_effort": "60 min (27 lines in 17 files, same pattern but distributed)",
+    "pattern_5_effort": "5 min (2 lines in 1 file, same pattern)",
+    "total_effort": "80 min",
+    "effort_breakdown": "Pattern 4 (API routes) is 75% of effort due to distribution across 17 files, not complexity"
+  },
+
+  "deployment_state": "BLOCKED_BY_38_REAL_DEFECTS → R29 execution will reduce to 0 defects in 80 minutes",
+
+  "optimization_note": "All 38 defects collapse into 5 unique fix patterns. Each pattern has identical shared_fix logic that can be applied uniformly. No custom fixes required. R29 can execute systematically: apply Pattern 1-2-3-5 (16 violations, 12 files, 20 min), then apply Pattern 4 (27 violations, 17 files, 60 min)."
+}
