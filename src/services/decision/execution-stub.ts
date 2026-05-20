@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
+import type { ServiceCapabilityContext } from "@/lib/auth-guard";
 
 /**
  * Execution stub - placeholder for actual decision implementation
@@ -8,7 +9,8 @@ import { logAuditEvent } from "@/services/audit/audit-log";
 export async function executeDecisionStub(
   decisionId: string,
   workspaceId: string,
-  userId: string
+  userId: string,
+  context?: ServiceCapabilityContext
 ): Promise<{
   success: boolean;
   message: string;
@@ -75,6 +77,7 @@ export async function executeDecisionStub(
       timestamp: executedAt.toISOString(),
     },
     workspaceId,
+    context,
   }).catch((err: unknown) => {
     console.error(
       `Audit logging failed: ${err instanceof Error ? err.message : String(err)}`

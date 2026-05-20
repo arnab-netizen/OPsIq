@@ -11,6 +11,7 @@ export async function executeDecisionAction(
   workspaceId: string,
   userId: string,
   action: "approve" | "reject" | "override",
+  context?: ServiceCapabilityContext,
   overrideReason?: string
 ) {
   // Fetch current decision state
@@ -77,6 +78,7 @@ export async function executeDecisionAction(
       timestamp: new Date().toISOString(),
     },
     workspaceId,
+    context,
   }).catch((err: unknown) => {
     console.error(
       `Audit logging failed: ${err instanceof Error ? err.message : String(err)}`

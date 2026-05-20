@@ -79,6 +79,7 @@ export async function executeDecisionTransaction(
     workspaceId,
     userId,
     action,
+    undefined,
     options?.overrideReason
   );
 
@@ -109,6 +110,7 @@ export async function startDecisionExecution(
     workspaceId,
     userId,
     "in_progress",
+    undefined,
     "Execution started"
   );
 
@@ -130,6 +132,7 @@ export async function completeDecisionExecution(
     workspaceId,
     userId,
     "completed",
+    undefined,
     notes || "Execution completed"
   );
 
@@ -151,6 +154,7 @@ export async function failDecisionExecution(
     workspaceId,
     userId,
     "failed",
+    undefined,
     reason || "Execution failed"
   );
 

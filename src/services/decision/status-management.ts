@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
+import type { ServiceCapabilityContext } from "@/lib/auth-guard";
 
 /**
  * Decision status enum
@@ -122,6 +123,7 @@ export async function changeDecisionStatus(
   workspaceId: string,
   userId: string,
   newStatus: string,
+  context?: ServiceCapabilityContext,
   metadata?: Record<string, any>
 ): Promise<{
   success: boolean;
@@ -192,6 +194,7 @@ export async function changeDecisionStatus(
       ...metadata,
     },
     workspaceId,
+    context,
   }).catch((err: unknown) => {
     console.error(
       `Audit logging failed: ${err instanceof Error ? err.message : String(err)}`

@@ -392,6 +392,7 @@ export function evaluateAuthState(
   } = {}
 ): AuthDecision {
   const trace: AuthDecisionTrace = {
+    decision: "allow",
     reason: "",
     checks: [],
   };

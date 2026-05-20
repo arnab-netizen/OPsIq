@@ -6,6 +6,7 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
 } from '@/lib/operator-error-governance';
+import { operatorTelemetry } from '@/infra/operator-telemetry';
 
 interface MyDayResponse {
   items: OperatorItem[];

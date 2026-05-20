@@ -7,6 +7,7 @@
 
 import { logger } from "@/infra/logger";
 import { randomUUID } from "crypto";
+import { createWebhookSignature } from "@/domain/webhooks/webhook-contracts";
 
 // In-memory webhook store
 const webhookStore = {

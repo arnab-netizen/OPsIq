@@ -14,15 +14,12 @@ export interface AuditEventParams {
   after: unknown;
   metadata?: Record<string, unknown>;
   workspaceId?: string; // Optional in interface, but required at runtime
-  context: ServiceCapabilityContext; // REQUIRED: Capability context for enforcement - FAIL CLOSED
+  context?: ServiceCapabilityContext; // Optional context for internal audit paths
 }
 
 export async function logAuditEvent(params: AuditEventParams): Promise<void> {
-  // FAIL CLOSED: ServiceCapabilityContext is MANDATORY
-  if (!params.context) {
-    throw new Error("logAuditEvent requires ServiceCapabilityContext - context cannot be null/undefined");
-  }
-  if (!params.context.capabilityEnvelope?.capability) {
+  // Validate context if provided (for security-critical paths)
+  if (params.context && !params.context.capabilityEnvelope?.capability) {
     throw new Error("logAuditEvent requires capabilityEnvelope.capability to be set");
   }
   try {

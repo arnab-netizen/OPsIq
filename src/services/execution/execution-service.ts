@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
-import { emitAuditEvent } from "@/infra";
+import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { recordDecisionMetrics } from "@/services/metrics/decision-metrics-service";
 import { logger } from "@/infra/logger";

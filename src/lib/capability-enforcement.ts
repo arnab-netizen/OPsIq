@@ -17,6 +17,7 @@ import type { CanonicalAuthContext } from "./canonical-route-enforcement";
 import type { CapabilityName } from "@/domain/constants/capabilities";
 import { hasCapability, type PolicyContext } from "@/policies/capability-check";
 import { ForbiddenError } from "@/infra/errors";
+import type { ServiceCapabilityContext, CapabilityEnvelope } from "@/lib/auth-guard";
 
 /**
  * BYPASS DETECTION HELPER
@@ -29,7 +30,7 @@ import { ForbiddenError } from "@/infra/errors";
 export function getCapabilityEnvelope(
   context: ServiceCapabilityContext | undefined
 ): CapabilityEnvelope | undefined {
-  return context?.capability;
+  return context?.capabilityEnvelope;
 }
 
 /**

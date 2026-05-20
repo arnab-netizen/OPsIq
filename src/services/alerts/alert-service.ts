@@ -4,6 +4,7 @@ import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import type { ServiceCapabilityContext } from "@/lib/auth-guard";
 
 export type AlertType = "blocked" | "threshold_breach" | "execution_failure";
 export type AlertChannel = "in_app" | "email";

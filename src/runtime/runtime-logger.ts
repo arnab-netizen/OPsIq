@@ -133,6 +133,7 @@ class RuntimeLogger {
     correlation_id: string,
     workspace_id: string,
     recommendation_id: string,
+    decision: string,
     confidence: number,
   ): void {
     this.log({

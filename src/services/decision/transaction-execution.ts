@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
+import type { ServiceCapabilityContext } from "@/lib/auth-guard";
 
 export type ExecutionStatus =
   | "not_started"
@@ -16,6 +17,7 @@ export async function updateExecutionStatus(
   workspaceId: string,
   userId: string,
   status: ExecutionStatus,
+  context?: ServiceCapabilityContext,
   notes?: string
 ) {
   const decision = await db.operatorItem.findFirst({
@@ -57,6 +59,7 @@ export async function updateExecutionStatus(
       timestamp: new Date().toISOString(),
     },
     workspaceId,
+    context,
   }).catch((err: unknown) => {
     console.error(
       `Audit logging failed: ${err instanceof Error ? err.message : String(err)}`

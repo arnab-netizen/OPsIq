@@ -6,6 +6,7 @@
  * Records audit events for all material operations.
  */
 
+import { randomUUID } from "crypto";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
