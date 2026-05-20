@@ -20,11 +20,11 @@ test.describe('PHASE C: Core Product Workflow Execution', () => {
     await waitForPageReady(page);
 
     // Verify dashboard elements
-    await expect(page.locator('h1, h2')).first().toBeVisible();
+    await expect(page.locator('h1, h2').nth(0)).toBeVisible();
 
     // Check for key sections
-    const hasSidebar = await page.locator('nav, aside').first().isVisible().catch(() => false);
-    const hasMainContent = await page.locator('main, [role="main"]').first().isVisible().catch(() => false);
+    const hasSidebar = await page.locator('nav, aside').nth(0).isVisible().catch(() => false);
+    const hasMainContent = await page.locator('main, [role="main"]').nth(0).isVisible().catch(() => false);
 
     await captureScreenshot(page, 'dashboard-home');
 

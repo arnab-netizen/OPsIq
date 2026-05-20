@@ -1,6 +1,21 @@
 import { test, expect } from '@playwright/test';
 import { TEST_USERS, authenticateUser, waitForPageReady, checkClientHealth, saveTestContext } from './helpers';
 
+interface MemoryMetrics {
+  time: number;
+  memory: number;
+}
+
+interface ErrorMetrics {
+  time: number;
+  error: string;
+}
+
+interface PerformanceMemory {
+  usedJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
 test.describe('PHASE F: Frontend Performance + Memory', () => {
   test.setTimeout(90 * 60 * 1000); // 90 minute timeout for soak test
 
@@ -67,11 +82,12 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
     await waitForPageReady(page);
 
     const memoryBaseline = await page.evaluate(() => {
-      if (performance.memory) {
+      const perfMemory = (performance as any).memory as PerformanceMemory | undefined;
+      if (perfMemory) {
         return {
-          heapUsed: (performance.memory as any).usedJSHeapSize,
-          heapLimit: (performance.memory as any).jsHeapSizeLimit,
-          heapUsagePercent: ((performance.memory as any).usedJSHeapSize / (performance.memory as any).jsHeapSizeLimit) * 100,
+          heapUsed: perfMemory.usedJSHeapSize,
+          heapLimit: perfMemory.jsHeapSizeLimit,
+          heapUsagePercent: (perfMemory.usedJSHeapSize / perfMemory.jsHeapSizeLimit) * 100,
         };
       }
       return null;
@@ -180,16 +196,17 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
 
     const soakMetrics = {
       startTime: Date.now(),
-      memorySnapshots: [],
+      memorySnapshots: [] as MemoryMetrics[],
       navigationCount: 0,
-      errors: [],
+      errors: [] as ErrorMetrics[],
       maxMemoryUsage: 0,
       memoryGrowth: 0,
     };
 
     const startMemory = await page.evaluate(() => {
-      if (performance.memory) {
-        return (performance.memory as any).usedJSHeapSize;
+      const perfMemory = (performance as any).memory as PerformanceMemory | undefined;
+      if (perfMemory) {
+        return perfMemory.usedJSHeapSize;
       }
       return 0;
     });
@@ -223,6 +240,7 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
             }
           }
         } catch (e) {
+          const elapsed = Date.now() - soakMetrics.startTime;
           soakMetrics.errors.push({
             time: elapsed,
             error: e instanceof Error ? e.message : String(e),
@@ -235,8 +253,9 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
       // Check memory every 5 minutes
       if (Date.now() - lastCheckTime > checkInterval) {
         const currentMemory = await page.evaluate(() => {
-          if (performance.memory) {
-            return (performance.memory as any).usedJSHeapSize;
+          const perfMemory = (performance as any).memory as PerformanceMemory | undefined;
+          if (perfMemory) {
+            return perfMemory.usedJSHeapSize;
           }
           return 0;
         });

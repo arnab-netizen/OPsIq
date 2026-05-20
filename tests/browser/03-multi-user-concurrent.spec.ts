@@ -152,11 +152,11 @@ test.describe('PHASE D: Multi-User Concurrent Execution', () => {
     const list2Content = await page2.content();
 
     // Extract engagement IDs or names from both
-    const engagements1 = list1Content.match(/engagement[_-]?id["\']?:\s*["\']?([^"'\s,}]+)/gi) || [];
-    const engagements2 = list2Content.match(/engagement[_-]?id["\']?:\s*["\']?([^"'\s,}]+)/gi) || [];
+    const engagements1: string[] = list1Content.match(/engagement[_-]?id["\']?:\s*["\']?([^"'\s,}]+)/gi) || [];
+    const engagements2: string[] = list2Content.match(/engagement[_-]?id["\']?:\s*["\']?([^"'\s,}]+)/gi) || [];
 
     // Lists should be different (users have different data)
-    const overlap = engagements1.filter((e) => engagements2.includes(e));
+    const overlap = engagements1.filter((e: string) => engagements2.includes(e));
 
     concurrencyMetrics.push({
       scenario: 'tenant-isolation',
@@ -247,7 +247,7 @@ test.describe('PHASE D: Multi-User Concurrent Execution', () => {
     expect(health2.healthy).toBe(true);
 
     // Both should be on same state
-    expect(page1.url().pathname).toBe(page2.url().pathname);
+    expect(new URL(page1.url()).pathname).toBe(new URL(page2.url()).pathname);
 
     concurrencyMetrics.push({
       scenario: 'concurrent-tab-refresh',
