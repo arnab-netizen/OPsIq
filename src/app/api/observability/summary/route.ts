@@ -1,3 +1,10 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import type { NextRequest } from "next/server";
@@ -42,7 +49,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     workspaceId: workspace.workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only
-    logger.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
+    logger.error(`Audit logging failed: ${getSafeErrorMessage(auditError)}`);
   });
 
   logger.success({

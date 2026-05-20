@@ -1,11 +1,11 @@
 /**
  * Shared Error Message Extractor
  *
- * Replaces the common anti-pattern:
- *   err instanceof Error ? err.message : "fallback"
+ * Provides operator-safe error handling by routing all errors through
+ * classifyOperatorError() governance layer. Never expose raw error.message.
  *
- * With operator-safe error handling:
- *   extractOperatorMessage(err, "fallback", context)
+ * Usage:
+ *   extractOperatorMessage(err, "fallback", context) — recommended
  */
 
 import {

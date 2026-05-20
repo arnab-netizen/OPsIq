@@ -1,3 +1,10 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
@@ -262,7 +269,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     workspaceId: workspace.workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only
-    console.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
+    console.error(`Audit logging failed: ${getSafeErrorMessage(auditError)}`);
   });
 
   return metrics;
