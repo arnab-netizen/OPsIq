@@ -34,7 +34,7 @@ const revokeRoleSchema = z.object({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const { userId } = params;
     parseOrThrow(uuidSchema, userId);
 
@@ -53,7 +53,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },
@@ -119,7 +119,7 @@ export const DELETE = withEnforcementFull(async (request, auditContext, context,
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },

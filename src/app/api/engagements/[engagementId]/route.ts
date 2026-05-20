@@ -39,7 +39,7 @@ const updateEngagementSchema = z.object({
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
 
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const { engagementId } = params;
     parseOrThrow(uuidSchema, engagementId);
 

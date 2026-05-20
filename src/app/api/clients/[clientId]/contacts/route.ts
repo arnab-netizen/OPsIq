@@ -24,7 +24,7 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { clientId } = params;
     parseOrThrow(uuidSchema, clientId);
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     const contacts = await getContactsForClient(clientId, workspaceId);
     return Response.json({ contacts });
@@ -36,7 +36,7 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { clientId } = params;
     parseOrThrow(uuidSchema, clientId);
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {

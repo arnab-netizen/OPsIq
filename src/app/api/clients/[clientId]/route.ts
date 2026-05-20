@@ -34,7 +34,7 @@ const archiveSchema = z.object({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
     const { clientId } = params;
     parseOrThrow(uuidSchema, clientId);
 
@@ -66,7 +66,7 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { clientId } = params;
     parseOrThrow(uuidSchema, clientId);
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const workspaceId = nextRequest.headers.get("x-workspace-id");
 
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {
