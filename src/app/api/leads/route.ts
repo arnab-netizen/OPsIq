@@ -2,6 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createLead, listLeads } from "@/services/lead";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
@@ -45,6 +46,10 @@ export const POST = withCanonicalEnforcement(
       throw new UnauthorizedError("idempotency-key header required");
     }
 
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.LEAD_CREATE,
+    });
+
     const body = await parseRequestBody(ctx.request!, createLeadSchema);
 
     // Check idempotency
@@ -52,6 +57,7 @@ export const POST = withCanonicalEnforcement(
       idempotencyKey,
       operationName: "createLead",
       actorId: ctx.verifiedActorId,
+      workspaceId,
       payload: body,
     });
 
@@ -68,5 +74,5 @@ export const POST = withCanonicalEnforcement(
       await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
       throw error;
     }
-  }, auditContext, { requireCapabilities: ["LEAD_CREATE"], requireWorkspace: true }
+  }, { requireCapabilities: ["LEAD_CREATE"], requireWorkspace: true }
 );

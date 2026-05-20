@@ -258,6 +258,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
         overallBlockRate: metrics.summary.overallBlockRate,
       },
     },
+    context: auditContext,
     workspaceId: workspace.workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only

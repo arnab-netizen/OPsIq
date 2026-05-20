@@ -1,6 +1,7 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import type { NextRequest } from "next/server";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { logAuditEvent } from "@/services/audit/audit-log";
@@ -20,6 +21,10 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   const summary = await getObservabilitySummary(workspace.workspaceId);
 
   // Log audit event for observability access
+  const auditContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.OWNER_VIEW,
+  });
+
   await logAuditEvent({
     eventName: "OBSERVABILITY_SUMMARY_ACCESSED",
     entityType: "ObservabilitySummary",
@@ -33,6 +38,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       last24h_events: summary.period.last24h.lifecycleCounts.reduce((sum, c) => sum + c.count, 0),
       last7d_events: summary.period.last7d.lifecycleCounts.reduce((sum, c) => sum + c.count, 0),
     },
+    context: auditContext,
     workspaceId: workspace.workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only

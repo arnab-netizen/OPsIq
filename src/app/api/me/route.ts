@@ -1,9 +1,10 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
+import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getRolesForUser } from "@/services/role-assignment";
 import { getMembershipsForUser } from "@/services/engagement-membership";
 import { highestRole } from "@/policies/capability-check";
 import { hasInternalAccess } from "@/policies/capability-check";
-import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {

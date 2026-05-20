@@ -169,6 +169,7 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
         pendingCount: pendingDecisions.length,
       },
     },
+    context: auditContext,
     workspaceId: workspace.workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only

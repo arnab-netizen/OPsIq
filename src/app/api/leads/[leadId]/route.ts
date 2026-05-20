@@ -96,12 +96,17 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   const { leadId } = params;
   parseOrThrow(uuidSchema, leadId);
 
+  const auditContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.LEAD_UPDATE,
+  });
+
   const body = await parseRequestBody(request, linkLeadSchema);
 
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "linkLeadToEngagement",
     actorId: session.user.id,
+    workspaceId,
     payload: { leadId, engagementId: body.engagementId, clientId: body.clientId },
   });
 
@@ -121,7 +126,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
     );
 
     const updated = await getLeadById(leadId, workspaceId);
-    await recordIdempotencyResponse(idempotencyKey, 200, updated, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+    await recordIdempotencyResponse(idempotencyKey, 200, updated, auditContext, workspaceId);
     return Response.json(updated);
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
