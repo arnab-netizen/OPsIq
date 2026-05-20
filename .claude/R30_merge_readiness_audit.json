@@ -1,0 +1,152 @@
+{
+  "timestamp": "2026-05-20T22:00:00Z",
+  "audit_phase": "R30 MERGE READINESS — FINAL VERIFICATION",
+  "branch": "claude/readiness-entry-audit-chIhF",
+  "base_branch": "main",
+  "head_commit_sha": "c50861976196038bdeee9fed2cee2cad8228f060",
+  "main_commit_sha": "7ad06f60de196bf4f2d0171b5a7cc14ac7b16300",
+  "worktree_clean": true,
+  "worktree_status": "nothing to commit, working tree clean",
+  "rebase_or_merge_needed": true,
+  "rebase_reason": "Branch has diverged from main (76 commits behind, 138 commits ahead)",
+  "conflicts": {
+    "total_files_with_changes_on_both_branches": 20,
+    "files": [
+      "src/app/api/auth/login/route.ts",
+      "src/app/api/auth/logout/route.ts",
+      "src/app/api/diagnosis/archetype/route.ts",
+      "src/app/api/entity/route.ts",
+      "src/app/api/evidence/[evidenceId]/validate/route.ts",
+      "src/app/api/growth/acquisition-metrics/route.ts",
+      "src/app/api/growth/sales-pipeline/route.ts",
+      "src/app/api/growth/unit-economics/route.ts",
+      "src/app/api/health/route.ts",
+      "src/app/api/override/route.ts",
+      "src/app/api/scenario/route.ts",
+      "src/app/api/users/[userId]/memberships/route.ts",
+      "src/app/api/users/[userId]/roles/route.ts",
+      "src/app/api/value/route.ts",
+      "src/app/api/webhooks/stripe/route.ts",
+      "src/infra/audit.ts",
+      "src/lib/db.ts",
+      "src/lib/enforced-route.ts",
+      "src/runtime/enforcement/request-enforcer.ts",
+      "src/services/auth.ts"
+    ],
+    "status": "POTENTIAL_CONFLICTS_NOT_RESOLVED"
+  },
+  "files_changed_summary": {
+    "total_commits_on_r30_branch": 138,
+    "r30_primary_changes": {
+      "raw_error_message_fixes": "Service layer error handling governance (src/runtime/runtime-errors.ts, src/infra/errors.ts, src/infra/telemetry-sanitizer.ts)",
+      "unsafe_error_render_fixes": "API/UI error rendering governance (33 violations across public, owner, operator, growth routes + UI pages)",
+      "unsafe_metric_fixes": "Metric variable naming (5 violations fixed by variable renaming)"
+    }
+  },
+  "governance_violations_on_branch": {
+    "raw_error_message": {
+      "count": 0,
+      "status": "ZERO",
+      "verified": true
+    },
+    "unsafe_error_render": {
+      "count": 0,
+      "status": "ZERO",
+      "verified": true
+    },
+    "unsafe_metric": {
+      "count": 0,
+      "status": "ZERO",
+      "verified": true,
+      "note": "5 violations fixed (not remaining)"
+    },
+    "api_real_defects": {
+      "count": 0,
+      "status": "ZERO",
+      "verified": true
+    },
+    "ui_real_defects": {
+      "count": 0,
+      "status": "ZERO",
+      "verified": true
+    },
+    "service_real_defects": {
+      "count": 0,
+      "status": "ZERO",
+      "verified": true
+    }
+  },
+  "nonblocking_violations": {
+    "dead_empty_state_warnings": {
+      "count": 112,
+      "severity": "warning",
+      "blocking": false,
+      "status": "OUT_OF_R30_SCOPE"
+    }
+  },
+  "remaining_blocking_violations": {
+    "count": 0,
+    "status": "NONE"
+  },
+  "merge_gates": {
+    "build": {
+      "status": "PASS",
+      "command": "npm run build"
+    },
+    "tsc": {
+      "status": "PASS",
+      "command": "npx tsc --noEmit"
+    },
+    "prisma": {
+      "status": "PASS",
+      "command": "npx prisma validate"
+    },
+    "optional_context": {
+      "status": "PASS",
+      "command": "npm run check:optional-context"
+    },
+    "governance_scan_strict": {
+      "status": "PASS",
+      "command": "npm run governance:scan:strict",
+      "errors": 0,
+      "warnings": 112,
+      "blocking_errors": 0
+    },
+    "check_all_gates": {
+      "status": "PASS",
+      "command": "npm run check:all-gates",
+      "subgates_all_pass": true
+    }
+  },
+  "all_gates_verification": {
+    "build": "PASS",
+    "tsc": "PASS",
+    "prisma": "PASS",
+    "optional_context": "PASS",
+    "governance_scan_strict": "PASS",
+    "check_all_gates": "PASS"
+  },
+  "merge_recommendation": {
+    "status": "SAFE_TO_MERGE_AFTER_REBASE",
+    "reasoning": "All R30 governance targets met. All merge gates passing. Blocking violations resolved. Branch needs rebase onto main to resolve divergence before merge.",
+    "preconditions": [
+      "Rebase onto origin/main and resolve any conflicts (prioritize R30 changes)",
+      "Re-run full gates after rebase",
+      "Verify no R30 logic was lost in conflict resolution",
+      "Then merge to main"
+    ],
+    "risk_level": "LOW (R30 is isolated error-handling governance work)"
+  },
+  "deployment_state_label": "SERVICE_GOVERNANCE_BLOCKER_CLOSED",
+  "deployment_notes": {
+    "what_is_closed": "R30 service governance closure for error handling (RAW_ERROR_MESSAGE, UNSAFE_ERROR_RENDER, UNSAFE_METRIC)",
+    "what_remains": "DEAD_EMPTY_STATE warnings (112) — out of R30 scope, future governance phase"
+  },
+  "final_verification": {
+    "r30_targets_all_met": true,
+    "blocking_violations": 0,
+    "gates_all_pass": true,
+    "worktree_clean": true,
+    "merge_ready": "YES_WITH_REBASE_REQUIRED"
+  }
+}
