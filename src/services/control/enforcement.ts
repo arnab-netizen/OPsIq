@@ -240,6 +240,6 @@ export function createControlledRecommendationGenerator(
       throw verification.error;
     }
 
-    return generateFn(decision, patterns, items, inputVariables, scenarios);
+    return generateFn(patterns, items, inputVariables, scenarios);
   };
 }

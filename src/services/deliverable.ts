@@ -52,7 +52,6 @@ export async function createDeliverable(
     actorId: auth.verifiedActorId,
     workspaceId: auth.verifiedWorkspaceId,
     capability: "DELIVERABLE_CREATE",
-    requestId: auth.requestId,
     entityType: "deliverable",
     entityId: deliverable.id,
     payload: {
@@ -143,7 +142,6 @@ export async function updateDeliverableReviewStatus(
     actorId: auth.verifiedActorId,
     workspaceId: auth.verifiedWorkspaceId,
     capability: "DELIVERABLE_APPROVE",
-    requestId: auth.requestId,
     entityType: "deliverable",
     entityId: deliverableId,
     payload: {

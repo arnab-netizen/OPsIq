@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import {
   DecisionState,
   requireTransitionAllowed,
@@ -291,7 +292,8 @@ export async function executeDecision(
 
     if (idempotencyKey) {
       const { recordIdempotencyResponse } = await import("@/services/idempotency");
-      await recordIdempotencyResponse(idempotencyKey, 200, result);
+      const context = createServiceCapabilityContext({ capability: "DECISION_EXECUTE" });
+      await recordIdempotencyResponse(idempotencyKey, 200, result, context, workspaceId);
     }
 
     return result;
@@ -299,7 +301,8 @@ export async function executeDecision(
     if (idempotencyKey) {
       const { recordIdempotencyError } = await import("@/services/idempotency");
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      const context = createServiceCapabilityContext({ capability: "DECISION_EXECUTE" });
+      await recordIdempotencyError(idempotencyKey, err, context, workspaceId);
     }
     throw error;
   }

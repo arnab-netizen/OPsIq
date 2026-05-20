@@ -76,7 +76,7 @@ export async function createAction(
   workspaceId: string,
   idempotencyKey?: string
 ) {
-  const capabilityValidated = context.capabilityEnvelope?.capability;
+  const capabilityValidated = authContext.verifiedCapabilities.has('ACTION_CREATE');
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const engagement = await db.engagement.findUnique({

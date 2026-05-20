@@ -610,7 +610,7 @@ function generateActionPlan(category: string, severity: string): ActionPlanItem[
 // ─── Main Diagnosis Function ───────────────────────────────────────────────
 
 export async function diagnoseBusiness(input: BusinessProblemInput, authContext: CanonicalAuthContext, workspaceId: string): Promise<DiagnosisResult> {
-  const capabilityValidated = context.capabilityEnvelope?.capability;
+  const capabilityValidated = authContext.verifiedCapabilities.has('DIAGNOSIS_CREATE');
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
   enforceWorkspaceId(validatedWorkspaceId, "diagnoseBusiness", "diagnosis");
 
