@@ -4,12 +4,18 @@ import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const PROCESSING_TIMEOUT_MS = 30000; // 30 seconds
 const STALE_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const RETRY_ALERT_THRESHOLD = 3; // Alert when attempts >= 3
 const MAX_ATTEMPTS = 5; // Move to dead-letter after 5 attempts
 const SIGNATURE_TIMESTAMP_TOLERANCE_S = 300; // 5 minutes
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface StripeSubscriptionEvent {
   id: string;
@@ -69,7 +75,7 @@ export async function verifyWebhookSignature(
     return { event, timestamp };
   } catch (error) {
     logger.error("Webhook signature verification failed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw new Error("Webhook signature verification failed");
   }
@@ -135,13 +141,13 @@ export async function recoverStaleProcessingEvents(): Promise<void> {
       } catch (error) {
         logger.error("Failed to recover stale event", {
           stripeEventId: event.stripeEventId,
-          error: error instanceof Error ? error.message : String(error),
+          error: getSafeErrorMessage(error),
         });
       }
     }
   } catch (error) {
     logger.error("Stale processing recovery failed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
   }
 }
@@ -272,7 +278,7 @@ export async function getOrCreateWebhookEvent(
   } catch (error) {
     logger.error("Failed to get or create webhook event", {
       stripeEventId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
@@ -358,7 +364,7 @@ async function syncEntitlementsForSubscription(
   } catch (error) {
     logger.error("Failed to sync entitlements", {
       workspaceId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
@@ -403,7 +409,7 @@ async function checkEventOrdering(
   } catch (error) {
     logger.error("Event ordering check failed", {
       stripeEventId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
   }
 }
@@ -442,7 +448,7 @@ async function checkRetryThreshold(stripeEventId: string, attempts: number, type
   } catch (error) {
     logger.error("Retry threshold check failed", {
       stripeEventId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
   }
 }
@@ -465,7 +471,7 @@ export async function markWebhookEventProcessed(stripeEventId: string): Promise<
   } catch (error) {
     logger.error("Failed to mark webhook event as processed", {
       stripeEventId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
@@ -550,7 +556,7 @@ async function handleCheckoutSessionCompleted(event: StripeCheckoutSessionEvent)
     });
   } catch (error) {
     logger.error("Failed to handle checkout.session.completed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
@@ -607,7 +613,7 @@ async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent)
     });
   } catch (error) {
     logger.error("Failed to handle customer.subscription.created", {
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
@@ -644,7 +650,7 @@ async function handleCustomerSubscriptionDeleted(event: StripeSubscriptionEvent)
     });
   } catch (error) {
     logger.error("Failed to handle customer.subscription.deleted", {
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
