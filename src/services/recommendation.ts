@@ -530,7 +530,6 @@ export async function createRecommendation(
     entityId: recommendation.id,
     workspaceId: validatedWorkspaceId,
     capability: 'RECOMMENDATION_CREATE',
-    decision: 'recommendation_created',
     requestId: authContext?.requestId,
     payload: {
       engagementId: input.engagementId,
@@ -931,9 +930,6 @@ export async function updateRecommendationStatus(
     entityType: "recommendation",
     entityId: recommendationId,
     workspaceId: validatedWorkspaceId,
-    capability: 'mutation',
-    decision: 'recommendation_approved',
-    requestId: randomUUID(),
     payload: {
       status: input.status,
     },
@@ -1002,9 +998,6 @@ export async function updateRecommendationPriorityFromScore(
     entityType: "recommendation",
     entityId: recommendationId,
     workspaceId: validatedWorkspaceId,
-    capability: 'mutation',
-    decision: 'recommendation_approved',
-    requestId: randomUUID(),
     payload: {
       score,
       priority: newPriority,
@@ -1230,8 +1223,6 @@ export async function updateRecommendation(
     workspaceId: validatedWorkspaceId,
     payload: updates,
     visibility: 'internal',
-    capability: 'mutation',
-    decision: 'recommendation_updated',
     requestId: randomUUID()
   });
 

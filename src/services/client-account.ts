@@ -74,7 +74,6 @@ export async function createClient(
     actorId,
     workspaceId: validatedWorkspaceId,
     capability: 'CLIENT_CREATE',
-    decision: 'client_account_created',
     requestId: authContext?.requestId,
     entityType: "client_account",
     entityId: result.result.id,
@@ -130,8 +129,6 @@ export async function updateClient(
     workspaceId: validatedWorkspaceId,
     payload: data,
     visibility: 'internal',
-    capability: 'mutation',
-    decision: 'client_updated',
     requestId: randomUUID()
   });
 
@@ -175,8 +172,6 @@ export async function archiveClient(
     entityId: clientId,
     workspaceId: validatedWorkspaceId,
     visibility: 'internal',
-    capability: 'mutation',
-    decision: 'client_archived',
     requestId: randomUUID()
   });
 

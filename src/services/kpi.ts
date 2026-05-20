@@ -64,9 +64,6 @@ export async function createKPI(
               name: input.name,
             },
             visibility: "internal",
-    capability: 'mutation',
-    decision: 'k_p_i__d_e_f_i_n_e_d',
-    requestId: randomUUID(),
 
           });
 
@@ -114,9 +111,6 @@ export async function createKPI(
       name: input.name,
     },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 'k_p_i__d_e_f_i_n_e_d',
-    requestId: randomUUID(),
 
   });
 
@@ -232,9 +226,6 @@ export async function updateKPIValue(
                   direction: kpi.direction,
                 },
                 visibility: "internal",
-    capability: 'mutation',
-    decision: 'k_p_i__d_e_t_e_r_i_o_r_a_t_e_d',
-    requestId: randomUUID(),
 
               });
             }
@@ -251,9 +242,6 @@ export async function updateKPIValue(
               deteriorated,
             },
             visibility: "internal",
-    capability: 'mutation',
-    decision: 'k_p_i__s_n_a_p_s_h_o_t__r_e_c_o_r_d_e_d',
-    requestId: randomUUID(),
 
           });
 
@@ -330,9 +318,6 @@ export async function updateKPIValue(
           direction: kpi.direction,
         },
         visibility: "internal",
-    capability: 'mutation',
-    decision: 'k_p_i__d_e_t_e_r_i_o_r_a_t_e_d',
-    requestId: randomUUID(),
 
       });
     }
@@ -349,9 +334,6 @@ export async function updateKPIValue(
       deteriorated,
     },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 'k_p_i__s_n_a_p_s_h_o_t__r_e_c_o_r_d_e_d',
-    requestId: randomUUID(),
 
   });
 

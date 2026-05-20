@@ -167,7 +167,6 @@ export async function createEvidence(
     actorId: userId,
     workspaceId: validatedWorkspaceId,
     capability: 'EVIDENCE_SUBMIT',
-    decision: 'evidence_submitted',
     requestId: authContext?.requestId,
     entityType: "evidence",
     entityId: result.result.id,
@@ -259,8 +258,6 @@ export async function updateEvidence(
     workspaceId: validatedWorkspaceId,
     payload: data,
     visibility: 'internal',
-    capability: 'mutation',
-    decision: 'evidence_submitted',
     requestId: randomUUID()
   });
 
@@ -516,8 +513,6 @@ export async function validateEvidence(
       engagementId: evidence.engagementId,
     },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 'evidence_validated',
     requestId: randomUUID()
   });
 
@@ -580,8 +575,6 @@ export async function createEvidenceBundle(
       title: input.title,
     },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 'evidence_bundle_created',
     requestId: randomUUID()
   });
 
@@ -675,8 +668,6 @@ export async function addEvidenceToBundle(
       evidenceId: input.evidenceItemId,
     },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 'evidence_bundle_item_added',
     requestId: randomUUID()
   });
 
@@ -719,8 +710,6 @@ export async function removeEvidenceFromBundle(
       evidenceId: item.evidenceId,
     },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 'evidence_bundle_item_removed',
     requestId: randomUUID()
   });
 
@@ -762,8 +751,6 @@ export async function updateEvidenceBundle(
     workspaceId: validatedWorkspaceId,
     payload: updates,
     visibility: 'internal',
-    capability: 'mutation',
-    decision: 'evidence_bundle_updated',
     requestId: randomUUID()
   });
 

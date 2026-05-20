@@ -529,9 +529,6 @@ export async function generateAndStoreReport(
       reportType: "engagement_report",
     },
     visibility,
-    capability: 'mutation',
-    decision: 'd_e_l_i_v_e_r_a_b_l_e__g_e_n_e_r_a_t_e_d',
-    requestId: randomUUID(),
 
   });
 

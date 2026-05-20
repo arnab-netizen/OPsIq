@@ -69,7 +69,6 @@ export async function createStage(
     actorId,
     workspaceId: validatedWorkspaceId,
     capability: 'STAGE_CREATE',
-    decision: 'stage_created',
     requestId: authContext?.requestId,
     entityType: "stage",
     entityId: stage.id,
@@ -166,9 +165,6 @@ export async function updateStage(
         toStatus: input.status,
       },
       visibility: "internal",
-    capability: 'mutation',
-    decision: 's_t_a_g_e__t_r_a_n_s_i_t_i_o_n_e_d',
-    requestId: randomUUID(),
 
     });
   }
@@ -180,9 +176,6 @@ export async function updateStage(
       entityType: "stage",
       entityId: id,
       workspaceId: stage.engagement.workspaceId,
-      capability: \'mutation\',
-      decision: \'stage_transitioned\',
-      requestId: randomUUID(),
       payload: {
         title: input.title,
         description: input.description,
@@ -240,8 +233,6 @@ export async function blockStage(
       entityType: "engagement",
       entityId: stage.engagementId,
       workspaceId: stage.engagement.workspaceId,
-      capability: \'mutation\',
-      decision: \'stage_updated\',
       requestId: randomUUID(),
       payload: {
         blockerReason: input.blockerReason,
@@ -257,8 +248,6 @@ export async function blockStage(
     entityType: "stage",
     entityId: id,
     workspaceId: stage.engagement.workspaceId,
-      capability: \'mutation\',
-      decision: \'engagement_blocked\',
       requestId: randomUUID(),
     payload: {
       engagementId: stage.engagementId,
@@ -329,8 +318,6 @@ export async function unblockStage(
       entityType: "engagement",
       entityId: stage.engagementId,
       workspaceId: stage.engagement.workspaceId,
-      capability: \'mutation\',
-      decision: \'stage_blocked\',
       requestId: randomUUID(),
       payload: {},
       visibility: "internal",
@@ -347,9 +334,6 @@ export async function unblockStage(
       engagementId: stage.engagementId,
     },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 's_t_a_g_e__u_n_b_l_o_c_k_e_d',
-    requestId: randomUUID(),
 
   });
 

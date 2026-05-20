@@ -7,7 +7,6 @@ import type { OperatorItem } from "@/domain/operator/types";
 
 describe("Recommendation Engine - Phase 4 Control 6", () => {
   const mockDecisionResult: DecisionResult = {
-    decision: "APPROVED",
     expectedImpact: 100000,
     confidence: 0.8,
     explanation: {

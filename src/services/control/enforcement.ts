@@ -222,7 +222,6 @@ export function enforceControlLayer(
  */
 export function createControlledRecommendationGenerator(
   generateFn: (
-    decision: any,
     patterns: any[],
     items: any[],
     inputVariables?: Record<string, unknown>,
@@ -230,7 +229,6 @@ export function createControlledRecommendationGenerator(
   ) => any
 ) {
   return (
-    decision: any,
     patterns: any[],
     items: any[],
     inputVariables?: Record<string, unknown>,

@@ -791,7 +791,6 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     actorId,
     workspaceId: validatedWorkspaceId,
     capability: "DIAGNOSIS_CREATE",
-    decision: "diagnosis_completed",
     requestId: authContext?.requestId,
     entityType: "Engagement",
     entityId: engagement.id,

@@ -106,7 +106,6 @@ export interface TelemetryEvent {
     startedAt: number;
     completedAt: number;
     state: string;
-    decision: string;
     terminated: boolean;
   }>;
 

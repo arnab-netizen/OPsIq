@@ -17,24 +17,6 @@ import type { CanonicalAuthContext } from "./canonical-route-enforcement";
 import type { CapabilityName } from "@/domain/constants/capabilities";
 import { hasCapability, type PolicyContext } from "@/policies/capability-check";
 import { ForbiddenError } from "@/infra/errors";
-    await emitAuditEvent({
-      timestamp: new Date(),
-      eventType: "CAPABILITY_CHECK",
-      detail: {
-        actor: params.actor.id,
-        actorType: params.actor.type || "user",
-        workspace: params.workspace.id,
-        capability: params.capability,
-        decision: params.decision,
-        scope: params.scope,
-        trace: params.trace,
-      },
-    });
-  } catch (error) {
-    // Audit failure shouldn't block request
-    console.error("[AUDIT_ERROR] Failed to emit capability audit:", error);
-  }
-}
 
 /**
  * BYPASS DETECTION HELPER

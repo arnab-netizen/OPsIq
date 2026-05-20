@@ -147,8 +147,6 @@ describe("Action Service", () => {
         },
         visibility: "internal",
       capability: 'mutation',
-    decision: 'expect',
-    requestId: randomUUID(),
     };
     });
 

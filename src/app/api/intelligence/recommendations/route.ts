@@ -94,7 +94,6 @@ export const GET = withCanonicalEnforcement(
 
   // Convert decision to DecisionResult format for recommendation
   const decisionResult = {
-    decision: "APPROVED" as const,
     workspaceId: decision.workspaceId,
     ownerUserId: decision.ownerUserId,
     createdBy: decision.createdBy,
@@ -187,11 +186,9 @@ export const GET = withCanonicalEnforcement(
     .slice(0, 2);
 
   const response = {
-    decision: {
-      id: decision.id,
-      problemType: decision.problemType,
-      problem: decision.problem,
-    },
+    id: decision.id,
+    problemType: decision.problemType,
+    problem: decision.problem,
     recommendation,
     alternatives,
     summary: {

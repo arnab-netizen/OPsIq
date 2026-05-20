@@ -173,7 +173,6 @@ export async function createEngagement(
       decision: 'engagement_created',
       requestId: randomUUID(),
     capability: 'ENGAGEMENT_CREATE',
-    decision: 'engagement_created',
     requestId: authContext?.requestId,
     entityType: "engagement",
     entityId: result.result.id,
@@ -262,9 +261,6 @@ export async function updateEngagement(
             blockingDetails: health.details,
           },
           visibility: "internal",
-    capability: 'mutation',
-    decision: 'e_n_g_a_g_e_m_e_n_t__b_l_o_c_k_e_d',
-    requestId: randomUUID(),
 
         });
       } else if (health.status === "at_risk") {
@@ -279,9 +275,6 @@ export async function updateEngagement(
             riskDetails: health.details,
           },
           visibility: "internal",
-    capability: 'mutation',
-    decision: 'r_i_s_k__i_d_e_n_t_i_f_i_e_d',
-    requestId: randomUUID(),
 
         });
       }
@@ -523,9 +516,6 @@ export async function computeNextReviewDate(
         isDueSoon,
       },
       visibility: "internal",
-    capability: 'mutation',
-    decision: 'r_e_v_i_e_w__d_u_e__f_l_a_g_g_e_d',
-    requestId: randomUUID(),
 
     });
 

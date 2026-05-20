@@ -128,7 +128,6 @@ function getContextualErrorMessage(
   context: "decision" | "action" | "form" | "load" | "save" | "network"
 ): string {
   const messages: Record<typeof context, string> = {
-    decision: "Couldn't save your decision. Please try again.",
     action: "Couldn't process this action. Please try again.",
     form: "Couldn't save the form. Please try again.",
     load: "Couldn't load that data. Please refresh and try again.",

@@ -56,9 +56,6 @@ export async function detectHighPriorityOverdueActions(
         actionTitles: criticalOverdueActions.map((a: any) => a.title),
       },
       visibility: "internal",
-    capability: 'mutation',
-    decision: 'e_s_c_a_l_a_t_i_o_n__a_l_e_r_t__h_i_g_h__p_r_i_o_r_i_t_y__o_v_e_r_d_u_e',
-    requestId: randomUUID(),
 
     });
 
@@ -137,9 +134,6 @@ export async function detectKPIDeteriorationPattern(
         kpiIds: deterioratedKPIs,
       },
       visibility: "internal",
-    capability: 'mutation',
-    decision: 'e_s_c_a_l_a_t_i_o_n__a_l_e_r_t__k_p_i__d_e_t_e_r_i_o_r_a_t_i_o_n__p_a_t_t_e_r_n',
-    requestId: randomUUID(),
 
     });
 

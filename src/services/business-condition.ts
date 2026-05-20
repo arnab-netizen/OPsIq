@@ -175,7 +175,6 @@ export async function assessCondition(
     actorId,
     workspaceId: engagement.workspaceId,
     capability: 'CONDITION_ASSESS',
-    decision: 'condition_assessed',
     requestId: authContext?.requestId,
     entityType: "business_condition_profile",
     entityId: result.result.id,

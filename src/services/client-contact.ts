@@ -59,7 +59,6 @@ export async function createContact(
     actorId,
     workspaceId,
     capability: 'CLIENT_CONTACT_CREATE',
-    decision: 'client_contact_created',
     requestId: authContext?.requestId,
     entityType: "client_contact",
     entityId: contact.id,
@@ -113,8 +112,6 @@ export async function deactivateContact(
     workspaceId,
     payload: { clientId: contact.clientId },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 'contact_deactivated',
     requestId: randomUUID()
   });
 
@@ -162,8 +159,6 @@ export async function updateContact(
     workspaceId,
     payload: data,
     visibility: 'internal',
-    capability: 'mutation',
-    decision: 'contact_updated',
     requestId: randomUUID()
   });
 

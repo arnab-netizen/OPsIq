@@ -158,9 +158,6 @@ export async function assignRole(
       scopeId: input.scopeId ?? null,
     },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 'role_assigned',
-    requestId: randomUUID(),
 
   });
 
@@ -246,9 +243,6 @@ export async function revokeRole(
       scopeId: input.scopeId ?? null,
     },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 'role_revoked',
-    requestId: randomUUID(),
 
   });
 

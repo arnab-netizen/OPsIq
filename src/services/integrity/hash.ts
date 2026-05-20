@@ -48,7 +48,6 @@ export function createCanonicalPayload(
   return {
     inputsSnapshot,
     calculationTrace: result.explanation.calculationTrace,
-    decision: result.decision,
     engineVersion: result.engineVersion || ENGINE_VERSION,
     timestamp: timestamp || new Date().toISOString(),
   };
@@ -68,7 +67,6 @@ export function generateDecisionHash(result: DecisionResult): string {
       formula: trace.formula,
       netImpact: trace.netImpact,
     },
-    decision: result.decision,
     version: ENGINE_VERSION,
   };
 

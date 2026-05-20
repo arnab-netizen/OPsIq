@@ -92,7 +92,6 @@ export const POST = withEnforcementFull(async (request) => {
     actorId: user.id,
     workspaceId,
     capability: "login",
-    decision: "login_success",
     requestId: request.headers.get("x-request-id") || `login:${user.id}:${Date.now()}`,
     entityType: "session",
     entityId: session.id,

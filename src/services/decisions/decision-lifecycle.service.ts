@@ -108,8 +108,6 @@ export async function transitionDecisionState(
     entityId: decisionId,
     workspaceId,
     actorId: actorId || undefined,
-    capability: 'mutation',
-    decision: 'decision_transitioned',
     requestId: requestId,
     payload: {
       fromState,
@@ -365,8 +363,6 @@ export async function recordDecisionOutcome(
     entityId: decisionId,
     workspaceId,
     actorId,
-    capability: 'mutation',
-    decision: 'outcome_recorded',
     requestId: requestId,
     payload: {
       fromState: "EXECUTED",

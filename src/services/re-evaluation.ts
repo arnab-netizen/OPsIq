@@ -743,7 +743,6 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       correlationId: event.correlationId,
       payload: auditPayload,
       visibility: 'internal',
-    capability: 'mutation',
     });
 
     return eventId;

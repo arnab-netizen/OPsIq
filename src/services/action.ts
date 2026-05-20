@@ -223,7 +223,6 @@ export async function createAction(
     actorId,
     workspaceId: validatedWorkspaceId,
     capability: 'ACTION_CREATE',
-    decision: 'action_created',
     requestId: authContext?.requestId,
     entityType: "action",
     entityId: action.id,
@@ -359,9 +358,6 @@ export async function updateActionStatus(
       blockageReason: input.blockageReason,
     },
     visibility: "internal",
-    capability: 'mutation',
-    decision: 'a_c_t_i_o_n__u_p_d_a_t_e_d',
-    requestId: randomUUID(),
 
   });
 
@@ -420,9 +416,6 @@ export async function detectOverdueActions(engagementId: string, authContext: Ca
         currentStatus: action.status,
       },
       visibility: "internal",
-    capability: 'mutation',
-    decision: 'a_c_t_i_o_n__o_v_e_r_d_u_e',
-    requestId: randomUUID(),
 
     });
 
@@ -449,9 +442,6 @@ export async function detectOverdueActions(engagementId: string, authContext: Ca
           reason: "overdue",
         },
         visibility: "internal",
-    capability: 'mutation',
-    decision: 'a_c_t_i_o_n__p_r_i_o_r_i_t_y__e_s_c_a_l_a_t_e_d',
-    requestId: randomUUID(),
 
       });
 
@@ -542,9 +532,6 @@ export async function updateAction(
         toStatus: input.status,
       },
       visibility: "internal",
-    capability: 'mutation',
-    decision: 'a_c_t_i_o_n__u_p_d_a_t_e_d',
-    requestId: randomUUID(),
 
     });
   }
@@ -625,9 +612,6 @@ export async function createActionsFromInterventions(
         title: "Consulting Engine Recommendations",
       },
       visibility: "internal",
-    capability: 'mutation',
-    decision: 'r_e_c_o_m_m_e_n_d_a_t_i_o_n__c_r_e_a_t_e_d',
-    requestId: randomUUID(),
 
     });
 

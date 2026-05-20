@@ -160,9 +160,6 @@ export async function runConsultingPipeline(
           status: engineOutput.status,
         },
         visibility: "internal",
-    capability: 'mutation',
-    decision: 'd_i_a_g_n_o_s_i_s__c_o_m_p_l_e_t_e_d',
-    requestId: randomUUID(),
 
       });
 

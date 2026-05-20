@@ -310,7 +310,6 @@ export function formatMetricValue(
 export function getMetricsForContext(context: string): MetricName[] {
   // Different surfaces show different metrics
   const contextMetrics: Record<string, MetricName[]> = {
-    decision: ["confidence", "priority", "impact"],
     action: ["urgency", "complexity", "completionRate"],
     risk: ["riskLevel"],
     engagement: ["priority", "impact", "completionRate"],

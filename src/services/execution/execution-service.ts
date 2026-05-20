@@ -20,7 +20,6 @@ export async function executeDecision(
 
   if (decision.executionStatus !== "pending") {
     throw new Error(
-      `Cannot execute decision: execution status must be 'pending', got '${decision.executionStatus}'`
     );
   }
 
@@ -40,10 +39,7 @@ export async function executeDecision(
           lastUpdatedBy: userId,
           updatedAt: now,
         },
-      capability: 'mutation',
-    decision: 'decision_execution_started',
-    requestId: randomUUID(),
-    };
+    });
 
       if (result.count === 0) {
         throw new Error("Execution lock acquired by another request: decision already transitioning");
@@ -51,14 +47,8 @@ export async function executeDecision(
 
       return tx.operatorItem.findFirst({
         where: { id: decisionId, workspaceId },
-      capability: 'mutation',
-    decision: 'decision_execution_started',
-    requestId: randomUUID(),
-    };
-    capability: 'mutation',
-    decision: 'decision_execution_started',
-    requestId: randomUUID(),
-    };
+    });
+    });
 
     if (!updated) {
       throw new Error("Decision not found after update");
@@ -74,10 +64,7 @@ export async function executeDecision(
         status: "running",
         startedAt: now.toISOString(),
       },
-    capability: 'mutation',
-    decision: 'decision_execution_started',
-    requestId: randomUUID(),
-    };
+    });
 
     return updated;
   } catch (error) {
@@ -129,10 +116,7 @@ export async function markSuccess(
         lastUpdatedBy: userId,
         updatedAt: now,
       },
-    capability: 'mutation',
-    decision: 'decision_execution_started',
-    requestId: randomUUID(),
-    };
+    });
 
     if (result.count === 0) {
       throw new Error("Execution already completed: state has changed since read");
@@ -140,10 +124,7 @@ export async function markSuccess(
 
     return tx.operatorItem.findFirst({
       where: { id: decisionId, workspaceId },
-    capability: 'mutation',
-    decision: 'decision_execution_started',
-    requestId: randomUUID(),
-    };
+    });
   });
 
   if (!updated) {
@@ -163,9 +144,6 @@ export async function markSuccess(
       accuracy: calculatedAccuracy,
       executedAt: now.toISOString(),
     },
-    capability: 'mutation',
-    decision: 'd_e_c_i_s_i_o_n__e_x_e_c_u_t_i_o_n__s_u_c_c_e_s_s',
-    requestId: randomUUID(),
 
   });
 
@@ -180,10 +158,7 @@ export async function markSuccess(
       decisionId,
       workspaceId,
       error: metricsError instanceof Error ? metricsError.message : String(metricsError),
-    capability: 'mutation',
-    decision: 'decision_execution_started',
-    requestId: randomUUID(),
-    };
+    });
   });
 
   return updated;
@@ -231,10 +206,7 @@ export async function markFailure(
         lastUpdatedBy: userId,
         updatedAt: now,
       },
-    capability: 'mutation',
-    decision: 'decision_execution_started',
-    requestId: randomUUID(),
-    };
+    });
 
     if (result.count === 0) {
       throw new Error("Execution already completed: state has changed since read");
@@ -242,10 +214,7 @@ export async function markFailure(
 
     return tx.operatorItem.findFirst({
       where: { id: decisionId, workspaceId },
-    capability: 'mutation',
-    decision: 'decision_execution_started',
-    requestId: randomUUID(),
-    };
+    });
   });
 
   if (!updated) {
@@ -263,9 +232,6 @@ export async function markFailure(
       reason,
       failedAt: now.toISOString(),
     },
-    capability: 'mutation',
-    decision: 'd_e_c_i_s_i_o_n__e_x_e_c_u_t_i_o_n__f_a_i_l_e_d',
-    requestId: randomUUID(),
 
   });
 
@@ -280,10 +246,7 @@ export async function markFailure(
       decisionId,
       workspaceId,
       error: metricsError instanceof Error ? metricsError.message : String(metricsError),
-    capability: 'mutation',
-    decision: 'decision_execution_started',
-    requestId: randomUUID(),
-    };
+    });
   });
 
   return updated;
