@@ -85,15 +85,14 @@ export const POST = withCanonicalEnforcement(
         { ...body, engagementId, workspaceId: ctx.verifiedWorkspaceId },
         ctx
       );
-      await recordIdempotencyResponse(idempotencyKey, 201, result);
+      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       return Response.json(result, { status: 201 });
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       throw error;
     }
-  },
-  {
+  }, auditContext, {
     requireCapabilities: [CAPABILITIES.CONDITION_ASSESS],
     requireWorkspace: true,
   }

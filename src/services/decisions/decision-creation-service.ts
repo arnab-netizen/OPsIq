@@ -128,10 +128,12 @@ export interface BulkCreateResult {
 }
 
 export async function createDecisionsBulk(
-  input: BulkCreateInput
-,
+  input: BulkCreateInput,
   context: ServiceCapabilityContext
 ): Promise<BulkCreateResult> {
+  if (!context || !context.capabilityEnvelope) {
+    throw new Error("createDecisionsBulk requires ServiceCapabilityContext with capabilityEnvelope");
+  }
   const { decisions } = input;
 
   if (!Array.isArray(decisions) || decisions.length === 0) {
@@ -147,7 +149,7 @@ export async function createDecisionsBulk(
 
   for (const decision of decisions) {
     try {
-      const result = await createDecision(decision);
+      const result = await createDecision(decision, context);
       successful.push(result);
     } catch (error) {
       failed.push({

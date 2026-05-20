@@ -2,7 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { runConsultingPipeline } from "@/services/consulting-engine/pipeline";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -88,12 +88,12 @@ export const POST = withEnforcementFull(async (request) => {
         data: { decisionMemo: null, recommendations: [], actions: [] },
         warnings: [],
       };
-      await recordIdempotencyError(idempotencyKey, new Error("Engagement not found"));
-      return Response.json(errorResponse, { status: 404 });
+      await recordIdempotencyError(idempotencyKey, new Error("Engagement not found", auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown"));
+      return Response.json(errorResponse, auditContext, { status: 404 });
     }
 
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
+    await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
     throw error;
   }
 });

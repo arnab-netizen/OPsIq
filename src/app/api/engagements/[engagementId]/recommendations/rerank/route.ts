@@ -34,15 +34,14 @@ export const POST = withCanonicalEnforcement(
 
     try {
       const result = await reRankRecommendationsInEngagement(engagementId, ctx, ctx.verifiedWorkspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 200, result);
+      await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       return Response.json(result);
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       throw error;
     }
-  },
-  {
+  }, auditContext, {
     requireCapabilities: [CAPABILITIES.RECOMMENDATION_APPROVE],
     requireWorkspace: true,
   }

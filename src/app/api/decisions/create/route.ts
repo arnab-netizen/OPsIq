@@ -1,7 +1,7 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { NextRequest } from "next/server";
@@ -18,6 +18,11 @@ import { PlanLimitError, UnauthorizedError, ForbiddenError } from "@/infra/error
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
   const { session } = await withAuth();
+
+  // Create audit context for mutations
+  const auditContext = createServiceCapabilityContext({
+    capability: "mutation",
+  });
 
   // Validate workspace membership (fail-closed)
   const workspaceId = ctx.verifiedWorkspaceId;
@@ -51,7 +56,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         verifiedActorId: userId,  // Verified at route level (session)
       }));
 
-      const result = await createDecisionsBulk({ decisions });
+      const result = await createDecisionsBulk({ decisions }, auditContext);
 
       logger.info("Bulk decisions created via API", {
         workspaceId,
@@ -77,7 +82,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         expectedOutcome,
       };
 
-      const decision = await createDecision(verifiedInput);
+      const decision = await createDecision(verifiedInput, auditContext);
 
       logger.info("Decision created via API", {
         decisionId: decision.id,

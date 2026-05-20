@@ -3,7 +3,7 @@ import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -53,19 +53,18 @@ export const POST = withCanonicalEnforcement(
       }
 
       const result = await createEvidenceBundle(body, ctx, workspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 201, result);
+      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
 
       return Response.json(result, { status: 201 });
     } catch (error) {
       logger.error("Error creating evidence bundle", { error });
       if (ctx.request?.headers.get("idempotency-key")) {
         const err = error instanceof Error ? error : new Error("Unknown error");
-        await recordIdempotencyError(ctx.request.headers.get("idempotency-key")!, err);
+        await recordIdempotencyError(ctx.request.headers.get("idempotency-key")!, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       }
       return errorToResponse(error);
     }
-  },
-  {
+  }, auditContext, {
     requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT],
     requireWorkspace: true,
   }

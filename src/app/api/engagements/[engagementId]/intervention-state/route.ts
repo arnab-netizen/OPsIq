@@ -55,11 +55,11 @@ export const PUT = withCanonicalEnforcement(
 
     try {
       const result = await transitionPhase(engagementId, body.targetPhase, ctx, ctx.verifiedWorkspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 200, result, ctx.verifiedWorkspaceId);
+      await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, ctx.verifiedWorkspaceId, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       return Response.json(result);
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err, ctx.verifiedWorkspaceId);
+      await recordIdempotencyError(idempotencyKey, err, auditContext, ctx.verifiedWorkspaceId, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       throw error;
     }
   },

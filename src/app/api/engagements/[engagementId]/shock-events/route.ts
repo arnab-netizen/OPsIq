@@ -2,7 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -105,11 +105,11 @@ export const POST = withEnforcementFull(async (request, context, params) => {
       { engagementId, ...body },
       canonicalizeAuthContext({ session, policy }, workspaceId)
     );
-    await recordIdempotencyResponse(idempotencyKey, 201, result);
+    await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
     return Response.json(result, { status: 201 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
+    await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
     throw error;
   }
 });

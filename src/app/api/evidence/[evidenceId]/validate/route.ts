@@ -2,7 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { validateEvidence } from "@/services/evidence";
@@ -76,7 +76,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
     await validateEvidence(bodyData, session.user.id, workspaceId);
     const result = { success: true };
-    await recordIdempotencyResponse(idempotencyKey, 200, result);
+    await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
 
     return Response.json(result);
   } catch (error) {

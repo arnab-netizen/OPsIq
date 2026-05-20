@@ -60,13 +60,12 @@ export const POST = withCanonicalEnforcement(
 
     try {
       const result = await createClient(body, ctx, workspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 201, result);
+      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       throw error;
     }
-  },
-  { requireCapabilities: ["CLIENT_CREATE"], requireWorkspace: true }
+  }, auditContext, { requireCapabilities: ["CLIENT_CREATE"], requireWorkspace: true }
 );

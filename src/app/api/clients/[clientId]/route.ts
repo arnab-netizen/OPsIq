@@ -3,7 +3,7 @@ import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -94,15 +94,14 @@ export const POST = withCanonicalEnforcement(
     try {
       await archiveClient(clientId, ctx, body.version, workspaceId);
       const result = { status: "archived" };
-      await recordIdempotencyResponse(idempotencyKey, 200, result);
+      await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       return Response.json(result);
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       throw error;
     }
-  },
-  {
+  }, auditContext, {
     requireCapabilities: [CAPABILITIES.CLIENT_ARCHIVE],
     requireWorkspace: true,
   }

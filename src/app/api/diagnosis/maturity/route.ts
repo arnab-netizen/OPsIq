@@ -2,7 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { maturityEngine } from "@/services/diagnostic-core/maturity-engine";
 import { parseRequestBody } from "@/lib/validation";
@@ -70,10 +70,9 @@ export const POST = withEnforcementFull(async (request) => {
     );
 
     if (!result) {
-      await recordIdempotencyError(idempotencyKey, new Error("Insufficient data for maturity analysis"));
+      await recordIdempotencyError(idempotencyKey, new Error("Insufficient data for maturity analysis", auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown"));
       return Response.json(
-        { error: "Analysis failed: insufficient data" },
-        { status: 400 }
+        { error: "Analysis failed: insufficient data" }, auditContext, { status: 400 }
       );
     }
 
@@ -83,12 +82,12 @@ export const POST = withEnforcementFull(async (request) => {
       confidence: result.overallConfidence,
     });
 
-    await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>);
+    await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, auditContext, unknown>, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
     return Response.json(result, { status: 201 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    logger.error("Maturity analysis error", { error: err.message });
+    await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+    logger.error("Maturity analysis error", auditContext, { error: err.message });
     return Response.json(
       { error: err.message || "Maturity analysis failed" },
       { status: 500 }

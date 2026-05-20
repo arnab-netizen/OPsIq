@@ -3,7 +3,7 @@ import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createContact, getContactsForClient } from "@/services/client-contact";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -67,15 +67,14 @@ export const POST = withCanonicalEnforcement(
         ctx,
         workspaceId
       );
-      await recordIdempotencyResponse(idempotencyKey, 201, result);
+      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       return Response.json(result, { status: 201 });
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       throw error;
     }
-  },
-  {
+  }, auditContext, {
     requireCapabilities: [CAPABILITIES.CLIENT_UPDATE],
     requireWorkspace: true,
   }

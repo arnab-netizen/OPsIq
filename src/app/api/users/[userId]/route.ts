@@ -4,7 +4,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -137,18 +137,18 @@ export const POST = withEnforcementFull(async (request, context, params) => {
     if (body.action === "deactivate") {
       await deactivateUser(userId, body.version, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
       const result = { status: "deactivated" };
-      await recordIdempotencyResponse(idempotencyKey, 200, result);
+      await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       return Response.json(result);
     }
 
     // reactivate
     await reactivateUser(userId, body.version, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
     const result = { status: "reactivated" };
-    await recordIdempotencyResponse(idempotencyKey, 200, result);
+    await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
     return Response.json(result);
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
+    await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
     throw error;
   }
 });

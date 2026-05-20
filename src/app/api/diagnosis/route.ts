@@ -3,7 +3,7 @@ import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { diagnoseBusiness, validateBusinessProblem } from "@/services/diagnosis";
 import { parseRequestBody } from "@/lib/validation";
@@ -53,15 +53,14 @@ export const POST = withCanonicalEnforcement(
     try {
       validateBusinessProblem(body);
       const result = await diagnoseBusiness(body, ctx, workspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>);
+      await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, auditContext, unknown>, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       throw error;
     }
-  },
-  {
+  }, auditContext, {
     requireCapabilities: [CAPABILITIES.ENGAGEMENT_CREATE],
     requireWorkspace: true,
   }

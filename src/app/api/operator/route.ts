@@ -234,7 +234,7 @@ export const POST = withCanonicalEnforcement(
   }
   const result = { success: true };
   if (workspaceId && idempotencyKey) {
-    await recordIdempotencyResponse(idempotencyKey, 200, result);
+    await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
   }
   return result;
 });

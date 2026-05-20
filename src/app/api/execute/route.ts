@@ -2,7 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { executeWorkflow } from "@/services/execute";
 import { parseRequestBody } from "@/lib/validation";
@@ -59,11 +59,11 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
   try {
     const result = await executeWorkflow(body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
-    await recordIdempotencyResponse(idempotencyKey, 200, result as unknown as Record<string, unknown>);
+    await recordIdempotencyResponse(idempotencyKey, 200, result as unknown as Record<string, auditContext, unknown>, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
     return Response.json(result, { status: 200 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
+    await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
     throw error;
   }
 });

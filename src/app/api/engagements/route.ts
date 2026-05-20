@@ -2,7 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { hasInternalAccess } from "@/policies/capability-check";
 import type { NextRequest } from "next/server";
@@ -80,11 +80,11 @@ export const POST = withCanonicalEnforcement(
 
     try {
       const result = await createEngagement(body, ctx, workspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 201, result, workspaceId);
+      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspaceId, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err, workspaceId);
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       throw error;
     }
   },

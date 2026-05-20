@@ -3,7 +3,7 @@ import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
+import { withAuth, canonicalizeAuthContext } from ", { createServiceCapabilityContext }@/lib/auth-guard", { createServiceCapabilityContext };
 import { hasInternalAccess } from "@/policies/capability-check";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -96,15 +96,14 @@ export const PATCH = withCanonicalEnforcement(
     try {
       await updateEngagement(engagementId, body, ctx, ctx.verifiedWorkspaceId);
       const updated = await getEngagementById(engagementId, ctx.verifiedWorkspaceId, ctx.policy ? hasInternalAccess(ctx.policy) : false);
-      await recordIdempotencyResponse(idempotencyKey, 200, updated);
+      await recordIdempotencyResponse(idempotencyKey, 200, updated, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       return Response.json(updated);
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       throw error;
     }
-  },
-  {
+  }, auditContext, {
     requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE],
     requireWorkspace: true,
   }

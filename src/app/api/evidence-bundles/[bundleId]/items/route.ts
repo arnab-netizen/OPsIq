@@ -61,7 +61,7 @@ export const POST = withCanonicalEnforcement(
       }
 
       await addEvidenceToBundle(bodyData, ctx, workspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 201, { success: true });
+      await recordIdempotencyResponse(idempotencyKey, 201, { success: true }, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
 
       return Response.json({ success: true }, { status: 201 });
     } catch (error) {
@@ -69,12 +69,11 @@ export const POST = withCanonicalEnforcement(
       const idempotencyKey = ctx.request!.headers.get("idempotency-key");
       if (idempotencyKey) {
         const err = error instanceof Error ? error : new Error("Unknown error");
-        await recordIdempotencyError(idempotencyKey, err);
+        await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
       }
       return errorToResponse(error);
     }
-  },
-  { requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT], requireWorkspace: true }
+  }, auditContext, { requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT], requireWorkspace: true }
 );
 
 export const DELETE = withCanonicalEnforcement(
