@@ -8,7 +8,7 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { deliverableId } = params;
 
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     if (!workspaceId) {
       throw new Error("Workspace ID required (x-workspace-id header)");
     }

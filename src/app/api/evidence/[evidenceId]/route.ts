@@ -23,7 +23,7 @@ const updateEvidenceSchema = z.object({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     const { evidenceId } = params;
     parseOrThrow(uuidSchema, evidenceId);
 
@@ -35,7 +35,7 @@ export const GET = withCanonicalEnforcement(
 
 export const PATCH = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     const { evidenceId } = params;
     parseOrThrow(uuidSchema, evidenceId);
 

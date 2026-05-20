@@ -27,7 +27,7 @@ const IncrementQuotaSchema = z.object({
  * Get quota usage for workspace
  */
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
 
   const usage = getQuotaUsage(workspaceId, userId);
@@ -55,7 +55,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
  * Increment quota usage
  */
 export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
 
   const nextRequest = ctx.request as any;

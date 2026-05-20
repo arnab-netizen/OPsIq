@@ -44,7 +44,7 @@ export const PUT = withCanonicalEnforcement(
       capability: CAPABILITIES.INTERVENTION_MANAGE,
     });
 
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,

@@ -48,7 +48,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   const body = await ctx.request.json();
   const parsed = SendNotificationSchema.parse(body);
 
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   const notification = await sendNotification({
     ...parsed,
@@ -82,7 +82,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
 
   const parsed = ListNotificationsSchema.parse(params);
 
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
 
   const result = await listUserNotifications(workspaceId, userId, parsed);

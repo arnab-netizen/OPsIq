@@ -18,7 +18,7 @@ import { logger } from "@/infra/logger";
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     try {
-      const workspaceId = nextRequest.headers.get("x-workspace-id");
+      const workspaceId = ctx.verifiedWorkspaceId;
       const { bundleId } = params;
       parseOrThrow(uuidSchema, bundleId);
 
@@ -79,7 +79,7 @@ export const POST = withCanonicalEnforcement(
 export const DELETE = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     try {
-      const workspaceId = nextRequest.headers.get("x-workspace-id");
+      const workspaceId = ctx.verifiedWorkspaceId;
       const { bundleId } = params;
       parseOrThrow(uuidSchema, bundleId);
 

@@ -36,7 +36,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   const userId = ctx.verifiedSessionSnapshot.actorId;
 
   // Get workspaceId from verified context
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   let body: UpgradeRequest;
   try {

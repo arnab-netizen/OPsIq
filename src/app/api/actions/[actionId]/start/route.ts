@@ -17,7 +17,7 @@ export const PATCH = withCanonicalEnforcement(
     const { actionId } = params;
     parseOrThrow(uuidSchema, actionId);
 
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const action = await getActionById(actionId, workspaceId);
     if (!action) throw new NotFoundError("Action", actionId);

@@ -16,7 +16,7 @@ import { logger } from "@/infra/logger";
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params) => {
     const decisionId = params.decisionId;
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     const userId = ctx.verifiedActorId;
 
     // Close via lifecycle service

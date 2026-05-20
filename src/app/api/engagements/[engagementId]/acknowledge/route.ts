@@ -24,7 +24,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
   const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
 
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,

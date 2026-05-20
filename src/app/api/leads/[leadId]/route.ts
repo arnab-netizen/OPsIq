@@ -35,7 +35,7 @@ const linkLeadSchema = z.object({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     const { leadId } = params;
     parseOrThrow(uuidSchema, leadId);
 
@@ -49,7 +49,7 @@ export const PATCH = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { leadId } = params;
     parseOrThrow(uuidSchema, leadId);
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const body = await parseRequestBody(ctx.request!, updateLeadSchema);
     await updateLead(leadId, body, ctx, workspaceId);
@@ -72,7 +72,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },

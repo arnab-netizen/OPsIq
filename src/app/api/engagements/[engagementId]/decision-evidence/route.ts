@@ -9,7 +9,7 @@ export const GET = withCanonicalEnforcement(
     const { engagementId } = params;
     parseOrThrow(uuidSchema, engagementId);
 
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     const evidence = await getDecisionEvidence(engagementId, workspaceId);
 
     return {

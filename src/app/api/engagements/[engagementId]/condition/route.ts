@@ -72,7 +72,7 @@ export const POST = withCanonicalEnforcement(
       capability: CAPABILITIES.CONDITION_ASSESS,
     });
 
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,

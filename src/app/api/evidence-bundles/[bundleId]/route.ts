@@ -13,7 +13,7 @@ import { logger } from "@/infra/logger";
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     try {
-      const workspaceId = nextRequest.headers.get("x-workspace-id");
+      const workspaceId = ctx.verifiedWorkspaceId;
       const { bundleId } = params;
       parseOrThrow(uuidSchema, bundleId);
 
@@ -31,7 +31,7 @@ export const GET = withCanonicalEnforcement(
 export const PUT = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     try {
-      const workspaceId = nextRequest.headers.get("x-workspace-id");
+      const workspaceId = ctx.verifiedWorkspaceId;
       const { bundleId } = params;
       parseOrThrow(uuidSchema, bundleId);
 

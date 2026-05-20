@@ -35,7 +35,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, pa
   const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
 
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   // Fetch all required data WITH workspace scoping
   const [engagement, businessImpact, drift, findings, recommendations, actions] =

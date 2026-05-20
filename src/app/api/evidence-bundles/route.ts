@@ -26,7 +26,7 @@ const listBundlesSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     try {
-      const workspaceId = nextRequest.headers.get("x-workspace-id");
+      const workspaceId = ctx.verifiedWorkspaceId;
 
       const idempotencyKey = ctx.request?.headers.get("idempotency-key");
       if (!idempotencyKey) {
@@ -72,7 +72,7 @@ export const POST = withCanonicalEnforcement(
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     const params = parseSearchParams(ctx.request!.url, listBundlesSchema);
     const result = await listEvidenceBundles(params.engagementId, workspaceId);
     return Response.json({ bundles: result });

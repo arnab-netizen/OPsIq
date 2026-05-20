@@ -24,7 +24,7 @@ const listUsersSchema = paginationSchema.extend({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     if (ctx.verifiedActorType !== "service") {
       throw new UnauthorizedError("Internal only");
@@ -40,7 +40,7 @@ export const GET = withCanonicalEnforcement(
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     // Require Idempotency-Key (fail-closed)
     const idempotencyKey = ctx.request?.headers.get("Idempotency-Key");

@@ -43,7 +43,7 @@ const actionSchema = z.discriminatedUnion("action", [
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     const { userId } = params;
     parseOrThrow(uuidSchema, userId);
 
@@ -62,7 +62,7 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },
@@ -94,7 +94,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },

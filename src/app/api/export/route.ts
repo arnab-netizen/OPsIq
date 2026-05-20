@@ -16,7 +16,7 @@ import {
  */
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     // Get format from query parameters
     const url = new URL(ctx.request?.url || "");

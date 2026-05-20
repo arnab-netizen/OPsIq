@@ -27,7 +27,7 @@ interface SevenDayImpact {
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     // Calculate date range: last 7 days
     const endDate = new Date();

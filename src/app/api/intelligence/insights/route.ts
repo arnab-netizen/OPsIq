@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     // Initialize logger
     const logger = createEventLogger("api_intelligence_insights", workspaceId);

@@ -34,7 +34,7 @@ const createFindingSchema = z.object({
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const idempotencyKey = ctx.request!.headers.get("idempotency-key");
     if (!idempotencyKey) {

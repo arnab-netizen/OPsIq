@@ -10,7 +10,7 @@ import { getMyDayItems } from "@/services/operator/myday";
  * Deterministic priority-based selection for daily action queue
  */
 export const GET = withCanonicalEnforcement(async (ctx) => {
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
 
   try {
     // Get My Day items (top 5 by priority)

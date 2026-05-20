@@ -7,7 +7,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     // R14: Use verified workspace from context, not x-workspace-id header
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     const { engagementId } = params;
 
     await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
