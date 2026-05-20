@@ -53,7 +53,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },
@@ -94,6 +94,10 @@ export const POST = withEnforcementFull(async (request, context, params) => {
     });
   }
 
+  const auditContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.USER_ASSIGN_ROLE,
+  });
+
   try {
     const result = await assignRole(
       { userId, ...body } as Parameters<typeof assignRole>[0],
@@ -101,7 +105,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
       actorLevel,
       workspaceId
     );
-    await recordIdempotencyResponse(idempotencyKey, result.isNew ? 201 : 200, result);
+    await recordIdempotencyResponse(idempotencyKey, result.isNew ? 201 : 200, result, auditContext, workspaceId);
     return Response.json(result, { status: result.isNew ? 201 : 200 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
@@ -110,7 +114,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   }
 });
 
-export const DELETE = withEnforcementFull(async (request, auditContext, context, params) => {
+export const DELETE = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.USER_ASSIGN_ROLE,
@@ -119,7 +123,7 @@ export const DELETE = withEnforcementFull(async (request, auditContext, context,
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },
