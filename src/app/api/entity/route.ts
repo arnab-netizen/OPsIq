@@ -1,7 +1,7 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth } from ", createServiceCapabilityContext@/lib/auth-guard", createServiceCapabilityContext;
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
@@ -67,8 +67,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     actorId,
     role,
     before: null,
-    after: entity,
-  });
+    after: entity,,
+        context: auditContext});
 
   return entity;
 });

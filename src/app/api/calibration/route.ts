@@ -1,5 +1,5 @@
 import { withEnforcement } from "@/lib/enforced-route";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth } from ", createServiceCapabilityContext@/lib/auth-guard", createServiceCapabilityContext;
 import { UnauthorizedError } from "@/infra/errors";
 import { getItems } from "@/services/operator/store";
 import { computeCalibration, computeCalibrationBySegment } from "@/services/calibration/engine";
@@ -56,8 +56,8 @@ export const GET = withEnforcement(async () => {
       segmentLow: byImpactSegment.low.itemsAnalyzed,
       segmentMedium: byImpactSegment.medium.itemsAnalyzed,
       segmentHigh: byImpactSegment.high.itemsAnalyzed,
-    },
-  });
+    },,
+        context: auditContext});
 
   return response;
 });

@@ -51,6 +51,18 @@ export interface AuthOptions {
   internalOnly?: boolean;
 }
 
+export interface CapabilityEnvelope {
+  capability: string;
+  scope?: { type: string; id: string };
+  verifiedAt: Date;
+}
+
+export interface ServiceCapabilityContext {
+  capabilityEnvelope?: CapabilityEnvelope;
+  session?: SessionInfo;
+  policy?: PolicyContext;
+}
+
 // ─── Core Primitives (Fail-Closed) ─────────────────────────────────────────
 
 /**
@@ -277,4 +289,23 @@ function extractCapabilities(policy: PolicyContext | undefined): Set<string> {
   }
 
   return capabilities;
+}
+
+// ─── Service Capability Context Helpers ─────────────────────────────────────
+
+export function createServiceCapabilityContext(options: {
+  capability: string;
+  scope?: { type: string; id: string };
+  session?: SessionInfo;
+  policy?: PolicyContext;
+}): ServiceCapabilityContext {
+  return {
+    capabilityEnvelope: {
+      capability: options.capability,
+      scope: options.scope,
+      verifiedAt: new Date(),
+    },
+    session: options.session,
+    policy: options.policy,
+  };
 }

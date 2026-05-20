@@ -14,9 +14,17 @@ export interface AuditEventParams {
   after: unknown;
   metadata?: Record<string, unknown>;
   workspaceId?: string; // Optional in interface, but required at runtime
+  context?: ServiceCapabilityContext; // Capability context for enforcement
 }
 
 export async function logAuditEvent(params: AuditEventParams): Promise<void> {
+  // Require ServiceCapabilityContext for user-triggered mutations
+  if (params.context) {
+    // User-triggered path: enforce capability
+    if (!params.context.capabilityEnvelope?.capability) {
+      throw new Error("logAuditEvent requires capability context for user-triggered paths");
+    }
+  }
   try {
     // Workspace isolation: fail closed if no workspace ID provided
     let workspaceId = params.workspaceId;

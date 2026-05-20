@@ -1,6 +1,6 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
@@ -80,6 +80,11 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     const { session } = await withAuth();
     userId = session?.user.id ?? null;
 
+    // Create audit context for all audit events in this request
+    const auditContext = createServiceCapabilityContext({
+      capability: "mutation",
+    });
+
     // Enforce server-side auth
     const role = await resolveServerRole();
     if (!role) {
@@ -96,6 +101,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           reason: "Session not found or invalid",
         },
         workspaceId: workspace?.workspaceId,
+        context: auditContext,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
@@ -118,6 +124,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           role: role,
         },
         workspaceId: workspace.workspaceId,
+        context: auditContext,
       }).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
@@ -194,7 +201,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           },
         },
         workspaceId: workspace.workspaceId,
-      }).catch((auditError) => {
+        context: auditContext}).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
 
@@ -240,7 +247,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           providedType: typeof confidence,
         },
         workspaceId: workspace.workspaceId,
-      }).catch((auditError) => {
+        context: auditContext}).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
 
@@ -289,7 +296,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           },
         },
         workspaceId: workspace.workspaceId,
-      }).catch((auditError) => {
+        context: auditContext}).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
 
@@ -340,7 +347,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           providedFxRates: Object.keys(fxRatesInput),
         },
         workspaceId: workspace.workspaceId,
-      }).catch((auditError) => {
+        context: auditContext}).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
 
@@ -407,7 +414,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           inputCurrency,
         },
         workspaceId: workspace.workspaceId,
-      }).catch((auditError) => {
+        context: auditContext}).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
 
@@ -522,7 +529,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           confidence: normalizedMetrics.confidence,
         },
         workspaceId: workspace.workspaceId,
-      }).catch((auditError) => {
+        context: auditContext}).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
 
@@ -630,7 +637,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           confidence: normalizedMetrics.confidence,
         },
         workspaceId: workspace.workspaceId,
-      }).catch((auditError) => {
+        context: auditContext}).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
 
@@ -916,7 +923,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
           confidence: normalizedMetrics.confidence,
         },
         workspaceId: workspace.workspaceId,
-      }).catch((auditError) => {
+        context: auditContext}).catch((auditError) => {
         if (logger) logger.error(`Audit logging failed: ${auditError}`);
       });
 
@@ -998,7 +1005,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         problemType,
       },
       workspaceId: workspace.workspaceId,
-    }).catch((auditError) => {
+        context: auditContext}).catch((auditError) => {
       if (logger) logger.error(`Audit logging failed: ${auditError}`);
       throw auditError;
     });

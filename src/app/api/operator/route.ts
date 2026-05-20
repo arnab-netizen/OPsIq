@@ -1,8 +1,9 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import {
   getItems,
   updateItem,
@@ -184,6 +185,9 @@ export const POST = withCanonicalEnforcement(
   const eventName = status === "done" ? "COMPLETE" : "UPDATE";
 
   // Log audit event (fail-closed if audit fails)
+  const auditContext = createServiceCapabilityContext({
+    capability: "mutation",
+  });
   await logAuditEvent({
     eventName,
     entityType: "OperatorItem",
@@ -192,6 +196,7 @@ export const POST = withCanonicalEnforcement(
     role,
     before: beforeItem ?? null,
     after: afterItem ?? null,
+    context: auditContext,
   }).catch((auditError) => {
     if (logger) logger.error(`Audit failed: ${auditError}`);
   });
