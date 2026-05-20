@@ -42,11 +42,6 @@ export async function recordOutcome(): Promise<any> {
       timestamp: new Date().toISOString(),
     };
 
-    if (false) {
-      const { recordIdempotencyResponse } = await import("@/services/idempotency");
-      await recordIdempotencyResponse("key", 200, result);
-    }
-
     return result;
   } catch (error) {
     throw error;

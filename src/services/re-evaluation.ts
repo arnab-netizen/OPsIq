@@ -4,6 +4,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { reRankRecommendationsInEngagement } from "@/services/recommendation";
 import { checkEngagementEscalations } from "@/services/escalation";
 import { computeNextReviewDate } from "@/services/engagement";
@@ -811,7 +812,8 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     // Record successful idempotency response
     if (idempotencyKey) {
       const { recordIdempotencyResponse } = await import("@/services/idempotency");
-      await recordIdempotencyResponse(idempotencyKey, 200, result, event.workspaceId);
+      const context = createServiceCapabilityContext({ capability: "DECISION_REEVALUATE" });
+      await recordIdempotencyResponse(idempotencyKey, 200, result, context, event.workspaceId);
     }
 
     return result;
@@ -820,7 +822,8 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     if (idempotencyKey) {
       const { recordIdempotencyError } = await import("@/services/idempotency");
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err, event.workspaceId);
+      const context = createServiceCapabilityContext({ capability: "DECISION_REEVALUATE" });
+      await recordIdempotencyError(idempotencyKey, err, context, event.workspaceId);
     }
 
     // Safety Guard 4: Failure handling - propagate error to fail transaction

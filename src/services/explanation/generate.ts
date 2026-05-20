@@ -177,6 +177,7 @@ export function createDecisionResult(
     : generateBlockedExplanation(blockReason || "INVALID_INPUT", input);
 
   return {
+    decision: isApproved ? "APPROVED" : "BLOCKED",
     expectedImpact: input.expectedImpact,
     confidence: input.confidence,
     explanation,

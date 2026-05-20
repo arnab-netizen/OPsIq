@@ -346,7 +346,6 @@ async function syncEntitlementsForSubscription(
       workspaceId,
       capability: 'SUBSCRIPTION_ACTIVATE',
       decision: 'subscription_activated',
-      requestId: context?.requestId,
       entityType: "Subscription",
       entityId: subscription.id,
       payload: {

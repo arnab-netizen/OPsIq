@@ -48,6 +48,7 @@ export function createCanonicalPayload(
   return {
     inputsSnapshot,
     calculationTrace: result.explanation.calculationTrace,
+    decision: result.decision,
     engineVersion: result.engineVersion || ENGINE_VERSION,
     timestamp: timestamp || new Date().toISOString(),
   };

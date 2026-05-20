@@ -100,7 +100,6 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
       workspaceId: item.workspaceId,
       capability: "OPERATOR_CREATE",
       decision: "operator_item_created",
-      requestId: context?.requestId,
       entityType: "operator_item",
       entityId: created.id,
       payload: {
@@ -367,7 +366,6 @@ export async function applyOverride(
     actorId: resolvedActorId,
     workspaceId: resolvedWorkspaceId,
     capability: 'OPERATOR_OVERRIDE',
-    requestId: context?.requestId,
     entityType: "operator_item",
     entityId: id,
     payload: {
@@ -529,7 +527,6 @@ export async function addBlockedDecision(params: {
     actorId: params.createdBy,
     workspaceId: params.workspaceId,
     capability: 'OPERATOR_BLOCK',
-    requestId: params.requestId,
     entityType: "operator_item",
     entityId: created.id,
     payload: {

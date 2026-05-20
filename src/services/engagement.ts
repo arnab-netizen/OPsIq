@@ -99,7 +99,7 @@ export async function createEngagement(
   }
 
   // Service-layer auth: require authContext, extract userId from it (never from parameters)
-  const capabilityValidated = context.capabilityEnvelope?.capability;
+  const capabilityValidated = authContext.verifiedCapabilities.has('ENGAGEMENT_CREATE');
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   // Validate client exists
@@ -169,11 +169,7 @@ export async function createEngagement(
     eventName: AUDIT_EVENTS.ENGAGEMENT_CREATED,
     actorId,
     workspaceId: validatedWorkspaceId,
-      capability: 'mutation',
-      decision: 'engagement_created',
-      requestId: randomUUID(),
     capability: 'ENGAGEMENT_CREATE',
-    requestId: authContext?.requestId,
     entityType: "engagement",
     entityId: result.result.id,
     payload: {

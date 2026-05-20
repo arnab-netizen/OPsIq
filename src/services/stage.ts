@@ -67,9 +67,8 @@ export async function createStage(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.STAGE_CREATED,
     actorId,
-    workspaceId: validatedWorkspaceId,
+    workspaceId,
     capability: 'STAGE_CREATE',
-    requestId: authContext?.requestId,
     entityType: "stage",
     entityId: stage.id,
     payload: {
