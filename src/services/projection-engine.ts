@@ -1,5 +1,11 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface ProjectionResult {
   projectionName: string;
@@ -63,7 +69,7 @@ export class ProjectionEngine {
       logger.error("ProjectionEngine: Projection failed", {
         eventId,
         aggregateType,
-        error: error instanceof Error ? error.message : String(error),
+        error: getSafeErrorMessage(error),
       });
       throw error;
     }
@@ -221,7 +227,7 @@ export class ProjectionEngine {
       } catch (error) {
         logger.error("ProjectionEngine: Rebuild failed for aggregate", {
           aggregateId: event.aggregateId,
-          error: error instanceof Error ? error.message : String(error),
+          error: getSafeErrorMessage(error),
         });
       }
     }

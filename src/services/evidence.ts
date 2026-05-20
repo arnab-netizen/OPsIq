@@ -19,6 +19,12 @@ import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import { EventEmitterService } from "@/services/event-emitter";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -154,7 +160,7 @@ export async function createEvidence(
       } catch (error) {
         logger.error("Evidence event emission failed", {
           evidenceId: evidence.id,
-          error: error instanceof Error ? error.message : String(error),
+          error: getSafeErrorMessage(error),
         });
       }
 
@@ -280,7 +286,7 @@ export async function updateEvidence(
     } catch (error) {
       logger.error("Evidence validation event emission failed", {
         evidenceId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getSafeErrorMessage(error),
       });
     }
 

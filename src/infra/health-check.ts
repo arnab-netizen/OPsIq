@@ -5,6 +5,13 @@
  * Non-DB core checks for application state and dependencies.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 export enum HealthStatus {
   HEALTHY = "healthy",
   DEGRADED = "degraded",
@@ -87,7 +94,7 @@ export function checkMemory(): CheckResult {
     return {
       status: HealthStatus.UNHEALTHY,
       responseTime: Date.now() - startTime,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: getSafeErrorMessage(error),
       lastChecked: new Date(),
     };
   }
@@ -115,7 +122,7 @@ export function checkResponseTime(): CheckResult {
     return {
       status: HealthStatus.UNHEALTHY,
       responseTime: Date.now() - startTime,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: getSafeErrorMessage(error),
       lastChecked: new Date(),
     };
   }

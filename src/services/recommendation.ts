@@ -22,6 +22,12 @@ import { EventEmitterService } from "@/services/event-emitter";
 import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 import { listEvidence } from "@/services/evidence";
 import { getKPIsForEngagement } from "@/services/kpi";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 interface TransactionClient {
   recommendation: {
@@ -885,13 +891,13 @@ export async function updateRecommendationStatus(
       logger.error("Error checking execution certainty before approval", {
         recommendationId,
         engagementId: rec.engagementId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: getSafeErrorMessage(error),
       });
 
       throw new ValidationError(
         "Unable to validate execution certainty before approval. Please try again.",
         {
-          originalError: error instanceof Error ? error.message : "Unknown error",
+          originalError: getSafeErrorMessage(error),
         }
       );
     }

@@ -15,6 +15,12 @@ import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import { recordActionUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface CreateActionInput {
   engagementId: string;
@@ -121,7 +127,7 @@ export async function createAction(
           } catch (error) {
             logger.error("Action event emission failed", {
               actionId: action.id,
-              error: error instanceof Error ? error.message : String(error),
+              error: getSafeErrorMessage(error),
             });
           }
 
@@ -214,7 +220,7 @@ export async function createAction(
   } catch (error) {
     logger.error("Action event emission failed", {
       actionId: action.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
   }
 

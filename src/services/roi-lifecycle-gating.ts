@@ -13,6 +13,12 @@ import { enrichMutationAuditEvent } from '@/infra/audit-enrichment';
  */
 
 import { randomUUID } from "crypto";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { logger } from "@/infra/logger";
@@ -294,7 +300,7 @@ export async function recordImpactWithGating(
     }
     logger.error("Error recording impact with gating", {
       decisionId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }
@@ -389,7 +395,7 @@ export async function recordROIWithGating(
     }
     logger.error("Error recording ROI with gating", {
       decisionId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }

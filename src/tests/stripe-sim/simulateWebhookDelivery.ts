@@ -7,6 +7,12 @@ import { StripeEvent } from "./stripeSimulator";
 import { handleWebhookEvent, getOrCreateWebhookEvent, markWebhookEventProcessed, markWebhookEventFailed, checkSignatureTimestamp } from "@/services/webhook.service";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface DeliveryOptions {
   delayMs?: number; // Delay before delivery
@@ -60,7 +66,7 @@ export async function simulateWebhookDelivery(
   try {
     checkSignatureTimestamp(eventToProcess.created);
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorMsg = getSafeErrorMessage(error);
     return {
       eventId: eventToProcess.id,
       eventType: eventToProcess.type,
@@ -147,7 +153,7 @@ export async function simulateWebhookDelivery(
         webhookEvent,
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorMsg = getSafeErrorMessage(error);
       logger.error("Webhook delivery failed", { eventId: eventToProcess.id, error: errorMsg });
 
       // Get webhook event state
