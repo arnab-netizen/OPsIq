@@ -101,7 +101,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
     return Response.json(result, { status: result.isNew ? 201 : 200 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+    await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
     throw error;
   }
 });

@@ -93,7 +93,7 @@ export const POST = withEnforcementFull(async (request) => {
     }
 
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+    await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
     throw error;
   }
 });

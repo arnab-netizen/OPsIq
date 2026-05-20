@@ -91,11 +91,11 @@ export const POST = withCanonicalEnforcement(
         { ...body, engagementId, workspaceId: ctx.verifiedWorkspaceId },
         ctx
       );
-      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, ctx.verifiedWorkspaceId);
+      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspaceId);
       return Response.json(result, { status: 201 });
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err, auditContext, ctx.verifiedWorkspaceId);
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
       throw error;
     }
   }, {

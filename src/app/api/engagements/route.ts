@@ -80,11 +80,11 @@ export const POST = withCanonicalEnforcement(
 
     try {
       const result = await createEngagement(body, ctx, workspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspaceId, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspaceId);
       return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
       throw error;
     }
   },

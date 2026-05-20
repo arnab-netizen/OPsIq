@@ -69,7 +69,7 @@ export const POST = withCanonicalEnforcement(
       const idempotencyKey = ctx.request!.headers.get("idempotency-key");
       if (idempotencyKey) {
         const err = error instanceof Error ? error : new Error("Unknown error");
-        await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+        await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
       }
       return errorToResponse(error);
     }

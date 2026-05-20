@@ -76,7 +76,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
     await validateEvidence(bodyData, session.user.id, workspaceId);
     const result = { success: true };
-    await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+    await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspaceId);
 
     return Response.json(result);
   } catch (error) {

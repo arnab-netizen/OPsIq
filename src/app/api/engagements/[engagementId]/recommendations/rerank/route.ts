@@ -34,11 +34,11 @@ export const POST = withCanonicalEnforcement(
 
     try {
       const result = await reRankRecommendationsInEngagement(engagementId, ctx, ctx.verifiedWorkspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspaceId);
       return Response.json(result);
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
       throw error;
     }
   }, auditContext, {

@@ -53,7 +53,7 @@ export const POST = withCanonicalEnforcement(
       }
 
       const result = await createEvidenceBundle(body, ctx, workspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspaceId);
 
       return Response.json(result, { status: 201 });
     } catch (error) {

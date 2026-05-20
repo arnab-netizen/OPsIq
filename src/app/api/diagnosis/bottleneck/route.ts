@@ -97,7 +97,7 @@ export const POST = withEnforcementFull(async (request) => {
     return Response.json(result, { status: 201 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err, auditContext, body.workspaceId);
+    await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
     logger.error("Bottleneck analysis error", { error: err.message });
     return Response.json(
       { error: err.message || "Bottleneck analysis failed" },
