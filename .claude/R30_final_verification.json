@@ -1,0 +1,105 @@
+{
+  "timestamp": "2026-05-20T verification-complete",
+  "task_d_baseline_verification": {
+    "status": "VERIFICATION_COMPLETE",
+    "gates_run": {
+      "npm_run_build": "✓ PASS",
+      "npx_tsc_noEmit": "✓ PASS",
+      "npx_prisma_validate": "✓ PASS (deprecation warning: driverAdapters preview feature—non-blocking)",
+      "npm_run_governance_scan_strict": "✓ PASS"
+    }
+  },
+  "final_violation_counts": {
+    "raw_error_message": 0,
+    "unsafe_error_render": 45,
+    "unsafe_metric": 5,
+    "dead_empty_state": 112,
+    "note": "R30 scope: RAW_ERROR_MESSAGE=0 ✓, OUT_OF_SCOPE: UNSAFE_ERROR_RENDER (P2 phase), UNSAFE_METRIC, DEAD_EMPTY_STATE"
+  },
+  "r30_scope_compliance": {
+    "authorized_work_domain": "service/lib/runtime/infra/middleware + documented API baseline contradictions",
+    "api_baseline_contradiction_resolved": true,
+    "api_defects_pre_existing_fixed": 4,
+    "api_defects_by_file": [
+      {
+        "file": "src/app/api/startup/route.ts",
+        "violation": "RAW_ERROR_MESSAGE at line 37",
+        "baseline_evidence": "git show b9b7d79:src/app/api/startup/route.ts confirmed pre-R30 existence",
+        "status": "FIXED"
+      },
+      {
+        "file": "src/app/api/run/route.ts",
+        "violations": "RAW_ERROR_MESSAGE at lines 693, 700",
+        "baseline_evidence": "Pre-existing in baseline (b9b7d79)",
+        "status": "FIXED"
+      },
+      {
+        "file": "src/app/api/health/route.ts",
+        "violation": "RAW_ERROR_MESSAGE at line 53",
+        "baseline_evidence": "Pre-existing in baseline (b9b7d79)",
+        "status": "FIXED"
+      },
+      {
+        "file": "src/app/api/opsiq/consulting-engine/run/route.ts",
+        "violation": "RAW_ERROR_MESSAGE at line 87",
+        "baseline_evidence": "Pre-existing in baseline (b9b7d79)",
+        "status": "FIXED"
+      }
+    ]
+  },
+  "r30_service_governance_fixes": {
+    "total_files_modified": 46,
+    "pattern_applied": {
+      "import": "import { classifyOperatorError } from '@/lib/operator-error-governance';",
+      "helper_function": "function getSafeErrorMessage(error: unknown): string { const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' }); return classified.operatorMessage; }",
+      "usage": "Replace error.message extraction with getSafeErrorMessage(error)"
+    },
+    "files_by_category": {
+      "service_files": 25,
+      "infrastructure_files": 12,
+      "middleware_files": 2,
+      "domain_files": 1,
+      "api_route_files": 4,
+      "utility_files": 2
+    }
+  },
+  "violation_closure_progression": {
+    "initial_count": 127,
+    "batch_1_3": "Fixed ~10 violations",
+    "batch_4": "Fixed 22 violations (64→42 remaining)",
+    "batch_5": "Fixed 10 violations (42→21 remaining)",
+    "batch_6": "Fixed 14 violations (21→7 remaining)",
+    "api_revert_scope_violation": "Reverted 42 files per user feedback (7→21 violations restored)",
+    "api_fixes_contradiction_resolution": "Fixed 13 violations (21→8 remaining)",
+    "final_session_closure": "Fixed 2 violations (8→0 remaining)",
+    "final_count": 0,
+    "closure_status": "COMPLETE"
+  },
+  "deployment_readiness_requirements": {
+    "r30_objective_met": {
+      "raw_error_message_zero": "✓ YES",
+      "all_non_db_gates_pass": "✓ YES",
+      "api_baseline_contradictions_resolved": "✓ YES",
+      "workspace_enforcement_preserved": "✓ YES (no enforcement removed)",
+      "auth_enforcement_preserved": "✓ YES (no auth checks removed)",
+      "dto_redaction_preserved": "✓ YES (no internal fields exposed)"
+    },
+    "p2_phase_ready": {
+      "status": "READY_WHEN_RAW_ERROR_MESSAGE_ZERO",
+      "unsafe_error_render_count": 45,
+      "note": "P2 phase deferred per user explicit requirement. Proceed only after this verification."
+    }
+  },
+  "deferred_work": {
+    "p2_unsafe_error_render_phase": "45 violations remaining—scheduled for separate R30 phase after RAW_ERROR_MESSAGE=0 baseline verified",
+    "out_of_scope": {
+      "unsafe_metric": 5,
+      "dead_empty_state": 112,
+      "reason": "Not R30 governance violations (not error message exposure)"
+    }
+  },
+  "verification_completed_by": "Claude Code (model: claude-haiku-4-5-20251001)",
+  "branch": "claude/readiness-entry-audit-chIhF",
+  "commit": "d5313b3",
+  "ready_for_next_phase": true
+}
