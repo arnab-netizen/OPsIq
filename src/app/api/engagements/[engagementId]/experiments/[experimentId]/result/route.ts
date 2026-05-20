@@ -97,13 +97,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
         { status: 400 }
       );
     }
-    if (error instanceof ExperimentLifecycleError) {
-      return Response.json(
-        { error: error.code, message: error.message },
-        { status: 400 }
-      );
-    }
-    if (error instanceof Error) {
+    if (error instanceof ExperimentLifecycleError || error instanceof Error) {
       const classified = classifyOperatorError(error, { context: "load" });
       return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }

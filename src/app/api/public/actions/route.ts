@@ -119,13 +119,7 @@ export const GET = withEnforcementFull(async (request) => {
         { status: 400 }
       );
     }
-    if (error instanceof PublicAPIError) {
-      return Response.json(
-        { error: error.code, message: error.message },
-        { status: 400 }
-      );
-    }
-    if (error instanceof Error) {
+    if (error instanceof PublicAPIError || error instanceof Error) {
       const classified = classifyOperatorError(error, { context: "load" });
       return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }

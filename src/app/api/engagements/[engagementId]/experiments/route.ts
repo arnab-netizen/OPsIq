@@ -185,14 +185,9 @@ export const POST = withEnforcementFull(async (request) => {
         { status: 400 }
       );
     }
-    if (error instanceof ExperimentLifecycleError) {
-      return Response.json(
-        { error: error.code, message: error.message },
-        { status: 400 }
-      );
-    }
-    if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+    if (error instanceof ExperimentLifecycleError || error instanceof Error) {
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },
@@ -234,7 +229,8 @@ export const GET = withEnforcementFull(async (request) => {
     });
   } catch (error) {
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const classified = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },

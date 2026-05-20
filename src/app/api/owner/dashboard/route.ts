@@ -145,13 +145,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
         { status: 400 }
       );
     }
-    if (error instanceof DashboardServiceError) {
-      return Response.json(
-        { error: error.code, message: error.message },
-        { status: 400 }
-      );
-    }
-    if (error instanceof Error) {
+    if (error instanceof DashboardServiceError || error instanceof Error) {
       const classified = classifyOperatorError(error, { context: "load" });
       return Response.json({ error: classified.operatorMessage }, { status: 400 });
     }
