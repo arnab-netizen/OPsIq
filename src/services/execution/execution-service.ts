@@ -4,6 +4,12 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { recordDecisionMetrics } from "@/services/metrics/decision-metrics-service";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export async function executeDecision(
   decisionId: string,
@@ -157,7 +163,7 @@ export async function markSuccess(
     logger.warn("Failed to record success metrics", {
       decisionId,
       workspaceId,
-      error: metricsError instanceof Error ? metricsError.message : String(metricsError),
+      error: getSafeErrorMessage(metricsError),
     });
   });
 
@@ -245,7 +251,7 @@ export async function markFailure(
     logger.warn("Failed to record failure metrics", {
       decisionId,
       workspaceId,
-      error: metricsError instanceof Error ? metricsError.message : String(metricsError),
+      error: getSafeErrorMessage(metricsError),
     });
   });
 

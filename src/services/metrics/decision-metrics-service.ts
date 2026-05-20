@@ -137,7 +137,7 @@ export function invalidateMetricsCache(
     .catch((err) => {
       logger.warn("Failed to invalidate metrics cache", {
         workspaceId,
-        error: err instanceof Error ? err.message : String(err),
+        error: getSafeErrorMessage(err),
       });
     });
 
@@ -147,7 +147,7 @@ export function invalidateMetricsCache(
       logger.warn("Failed to invalidate problem metrics cache", {
         workspaceId,
         problemType,
-        error: err instanceof Error ? err.message : String(err),
+        error: getSafeErrorMessage(err),
       });
     });
 }
@@ -160,7 +160,7 @@ export async function recalculateWorkspaceMetrics(workspaceId: string) {
     .catch((err) => {
       logger.warn("Failed to flush workspace metrics cache", {
         workspaceId,
-        error: err instanceof Error ? err.message : String(err),
+        error: getSafeErrorMessage(err),
       });
     });
 

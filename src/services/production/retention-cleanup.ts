@@ -4,6 +4,12 @@
 import { db } from "@/lib/db";
 import { PRODUCTION_CONFIG } from "./safety-config";
 import { createEventLogger } from "@/lib/observability/log";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 const logger = createEventLogger("retention_cleanup", "system");
 
@@ -55,7 +61,7 @@ export async function cleanupOldRecords(): Promise<void> {
       logger.success({ message: `Deleted ${totalDeletedAuditEvents} expired audit events` });
     }
   } catch (error) {
-    logger.error(`Retention cleanup failed: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`Retention cleanup failed: ${getSafeErrorMessage(error)}`);
   }
 }
 

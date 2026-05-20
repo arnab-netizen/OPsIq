@@ -4,6 +4,12 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface LearningRecordInput {
   workspaceId: string;
@@ -48,7 +54,7 @@ export async function recordLearning(input: LearningRecordInput): Promise<void> 
   }).catch((error) => {
     logger.warn("Failed to emit audit event for learning record", {
       workspaceId: input.workspaceId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
   });
 }

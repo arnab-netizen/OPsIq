@@ -7,6 +7,12 @@ import { logDecision } from "@/services/audit/log";
 import { createBaseline } from "@/services/onboarding/basic";
 import { compareScenarios, ScenarioComparison } from "@/services/control/scenario-comparison";
 import { randomUUID } from "crypto";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export function runSystem(inputMetrics: Record<string, number>): {
   decisions: DecisionOutput[];
@@ -66,7 +72,7 @@ export function runSystem(inputMetrics: Record<string, number>): {
       confidence,
     });
   } catch (scenarioError) {
-    const errorMsg = scenarioError instanceof Error ? scenarioError.message : "Unknown scenario error";
+    const errorMsg = getSafeErrorMessage(scenarioError);
     throw new Error(`SCENARIO_GENERATION_FAILED: ${errorMsg}`);
   }
 
