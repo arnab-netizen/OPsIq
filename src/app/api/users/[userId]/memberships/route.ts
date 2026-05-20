@@ -91,13 +91,17 @@ export const POST = withEnforcementFull(async (request, context, params) => {
     });
   }
 
+  const auditContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
+  });
+
   try {
     const result = await addMember(
       { userId, ...body, workspaceId } as Parameters<typeof addMember>[0],
       canonicalizeAuthContext({ session, policy }, workspaceId)
     );
 
-    await recordIdempotencyResponse(idempotencyKey, result.isNew ? 201 : 200, result);
+    await recordIdempotencyResponse(idempotencyKey, result.isNew ? 201 : 200, result, auditContext, workspaceId);
     return Response.json(result, { status: result.isNew ? 201 : 200 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
@@ -106,7 +110,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
   }
 });
 
-export const DELETE = withEnforcementFull(async (request, auditContext, context, params) => {
+export const DELETE = withEnforcementFull(async (request, context, params) => {
   // Authenticate + authorize (fail-closed)
   const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_MANAGE_MEMBERS,
@@ -115,7 +119,7 @@ export const DELETE = withEnforcementFull(async (request, auditContext, context,
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },
