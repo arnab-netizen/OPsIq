@@ -1,0 +1,110 @@
+{
+  "timestamp": "2026-05-20T13:01:00Z",
+  "total_patterns": 2,
+  "total_defects": 172,
+  "patterns": [
+    {
+      "pattern_id": "P1_RAW_ERROR_MESSAGE_ASSIGNMENT",
+      "priority": 1,
+      "violation_type": "RAW_ERROR_MESSAGE",
+      "affected_count": 127,
+      "affected_domains": [
+        "webhooks",
+        "services",
+        "infrastructure",
+        "middleware",
+        "lib",
+        "domain",
+        "tests"
+      ],
+      "root_cause": "Services and utilities directly extract and use error.message without governance wrapper, exposing raw error details to clients/callers",
+      "code_pattern": "error instanceof Error ? error.message : <fallback>",
+      "examples": [
+        {
+          "file": "src/services/webhooks.service.ts",
+          "line": 167,
+          "code": "const message = error instanceof Error ? error.message : \"Unknown error\";",
+          "context": "catch block returning error to client"
+        },
+        {
+          "file": "src/services/webhook.service.ts",
+          "line": 72,
+          "code": "error: error instanceof Error ? error.message : String(error),",
+          "context": "error object property assignment"
+        },
+        {
+          "file": "src/services/usage.service.ts",
+          "line": "various",
+          "code": "message: error instanceof Error ? error.message : String(error)",
+          "context": "error response construction"
+        }
+      ],
+      "required_fix": {
+        "service_layer": "Replace with classifyOperatorError(error, { context: 'load' }) then use classified.operatorMessage",
+        "single_line_conversion": "const classified = classifyOperatorError(error, { context: 'load' }); return { error: classified.operatorMessage };",
+        "no_bulk_regex": true,
+        "manual_review_required": true
+      },
+      "validation_commands": [
+        "npm run build",
+        "npx tsc --noEmit",
+        "npm run governance:scan:strict"
+      ],
+      "success_criteria": {
+        "build_passes": true,
+        "tsc_passes": true,
+        "governance_raw_error_message_reduced": "127 → <lower>"
+      },
+      "risk_level": "MEDIUM",
+      "risk_notes": "Services may have custom error handling logic; each file requires individual review to ensure context parameter is appropriate"
+    },
+    {
+      "pattern_id": "P2_UNSAFE_ERROR_RENDER",
+      "priority": 2,
+      "violation_type": "UNSAFE_ERROR_RENDER",
+      "affected_count": 45,
+      "affected_domains": [
+        "runtime_errors",
+        "services"
+      ],
+      "root_cause": "Error creation/throwing logic in runtime and services does not apply governance classification before exposing errors",
+      "code_pattern": "return new ErrorClass(message, {...}) without prior classifyOperatorError",
+      "examples": [
+        {
+          "file": "src/runtime/runtime-errors.ts",
+          "lines": [101, 119, 137, 156, 176],
+          "code": "return new RuntimeError(message, {",
+          "context": "RuntimeError factory methods"
+        }
+      ],
+      "required_fix": {
+        "approach": "Apply classifyOperatorError to error source BEFORE RuntimeError instantiation, or modify RuntimeError to accept pre-classified errors",
+        "single_line_approach": "const classified = classifyOperatorError(error, { context: 'load' }); return new RuntimeError(classified.operatorMessage, {...});",
+        "no_bulk_regex": true,
+        "architectural_decision": "May require reviewing RuntimeError constructor to accept governed errors"
+      },
+      "validation_commands": [
+        "npm run build",
+        "npx tsc --noEmit",
+        "npm run governance:scan:strict"
+      ],
+      "success_criteria": {
+        "build_passes": true,
+        "tsc_passes": true,
+        "governance_unsafe_error_render_reduced": "45 → <lower>"
+      },
+      "risk_level": "MEDIUM",
+      "risk_notes": "RuntimeError is a factory; changes may affect error propagation across the system. Requires careful testing of error handling paths."
+    }
+  ],
+  "fix_order": [
+    "P1_RAW_ERROR_MESSAGE_ASSIGNMENT (127 violations)",
+    "P2_UNSAFE_ERROR_RENDER (45 violations)"
+  ],
+  "notes": {
+    "scope": "Only service/utility layer (src/services, src/runtime, src/infra, src/middleware, src/lib, src/domain). NO API routes (R29 completed). NO UI/pages (per user NO UI WORK instruction).",
+    "classification_caveat": "User asserted api_real_defects=0, ui_real_defects=0. This registry assumes those counts are correct and focuses exclusively on service layer.",
+    "bulk_regex_prohibition": "Each fix must target specific lines/patterns, not use find-replace across files.",
+    "build_tsc_requirement": "After EACH pattern fix, npm run build and npx tsc --noEmit must pass before committing."
+  }
+}

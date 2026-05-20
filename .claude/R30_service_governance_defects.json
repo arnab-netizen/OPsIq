@@ -1,0 +1,127 @@
+{
+  "timestamp": "2026-05-20T13:00:00Z",
+  "authoritative_scope": {
+    "total_service_real_defects": 172,
+    "RAW_ERROR_MESSAGE": 127,
+    "UNSAFE_ERROR_RENDER": 45,
+    "api_defects_after_r29": 0,
+    "ui_defects_claimed": 0,
+    "service_defects_to_fix": 172
+  },
+  "service_domains": {
+    "webhooks": {
+      "files": ["src/services/webhooks.service.ts", "src/services/webhook.service.ts", "src/lib/integrations/webhook.ts"],
+      "estimated_violations": 20,
+      "violation_types": ["RAW_ERROR_MESSAGE"]
+    },
+    "runtime_errors": {
+      "files": ["src/runtime/runtime-errors.ts", "src/runtime/queue/queue-durability.ts", "src/runtime/health/health-system.ts", "src/runtime/enforcement/request-enforcer.ts"],
+      "estimated_violations": 20,
+      "violation_types": ["UNSAFE_ERROR_RENDER", "RAW_ERROR_MESSAGE"]
+    },
+    "services": {
+      "files": [
+        "src/services/usage.service.ts",
+        "src/services/roi-lifecycle-gating.ts",
+        "src/services/recommendation.ts",
+        "src/services/re-evaluation.ts",
+        "src/services/projection-rebuild-engine.ts",
+        "src/services/projection-engine.ts",
+        "src/services/evidence.ts",
+        "src/services/event-replay-engine.ts",
+        "src/services/event-emitter.ts",
+        "src/services/entitlement.service.ts",
+        "src/services/decision-lifecycle-integrity.ts",
+        "src/services/action.ts",
+        "src/services/decision/transaction-execution.ts",
+        "src/services/decision/transaction-actions.ts",
+        "src/services/decision/status-management.ts",
+        "src/services/decision/execution-stub.ts",
+        "src/services/decisions/decision-lifecycle.service.ts",
+        "src/services/decisions/decision-creation-service.ts",
+        "src/services/decision-control/enforcement.service.ts",
+        "src/services/control/control-surface.service.ts",
+        "src/services/consulting-engine/pipeline.ts",
+        "src/services/best-path-engine/orchestrator.ts",
+        "src/services/alerts/alert-service.ts",
+        "src/services/operator/store.ts",
+        "src/services/metrics/decision-metrics-service.ts",
+        "src/services/learning/store.ts",
+        "src/services/execution/execution-service.ts",
+        "src/services/execution/action-handlers.ts",
+        "src/services/system/run.ts",
+        "src/services/production/retention-cleanup.ts",
+        "src/services/validation-contracts/contract-validator.ts"
+      ],
+      "estimated_violations": 80,
+      "violation_types": ["RAW_ERROR_MESSAGE", "UNSAFE_ERROR_RENDER"]
+    },
+    "infrastructure": {
+      "files": [
+        "src/infra/telemetry-sanitizer.ts",
+        "src/infra/scheduler.ts",
+        "src/infra/health-check.ts",
+        "src/infra/errors.ts",
+        "src/infra/error-tracking.ts",
+        "src/infra/error-handler.ts"
+      ],
+      "estimated_violations": 10,
+      "violation_types": ["RAW_ERROR_MESSAGE"]
+    },
+    "middleware": {
+      "files": [
+        "src/middleware/status-transition-guard.ts",
+        "src/middleware/monitoring.middleware.ts"
+      ],
+      "estimated_violations": 2,
+      "violation_types": ["RAW_ERROR_MESSAGE"]
+    },
+    "lib": {
+      "files": [
+        "src/lib/shared-error-extractor.ts",
+        "src/lib/enforced-queue-worker.ts",
+        "src/lib/db.ts",
+        "src/lib/observability/log.ts",
+        "src/lib/ingestion/csv.ts"
+      ],
+      "estimated_violations": 15,
+      "violation_types": ["RAW_ERROR_MESSAGE"]
+    },
+    "domain": {
+      "files": ["src/domain/decision-lifecycle.ts"],
+      "estimated_violations": 1,
+      "violation_types": ["RAW_ERROR_MESSAGE"]
+    },
+    "tests": {
+      "files": ["src/tests/stripe-sim/simulateWebhookDelivery.ts"],
+      "estimated_violations": 2,
+      "violation_types": ["RAW_ERROR_MESSAGE"]
+    }
+  },
+  "violation_patterns": {
+    "RAW_ERROR_MESSAGE_ASSIGNMENT": {
+      "pattern": "error instanceof Error ? error.message : <fallback>",
+      "examples": [
+        "const errorMsg = error instanceof Error ? error.message : String(error);",
+        "const message = error instanceof Error ? error.message : \"Unknown error\";",
+        "error: error instanceof Error ? error.message : String(error),"
+      ],
+      "estimated_count": 127,
+      "fix_strategy": "Route through toOperatorSafeError(err, context) in UI, classifyOperatorError(err, { context }) in services"
+    },
+    "UNSAFE_ERROR_RENDER": {
+      "pattern": "return new ErrorClass(message, {...}) or direct error.message exposure in error objects",
+      "examples": [
+        "return new RuntimeError(message, {",
+        "return new CustomError(error.message)"
+      ],
+      "estimated_count": 45,
+      "fix_strategy": "Route through classifyOperatorError(error, { context: 'load' }) before returning/exposing"
+    }
+  },
+  "scope_clarification": {
+    "includes": "service files, runtime, infrastructure, middleware, lib utilities, domain (non-API, non-pages)",
+    "excludes": "src/app/api/ routes (R29 completed), UI components and pages (per user instruction NO UI WORK)",
+    "note": "User assertion states api_real_defects=0 and ui_real_defects=0; R30 focuses only on service layer defects"
+  }
+}
