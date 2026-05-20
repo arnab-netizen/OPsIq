@@ -1,5 +1,5 @@
 import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth } from ", createServiceCapabilityContext@/lib/auth-guard", createServiceCapabilityContext;
+import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
 import { getItems } from "@/services/operator/store";
 import { calculateValue } from "@/services/value/tracker";
@@ -46,8 +46,9 @@ export const GET = withEnforcementFull(async () => {
       roi: metrics.roi,
       lossFromWrongDecisions: metrics.lossFromWrongDecisions,
       itemsAnalyzed: metrics.itemsAnalyzed,
-    },,
-        context: auditContext}).catch((auditError) => {
+    },
+    context: createServiceCapabilityContext({ capability: "mutation" }),
+  }).catch((auditError) => {
     console.error(`Audit logging failed: ${auditError}`);
   });
 

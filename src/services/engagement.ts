@@ -326,34 +326,26 @@ export async function updateEngagement(
     })
   );
 
-      await emitAuditEvent({
-        eventName: AUDIT_EVENTS.ENGAGEMENT_COMPLETED,
-        actorId,
-        entityType: "engagement",
-        entityId: engagementId,
-        workspaceId: validatedWorkspaceId,
-        payload: { previousStatus: currentStatus },
-        visibility: "internal",
-    capability: 'mutation',
-    decision: 'e_n_g_a_g_e_m_e_n_t__c_o_m_p_l_e_t_e_d',
-    requestId: randomUUID(),
-
-      });
-    } else if (input.status === "cancelled") {
-      await emitAuditEvent({
-        eventName: AUDIT_EVENTS.ENGAGEMENT_CANCELLED,
-        actorId,
-        entityType: "engagement",
-        entityId: engagementId,
-        workspaceId: validatedWorkspaceId,
-        payload: { previousStatus: currentStatus },
-        visibility: "internal",
-    capability: 'mutation',
-    decision: 'e_n_g_a_g_e_m_e_n_t__c_a_n_c_e_l_l_e_d',
-    requestId: randomUUID(),
-
-      });
-    }
+  if (input.status === "completed") {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ENGAGEMENT_COMPLETED,
+      actorId,
+      entityType: "engagement",
+      entityId: engagementId,
+      workspaceId: validatedWorkspaceId,
+      payload: { previousStatus: currentStatus },
+      visibility: "internal",
+    });
+  } else if (input.status === "cancelled") {
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ENGAGEMENT_CANCELLED,
+      actorId,
+      entityType: "engagement",
+      entityId: engagementId,
+      workspaceId: validatedWorkspaceId,
+      payload: { previousStatus: currentStatus },
+      visibility: "internal",
+    });
   }
 
   // Trigger re-evaluation if intervention mode changed
@@ -369,10 +361,6 @@ export async function updateEngagement(
         newMode: input.interventionMode,
       },
       visibility: "internal",
-    capability: 'mutation',
-    decision: 'i_n_t_e_r_v_e_n_t_i_o_n__m_o_d_e__c_h_a_n_g_e_d',
-    requestId: randomUUID(),
-
     });
 
     await triggerReEvaluation({

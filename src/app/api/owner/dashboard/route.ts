@@ -56,10 +56,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     const queryParams = querySchema.parse({
       includeKPIs: url.searchParams.get("includeKPIs"),
       daysOfHistory: url.searchParams.get("daysOfHistory"),
-    capability: 'mutation',
-    decision: 'owner_dashboard_viewed',
-    requestId: randomUUID(),
-    };
+    });
 
     const context = { workspaceId, userId };
 
@@ -137,10 +134,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
         criticalCount: health.criticalEngagements,
         actionQueueSize: actionQueue.totalCount,
       },
-    capability: 'mutation',
-    decision: 'owner_dashboard_viewed',
-    requestId: randomUUID(),
-    };
+    });
 
     return Response.json(toOwnerDashboardDTO(dashboard), { status: 200 });
   } catch (error) {

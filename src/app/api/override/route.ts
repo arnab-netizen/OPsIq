@@ -1,7 +1,7 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { NextRequest } from "next/server";
-import { withAuth } from ", createServiceCapabilityContext@/lib/auth-guard", createServiceCapabilityContext;
+import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { addOverride } from "@/services/override/store";
@@ -27,8 +27,9 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       metadata: {
         reason: "Session not found or invalid",
         action: "override_attempt",
-      },,
-        context: auditContext}).catch((auditError) => {
+      },
+      context: createServiceCapabilityContext({ capability: "mutation" }),
+    }).catch((auditError) => {
       console.error(`Audit logging failed: ${auditError}`);
     });
 
@@ -49,8 +50,9 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       metadata: {
         reason: "User role lacks edit permission",
         action: "override_attempt",
-      },,
-        context: auditContext}).catch((auditError) => {
+      },
+      context: createServiceCapabilityContext({ capability: "mutation" }),
+    }).catch((auditError) => {
       console.error(`Audit logging failed: ${auditError}`);
     });
 
@@ -93,8 +95,9 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         attemptedOverride: overriddenAction,
         reason,
         denialReason: "Override not allowed for this violation",
-      },,
-        context: auditContext}).catch((auditError) => {
+      },
+      context: createServiceCapabilityContext({ capability: "mutation" }),
+    }).catch((auditError) => {
       console.error(`Audit logging failed: ${auditError}`);
     });
 
@@ -132,8 +135,9 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       originalAction: item.action,
       overriddenAction,
       reason,
-    },,
-        context: auditContext}).catch((auditError) => {
+    },
+    context: createServiceCapabilityContext({ capability: "mutation" }),
+  }).catch((auditError) => {
     console.error(`Audit logging failed: ${auditError}`);
   });
 

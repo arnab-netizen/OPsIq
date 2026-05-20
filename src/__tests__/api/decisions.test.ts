@@ -188,13 +188,6 @@ describe("Decisions API Routes", () => {
     it("should emit DECISION_CREATED audit event with workspace context", () => {
       // Critical: Audit trail emission
       // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_CREATED, workspaceId, ... ,
-    requestId: randomUUID()
-  }
-      expect(true).toBe(true);
-    capability: 'mutation',
-    decision: 'd_e_c_i_s_i_o_n__c_r_e_a_t_e_d',
-    requestId: randomUUID(),
-    };
 
     it("should prevent cross-workspace decision creation (critical isolation)", () => {
       // Critical: User from ws-2 cannot create decision in ws-1
@@ -289,13 +282,6 @@ describe("Decisions API Routes", () => {
     it("should emit DECISION_APPROVED audit event with workspace", () => {
       // Critical: Audit trail
       // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_APPROVED, workspaceId, ... ,
-    requestId: randomUUID()
-  }
-      expect(true).toBe(true);
-    capability: 'mutation',
-    decision: 'd_e_c_i_s_i_o_n__a_p_p_r_o_v_e_d',
-    requestId: randomUUID(),
-    };
 
     it("should require authentication", () => {
       // TODO_A2_FAKE_TEST_QUARANTINED: withAuth middleware
@@ -356,13 +342,6 @@ describe("Decisions API Routes", () => {
     it("should emit DECISION_BLOCKED audit event with workspace", () => {
       // Critical: Audit trail
       // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.DECISION_BLOCKED, workspaceId, ... ,
-    requestId: randomUUID()
-  }
-      expect(true).toBe(true);
-    capability: 'mutation',
-    decision: 'd_e_c_i_s_i_o_n__b_l_o_c_k_e_d',
-    requestId: randomUUID(),
-    };
 
     it("should require authentication", () => {
       // TODO_A2_FAKE_TEST_QUARANTINED: withAuth middleware
@@ -458,69 +437,3 @@ describe("Decisions API Routes", () => {
     it("should include actor ID in all audit events", () => {
       // Critical: Audit trail includes userId
       // Service: emitAuditEvent({ actorId: authContext.session.user.id, ... ,
-    requestId: randomUUID()
-  }
-      expect(true).toBe(true);
-    });
-
-    it("should include workspace context in all audit events", () => {
-      // Critical: All events include workspaceId
-      // Service: emitAuditEvent({ workspaceId: validatedWorkspaceId, ... ,
-    requestId: randomUUID()
-  }
-      expect(true).toBe(true);
-    });
-
-    it("should record audit trail with timestamp", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Audit metadata (delegated to audit service)
-    });
-
-    it("should include rationale for status changes", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: Audit payload (block reason, etc)
-    });
-
-    it("should allow history retrieval via GET", () => {
-      // TODO_A2_FAKE_TEST_QUARANTINED: History API (integration test)
-    });
-  });
-
-  describe("Decision Isolation & Authorization (Critical Invariants)", () => {
-    it("should prevent cross-workspace decision access (critical isolation)", () => {
-      // Critical: All operations enforce workspace scoping
-      expect(true).toBe(true);
-    });
-
-    it("should prevent unauthenticated access to any decision operation", () => {
-      // Critical: withAuth middleware enforces auth
-      expect(true).toBe(true);
-    });
-
-    it("should enforce capability-based access control (critical)", () => {
-      // Critical: Policy checks enforce capabilities (READ, WRITE)
-      expect(true).toBe(true);
-    });
-
-    it("should scope all responses to authenticated user's workspace", () => {
-      // Critical: No workspace leakage in responses
-      // Service enforces WHERE workspaceId = request.workspaceId
-      expect(true).toBe(true);
-    });
-
-    it("should return 403 for cross-workspace mutation attempts", () => {
-      // Critical: Fail-closed on cross-workspace operations
-      expect(true).toBe(true);
-    });
-  });
-
-  // QUARANTINED: 117 fake tests (from original 132)
-  // Marked TODO_A2_FAKE_TEST_QUARANTINED with reasons:
-  // - DELEGATED_TO_SERVICE: 47 tests (auth, pagination, optional fields, filtering)
-  // - SUCCESS_PATH: 35 tests (integration test coverage)
-  // - ERROR_HANDLING: 35 tests (generic response handling)
-  //
-  // IMPLEMENTED: 15 critical invariant tests covering Tier 1 production safety
-  // - Workspace isolation: 5 tests
-  // - Auth enforcement: 4 tests
-  // - State machine: 8 tests
-  // - Audit trail: 5 tests
-});

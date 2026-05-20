@@ -158,15 +158,8 @@ describe("Actions API Route", () => {
 
     it("should emit ACTION_CREATED audit event on workspace", async () => {
       // Critical invariant: All actions creation must emit audit event with correct workspace
-      // Service calls: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_CREATED, workspaceId, ... ,
-    requestId: randomUUID()
-  }
       expect(AUDIT_EVENTS).toBeDefined();
-    capability: 'mutation',
-    decision: 'a_c_t_i_o_n__c_r_e_a_t_e_d',
-    requestId: randomUUID(),
-    };
-  });
+    });
 
   describe("GET /api/actions - List Actions (Workspace Isolation Critical)", () => {
     it("should require x-workspace-id header", () => {
@@ -707,63 +700,15 @@ describe("Actions API Route", () => {
     it("should emit ACTION_CREATED event on creation", () => {
       // Critical invariant: All creates emit AUDIT_EVENTS.ACTION_CREATED
       // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_CREATED, workspaceId, ... ,
-    requestId: randomUUID()
-  }
-      expect(true).toBe(true);
-    capability: 'mutation',
-    decision: 'a_c_t_i_o_n__c_r_e_a_t_e_d',
-    requestId: randomUUID(),
-    };
 
     it("should emit ACTION_UPDATED event on status change", () => {
       // Critical invariant: State transitions emit ACTION_UPDATED
       // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_UPDATED, ... ,
-    requestId: randomUUID()
-  }
-      expect(true).toBe(true);
-    capability: 'mutation',
-    decision: 'a_c_t_i_o_n__u_p_d_a_t_e_d',
-    requestId: randomUUID(),
-    };
 
     it("should emit ACTION_COMPLETED event on completion", () => {
       // Critical invariant: Completion transitions emit ACTION_COMPLETED
       // Service: emitAuditEvent({ eventName: AUDIT_EVENTS.ACTION_COMPLETED, workspaceId, ... ,
-    requestId: randomUUID()
-  }
-      expect(true).toBe(true);
-    capability: 'mutation',
-    decision: 'a_c_t_i_o_n__c_o_m_p_l_e_t_e_d',
-    requestId: randomUUID(),
-    };
 
     it("should record audit trail with actor ID", () => {
       // Critical invariant: All events include actorId
       // Service: emitAuditEvent({ ..., actorId: authContext.session.user.id ,
-    requestId: randomUUID()
-  }
-      expect(true).toBe(true);
-    });
-
-    it("should record audit trail with workspace context", () => {
-      // Critical invariant: All events include workspaceId
-      // Service: emitAuditEvent({ ..., workspaceId: validatedWorkspaceId ,
-    requestId: randomUUID()
-  }
-      expect(true).toBe(true);
-    });
-  });
-
-  // QUARANTINED: DELEGATED_TO_SERVICE tests (tested in action-lifecycle.test.ts, action.test.ts)
-  // - Lines 465-521: POST start/accept/reject operations (delegated to service tests)
-  // - Lines 650-680: Informational queries (low-risk, view-only operations)
-  // Total quarantined: 87 tests (from original 119)
-  // Implemented critical tests: 32 tests covering:
-  //   - Workspace isolation (6 tests)
-  //   - Auth enforcement (5 tests)
-  //   - State machine transitions (6 tests)
-  //   - Tenant safety & isolation (4 tests)
-  //   - Error handling & fail-closed (6 tests)
-  //   - Idempotency (3 tests)
-  //   - Audit & events (5 tests)
-});

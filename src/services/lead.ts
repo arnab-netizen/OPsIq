@@ -161,10 +161,7 @@ export async function updateLead(
     workspaceId: validatedWorkspaceId,
     payload: data,
     visibility: 'internal',
-    capability: 'mutation',
-  ,
-    requestId: randomUUID()
-  };
+  });
 
   logger.info("Lead updated", { leadId });
 }

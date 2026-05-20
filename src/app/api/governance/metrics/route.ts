@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard", { createServiceCapabilityContext };
+import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";

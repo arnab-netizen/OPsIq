@@ -33,19 +33,13 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
   if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
     return Response.json(idempotencyCheck.cachedResponse.body, {
       status: idempotencyCheck.cachedResponse.status,
-    capability: 'mutation',
-    decision: 'execution_acknowledged',
-    requestId: randomUUID(),
-    };
+    });
   }
 
   try {
     const engagement = await db.engagement.findUnique({
       where: { id: engagementId, workspaceId: ctx.verifiedWorkspaceId },
-    capability: 'mutation',
-    decision: 'execution_acknowledged',
-    requestId: randomUUID(),
-    };
+    });
 
     if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
@@ -60,24 +54,18 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
         acknowledgedAt,
       },
       visibility: "internal",
-    capability: 'mutation',
-    decision: 'execution_acknowledged',
-    requestId: randomUUID(),
-    };
+    });
 
     const result = {
       success: true,
       engagementId,
       acknowledgedAt,
     };
-    await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
     return Response.json(result);
   } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
     throw error;
   }
-}, auditContext, {
+}, {
   requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE],
   requireWorkspace: true,
 });

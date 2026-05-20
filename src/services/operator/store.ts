@@ -247,16 +247,11 @@ export async function updateItem(
     eventName: AUDIT_EVENTS.OPERATOR_ITEM_UPDATED,
     actorId: item.lastUpdatedBy || item.createdBy || "system",
     workspaceId: item.workspaceId,
-    capability: 'OPERATOR_UPDATE',
-    decision: 'operator_item_updated',
-    requestId: context?.requestId,
     entityType: "operator_item",
     entityId: id,
     payload: payloadFields,
     visibility: 'internal',
-  ,
-    requestId: randomUUID()
-  }.catch((error) => {
+  }).catch((error) => {
     logger.warn("Failed to emit audit event for operator item update", {
       itemId: id,
       error: error instanceof Error ? error.message : String(error),

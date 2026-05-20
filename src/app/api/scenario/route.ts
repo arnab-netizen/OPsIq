@@ -1,7 +1,7 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { NextRequest } from "next/server";
-import { withAuth } from ", createServiceCapabilityContext@/lib/auth-guard", createServiceCapabilityContext;
+import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { runScenario } from "@/services/scenario/engine";
@@ -56,8 +56,9 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       deltaRevenue,
       deltaCost,
       result,
-    },,
-        context: auditContext}).catch((auditError) => {
+    },
+    context: createServiceCapabilityContext({ capability: "mutation" }),
+  }).catch((auditError) => {
     console.error(`Audit logging failed: ${auditError}`);
   });
 

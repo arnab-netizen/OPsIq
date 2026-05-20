@@ -10,7 +10,7 @@ import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { recordResult, analyzeOutcome, ExperimentLifecycleError } from "@/services/experiment/experiment-lifecycle.service";
+import { recordResult, ExperimentLifecycleError } from "@/services/experiment/experiment-lifecycle.service";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
 import type { Experiment } from "@/domain/experiment/experiment";

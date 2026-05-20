@@ -1,7 +1,7 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { NextRequest } from "next/server";
-import { withAuth } from ", createServiceCapabilityContext@/lib/auth-guard", createServiceCapabilityContext;
+import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError } from "@/infra/errors";
@@ -60,6 +60,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   createEntity(entity);
 
   // Log audit event (fail-closed if audit fails)
+  const auditContext = createServiceCapabilityContext({ capability: "mutation" });
   await logAuditEvent({
     eventName: "CREATE",
     entityType: "Entity",
@@ -67,8 +68,9 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     actorId,
     role,
     before: null,
-    after: entity,,
-        context: auditContext});
+    after: entity,
+    context: auditContext,
+  });
 
   return entity;
 });

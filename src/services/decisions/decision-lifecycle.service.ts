@@ -251,10 +251,7 @@ export async function executeDecision(
       operationName: "executeDecision",
       actorId,
       payload: { decisionId, workspaceId },
-    capability: 'mutation',
-    decision: 'eventname',
-    requestId: randomUUID(),
-    };
+    });
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
       return idempotencyCheck.cachedResponse.body as { id: string; status: string };
@@ -269,10 +266,7 @@ export async function executeDecision(
     // Fetch to verify state
     const decision = await db.operatorItem.findFirst({
       where: { id: decisionId, workspaceId },
-    capability: 'mutation',
-    decision: 'eventname',
-    requestId: randomUUID(),
-    };
+    });
 
     if (!decision) {
       throw new NotFoundError("Decision", decisionId);

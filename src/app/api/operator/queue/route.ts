@@ -60,10 +60,7 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
         status: status || "all",
         limit,
       },
-    capability: 'mutation',
-    decision: 'operator_queue_viewed',
-    requestId: randomUUID(),
-    };
+    });
 
     return Response.json(
       {

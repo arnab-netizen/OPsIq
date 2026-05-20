@@ -1,4 +1,4 @@
-import { withAuth } from "@/lib/auth-guard", { createServiceCapabilityContext };
+import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
 import { NextRequest } from "next/server";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { requireWorkspaceContext } from "@/services/workspace/context";

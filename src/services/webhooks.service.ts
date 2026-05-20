@@ -6,16 +6,47 @@
  */
 
 import { logger } from "@/infra/logger";
-  await emitAuditEvent({
-    workspace_id: workspaceId,
-    entity_type: "webhook",
-    entity_id: webhookId,
-    actor_id: createdBy,
-    action: "create",
-    status: "success",
-    details: { url, events },
-  } as any);
+import { randomUUID } from "crypto";
 
+// In-memory webhook store
+const webhookStore = {
+  webhooks: new Map(),
+  getWebhook(id: string) {
+    return this.webhooks.get(id);
+  },
+  addWebhook(webhook: any) {
+    this.webhooks.set(webhook.id, webhook);
+    return webhook;
+  },
+};
+
+export interface Webhook {
+  id: string;
+  workspaceId: string;
+  url: string;
+  events: string[];
+  createdBy: string;
+  createdAt: Date;
+  active: boolean;
+}
+
+export async function registerWebhook(
+  workspaceId: string,
+  url: string,
+  events: string[],
+  createdBy: string
+): Promise<Webhook> {
+  const webhook: Webhook = {
+    id: randomUUID(),
+    workspaceId,
+    url,
+    events,
+    createdBy,
+    createdAt: new Date(),
+    active: true,
+  };
+
+  webhookStore.addWebhook(webhook);
   return webhook;
 }
 
@@ -254,3 +285,4 @@ export async function deleteWebhook(webhookId: string, workspaceId: string): Pro
   webhookStore.deleteWebhook(webhookId);
 
   // Emit audit event
+}

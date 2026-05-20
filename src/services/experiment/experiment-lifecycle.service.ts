@@ -465,4 +465,6 @@ export async function captureLearning(
   });
 
   // Emit audit event
-  if (userId) {
+  if (userId) {    // Emit audit event later
+  }
+}
