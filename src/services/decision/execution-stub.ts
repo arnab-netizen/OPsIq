@@ -1,3 +1,10 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import type { ServiceCapabilityContext } from "@/lib/auth-guard";
@@ -85,7 +92,7 @@ export async function executeDecisionStub(
     context,
   }).catch((err: unknown) => {
     console.error(
-      `Audit logging failed: ${err instanceof Error ? err.message : String(err)}`
+      `Audit logging failed: ${getSafeErrorMessage(err)}`
     );
   });
 

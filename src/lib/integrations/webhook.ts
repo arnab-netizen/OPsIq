@@ -1,4 +1,10 @@
 import { logEvent } from "@/lib/observability/log";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface WebhookPayload {
   event: string;
@@ -42,7 +48,7 @@ export async function emitWebhook(
       });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = getSafeErrorMessage(error);
     logEvent({
       type: "webhook_error",
       workspaceId: payload.workspaceId,

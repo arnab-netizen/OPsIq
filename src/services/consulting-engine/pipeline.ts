@@ -1,3 +1,10 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { runConsultingEngine } from "./orchestrator";
@@ -185,7 +192,7 @@ export async function runConsultingPipeline(
     } catch (error) {
       logger.error("Consulting pipeline failed at persistence stage", {
         engagementId,
-        error: error instanceof Error ? error.message : String(error),
+        error: getSafeErrorMessage(error),
       });
 
       throw error;
@@ -193,7 +200,7 @@ export async function runConsultingPipeline(
   } catch (error) {
     logger.error("Consulting pipeline failed", {
       engagementId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }

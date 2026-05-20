@@ -1,3 +1,10 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 /**
  * CSV Ingestion & Validation
  *
@@ -160,12 +167,12 @@ export function ingestCSVSafe(
 
         records.push({ revenue, cost });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
+        const message = getSafeErrorMessage(err);
         errors.push(`Row ${i + 1}: ${message}`);
       }
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : "CSV parsing failed";
+    const message = getSafeErrorMessage(err);
     errors.push(`Parse error: ${message}`);
   }
 
