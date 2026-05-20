@@ -66,7 +66,6 @@ export async function createAlert(input: CreateAlertInput,
       workspaceId,
       capability: 'ALERT_CREATE',
       decision: 'alert_created',
-      requestId: context?.requestId,
       entityType: "alert",
       entityId: alert.id,
       payload: {
@@ -86,7 +85,7 @@ export async function createAlert(input: CreateAlertInput,
 
     // Deliver based on channel
     if (channel === "email") {
-      deliverEmailAlert(alert as any).catch((error) => {
+      deliverEmailAlert(alert as any, context).catch((error) => {
         logger.warn("Failed to deliver email alert", {
           alertId: alert.id,
           userId,
@@ -230,7 +229,7 @@ export async function triggerBlockedAlert(
     message: `Decision execution blocked: ${reason}`,
     entityType: "OperatorItem",
     entityId: decisionId,
-  });
+  }, context);
 }
 
 export async function triggerThresholdBreachAlert(
@@ -251,7 +250,7 @@ export async function triggerThresholdBreachAlert(
     type: "threshold_breach",
     channel: "in_app",
     message: `Threshold breach: ${thresholdName} (current: ${currentValue}, threshold: ${threshold})`,
-  });
+  }, context);
 }
 
 export async function triggerExecutionFailureAlert(
@@ -273,10 +272,10 @@ export async function triggerExecutionFailureAlert(
     message: `Decision execution failed: ${failureReason}`,
     entityType: "OperatorItem",
     entityId: decisionId,
-  });
+  }, context);
 }
 
-async function deliverEmailAlert(alert: Alert): Promise<void> {
+async function deliverEmailAlert(alert: Alert, context: ServiceCapabilityContext): Promise<void> {
   if (!context || !context.capabilityEnvelope) {
     throw new Error("Function requires ServiceCapabilityContext with capabilityEnvelope");
   }

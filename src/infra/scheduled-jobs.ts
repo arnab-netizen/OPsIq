@@ -53,8 +53,6 @@ export const dailyAlphaReviewJob: ScheduledJobConfig = {
       // 2. Send to admin email
       // 3. Update admin dashboard
       // 4. Alert on critical issues
-
-      return report;
     } catch (error) {
       console.error('[SCHEDULED_JOB] Daily alpha review failed:', error);
       throw error;

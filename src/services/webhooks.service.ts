@@ -9,27 +9,65 @@ import { logger } from "@/infra/logger";
 import { randomUUID } from "crypto";
 import { createWebhookSignature } from "@/domain/webhooks/webhook-contracts";
 
-// In-memory webhook store
-const webhookStore = {
-  webhooks: new Map(),
-  getWebhook(id: string) {
-    return this.webhooks.get(id);
-  },
-  addWebhook(webhook: any) {
-    this.webhooks.set(webhook.id, webhook);
-    return webhook;
-  },
-};
+export interface WebhookDelivery {
+  id: string;
+  webhookId: string;
+  workspaceId: string;
+  event: string;
+  payload: Record<string, unknown>;
+  statusCode?: number;
+  responseBody?: string;
+  attempt: number;
+  deliveredAt?: Date;
+  nextRetryAt?: Date;
+  createdAt: Date;
+}
 
 export interface Webhook {
   id: string;
   workspaceId: string;
   url: string;
   events: string[];
+  secret: string;
   createdBy: string;
   createdAt: Date;
   active: boolean;
+  failureCount: number;
+  lastDeliveryAt?: Date;
+  lastFailureAt?: Date;
 }
+
+// In-memory webhook store
+const webhookStore = {
+  webhooks: new Map<string, Webhook>(),
+  deliveries: new Map<string, WebhookDelivery[]>(),
+  getWebhook(id: string): Webhook | undefined {
+    return this.webhooks.get(id);
+  },
+  addWebhook(webhook: Webhook): Webhook {
+    this.webhooks.set(webhook.id, webhook);
+    return webhook;
+  },
+  updateWebhook(webhook: Webhook): void {
+    this.webhooks.set(webhook.id, webhook);
+  },
+  addDelivery(delivery: WebhookDelivery): void {
+    if (!this.deliveries.has(delivery.webhookId)) {
+      this.deliveries.set(delivery.webhookId, []);
+    }
+    this.deliveries.get(delivery.webhookId)!.push(delivery);
+  },
+  getWebhooksByEvent(event: string): Webhook[] {
+    return Array.from(this.webhooks.values()).filter(w => w.events.includes(event));
+  },
+  getWebhooksByWorkspace(workspaceId: string): Webhook[] {
+    return Array.from(this.webhooks.values()).filter(w => w.workspaceId === workspaceId);
+  },
+  deleteWebhook(id: string): void {
+    this.webhooks.delete(id);
+    this.deliveries.delete(id);
+  },
+};
 
 export async function registerWebhook(
   workspaceId: string,
@@ -42,9 +80,11 @@ export async function registerWebhook(
     workspaceId,
     url,
     events,
+    secret: randomUUID(),
     createdBy,
     createdAt: new Date(),
     active: true,
+    failureCount: 0,
   };
 
   webhookStore.addWebhook(webhook);
