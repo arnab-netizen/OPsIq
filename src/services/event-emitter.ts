@@ -2,6 +2,12 @@ import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { v4 as uuidv4 } from "uuid";
 import { ProjectionEngine } from "@/services/projection-engine";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export type EventPayload = Record<string, string | undefined>;
 
@@ -249,7 +255,7 @@ export class EventEmitterService {
     } catch (error) {
       logger.warn("EventEmitterService: Projection failed (non-blocking)", {
         eventId: event.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: getSafeErrorMessage(error),
       });
     }
 

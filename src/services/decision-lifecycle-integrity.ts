@@ -13,6 +13,12 @@ import {
   DecisionState,
   isTerminalState,
 } from "@/domain/decision-lifecycle";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 /**
  * Severity levels for integrity issues
@@ -348,7 +354,7 @@ export async function runDecisionLifecycleIntegrityCheck(
   } catch (error) {
     logger.error("Decision lifecycle integrity check failed", {
       workspaceId,
-      error: error instanceof Error ? error.message : String(error),
+      error: getSafeErrorMessage(error),
     });
     throw error;
   }

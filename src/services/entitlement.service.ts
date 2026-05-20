@@ -1,6 +1,12 @@
 import type { ServiceCapabilityContext } from '@/lib/auth-guard';
 import { db } from "@/lib/db";
 import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface WorkspacePlan {
   id: string;
@@ -311,7 +317,7 @@ export async function assertCapability(
     // Fail closed: any error means deny
     return {
       allowed: false,
-      reason: `Entitlement check failed: ${error instanceof Error ? error.message : "unknown error"}`,
+      reason: `Entitlement check failed: ${getSafeErrorMessage(error)}`,
     };
   }
 }

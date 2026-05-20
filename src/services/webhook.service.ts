@@ -510,7 +510,7 @@ export async function markWebhookEventFailed(
     logger.error("Failed to mark webhook event as failed", {
       stripeEventId,
       originalError: error.message,
-      dbError: dbError instanceof Error ? dbError.message : String(dbError),
+      dbError: getSafeErrorMessage(dbError),
     });
     throw dbError;
   }

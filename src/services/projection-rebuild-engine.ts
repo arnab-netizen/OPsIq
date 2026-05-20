@@ -61,7 +61,7 @@ export class ProjectionRebuildEngine {
         );
       } catch (replayErr) {
         throw new Error(
-          `Replay failed: ${replayErr instanceof Error ? replayErr.message : String(replayErr)}`
+          `Replay failed: ${getSafeErrorMessage(replayErr)}`
         );
       }
 

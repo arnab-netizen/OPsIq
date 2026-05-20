@@ -1,6 +1,12 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { SnapshotOptimizationEngine } from "@/services/snapshot-optimization-engine";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface ReplayedAggregate {
   aggregateId: string;
@@ -149,7 +155,7 @@ export class EventReplayEngine {
       } catch (snapshotErr) {
         logger.warn("EventReplayEngine: Failed to create snapshot", {
           aggregateId,
-          error: snapshotErr instanceof Error ? snapshotErr.message : String(snapshotErr),
+          error: getSafeErrorMessage(snapshotErr),
         });
         // Do not fail replay if snapshot creation fails - logging only
       }

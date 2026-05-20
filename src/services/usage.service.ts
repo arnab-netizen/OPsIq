@@ -1,5 +1,11 @@
 import { trackUsage } from "@/services/entitlement.service";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface UsageRecord {
   workspaceId: string;
@@ -39,7 +45,7 @@ export async function recordUsage(
       workspaceId,
       key,
       value,
-      error: error instanceof Error ? error.message : "unknown error",
+      error: getSafeErrorMessage(error),
     });
   }
 }

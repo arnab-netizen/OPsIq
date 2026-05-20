@@ -800,7 +800,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     } catch (escalationError) {
       logger.warn("Escalation/review check failed (non-blocking)", {
         engagementId: event.engagementId,
-        error: escalationError instanceof Error ? escalationError.message : String(escalationError),
+        error: getSafeErrorMessage(escalationError),
       });
     }
 
