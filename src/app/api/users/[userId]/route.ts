@@ -4,7 +4,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
+import { withAuth, createServiceCapabilityContext, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -94,7 +94,7 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
   // Validate workspace membership (fail-closed)
   const nextRequest = request as NextRequest;
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = nextRequest.headers.get("x-workspace-id");
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },
