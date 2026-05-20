@@ -62,15 +62,15 @@
   "governance_metrics": {
     "raw_error_message": {
       "baseline": 202,
-      "current": 201,
-      "improvement": "1 error (-0.5%)",
-      "status": "FOUNDATION_LAID - requires API/UI error rendering patches"
+      "current": 196,
+      "improvement": "6 errors (-3%)",
+      "status": "IN_PROGRESS - systematic UI/infra fixes applied"
     },
     "unsafe_error_render": {
       "baseline": 92,
-      "current": 80,
-      "improvement": "12 errors (-13%)",
-      "status": "PARTIAL - runtime-errors foundation applied"
+      "current": 77,
+      "improvement": "15 errors (-16%)",
+      "status": "IN_PROGRESS - runtime-errors foundation + UI patches"
     },
     "unsafe_metric": {
       "baseline": 5,
@@ -88,9 +88,9 @@
 
   "total_errors": {
     "baseline": 299,
-    "current": 281,
-    "improvement": "18 errors (-6%)",
-    "remaining": 281
+    "current": 273,
+    "improvement": "26 errors (-8.7%)",
+    "remaining": 273
   },
 
   "total_warnings": {
@@ -150,7 +150,10 @@
     "Target: Reduce RAW_ERROR_MESSAGE from 201→0 and UNSAFE_ERROR_RENDER from 80→0"
   ],
 
-  "deployment_state_label": "R30_CLEANROOM_PARTIAL_FOUNDATION_ONLY_GOVERNANCE_STILL_BLOCKED",
+  "deployment_state_label": "R30_CLEANROOM_GOVERNANCE_IN_PROGRESS_BLOCKERS_REDUCED",
   "merge_recommendation": "DO_NOT_MERGE_CONTINUE_GOVERNANCE_CLOSURE",
-  "deployment_readiness": "PARTIAL - Foundation architecture proven, but 281 blocking governance violations remain. Continuation required for zero-defect closure."
+  "batches_completed": 4,
+  "files_changed": 6,
+  "commits_made": 5,
+  "progress_summary": "Systematic governance closure in progress: 26 violations closed out of 281 remaining. UNSAFE_METRIC 100% complete. RAW_ERROR_MESSAGE and UNSAFE_ERROR_RENDER in controlled batch reduction. Foundation proven, pattern established, continuation required for zero-defect closure."
 }
