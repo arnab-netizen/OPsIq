@@ -8,6 +8,12 @@
 import { logger } from "@/infra/logger";
 import { randomUUID } from "crypto";
 import { createWebhookSignature } from "@/domain/webhooks/webhook-contracts";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export interface WebhookDelivery {
   id: string;
@@ -223,7 +229,7 @@ export async function deliverWebhookEvent(event: string, data: Record<string, un
         logger.error("Webhook delivery failed permanently", {
           webhookId: webhook.id,
           event,
-          error: error instanceof Error ? error.message : String(error),
+          error: getSafeErrorMessage(error),
         });
       });
   }
@@ -287,7 +293,7 @@ async function deliverWithRetry(
       logger.warn("Webhook delivery network error, scheduling retry", {
         webhookId: webhook.id,
         attempt,
-        error: error instanceof Error ? error.message : String(error),
+        error: getSafeErrorMessage(error),
         nextRetryMs: delayMs,
       });
 
@@ -300,7 +306,7 @@ async function deliverWithRetry(
       webhookStore.updateWebhook(webhook);
       logger.error("Webhook delivery failed (network error)", {
         webhookId: webhook.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: getSafeErrorMessage(error),
       });
     }
   }
