@@ -75,7 +75,7 @@ export function DecisionCSVUpload({
         onSuccess(data);
       }
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorMsg = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "form" }).operatorMessage;
       setMessageType("error");
       setMessage(errorMsg);
 
