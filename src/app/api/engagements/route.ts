@@ -38,7 +38,7 @@ const listEngagementsSchema = paginationSchema.extend({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const params = parseSearchParams(ctx.request?.url || "", listEngagementsSchema);
     const result = await listEngagements(workspaceId, params, ctx.policy ? hasInternalAccess(ctx.policy) : false);
@@ -50,7 +50,7 @@ export const GET = withCanonicalEnforcement(
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {

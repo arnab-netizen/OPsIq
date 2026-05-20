@@ -30,7 +30,7 @@ const updateInterventionModeSchema = z.object({
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
 
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
     const { engagementId } = params;
     parseOrThrow(uuidSchema, engagementId);
 
