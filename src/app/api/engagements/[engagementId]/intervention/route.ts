@@ -50,7 +50,7 @@ export const PATCH = withEnforcementFull(async (request, context, params) => {
   });
 
   const nextRequest = request as NextRequest;
-  const workspaceId = nextRequest.headers.get("x-workspace-id");
+  const workspaceId = ctx.verifiedWorkspaceId;
   if (!workspaceId) {
     return Response.json(
       { error: "Workspace ID required (x-workspace-id header)" },
