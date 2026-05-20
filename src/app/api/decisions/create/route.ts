@@ -1,3 +1,10 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
@@ -125,7 +132,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       return result;
     } catch (parseError) {
       throw new UnauthorizedError(
-        parseError instanceof Error ? parseError.message : String(parseError)
+        getSafeErrorMessage(parseError)
       );
     }
   }

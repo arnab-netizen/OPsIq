@@ -9,6 +9,12 @@ import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 const runConsultingEngineSchema = z.object({
   engagementId: z.string().uuid("Invalid engagement ID format"),
@@ -84,7 +90,7 @@ export const POST = withEnforcementFull(async (request) => {
 
     return Response.json(response, { status: statusCode });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = getSafeErrorMessage(error);
 
     if (
       message.includes("not found") ||
