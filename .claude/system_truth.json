@@ -15,61 +15,12 @@
     "unknown": null
   },
   "audit": {
-    "coverage_percent": 75,
+    "coverage_percent": 83,
     "missing": [
-      {
-        "file": "src/services/experiment/experiment-lifecycle.service.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/experiment/experiment-lifecycle.service.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/experiment/experiment-lifecycle.service.ts",
-        "missing": [
-          "capability",
-          "decision",
-          "requestId"
-        ]
-      },
       {
         "file": "src/services/lead.ts",
         "missing": [
           "decision"
-        ]
-      },
-      {
-        "file": "src/services/user.ts",
-        "missing": [
-          "workspace"
-        ]
-      },
-      {
-        "file": "src/services/user.ts",
-        "missing": [
-          "capability",
-          "decision"
-        ]
-      },
-      {
-        "file": "src/services/user.ts",
-        "missing": [
-          "workspace"
-        ]
-      },
-      {
-        "file": "src/services/user.ts",
-        "missing": [
-          "workspace"
         ]
       },
       {
@@ -98,18 +49,6 @@
           "capability",
           "decision",
           "requestId"
-        ]
-      },
-      {
-        "file": "src/services/role-assignment.ts",
-        "missing": [
-          "workspace"
-        ]
-      },
-      {
-        "file": "src/services/role-assignment.ts",
-        "missing": [
-          "workspace"
         ]
       },
       {
@@ -150,20 +89,6 @@
         "file": "src/app/api/auth/logout/route.ts",
         "missing": [
           "decision"
-        ]
-      },
-      {
-        "file": "src/app/api/auth/login/route.ts",
-        "missing": [
-          "actor",
-          "workspace",
-          "entity"
-        ]
-      },
-      {
-        "file": "src/app/api/auth/login/route.ts",
-        "missing": [
-          "entity"
         ]
       },
       {
@@ -463,72 +388,9 @@
     {
       "phase": "C",
       "type": "incomplete_audit",
-      "file": "src/services/experiment/experiment-lifecycle.service.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/experiment/experiment-lifecycle.service.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/experiment/experiment-lifecycle.service.ts",
-      "missing": [
-        "capability",
-        "decision",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
       "file": "src/services/lead.ts",
       "missing": [
         "decision"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/user.ts",
-      "missing": [
-        "workspace"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/user.ts",
-      "missing": [
-        "capability",
-        "decision"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/user.ts",
-      "missing": [
-        "workspace"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/user.ts",
-      "missing": [
-        "workspace"
       ]
     },
     {
@@ -565,22 +427,6 @@
         "capability",
         "decision",
         "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/role-assignment.ts",
-      "missing": [
-        "workspace"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/role-assignment.ts",
-      "missing": [
-        "workspace"
       ]
     },
     {
@@ -633,24 +479,6 @@
       "file": "src/app/api/auth/logout/route.ts",
       "missing": [
         "decision"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/app/api/auth/login/route.ts",
-      "missing": [
-        "actor",
-        "workspace",
-        "entity"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/app/api/auth/login/route.ts",
-      "missing": [
-        "entity"
       ]
     },
     {
