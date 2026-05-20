@@ -2,6 +2,12 @@ import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
 import { v4 as uuidv4 } from "uuid";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export type TaskStatus =
   | "pending"
@@ -95,8 +101,7 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
         });
         processed++;
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
+        const errorMessage = getSafeErrorMessage(err);
         const newAttempts = task.attempts + 1;
         const isDeadLetter = newAttempts >= task.maxAttempts;
 
@@ -177,7 +182,7 @@ export class InMemorySchedulerProvider implements SchedulerProvider {
         task.status = task.attempts >= maxAttempts ? "dead_letter" : "pending";
         logger.error("Task failed (in-memory)", {
           taskId: id,
-          error: err instanceof Error ? err.message : "Unknown",
+          error: getSafeErrorMessage(err),
         });
       }
     }

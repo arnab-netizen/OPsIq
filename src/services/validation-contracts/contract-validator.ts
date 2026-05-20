@@ -7,6 +7,12 @@ import {
   ValidationError,
 } from "@/domain/validation/contract";
 import { v4 as uuidv4 } from "uuid";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 
 export class ContractValidator {
   async validateContract(input: unknown): Promise<ValidationContractResult> {
@@ -38,7 +44,7 @@ export class ContractValidator {
       } else {
         errors.push({
           field: "root",
-          message: err instanceof Error ? err.message : String(err),
+          message: getSafeErrorMessage(err),
           severity: "ERROR",
         });
       }

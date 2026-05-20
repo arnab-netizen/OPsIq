@@ -15,6 +15,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requestContext } from "../request-context";
 import { runtimeLogger } from "../runtime-logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
 import {
   RuntimeError,
   createInfrastructureError,
@@ -259,7 +265,7 @@ export async function enforceRequest<T>(
         correlation_id: correlation_id || requestContext.generateCorrelationId(),
         context: {
           error_type: error?.constructor?.name || typeof error,
-          error_message: error instanceof Error ? error.message : String(error),
+          error_message: getSafeErrorMessage(error),
           stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
           endpoint: enforced_context?.endpoint,
           method: enforced_context?.method,

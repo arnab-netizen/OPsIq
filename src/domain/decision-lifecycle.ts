@@ -5,6 +5,13 @@
  * Enforces no skipped states, proper sequencing, and outcome recording rules.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
+function getSafeErrorMessage(error: unknown): string {
+  const classified = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  return classified.operatorMessage;
+}
+
 /**
  * All possible decision states
  */
@@ -241,9 +248,7 @@ export function validateLifecycleSequence(
 
       requireTransitionAllowed(fromState, toState, reason);
     } catch (error) {
-      errors.push(
-        error instanceof Error ? error.message : `Unknown error at step ${i}`
-      );
+      errors.push(getSafeErrorMessage(error));
     }
   }
 
