@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getInterventionState, transitionPhase } from "@/services/intervention-state";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -39,11 +40,17 @@ export const PUT = withCanonicalEnforcement(
 
     const body = await parseRequestBody(ctx.request!, transitionPhaseSchema);
 
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.INTERVENTION_MANAGE,
+    });
+
+    const workspaceId = ctx.verifiedWorkspaceId;
+
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "transitionPhase",
       actorId: ctx.verifiedActorId,
-      workspaceId: ctx.verifiedWorkspaceId,
+      workspaceId,
       payload: { engagementId, ...body },
     });
 
@@ -54,7 +61,7 @@ export const PUT = withCanonicalEnforcement(
     }
 
     try {
-      const result = await transitionPhase(engagementId, body.targetPhase, ctx, ctx.verifiedWorkspaceId);
+      const result = await transitionPhase(engagementId, body.targetPhase, ctx, workspaceId);
       await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspaceId);
       return Response.json(result);
     } catch (error) {
