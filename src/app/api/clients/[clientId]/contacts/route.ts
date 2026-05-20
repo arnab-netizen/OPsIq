@@ -24,7 +24,7 @@ export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { clientId } = params;
     parseOrThrow(uuidSchema, clientId);
-    const workspaceId = nextRequest.headers.get("x-workspace-id");
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const contacts = await getContactsForClient(clientId, workspaceId);
     return Response.json({ contacts });
