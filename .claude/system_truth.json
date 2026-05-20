@@ -15,20 +15,8 @@
     "unknown": null
   },
   "audit": {
-    "coverage_percent": 72,
+    "coverage_percent": 75,
     "missing": [
-      {
-        "file": "src/services/action.ts",
-        "missing": [
-          "workspace"
-        ]
-      },
-      {
-        "file": "src/services/webhook.service.ts",
-        "missing": [
-          "workspace"
-        ]
-      },
       {
         "file": "src/services/experiment/experiment-lifecycle.service.ts",
         "missing": [
@@ -122,20 +110,6 @@
         "file": "src/services/role-assignment.ts",
         "missing": [
           "workspace"
-        ]
-      },
-      {
-        "file": "src/services/decisions/decision-lifecycle.service.ts",
-        "missing": [
-          "capability",
-          "requestId"
-        ]
-      },
-      {
-        "file": "src/services/decisions/decision-lifecycle.service.ts",
-        "missing": [
-          "capability",
-          "requestId"
         ]
       },
       {
@@ -276,7 +250,10 @@
       {
         "file": "src/infra/audit.ts",
         "missing": [
-          "actor"
+          "actor",
+          "capability",
+          "decision",
+          "requestId"
         ]
       },
       {
@@ -486,22 +463,6 @@
     {
       "phase": "C",
       "type": "incomplete_audit",
-      "file": "src/services/action.ts",
-      "missing": [
-        "workspace"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/webhook.service.ts",
-      "missing": [
-        "workspace"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
       "file": "src/services/experiment/experiment-lifecycle.service.ts",
       "missing": [
         "capability",
@@ -620,24 +581,6 @@
       "file": "src/services/role-assignment.ts",
       "missing": [
         "workspace"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/decisions/decision-lifecycle.service.ts",
-      "missing": [
-        "capability",
-        "requestId"
-      ]
-    },
-    {
-      "phase": "C",
-      "type": "incomplete_audit",
-      "file": "src/services/decisions/decision-lifecycle.service.ts",
-      "missing": [
-        "capability",
-        "requestId"
       ]
     },
     {
@@ -818,7 +761,10 @@
       "type": "incomplete_audit",
       "file": "src/infra/audit.ts",
       "missing": [
-        "actor"
+        "actor",
+        "capability",
+        "decision",
+        "requestId"
       ]
     },
     {
