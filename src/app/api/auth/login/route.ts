@@ -34,9 +34,13 @@ export const POST = withEnforcementFull(async (request) => {
   if (!user || !user.isActive || !user.hashedPassword) {
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
-      capability: "login",
+      actorId: "system",
+      workspaceId: "system",
+      capability: "mutation",
       decision: "login_failed",
       requestId: request.headers.get("x-request-id") || `login:${email}:${Date.now()}`,
+      entityType: "session",
+      entityId: email,
       payload: { email, reason: "user_not_found_or_inactive" },
       visibility: "internal",
     });
@@ -59,9 +63,11 @@ export const POST = withEnforcementFull(async (request) => {
       eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
       actorId: user.id,
       workspaceId,
-      capability: "login",
+      capability: "mutation",
       decision: "login_failed",
       requestId: request.headers.get("x-request-id") || `login:${user.id}:${Date.now()}`,
+      entityType: "session",
+      entityId: user.id,
       payload: { reason: "invalid_password" },
       visibility: "internal",
     });

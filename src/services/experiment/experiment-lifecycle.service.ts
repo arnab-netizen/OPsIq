@@ -165,13 +165,17 @@ export async function approveExperiment(
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.EXPERIMENT_APPROVED,
       actorId: userId,
+      workspaceId,
+      capability: 'mutation',
+      decision: 'experiment_approved',
+      requestId: randomUUID(),
       entityType: "Experiment",
       entityId: experiment.id,
-      workspaceId,
       payload: {
         name: experiment.name,
         riskLevel: experiment.plan.riskLevel,
       },
+      visibility: "internal",
     }).catch((err) => logger.warn("Failed to emit audit event", { error: err.message }));
   }
 
@@ -314,14 +318,18 @@ export async function updateExecution(
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.EXPERIMENT_PROGRESS_UPDATED,
       actorId: userId,
+      workspaceId,
+      capability: 'mutation',
+      decision: 'experiment_progress_updated',
+      requestId: randomUUID(),
       entityType: "Experiment",
       entityId: experiment.id,
-      workspaceId,
       payload: {
         percentComplete: updatedExecution.percentComplete,
         stoppedEarly: updatedExecution.stoppedEarly,
         stoppingReason: updatedExecution.stoppingReason,
       },
+      visibility: "internal",
     }).catch((err) => logger.warn("Failed to emit audit event", { error: err.message }));
   }
 
@@ -377,15 +385,19 @@ export async function recordResult(
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.EXPERIMENT_RESULT_RECORDED,
       actorId: userId,
+      workspaceId,
+      capability: 'mutation',
+      decision: 'experiment_result_recorded',
+      requestId: randomUUID(),
       entityType: "Experiment",
       entityId: experiment.id,
-      workspaceId,
       payload: {
         classification: result.classification,
         primaryMetricChange: result.primaryMetricChange,
         roi: result.roi,
         confidenceLevel: result.confidenceLevel,
       },
+      visibility: "internal",
     }).catch((err) => logger.warn("Failed to emit audit event", { error: err.message }));
   }
 

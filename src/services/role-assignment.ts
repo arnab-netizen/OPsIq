@@ -148,6 +148,7 @@ export async function assignRole(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ROLE_ASSIGNED,
     actorId,
+    workspaceId,
     entityType: "user_role_assignment",
     entityId: result.result.id,
     payload: {
@@ -158,7 +159,7 @@ export async function assignRole(
     },
     visibility: "internal",
     capability: 'mutation',
-    decision: 'r_o_l_e__a_s_s_i_g_n_e_d',
+    decision: 'role_assigned',
     requestId: randomUUID(),
 
   });
@@ -235,6 +236,7 @@ export async function revokeRole(
   await emitAuditEvent({
     eventName: AUDIT_EVENTS.ROLE_REVOKED,
     actorId,
+    workspaceId,
     entityType: "user_role_assignment",
     entityId: assignment.id,
     payload: {
@@ -245,7 +247,7 @@ export async function revokeRole(
     },
     visibility: "internal",
     capability: 'mutation',
-    decision: 'r_o_l_e__r_e_v_o_k_e_d',
+    decision: 'role_revoked',
     requestId: randomUUID(),
 
   });
