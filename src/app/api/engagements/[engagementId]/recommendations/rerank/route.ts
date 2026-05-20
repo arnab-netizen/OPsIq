@@ -1,6 +1,7 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { reRankRecommendationsInEngagement } from "@/services/recommendation";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -10,6 +11,7 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { engagementId } = params;
     parseOrThrow(uuidSchema, engagementId);
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {
@@ -19,10 +21,15 @@ export const POST = withCanonicalEnforcement(
       );
     }
 
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.RECOMMENDATION_APPROVE,
+    });
+
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "reRankRecommendations",
       actorId: ctx.verifiedActorId,
+      workspaceId,
       payload: { engagementId },
     });
 
@@ -33,7 +40,7 @@ export const POST = withCanonicalEnforcement(
     }
 
     try {
-      const result = await reRankRecommendationsInEngagement(engagementId, ctx, ctx.verifiedWorkspaceId);
+      const result = await reRankRecommendationsInEngagement(engagementId, ctx, workspaceId);
       await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspaceId);
       return Response.json(result);
     } catch (error) {
@@ -41,7 +48,7 @@ export const POST = withCanonicalEnforcement(
       await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
       throw error;
     }
-  }, auditContext, {
+  }, {
     requireCapabilities: [CAPABILITIES.RECOMMENDATION_APPROVE],
     requireWorkspace: true,
   }

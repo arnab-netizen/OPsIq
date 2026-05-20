@@ -1,6 +1,7 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement, type CanonicalAuthContext, type ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { linkEvidenceToFinding, unlinkEvidenceFromFinding } from "@/services/findings";
 import { hasInternalAccess } from "@/policies/capability-check";
@@ -20,6 +21,7 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { findingId } = params;
     parseOrThrow(uuidSchema, findingId);
+    const workspaceId = ctx.verifiedWorkspaceId;
 
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {
@@ -29,12 +31,17 @@ export const POST = withCanonicalEnforcement(
       );
     }
 
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.FINDING_UPDATE,
+    });
+
     const body = await parseRequestBody(ctx.request!, linkEvidenceSchema);
 
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "linkEvidenceToFinding",
       actorId: ctx.verifiedActorId,
+      workspaceId,
       payload: { findingId, evidenceId: body.evidenceId },
     });
 
@@ -61,7 +68,7 @@ export const POST = withCanonicalEnforcement(
       await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
       throw error;
     }
-  }, auditContext, {
+  }, {
     requireCapabilities: [CAPABILITIES.FINDING_UPDATE],
     requireWorkspace: true,
   }

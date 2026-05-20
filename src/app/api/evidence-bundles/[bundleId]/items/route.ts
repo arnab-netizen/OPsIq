@@ -1,6 +1,7 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   addEvidenceToBundle,
@@ -30,6 +31,10 @@ export const POST = withCanonicalEnforcement(
         );
       }
 
+      const auditContext = createServiceCapabilityContext({
+        capability: CAPABILITIES.EVIDENCE_SUBMIT,
+      });
+
       const bodyData = await parseRequestBody(
         ctx.request!,
         addEvidenceToBundleSchema
@@ -51,6 +56,7 @@ export const POST = withCanonicalEnforcement(
         idempotencyKey,
         operationName: "addEvidenceToBundle",
         actorId: ctx.verifiedActorId,
+        workspaceId,
         payload: bodyData,
       });
 
@@ -61,7 +67,7 @@ export const POST = withCanonicalEnforcement(
       }
 
       await addEvidenceToBundle(bodyData, ctx, workspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 201, { success: true }, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyResponse(idempotencyKey, 201, { success: true }, auditContext, workspaceId);
 
       return Response.json({ success: true }, { status: 201 });
     } catch (error) {
@@ -69,11 +75,15 @@ export const POST = withCanonicalEnforcement(
       const idempotencyKey = ctx.request!.headers.get("idempotency-key");
       if (idempotencyKey) {
         const err = error instanceof Error ? error : new Error("Unknown error");
-        await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
+        const auditContext = createServiceCapabilityContext({
+          capability: CAPABILITIES.EVIDENCE_SUBMIT,
+        });
+        await recordIdempotencyError(idempotencyKey, err, auditContext, ctx.verifiedWorkspaceId);
       }
       return errorToResponse(error);
     }
-  }, auditContext, { requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT], requireWorkspace: true }
+  },
+  { requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT], requireWorkspace: true }
 );
 
 export const DELETE = withCanonicalEnforcement(

@@ -61,10 +61,15 @@ export const POST = withEnforcementFull(async (request, context, params) => {
       );
     }
 
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.EVIDENCE_VALIDATE,
+    });
+
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "validateEvidence",
       actorId: session.user.id,
+      workspaceId,
       payload: bodyData,
     });
 

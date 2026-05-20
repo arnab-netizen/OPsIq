@@ -2,7 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
+import { withAuth, createServiceCapabilityContext, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { executeWorkflow } from "@/services/execute";
 import { parseRequestBody } from "@/lib/validation";
@@ -20,12 +20,16 @@ const executeSchema = z.object({
 });
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
-  const authContext = await withAuth({
+  const { session, policy } = await withAuth({
     capability: CAPABILITIES.ENGAGEMENT_CREATE,
     internalOnly: true,
   });
 
-  const workspaceId = ctx.verifiedWorkspaceId || "";
+  const nextRequest = request as NextRequest;
+  const workspaceId = nextRequest.headers.get("x-workspace-id") || "";
+  if (!workspaceId) {
+    throw new UnauthorizedError("Workspace ID required");
+  }
 
   // Check capability: decision_engine
   const capabilityCheck = await assertCapability(workspaceId, "decision_engine");
@@ -41,13 +45,18 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     );
   }
 
+  const auditContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.ENGAGEMENT_CREATE,
+  });
+
   const body = await parseRequestBody(request, executeSchema);
 
   // Check idempotency
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "executeWorkflow",
-    actorId: authContext.session.user.id,
+    actorId: session.user.id,
+    workspaceId,
     payload: body,
   });
 
@@ -58,8 +67,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   }
 
   try {
-    const result = await executeWorkflow(body, canonicalizeAuthContext(authContext, workspaceId), workspaceId);
-    await recordIdempotencyResponse(idempotencyKey, 200, result as unknown as Record<string, auditContext, unknown>, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+    const result = await executeWorkflow(body, canonicalizeAuthContext({ session, policy }, workspaceId), workspaceId);
+    await recordIdempotencyResponse(idempotencyKey, 200, result as unknown as Record<string, unknown>, auditContext, workspaceId);
     return Response.json(result, { status: 200 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");

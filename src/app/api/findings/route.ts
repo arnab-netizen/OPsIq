@@ -2,6 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createFinding } from "@/services/findings";
 import { hasInternalAccess } from "@/policies/capability-check";
@@ -52,11 +53,16 @@ export const POST = withCanonicalEnforcement(
 
     const body = await parseRequestBody(ctx.request!, createFindingSchema);
 
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.FINDING_CREATE,
+    });
+
     // Check idempotency
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "createFinding",
       actorId: ctx.verifiedSessionSnapshot.actorId,
+      workspaceId,
       payload: body,
     });
 
@@ -88,5 +94,5 @@ export const POST = withCanonicalEnforcement(
       await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
       throw error;
     }
-  }, auditContext, { requireWorkspace: true, requireCapabilities: ['FINDING_CREATE'] }
+  }, { requireWorkspace: true, requireCapabilities: ['FINDING_CREATE'] }
 );

@@ -65,6 +65,10 @@ export const POST = withCanonicalEnforcement(
 
     const body = await parseRequestBody(ctx.request!, createEngagementSchema);
 
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.ENGAGEMENT_CREATE,
+    });
+
     // Check idempotency
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,

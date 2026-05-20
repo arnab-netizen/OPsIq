@@ -55,8 +55,9 @@ export const PATCH = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const { engagementId } = params;
     parseOrThrow(uuidSchema, engagementId);
+    const workspaceId = ctx.verifiedWorkspaceId;
 
-    await assertEngagementAccess(ctx.verifiedActorId, engagementId, ctx.verifiedWorkspaceId);
+    await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
     // Check for interventionPhase in raw request body to provide clear error
     const rawBody = await ctx.request!.clone().json().catch(() => ({}));
@@ -77,6 +78,10 @@ export const PATCH = withCanonicalEnforcement(
       );
     }
 
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.ENGAGEMENT_UPDATE,
+    });
+
     const body = await parseRequestBody(ctx.request!, updateEngagementSchema);
 
     // Check idempotency
@@ -84,6 +89,7 @@ export const PATCH = withCanonicalEnforcement(
       idempotencyKey,
       operationName: "updateEngagement",
       actorId: ctx.verifiedActorId,
+      workspaceId,
       payload: { engagementId, ...body },
     });
 
@@ -94,16 +100,16 @@ export const PATCH = withCanonicalEnforcement(
     }
 
     try {
-      await updateEngagement(engagementId, body, ctx, ctx.verifiedWorkspaceId);
-      const updated = await getEngagementById(engagementId, ctx.verifiedWorkspaceId, ctx.policy ? hasInternalAccess(ctx.policy) : false);
-      await recordIdempotencyResponse(idempotencyKey, 200, updated, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await updateEngagement(engagementId, body, ctx, workspaceId);
+      const updated = await getEngagementById(engagementId, workspaceId, ctx.policy ? hasInternalAccess(ctx.policy) : false);
+      await recordIdempotencyResponse(idempotencyKey, 200, updated, auditContext, workspaceId);
       return Response.json(updated);
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
       await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
       throw error;
     }
-  }, auditContext, {
+  }, {
     requireCapabilities: [CAPABILITIES.ENGAGEMENT_UPDATE],
     requireWorkspace: true,
   }

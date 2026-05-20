@@ -2,7 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
+import { withAuth, createServiceCapabilityContext, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
@@ -86,11 +86,16 @@ export const POST = withEnforcementFull(async (request, context, params) => {
 
   const body = await parseRequestBody(request, createShockEventSchema);
 
+  const auditContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.ENGAGEMENT_UPDATE,
+  });
+
   // Check idempotency
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "createShockEvent",
     actorId: session.user.id,
+    workspaceId,
     payload: { engagementId, ...body },
   });
 

@@ -36,6 +36,10 @@ export const POST = withCanonicalEnforcement(
         );
       }
 
+      const auditContext = createServiceCapabilityContext({
+        capability: CAPABILITIES.EVIDENCE_SUBMIT,
+      });
+
       const body = await parseRequestBody(ctx.request!, createEvidenceBundleSchema);
 
       // Check idempotency
@@ -43,6 +47,7 @@ export const POST = withCanonicalEnforcement(
         idempotencyKey,
         operationName: "createEvidenceBundle",
         actorId: ctx.verifiedActorId,
+        workspaceId,
         payload: body,
       });
 
@@ -60,11 +65,14 @@ export const POST = withCanonicalEnforcement(
       logger.error("Error creating evidence bundle", { error });
       if (ctx.request?.headers.get("idempotency-key")) {
         const err = error instanceof Error ? error : new Error("Unknown error");
-        await recordIdempotencyError(ctx.request.headers.get("idempotency-key")!, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+        const auditContext = createServiceCapabilityContext({
+          capability: CAPABILITIES.EVIDENCE_SUBMIT,
+        });
+        await recordIdempotencyError(ctx.request.headers.get("idempotency-key")!, err, auditContext, ctx.verifiedWorkspaceId);
       }
       return errorToResponse(error);
     }
-  }, auditContext, {
+  }, {
     requireCapabilities: [CAPABILITIES.EVIDENCE_SUBMIT],
     requireWorkspace: true,
   }

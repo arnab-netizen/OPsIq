@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
@@ -37,6 +38,10 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   );
 
   // Log audit event for alerts access
+  const auditContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.GOVERNANCE_VIEW,
+  });
+
   await logAuditEvent({
     eventName: "GOVERNANCE_ALERTS_ACCESSED",
     entityType: "GovernanceAlerts",
@@ -52,6 +57,8 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       criticalCount: alerts.period.criticalCount,
       warningCount: alerts.period.warningCount,
     },
+    context: auditContext,
+    workspaceId: workspace.workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only
     console.error(`Audit logging failed: ${auditError}`);

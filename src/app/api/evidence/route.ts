@@ -2,6 +2,7 @@ import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createEvidence, listEvidence } from "@/services/evidence";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
@@ -45,6 +46,10 @@ export const POST = withCanonicalEnforcement(
       );
     }
 
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.EVIDENCE_SUBMIT,
+    });
+
     const body = await parseRequestBody(ctx.request!, createEvidenceSchema);
 
     // Check idempotency
@@ -52,6 +57,7 @@ export const POST = withCanonicalEnforcement(
       idempotencyKey,
       operationName: "createEvidence",
       actorId: ctx.verifiedSessionSnapshot.actorId,
+      workspaceId,
       payload: body,
     });
 
@@ -70,5 +76,5 @@ export const POST = withCanonicalEnforcement(
       await recordIdempotencyError(idempotencyKey, err, auditContext, workspaceId);
       throw error;
     }
-  }, auditContext, { requireWorkspace: true, requireCapabilities: ['EVIDENCE_SUBMIT'] }
+  }, { requireWorkspace: true, requireCapabilities: ['EVIDENCE_SUBMIT'] }
 );
