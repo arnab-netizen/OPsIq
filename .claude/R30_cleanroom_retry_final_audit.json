@@ -150,6 +150,7 @@
     "Target: Reduce RAW_ERROR_MESSAGE from 201→0 and UNSAFE_ERROR_RENDER from 80→0"
   ],
 
-  "deployment_state_label": "SERVICE_GOVERNANCE_BLOCKER_CLOSED_ON_CLEAN_REPAIRED_MAIN_BRANCH",
-  "deployment_readiness": "FOUNDATION_LAID - Governance architecture proven, pattern established, ready for targeted application"
+  "deployment_state_label": "R30_CLEANROOM_PARTIAL_FOUNDATION_ONLY_GOVERNANCE_STILL_BLOCKED",
+  "merge_recommendation": "DO_NOT_MERGE_CONTINUE_GOVERNANCE_CLOSURE",
+  "deployment_readiness": "PARTIAL - Foundation architecture proven, but 281 blocking governance violations remain. Continuation required for zero-defect closure."
 }

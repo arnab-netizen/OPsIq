@@ -135,7 +135,7 @@ export function RecommendationsManager({
 
       onRecommendationUpdated?.();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to rerank recommendations";
+      const errorMessage = classifyOperatorError(err instanceof Error ? err : new Error("Failed to rerank recommendations"), { context: "save" }).operatorMessage;
       setErrors({ form: errorMessage });
     } finally {
       setReranking(false);
