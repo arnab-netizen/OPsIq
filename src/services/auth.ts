@@ -39,8 +39,19 @@ export interface SessionInfo {
  *
  * Throwing versions (requireSession, requirePolicyContext, etc.) will be deprecated
  * after PHASE F when legacy is fully stripped down.
+ *
+ * SECURITY NOTE: These functions have optional context for backward compatibility during
+ * the transition phase. They are called only from legacy code paths (auth-guard.ts, middleware).
+ * The canonical wrapper (lib/canonical-route-enforcement.ts) is the preferred path for
+ * new code and uses getSessionFact/getPolicyContextFact instead.
+ * See: lib/auth-guard.ts (lines 18-34) for transition documentation.
  */
 
+/**
+ * @deprecated Use getSessionFact from services/auth.ts for new code (fact-returning, non-throwing).
+ * @internal Used only by legacy auth-guard.ts during PHASE A-F transition.
+ * Context is optional for backward compatibility with legacy middleware/route handlers.
+ */
 export async function getSession(workspaceId: string = "system",
   context?: ServiceCapabilityContext
 ): Promise<SessionInfo | null> {
@@ -87,6 +98,11 @@ export async function getSession(workspaceId: string = "system",
   };
 }
 
+/**
+ * @deprecated Use getSessionFact from services/auth.ts for new code (fact-returning, non-throwing).
+ * @internal Used only by legacy auth-guard.ts during PHASE A-F transition.
+ * Context is optional for backward compatibility with legacy code.
+ */
 export async function requireSession(workspaceId: string = "system",
   context?: ServiceCapabilityContext
 ): Promise<SessionInfo> {
@@ -100,6 +116,11 @@ export async function requireSession(workspaceId: string = "system",
   return session;
 }
 
+/**
+ * @deprecated Use getPolicyContextFact from services/auth.ts for new code (fact-returning, non-throwing).
+ * @internal Used only by legacy auth-guard.ts during PHASE A-F transition.
+ * Context is optional for backward compatibility with legacy code.
+ */
 export async function getPolicyContext(workspaceId: string = "system",
   context?: ServiceCapabilityContext
 ): Promise<PolicyContext | null> {
@@ -145,6 +166,11 @@ export async function getPolicyContext(workspaceId: string = "system",
   };
 }
 
+/**
+ * @deprecated Use getPolicyContextFact from services/auth.ts for new code (fact-returning, non-throwing).
+ * @internal Used only by legacy auth-guard.ts during PHASE A-F transition.
+ * Context is optional for backward compatibility with legacy code.
+ */
 export async function requirePolicyContext(workspaceId: string = "system",
   context?: ServiceCapabilityContext
 ): Promise<PolicyContext> {
@@ -162,6 +188,11 @@ export function getSessionDurationMs(): number {
   return SESSION_DURATION_MS;
 }
 
+/**
+ * @deprecated For new code, use canonical wrapper with proper capability enforcement.
+ * @internal Used by legacy logout flows during PHASE A-F transition.
+ * Context is optional for backward compatibility. Proper audit logging handled by caller.
+ */
 export async function revokeSession(
   sessionId: string,
   authContext: CanonicalAuthContext

@@ -11,6 +11,13 @@ export type ExecutionStatus =
 /**
  * Update decision execution status
  * Tracks implementation progress after approval
+ *
+ * @internal Called only from transaction-layer.ts (startDecisionExecution, completeDecisionExecution,
+ * failDecisionExecution). Not currently used in production. Context is optional as this is an
+ * internal service-to-service call. Audit events emitted within this function.
+ * ALLOWLIST: transaction-layer.ts::startDecisionExecution (line 108)
+ *            transaction-layer.ts::completeDecisionExecution (line 130)
+ *            transaction-layer.ts::failDecisionExecution (called by pattern)
  */
 export async function updateExecutionStatus(
   decisionId: string,

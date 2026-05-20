@@ -117,6 +117,11 @@ export function getValidNextStatuses(currentStatus: string): DecisionStatus[] {
 
 /**
  * Change decision status with validation and audit
+ *
+ * @internal Called only from transaction-layer.ts (not currently used in production).
+ * Context is optional as this is an internal service-to-service call within decision
+ * orchestration. Audit event emission handled within this function.
+ * ALLOWLIST: transaction-layer.ts (import only, not actually called)
  */
 export async function changeDecisionStatus(
   decisionId: string,

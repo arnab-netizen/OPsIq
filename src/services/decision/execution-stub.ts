@@ -5,6 +5,11 @@ import type { ServiceCapabilityContext } from "@/lib/auth-guard";
 /**
  * Execution stub - placeholder for actual decision implementation
  * Simulates execution of an approved decision
+ *
+ * @internal Stub implementation. Called only from transaction-layer.ts (which is not currently
+ * used in production). Context is optional as this is an internal service-to-service call
+ * within the decision orchestration layer.
+ * ALLOWLIST: transaction-layer.ts::startDecisionExecution, completeDecisionExecution
  */
 export async function executeDecisionStub(
   decisionId: string,

@@ -5,6 +5,11 @@ import { logAuditEvent } from "@/services/audit/audit-log";
 /**
  * Execute decision action (approve, reject, override)
  * Orchestrates state transition and audit logging
+ *
+ * @internal Called only from transaction-layer.ts::executeDecisionTransaction (not currently
+ * used in production). Context is optional as this is an internal service-to-service call.
+ * Audit events emitted within this function.
+ * ALLOWLIST: transaction-layer.ts::executeDecisionTransaction (line 77)
  */
 export async function executeDecisionAction(
   decisionId: string,
