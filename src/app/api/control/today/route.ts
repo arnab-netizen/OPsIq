@@ -19,5 +19,5 @@ export const GET = withCanonicalEnforcement(
     const surface = await getControlSurface(workspaceIdParam);
     return surface;
   },
-  { requireCapabilities: [CAPABILITIES.DECISION_VIEW], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true }
 );

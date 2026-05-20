@@ -7,6 +7,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError } from "@/infra/errors";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
+import { createServiceCapabilityContext } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,10 +24,13 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
   const { engagementId } = params;
   parseOrThrow(uuidSchema, engagementId);
 
+  const workspaceId = ctx.verifiedWorkspaceId;
+
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "acknowledgeEngagement",
     actorId: ctx.verifiedActorId,
+    workspaceId,
     payload: { engagementId },
   });
 
@@ -36,9 +40,13 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
     });
   }
 
+  const capabilityContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.ENGAGEMENT_UPDATE,
+  });
+
   try {
     const engagement = await db.engagement.findUnique({
-      where: { id: engagementId, workspaceId: ctx.verifiedWorkspaceId },
+      where: { id: engagementId, workspaceId },
     });
 
     if (!engagement) throw new NotFoundError("Engagement", engagementId);
@@ -61,8 +69,11 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
       engagementId,
       acknowledgedAt,
     };
+    await recordIdempotencyResponse(idempotencyKey, 200, result, capabilityContext, workspaceId);
     return Response.json(result);
   } catch (error) {
+    const err = error instanceof Error ? error : new Error("Unknown error");
+    await recordIdempotencyError(idempotencyKey, err, capabilityContext, workspaceId);
     throw error;
   }
 }, {

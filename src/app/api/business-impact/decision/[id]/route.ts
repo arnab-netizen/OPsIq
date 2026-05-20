@@ -21,5 +21,5 @@ export const GET = withCanonicalEnforcement(
 
     return metrics;
   },
-  { requireCapabilities: [CAPABILITIES.DECISION_VIEW], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true }
 );

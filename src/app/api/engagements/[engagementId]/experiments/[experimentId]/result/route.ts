@@ -86,11 +86,8 @@ export const POST = withEnforcementFull(async (request, context, params) => {
     const analyzed = await recordResult(experiment, validated, workspaceId, session.user.id);
     experimentStore.set(experimentId, analyzed);
 
-    const analysis = analyzeOutcome(analyzed);
-
     return Response.json({
       experiment: toExperimentDTO(analyzed),
-      analysis,
     }, { status: 200 });
   } catch (error) {
     if (error instanceof z.ZodError) {

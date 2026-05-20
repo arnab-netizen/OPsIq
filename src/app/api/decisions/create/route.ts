@@ -25,7 +25,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   });
 
   // Validate workspace membership (fail-closed)
-  const workspaceId = ctx.verifiedWorkspaceId;
+  const workspaceId = request.headers.get("x-workspace-id");
   if (!workspaceId) {
     throw new UnauthorizedError("Workspace ID is required (x-workspace-id header)");
   }
@@ -113,7 +113,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         verifiedWorkspaceId: workspaceId,  // Verified at route level (enforcement)
         verifiedActorId: userId,  // Verified at route level (session)
       }));
-      const result = await createDecisionsBulk({ decisions: verifiedDecisions });
+      const result = await createDecisionsBulk({ decisions: verifiedDecisions }, auditContext);
 
       logger.info("Bulk decisions created via CSV upload", {
         workspaceId,

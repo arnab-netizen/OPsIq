@@ -52,6 +52,7 @@ export const POST = withCanonicalEnforcement(
       idempotencyKey,
       operationName: "createContact",
       actorId: ctx.verifiedActorId,
+      workspaceId,
       payload: { ...body, clientId },
     });
 
@@ -61,20 +62,24 @@ export const POST = withCanonicalEnforcement(
       });
     }
 
+    const capabilityContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.CLIENT_UPDATE,
+    });
+
     try {
       const result = await createContact(
         { ...body, clientId },
         ctx,
         workspaceId
       );
-      await recordIdempotencyResponse(idempotencyKey, 201, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyResponse(idempotencyKey, 201, result, capabilityContext, workspaceId);
       return Response.json(result, { status: 201 });
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyError(idempotencyKey, err, capabilityContext, workspaceId);
       throw error;
     }
-  }, auditContext, {
+  }, {
     requireCapabilities: [CAPABILITIES.CLIENT_UPDATE],
     requireWorkspace: true,
   }

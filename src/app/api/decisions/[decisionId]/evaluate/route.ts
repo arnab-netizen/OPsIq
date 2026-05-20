@@ -1,13 +1,14 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth, createServiceCapabilityContext } from "@/lib/auth-guard";
 import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getSession } from "@/services/auth";
 import { enforceWorkspaceScoping, hasPermission } from "@/middleware/workspace-enforcement";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 /**
  * POST /api/decisions/[decisionId]/evaluate
@@ -114,6 +115,10 @@ export const POST = withEnforcementFull(
     });
 
     // Log evaluation audit event
+    const auditContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.DECISION_UPDATE,
+    });
+
     await logAuditEvent({
       eventName: "DECISION_EVALUATED",
       entityType: "Decision",
@@ -137,6 +142,7 @@ export const POST = withEnforcementFull(
         control_layer_violations: evaluationResult.controlLayerViolations,
         timestamp: new Date().toISOString(),
       },
+      context: auditContext,
       workspaceId,
     }).catch((auditError) => {
       console.error(`Audit logging failed: ${auditError}`);

@@ -9,10 +9,8 @@
  * - repeated clicks (sign of confusion)
  * - form abandonment
  *
- * Stores in database for daily review and analysis.
+ * Tracks in-memory with console logging during development.
  */
-
-import { db } from '@/lib/db';
 
 export interface TelemetryEvent {
   eventType:
@@ -151,27 +149,6 @@ class OperatorTelemetryService {
 
     this.pageVisitStack.delete(visitId);
 
-    // Store in database
-    try {
-      await db.auditEvent.create({
-        data: {
-          id: `${Date.now()}-page-exit`,
-          eventName: 'operator_page_exit',
-          actorId: params.actorId,
-          workspaceId: params.workspaceId,
-          payload: {
-            page: params.page,
-            durationSeconds,
-            actionCount: params.actionCount,
-            errorCount: params.errorCount,
-          },
-          occurredAt: exitTime,
-        },
-      });
-    } catch (err) {
-      console.error('Failed to record page exit:', err);
-    }
-
     this.recordEvent({
       eventType: 'page_exit',
       actorId: params.actorId,
@@ -214,27 +191,6 @@ class OperatorTelemetryService {
       },
       timestamp,
     });
-
-    // Store in database
-    try {
-      await db.auditEvent.create({
-        data: {
-          id: `${timestamp.getTime()}-action-${params.actionType}`,
-          eventName: `operator_action_${params.result}`,
-          actorId: params.actorId,
-          workspaceId: params.workspaceId,
-          payload: {
-            actionType: params.actionType,
-            page: params.page,
-            errorMessage: params.errorMessage,
-            attemptNumber,
-          },
-          occurredAt: timestamp,
-        },
-      });
-    } catch (err) {
-      console.error('Failed to record action:', err);
-    }
   }
 
   /**
@@ -260,25 +216,6 @@ class OperatorTelemetryService {
       },
       timestamp,
     });
-
-    try {
-      await db.auditEvent.create({
-        data: {
-          id: `${timestamp.getTime()}-error`,
-          eventName: 'operator_error_displayed',
-          actorId: params.actorId,
-          workspaceId: params.workspaceId,
-          payload: {
-            page: params.page,
-            errorMessage: params.errorMessage,
-            errorContext: params.errorContext,
-          },
-          occurredAt: timestamp,
-        },
-      });
-    } catch (err) {
-      console.error('Failed to record error event:', err);
-    }
   }
 
   /**
@@ -304,25 +241,6 @@ class OperatorTelemetryService {
       },
       timestamp,
     });
-
-    try {
-      await db.auditEvent.create({
-        data: {
-          id: `${timestamp.getTime()}-support`,
-          eventName: 'operator_support_requested',
-          actorId: params.actorId,
-          workspaceId: params.workspaceId,
-          payload: {
-            page: params.page,
-            requestType: params.requestType,
-            context: params.context,
-          },
-          occurredAt: timestamp,
-        },
-      });
-    } catch (err) {
-      console.error('Failed to record support request:', err);
-    }
   }
 
   /**
@@ -350,25 +268,6 @@ class OperatorTelemetryService {
       },
       timestamp,
     });
-
-    try {
-      await db.auditEvent.create({
-        data: {
-          id: `${timestamp.getTime()}-repeated-click`,
-          eventName: 'operator_repeated_click',
-          actorId: params.actorId,
-          workspaceId: params.workspaceId,
-          payload: {
-            page: params.page,
-            buttonName: params.buttonName,
-            clickCount: params.clickCount,
-          },
-          occurredAt: timestamp,
-        },
-      });
-    } catch (err) {
-      console.error('Failed to record repeated click:', err);
-    }
   }
 
   /**
@@ -396,29 +295,6 @@ class OperatorTelemetryService {
       },
       timestamp,
     });
-
-    try {
-      await db.auditEvent.create({
-        data: {
-          id: `${timestamp.getTime()}-form-abandoned`,
-          eventName: 'operator_form_abandoned',
-          actorId: params.actorId,
-          workspaceId: params.workspaceId,
-          payload: {
-            page: params.page,
-            formName: params.formName,
-            fieldsCompleted: params.fieldsCompleted,
-            totalFields: params.totalFields,
-            percentComplete: Math.round(
-              (params.fieldsCompleted / params.totalFields) * 100
-            ),
-          },
-          occurredAt: timestamp,
-        },
-      });
-    } catch (err) {
-      console.error('Failed to record form abandonment:', err);
-    }
   }
 
   /**

@@ -63,5 +63,5 @@ export const GET = withCanonicalEnforcement(
       offset,
     };
   },
-  { requireCapabilities: [CAPABILITIES.DECISION_VIEW], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true }
 );

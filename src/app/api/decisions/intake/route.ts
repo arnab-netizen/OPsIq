@@ -117,6 +117,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       risk: input.risk,
       createdAt: new Date().toISOString(),
     },
+    context: auditContext,
     workspaceId,
   }).catch((auditError) => {
     console.error(`Audit logging failed: ${auditError}`);

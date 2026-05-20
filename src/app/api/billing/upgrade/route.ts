@@ -98,7 +98,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
       // Audit: Billing account setup with Stripe customer
       await emitAuditEvent({
-        eventName: AUDIT_EVENTS.BILLING_UPDATED,
+        eventName: AUDIT_EVENTS.SUBSCRIPTION_ACTIVATED,
         actorId: userId,
         workspaceId,
         capability: CAPABILITIES.SYSTEM_ADMIN,
@@ -145,7 +145,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
     // Audit: Checkout session initiated
     await emitAuditEvent({
-      eventName: AUDIT_EVENTS.BILLING_UPDATED,
+      eventName: AUDIT_EVENTS.SUBSCRIPTION_ACTIVATED,
       actorId: userId,
       workspaceId,
       capability: CAPABILITIES.SYSTEM_ADMIN,

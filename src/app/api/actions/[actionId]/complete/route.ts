@@ -8,8 +8,6 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
-import { recordOutcome } from "@/services/outcome/outcome.service";
-import { logger } from "@/infra/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -61,18 +59,6 @@ export const PATCH = withCanonicalEnforcement(
       },
       visibility: "internal",
     });
-
-    // Record outcome for decision tracking
-    try {
-      const idempotencyKey = ctx.request?.headers.get("idempotency-key") || undefined;
-      await recordOutcome(actionId, ctx.verifiedActorId, idempotencyKey, workspaceId);
-    } catch (err) {
-      // Log but don't fail the action completion
-      logger.error("Failed to record outcome", {
-        actionId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
 
     const result = await getActionById(actionId, workspaceId);
     return Response.json(result);

@@ -82,6 +82,7 @@ export const POST = withCanonicalEnforcement(
       idempotencyKey,
       operationName: "archiveClient",
       actorId: ctx.verifiedActorId,
+      workspaceId,
       payload: { clientId, version: body.version },
     });
 
@@ -91,17 +92,21 @@ export const POST = withCanonicalEnforcement(
       });
     }
 
+    const capabilityContext = createServiceCapabilityContext({
+      capability: CAPABILITIES.CLIENT_ARCHIVE,
+    });
+
     try {
       await archiveClient(clientId, ctx, body.version, workspaceId);
       const result = { status: "archived" };
-      await recordIdempotencyResponse(idempotencyKey, 200, result, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyResponse(idempotencyKey, 200, result, capabilityContext, workspaceId);
       return Response.json(result);
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+      await recordIdempotencyError(idempotencyKey, err, capabilityContext, workspaceId);
       throw error;
     }
-  }, auditContext, {
+  }, {
     requireCapabilities: [CAPABILITIES.CLIENT_ARCHIVE],
     requireWorkspace: true,
   }

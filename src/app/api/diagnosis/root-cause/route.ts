@@ -34,11 +34,15 @@ export const POST = withEnforcementFull(async (request) => {
 
   const body = await parseRequestBody(request, rootCauseSchema);
 
+  const auditContext = createServiceCapabilityContext({
+    capability: CAPABILITIES.DIAGNOSIS_READ,
+  });
+
   // Check idempotency
   const idempotencyCheck = await checkIdempotencyKey({
     idempotencyKey,
     operationName: "analyzeRootCause",
-    authContext,
+    workspaceId: body.workspaceId,
     payload: body,
   });
 
@@ -64,9 +68,10 @@ export const POST = withEnforcementFull(async (request) => {
     );
 
     if (!result) {
-      await recordIdempotencyError(idempotencyKey, new Error("Insufficient data for root cause analysis", auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown"));
+      await recordIdempotencyError(idempotencyKey, new Error("Insufficient data for root cause analysis"), auditContext, body.workspaceId);
       return Response.json(
-        { error: "Analysis failed: insufficient or contradictory data" }, auditContext, { status: 400 }
+        { error: "Analysis failed: insufficient or contradictory data" },
+        { status: 400 }
       );
     }
 
@@ -75,12 +80,12 @@ export const POST = withEnforcementFull(async (request) => {
       confidence: result.overallConfidence,
     });
 
-    await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, auditContext, unknown>, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
+    await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>, auditContext, body.workspaceId);
     return Response.json(result, { status: 201 });
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err, auditContext, workspace?.workspaceId || workspaceId || verifiedWorkspaceId || "unknown");
-    logger.error("Root cause analysis error", auditContext, { error: err.message });
+    await recordIdempotencyError(idempotencyKey, err, auditContext, body.workspaceId);
+    logger.error("Root cause analysis error", { error: err.message });
     return Response.json(
       { error: err.message || "Root cause analysis failed" },
       { status: 500 }
