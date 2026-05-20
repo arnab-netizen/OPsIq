@@ -1,7 +1,7 @@
 import { emitAuditEvent } from '@/infra/audit';
 import { AUDIT_EVENTS } from '@/domain/constants/audit-events';
 import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard", { createServiceCapabilityContext };
 import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { getSession } from "@/services/auth";
@@ -29,6 +29,7 @@ type IntakeInput = z.infer<typeof IntakeSchema>;
  */
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   const { session } = await withAuth();
+  const auditContext = createServiceCapabilityContext({ capability: "mutation" });
   if (!session?.user?.id) {
     throw new UnauthorizedError("Unauthorized");
   }

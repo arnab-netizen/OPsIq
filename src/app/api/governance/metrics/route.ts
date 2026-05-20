@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
+import { withAuth } from "@/lib/auth-guard", { createServiceCapabilityContext };
 import { UnauthorizedError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { calculateGovernanceMetrics } from "@/services/governance/metrics";
@@ -9,6 +9,7 @@ import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 
 export const GET = withEnforcementFull(async (request: NextRequest) => {
   const { session } = await withAuth();
+  const auditContext = createServiceCapabilityContext({ capability: "mutation" });
   if (!session?.user?.id) {
     throw new UnauthorizedError("Unauthorized");
   }
