@@ -9,6 +9,7 @@
  * They require: next dev server running OR CI deployment
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 // NOTE: These tests are designed to run against a live HTTP server
@@ -37,7 +38,8 @@ describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
         headers: response.headers,
       };
     } catch (error) {
-      return { error: error instanceof Error ? error.message : String(error) };
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      return { error: governed.operatorMessage };
     }
   }
 

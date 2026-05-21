@@ -5,6 +5,7 @@
 
 import { ensureStartupComplete } from "@/infra/startup-orchestrator";
 import { isStartupComplete, getStartupError } from "@/infra/startup-state";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -21,9 +22,9 @@ export async function GET() {
       { status: 200 }
     );
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
     return Response.json(
-      { startup_complete: false, error: errorMsg },
+      { startup_complete: false, error: governed.operatorMessage },
       { status: 503 }
     );
   }

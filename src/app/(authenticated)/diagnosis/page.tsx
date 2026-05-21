@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button, Input, Textarea, Select, Badge } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface DiagnosisResult {
   id: string;
@@ -98,7 +99,8 @@ export default function DiagnosisPage() {
       const data = await res.json();
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'action' });
+      setError(governed.operatorMessage);
       setIsSubmitting(false);
     }
   }

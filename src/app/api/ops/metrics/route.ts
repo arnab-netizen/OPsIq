@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getMetrics, getActiveRequests } from "@/infra/structured-logger";
 import { getTraceHistory, getTracesWithError } from "@/infra/request-tracer";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,10 +67,11 @@ export async function GET(request: NextRequest) {
       errors_by_classification: errorsByClassification,
     });
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
     return NextResponse.json(
       {
         error: "Failed to get metrics",
-        details: error instanceof Error ? error.message : String(error),
+        details: governed.operatorMessage,
       },
       { status: 500 }
     );

@@ -70,7 +70,8 @@ export default function EvidenceVaultPage({
         const data = await res.json();
         setEvidence(data.items ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+        setError(governed.operatorMessage);
       } finally {
         setIsLoading(false);
       }

@@ -1,6 +1,7 @@
 import { getMonitoringServiceInstance } from "@/middleware/monitoring.middleware";
 import { logger } from "@/infra/logger";
 import { getDbInstance } from "@/lib/db";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -33,6 +34,7 @@ export const GET = async () => {
     });
   } catch (error) {
     logger.error("Liveness probe failed", { error });
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
 
     return Response.json(
       {
@@ -43,7 +45,7 @@ export const GET = async () => {
         cpu_usage_percent: 0,
         cpu_ok: false,
         uptime_minutes: 0,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: governed.operatorMessage,
       },
       {
         status: 503,

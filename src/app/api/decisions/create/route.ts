@@ -12,6 +12,7 @@ import {
 import { logger } from "@/infra/logger";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError, UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   // Authenticate + authorize (fail-closed)
@@ -117,9 +118,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
       return result;
     } catch (parseError) {
-      throw new UnauthorizedError(
-        parseError instanceof Error ? parseError.message : String(parseError)
-      );
+      const governed = classifyOperatorError(parseError instanceof Error ? parseError : new Error(String(parseError)), { context: 'action' });
+      throw new UnauthorizedError(governed.operatorMessage);
     }
   }
 

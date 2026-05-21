@@ -2,6 +2,7 @@ import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canon
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { generateReport } from "@/services/report/engine";
 import { UnauthorizedError } from "@/infra/errors";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
@@ -14,8 +15,8 @@ export const GET = withCanonicalEnforcement(
       const report = await generateReport();
       return Response.json(report);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
-      return Response.json({ error: message }, { status: 400 });
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
+      return Response.json({ error: governed.operatorMessage }, { status: 400 });
     }
   },
   { requireCapabilities: ["SYSTEM_VIEW_AUDIT"], requireWorkspace: true }

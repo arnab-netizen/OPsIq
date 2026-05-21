@@ -9,6 +9,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { recordOutcome } from "@/services/outcome/outcome.service";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -63,9 +64,10 @@ export const PATCH = withCanonicalEnforcement(
       await recordOutcome(actionId, ctx.verifiedActorId, idempotencyKey, workspaceId);
     } catch (err) {
       // Log but don't fail the action completion
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'action' });
       logger.error("Failed to record outcome", {
         actionId,
-        error: err instanceof Error ? err.message : String(err),
+        error: governed.operatorMessage,
       });
     }
 

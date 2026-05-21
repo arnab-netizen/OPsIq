@@ -94,9 +94,10 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
         data: { stripeCustomerId },
       });
     } catch (stripeError) {
+      const governed = classifyOperatorError(stripeError instanceof Error ? stripeError : new Error(String(stripeError)), { context: 'action' });
       logger.error("Failed to create Stripe customer", {
         workspaceId,
-        error: stripeError instanceof Error ? stripeError.message : String(stripeError),
+        error: governed.operatorMessage,
       });
       throw new Error("Failed to initialize payment");
     }
@@ -127,10 +128,11 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
       sessionUrl: session.url,
     };
   } catch (stripeError) {
+    const governed = classifyOperatorError(stripeError instanceof Error ? stripeError : new Error(String(stripeError)), { context: 'action' });
     logger.error("Failed to create checkout session", {
       workspaceId,
       planId: plan.id,
-      error: stripeError instanceof Error ? stripeError.message : String(stripeError),
+      error: governed.operatorMessage,
     });
     throw new Error("Failed to create checkout session");
   }

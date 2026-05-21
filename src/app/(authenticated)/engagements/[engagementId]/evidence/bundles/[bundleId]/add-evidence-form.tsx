@@ -84,7 +84,8 @@ export function AddEvidenceToBundleForm({
 
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'action' });
+      setError(governed.operatorMessage);
       setIsSubmitting(false);
     }
   }

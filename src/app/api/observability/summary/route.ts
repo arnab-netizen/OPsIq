@@ -5,6 +5,7 @@ import { requireWorkspaceContext } from "@/services/workspace/context";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { getObservabilitySummary } from "@/services/observability/statistics";
 import { createEventLogger } from "@/lib/observability/log";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   // Get workspace context early (fail closed if missing)
@@ -35,7 +36,8 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     workspaceId: workspace.workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only
-    logger.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
+    const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: 'load' });
+    logger.error(`Audit logging failed: ${governed.operatorMessage}`);
   });
 
   logger.success({

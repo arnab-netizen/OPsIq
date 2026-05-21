@@ -44,7 +44,8 @@ export default function BundlesPage({
         const data = await res.json();
         setBundles(data.bundles ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+        setError(governed.operatorMessage);
       } finally {
         setIsLoading(false);
       }

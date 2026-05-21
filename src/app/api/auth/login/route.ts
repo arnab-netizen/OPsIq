@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
 import { cookies } from "next/headers";
 import * as bcrypt from "bcryptjs";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -109,15 +110,15 @@ export const POST = async (request: NextRequest) => {
       },
     });
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error("[LOGIN_ERROR]", errorMsg, error);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'auth' });
+    console.error("[LOGIN_ERROR]", governed.operatorMessage, error);
 
     if (error instanceof UnauthorizedError) {
       return Response.json({ error: error.message }, { status: 401 });
     }
 
     return Response.json(
-      { error: "Login failed", details: errorMsg },
+      { error: "Login failed", details: governed.operatorMessage },
       { status: 500 }
     );
   }

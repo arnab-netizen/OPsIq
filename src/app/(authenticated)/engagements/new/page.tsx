@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Input, Textarea, Select } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export default function NewEngagementPage() {
   const router = useRouter();
@@ -56,7 +57,8 @@ export default function NewEngagementPage() {
       const { id } = await res.json();
       router.push(`/engagements/${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'action' });
+      setError(governed.operatorMessage);
       setIsSubmitting(false);
     }
   }

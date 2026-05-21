@@ -92,7 +92,8 @@ export default function OnboardingFlow() {
       setData({ ...data, decision: result });
       setCurrentStep("evaluate");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating decision");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error("Error creating decision"), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -125,7 +126,8 @@ export default function OnboardingFlow() {
       });
       setCurrentStep("dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error evaluating decision");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error("Error evaluating decision"), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }

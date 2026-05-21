@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { classifyOperatorError } from '@/lib/operator-error-governance';
 
 interface ActionItem {
   decisionId: string;
@@ -66,7 +67,8 @@ export default function ControlTodayPage() {
         const surface = await response.json();
         setData(surface);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load');
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+        setError(governed.operatorMessage);
       } finally {
         setLoading(false);
       }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Table, Badge, LoadingState, ErrorState } from "@/ui/primitives";
 import { formatRole } from "@/domain/constants/role-labels";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface UserRow {
   id: string;
@@ -73,7 +74,8 @@ export default function UsersPage() {
       const json = await res.json();
       setData(json);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load users");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
