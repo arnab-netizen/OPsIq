@@ -1,11 +1,20 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { DecisionInput, DecisionRule, DecisionOutput } from "@/domain/decision/types";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { ImpactEstimate } from "@/domain/finance/types";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { runDecisionEngine } from "@/services/decision/engine";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { calculateImpact } from "@/services/finance/normalize";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { AuditRecord } from "@/domain/audit/types";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { logDecision } from "@/services/audit/log";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { createBaseline } from "@/services/onboarding/basic";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { compareScenarios, ScenarioComparison } from "@/services/control/scenario-comparison";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { randomUUID } from "crypto";
 
 export function runSystem(inputMetrics: Record<string, number>): {

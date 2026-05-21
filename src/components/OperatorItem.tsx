@@ -60,7 +60,8 @@ export function OperatorItem({ item, onUpdate }: OperatorItemProps) {
 
       onUpdate?.({ ...item, status: "done" });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Unknown error");
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "action" });
+      alert(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -92,7 +93,8 @@ export function OperatorItem({ item, onUpdate }: OperatorItemProps) {
       setOverrideReason("");
       alert("Override applied successfully");
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Unknown error");
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "action" });
+      alert(governed.operatorMessage);
     } finally {
       setOverrideLoading(false);
     }

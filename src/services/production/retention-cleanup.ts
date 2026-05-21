@@ -1,8 +1,11 @@
 // Retention policy enforcement - cleanup old records
 // Triggered on startup and periodically
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { PRODUCTION_CONFIG } from "./safety-config";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { createEventLogger } from "@/lib/observability/log";
 
 const logger = createEventLogger("retention_cleanup", "system");

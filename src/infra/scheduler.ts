@@ -176,9 +176,10 @@ export class InMemorySchedulerProvider implements SchedulerProvider {
       } catch (err) {
         const maxAttempts = task.maxAttempts ?? 3;
         task.status = task.attempts >= maxAttempts ? "dead_letter" : "pending";
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
         logger.error("Task failed (in-memory)", {
           taskId: id,
-          error: err instanceof Error ? err.message : "Unknown",
+          error: governed.operatorMessage,
         });
       }
     }

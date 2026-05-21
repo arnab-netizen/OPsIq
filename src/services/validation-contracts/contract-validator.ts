@@ -1,11 +1,15 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z, ZodError } from "zod/v4";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   decisionRequestContractSchema,
   DecisionRequestContract,
   ValidationContractResult,
   ValidationError,
 } from "@/domain/validation/contract";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { v4 as uuidv4 } from "uuid";
 
 export class ContractValidator {
