@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { ValidationError } from "@/infra/errors";
 import crypto from "crypto";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export interface IdempotencyOptions {
   idempotencyKey: string;
@@ -231,12 +232,13 @@ export async function recordIdempotencyError(
     throw new Error("workspaceId is required for workspace-scoped idempotency");
   }
 
+  const governed = classifyOperatorError(error, { context: "load" });
   await db.idempotencyRecord.updateMany({
     where: { idempotencyKey, workspaceId },
     data: {
       status: "failed",
       responseBody: {
-        error: error.message,
+        error: governed.operatorMessage,
         errorName: error.name,
       } as Prisma.InputJsonValue,
       completedAt: new Date(),
