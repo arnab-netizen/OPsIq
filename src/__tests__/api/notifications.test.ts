@@ -111,7 +111,7 @@ describe("Notifications API Routes (Structural)", () => {
 
     it("should return 404 for missing notification", () => {
       // Route calls getNotification(id)
-      // If null, returns 404 with error message
+      // If null, returns 404 with details
       expect(true).toBe(true);
     });
   });
@@ -270,19 +270,19 @@ describe("Notifications API Routes (Structural)", () => {
 
     it("should return 404 for missing notification", () => {
       // GET /api/notifications/nonexistent-id
-      // Returns 404 with error message
+      // Returns 404 with details
       expect(true).toBe(true);
     });
 
     it("should return 403 for cross-workspace access", () => {
       // GET /api/notifications/id where notification belongs to different workspace
-      // Returns 403 with "Access denied" message
+      // Returns 403 with "Access denied" response
       expect(true).toBe(true);
     });
 
     it("should return 500 for internal errors", () => {
       // Catch-all for unexpected errors
-      // Return 500 with generic error message (no internal details exposed)
+      // Return 500 with generic details (no internal data exposed)
       expect(true).toBe(true);
     });
   });

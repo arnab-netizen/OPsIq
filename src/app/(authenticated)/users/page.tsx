@@ -60,11 +60,11 @@ function UserRoles({ userId }: { userId: string }) {
 export default function UsersPage() {
   const [data, setData] = useState<UsersResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setErrorDetails(null);
     try {
       const res = await fetch("/api/users?limit=50");
       if (!res.ok) {
@@ -75,7 +75,7 @@ export default function UsersPage() {
       setData(json);
     } catch (err) {
       const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
-      setError(governed.operatorMessage);
+      setErrorDetails(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export default function UsersPage() {
   }, [fetchUsers]);
 
   if (loading) return <LoadingState message="Loading users..." />;
-  if (error) return <ErrorState message={error} onRetry={fetchUsers} />;
+  if (errorDetails) return <ErrorState message={errorDetails} onRetry={fetchUsers} />;
 
   const users = data?.users ?? [];
 
