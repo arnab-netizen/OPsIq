@@ -171,7 +171,8 @@ export function ActionCenter({
       });
       onActionUpdated?.();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to update action";
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      const errorMessage = governed.operatorMessage;
       setErrors({ [actionId]: errorMessage });
     } finally {
       setUpdating(null);

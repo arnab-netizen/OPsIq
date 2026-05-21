@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { OutputPanel } from "@/components/OutputPanel";
 import { TrustCard } from "@/components/TrustCard";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface DecisionOutput {
   problem: string;
@@ -53,7 +54,8 @@ export default function QuickStartPage() {
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }

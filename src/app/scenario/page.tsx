@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface ScenarioResult {
   impactExpected: number;
@@ -41,7 +42,8 @@ export default function ScenarioPage() {
       const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }

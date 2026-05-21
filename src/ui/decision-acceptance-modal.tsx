@@ -51,7 +51,8 @@ export function DecisionAcceptanceModal({
       });
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to accept decision";
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      const message = governed.operatorMessage;
       setError(message);
       logger.error("Error accepting decision", {
         decisionId,
@@ -78,7 +79,8 @@ export function DecisionAcceptanceModal({
       });
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to reject decision";
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      const message = governed.operatorMessage;
       setError(message);
       logger.error("Error rejecting decision", {
         decisionId,
