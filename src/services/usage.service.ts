@@ -1,5 +1,6 @@
 import { trackUsage } from "@/services/entitlement.service";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export interface UsageRecord {
   workspaceId: string;
@@ -35,11 +36,12 @@ export async function recordUsage(
     // TODO: Add capability-usage audit event type to domain/constants/audit-events.ts
   } catch (error) {
     // Fail open: usage tracking should not block operations
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to record usage", {
       workspaceId,
       key,
       value,
-      error: error instanceof Error ? error.message : "unknown error",
+      error: governed.operatorMessage,
     });
   }
 }

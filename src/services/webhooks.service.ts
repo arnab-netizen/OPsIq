@@ -306,12 +306,13 @@ async function deliverWithRetry(
       });
     }
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     if (attempt < maxRetries) {
       const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 60000);
       logger.warn("Webhook delivery network error, scheduling retry", {
         webhookId: webhook.id,
         attempt,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
         nextRetryMs: delayMs,
       });
 
@@ -324,7 +325,7 @@ async function deliverWithRetry(
       webhookStore.updateWebhook(webhook);
       logger.error("Webhook delivery failed (network error)", {
         webhookId: webhook.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
       });
     }
   }

@@ -10,6 +10,7 @@ import {
 } from "@/infra/errors";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { withIdempotency } from "@/infra/idempotency";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
@@ -865,16 +866,17 @@ export async function updateRecommendationStatus(
         throw error;
       }
 
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.error("Error checking execution certainty before approval", {
         recommendationId,
         engagementId: rec.engagementId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: governed.operatorMessage,
       });
 
       throw new ValidationError(
         "Unable to validate execution certainty before approval. Please try again.",
         {
-          originalError: error instanceof Error ? error.message : "Unknown error",
+          originalError: governed.operatorMessage,
         }
       );
     }

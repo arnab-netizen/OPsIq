@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const PROCESSING_TIMEOUT_MS = 30000; // 30 seconds
 const STALE_PROCESSING_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -66,8 +67,9 @@ export async function verifyWebhookSignature(
 
     return { event, timestamp };
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Webhook signature verification failed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw new Error("Webhook signature verification failed");
   }
@@ -131,15 +133,17 @@ export async function recoverStaleProcessingEvents(): Promise<void> {
           createdAt: event.createdAt,
         });
       } catch (error) {
+        const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
         logger.error("Failed to recover stale event", {
           stripeEventId: event.stripeEventId,
-          error: error instanceof Error ? error.message : String(error),
+          error: governed.operatorMessage,
         });
       }
     }
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Stale processing recovery failed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
   }
 }
@@ -268,9 +272,10 @@ export async function getOrCreateWebhookEvent(
       isDeadLetter: false,
     };
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to get or create webhook event", {
       stripeEventId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }
@@ -351,9 +356,10 @@ async function syncEntitlementsForSubscription(
       visibility: "internal",
     });
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to sync entitlements", {
       workspaceId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }
@@ -396,9 +402,10 @@ async function checkEventOrdering(
       }
     }
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Event ordering check failed", {
       stripeEventId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
   }
 }
@@ -433,9 +440,10 @@ async function checkRetryThreshold(stripeEventId: string, attempts: number, type
       });
     }
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Retry threshold check failed", {
       stripeEventId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
   }
 }
@@ -456,9 +464,10 @@ export async function markWebhookEventProcessed(stripeEventId: string): Promise<
 
     logger.info("Webhook event marked as processed", { stripeEventId });
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to mark webhook event as processed", {
       stripeEventId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }
@@ -494,10 +503,11 @@ export async function markWebhookEventFailed(
       maxAttempts: MAX_ATTEMPTS,
     });
   } catch (dbError) {
+    const governed = classifyOperatorError(dbError instanceof Error ? dbError : new Error(String(dbError)), { context: "load" });
     logger.error("Failed to mark webhook event as failed", {
       stripeEventId,
       originalError: error.message,
-      dbError: dbError instanceof Error ? dbError.message : String(dbError),
+      dbError: governed.operatorMessage,
     });
     throw dbError;
   }
@@ -542,8 +552,9 @@ async function handleCheckoutSessionCompleted(event: StripeCheckoutSessionEvent)
       workspaceId: billingAccount.workspaceId,
     });
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to handle checkout.session.completed", {
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }
@@ -599,8 +610,9 @@ async function handleCustomerSubscriptionCreated(event: StripeSubscriptionEvent)
       workspaceId: billingAccount.workspaceId,
     });
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to handle customer.subscription.created", {
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }
@@ -636,8 +648,9 @@ async function handleCustomerSubscriptionDeleted(event: StripeSubscriptionEvent)
       workspaceId: billingAccount.workspaceId,
     });
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to handle customer.subscription.deleted", {
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }
@@ -735,8 +748,9 @@ export async function syncSubscriptionStatus(
       status: event.status,
     });
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to sync subscription status", {
-      error: error instanceof Error ? error.message : "unknown error",
+      error: governed.operatorMessage,
       eventId: event.id,
       providerCustomerId,
     });
@@ -797,9 +811,10 @@ export async function handleWebhookEvent(event: any): Promise<void> {
           logger.debug("Unhandled webhook event type", { eventType });
       }
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.error("Error handling webhook event", {
         eventType: event.type,
-        error: error instanceof Error ? error.message : "unknown error",
+        error: governed.operatorMessage,
       });
       throw error;
     }
