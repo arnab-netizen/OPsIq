@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { isStartupComplete, getStartupError } from "@/infra/startup-state";
 
 /**
@@ -32,11 +33,12 @@ export function withStartupGate(
     // For all other requests, require startup to be complete
     if (!isStartupComplete()) {
       const error = getStartupError();
+      const governed = error ? classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }) : null;
       return NextResponse.json(
         {
           error: "SERVICE_UNAVAILABLE",
           message: "Application starting up",
-          details: error ? error.message : "Startup checks in progress",
+          details: governed ? governed.operatorMessage : "Startup checks in progress",
         },
         { status: 503 }
       );

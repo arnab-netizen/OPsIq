@@ -7,6 +7,8 @@
  */
 
 import { setStartupStatus, getStartupStatus } from "@/services/startup-status";
+import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 let startupPromise: Promise<void> | null = null;
 const STARTUP_TIMEOUT_MS = 30000;
@@ -103,7 +105,8 @@ async function performStartupChecks(): Promise<void> {
     logger.info("✓ STARTUP: All checks passed", { duration_ms: duration });
     // NOTE: setStartupState(READY) is called in ensureStartupComplete(), not here
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+    const errorMsg = governed.operatorMessage;
     const errorStack = error instanceof Error ? error.stack : undefined;
     const errorObj = error instanceof Error ? error : new Error(errorMsg);
 
@@ -136,7 +139,8 @@ async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
     ]);
     return true;
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+    const msg = governed.operatorMessage;
     logger.error("Database connectivity check failed", { error: msg });
     return false;
   }
@@ -164,7 +168,8 @@ async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolea
 
     return true;
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+    const msg = governed.operatorMessage;
     logger.error("Database schema check failed", { error: msg });
     return false;
   }

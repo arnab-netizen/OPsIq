@@ -1,3 +1,5 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 const globalForPrisma = globalThis as unknown as {
   prisma: any | undefined;
   prismaPromise: Promise<any> | undefined;
@@ -86,8 +88,9 @@ async function createPrismaClient() {
       },
     });
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     throw new Error(
-      `Failed to initialize Prisma client: ${error instanceof Error ? error.message : String(error)}`
+      `Failed to initialize Prisma client: ${governed.operatorMessage}`
     );
   }
 }

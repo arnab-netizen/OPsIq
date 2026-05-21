@@ -4,6 +4,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError, ConflictError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { ACTION_STATUSES, type ActionStatus } from "@/domain/constants/statuses";
 import { assertEngagementAccess } from "@/lib/visibility";
@@ -116,9 +117,10 @@ export async function createAction(
               workspaceId: validatedWorkspaceId,
             });
           } catch (error) {
+            const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
             logger.error("Action event emission failed", {
               actionId: action.id,
-              error: error instanceof Error ? error.message : String(error),
+              error: governed.operatorMessage,
             });
           }
 
@@ -206,9 +208,10 @@ export async function createAction(
       workspaceId: validatedWorkspaceId,
     });
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Action event emission failed", {
       actionId: action.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
   }
 

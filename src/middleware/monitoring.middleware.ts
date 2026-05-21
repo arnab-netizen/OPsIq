@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { MonitoringService } from "@/services/monitoring/monitoring.service";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 let monitoringService: MonitoringService | null = null;
 
@@ -74,9 +75,10 @@ export async function withMonitoringMiddleware(
       const service = getMonitoringService();
 
       // Record error
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       service.recordError(
         "unhandled_exception",
-        error instanceof Error ? error.message : String(error)
+        governed.operatorMessage
       );
 
       // Record failed request with 500 status

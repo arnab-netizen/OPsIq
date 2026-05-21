@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { v4 as uuidv4 } from "uuid";
 
 export type TaskStatus =
@@ -95,8 +96,8 @@ export class DatabaseSchedulerProvider implements SchedulerProvider {
         });
         processed++;
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
+        const errorMessage = governed.operatorMessage;
         const newAttempts = task.attempts + 1;
         const isDeadLetter = newAttempts >= task.maxAttempts;
 

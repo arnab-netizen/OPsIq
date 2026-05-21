@@ -8,6 +8,7 @@
 
 import { requestContext } from "@/runtime/request-context";
 import { runtimeLogger } from "@/runtime/runtime-logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { executionEnforcer } from "@/runtime/enforcement/execution-enforcer";
 import { runtimeMetricsCollector } from "@/runtime/metrics/runtime-metrics";
 import {
@@ -102,7 +103,10 @@ export async function withEnforcedQueueWorker(
                 queue_name: job.queue_name,
                 retry_count: job.retry_count,
                 max_retries: job.max_retries,
-                error: error instanceof Error ? error.message : String(error),
+                error: (() => {
+                  const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+                  return governed.operatorMessage;
+                })(),
               },
               tags: ["queue_poison_job", "queue_dead_letter"],
             });
@@ -129,7 +133,10 @@ export async function withEnforcedQueueWorker(
               job_id: job.job_id,
               retry_count: job.retry_count,
               max_retries: job.max_retries,
-              error: error instanceof Error ? error.message : String(error),
+              error: (() => {
+                const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+                return governed.operatorMessage;
+              })(),
             },
             tags: ["queue_job_failure", "queue_will_retry"],
           });
@@ -178,10 +185,11 @@ export async function withEnforcedQueueWorker(
 
         // Emit execution failure event if execution_id present
         if (job.execution_id) {
+          const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
           executionEnforcer.emitExecutionBlocked(
             job.execution_id,
             job.workspace_id || "system",
-            error instanceof Error ? error.message : String(error),
+            governed.operatorMessage,
             {
               recommendation_id: "queue_job",
               job_id: job.job_id,
@@ -201,7 +209,10 @@ export async function withEnforcedQueueWorker(
           context: {
             job_id: job.job_id,
             queue_name: job.queue_name,
-            error: error instanceof Error ? error.message : String(error),
+            error: (() => {
+              const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+              return governed.operatorMessage;
+            })(),
             duration_ms: durationMs,
           },
           tags: ["queue_job_error"],

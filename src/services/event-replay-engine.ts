@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { SnapshotOptimizationEngine } from "@/services/snapshot-optimization-engine";
 
 export interface ReplayedAggregate {
@@ -147,9 +148,10 @@ export class EventReplayEngine {
           lastEventNumber: lastEvent.eventNumber,
         });
       } catch (snapshotErr) {
+        const governed = classifyOperatorError(snapshotErr instanceof Error ? snapshotErr : new Error(String(snapshotErr)), { context: "load" });
         logger.warn("EventReplayEngine: Failed to create snapshot", {
           aggregateId,
-          error: snapshotErr instanceof Error ? snapshotErr.message : String(snapshotErr),
+          error: governed.operatorMessage,
         });
         // Do not fail replay if snapshot creation fails - logging only
       }

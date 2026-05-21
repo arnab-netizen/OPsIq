@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { v4 as uuidv4 } from "uuid";
 import { ProjectionEngine } from "@/services/projection-engine";
 
@@ -247,9 +248,10 @@ export class EventEmitterService {
         event.workspaceId
       );
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.warn("EventEmitterService: Projection failed (non-blocking)", {
         eventId: event.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
       });
     }
 

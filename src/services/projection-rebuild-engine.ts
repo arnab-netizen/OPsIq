@@ -264,9 +264,10 @@ export class ProjectionRebuildEngine {
 
       return allMatch;
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.error("ProjectionParity: Check failed", {
         recommendationId,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
       });
       return false;
     }
