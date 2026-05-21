@@ -1,0 +1,80 @@
+{
+  "task": "PR #8 workflow failure audit + fix + merge",
+  "pr_number": 8,
+  "pr_url": "https://github.com/arnab-netizen/OPsIq/pull/8",
+  "source_branch": "main-build-repair",
+  "target_branch": "main",
+  "head_sha": "aed1dc1fcfce1d9b9f28c0e889e33604d4a5e53e",
+  "workflow_files": [
+    ".github/workflows/ci.yml",
+    ".github/workflows/mvp-readiness.yml"
+  ],
+  "checks": {
+    "total": 11,
+    "passing": 6,
+    "failing": 3,
+    "skipped": 2
+  },
+  "failing_checks": [
+    {
+      "name": "build-and-test (20.x)",
+      "workflow": "ci.yml",
+      "failed_step": "Governance compliance scan",
+      "command": "npm run governance:scan:strict",
+      "failure_type": "actual_governance_violations_not_bypassed",
+      "exit_code": 1,
+      "root_cause": "PR #8 intentionally does not include R30 governance closure work. The scan detects actual violations that PR #9 was created to close.",
+      "violation_counts": {
+        "RAW_ERROR_MESSAGE": 202,
+        "UNSAFE_ERROR_RENDER": 92,
+        "DEAD_EMPTY_STATE": 120
+      }
+    },
+    {
+      "name": "MVP Readiness Validation",
+      "workflow": "mvp-readiness.yml",
+      "failed_step": "Run MVP Readiness Check",
+      "command": "bash scripts/mvp-readiness-check.sh",
+      "failure_type": "cascading_failure_from_governance",
+      "root_cause": "The mvp-readiness-check.sh calls npm run build, which depends on governance scan not failing. Governance failure cascades to build.",
+      "depends_on": "governance compliance scan"
+    },
+    {
+      "name": "Readiness Summary",
+      "workflow": "mvp-readiness.yml",
+      "failed_step": "Enforce readiness gate",
+      "command": "exit 1 if readiness-check failed",
+      "failure_type": "dependent_job_failure",
+      "root_cause": "Depends on MVP Readiness Validation passing",
+      "depends_on": "MVP Readiness Validation"
+    }
+  ],
+  "passing_checks": [
+    "Enforce Branch Protection (SUCCESS)",
+    "Run Tests (SUCCESS)",
+    "Validate Branch Status (SUCCESS)",
+    "Build + Type + Prisma Verify (SUCCESS)",
+    "lint (20.x) (SUCCESS)",
+    "Security Baseline Check (SUCCESS)"
+  ],
+  "analysis": {
+    "pr_intent": "Build repair only - intentionally excludes R30 governance closure",
+    "pr_description_states": "governance:scan:strict still fails on this branch because R30 governance closure is intentionally not included here",
+    "governance_violations_on_branch": {
+      "RAW_ERROR_MESSAGE": 202,
+      "UNSAFE_ERROR_RENDER": 92,
+      "DEAD_EMPTY_STATE": 120,
+      "total": 414
+    },
+    "pr_9_addresses_same_violations": "PR #9 (r30-governance-clean-main → main) closes all RAW_ERROR_MESSAGE (202) and UNSAFE_ERROR_RENDER (92) violations, passing governance with 0 errors",
+    "critical_issue": "Governance scan is MANDATORY in CI workflow (ci.yml line 50-52: continue-on-error=false). PR #8 cannot pass CI without including R30 governance closure.",
+    "decision": "PR #8 cannot be merged. Per TASK E rules: 'if PR #8 is intentionally build-repair only and governance is mandatory, stop and mark PR #8 as not mergeable, then report that combined R30 branch must be used instead'",
+    "recommendation": "Use PR #9 (r30-governance-clean-main) which consolidates both build repairs and R30 governance closure and passes all gates with governance violations at 0"
+  },
+  "local_test_results": {
+    "npm_ci": "PASS",
+    "npm_run_governance_scan_strict": "FAIL - 202 RAW_ERROR_MESSAGE, 92 UNSAFE_ERROR_RENDER, 120 DEAD_EMPTY_STATE",
+    "error_output": "Governance scan reports actual unresolved violations"
+  },
+  "next_step": "DO NOT MERGE PR #8. Instead merge PR #9 from r30-governance-clean-main which includes both build repairs and R30 governance closure and passes all required checks."
+}
