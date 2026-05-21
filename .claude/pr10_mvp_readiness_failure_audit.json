@@ -1,0 +1,51 @@
+{
+  "audit_date": "2026-05-21",
+  "pr_number": 10,
+  "source_branch": "claude/devops-p0-blockers-audit-FLmZv",
+  "target_branch": "main",
+  "failing_workflows": [
+    ".github/workflows/mvp-readiness.yml"
+  ],
+  "failing_jobs": [
+    "readiness-check"
+  ],
+  "failing_steps": [
+    "Run MVP Readiness Check (bash scripts/mvp-readiness-check.sh)"
+  ],
+  "exact_errors": {
+    "root_cause": "mvp-readiness.yml uses ${{ secrets.DATABASE_URL }} and ${{ secrets.DATABASE_URL_TEST }}, but these secrets do not exist in the GitHub Actions environment",
+    "consequence": "DATABASE_URL resolves to empty string, causing npm run build to fail in mvp-readiness-check.sh",
+    "build_failure_message": "Build requires DATABASE_URL for Prisma client generation and schema validation"
+  },
+  "database_url_required": true,
+  "database_url_available": false,
+  "database_url_source": "attempted to use non-existent GitHub secrets",
+  "postgres_service_configured": false,
+  "postgres_service_in_ci_workflow": true,
+  "postgres_service_in_mvp_workflow": false,
+  "secrets_database_url_used": true,
+  "workflow_environment_declared": false,
+  "workflow_environment_value": "test (but no environment secrets exist)",
+  "root_cause_detailed": {
+    "mvp_readiness_yml_line_23": "DATABASE_URL: ${{ secrets.DATABASE_URL }}",
+    "mvp_readiness_yml_line_24": "DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}",
+    "mvp_readiness_check_sh_line_100": "npm run build (requires DATABASE_URL)",
+    "mvp_readiness_check_sh_line_129": "npx prisma db execute --stdin (requires DATABASE_URL)",
+    "mvp_readiness_check_sh_line_138": "npx prisma migrate deploy (requires DATABASE_URL)",
+    "ci_yml_comparison": "ci.yml correctly uses PostgreSQL service container with hardcoded test DATABASE_URL (safe for CI)"
+  },
+  "fix_strategy": {
+    "approach": "Add PostgreSQL 16 service container to MVP readiness workflow, same as ci.yml uses",
+    "reasoning": "A hardcoded test database URL in CI workflow is safe and standard practice. No secrets are needed for local/test database.",
+    "steps": [
+      "Add services.postgres block to readiness-check job in mvp-readiness.yml",
+      "Configure PostgreSQL 16 with test credentials (postgres:postgres)",
+      "Set DATABASE_URL as: postgresql://postgres:postgres@localhost:5432/opsiq_test",
+      "Set DIRECT_DATABASE_URL (if required by Prisma): postgresql://postgres:postgres@localhost:5432/opsiq_test",
+      "Remove reference to ${{ secrets.DATABASE_URL }} and ${{ secrets.DATABASE_URL_TEST }}"
+    ]
+  },
+  "also_inspect": {
+    "note": "ci.yml build-and-test jobs are also failing. This needs separate investigation. May be due to test environment issues or resource constraints."
+  }
+}
