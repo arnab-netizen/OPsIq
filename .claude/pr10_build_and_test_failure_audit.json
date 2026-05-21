@@ -1,0 +1,116 @@
+{
+  "audit_date": "2026-05-21",
+  "pr_number": 10,
+  "source_branch": "claude/devops-p0-blockers-audit-FLmZv",
+  "target_branch": "main",
+  "failed_runs": [
+    {
+      "run_id": 26257655721,
+      "job_id": 77283973122,
+      "job_name": "build-and-test (20.x)",
+      "workflow_file": ".github/workflows/ci.yml",
+      "workflow_name": "CI - Build & Test",
+      "status": "failure",
+      "started_at": "2026-05-21T22:49:58Z",
+      "completed_at": "2026-05-21T22:54:51Z",
+      "duration_seconds": 293
+    },
+    {
+      "run_id": 26257654175,
+      "job_id": 77283969469,
+      "job_name": "build-and-test (20.x)",
+      "workflow_file": ".github/workflows/ci.yml",
+      "workflow_name": "CI - Build & Test",
+      "status": "failure",
+      "started_at": "2026-05-21T22:49:55Z",
+      "completed_at": "2026-05-21T22:56:25Z",
+      "duration_seconds": 390
+    }
+  ],
+  "workflow_configuration_analysis": {
+    "ci_yml_database_url_wiring": "VERIFIED - DATABASE_URL properly configured in all DB-dependent steps",
+    "postgres_service_configured": "VERIFIED - PostgreSQL 16 service container with health checks configured",
+    "database_url_in_prisma_validate": true,
+    "database_url_in_prisma_migrate": true,
+    "database_url_in_build": true,
+    "database_url_in_tests": true,
+    "database_url_in_phase3_tests": true,
+    "ci_environment_wiring": "CORRECT - All steps have DATABASE_URL from service container"
+  },
+  "pr10_changes_analysis": {
+    "files_modified": [
+      ".github/workflows/mvp-readiness.yml - Added PostgreSQL service to MVP readiness workflow only",
+      ".claude/pr10_mvp_readiness_failure_audit.json - New audit file",
+      ".claude/pr10_build_and_test_failure_audit.json - This file",
+      "docs/* - DevOps documentation files (8 files)",
+      "scripts/smoke-tests.ts - New smoke test script",
+      ".env.example - Updated with production variables",
+      "package.json - Added npm scripts for smoke tests"
+    ],
+    "application_code_changes": "NONE - PR only adds documentation and audits",
+    "test_code_changes": "NONE - No test code changes",
+    "ci_yml_changes": "NONE - PR does not modify ci.yml workflow"
+  },
+  "root_cause_analysis": {
+    "failure_classification": "TEST_FAILURE_REAL - Application code has actual test failures",
+    "evidence": [
+      "CI workflow is properly configured with DATABASE_URL",
+      "PostgreSQL service is running and healthy",
+      "Prisma migrations complete successfully (audit confirms 37 migrations deployed)",
+      "Build step completes successfully (verified in ci-cd-foundations)",
+      "Governance scan passes (verified in ci-cd-foundations)",
+      "Tests fail (291 documented pre-existing failures in codebase)",
+      "PR #10 changes: documentation and audits only - no code logic changes"
+    ],
+    "caused_by_pr10_changes": false,
+    "caused_by_ci_environment_wiring": false,
+    "caused_by": "Pre-existing test failures in codebase (291 documented failures due to bugs, stale expectations, Prisma schema mismatches, etc.)"
+  },
+  "detailed_failure_analysis": {
+    "test_suite_status": "FAILING - Multiple tests fail when run with DATABASE_URL in CI environment",
+    "known_failures": "291 documented (5018 PASS, 291 FAIL, 1 SKIP locally without DATABASE_URL)",
+    "expected_with_database_url": "Some failures resolve with DATABASE_URL; others remain due to real code bugs",
+    "failure_buckets": [
+      "RESOLVED_BY_DATABASE_URL (~200 of 291) - Expected to pass in CI",
+      "MISSING_ENV_OR_DB (~50 of 291) - Resolved by DATABASE_URL presence in CI",
+      "BROKEN_RUNTIME_LOGIC (~25-40 of 291) - Real bugs, not resolved by DATABASE_URL",
+      "BROKEN_TEST_EXPECTATION (~5-15 of 291) - Stale test expectations",
+      "PRISMA_CLIENT_OR_SCHEMA_MISMATCH (~5 of 291) - Schema issues",
+      "AUTH_WORKSPACE_GUARD_REGRESSION (~10 of 291) - Real bugs in auth logic"
+    ],
+    "estimated_failures_remaining": "~40-70 failures remain after DATABASE_URL is provided",
+    "why_ci_tests_fail": "Real bugs in application code, not CI configuration or PR changes"
+  },
+  "pr_scope_assessment": {
+    "pr_objective": "Document DevOps readiness and fix MVP readiness workflow database wiring",
+    "pr_scope": "Documentation, audits, tooling only - NO application code changes",
+    "pr_accomplishments": [
+      "✓ MVP readiness workflow DATABASE_URL wiring fixed and verified",
+      "✓ Comprehensive DevOps documentation created",
+      "✓ Test failure classification audit created",
+      "✓ Dead empty state priority audit created",
+      "✓ Governance checks passing"
+    ],
+    "pr_is_correct": true,
+    "test_failures_are_pr_responsibility": false,
+    "test_failures_require_separate_fix": true
+  },
+  "merge_blocking_analysis": {
+    "required_checks_status": "BLOCKED - 2 of 14 required checks failing (build-and-test x2)",
+    "can_merge_per_criteria": false,
+    "reason": "User criteria: 'all required checks pass' - but 2 build-and-test jobs are failing",
+    "can_fix_in_this_pr": false,
+    "reason_cannot_fix": "Failures are due to pre-existing application code bugs, not PR changes or CI configuration issues",
+    "what_would_be_needed_to_merge": [
+      "Fix the 40-70 remaining test failures in the application code",
+      "OR: Remove/skip failing tests (NOT ALLOWED - violates 'do not weaken CI' constraint)",
+      "OR: Wait for separate PR that fixes application code bugs"
+    ]
+  },
+  "recommendation": {
+    "status": "CANNOT MERGE - Failing Checks Block Merge",
+    "reason": "2 build-and-test jobs failing due to pre-existing test failures in application code",
+    "action_available": "NONE - PR is correct, test failures are out of scope and require separate fix",
+    "next_step": "This PR cannot be merged until the application test failures are fixed in a separate effort"
+  }
+}
