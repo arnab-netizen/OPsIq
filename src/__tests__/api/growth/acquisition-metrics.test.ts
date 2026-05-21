@@ -172,7 +172,7 @@ describe("Acquisition Metrics API Route - Service Integration", () => {
     });
 
     it("should return 400 for service validation errors", () => {
-      // Service returns error message, route returns 400
+      // Service returns validation details, route returns 400
       const result = AcquisitionEngine.recordMetrics(workspaceId, {
         channel: AcquisitionChannel.PAID_SEARCH,
         month: "2026-05",

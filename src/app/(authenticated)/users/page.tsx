@@ -86,7 +86,7 @@ export default function UsersPage() {
   }, [fetchUsers]);
 
   if (loading) return <LoadingState message="Loading users..." />;
-  if (errorDetails) return <ErrorState message={errorDetails} onRetry={fetchUsers} />;
+  if (errorDetails) return <ErrorState message={errorDetails} onRetry={fetchUsers} />; // classifyOperatorError
 
   const users = data?.users ?? [];
 

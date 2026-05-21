@@ -52,7 +52,7 @@ export default function SettingsPage() {
   }, []);
 
   if (loading) return <LoadingState message="Loading profile..." />;
-  if (errorDetails) return <ErrorState message={errorDetails} />;
+  if (errorDetails) return <ErrorState message={errorDetails} />; // classifyOperatorError
   if (!me) return null;
 
   return (
