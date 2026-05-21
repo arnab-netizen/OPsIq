@@ -1,5 +1,6 @@
 'use client';
 
+import { classifyOperatorError } from '@/lib/operator-error-governance';
 import { useState, useEffect } from 'react';
 import { OperatorItem } from '@/domain/operator/types';
 import { calculateBadges, getBadgeVariant } from '@/services/badges/engine';
@@ -37,8 +38,8 @@ export default function OperatorQueuePage() {
         const queueData = data as QueueResponse;
         setItems(queueData.items);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Network error';
-        setError(`Error: ${message}`);
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error('Network error'), { context: "load" });
+        setError(`Error: ${governed.operatorMessage}`);
         setItems([]);
       } finally {
         setLoading(false);

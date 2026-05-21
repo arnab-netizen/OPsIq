@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -45,7 +46,8 @@ export default function OnboardingPage() {
 
       setStep("team");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating workspace");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error("Error creating workspace"), { context: "load" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -93,7 +95,8 @@ export default function OnboardingPage() {
 
       setStep("complete");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error inviting team members");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error("Error inviting team members"), { context: "load" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
