@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type Step = "workspace" | "decision" | "evaluate" | "dashboard";
 
@@ -51,7 +52,8 @@ export default function OnboardingFlow() {
       setData({ workspace: result });
       setCurrentStep("decision");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating workspace");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }

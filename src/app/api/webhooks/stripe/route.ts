@@ -9,6 +9,7 @@ import {
   handleWebhookEvent,
 } from "@/services/webhook.service";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 /**
  * Handle Stripe webhook events - FINAL LOCK for production
@@ -64,8 +65,9 @@ export const POST = withEnforcementFull(
       event = verified.event;
       timestamp = verified.timestamp;
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.warn("Webhook signature verification failed", {
-        error: error instanceof Error ? error.message : "unknown error",
+        error: governed.operatorMessage,
       });
       throw new UnauthorizedError("Invalid signature");
     }
@@ -74,8 +76,9 @@ export const POST = withEnforcementFull(
     try {
       checkSignatureTimestamp(timestamp);
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.warn("Webhook replay protection check failed", {
-        error: error instanceof Error ? error.message : "unknown error",
+        error: governed.operatorMessage,
       });
       throw new UnauthorizedError("Invalid timestamp");
     }
@@ -141,9 +144,10 @@ export const POST = withEnforcementFull(
       }
     } catch (error) {
       // DB error getting/creating event
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.error("Failed to get or create webhook event", {
         stripeEventId: event.id,
-        error: error instanceof Error ? error.message : "unknown error",
+        error: governed.operatorMessage,
       });
       return Response.json(
         { error: "Internal error" },
@@ -164,9 +168,10 @@ export const POST = withEnforcementFull(
             type: event.type,
           });
         } catch (error) {
+          const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
           logger.error("Failed to mark webhook event as processed after successful handling", {
             stripeEventId: event.id,
-            error: error instanceof Error ? error.message : "unknown error",
+            error: governed.operatorMessage,
           });
           // Don't fail - event was processed, just couldn't mark it
           // Stripe will retry, idempotency will prevent reprocessing
@@ -174,10 +179,11 @@ export const POST = withEnforcementFull(
       })
       .catch(async (error) => {
         // Failure: mark event as failed and log error
+        const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
         logger.error("Webhook event processing failed", {
           stripeEventId: event.id,
           type: event.type,
-          error: error instanceof Error ? error.message : "unknown error",
+          error: governed.operatorMessage,
         });
 
         try {
@@ -186,9 +192,10 @@ export const POST = withEnforcementFull(
             error instanceof Error ? error : new Error(String(error))
           );
         } catch (dbError) {
+          const governedDb = classifyOperatorError(dbError instanceof Error ? dbError : new Error(String(dbError)), { context: "load" });
           logger.error("Failed to record webhook event failure", {
             stripeEventId: event.id,
-            error: dbError instanceof Error ? dbError.message : "unknown error",
+            error: governedDb.operatorMessage,
           });
           // Even if recording failure fails, the error is logged
         }
@@ -206,8 +213,9 @@ export const POST = withEnforcementFull(
     );
   } catch (error) {
     // Catch-all for any unexpected errors
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Webhook handler error", {
-      error: error instanceof Error ? error.message : "unknown error",
+      error: governed.operatorMessage,
     });
 
     return Response.json(

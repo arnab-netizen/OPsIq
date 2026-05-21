@@ -5,6 +5,8 @@
  * and flexible output formats. Mock-backed for non-DB environments.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 export enum LogLevel {
   DEBUG = "DEBUG",
   INFO = "INFO",
@@ -182,17 +184,18 @@ function log(
     return;
   }
 
+  const governedError = error ? classifyOperatorError(error, { context: "load" }) : null;
   const entry: LogEntry = {
     timestamp: new Date(),
     level,
     message,
     context: { ...globalContext, ...context },
     metadata,
-    error: error
+    error: governedError
       ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
+          name: error instanceof Error ? error.name : "Unknown",
+          message: governedError.operatorMessage,
+          stack: error instanceof Error ? error.stack : undefined,
         }
       : undefined,
   };

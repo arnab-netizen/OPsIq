@@ -11,6 +11,7 @@ import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   createExperiment,
   approveExperiment,
@@ -184,13 +185,15 @@ export const POST = withEnforcementFull(async (request) => {
       );
     }
     if (error instanceof ExperimentLifecycleError) {
+      const governed = classifyOperatorError(error, { context: "load" });
       return Response.json(
-        { error: error.code, message: error.message },
+        { error: error.code, message: governed.operatorMessage },
         { status: 400 }
       );
     }
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const governed = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: governed.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },
@@ -232,7 +235,8 @@ export const GET = withEnforcementFull(async (request) => {
     });
   } catch (error) {
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const governed = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: governed.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },

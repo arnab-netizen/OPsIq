@@ -13,6 +13,8 @@
  * - WORKSPACE_ERROR: Workspace isolation/enforcement violations
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 export type ErrorClassification =
   | "AUTH_ERROR"
   | "VALIDATION_ERROR"
@@ -40,7 +42,8 @@ export function classifyError(
   context?: Record<string, unknown>
 ): ClassifiedError {
   const now = new Date().toISOString();
-  const message = error instanceof Error ? error.message : String(error);
+  const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  const message = governed.operatorMessage;
 
   // Auth errors
   if (
@@ -212,11 +215,13 @@ export function reportError(classified: ClassifiedError): void {
  */
 export function extractErrorContext(error: unknown): Record<string, unknown> {
   if (!(error instanceof Error)) {
-    return { rawError: String(error) };
+    const governed = classifyOperatorError(new Error(String(error)), { context: "load" });
+    return { rawError: governed.operatorMessage };
   }
 
+  const governed = classifyOperatorError(error, { context: "load" });
   return {
-    message: error.message,
+    message: governed.operatorMessage,
     stack: error.stack?.split("\n").slice(0, 5).join("\n"), // First 5 stack frames
     name: error.name,
   };

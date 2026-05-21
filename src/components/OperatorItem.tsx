@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { OperatorItem as OperatorItemType } from "@/domain/operator/types";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface OperatorItemProps {
   item: OperatorItemType;
@@ -33,7 +34,8 @@ export function OperatorItem({ item, onUpdate }: OperatorItemProps) {
 
       onUpdate?.({ ...item, status: "in_progress" });
     } catch (error) {
-      alert(error instanceof Error ? error.message : "Unknown error");
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "action" });
+      alert(governed.operatorMessage);
     } finally {
       setLoading(false);
     }

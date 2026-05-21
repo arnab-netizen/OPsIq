@@ -1,3 +1,5 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 // Layer 1: Identity Authentication
 export type Layer1ErrorCode =
   | "AUTH_MISSING"
@@ -797,8 +799,8 @@ export class TooManyRequestsError extends AppError {
 
 export function toAppError(error: unknown, correlationId?: string): AppError {
   if (error instanceof AppError) return error;
-  const message =
-    error instanceof Error ? error.message : "An unexpected error occurred";
+  const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  const message = governed.operatorMessage;
   return new AppError(
     "INTERNAL_ERROR",
     message,

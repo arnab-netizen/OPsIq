@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { classifyError, type ClassifiedError } from "@/infra/error-tracking";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 /**
  * Type for a route handler function
@@ -181,7 +182,8 @@ export function getErrorStatusCode(error: unknown): number {
  * Helper: Check if error should be reported (skip expected/benign errors)
  */
 export function shouldReportError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
+  const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+  const message = governed.operatorMessage;
 
   // Skip benign errors
   const benignPatterns = [
