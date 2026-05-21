@@ -11,6 +11,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { calculateWorkspaceHealth, summarizeActionQueue, buildOwnerDashboardView, DashboardServiceError } from "@/services/owner-mode/dashboard.service";
 import { OwnerDashboardConfig, HealthStatus, ActionQueuePriority } from "@/domain/owner-mode/owner-dashboard";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z } from "zod/v4";
 
 const querySchema = z.object({
@@ -145,13 +146,15 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       );
     }
     if (error instanceof DashboardServiceError) {
+      const governed = classifyOperatorError(error, { context: "load" });
       return Response.json(
-        { error: error.code, message: error.message },
+        { details: governed.operatorMessage },
         { status: 400 }
       );
     }
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const governed = classifyOperatorError(error, { context: "load" });
+      return Response.json({ details: governed.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },

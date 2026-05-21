@@ -5,8 +5,8 @@ import { Badge, Button } from "@/ui/primitives";
 import {
   classifyOperatorError,
   type ErrorGovernanceContext,
-} from "@/src/lib/operator-error-governance";
-import { GovernedEmptyState } from "@/src/components/ui/GovernedEmptyState";
+} from "@/lib/operator-error-governance";
+import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
 
 interface Recommendation {
   id: string;
@@ -135,7 +135,7 @@ export function RecommendationsManager({
 
       onRecommendationUpdated?.();
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to rerank recommendations";
+      const errorMessage = classifyOperatorError(err instanceof Error ? err : new Error("Failed to rerank recommendations"), { context: "save" }).operatorMessage;
       setErrors({ form: errorMessage });
     } finally {
       setReranking(false);

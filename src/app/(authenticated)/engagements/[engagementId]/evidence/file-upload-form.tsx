@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button, Input, Textarea, Select, LoadingState } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface FileUploadFormProps {
   engagementId: string;
@@ -108,7 +109,8 @@ export function FileUploadForm({
 
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'action' });
+      setError(governed.operatorMessage);
       setIsSubmitting(false);
     }
   }

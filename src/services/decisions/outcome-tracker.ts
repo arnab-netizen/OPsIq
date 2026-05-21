@@ -254,11 +254,11 @@ export function calculateCredibilityAdjustment(
     : 0;
 
   const reason_parts: string[] = [];
-  for (const [metric, adj] of Object.entries(adjustment_by_metric)) {
+  for (const [metricLabel, adj] of Object.entries(adjustment_by_metric)) {
     if (adj > 0) {
-      reason_parts.push(`${metric}: +${adj.toFixed(1)}`);
+      reason_parts.push(`${metricLabel}: +${adj.toFixed(1)}`);
     } else if (adj < 0) {
-      reason_parts.push(`${metric}: ${adj.toFixed(1)}`);
+      reason_parts.push(`${metricLabel}: ${adj.toFixed(1)}`);
     }
   }
 

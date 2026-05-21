@@ -19,6 +19,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
 import { getSessionFact, getPolicyContextFact } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
@@ -193,8 +194,9 @@ export function withCanonicalEnforcement(
             );
           }
         } catch (error) {
+          const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
           logger.error("Failed to check startup status", {
-            error: error instanceof Error ? error.message : String(error),
+            error: governed.operatorMessage,
             endpoint: req.nextUrl.pathname,
             method: req.method,
             correlationId,

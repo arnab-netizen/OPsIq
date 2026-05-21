@@ -32,6 +32,7 @@ import {
   ForbiddenError,
   AppError,
 } from "@/infra/errors";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 // Global enforcement state
 const requestCircuitBreaker = new CircuitBreaker({
@@ -293,6 +294,7 @@ export async function enforceRequest<T>(
       );
 
       // Log the unhandled error for debugging
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       runtimeLogger.log({
         level: "CRITICAL",
         category: "FAILURE",
@@ -300,7 +302,7 @@ export async function enforceRequest<T>(
         correlation_id: correlation_id || requestContext.generateCorrelationId(),
         context: {
           error_type: error?.constructor?.name || typeof error,
-          error_message: error instanceof Error ? error.message : String(error),
+          error_message: governed.operatorMessage,
           stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined,
           endpoint: enforced_context?.endpoint,
           method: enforced_context?.method,

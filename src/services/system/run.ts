@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { DecisionInput, DecisionRule, DecisionOutput } from "@/domain/decision/types";
 import { ImpactEstimate } from "@/domain/finance/types";
 import { runDecisionEngine } from "@/services/decision/engine";
@@ -66,8 +67,8 @@ export function runSystem(inputMetrics: Record<string, number>): {
       confidence,
     });
   } catch (scenarioError) {
-    const errorMsg = scenarioError instanceof Error ? scenarioError.message : "Unknown scenario error";
-    throw new Error(`SCENARIO_GENERATION_FAILED: ${errorMsg}`);
+    const governed = classifyOperatorError(scenarioError instanceof Error ? scenarioError : new Error(String(scenarioError)), { context: "load" });
+    throw new Error(`SCENARIO_GENERATION_FAILED: ${governed.operatorMessage}`);
   }
 
   // 1. Build DecisionInput

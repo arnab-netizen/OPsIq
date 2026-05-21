@@ -1,0 +1,43 @@
+{
+  "worklist_version": "1.0",
+  "batch_number": 2,
+  "created_after_batch_1": true,
+
+  "pre_batch_counts": {
+    "raw_error_message": 172,
+    "unsafe_error_render": 76,
+    "unsafe_metric": 0,
+    "dead_empty_state_warnings": 120,
+    "total_blocking_violations": 248,
+    "total_with_warnings": 368
+  },
+
+  "batch_2_strategy": "Continue RAW_ERROR_MESSAGE closure targeting remaining 172 violations across high-impact files. Focus on API routes, services, and UI components with direct error.message access patterns.",
+
+  "batch_2_target": "Close minimum 40 RAW_ERROR_MESSAGE violations to bring total to ~132",
+
+  "identified_files_with_violations": [
+    "src/ui/decision-acceptance-modal.tsx (2 violations) - err.message in accept/reject handlers",
+    "src/services/webhooks.service.ts (2 violations) - error.message in webhook handling",
+    "src/ui/action-center.tsx (1+ violations) - err.message in error handler",
+    "src/infra/telemetry-sanitizer.ts (1+ violations) - error redaction logic",
+    "src/infra/error-tracking.ts (1+ violations) - error extraction already partially fixed",
+    "src/app/scenario/page.tsx (1+ violations) - err.message in fetch error",
+    "src/app/report/page.tsx (1+ violations) - err.message in fetch error",
+    "src/app/quick-start/page.tsx (1+ violations) - err.message in fetch error",
+    "... and 164+ additional violations across remaining codebase"
+  ],
+
+  "selected_batch_files": [
+    "src/ui/decision-acceptance-modal.tsx",
+    "src/services/webhooks.service.ts",
+    "src/ui/action-center.tsx",
+    "src/app/scenario/page.tsx",
+    "src/app/report/page.tsx",
+    "src/app/quick-start/page.tsx"
+  ],
+
+  "next_batch_action": "Start with decision-acceptance-modal.tsx which has 2 clear RAW_ERROR_MESSAGE violations from the scan output. Then systematically address remaining files.",
+
+  "notes": "BATCH 1 reduced RAW_ERROR_MESSAGE from 196→172 (24 violations closed), UNSAFE_ERROR_RENDER from 77→76 (1 closed). Total BATCH 1 impact: 25 violations. Continue aggressive closure with BATCH 2."
+}

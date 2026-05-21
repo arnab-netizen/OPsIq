@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { describe, it, expect, beforeEach } from "vitest";
 import crypto from "crypto";
 
@@ -129,9 +130,10 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
         processingQueue.push(poisonMessage);
       } catch (error) {
         // Send to DLQ
+        const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
         dlq.push({
           message: poisonMessage,
-          error: error instanceof Error ? error.message : String(error),
+          error: governed.operatorMessage,
           timestamp: Date.now(),
         });
       }

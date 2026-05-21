@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { isValidTransition } from "@/services/decision/status-management";
 
 /**
@@ -37,7 +39,8 @@ export async function statusTransitionGuard(
     try {
       return await handler(request);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      const message = governed.operatorMessage;
 
       // Check if it's a transition error
       if (message.includes("Invalid status transition")) {

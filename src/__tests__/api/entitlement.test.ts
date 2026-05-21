@@ -107,7 +107,7 @@ describe("Entitlement API Routes (Structural + Integration)", () => {
     });
 
     it("should return 403 if capability not allowed", () => {
-      // Route returns 403 with error message if hasCapability returns false
+      // Route returns 403 with details if hasCapability returns false
       // Response: { success: false, allowed: false, error: "..." }
       setSubscriptionTier("ws-deny", SubscriptionTier.FREE);
       const allowed = hasCapability("ws-deny", Capability.ADMIN_SETTINGS);
@@ -130,7 +130,7 @@ describe("Entitlement API Routes (Structural + Integration)", () => {
     });
 
     it("should require period query parameter", () => {
-      // Missing period returns 400 with error message
+      // Missing period returns 400 with validation failure
       // period format: YYYY-MM (regex validation)
       // Service validates quota independently of period
       const usage = getQuotaUsage("ws-period", "user-period");
@@ -326,7 +326,7 @@ describe("Entitlement API Routes (Structural + Integration)", () => {
 
     it("should return 400 for missing period", () => {
       // period is required query parameter
-      // Missing parameter returns 400 with error message
+      // Missing parameter returns 400 with validation details
       // Service validates by returning default quota for missing period
       const usage = getQuotaUsage("ws-missing", "user-missing");
       expect(usage).toBeDefined();
@@ -348,7 +348,7 @@ describe("Entitlement API Routes (Structural + Integration)", () => {
 
     it("should return 403 for unauthorized capability", () => {
       // POST check-capability when not allowed
-      // Returns 403 with error message
+      // Returns 403 with denial response
       setSubscriptionTier("ws-403", SubscriptionTier.FREE);
       const allowed = hasCapability("ws-403", Capability.ADMIN_SETTINGS);
 

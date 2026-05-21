@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "v8", "v8/**/*", "**/__ignored_tests__/**", "scripts/seed-test-db.ts"]
+  "exclude": ["node_modules", ".next", "v8", "v8/**/*", "**/__ignored_tests__/**", "**/__tests__/**", "tests/**", "scripts/seed-test-db.ts", "scripts/reset-staging.ts", "scripts/seed-staging.ts"]
 }

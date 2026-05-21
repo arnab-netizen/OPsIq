@@ -3,6 +3,7 @@
  * Simulates realistic Stripe webhook delivery with retries, failures, duplicates, etc.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { StripeEvent } from "./stripeSimulator";
 import { handleWebhookEvent, getOrCreateWebhookEvent, markWebhookEventProcessed, markWebhookEventFailed, checkSignatureTimestamp } from "@/services/webhook.service";
 import { db } from "@/lib/db";
@@ -60,14 +61,14 @@ export async function simulateWebhookDelivery(
   try {
     checkSignatureTimestamp(eventToProcess.created);
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     return {
       eventId: eventToProcess.id,
       eventType: eventToProcess.type,
       success: false,
       attempts: 1,
       finalStatus: "failed",
-      error: errorMsg,
+      error: governed.operatorMessage,
     };
   }
 
@@ -147,7 +148,8 @@ export async function simulateWebhookDelivery(
         webhookEvent,
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      const errorMsg = governed.operatorMessage;
       logger.error("Webhook delivery failed", { eventId: eventToProcess.id, error: errorMsg });
 
       // Get webhook event state

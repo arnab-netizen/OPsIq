@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { runConsultingEngine } from "./orchestrator";
 import type { ConsultingEngineInput, ConsultingEngineOutput } from "@/domain/consulting-engine/types";
@@ -181,17 +182,19 @@ export async function runConsultingPipeline(
         warnings: engineOutput.warnings,
       };
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.error("Consulting pipeline failed at persistence stage", {
         engagementId,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
       });
 
       throw error;
     }
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Consulting pipeline failed", {
       engagementId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }

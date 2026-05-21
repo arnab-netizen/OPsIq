@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input, Textarea } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface CreateBundleFormProps {
   engagementId: string;
@@ -44,7 +45,8 @@ export function CreateBundleForm({
 
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'action' });
+      setError(governed.operatorMessage);
       setIsSubmitting(false);
     }
   }

@@ -1,5 +1,6 @@
 import { getMonitoringServiceInstance } from "@/middleware/monitoring.middleware";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -26,6 +27,7 @@ export const GET = async () => {
     });
   } catch (error) {
     logger.error("Startup probe failed", { error });
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
 
     return Response.json(
       {
@@ -34,7 +36,7 @@ export const GET = async () => {
         database_migrated: false,
         routes_registered: 0,
         test_request_successful: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: governed.operatorMessage,
       },
       {
         status: 503,

@@ -14,7 +14,7 @@ import {
   getMetricSeverity,
   formatMetricValue,
   type MetricName,
-} from "@/src/lib/metric-registry";
+} from "@/lib/metric-registry";
 
 export interface GovMetricProps {
   name: MetricName;
@@ -206,8 +206,8 @@ export function GovMetricInline({
 export function GovMetricCard({
   name,
   value,
-  trend?: "up" | "down" | "stable";
-  target?: number,
+  trend,
+  target,
 }: {
   name: MetricName;
   value: number;

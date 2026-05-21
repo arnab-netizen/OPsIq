@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { logAuditEvent } from "@/services/audit/audit-log";
 
@@ -58,8 +59,9 @@ export async function updateExecutionStatus(
     },
     workspaceId,
   }).catch((err: unknown) => {
+    const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
     console.error(
-      `Audit logging failed: ${err instanceof Error ? err.message : String(err)}`
+      `Audit logging failed: ${governed.operatorMessage}`
     );
   });
 

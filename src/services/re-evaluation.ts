@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { reRankRecommendationsInEngagement } from "@/services/recommendation";
 import { checkEngagementEscalations } from "@/services/escalation";
@@ -790,9 +791,10 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         await computeNextReviewDate(event.engagementId, internalAuthContext, engagementForPhase7.workspaceId);
       }
     } catch (escalationError) {
+      const governed = classifyOperatorError(escalationError instanceof Error ? escalationError : new Error(String(escalationError)), { context: "load" });
       logger.warn("Escalation/review check failed (non-blocking)", {
         engagementId: event.engagementId,
-        error: escalationError instanceof Error ? escalationError.message : String(escalationError),
+        error: governed.operatorMessage,
       });
     }
 
@@ -823,11 +825,12 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     }
 
     // Safety Guard 4: Failure handling - propagate error to fail transaction
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Re-evaluation failed", {
       engagementId: event.engagementId,
       triggerType: event.changeType,
       entityId: event.entityId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   } finally {

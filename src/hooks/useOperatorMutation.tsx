@@ -19,7 +19,7 @@ import {
   classifyOperatorError,
   type ErrorGovernanceContext,
   type GovernedErrorResponse,
-} from "@/src/lib/operator-error-governance";
+} from "@/lib/operator-error-governance";
 
 export interface MutationOptions<TData, TVariables> {
   // API configuration

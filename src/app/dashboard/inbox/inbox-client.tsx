@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -75,7 +76,8 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
       setDecisions(data.decisions);
       setTotal(data.total);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch decisions");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error("Failed to fetch decisions"), { context: "load" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }

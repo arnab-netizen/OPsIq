@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button, Select, LoadingState, ErrorState } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface EvidenceOption {
   id: string;
@@ -40,7 +41,8 @@ export function AddEvidenceToBundleForm({
         const data = await res.json();
         setEvidence(data.items ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
+        setError(governed.operatorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -82,7 +84,8 @@ export function AddEvidenceToBundleForm({
 
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'action' });
+      setError(governed.operatorMessage);
       setIsSubmitting(false);
     }
   }

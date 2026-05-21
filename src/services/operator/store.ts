@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { OperatorItem } from "@/domain/operator/types";
 import { CalibrationRecord } from "@/domain/calibration/types";
 import { calculateDeviation } from "@/services/calibration/engine";
@@ -105,9 +106,10 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
       },
       visibility: "internal",
     }).catch((error) => {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.warn("Failed to emit audit event for operator item creation", {
         itemId: created.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
       });
     });
   }
@@ -247,9 +249,10 @@ export async function updateItem(
     payload: payloadFields,
     visibility: "internal",
   }).catch((error) => {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.warn("Failed to emit audit event for operator item update", {
       itemId: id,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
   });
 
@@ -369,9 +372,10 @@ export async function applyOverride(
     },
     visibility: "internal",
   }).catch((error) => {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.warn("Failed to emit audit event for operator item override", {
       itemId: id,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
   });
 }
@@ -530,9 +534,10 @@ export async function addBlockedDecision(params: {
     },
     visibility: "internal",
   }).catch((error) => {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.warn("Failed to emit audit event for blocked decision", {
       itemId: created.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
   });
 

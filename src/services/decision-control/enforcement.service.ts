@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { calculateDecisionImpact, calculateWorkspaceImpactSummary } from "@/services/business-impact/decision-impact.service";
@@ -163,10 +164,11 @@ export async function getDailyControl(
   const controls = await Promise.all(
     summary.metrics.map((m) =>
       enforceDecisionControl(m.decisionId, workspaceId).catch((error) => {
+        const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
         logger.warn("Failed to enforce decision control", {
           decisionId: m.decisionId,
           workspaceId,
-          error: error instanceof Error ? error.message : String(error),
+          error: governed.operatorMessage,
         });
         return null;
       })

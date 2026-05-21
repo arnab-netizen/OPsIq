@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z, ZodError } from "zod/v4";
 import { logger } from "@/infra/logger";
 import {
@@ -36,9 +37,10 @@ export class ContractValidator {
           });
         });
       } else {
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
         errors.push({
           field: "root",
-          message: err instanceof Error ? err.message : String(err),
+          message: governed.operatorMessage,
           severity: "ERROR",
         });
       }

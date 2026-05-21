@@ -11,6 +11,7 @@ import {
   withVersionIncrement,
 } from "@/lib/optimistic-lock";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import type { EvidenceStatus } from "@/domain/constants/statuses";
 import { EVIDENCE_STATUSES } from "@/domain/constants/statuses";
@@ -150,9 +151,10 @@ export async function createEvidence(
           workspaceId: validatedWorkspaceId,
         });
       } catch (error) {
+        const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
         logger.error("Evidence event emission failed", {
           evidenceId: evidence.id,
-          error: error instanceof Error ? error.message : String(error),
+          error: governed.operatorMessage,
         });
       }
 
@@ -272,9 +274,10 @@ export async function updateEvidence(
         workspaceId: validatedWorkspaceId,
       });
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.error("Evidence validation event emission failed", {
         evidenceId,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
       });
     }
 

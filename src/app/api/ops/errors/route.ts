@@ -9,6 +9,7 @@ import {
   getIdempotencyCollisions,
   getSlowRequests,
 } from "@/infra/request-tracer";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export async function GET(request: NextRequest) {
   try {
@@ -74,10 +75,11 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
     return NextResponse.json(
       {
         error: "Failed to get error history",
-        details: error instanceof Error ? error.message : String(error),
+        details: governed.operatorMessage,
       },
       { status: 500 }
     );

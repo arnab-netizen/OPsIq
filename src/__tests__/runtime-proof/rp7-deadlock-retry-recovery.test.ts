@@ -16,6 +16,7 @@ import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import { db, getDbInstance } from "@/lib/db";
 import { EventEmitterService } from "@/services/event-emitter";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 describe("Phase RP7: Deadlock & Retry Recovery", () => {
   let workspaceId: string;
@@ -376,18 +377,19 @@ describe("Phase RP7: Deadlock & Retry Recovery", () => {
           visibilityScope: "internal",
           sensitivityClassification: "standard",
         }).catch((e) => {
-          console.error(`Emit failed: ${e.message}`);
-          return { error: e.message, code: (e as any).code };
+          const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "load" });
+          console.error(`Emit failed: ${governed.operatorMessage}`);
+          return { details: governed.operatorMessage, code: (e as any).code };
         });
       });
 
       const results = await Promise.all(promises);
-      const successes = results.filter((r) => !r.error);
-      const failures = results.filter((r) => r.error);
+      const successes = results.filter((r) => !r.details);
+      const failures = results.filter((r) => r.details);
 
       if (failures.length > 0) {
         console.log(
-          `Failures (${failures.length}): ${failures.map((f) => `${f.error}[${f.code}]`).join("; ")}`
+          `Failures (${failures.length}): ${failures.map((f) => `${f.details}[${f.code}]`).join("; ")}`
         );
       }
 
@@ -447,18 +449,19 @@ describe("Phase RP7: Deadlock & Retry Recovery", () => {
           visibilityScope: "internal",
           sensitivityClassification: "standard",
         }).catch((e) => {
-          console.error(`Emit ${i} failed: ${e.message}`);
-          return { error: e.message, code: (e as any).code };
+          const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "load" });
+          console.error(`Emit ${i} failed: ${governed.operatorMessage}`);
+          return { details: governed.operatorMessage, code: (e as any).code };
         })
       );
 
       const results = await Promise.all(promises);
-      const successes = results.filter((r) => !r.error);
-      const failures = results.filter((r) => r.error);
+      const successes = results.filter((r) => !r.details);
+      const failures = results.filter((r) => r.details);
 
       if (failures.length > 0) {
         console.log(
-          `Failures (${failures.length}): Sample error: ${failures[0]?.error}`
+          `Failures (${failures.length}): Sample error: ${failures[0]?.details}`
         );
       }
 

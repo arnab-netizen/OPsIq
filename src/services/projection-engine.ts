@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export interface ProjectionResult {
   projectionName: string;
@@ -60,10 +61,11 @@ export class ProjectionEngine {
           };
       }
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.error("ProjectionEngine: Projection failed", {
         eventId,
         aggregateType,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
       });
       throw error;
     }
@@ -219,9 +221,10 @@ export class ProjectionEngine {
         aggregates.push(event.aggregateId);
         rebuildCount++;
       } catch (error) {
+        const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
         logger.error("ProjectionEngine: Rebuild failed for aggregate", {
           aggregateId: event.aggregateId,
-          error: error instanceof Error ? error.message : String(error),
+          error: governed.operatorMessage,
         });
       }
     }

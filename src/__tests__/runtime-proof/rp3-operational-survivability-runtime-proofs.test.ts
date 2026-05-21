@@ -15,6 +15,7 @@
  * - Correlation ID preservation
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 const TEST_API_URL = process.env.TEST_API_URL || "http://localhost:3000";
@@ -28,7 +29,8 @@ describe("PHASE RP3: Operational Survivability Runtime Proofs", () => {
         body: await response.json().catch(() => ({})),
       };
     } catch (error) {
-      return { error: error instanceof Error ? error.message : String(error) };
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      return { details: governed.operatorMessage };
     }
   }
 

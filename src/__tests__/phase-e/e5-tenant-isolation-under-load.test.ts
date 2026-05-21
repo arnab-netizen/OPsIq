@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { describe, it, expect, beforeEach } from "vitest";
 import crypto from "crypto";
 
@@ -99,7 +100,8 @@ describe("PHASE E PRIORITY 5: Tenant Isolation Under Hostile Load", () => {
           throw new Error("Unauthorized"); // Generic, no details
         }
       } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : "";
+        const governed = classifyOperatorError(error instanceof Error ? error : new Error(""), { context: "load" });
+        const errorMsg = governed.operatorMessage;
 
         // INVARIANT: Error message doesn't leak workspace info
         expect(errorMsg).not.toContain("ws-victim");

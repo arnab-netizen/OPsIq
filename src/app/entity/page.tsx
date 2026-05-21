@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { useEffect, useState } from "react";
 
 interface Entity {
@@ -24,7 +25,8 @@ export default function EntityPage() {
         const data = await response.json();
         setEntities(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error("Unknown error"), { context: "load" });
+        setError(governed.operatorMessage);
       } finally {
         setLoading(false);
       }

@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { useEffect, useState } from "react";
 import { AccuracyPanel } from "@/components/AccuracyPanel";
 
@@ -39,7 +40,8 @@ export default function CalibrationPage() {
         const data = await response.json();
         setData(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error("Unknown error"), { context: "load" });
+        setError(governed.operatorMessage);
       } finally {
         setLoading(false);
       }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button, Input, Badge } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface ConsultingEngineResponse {
   success: boolean;
@@ -141,7 +142,8 @@ export default function ConsultingEnginePage() {
 
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'action' });
+      setError(governed.operatorMessage);
     } finally {
       setIsSubmitting(false);
     }

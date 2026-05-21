@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface ReportData {
   totalImpact: number;
@@ -25,7 +26,8 @@ export default function ReportPage() {
         const data = await response.json();
         setReport(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
+        setError(governed.operatorMessage);
       } finally {
         setLoading(false);
       }

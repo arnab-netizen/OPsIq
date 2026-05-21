@@ -1,0 +1,64 @@
+{
+  "cleanroom_retry_version": "1.0",
+  "initiated_at": "2026-05-20T22:40:00Z",
+
+  "clean_branch": "r30-governance-clean-main",
+  "base_branch": "origin/main-build-repair",
+  "base_sha": "362fc80432e9548823e9c40b1d19a1bdc62dd715",
+  "source_branch": "origin/claude/readiness-entry-audit-chIhF",
+  "source_sha": "392f754927cf76a3a7c9489027546923bcb058b1",
+
+  "worktree_clean": true,
+  "baseline_build": "NOT_RUN_YET",
+  "baseline_tsc": "NOT_RUN_YET",
+  "baseline_prisma": "NOT_RUN_YET",
+  "baseline_governance": "NOT_RUN_YET",
+  "baseline_check_all_gates": "NOT_RUN_YET",
+
+  "replay_strategy": "CONTROLLED_GROUP_REPLAY",
+  "groups": [
+    {
+      "group": 1,
+      "name": "Shared safe-error governance foundation",
+      "description": "Apply required helper/import/type changes for error governance"
+    },
+    {
+      "group": 2,
+      "name": "Service/lib/infra error governance",
+      "description": "Close RAW_ERROR_MESSAGE and UNSAFE_ERROR_RENDER in service/lib/infra files"
+    },
+    {
+      "group": 3,
+      "name": "API/UI unsafe render fixes",
+      "description": "Fix only if flagged by current scanner - no route refactor, auth, UI redesign"
+    },
+    {
+      "group": 4,
+      "name": "UNSAFE_METRIC fixes",
+      "description": "Fix only if flagged - minimal variable/display governance patch"
+    },
+    {
+      "group": 5,
+      "name": "Final audit artifacts",
+      "description": "Create cleanroom audit after gates pass"
+    }
+  ],
+
+  "strict_rules_enforced": [
+    "No unrelated old-branch history",
+    "No auth-flow divergence copy",
+    "No route refactor",
+    "No UI redesign",
+    "No billing/entitlement/webhook/workspace/DTO behavior change",
+    "No scanner/governance rule changes",
+    "No broad repo-wide regex",
+    "No feature additions",
+    "No ts-ignore",
+    "No error suppression",
+    "Smallest local governance patches only",
+    "Prefer line-level patches over whole-file replacement"
+  ],
+
+  "current_phase": "TASK_A_PLAN_CREATED",
+  "next_phase": "TASK_B_BASELINE_GATES"
+}

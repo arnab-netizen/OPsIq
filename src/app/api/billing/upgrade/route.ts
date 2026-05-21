@@ -2,6 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { db } from "@/lib/db";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 async function getStripe() {
   const apiKey = process.env.STRIPE_API_KEY;
@@ -22,8 +23,9 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
   try {
     stripe = await getStripe();
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to initialize Stripe client", {
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw new Error("Payment service is not configured");
   }
@@ -92,9 +94,10 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
         data: { stripeCustomerId },
       });
     } catch (stripeError) {
+      const governed = classifyOperatorError(stripeError instanceof Error ? stripeError : new Error(String(stripeError)), { context: 'action' });
       logger.error("Failed to create Stripe customer", {
         workspaceId,
-        error: stripeError instanceof Error ? stripeError.message : String(stripeError),
+        error: governed.operatorMessage,
       });
       throw new Error("Failed to initialize payment");
     }
@@ -125,10 +128,11 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
       sessionUrl: session.url,
     };
   } catch (stripeError) {
+    const governed = classifyOperatorError(stripeError instanceof Error ? stripeError : new Error(String(stripeError)), { context: 'action' });
     logger.error("Failed to create checkout session", {
       workspaceId,
       planId: plan.id,
-      error: stripeError instanceof Error ? stripeError.message : String(stripeError),
+      error: governed.operatorMessage,
     });
     throw new Error("Failed to create checkout session");
   }

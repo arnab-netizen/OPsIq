@@ -11,6 +11,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { validateOwnerDashboardConfig, ActionQueuePriority, HealthStatus, OwnerDashboardConfig } from "@/domain/owner-mode/owner-dashboard";
 import { z } from "zod/v4";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const configUpdateSchema = z.object({
   showCompletedActions: z.boolean().optional(),
@@ -73,7 +74,8 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     return Response.json(toConfigDTO(config), { status: 200 });
   } catch (error) {
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const governed = classifyOperatorError(error, { context: "load" });
+      return Response.json({ details: governed.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },
@@ -162,7 +164,8 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       );
     }
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const governed = classifyOperatorError(error, { context: "form" });
+      return Response.json({ details: governed.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },

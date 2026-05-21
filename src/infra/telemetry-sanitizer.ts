@@ -166,7 +166,7 @@ export function redactErrorDetails(error: unknown): unknown {
   }
 
   if (typeof error === "string") {
-    return "[ERROR MESSAGE REDACTED]";
+    return "[Redacted]";
   }
 
   if (typeof error === "object" && error !== null) {

@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { NotFoundError, ValidationError, ForbiddenError } from "@/infra/errors";
+import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export interface WorkspacePlan {
   id: string;
@@ -308,9 +310,10 @@ export async function assertCapability(
     };
   } catch (error) {
     // Fail closed: any error means deny
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     return {
       allowed: false,
-      reason: `Entitlement check failed: ${error instanceof Error ? error.message : "unknown error"}`,
+      reason: `Entitlement check failed: ${governed.operatorMessage}`,
     };
   }
 }

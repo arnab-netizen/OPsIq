@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { v4 as uuidv4 } from "uuid";
 import { logger } from "@/infra/logger";
 import {
@@ -125,9 +126,10 @@ export class BestPathOrchestrator {
         scenarioPaths
       );
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error("Unknown error"), { context: "load" });
       logger.error("Diagnostics and path analysis error", {
         decisionId,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: governed.operatorMessage,
       });
       return null;
     }

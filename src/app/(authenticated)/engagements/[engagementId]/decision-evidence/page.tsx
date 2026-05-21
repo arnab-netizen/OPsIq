@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Badge } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface DecisionEvidencePage {
   params: {
@@ -100,7 +101,8 @@ export default function DecisionEvidencePage({ params }: DecisionEvidencePage) {
         const data = await response.json();
         setEvidence(data.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+        setError(governed.operatorMessage);
       } finally {
         setIsLoading(false);
       }

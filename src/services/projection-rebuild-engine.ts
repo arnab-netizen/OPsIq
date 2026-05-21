@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { EventReplayEngine } from "@/services/event-replay-engine";
 
 /**
@@ -54,8 +55,9 @@ export class ProjectionRebuildEngine {
           undefined // upToEventNumber - replay all events
         );
       } catch (replayErr) {
+        const governed = classifyOperatorError(replayErr instanceof Error ? replayErr : new Error(String(replayErr)), { context: "load" });
         throw new Error(
-          `Replay failed: ${replayErr instanceof Error ? replayErr.message : String(replayErr)}`
+          `Replay failed: ${governed.operatorMessage}`
         );
       }
 
@@ -121,7 +123,8 @@ export class ProjectionRebuildEngine {
         errors,
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      const errorMsg = governed.operatorMessage;
       const errorStack = error instanceof Error ? error.stack : "";
       console.error("[ProjectionRebuild] CATCH BLOCK TRIGGERED:", {
         errorMsg,
@@ -261,9 +264,10 @@ export class ProjectionRebuildEngine {
 
       return allMatch;
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.error("ProjectionParity: Check failed", {
         recommendationId,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
       });
       return false;
     }

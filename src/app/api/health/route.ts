@@ -4,6 +4,7 @@ import { logger } from "@/infra/logger";
 import { classifyError, reportError } from "@/infra/error-tracking";
 import { cleanupOldRecords } from "@/services/production/retention-cleanup";
 import { isStartupComplete } from "@/infra/startup-state";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -42,10 +43,11 @@ export const GET = withEnforcement(async (ctx) => {
     } catch (error) {
       const classified = classifyError(error, { check: "database" });
       reportError(classified);
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
       checks.database = {
         status: "unhealthy",
         latencyMs: Date.now() - dbStart,
-        error: error instanceof Error ? error.message : "Unknown database error",
+        error: governed.operatorMessage,
       };
     }
   } else {

@@ -5,6 +5,8 @@
  * Non-DB core checks for application state and dependencies.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 export enum HealthStatus {
   HEALTHY = "healthy",
   DEGRADED = "degraded",
@@ -84,10 +86,11 @@ export function checkMemory(): CheckResult {
       lastChecked: new Date(),
     };
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     return {
       status: HealthStatus.UNHEALTHY,
       responseTime: Date.now() - startTime,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: governed.operatorMessage,
       lastChecked: new Date(),
     };
   }
@@ -112,10 +115,11 @@ export function checkResponseTime(): CheckResult {
       lastChecked: new Date(),
     };
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     return {
       status: HealthStatus.UNHEALTHY,
       responseTime: Date.now() - startTime,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: governed.operatorMessage,
       lastChecked: new Date(),
     };
   }

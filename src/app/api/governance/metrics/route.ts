@@ -6,6 +6,7 @@ import { calculateGovernanceMetrics } from "@/services/governance/metrics";
 import { getSession } from "@/services/auth";
 import { logAuditEvent } from "@/services/audit/audit-log";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const GET = withEnforcementFull(async (request: NextRequest) => {
   const { session } = await withAuth();
@@ -59,7 +60,8 @@ export const GET = withEnforcementFull(async (request: NextRequest) => {
     workspaceId,
   }).catch((auditError) => {
     // Log but don't fail on audit error - observability only
-    console.error(`Audit logging failed: ${auditError instanceof Error ? auditError.message : String(auditError)}`);
+    const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: 'load' });
+    console.error(`Audit logging failed: ${governed.operatorMessage}`);
   });
 
   return metrics;

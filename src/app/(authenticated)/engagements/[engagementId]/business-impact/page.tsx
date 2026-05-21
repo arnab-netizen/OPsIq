@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface DetailData {
   impactLevel: string;
@@ -52,7 +53,8 @@ export default function BusinessImpactPage() {
         const result = await response.json();
         setData(result.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+        setError(governed.operatorMessage);
       } finally {
         setIsLoading(false);
       }

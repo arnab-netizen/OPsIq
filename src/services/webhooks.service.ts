@@ -8,6 +8,7 @@
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   Webhook,
   WebhookDelivery,
@@ -185,7 +186,8 @@ export async function testWebhookDelivery(
       message: success ? "Test delivery successful" : `HTTP ${response.status}: ${responseBody}`,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+    const message = governed.operatorMessage;
 
     // Record failed delivery attempt
     const delivery: WebhookDelivery = {
@@ -241,10 +243,11 @@ export async function deliverWebhookEvent(event: string, data: Record<string, un
     // Background delivery (fire and forget with retries)
     deliverWithRetry(webhook, payload, signature, timestamp, 1)
       .catch((error) => {
+        const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
         logger.error("Webhook delivery failed permanently", {
           webhookId: webhook.id,
           event,
-          error: error instanceof Error ? error.message : String(error),
+          error: governed.operatorMessage,
         });
       });
   }
@@ -303,12 +306,13 @@ async function deliverWithRetry(
       });
     }
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     if (attempt < maxRetries) {
       const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 60000);
       logger.warn("Webhook delivery network error, scheduling retry", {
         webhookId: webhook.id,
         attempt,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
         nextRetryMs: delayMs,
       });
 
@@ -321,7 +325,7 @@ async function deliverWithRetry(
       webhookStore.updateWebhook(webhook);
       logger.error("Webhook delivery failed (network error)", {
         webhookId: webhook.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
       });
     }
   }

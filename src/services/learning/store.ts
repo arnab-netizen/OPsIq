@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { OperatorItem } from "@/domain/operator/types";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra/audit";
@@ -45,9 +46,10 @@ export async function recordLearning(input: LearningRecordInput): Promise<void> 
     },
     visibility: "internal",
   }).catch((error) => {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.warn("Failed to emit audit event for learning record", {
       workspaceId: input.workspaceId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
   });
 }

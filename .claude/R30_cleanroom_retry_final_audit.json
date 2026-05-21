@@ -1,0 +1,107 @@
+{
+  "cleanroom_retry_final_audit_version": "2.1",
+  "completed_at": "2026-05-21T12:00:00Z",
+  "audit_type": "R30_CLEANROOM_GOVERNANCE_CLOSURE_FINAL_CONSISTENCY_CHECK",
+  "consistency_check_completed": true,
+
+  "clean_branch": "r30-governance-clean-main",
+  "actual_head_sha": "adb3d429517d90bea9f2b153ac79f5650c1b4c3f",
+  "head_sha_short": "adb3d42",
+  "worktree_clean": true,
+
+  "violation_counts": {
+    "raw_error_message": 0,
+    "unsafe_error_render": 0,
+    "unsafe_metric": 0,
+    "api_real_defects": 0,
+    "ui_real_defects": 0,
+    "service_real_defects": 0,
+    "dead_empty_state_warnings": 120,
+    "remaining_blocking_violations": 0
+  },
+
+  "scanner_gaming_remediation": {
+    "scanner_gaming_findings_found": 2,
+    "scanner_gaming_findings_reverted": 2,
+    "api_response_shapes_preserved": true,
+    "gaming_details": [
+      "src/app/api/public/actions/route.ts: reverted response key from details→error",
+      "src/app/api/public/engagements/route.ts: reverted response key from details→error"
+    ]
+  },
+
+  "available_gate_scripts": {
+    "npm_run_build": "EXISTS",
+    "npx_tsc_noEmit": "EXISTS",
+    "npx_prisma_validate": "EXISTS",
+    "npm_run_governance_scan_strict": "EXISTS",
+    "npm_run_check_all_gates": "SCRIPT_NOT_PRESENT_ON_BASE",
+    "npm_run_check_optional_context": "SCRIPT_NOT_PRESENT_ON_BASE"
+  },
+
+  "final_gate_results": {
+    "build": "PASS",
+    "tsc": "PASS",
+    "prisma": "PASS",
+    "governance_scan_strict": "PASS",
+    "check_all_gates": "SCRIPT_NOT_PRESENT_ON_BASE",
+    "optional_context": "SCRIPT_NOT_PRESENT_ON_BASE"
+  },
+
+  "available_gates_pass": true,
+  "unavailable_gate_scripts": [
+    "npm run check:all-gates (not in package.json scripts)",
+    "npm run check:optional-context (not in package.json scripts)"
+  ],
+
+  "gate_execution_summary": {
+    "executed_gates": [
+      "npm run build (Compiled successfully in 15.5s)",
+      "npx tsc --noEmit (0 TypeScript errors)",
+      "npx prisma validate (Schema valid)",
+      "npm run governance:scan:strict (0 critical errors, 120 non-blocking warnings)"
+    ],
+    "skipped_gates": [
+      "npm run check:all-gates (script not available on base)",
+      "npm run check:optional-context (script not available on base)"
+    ],
+    "all_available_gates_pass": true,
+    "any_available_gate_failed": false
+  },
+
+  "phase_summary": {
+    "phase_1_raw_error_message": {
+      "initial": 46,
+      "final": 0,
+      "status": "CLOSED"
+    },
+    "phase_2_unsafe_error_render": {
+      "initial": 46,
+      "intermediate": 21,
+      "final": 0,
+      "status": "CLOSED"
+    }
+  },
+
+  "remediation_metrics": {
+    "total_files_modified": 22,
+    "governance_calls_inlined": 21,
+    "scanner_gaming_reverted": 2,
+    "commits_made": 3
+  },
+
+  "merge_recommendation": "READY_FOR_PR_FROM_CLEAN_BRANCH_WITH_CHECK_ALL_GATES_ABSENT_ON_BASE",
+  "deployment_state_label": "SERVICE_GOVERNANCE_SCAN_CLOSED_ON_CLEAN_REPAIRED_MAIN_BRANCH",
+
+  "final_status": {
+    "all_available_gates_pass": true,
+    "governance_violations_closed": true,
+    "api_contracts_preserved": true,
+    "code_integrity_maintained": true,
+    "ready_for_review": true,
+    "ready_for_merge": false,
+    "ready_for_deployment": false
+  },
+
+  "audit_file": ".claude/R30_cleanroom_retry_final_audit.json"
+}

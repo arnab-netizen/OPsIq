@@ -7,6 +7,7 @@ import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const runConsultingEngineSchema = z.object({
   engagementId: z.string().uuid("Invalid engagement ID format"),
@@ -69,7 +70,8 @@ export const POST = withEnforcementFull(async (request) => {
 
     return Response.json(response, { status: statusCode });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'action' });
+    const message = governed.operatorMessage;
 
     if (
       message.includes("not found") ||

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { OperatorItem } from '@/domain/operator/types';
+import { classifyOperatorError } from '@/lib/operator-error-governance';
 
 interface MyDayResponse {
   items: OperatorItem[];
@@ -35,7 +36,8 @@ export default function MyDayPage() {
 
       if (!response.ok) {
         const errorData = data as MyDayError;
-        setError(errorData.error || 'Failed to fetch My Day items');
+        const governed = classifyOperatorError(new Error(errorData.error || 'Failed to fetch My Day items'), { context: "load" });
+        setError(governed.operatorMessage);
         setItems([]);
         return;
       }
@@ -43,8 +45,8 @@ export default function MyDayPage() {
       const myDayData = data as MyDayResponse;
       setItems(myDayData.items);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Network error';
-      setError(`Error: ${message}`);
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+      setError(`Error: ${governed.operatorMessage}`);
       setItems([]);
     } finally {
       setLoading(false);
@@ -94,8 +96,8 @@ export default function MyDayPage() {
       // Refresh queue
       await fetchMyDay();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setError(`Error: ${message}`);
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error('Unknown error'), { context: 'load' });
+      setError(`Error: ${governed.operatorMessage}`);
     } finally {
       setActingItemId(null);
     }

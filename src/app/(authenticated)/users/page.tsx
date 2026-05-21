@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Table, Badge, LoadingState, ErrorState } from "@/ui/primitives";
 import { formatRole } from "@/domain/constants/role-labels";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface UserRow {
   id: string;
@@ -59,11 +60,11 @@ function UserRoles({ userId }: { userId: string }) {
 export default function UsersPage() {
   const [data, setData] = useState<UsersResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    setError(null);
+    setErrorDetails(null);
     try {
       const res = await fetch("/api/users?limit=50");
       if (!res.ok) {
@@ -73,7 +74,8 @@ export default function UsersPage() {
       const json = await res.json();
       setData(json);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load users");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+      setErrorDetails(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -84,7 +86,7 @@ export default function UsersPage() {
   }, [fetchUsers]);
 
   if (loading) return <LoadingState message="Loading users..." />;
-  if (error) return <ErrorState message={error} onRetry={fetchUsers} />;
+  if (errorDetails) return <ErrorState message={errorDetails} onRetry={fetchUsers} />; // classifyOperatorError
 
   const users = data?.users ?? [];
 

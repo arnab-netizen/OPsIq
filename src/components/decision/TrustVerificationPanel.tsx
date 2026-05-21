@@ -1,5 +1,6 @@
 'use client';
 
+import { classifyOperatorError } from '@/lib/operator-error-governance';
 import { useState } from 'react';
 
 interface TrustVerificationPanelProps {
@@ -70,9 +71,9 @@ export function TrustVerificationPanel({
       console.log('Verification result:', data);
       setResult(data);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error('Unknown error'), { context: "load" });
       console.error('Verification error:', err);
-      setError(`Verification failed: ${errorMessage}`);
+      setError(`Verification failed: ${governed.operatorMessage}`);
     } finally {
       setLoading(false);
     }

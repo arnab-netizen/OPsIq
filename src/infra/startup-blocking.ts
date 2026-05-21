@@ -12,6 +12,8 @@
  * blockUntilStartupComplete() is actually called from server context.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 let startupPromise: Promise<boolean> | null = null;
 let startupComplete = false;
 let startupError: Error | null = null;
@@ -92,7 +94,8 @@ async function performStartupChecks(): Promise<boolean> {
     startupComplete = true;
     return true;
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+    const errorMsg = governed.operatorMessage;
     startupError = error instanceof Error ? error : new Error(errorMsg);
 
     // Use console if logger not available (during early startup failure)

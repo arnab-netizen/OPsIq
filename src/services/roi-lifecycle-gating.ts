@@ -16,6 +16,7 @@ import { logger } from "@/infra/logger";
 import { requireServiceContext } from "@/lib/service-auth";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import {
   DecisionState,
   isTerminalState,
@@ -283,9 +284,10 @@ export async function recordImpactWithGating(
     if (error instanceof ValidationError || error instanceof ConflictError || error instanceof NotFoundError) {
       throw error;
     }
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Error recording impact with gating", {
       decisionId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }
@@ -375,9 +377,10 @@ export async function recordROIWithGating(
     if (error instanceof ValidationError || error instanceof NotFoundError) {
       throw error;
     }
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Error recording ROI with gating", {
       decisionId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }

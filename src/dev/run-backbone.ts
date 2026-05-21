@@ -1,4 +1,5 @@
 import { runSystem } from "../services/system/run";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 console.log("=== BACKBONE SYSTEM TEST ===\n");
 
@@ -35,7 +36,8 @@ try {
     });
     console.log("✗ Should have thrown LOW_CONFIDENCE_BLOCKED");
   } catch (e) {
-    console.log("✓ Correctly caught error:", (e as Error).message);
+    const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "load" });
+    console.log("✓ Correctly caught error:", governed.operatorMessage);
   }
   console.log("");
 
@@ -50,7 +52,8 @@ try {
     });
     console.log("✗ Should have thrown NO_IMPACT");
   } catch (e) {
-    console.log("✓ Correctly caught error:", (e as Error).message);
+    const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "load" });
+    console.log("✓ Correctly caught error:", governed.operatorMessage);
   }
 
   console.log("\n=== ALL TESTS PASSED ===");

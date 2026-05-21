@@ -7,6 +7,7 @@
 
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import {
@@ -346,9 +347,10 @@ export async function runDecisionLifecycleIntegrityCheck(
 
     return result;
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Decision lifecycle integrity check failed", {
       workspaceId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }

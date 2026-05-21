@@ -1,0 +1,38 @@
+{
+  "worklist_version": "1.0",
+  "current_state": {
+    "raw_error_message_count": 196,
+    "unsafe_error_render_count": 77,
+    "unsafe_metric_count": 0,
+    "total_blocking_errors": 273,
+    "total_production_files_with_patterns": 189
+  },
+
+  "batch_1_files_selected": [
+    "src/infra/logger.ts (8 violations)",
+    "src/app/api/webhooks/stripe/route.ts (8 violations)",
+    "src/app/dashboard/decision/[id]/DecisionDetailView.tsx (7 violations)",
+    "src/app/api/run/route.ts (7 violations)",
+    "src/infra/error-tracking.ts (6 violations)",
+    "src/infra/error-handler.ts (5 violations)",
+    "src/infra/errors.ts (3 violations)",
+    "src/components/OperatorItem.tsx (3 violations)",
+    "src/app/dashboard/onboarding/page.tsx (3 violations)",
+    "src/app/api/engagements/[engagementId]/experiments/route.ts (3 violations)",
+    "src/app/api/billing/upgrade/route.ts (3 violations)",
+    "src/app/(authenticated)/engagements/[engagementId]/evidence/bundles/[bundleId]/add-evidence-form.tsx (3 violations)",
+    "src/infra/health-check.ts (2 violations)",
+    "src/domain/data-parsers/sheet-parser.ts (2 violations)",
+    "src/dev/run-backbone.ts (2 violations)",
+    "src/app/onboarding/page.tsx (2 violations)",
+    "src/app/my-day/page.tsx (2 violations)",
+    "src/app/api/public/kpis/route.ts (2 violations)",
+    "src/app/api/public/engagements/route.ts (2 violations)",
+    "src/app/api/public/actions/route.ts (2 violations)"
+  ],
+
+  "batch_1_expected_reduction": "71 violations (8+8+7+7+6+5+3+3+3+3+3+3+2+2+2+2+2+2+2+2)",
+  "batch_1_target": "RAW_ERROR_MESSAGE reduction to ~125 (196-71)",
+  "batch_1_strategy": "Fix top-impact infra/API/UI files with multiple violations each using classifyOperatorError governance wrapper",
+  "batch_number": 1
+}

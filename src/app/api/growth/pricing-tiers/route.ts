@@ -8,6 +8,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { PricingEngine } from "@/services/growth/pricing-engine";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const createTierSchema = z.object({
   name: z.string().min(1, "Tier name required"),
@@ -63,7 +64,7 @@ export const POST = withEnforcementFull(async (request) => {
     }
 
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
     }
 
     return Response.json(

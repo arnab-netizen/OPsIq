@@ -1,5 +1,5 @@
 "use client";
-import { classifyOperatorError, type ErrorGovernanceContext } from "@/src/lib/operator-error-governance";
+import { classifyOperatorError, type ErrorGovernanceContext } from "@/lib/operator-error-governance";
 
 import { useState } from "react";
 
@@ -91,7 +91,7 @@ export function DecisionCreationForm({
 
       setTimeout(() => setMessage(""), 3000);
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const errorMsg = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "form" }).operatorMessage;
       setMessageType("error");
       setMessage(errorMsg);
 

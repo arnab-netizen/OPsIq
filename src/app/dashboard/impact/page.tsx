@@ -1,5 +1,6 @@
 "use client";
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
@@ -56,7 +57,8 @@ export default function DashboardImpactPage() {
         const decisionsData = await decisionsRes.json();
         setBlockedDecisions(decisionsData.decisions || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error loading data");
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error("Error loading data"), { context: "load" });
+        setError(governed.operatorMessage);
       } finally {
         setLoading(false);
       }

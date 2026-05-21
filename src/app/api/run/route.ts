@@ -25,6 +25,7 @@ import { validateDependencies } from "@/services/control/variable-registry";
 import { enforceControlLayer } from "@/services/control/enforcement";
 import { recordLifecycleStage } from "@/services/lifecycle/decision-lifecycle";
 import { checkRateLimit, isDuplicateRequest, getRequestHash } from "@/services/production/safety-config";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 function addIntegrity(
   result: DecisionResult,
@@ -95,7 +96,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         },
         workspaceId: workspace?.workspaceId,
       }).catch((auditError) => {
-        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        if (logger) {
+          const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
       });
 
       throw new UnauthorizedError("Unauthorized");
@@ -117,7 +121,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         },
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
-        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        if (logger) {
+          const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
       });
 
       throw new Error("Insufficient permissions");
@@ -193,7 +200,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         },
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
-        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        if (logger) {
+          const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
       });
 
       throw new Error("Missing or invalid required fields: revenue and cost must be numbers");
@@ -239,7 +249,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         },
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
-        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        if (logger) {
+          const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
       });
 
       throw new Error("Missing required field: confidence must be a number between 0 and 1");
@@ -288,7 +301,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         },
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
-        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        if (logger) {
+          const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
       });
 
       throw new Error("Missing required fields: revenueChange and costChange must be numbers");
@@ -339,7 +355,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         },
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
-        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        if (logger) {
+          const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
       });
 
       throw new Error(`Missing FX rate for currency ${inputCurrency}. Provide fxRates: { "${inputCurrency}": rate }`);
@@ -363,10 +382,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       // Validate normalized metrics
       validateNormalizedMetrics(normalizedMetrics);
     } catch (normalizationError) {
-      const errorMsg =
-        normalizationError instanceof Error
-          ? normalizationError.message
-          : "Normalization failed";
+      const governed = classifyOperatorError(normalizationError instanceof Error ? normalizationError : new Error(String(normalizationError)), { context: "load" });
+      const errorMsg = governed.operatorMessage;
 
       const normErrResult = createDecisionResult(
         {
@@ -406,7 +423,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         },
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
-        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        if (logger) {
+          const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
       });
 
       // Record ERRORED stage for normalization failure
@@ -476,7 +496,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         });
       } catch (persistError) {
         if (logger) {
-          logger.error(`Failed to persist blocked decision: ${persistError}`);
+          const governed = classifyOperatorError(persistError instanceof Error ? persistError : new Error(String(persistError)), { context: "load" });
+          logger.error(`Failed to persist blocked decision: ${governed.operatorMessage}`);
         }
       }
 
@@ -521,7 +542,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         },
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
-        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        if (logger) {
+          const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
       });
 
       if (logger) {
@@ -581,7 +605,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         });
       } catch (persistError) {
         if (logger) {
-          logger.error(`Failed to persist blocked decision: ${persistError}`);
+          const governed = classifyOperatorError(persistError instanceof Error ? persistError : new Error(String(persistError)), { context: "load" });
+          logger.error(`Failed to persist blocked decision: ${governed.operatorMessage}`);
         }
       }
 
@@ -629,7 +654,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         },
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
-        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        if (logger) {
+          const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
       });
 
       // Log gate rejection
@@ -680,8 +708,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       // System executed successfully - data sufficiency was validated
       executedValidations.push("data_sufficiency");
     } catch (systemError) {
-      const errorMsg =
-        systemError instanceof Error ? systemError.message : "Unknown error";
+      const governed = classifyOperatorError(systemError instanceof Error ? systemError : new Error(String(systemError)), { context: "load" });
+      const errorMsg = governed.operatorMessage;
 
       if (errorMsg === "LOW_CONFIDENCE_BLOCKED") {
         const lowConfResult = createDecisionResult(
@@ -863,7 +891,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         });
       } catch (persistError) {
         if (logger) {
-          logger.error(`Failed to persist blocked decision: ${persistError}`);
+          const governed = classifyOperatorError(persistError instanceof Error ? persistError : new Error(String(persistError)), { context: "load" });
+          logger.error(`Failed to persist blocked decision: ${governed.operatorMessage}`);
         }
       }
 
@@ -915,7 +944,10 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         },
         workspaceId: workspace.workspaceId,
       }).catch((auditError) => {
-        if (logger) logger.error(`Audit logging failed: ${auditError}`);
+        if (logger) {
+          const governed = classifyOperatorError(auditError instanceof Error ? auditError : new Error(String(auditError)), { context: "load" });
+          logger.error(`Audit logging failed: ${governed.operatorMessage}`);
+        }
       });
 
       if (logger) {
@@ -1033,14 +1065,15 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       enforceControlLayer("/api/run", executedValidations);
     } catch (enforceError: any) {
       // Control layer bypass detected - log and throw
-      const bypasMsg = `CONTROL_LAYER_BYPASS: ${enforceError.reason}`;
+      const governed = classifyOperatorError(enforceError instanceof Error ? enforceError : new Error(String(enforceError.reason || enforceError)), { context: "load" });
+      const bypasMsg = `CONTROL_LAYER_BYPASS: ${governed.operatorMessage}`;
       if (logger) {
         logger.error(bypasMsg, {
           skippedValidations: enforceError.skippedValidations,
           requiredValidations: enforceError.requiredValidations,
         });
       }
-      throw new Error(`Control layer validation incomplete: ${enforceError.reason}`);
+      throw new Error(`Control layer validation incomplete: ${governed.operatorMessage}`);
     }
 
     // Return decision result with explanation (including guardrails status)

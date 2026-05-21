@@ -1,5 +1,6 @@
 'use client';
 
+import { classifyOperatorError } from '@/lib/operator-error-governance';
 import { useState, useEffect } from 'react';
 
 interface ValueMetrics {
@@ -32,8 +33,8 @@ export default function ValuePage() {
         const data: ApiResponse = await response.json();
         setMetrics(data.metrics);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'An error occurred';
-        setError(message);
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error('An error occurred'), { context: "load" });
+        setError(governed.operatorMessage);
         setMetrics(null);
       } finally {
         setLoading(false);

@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
@@ -95,11 +96,12 @@ export async function createDecision(
       createdAt: decision.createdAt,
     };
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to create decision", {
       workspaceId,
       userId,
       title,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }
@@ -143,14 +145,15 @@ export async function createDecisionsBulk(
       const result = await createDecision(decision);
       successful.push(result);
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       failed.push({
         title: decision.title,
-        reason: error instanceof Error ? error.message : String(error),
+        reason: governed.operatorMessage,
       });
       logger.warn("Failed to create decision in bulk", {
         title: decision.title,
         workspaceId: decision.verifiedWorkspaceId,
-        reason: error instanceof Error ? error.message : String(error),
+        reason: governed.operatorMessage,
       });
     }
   }

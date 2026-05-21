@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { NotFoundError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
@@ -195,9 +196,10 @@ export async function recordOutcome(
       },
       visibility: "internal",
     }).catch((error) => {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logger.warn("Failed to emit audit event for outcome recording", {
         actionId,
-        error: error instanceof Error ? error.message : String(error),
+        error: governed.operatorMessage,
       });
     });
 

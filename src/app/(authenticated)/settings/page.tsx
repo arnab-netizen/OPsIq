@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Badge, LoadingState, ErrorState } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { formatRole } from "@/domain/constants/role-labels";
 
 interface MeResponse {
@@ -29,7 +30,7 @@ interface MeResponse {
 export default function SettingsPage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/me")
@@ -45,13 +46,13 @@ export default function SettingsPage() {
         setLoading(false);
       })
       .catch((err) => {
-        setError(classifyOperatorError(err, { context: "load" }).operatorMessage);
+        setErrorDetails(classifyOperatorError(err, { context: "load" }).operatorMessage);
         setLoading(false);
       });
   }, []);
 
   if (loading) return <LoadingState message="Loading profile..." />;
-  if (error) return <ErrorState message={error} />;
+  if (errorDetails) return <ErrorState message={errorDetails} />; // classifyOperatorError
   if (!me) return null;
 
   return (

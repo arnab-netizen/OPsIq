@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { ForbiddenError } from "@/infra/errors";
@@ -44,7 +45,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     }
 
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
     }
 
     return Response.json(
@@ -93,7 +94,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     });
   } catch (error) {
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
     }
 
     return Response.json(

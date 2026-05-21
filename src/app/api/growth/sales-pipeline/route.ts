@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
@@ -80,7 +81,7 @@ export const POST = withCanonicalEnforcement(
       }
 
       if (error instanceof Error) {
-        return Response.json({ error: error.message }, { status: 400 });
+        return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
       }
 
       return Response.json(

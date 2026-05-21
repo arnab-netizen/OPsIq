@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button, Table, LoadingState, EmptyState, ErrorState } from "@/ui/primitives";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { CreateBundleForm } from "./create-bundle-form";
 
 interface BundleItem {
@@ -43,7 +44,8 @@ export default function BundlesPage({
         const data = await res.json();
         setBundles(data.bundles ?? []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+        setError(governed.operatorMessage);
       } finally {
         setIsLoading(false);
       }

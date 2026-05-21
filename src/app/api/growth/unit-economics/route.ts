@@ -5,6 +5,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { UnitEconomicsEngine } from "@/services/growth/unit-economics-engine";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const calculateCACSchema = z.object({
   totalAcquisitionSpend: z.number().nonnegative("Spend must be non-negative"),
@@ -109,7 +110,7 @@ export const POST = withCanonicalEnforcement(
       }
 
       if (error instanceof Error) {
-        return Response.json({ error: error.message }, { status: 400 });
+        return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
       }
 
       return Response.json(

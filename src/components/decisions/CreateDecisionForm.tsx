@@ -4,12 +4,8 @@ import { useState } from "react";
 import {
   classifyOperatorError,
   type ErrorGovernanceContext,
-} from "@/src/lib/operator-error-governance";
+} from "@/lib/operator-error-governance";
 import { useRouter } from "next/navigation";
-import {
-  classifyOperatorError,
-  type ErrorGovernanceContext,
-} from "@/src/lib/operator-error-governance";
 
 export function CreateDecisionForm() {
   const router = useRouter();

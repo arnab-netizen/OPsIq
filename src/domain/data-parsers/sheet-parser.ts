@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 // ============================================================================
 // PARSER CONTRACTS
@@ -220,10 +221,11 @@ export function parseCSV(
 
         data.push(record);
       } catch (err) {
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
         errors.push({
           rowNumber: i + 1,
           errorCode: "INVALID_FORMAT",
-          errorMessage: `Failed to parse row: ${String(err)}`,
+          errorMessage: `Failed to parse row: ${governed.operatorMessage}`,
           value: line,
         });
       }

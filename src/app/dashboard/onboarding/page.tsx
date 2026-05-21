@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 type Step = "workspace" | "decision" | "evaluate" | "dashboard";
 
@@ -51,7 +52,8 @@ export default function OnboardingFlow() {
       setData({ workspace: result });
       setCurrentStep("decision");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating workspace");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -90,7 +92,8 @@ export default function OnboardingFlow() {
       setData({ ...data, decision: result });
       setCurrentStep("evaluate");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating decision");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error("Error creating decision"), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -123,7 +126,8 @@ export default function OnboardingFlow() {
       });
       setCurrentStep("dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error evaluating decision");
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error("Error evaluating decision"), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }

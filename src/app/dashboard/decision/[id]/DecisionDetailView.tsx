@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 interface DecisionData {
   id: string;
@@ -87,9 +88,8 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
 
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error approving decision"
-      );
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -117,9 +117,8 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
 
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error rejecting decision"
-      );
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -161,9 +160,8 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
 
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error overriding decision"
-      );
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -192,9 +190,8 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
       setShowExecuteConfirm(false);
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error executing decision"
-      );
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -235,9 +232,8 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
       setOutcomeValue("");
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error marking decision successful"
-      );
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
@@ -277,9 +273,8 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
       setFailureReason("");
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Error marking decision failed"
-      );
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "action" });
+      setError(governed.operatorMessage);
     } finally {
       setLoading(false);
     }
