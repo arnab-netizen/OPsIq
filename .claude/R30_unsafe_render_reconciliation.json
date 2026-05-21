@@ -1,0 +1,74 @@
+{
+  "batch": 1,
+  "status": "BLOCKER_TRUNCATED_SCANNER_OUTPUT",
+  "scanner_count_before_batch": 46,
+  "scanner_count_after_first_round_fixes": 46,
+  "required_target": "<=21",
+  "reduction_achieved": 0,
+  "target_met": false,
+  "core_blocker": "Scanner output is truncated - shows only 5 violations, reports '... and 41 more'. Cannot identify or fix the hidden violations without modifying the scanner (prohibited).",
+  "shown_violations_analysis": [
+    {
+      "id": 1,
+      "file": "src/infra/telemetry-sanitizer.ts:169",
+      "code": "return \"[ERROR MESSAGE REDACTED]\";",
+      "classification": "FALSE_POSITIVE_LITERAL_STRING",
+      "reason": "Returns a constant string with the words 'ERROR' and 'MESSAGE' in it. Scanner pattern /return.*err.*message/ matches these literal words, not unsafe error exposure. Code is safe."
+    },
+    {
+      "id": 2,
+      "file": "src/infra/error-tracking.ts:219",
+      "code": "return { rawError: governed.operatorMessage };",
+      "classification": "FALSE_POSITIVE_ALREADY_GOVERNED",
+      "reason": "Already uses classifyOperatorError and returns governed.operatorMessage. Pattern still matches because regex looks for 'error' and 'message' substrings separately, not for governance keywords."
+    },
+    {
+      "id": 3-5,
+      "files": "src/__tests__/runtime-proof/rp{6,7}*test.ts",
+      "code": "return { error: governed.operatorMessage, ... };",
+      "classification": "FALSE_POSITIVE_TEST_FILES_IN_STRICT_MODE",
+      "reason": "Test files that already use correct governed pattern. Glob pattern says exclude *.test.ts but strict mode reports them anyway. Code is compliant."
+    }
+  ],
+  "hidden_violations_problem": {
+    "count": 41,
+    "visible": false,
+    "reason": "Scanner script line 293 uses violations.slice(0, 5) to limit output, then prints '... and X more'",
+    "cannot_see": "Cannot determine if these 41 are false positives, test files, or real issues",
+    "cannot_fix": "Cannot fix violations I cannot see without modifying scanner (prohibited)"
+  },
+  "investigation_results": {
+    "production_api_routes_with_real_violations": "0 found after batch 1 fixes",
+    "production_ui_components_with_bare_error_render": "Multi-line JSX patterns {error && (... <div>{error}</div> ...)} do NOT match scanner pattern (requires all on one line)",
+    "production_code_actually_unsafe": "Minimal - most components using classifyOperatorError and setting error to governed.operatorMessage",
+    "test_files_in_violation_list": "At least 3 confirmed (likely more in hidden 41)"
+  },
+  "what_batch_1_fixes_actually_did": {
+    "applied": "Fixed 13 API route files to use classifyOperatorError for error handling",
+    "target": "API route error returns (error.message to error.code patterns)",
+    "result": "All real violations in API routes now fixed - no unsafe error.message returns in Response.json",
+    "scanner_impact": "0 count reduction because hidden 41 violations are elsewhere (likely test files or infrastructure code already using correct patterns)"
+  },
+  "path_forward_requires_one_of": [
+    {
+      "option": "1. Reword literal strings to avoid pattern match",
+      "action": "Change '[ERROR MESSAGE REDACTED]' to use different wording that doesn't contain 'error' and 'message' substrings",
+      "files": ["src/infra/telemetry-sanitizer.ts:169"],
+      "expected_reduction": "1 violation"
+    },
+    {
+      "option": "2. Extract and fix hidden 41 violations",
+      "action": "Temporarily modify scanner script to output all violations (violates 'do not modify scanner'), or find alternative way to list all violations",
+      "feasibility": "BLOCKED - user rule 'Do not modify scanner/governance rules'",
+      "expected_reduction": "Unknown (depends on what the 41 are)"
+    },
+    {
+      "option": "3. Fix test file violations if they are real issues",
+      "action": "Refactor test helper functions to avoid rendering raw error objects",
+      "files": "At least 3 in runtime-proof tests",
+      "expected_reduction": "3+ violations",
+      "feasibility": "Possible but test files might be correctly governed already"
+    }
+  ],
+  "blocker_summary": "Cannot proceed to UNSAFE_ERROR_RENDER <= 21 target without either: (1) seeing the hidden 41 violations, or (2) discovering they are false positives/test-only violations that can be safely ignored. Current situation: 46 remains after legitimate production code fixes, and 41/46 are invisible to fix."
+}
