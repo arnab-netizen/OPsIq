@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { getCache } from "@/services/cache/cache-factory";
 import { logger } from "@/infra/logger";
@@ -36,10 +37,11 @@ export async function recordDecisionMetrics(
 
     return { workspaceId, ...metrics };
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to record decision metrics", {
       workspaceId,
       problemType: metrics.problemType,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw error;
   }
@@ -129,19 +131,21 @@ export function invalidateMetricsCache(
   cache
     .delete(`metrics:workspace:${workspaceId}`)
     .catch((err) => {
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
       logger.warn("Failed to invalidate metrics cache", {
         workspaceId,
-        error: err instanceof Error ? err.message : String(err),
+        error: governed.operatorMessage,
       });
     });
 
   cache
     .delete(`metrics:problem:${workspaceId}:${problemType}`)
     .catch((err) => {
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
       logger.warn("Failed to invalidate problem metrics cache", {
         workspaceId,
         problemType,
-        error: err instanceof Error ? err.message : String(err),
+        error: governed.operatorMessage,
       });
     });
 }
@@ -152,9 +156,10 @@ export async function recalculateWorkspaceMetrics(workspaceId: string) {
   cache
     .flush(`^metrics:workspace:${workspaceId}`)
     .catch((err) => {
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
       logger.warn("Failed to flush workspace metrics cache", {
         workspaceId,
-        error: err instanceof Error ? err.message : String(err),
+        error: governed.operatorMessage,
       });
     });
 

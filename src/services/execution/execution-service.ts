@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { emitAuditEvent } from "@/infra";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -153,10 +154,11 @@ export async function markSuccess(
     actualOutcome: outcomeValue,
     expectedOutcome: decision.impactExpected,
   }).catch((metricsError) => {
+    const governed = classifyOperatorError(metricsError instanceof Error ? metricsError : new Error(String(metricsError)), { context: "load" });
     logger.warn("Failed to record success metrics", {
       decisionId,
       workspaceId,
-      error: metricsError instanceof Error ? metricsError.message : String(metricsError),
+      error: governed.operatorMessage,
     });
   });
 

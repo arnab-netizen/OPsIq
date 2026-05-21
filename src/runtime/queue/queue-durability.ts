@@ -5,6 +5,8 @@
  * No duplicate execution side effects.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 export type JobStatus = "ENQUEUED" | "PROCESSING" | "COMPLETED" | "FAILED" | "DEAD_LETTER";
 
 export interface QueueJob {
@@ -106,7 +108,8 @@ class QueueDurabilityEngine {
       job.completed_at = new Date();
     } catch (error) {
       job.retry_count++;
-      job.error_message = error instanceof Error ? error.message : String(error);
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      job.error_message = governed.operatorMessage;
 
       if (job.retry_count >= job.max_retries || this.isPoisonJob(job)) {
         job.status = "DEAD_LETTER";

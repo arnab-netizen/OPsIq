@@ -5,11 +5,8 @@
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { StripeEvent } from "./stripeSimulator";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { handleWebhookEvent, getOrCreateWebhookEvent, markWebhookEventProcessed, markWebhookEventFailed, checkSignatureTimestamp } from "@/services/webhook.service";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { logger } from "@/infra/logger";
 
 export interface DeliveryOptions {
@@ -64,14 +61,14 @@ export async function simulateWebhookDelivery(
   try {
     checkSignatureTimestamp(eventToProcess.created);
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     return {
       eventId: eventToProcess.id,
       eventType: eventToProcess.type,
       success: false,
       attempts: 1,
       finalStatus: "failed",
-      error: errorMsg,
+      error: governed.operatorMessage,
     };
   }
 
@@ -151,7 +148,8 @@ export async function simulateWebhookDelivery(
         webhookEvent,
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      const errorMsg = governed.operatorMessage;
       logger.error("Webhook delivery failed", { eventId: eventToProcess.id, error: errorMsg });
 
       // Get webhook event state

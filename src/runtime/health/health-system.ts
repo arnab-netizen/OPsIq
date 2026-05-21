@@ -5,6 +5,8 @@
  * Fail-closed: degraded state triggers containment, not graceful degradation.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 export type HealthState = "HEALTHY" | "DEGRADED" | "PARTIAL_OUTAGE" | "FAILING" | "RECOVERY_MODE";
 
 export interface ComponentHealth {
@@ -55,6 +57,7 @@ class RuntimeHealthSystem {
         requires_attention: false,
       };
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       return {
         component: "database",
         state: "HEALTHY", // Still mark as healthy if DB is initializing; let requests proceed
@@ -62,7 +65,7 @@ class RuntimeHealthSystem {
         check_duration_ms: Date.now() - start,
         details: {
           connected: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: governed.operatorMessage,
           note: "DB initialization may be in progress - allowing requests",
         },
         requires_attention: false,
@@ -88,6 +91,7 @@ class RuntimeHealthSystem {
         requires_attention: false,
       };
     } catch (error) {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       return {
         component: "queue",
         state: "FAILING",
@@ -95,7 +99,7 @@ class RuntimeHealthSystem {
         check_duration_ms: Date.now() - start,
         details: {
           connected: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: governed.operatorMessage,
         },
         requires_attention: true,
       };

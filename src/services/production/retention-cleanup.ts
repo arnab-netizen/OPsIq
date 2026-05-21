@@ -3,9 +3,7 @@
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { PRODUCTION_CONFIG } from "./safety-config";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { createEventLogger } from "@/lib/observability/log";
 
 const logger = createEventLogger("retention_cleanup", "system");
@@ -58,7 +56,8 @@ export async function cleanupOldRecords(): Promise<void> {
       logger.success({ message: `Deleted ${totalDeletedAuditEvents} expired audit events` });
     }
   } catch (error) {
-    logger.error(`Retention cleanup failed: ${error instanceof Error ? error.message : String(error)}`);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+    logger.error(`Retention cleanup failed: ${governed.operatorMessage}`);
   }
 }
 
