@@ -9,6 +9,7 @@ import { withAuth } from "@/lib/auth-guard";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { recordResult, analyzeOutcome, ExperimentLifecycleError } from "@/services/experiment/experiment-lifecycle.service";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { z } from "zod/v4";
 import type { NextRequest } from "next/server";
 import type { Experiment } from "@/domain/experiment/experiment";
@@ -98,13 +99,15 @@ export const POST = withEnforcementFull(async (request, context, params) => {
       );
     }
     if (error instanceof ExperimentLifecycleError) {
+      const governed = classifyOperatorError(error, { context: "action" });
       return Response.json(
-        { error: error.code, message: error.message },
+        { error: governed.operatorMessage },
         { status: 400 }
       );
     }
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const governed = classifyOperatorError(error, { context: "action" });
+      return Response.json({ error: governed.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },

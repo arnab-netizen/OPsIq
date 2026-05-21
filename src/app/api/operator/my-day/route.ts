@@ -5,6 +5,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getQueuedItems } from "@/services/operator/store";
 import { getMyDayItems } from "@/services/operator/myday";
 import { z } from "zod/v4";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const queueParamsSchema = z.object({
   status: z.enum(["pending", "in_progress", "blocked"]).optional(),
@@ -41,7 +42,8 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
     );
   } catch (error) {
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const governed = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: governed.operatorMessage }, { status: 400 });
     }
 
     return Response.json(
