@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { withAuth } from "@/lib/auth-guard";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withEnforcementFull } from "@/lib/enforced-route";
@@ -77,7 +78,8 @@ export const POST = withEnforcementFull(async (request) => {
     }
 
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const governed = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: governed.operatorMessage }, { status: 400 });
     }
 
     return Response.json(
