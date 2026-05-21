@@ -30,7 +30,8 @@ export default function OperatorQueuePage() {
 
         if (!response.ok) {
           const errorData = data as QueueError;
-          setError(errorData.error || 'Failed to fetch queue');
+          const governed = classifyOperatorError(new Error(errorData.error || 'Failed to fetch queue'), { context: "load" });
+          setError(governed.operatorMessage);
           setItems([]);
           return;
         }

@@ -16,6 +16,7 @@ import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import { db, getDbInstance } from "@/lib/db";
 import { EventEmitterService } from "@/services/event-emitter";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 describe("Phase RP7: Deadlock & Retry Recovery", () => {
   let workspaceId: string;
@@ -376,8 +377,9 @@ describe("Phase RP7: Deadlock & Retry Recovery", () => {
           visibilityScope: "internal",
           sensitivityClassification: "standard",
         }).catch((e) => {
-          console.error(`Emit failed: ${e.message}`);
-          return { error: e.message, code: (e as any).code };
+          const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "load" });
+          console.error(`Emit failed: ${governed.operatorMessage}`);
+          return { error: governed.operatorMessage, code: (e as any).code };
         });
       });
 
@@ -447,8 +449,9 @@ describe("Phase RP7: Deadlock & Retry Recovery", () => {
           visibilityScope: "internal",
           sensitivityClassification: "standard",
         }).catch((e) => {
-          console.error(`Emit ${i} failed: ${e.message}`);
-          return { error: e.message, code: (e as any).code };
+          const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "load" });
+          console.error(`Emit ${i} failed: ${governed.operatorMessage}`);
+          return { error: governed.operatorMessage, code: (e as any).code };
         })
       );
 

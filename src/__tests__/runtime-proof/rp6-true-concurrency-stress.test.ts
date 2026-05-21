@@ -18,6 +18,7 @@ import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import { db, getDbInstance } from "@/lib/db";
 import { EventEmitterService } from "@/services/event-emitter";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { EventReplayEngine } from "@/services/event-replay-engine";
 import { spawn } from "child_process";
 import { promisify } from "util";
@@ -157,7 +158,8 @@ describe("Phase RP6: TRUE Concurrency Stress Testing (Independent Connections)",
           sensitivityClassification: "standard",
         }).catch((error) => {
           // Log errors but continue
-          return { error: error.message };
+          const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+          return { error: governed.operatorMessage };
         })
       );
 

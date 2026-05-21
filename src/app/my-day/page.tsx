@@ -36,7 +36,8 @@ export default function MyDayPage() {
 
       if (!response.ok) {
         const errorData = data as MyDayError;
-        setError(errorData.error || 'Failed to fetch My Day items');
+        const governed = classifyOperatorError(new Error(errorData.error || 'Failed to fetch My Day items'), { context: "load" });
+        setError(governed.operatorMessage);
         setItems([]);
         return;
       }
