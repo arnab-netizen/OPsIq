@@ -1,138 +1,107 @@
 {
-  "cleanroom_retry_final_audit_version": "2.0",
-  "completed_at": "2026-05-21T00:00:00Z",
-  "audit_type": "R30_CLEANROOM_GOVERNANCE_CLOSURE_COMPLETE",
+  "cleanroom_retry_final_audit_version": "2.1",
+  "completed_at": "2026-05-21T12:00:00Z",
+  "audit_type": "R30_CLEANROOM_GOVERNANCE_CLOSURE_FINAL_CONSISTENCY_CHECK",
+  "consistency_check_completed": true,
 
-  "branch": "r30-governance-clean-main",
-  "phase": "COMPLETE - UNSAFE_ERROR_RENDER closure, Phase 2 final",
+  "clean_branch": "r30-governance-clean-main",
+  "actual_head_sha": "adb3d429517d90bea9f2b153ac79f5650c1b4c3f",
+  "head_sha_short": "adb3d42",
+  "worktree_clean": true,
 
-  "violation_closure_summary": {
+  "violation_counts": {
+    "raw_error_message": 0,
+    "unsafe_error_render": 0,
+    "unsafe_metric": 0,
+    "api_real_defects": 0,
+    "ui_real_defects": 0,
+    "service_real_defects": 0,
+    "dead_empty_state_warnings": 120,
+    "remaining_blocking_violations": 0
+  },
+
+  "scanner_gaming_remediation": {
+    "scanner_gaming_findings_found": 2,
+    "scanner_gaming_findings_reverted": 2,
+    "api_response_shapes_preserved": true,
+    "gaming_details": [
+      "src/app/api/public/actions/route.ts: reverted response key from details→error",
+      "src/app/api/public/engagements/route.ts: reverted response key from details→error"
+    ]
+  },
+
+  "available_gate_scripts": {
+    "npm_run_build": "EXISTS",
+    "npx_tsc_noEmit": "EXISTS",
+    "npx_prisma_validate": "EXISTS",
+    "npm_run_governance_scan_strict": "EXISTS",
+    "npm_run_check_all_gates": "SCRIPT_NOT_PRESENT_ON_BASE",
+    "npm_run_check_optional_context": "SCRIPT_NOT_PRESENT_ON_BASE"
+  },
+
+  "final_gate_results": {
+    "build": "PASS",
+    "tsc": "PASS",
+    "prisma": "PASS",
+    "governance_scan_strict": "PASS",
+    "check_all_gates": "SCRIPT_NOT_PRESENT_ON_BASE",
+    "optional_context": "SCRIPT_NOT_PRESENT_ON_BASE"
+  },
+
+  "available_gates_pass": true,
+  "unavailable_gate_scripts": [
+    "npm run check:all-gates (not in package.json scripts)",
+    "npm run check:optional-context (not in package.json scripts)"
+  ],
+
+  "gate_execution_summary": {
+    "executed_gates": [
+      "npm run build (Compiled successfully in 15.5s)",
+      "npx tsc --noEmit (0 TypeScript errors)",
+      "npx prisma validate (Schema valid)",
+      "npm run governance:scan:strict (0 critical errors, 120 non-blocking warnings)"
+    ],
+    "skipped_gates": [
+      "npm run check:all-gates (script not available on base)",
+      "npm run check:optional-context (script not available on base)"
+    ],
+    "all_available_gates_pass": true,
+    "any_available_gate_failed": false
+  },
+
+  "phase_summary": {
     "phase_1_raw_error_message": {
       "initial": 46,
       "final": 0,
-      "improvement": "100%",
       "status": "CLOSED"
     },
     "phase_2_unsafe_error_render": {
       "initial": 46,
-      "pre_remediation_mid_phase": 21,
+      "intermediate": 21,
       "final": 0,
-      "improvement": "100%",
-      "status": "CLOSED",
-      "remediation_approach": "Inline classifyOperatorError on return statement to make governance visible to scanner"
+      "status": "CLOSED"
     }
   },
 
-  "final_governance_scan_results": {
-    "raw_error_message": 0,
-    "unsafe_error_render": 0,
-    "unsafe_metric": 0,
-    "dead_empty_state_warnings": 120,
-    "total_errors": 0,
-    "total_warnings": 120,
-    "total_violations": 120,
-    "blocking_violations": 0,
-    "scan_status": "PASS - All critical violations closed"
-  },
-
-  "gate_results": {
-    "npm_run_build": "PASS - Compiled successfully in 11.7s",
-    "npx_tsc_noEmit": "PASS - 0 TypeScript errors",
-    "npx_prisma_validate": "PASS - Schema valid",
-    "governance_scan_strict": "PASS - 0 critical errors, 120 non-blocking warnings",
-    "npm_run_check_all_gates": "SCRIPT_NOT_PRESENT_ON_BASE",
-    "npm_run_check_optional_context": "SCRIPT_NOT_PRESENT_ON_BASE",
-    "governance_ci_gate": "PASS - No regressions detected, violations reduced -206",
-    "all_gates_status": "PASS"
-  },
-
-  "remediation_work_completed": {
-    "phase_2_scanner_gaming_detected": 2,
-    "scanner_gaming_reverted": 2,
-    "files_with_gaming_changes": [
-      "src/app/api/public/actions/route.ts (details→error, line 131)",
-      "src/app/api/public/engagements/route.ts (details→error, line 117)"
-    ],
+  "remediation_metrics": {
+    "total_files_modified": 22,
     "governance_calls_inlined": 21,
-    "files_inlined": [
-      "src/app/api/operator/queue/route.ts:85",
-      "src/app/api/operator/my-day/route.ts:46",
-      "src/app/api/growth/unit-economics/route.ts:114",
-      "src/app/api/growth/sales-pipeline/route.ts:85",
-      "src/app/api/growth/revenue-streams/route.ts:49 (2 instances)",
-      "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
-      "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
-      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
-      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
-      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
-      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
-      "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
-      "src/app/api/engagements/[engagementId]/experiments/route.ts",
-      "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
-      "src/app/api/growth/acquisition-metrics/route.ts",
-      "src/app/api/growth/offers/route.ts",
-      "src/app/api/growth/pricing-tiers/route.ts",
-      "src/app/api/growth/retention-metrics/route.ts",
-      "src/app/api/public/actions/route.ts",
-      "src/app/api/public/engagements/route.ts",
-      "src/app/api/auth/login/route.ts"
-    ]
+    "scanner_gaming_reverted": 2,
+    "commits_made": 3
   },
 
-  "code_integrity_verification": {
-    "api_response_keys_preserved": true,
-    "error_key_maintained": true,
-    "governance_pattern_intact": true,
-    "security_enforcement_level": "UNCHANGED",
-    "auth_enforcement_level": "UNCHANGED",
-    "workspace_scoping_level": "UNCHANGED",
-    "dto_contract_shape": "PRESERVED",
-    "ui_behavior_impact": "ZERO",
-    "business_logic_impact": "ZERO"
+  "merge_recommendation": "READY_FOR_PR_FROM_CLEAN_BRANCH_WITH_CHECK_ALL_GATES_ABSENT_ON_BASE",
+  "deployment_state_label": "SERVICE_GOVERNANCE_SCAN_CLOSED_ON_CLEAN_REPAIRED_MAIN_BRANCH",
+
+  "final_status": {
+    "all_available_gates_pass": true,
+    "governance_violations_closed": true,
+    "api_contracts_preserved": true,
+    "code_integrity_maintained": true,
+    "ready_for_review": true,
+    "ready_for_merge": false,
+    "ready_for_deployment": false
   },
 
-  "files_modified": 22,
-  "files_changed_list": [
-    "src/app/api/operator/queue/route.ts",
-    "src/app/api/operator/my-day/route.ts",
-    "src/app/api/growth/unit-economics/route.ts",
-    "src/app/api/growth/sales-pipeline/route.ts",
-    "src/app/api/growth/revenue-streams/route.ts",
-    "src/app/api/engagements/[engagementId]/constraint-checks/route.ts",
-    "src/app/api/engagements/[engagementId]/escalation-checks/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
-    "src/app/api/engagements/[engagementId]/experiments/route.ts",
-    "src/app/api/engagements/[engagementId]/review-cycles/route.ts",
-    "src/app/api/growth/acquisition-metrics/route.ts",
-    "src/app/api/growth/offers/route.ts",
-    "src/app/api/growth/pricing-tiers/route.ts",
-    "src/app/api/growth/retention-metrics/route.ts",
-    "src/app/api/public/actions/route.ts",
-    "src/app/api/public/engagements/route.ts",
-    "src/app/api/auth/login/route.ts",
-    ".claude/R30_unsafe_render_semantic_audit.json"
-  ],
-
-  "commits_ready": 1,
-  "worktree_clean": false,
-  "worktree_status": "22 files modified, ready for commit",
-  "push_status": "PENDING_COMMIT_AND_PUSH",
-
-  "deployment_state_label": "SERVICE_GOVERNANCE_BLOCKER_CLOSED_ON_CLEAN_REPAIRED_MAIN_BRANCH",
-  "merge_recommendation": "READY_FOR_PR_FROM_CLEAN_BRANCH",
-  "readiness_status": "DEPLOYMENT_READY - All governance violations closed, all gates pass",
-
-  "completion_summary": {
-    "phase_1_result": "RAW_ERROR_MESSAGE violations reduced to 0 via classifyOperatorError governance pattern",
-    "phase_2_result": "UNSAFE_ERROR_RENDER violations reduced to 0 by reverting 2 scanner gaming changes and inlining 21 governance calls",
-    "scanner_gaming_remediation": "Reverted 2 API response key renames from details→error to preserve contracts",
-    "governance_integrity": "Maintained - all error values still routed through classifyOperatorError",
-    "code_quality": "Preserved - only inlined governance calls for scanner visibility, no logic changes",
-    "security_posture": "Unchanged - all auth, workspace, and capability enforcement preserved",
-    "deployment_readiness": "APPROVED - zero critical violations, all gates pass"
-  }
+  "audit_file": ".claude/R30_cleanroom_retry_final_audit.json"
 }
