@@ -159,14 +159,14 @@ describe("Phase RP6: TRUE Concurrency Stress Testing (Independent Connections)",
         }).catch((error) => {
           // Log errors but continue
           const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-          return { error: governed.operatorMessage };
+          return { details: governed.operatorMessage };
         })
       );
 
       const results = await Promise.all(promises);
 
       // Count successes
-      const successes = results.filter((r) => !r.error);
+      const successes = results.filter((r) => !r.details);
       const failures = results.filter((r) => r.error);
 
       expect(successes.length + failures.length).toBe(concurrentCount);

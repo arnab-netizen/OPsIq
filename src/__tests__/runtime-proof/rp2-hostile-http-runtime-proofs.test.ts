@@ -39,7 +39,7 @@ describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
       };
     } catch (error) {
       const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-      return { error: governed.operatorMessage };
+      return { details: governed.operatorMessage };
     }
   }
 

@@ -30,7 +30,7 @@ describe("PHASE RP3: Operational Survivability Runtime Proofs", () => {
       };
     } catch (error) {
       const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-      return { error: governed.operatorMessage };
+      return { details: governed.operatorMessage };
     }
   }
 

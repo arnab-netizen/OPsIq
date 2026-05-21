@@ -216,12 +216,12 @@ export function reportError(classified: ClassifiedError): void {
 export function extractErrorContext(error: unknown): Record<string, unknown> {
   if (!(error instanceof Error)) {
     const governed = classifyOperatorError(new Error(String(error)), { context: "load" });
-    return { rawError: governed.operatorMessage };
+    return { details: governed.operatorMessage };
   }
 
   const governed = classifyOperatorError(error, { context: "load" });
   return {
-    message: governed.operatorMessage,
+    operatorMessage: governed.operatorMessage,
     stack: error.stack?.split("\n").slice(0, 5).join("\n"), // First 5 stack frames
     name: error.name,
   };
