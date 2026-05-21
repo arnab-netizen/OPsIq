@@ -1,0 +1,42 @@
+{
+  "audit_version": "1.0",
+  "audit_timestamp": "2026-05-21T00:00:00Z",
+  "branch": "main-build-repair",
+  "head_sha": "362fc80432e9548823e9c40b1d19a1bdc62dd715",
+  "head_sha_short": "362fc80",
+  "target_branch": "main",
+  "worktree_clean": true,
+
+  "gate_results": {
+    "build": "PASS",
+    "tsc": "PASS",
+    "prisma": "PASS",
+    "governance_scan_strict": "FAIL_EXPECTED_R30_NOT_INTEGRATED"
+  },
+
+  "governance_scan_results": {
+    "governance_error_count": 299,
+    "governance_warning_count": 120,
+    "raw_error_message": 202,
+    "unsafe_error_render": 92,
+    "unsafe_metric": 5,
+    "dead_empty_state_warnings": 120,
+    "total_violations": 419,
+    "status": "EXPECTED - R30 governance integration not yet applied"
+  },
+
+  "files_changed_summary": {
+    "description": "Build and typecheck blocker fixes on main-build-repair base",
+    "critical_fixes": [
+      "FIX: Complete main typecheck blockers reconciliation (HEAD: 362fc80)",
+      "FIX: Repair origin/main build blocker (ed767fb)"
+    ]
+  },
+
+  "pr_order": 1,
+  "pr_title": "Fix main build and typecheck blockers",
+  "pr_body": "## Summary\n\nRepaired critical build and TypeScript compilation blockers that prevented main from building.\n\n### Fixes Applied\n- Fixed main typecheck blockers (commit 362fc80)\n- Repaired origin/main build blocker (commit ed767fb)\n\n### Gates Status\n✓ npm run build: PASS (Compiled successfully in 17.6s)\n✓ npx tsc --noEmit: PASS (0 errors)\n✓ npx prisma validate: PASS (Schema valid)\n\n### Governance Status\n⚠ npm run governance:scan:strict: 299 errors (EXPECTED - R30 governance integration not yet applied)\n\n### Caveat\nGovernance violations are expected and not addressed in this PR. R30 governance integration will be applied in the next PR (r30-governance-clean-main) after this PR merges and main is updated.\n\n### Next Step\nAfter this PR merges and main is updated, PR 2 (r30-governance-clean-main → main) will integrate R30 governance closure and reduce governance violations from 299 to 0.",
+
+  "pr_readiness": "READY_FOR_PR_MAIN_BUILD_REPAIR_FIRST",
+  "audit_file": ".claude/main_build_repair_pr_audit.json"
+}
