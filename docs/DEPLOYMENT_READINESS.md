@@ -1,29 +1,32 @@
 # OpsIQ Deployment Readiness - P0 DevOps Audit
 
 **Last Updated:** 2026-05-21  
-**Status:** CODE READY, OPS INCOMPLETE  
+**Status:** CODE_GOVERNANCE_READY_DEPLOYMENT_OPS_BLOCKED  
 **Audience:** DevOps, Engineering Leadership, Product Management
 
 ---
 
 ## Executive Summary
 
-OpsIQ main branch (commit `afdf004`) is **CODE READY** for production deployment. All governance gates, build checks, and TypeScript validation pass.
+OpsIQ main branch (commit `afdf004`) has **CODE GOVERNANCE GATES PASSING** (governance strict, tsc, prisma validate all PASS). **DEPLOYMENT IS BLOCKED ON 7 P0 EXTERNAL INFRASTRUCTURE BLOCKERS** that require provisioning and configuration outside the repository. These are operational prerequisites, not code defects.
 
-However, **REAL DEPLOYMENT IS BLOCKED ON 7 P0 OPERATIONAL BLOCKERS** that require external infrastructure setup and configuration. These are not code defects—they are operational prerequisites.
+**This document is a roadmap for external DevOps setup. Do not claim production-ready until all 7 blockers are verified complete.**
 
 ### Status by Dimension
 
 | Dimension | Status | Details |
 |-----------|--------|---------|
-| **Code Quality** | ✓ READY | All tests pass, governance strict=PASS, build succeeds |
-| **TypeScript** | ✓ READY | Zero type errors |
-| **Prisma Schema** | ✓ READY | Valid, 37 migrations ready |
-| **Auth Governance** | ✓ READY | 135/144 routes protected, 9 exempt with justification |
-| **Infrastructure** | ✗ INCOMPLETE | Database, secrets, monitoring not configured |
-| **Deployment Process** | ⚠ PARTIAL | Runbook exists, but external setup incomplete |
-| **Rollback Capability** | ⚠ PARTIAL | Procedures documented, need testing |
-| **Production Safety** | ⚠ PARTIAL | Health checks ready, smoke tests defined, alerting not configured |
+| **Code Governance** | ✓ PASS | Governance strict=PASS, tsc=PASS, prisma validate=PASS |
+| **TypeScript** | ✓ PASS | Zero type errors |
+| **Prisma Schema** | ✓ PASS | Valid, 37 migrations defined |
+| **Auth Governance** | ✓ PASS | 135/144 routes protected, 9 exempt with justification |
+| **Build** | ⚠ BLOCKED | Requires DATABASE_URL (expected, documented) |
+| **Database** | ✗ EXTERNAL BLOCKER | Requires provisioning (Neon, RDS, Supabase, etc.) |
+| **Secrets Management** | ✗ EXTERNAL BLOCKER | Requires secrets manager configuration |
+| **Stripe Webhooks** | ✗ EXTERNAL BLOCKER | Requires Stripe dashboard registration |
+| **Monitoring Setup** | ✗ EXTERNAL BLOCKER | Requires Sentry/Datadog/CloudWatch integration |
+| **Rollback Procedure** | ⚠ DOCUMENTED | Procedures defined, need testing in staging |
+| **Smoke Tests** | ✓ READY | Suite created, automation defined |
 
 ---
 
@@ -410,6 +413,26 @@ Miscellaneous:                          $50
 ────────────────────────────────────────────────
 Total:                                  ~$500-1,000/month
 ```
+
+---
+
+## For DevOps Operators: External Deployment Execution Checklist
+
+**See:** `docs/EXTERNAL_DEPLOYMENT_EXECUTION_CHECKLIST.md`
+
+This document provides a practical, step-by-step checklist for executing the 7 P0 external infrastructure blockers:
+
+- Phase 1: Planning (Day 1)
+- Phase 2: Database provisioning (Days 2-3)
+- Phase 3: Environment variables (Days 2-4)
+- Phase 4: Stripe webhook registration (Days 3-4)
+- Phase 5: Monitoring setup (Days 4-5)
+- Phase 6: Staging deployment (Days 6-8)
+- Phase 7: Migration deployment (Day of release)
+- Phase 8: Production deployment (Day of release)
+- Phase 9: Final go/no-go checklist
+
+**⚠️ CRITICAL:** Do NOT claim production-ready until all items are verified complete.
 
 ---
 

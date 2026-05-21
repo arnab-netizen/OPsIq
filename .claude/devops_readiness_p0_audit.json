@@ -3,7 +3,14 @@
   "repository": "arnab-netizen/opsiq",
   "main_branch_sha": "afdf004",
   "audit_scope": "7 P0 Operational Blockers for Production Readiness",
-  "overall_status": "PARTIAL - CODE READY, OPS INCOMPLETE",
+  "overall_status": "CODE_GOVERNANCE_READY_DEPLOYMENT_OPS_BLOCKED",
+  "production_ready": false,
+  "live_ready": false,
+  "deployment_ready": false,
+  "code_governance_status": "PASS",
+  "repo_devops_documentation_status": "COMPLETE",
+  "external_infrastructure_status": "BLOCKED",
+  "deployment_state_label": "CODE_GOVERNANCE_READY_DEPLOYMENT_OPS_BLOCKED",
   "p0_blockers": [
     {
       "blocker_id": 1,
@@ -309,20 +316,26 @@
   "summary": {
     "total_blockers": 7,
     "status_breakdown": {
-      "FAIL": 1,
-      "PARTIAL": 5,
-      "UNKNOWN": 1
+      "EXTERNAL_BLOCKER": 7
     },
-    "can_be_fixed_in_repo": 7,
-    "requires_external_setup": 7,
-    "code_ready": true,
-    "ops_ready": false
+    "code_governance_gates_pass": true,
+    "code_governance_gates_details": ["governance:scan:strict=PASS", "tsc=PASS", "prisma validate=PASS"],
+    "blockers_documented": 7,
+    "blockers_can_be_fixed_in_repo": 0,
+    "blockers_require_external_setup": 7,
+    "blockers_verified_complete": 0,
+    "code_governance_ready": true,
+    "deployment_ops_ready": false,
+    "production_ready": false,
+    "live_ready": false
   },
   "deployment_readiness": {
-    "code_level": "READY - Build, TypeScript, Prisma, Governance all pass",
-    "ops_level": "INCOMPLETE - 7 P0 blockers require external infrastructure setup",
-    "estimated_deployment_effort": "4-6 weeks (includes procurement, setup, testing, rollback validation)",
-    "critical_path": "1. Database provisioning → 2. Migrate → 3. Env vars → 4. Stripe setup → 5. Monitoring → 6. Rollback testing → 7. Smoke tests"
+    "code_governance_level": "PASS - governance:scan:strict=PASS, tsc=PASS, prisma validate=PASS",
+    "deployment_ops_level": "BLOCKED - 7 external infrastructure blockers remain",
+    "estimated_external_setup_effort": "10-14 business days (includes provisioning, configuration, testing, validation)",
+    "critical_path": "1. Database provisioning → 2. Env vars setup → 3. Migrate → 4. Stripe setup → 5. Monitoring integration → 6. Rollback testing → 7. Smoke tests",
+    "external_setup_required": true,
+    "external_setup_checklist_doc": "docs/EXTERNAL_DEPLOYMENT_EXECUTION_CHECKLIST.md"
   },
   "next_steps": [
     "Update .env.example with all required production variables",

@@ -11,7 +11,6 @@
  */
 
 import https from "https";
-import { parse } from "url";
 
 interface TestResult {
   name: string;
@@ -41,15 +40,14 @@ async function request(
 ): Promise<{ status: number; data: unknown; headers: Record<string, string> }> {
   return new Promise((resolve, reject) => {
     const url = new URL(path, baseUrl);
-    const options = parse(url.toString());
-    options.method = method;
-    options.headers = {
-      "Content-Type": "application/json",
-      ...options.headers,
-    };
-    options.timeout = timeout;
 
-    const req = https.request(options, (res) => {
+    const req = https.request(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      timeout,
+    }, (res) => {
       let data = "";
       res.on("data", (chunk) => (data += chunk));
       res.on("end", () => {
