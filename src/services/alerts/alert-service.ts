@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
@@ -70,7 +71,7 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
     }).catch((error) => {
       logger.warn("Failed to emit audit event for alert creation", {
         alertId: alert.id,
-        error: error instanceof Error ? error.message : String(error),
+        error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
       });
     });
 
@@ -80,7 +81,7 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
         logger.warn("Failed to deliver email alert", {
           alertId: alert.id,
           userId,
-          error: error instanceof Error ? error.message : String(error),
+          error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
         });
       });
     }
@@ -99,7 +100,7 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
       workspaceId,
       userId,
       type,
-      error: error instanceof Error ? error.message : String(error),
+      error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
     });
     throw error;
   }
@@ -142,7 +143,7 @@ export async function markAlertAsRead(
     }).catch((error) => {
       logger.warn("Failed to emit audit event for alert update", {
         alertId,
-        error: error instanceof Error ? error.message : String(error),
+        error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
       });
     });
 
@@ -151,7 +152,7 @@ export async function markAlertAsRead(
   } catch (error) {
     logger.error("Failed to mark alert as read", {
       alertId,
-      error: error instanceof Error ? error.message : String(error),
+      error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
     });
     throw error;
   }
@@ -185,7 +186,7 @@ export async function getAlerts(
     logger.error("Failed to fetch alerts", {
       workspaceId,
       userId,
-      error: error instanceof Error ? error.message : String(error),
+      error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
     });
     throw error;
   }
@@ -268,7 +269,7 @@ export async function getUnreadAlertCount(
     logger.error("Failed to get unread alert count", {
       workspaceId,
       userId,
-      error: error instanceof Error ? error.message : String(error),
+      error: classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" }).operatorMessage,
     });
     return 0;
   }
