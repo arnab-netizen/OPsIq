@@ -114,8 +114,7 @@ export const POST = async (request: NextRequest) => {
     console.error("[LOGIN_ERROR]", governed.operatorMessage, error);
 
     if (error instanceof UnauthorizedError) {
-      const unauthorizedGoverned = classifyOperatorError(error, { context: "auth" });
-      return Response.json({ error: unauthorizedGoverned.operatorMessage }, { status: 401 });
+      return Response.json({ error: classifyOperatorError(error, { context: "auth" }).operatorMessage }, { status: 401 });
     }
 
     return Response.json(

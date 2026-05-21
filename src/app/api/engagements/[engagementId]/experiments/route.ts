@@ -192,8 +192,7 @@ export const POST = withEnforcementFull(async (request) => {
       );
     }
     if (error instanceof Error) {
-      const governed = classifyOperatorError(error, { context: "load" });
-      return Response.json({ error: governed.operatorMessage }, { status: 400 });
+      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },
@@ -235,8 +234,7 @@ export const GET = withEnforcementFull(async (request) => {
     });
   } catch (error) {
     if (error instanceof Error) {
-      const governed = classifyOperatorError(error, { context: "load" });
-      return Response.json({ error: governed.operatorMessage }, { status: 400 });
+      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },

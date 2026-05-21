@@ -42,8 +42,7 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
     );
   } catch (error) {
     if (error instanceof Error) {
-      const governed = classifyOperatorError(error, { context: "load" });
-      return Response.json({ error: governed.operatorMessage }, { status: 400 });
+      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
     }
 
     return Response.json(
