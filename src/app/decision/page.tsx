@@ -1,5 +1,6 @@
 'use client';
 
+import { classifyOperatorError } from '@/lib/operator-error-governance';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { DecisionResultComponent } from '@/components/decision/DecisionResult';
@@ -257,10 +258,9 @@ export default function DecisionPage() {
                                  (!data.gate || data.gate.allowed);
       setIsApproved(isApprovedDecision);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Failed to get decision';
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error('Failed to get decision'), { context: 'load' });
       console.error('Decision API error:', err);
-      setError(`Network error: ${errorMessage}`);
+      setError(`Network error: ${governed.operatorMessage}`);
       setResult(null);
       setIsApproved(false);
     } finally {

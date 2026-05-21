@@ -95,8 +95,8 @@ export default function MyDayPage() {
       // Refresh queue
       await fetchMyDay();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      setError(`Error: ${message}`);
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error('Unknown error'), { context: 'load' });
+      setError(`Error: ${governed.operatorMessage}`);
     } finally {
       setActingItemId(null);
     }

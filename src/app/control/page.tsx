@@ -1,5 +1,6 @@
 'use client';
 
+import { classifyOperatorError } from '@/lib/operator-error-governance';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
@@ -194,9 +195,8 @@ export default function ControlPage() {
 
         setLastUpdate(new Date().toLocaleTimeString());
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load dashboard data'
-        );
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error('Failed to load dashboard data'), { context: 'load' });
+        setError(governed.operatorMessage);
         console.error('Dashboard error:', err);
       } finally {
         setLoading(false);
