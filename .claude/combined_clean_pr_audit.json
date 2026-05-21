@@ -1,0 +1,84 @@
+{
+  "task": "Create clean combined PR from r30-governance-clean-main → main",
+  "pr_intent": "Fix main build errors AND close R30 governance blockers in single PR",
+  "supersedes": "PR #8",
+  "reason_for_combined_pr": "PR #8 cannot pass governance scan without R30 closure. Combined PR ensures both build repairs and governance closure are validated together before merge.",
+  "branch_source": "r30-governance-clean-main",
+  "branch_target": "main",
+  "current_head_sha": "49f7be5",
+  "current_branch": "r30-governance-clean-main",
+  "working_tree_status": "clean",
+  "task_b_gates": {
+    "npm_run_build": {
+      "status": "PASS",
+      "output": "Build completed successfully, all routes compiled"
+    },
+    "npx_tsc_noEmit": {
+      "status": "PASS",
+      "output": "TypeScript compilation clean, no type errors"
+    },
+    "npx_prisma_validate": {
+      "status": "PASS",
+      "output": "Prisma schema valid, preview feature deprecation warning (non-blocking)"
+    },
+    "npm_run_governance_scan_strict": {
+      "status": "PASS",
+      "errors_count": 0,
+      "warnings_count": 120,
+      "warning_category": "DEAD_EMPTY_STATE (unrelated to R30 task)",
+      "raw_error_message_violations": 0,
+      "unsafe_error_render_violations": 0,
+      "unsafe_metric_violations": 0,
+      "output": "Scan complete: 0 errors, 120 warnings (DEAD_EMPTY_STATE only)"
+    }
+  },
+  "r30_closure_validation": {
+    "phase_1_raw_error_message": {
+      "initial_count": 66,
+      "final_count": 0,
+      "violations_closed": 66,
+      "method": "Inlined classifyOperatorError() governance calls across 24+ API routes"
+    },
+    "phase_2_unsafe_error_render": {
+      "initial_count": 41,
+      "final_count": 0,
+      "violations_closed": 41,
+      "method": "Inlined classifyOperatorError() on return statements, reverted contract key changes"
+    },
+    "phase_3_unsafe_metric": {
+      "initial_count": 0,
+      "final_count": 0,
+      "violations_closed": 0,
+      "note": "No violations detected in this category"
+    }
+  },
+  "files_modified": {
+    "count": 26,
+    "categories": {
+      "api_routes_governance_inlined": 24,
+      "package_json_tsx_dependency": 1,
+      "package_lock_json": 1
+    }
+  },
+  "deployment_state_label": "GATE_ALL_PASS_READY_FOR_MERGE",
+  "next_step": "TASK C — Create combined PR via GitHub API",
+  "pr_title_recommended": "Fix main build and close R30 governance blockers",
+  "pr_body_template_sections": [
+    "## Summary",
+    "Fixes build compilation errors on main and closes all R30 governance violations (RAW_ERROR_MESSAGE + UNSAFE_ERROR_RENDER).",
+    "",
+    "Supersedes PR #8 — which cannot pass governance scan without R30 closure included.",
+    "",
+    "## Validation Results",
+    "- npm run build: ✅ PASS",
+    "- npx tsc --noEmit: ✅ PASS",
+    "- npx prisma validate: ✅ PASS",
+    "- npm run governance:scan:strict: ✅ PASS (0 errors, 120 DEAD_EMPTY_STATE warnings unrelated to R30)",
+    "- RAW_ERROR_MESSAGE violations: 0 (closed 66)",
+    "- UNSAFE_ERROR_RENDER violations: 0 (closed 41)",
+    "- UNSAFE_METRIC violations: 0 (no violations)",
+    "",
+    "## Caveat",
+    "This PR consolidates both main build repairs and R30 governance closure. All gates pass. Ready for merge after approval."
+  ]
+}
