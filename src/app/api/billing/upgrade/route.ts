@@ -2,6 +2,7 @@ import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import { ValidationError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { db } from "@/lib/db";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 async function getStripe() {
   const apiKey = process.env.STRIPE_API_KEY;
@@ -22,8 +23,9 @@ export const POST = withCanonicalEnforcement(async (ctx) => {
   try {
     stripe = await getStripe();
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Failed to initialize Stripe client", {
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
     throw new Error("Payment service is not configured");
   }
