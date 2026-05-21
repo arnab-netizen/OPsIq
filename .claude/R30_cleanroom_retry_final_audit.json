@@ -36,11 +36,13 @@
   },
 
   "gate_results": {
-    "npm_run_build": "PASS - Compiled successfully in 11.5s",
+    "npm_run_build": "PASS - Compiled successfully in 11.7s",
     "npx_tsc_noEmit": "PASS - 0 TypeScript errors",
     "npx_prisma_validate": "PASS - Schema valid",
     "governance_scan_strict": "PASS - 0 critical errors, 120 non-blocking warnings",
-    "optional_context_check": "SCRIPT_NOT_PRESENT_ON_BASE",
+    "npm_run_check_all_gates": "SCRIPT_NOT_PRESENT_ON_BASE",
+    "npm_run_check_optional_context": "SCRIPT_NOT_PRESENT_ON_BASE",
+    "governance_ci_gate": "PASS - No regressions detected, violations reduced -206",
     "all_gates_status": "PASS"
   },
 
