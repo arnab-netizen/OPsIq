@@ -481,12 +481,13 @@ export async function markWebhookEventFailed(
   stripeEventId: string,
   error: Error
 ): Promise<void> {
+  const governedError = classifyOperatorError(error, { context: "load" });
   try {
     const result = await db.webhookEvent.update({
       where: { stripeEventId },
       data: {
         status: "failed",
-        lastError: error.message,
+        lastError: governedError.operatorMessage,
         attempts: {
           increment: 1,
         },
@@ -498,7 +499,7 @@ export async function markWebhookEventFailed(
 
     logger.warn("Webhook event marked as failed", {
       stripeEventId,
-      error: error.message,
+      error: governedError.operatorMessage,
       attempts: result.attempts,
       maxAttempts: MAX_ATTEMPTS,
     });
@@ -506,7 +507,7 @@ export async function markWebhookEventFailed(
     const governed = classifyOperatorError(dbError instanceof Error ? dbError : new Error(String(dbError)), { context: "load" });
     logger.error("Failed to mark webhook event as failed", {
       stripeEventId,
-      originalError: error.message,
+      originalError: governedError.operatorMessage,
       dbError: governed.operatorMessage,
     });
     throw dbError;
