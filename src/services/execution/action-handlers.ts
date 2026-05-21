@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { logger } from "@/infra/logger";
 import { db } from "@/lib/db";
 
@@ -65,18 +66,19 @@ export async function triggerAction(
 
     return result;
   } catch (error) {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.error("Unexpected error triggering action", {
       actionType,
       decisionId,
       workspaceId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
 
     return {
       success: false,
       actionType,
       message: "Action trigger failed",
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     };
   }
 }
@@ -164,12 +166,12 @@ async function handleWebhookAction(
       message: `Webhook triggered: ${url}`,
     };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     return {
       success: false,
       actionType: "webhook",
       message: "Webhook request failed",
-      error: errorMsg,
+      error: governed.operatorMessage,
     };
   }
 }
@@ -223,12 +225,12 @@ async function handleTaskAction(
       message: `Task created: ${title}`,
     };
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     return {
       success: false,
       actionType: "task",
       message: "Task creation failed",
-      error: errorMsg,
+      error: governed.operatorMessage,
     };
   }
 }

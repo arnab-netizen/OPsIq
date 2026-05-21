@@ -1,3 +1,5 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 export interface LogEvent {
   type: string;
   workspaceId: string;
@@ -27,13 +29,13 @@ export function createEventLogger(type: string, workspaceId: string) {
     },
     error: (error: Error | string, metadata?: Record<string, unknown>) => {
       const durationMs = Date.now() - startTime;
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       logEvent({
         type,
         workspaceId,
         durationMs,
         status: 'error',
-        error: errorMessage,
+        error: governed.operatorMessage,
         metadata,
       });
     },

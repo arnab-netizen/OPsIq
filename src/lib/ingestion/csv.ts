@@ -5,6 +5,8 @@
  * Rejects NaN, no silent conversions, explicit error handling.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
+
 export interface CSVRecord {
   revenue: number;
   cost: number;
@@ -160,13 +162,13 @@ export function ingestCSVSafe(
 
         records.push({ revenue, cost });
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        errors.push(`Row ${i + 1}: ${message}`);
+        const governed = classifyOperatorError(err instanceof Error ? err : new Error("Unknown error"), { context: "load" });
+        errors.push(`Row ${i + 1}: ${governed.operatorMessage}`);
       }
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : "CSV parsing failed";
-    errors.push(`Parse error: ${message}`);
+    const governed = classifyOperatorError(err instanceof Error ? err : new Error("CSV parsing failed"), { context: "load" });
+    errors.push(`Parse error: ${governed.operatorMessage}`);
   }
 
   return { records, errors };

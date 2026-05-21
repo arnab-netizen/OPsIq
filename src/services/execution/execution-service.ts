@@ -242,10 +242,11 @@ export async function markFailure(
     actualOutcome: 0,
     expectedOutcome: decision.impactExpected,
   }).catch((metricsError) => {
+    const governed = classifyOperatorError(metricsError instanceof Error ? metricsError : new Error(String(metricsError)), { context: "load" });
     logger.warn("Failed to record failure metrics", {
       decisionId,
       workspaceId,
-      error: metricsError instanceof Error ? metricsError.message : String(metricsError),
+      error: governed.operatorMessage,
     });
   });
 

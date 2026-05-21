@@ -1,3 +1,4 @@
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { logEvent } from "@/lib/observability/log";
 
 export interface WebhookPayload {
@@ -42,12 +43,12 @@ export async function emitWebhook(
       });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error("Unknown error"), { context: "load" });
     logEvent({
       type: "webhook_error",
       workspaceId: payload.workspaceId,
       status: "error",
-      error: errorMessage,
+      error: governed.operatorMessage,
       metadata: {
         url,
         event: payload.event,

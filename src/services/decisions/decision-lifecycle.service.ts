@@ -5,6 +5,7 @@
  * Every mutation must route through lifecycle validation.
  */
 
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
@@ -56,9 +57,8 @@ export async function transitionDecisionState(
   try {
     requireTransitionAllowed(fromState, toState, reason || null);
   } catch (error) {
-    throw new ValidationError(
-      error instanceof Error ? error.message : String(error)
-    );
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+    throw new ValidationError(governed.operatorMessage);
   }
 
   // Prepare update data based on target state
@@ -113,11 +113,12 @@ export async function transitionDecisionState(
     },
     visibility: "internal",
   }).catch((error) => {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.warn("Failed to emit audit event for decision transition", {
       decisionId,
       fromState,
       toState,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
   });
 
@@ -273,9 +274,8 @@ export async function executeDecision(
     try {
       requireExecutable(currentState);
     } catch (error) {
-      throw new ValidationError(
-        error instanceof Error ? error.message : String(error)
-      );
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      throw new ValidationError(governed.operatorMessage);
     }
 
     const result = await transitionDecisionState(
@@ -336,9 +336,8 @@ export async function recordDecisionOutcome(
   try {
     requireOutcomeRecordable(currentState);
   } catch (error) {
-    throw new ValidationError(
-      error instanceof Error ? error.message : String(error)
-    );
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+    throw new ValidationError(governed.operatorMessage);
   }
 
   // Update with outcome data
@@ -366,9 +365,10 @@ export async function recordDecisionOutcome(
     },
     visibility: "internal",
   }).catch((error) => {
+    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     logger.warn("Failed to emit audit event for outcome recording", {
       decisionId,
-      error: error instanceof Error ? error.message : String(error),
+      error: governed.operatorMessage,
     });
   });
 
