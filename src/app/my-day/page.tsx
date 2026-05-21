@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { OperatorItem } from '@/domain/operator/types';
+import { classifyOperatorError } from '@/lib/operator-error-governance';
 
 interface MyDayResponse {
   items: OperatorItem[];
@@ -43,8 +44,8 @@ export default function MyDayPage() {
       const myDayData = data as MyDayResponse;
       setItems(myDayData.items);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Network error';
-      setError(`Error: ${message}`);
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+      setError(`Error: ${governed.operatorMessage}`);
       setItems([]);
     } finally {
       setLoading(false);

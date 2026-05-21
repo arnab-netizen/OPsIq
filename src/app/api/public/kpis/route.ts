@@ -12,6 +12,7 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { toPublicKPIDTO, PublicAPIError } from "@/services/public-api.service";
 import type { NextRequest } from "next/server";
 import { z } from "zod/v4";
+import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const querySchema = z.object({
   engagementId: z.string().optional(),
@@ -128,13 +129,15 @@ export const GET = withEnforcementFull(async (request) => {
       );
     }
     if (error instanceof PublicAPIError) {
+      const governed = classifyOperatorError(error, { context: "load" });
       return Response.json(
-        { error: error.code, message: error.message },
+        { error: error.code, message: governed.operatorMessage },
         { status: 400 }
       );
     }
     if (error instanceof Error) {
-      return Response.json({ error: error.message }, { status: 400 });
+      const governed = classifyOperatorError(error, { context: "load" });
+      return Response.json({ error: governed.operatorMessage }, { status: 400 });
     }
     return Response.json(
       { error: "Internal server error" },
