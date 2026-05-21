@@ -45,7 +45,24 @@
       "Remove reference to ${{ secrets.DATABASE_URL }} and ${{ secrets.DATABASE_URL_TEST }}"
     ]
   },
+  "fix_applied": {
+    "timestamp": "2026-05-21T22:45:00Z",
+    "commit": "63d89dad4c4ea23717ba1e8402e91eb0838226ef",
+    "changes": [
+      "Added PostgreSQL 16 service container to readiness-check job",
+      "Replaced ${{ secrets.DATABASE_URL }} with postgresql://postgres:postgres@localhost:5432/opsiq_test",
+      "Added DIRECT_DATABASE_URL for Prisma client compatibility"
+    ]
+  },
+  "fix_result": {
+    "mvp_readiness_validation_status": "PASSED ✓",
+    "readiness_summary_status": "PASSED ✓",
+    "validate_branch_status": "PASSED ✓",
+    "mvp_readiness_validation_completed_at": "2026-05-21T22:46:55Z",
+    "root_cause_resolved": true,
+    "database_url_now_available": true
+  },
   "also_inspect": {
-    "note": "ci.yml build-and-test jobs are also failing. This needs separate investigation. May be due to test environment issues or resource constraints."
+    "note": "ci.yml build-and-test jobs still running (5018 test suite). Full test results pending. All MVP readiness validations now passing with PostgreSQL service container fix."
   }
 }
