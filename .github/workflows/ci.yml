@@ -67,6 +67,10 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
         continue-on-error: false
 
+      - name: Regenerate Prisma client after migrations
+        run: npx prisma generate
+        continue-on-error: false
+
       - name: Build project
         run: npm run build
         env:
