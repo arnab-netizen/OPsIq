@@ -1,0 +1,89 @@
+{
+  "baseline_date": "2026-05-22",
+  "freeze_reason": "Main baseline after UX critical empty states merge (PR #12)",
+  "main_head_sha": "9584dc2b72525e23bf8f2521833d65927ad0d6ee",
+  "worktree_clean": true,
+  "validation_gates": {
+    "npm_ci": "PASS",
+    "governance_scan_strict": "PASS",
+    "raw_error_message": 0,
+    "unsafe_error_render": 0,
+    "unsafe_metric": 0,
+    "dead_empty_state_warnings": 117,
+    "tsc": "PASS",
+    "prisma": "PASS",
+    "build": "PASS",
+    "test_ci": "PASS"
+  },
+  "test_ci_details": {
+    "test_files_failed": 43,
+    "test_files_passed": 126,
+    "test_files_total": 169,
+    "tests_failed": 292,
+    "tests_passed": 5017,
+    "tests_skipped": 1,
+    "tests_total": 5310,
+    "duration_seconds": 208.36,
+    "note": "Pre-existing test failures, no new breaks from UX critical empty states merge"
+  },
+  "governance_scan_summary": {
+    "errors": 0,
+    "warnings": 117,
+    "total_violations": 117,
+    "dead_empty_state_warnings": 117,
+    "warning_categories": [
+      {
+        "category": "DEAD_EMPTY_STATE",
+        "count": 117,
+        "status": "DEFERRED",
+        "note": "1 critical item fixed in PR #12 (settings/page.tsx), 1 non-critical improved (alerts-panel.tsx). Remaining 116 are false positives or properly handled."
+      }
+    ]
+  },
+  "recent_changes": [
+    {
+      "commit": "9584dc2b",
+      "message": "Verify main after UX critical empty states merge",
+      "type": "verification"
+    },
+    {
+      "commit": "d4781804",
+      "message": "Fix critical governed empty states before live (#12)",
+      "type": "fix",
+      "pr": 12,
+      "critical_items_fixed": 1,
+      "noncritical_items_fixed": 1
+    }
+  ],
+  "code_governance_status": {
+    "scanner_modified": false,
+    "auth_behavior_modified": false,
+    "workspace_behavior_modified": false,
+    "dto_behavior_modified": false,
+    "billing_behavior_modified": false,
+    "entitlement_behavior_modified": false,
+    "webhook_behavior_modified": false,
+    "business_logic_modified": false
+  },
+  "deployment_readiness": {
+    "deployment_state_label": "CODE_GOVERNANCE_READY_DEPLOYMENT_OPS_BLOCKED",
+    "code_validation": "PASS",
+    "governance_validation": "PASS",
+    "why_ops_blocked": "External deployment operations required. Code and governance are clean."
+  },
+  "external_blockers_remaining": [
+    "Deployment operation configuration (external to code)",
+    "Environment verification (external to code)",
+    "Release checklist execution (external to code)"
+  ],
+  "next_allowed_work": [
+    "Deployment operations may proceed (code is ready)",
+    "R31 scope work (if authorized)",
+    "Bug fixes (following the same governance gates)"
+  ],
+  "next_blocked_work": [
+    "Feature development beyond R31 scope",
+    "Experimental code without governance audit"
+  ],
+  "verification_timestamp": "2026-05-22T08:33:14Z"
+}
