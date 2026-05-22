@@ -19,6 +19,13 @@ export const PUBLIC_ROUTE_EXEMPTIONS = {
   ],
   STARTUP: [
     "/api/startup",
+    "/api/internal/startup",
+  ],
+  OPS: [
+    "/api/ops/metrics",
+    "/api/ops/errors",
+    "/api/ops/readiness",
+    "/api/ops/runtime",
   ],
   PUBLIC: [
     "/api/public/actions",
@@ -39,6 +46,11 @@ export const EXEMPTION_REASONS = {
   "/api/readiness": "Kubernetes readiness probe - no auth required",
   "/api/liveness": "Kubernetes liveness probe - no auth required",
   "/api/startup": "Application startup initialization - internal only",
+  "/api/internal/startup": "Internal startup status - no auth required",
+  "/api/ops/metrics": "Prometheus-compatible operational metrics - monitoring use only",
+  "/api/ops/errors": "Error tracking and aggregation - operational visibility",
+  "/api/ops/readiness": "Alternative readiness endpoint for ops tooling",
+  "/api/ops/runtime": "Runtime diagnostics and state - operational visibility",
   "/api/public/actions": "Public API - workspace context provided by caller",
   "/api/public/engagements": "Public API - workspace context provided by caller",
   "/api/public/kpis": "Public API - workspace context provided by caller",
