@@ -11,39 +11,18 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = "postgresql://user:password@localhost:5432/opsiq_dev?schema=public";
 }
 
-// Ensure database is initialized and ready before tests run
+// Ensure database client is initialized before tests run
 beforeAll(async () => {
   try {
     const { getDbInstance } = await import("./src/lib/db");
-    const db = await getDbInstance();
-
-    // Actually test the database connection with a simple query
-    // to ensure testcontainers is fully ready
-    let isReady = false;
-    let attempts = 0;
-    const maxAttempts = 120; // 12 seconds max wait
-    const delayMs = 100;
-
-    while (!isReady && attempts < maxAttempts) {
-      try {
-        await db.$queryRaw`SELECT 1`;
-        isReady = true;
-        console.log(`✓ Database ready after ${attempts * delayMs}ms`);
-      } catch (error) {
-        attempts++;
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, delayMs));
-        }
-      }
-    }
-
-    if (!isReady) {
-      console.warn(`⚠ Database not ready after ${maxAttempts * delayMs}ms, tests will run with database unavailable`);
-      // Don't throw - tests will fail gracefully if DB not available
-    }
+    // Just initialize the client - don't wait for actual database readiness
+    // Tests will handle database unavailability gracefully
+    await getDbInstance();
+    console.log("✓ Database client initialized");
   } catch (error) {
-    console.error("Failed to initialize database in test setup:", error);
-    // Don't throw - allow tests to run and handle DB errors gracefully
+    // Initialization failures are logged but not fatal
+    // Tests that need database will fail with clear errors
+    console.warn("⚠ Database client initialization:", (error as Error).message);
   }
 });
 

@@ -1,6 +1,9 @@
 /**
  * Test helper for initializing startup status in test environment
  * Used by tests that call enforceRequest middleware
+ *
+ * Note: This is a best-effort helper. If database isn't available,
+ * tests will still run but may fail due to startup status checks.
  */
 
 import { setStartupStatus } from "@/services/startup-status";
@@ -16,16 +19,15 @@ export async function ensureStartupStatusReady(fileIdentifier?: string): Promise
   }
 
   try {
-    // Simply set startup status to READY
-    // The setStartupStatus function will retry and handle database unavailability gracefully
+    // Set startup status to READY - best effort
+    // If database is unavailable, setStartupStatus will fail gracefully
+    // and getStartupStatus() will return NOT_STARTED for those tests
     await setStartupStatus("READY");
     initializedFiles.add(identifier);
-    console.log(`✓ Startup status initialized for ${identifier}`);
   } catch (error) {
-    // If startup status can't be set, the getStartupStatus() function
-    // will return NOT_STARTED, and tests will fail accordingly
-    // This is better than silently passing tests that require startup
-    console.warn(`⚠ Could not initialize startup status for ${identifier}:`, (error as Error).message);
+    // Silently fail - tests using this helper will see NOT_STARTED
+    // and fail with appropriate database connectivity errors
+    initializedFiles.add(identifier); // Mark as "attempted" so we don't retry
   }
 }
 
