@@ -16,11 +16,15 @@
  * ✓ metrics recording
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import fs from "fs";
 import path from "path";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 
 describe("PHASE I10: Runtime Enforcement Scanner - ALL Routes", () => {
+  beforeAll(async () => {
+    await ensureStartupStatusReady();
+  });
   const apiDir = path.join(process.cwd(), "src/app/api");
 
   function findAllRouteFiles(): string[] {
