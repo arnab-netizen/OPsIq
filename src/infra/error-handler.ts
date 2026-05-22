@@ -182,8 +182,7 @@ export function getErrorStatusCode(error: unknown): number {
  * Helper: Check if error should be reported (skip expected/benign errors)
  */
 export function shouldReportError(error: unknown): boolean {
-  const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-  const message = governed.operatorMessage;
+  const message = error instanceof Error ? error.message : String(error);
 
   // Skip benign errors
   const benignPatterns = [
@@ -191,6 +190,7 @@ export function shouldReportError(error: unknown): boolean {
     "User canceled",
     "timeout",
     "AbortError",
+    "cancel",
   ];
 
   return !benignPatterns.some((pattern) =>
