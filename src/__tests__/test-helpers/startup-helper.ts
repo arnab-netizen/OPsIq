@@ -3,50 +3,33 @@
  * Used by tests that call enforceRequest middleware
  */
 
-import { resetStartupStatus, setStartupStatus } from "@/services/startup-status";
-import { getDbInstance } from "@/lib/db";
+import { setStartupStatus } from "@/services/startup-status";
 
-let startupStatusInitialized = false;
+// Track per-test-file to allow startup status initialization in each describe block
+const initializedFiles = new Set<string>();
 
-async function waitForDatabaseReady(maxAttempts = 30, delayMs = 100): Promise<void> {
-  let lastError: Error | null = null;
+export async function ensureStartupStatusReady(fileIdentifier?: string): Promise<void> {
+  const identifier = fileIdentifier || "global";
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const db = await getDbInstance();
-      await db.$queryRaw`SELECT 1`;
-      return; // Database is ready
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      if (attempt < maxAttempts - 1) {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      }
-    }
-  }
-
-  throw new Error(`Database not ready after ${maxAttempts * delayMs}ms: ${lastError?.message}`);
-}
-
-export async function ensureStartupStatusReady(): Promise<void> {
-  if (startupStatusInitialized) {
-    return;
+  if (initializedFiles.has(identifier)) {
+    return; // Already initialized in this test file
   }
 
   try {
-    // Wait for database to be available first
-    await waitForDatabaseReady();
-
-    // Now initialize startup status
-    await resetStartupStatus();
+    // Simply set startup status to READY
+    // The setStartupStatus function will retry and handle database unavailability gracefully
     await setStartupStatus("READY");
-    startupStatusInitialized = true;
+    initializedFiles.add(identifier);
+    console.log(`✓ Startup status initialized for ${identifier}`);
   } catch (error) {
     // If startup status can't be set, the getStartupStatus() function
-    // will return NOT_STARTED, which is acceptable for some tests
-    console.warn("⚠ Could not initialize startup status:", (error as Error).message);
+    // will return NOT_STARTED, and tests will fail accordingly
+    // This is better than silently passing tests that require startup
+    console.warn(`⚠ Could not initialize startup status for ${identifier}:`, (error as Error).message);
   }
 }
 
-export function resetStartupStatusInitialization(): void {
-  startupStatusInitialized = false;
+export function resetStartupStatusInitialization(fileIdentifier?: string): void {
+  const identifier = fileIdentifier || "global";
+  initializedFiles.delete(identifier);
 }
