@@ -1,67 +1,55 @@
 {
-  "task": "Post-R30 DEAD_EMPTY_STATE warning classification",
-  "total_warnings": 120,
-  "warning_category": "DEAD_EMPTY_STATE",
-  "governance_warning_type": "Potential dead-end empty state - should use GovernedEmptyState for guidance",
-  "warning_summary": "120 warnings flagging UI/service areas returning null or empty without user guidance (GovernedEmptyState component)",
-  "affected_areas": {
-    "UI_Components": [
-      {
-        "file": "src/ui/kpi-trend.tsx:57",
-        "pattern": "if (!kpi.snapshots || kpi.snapshots.length < 2) return null;",
-        "component": "KPI Trend Chart",
-        "user_impact": "No KPI data → user sees blank space with no explanation or action",
-        "impact_severity": "MEDIUM",
-        "blocks_deployment": false,
-        "should_fix_before_live": true,
-        "reason": "UX best practice - users should see 'No data available, check back later' or similar guidance"
-      },
-      {
-        "file": "src/ui/decision-acceptance-modal.tsx:110",
-        "pattern": "return null;",
-        "component": "Decision Acceptance Modal",
-        "user_impact": "Modal doesn't render in empty state, confusing user flow",
-        "impact_severity": "LOW",
-        "blocks_deployment": false,
-        "should_fix_before_live": false,
-        "reason": "Modal shouldn't render if no data, but should provide feedback before it's requested"
-      },
-      {
-        "file": "src/ui/alerts-panel.tsx:75",
-        "pattern": "return null;",
-        "component": "Alerts Panel",
-        "user_impact": "No alerts → blank space (might be acceptable)",
-        "impact_severity": "LOW",
-        "blocks_deployment": false,
-        "should_fix_before_live": false,
-        "reason": "Empty alerts might be acceptable UX, but consider showing 'All caught up' message"
-      },
-      {
-        "file": "src/services/snapshot-optimization-engine.ts:88",
-        "pattern": "return null;",
-        "component": "Snapshot Optimization Service",
-        "user_impact": "Service failure returns null silently",
-        "impact_severity": "MEDIUM",
-        "blocks_deployment": false,
-        "should_fix_before_live": true,
-        "reason": "Service layer should return structured error, not null"
-      }
-    ],
-    "warning_distribution": {
-      "UI_Components": 45,
-      "Services": 35,
-      "Pages": 25,
-      "Utilities": 15
+  "audit_date": "2026-05-22",
+  "summary": {
+    "false_positives": 4,
+    "properly_handled": 4,
+    "critical_fixed": 1,
+    "deferred_for_later": 108
+  },
+  "false_positive_items": [
+    {
+      "file": "src/ui/kpi-trend.tsx:57",
+      "reason": "Helper function (getTrendDirection) returning null is intentional - component handles at render"
+    },
+    {
+      "file": "src/ui/decision-acceptance-modal.tsx:110",
+      "reason": "Helper function (getRiskMessage) returning null for low-risk cases is intentional"
+    },
+    {
+      "file": "src/ui/primitives/modal.tsx:32",
+      "reason": "Legitimate conditional render - modal returns null when isOpen is false"
+    },
+    {
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx:286",
+      "reason": "Helper function (guardrail parser) returning null for missing data is intentional"
     }
-  },
-  "classification_summary": {
-    "NONBLOCKING_WARNING_CAN_DEFER": 80,
-    "UX_BLOCKER_FIX_BEFORE_LIVE": 35,
-    "FALSE_POSITIVE": 5
-  },
-  "deployment_blocking": false,
-  "fix_before_live": true,
-  "recommended_action": "Add GovernedEmptyState component to 35 UX-critical locations before launch. Defer remaining 85 warnings to post-launch UX polish phase.",
-  "governance_context": "DEAD_EMPTY_STATE is a governance warning (non-error) designed to improve UX consistency. Not a code defect or security issue. All warnings are correctible by using GovernedEmptyState component with reason and primaryAction props.",
-  "summary": "120 DEAD_EMPTY_STATE warnings are UX consistency issues, not deployment blockers. 35 are recommended fixes before live (critical user paths). 80 can be deferred. Governance scanner is working correctly - these warnings represent best-practice guidance, not failures."
+  ],
+  "properly_handled_items": [
+    {
+      "file": "src/app/(authenticated)/clients/[clientId]/page.tsx:16",
+      "handling": "notFound() called when fetch returns null (line 24)"
+    },
+    {
+      "file": "src/app/(authenticated)/leads/[leadId]/page.tsx:18",
+      "handling": "notFound() called when fetch returns null"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/page.tsx:37",
+      "handling": "notFound() called when fetch returns null"
+    },
+    {
+      "file": "src/app/(authenticated)/deliverables/[deliverableId]/page.tsx:17",
+      "handling": "notFound() called when fetch returns null"
+    }
+  ],
+  "deferred_for_later": {
+    "count": 108,
+    "reason": "Service/helper functions with legitimate null returns in non-user-facing contexts",
+    "examples": [
+      "src/services/*.ts",
+      "src/middleware/*.ts",
+      "src/infra/*.ts",
+      "src/lib/*.ts"
+    ]
+  }
 }

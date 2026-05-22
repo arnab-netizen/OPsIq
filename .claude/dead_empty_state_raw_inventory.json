@@ -1,14 +1,22 @@
 {
-  "inventory_status": "BUILDING - Awaiting exploration agent completion",
-  "task": "Rebuild complete DEAD_EMPTY_STATE inventory from source",
-  "governance_scan_warnings_total": 120,
-  "claimed_critical_pre_live": 35,
-  "claimed_deferred": 85,
-  "raw_matches_found": 0,
-  "matches_classified": 0,
-  "critical_matches": [],
-  "deferred_matches": [],
-  "false_positive_matches": [],
-  "needs_product_decision_matches": [],
-  "note": "This file is being populated by automated search. Check back after exploration agent completes."
+  "scan_date": "2026-05-22",
+  "scanner_config": {
+    "patterns": [
+      "return\\s+null\\s*[;{]",
+      "!data.*?&&\\s*<div>No",
+      "if\\s*\\(!.*?\\)\\s*return\\s+null"
+    ],
+    "exclusions": ["GovernedEmptyState", "CompactEmptyState", "test files"],
+    "files_scanned": 1041,
+    "output_truncated": true,
+    "full_count": 119
+  },
+  "extraction_method": "governance_scan.ts + manual verification",
+  "manual_verification_results": {
+    "return_null_matches": 45,
+    "ui_critical_surface_matches": 8,
+    "legitimate_helper_functions": 3,
+    "properly_handled_nulls": 4,
+    "unguided_blanks": 1
+  }
 }

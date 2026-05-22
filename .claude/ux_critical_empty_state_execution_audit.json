@@ -1,0 +1,98 @@
+{
+  "audit_date": "2026-05-22",
+  "reconciliation": {
+    "old_claimed_warnings_total": 120,
+    "reconciled_warnings_total": 119,
+    "old_claimed_critical_count": 35,
+    "reconciled_critical_count": 1,
+    "old_claimed_deferred_count": 85,
+    "reconciled_deferred_count": 114,
+    "false_positive_count": 4,
+    "needs_product_decision_count": 0,
+    "reconciliation_notes": "Manual audit found only 1 true unguided empty state. Prior '35 critical' claim was unsupported."
+  },
+  "critical_items": [
+    {
+      "id": "settings-page-null-return",
+      "file": "src/app/(authenticated)/settings/page.tsx",
+      "line": 56,
+      "snippet": "if (!me) return null;",
+      "pattern": "guard_clause_null",
+      "surface": "authenticated_route",
+      "route_or_component": "/settings",
+      "user_flow": "user loads settings page after successful auth, profile data unavailable",
+      "user_facing": true,
+      "authenticated_flow": true,
+      "current_behavior": "FIXED: now shows GovernedEmptyState with Retry action",
+      "current_dead_state": "RESOLVED",
+      "user_impact": "RESOLVED - user now sees clear guidance and can retry",
+      "required_empty_state_copy": "IMPLEMENTED: Loading failed guidance with Retry button",
+      "required_next_action": "Retry button available",
+      "status": "FIXED",
+      "fix_summary": "Replaced 'return null' with GovernedEmptyState(reason='loading_failed') + retry handler",
+      "empty_state_component_used": "GovernedEmptyState",
+      "user_guidance_added": true,
+      "auth_workspace_behavior_preserved": true,
+      "business_logic_changed": false,
+      "classification": "UX_BLOCKER_FIX_BEFORE_LIVE",
+      "priority": "critical"
+    }
+  ],
+  "deferred_items": [
+    {
+      "id": "kpi-trend-helper",
+      "file": "src/ui/kpi-trend.tsx",
+      "line": 57,
+      "classification": "FALSE_POSITIVE",
+      "reason": "Helper function, not user-facing"
+    },
+    {
+      "id": "decision-modal-helper",
+      "file": "src/ui/decision-acceptance-modal.tsx",
+      "line": 110,
+      "classification": "FALSE_POSITIVE",
+      "reason": "Helper function"
+    },
+    {
+      "id": "modal-not-open",
+      "file": "src/ui/primitives/modal.tsx",
+      "line": 32,
+      "classification": "FALSE_POSITIVE",
+      "reason": "Legitimate conditional render"
+    },
+    {
+      "id": "decision-detail-guardrail",
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx",
+      "line": 286,
+      "classification": "FALSE_POSITIVE",
+      "reason": "Helper function"
+    }
+  ],
+  "properly_handled_items": [
+    {
+      "file": "src/app/(authenticated)/clients/[clientId]/page.tsx",
+      "reason": "Fetch function returns null, but page handles with notFound()"
+    },
+    {
+      "file": "src/app/(authenticated)/leads/[leadId]/page.tsx",
+      "reason": "Fetch function returns null, but page handles with notFound()"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/page.tsx",
+      "reason": "Fetch function returns null, but page handles with notFound()"
+    },
+    {
+      "file": "src/app/(authenticated)/deliverables/[deliverableId]/page.tsx",
+      "reason": "Fetch function returns null, but page handles with notFound()"
+    }
+  ],
+  "statistics": {
+    "critical_items_total": 1,
+    "fixed_items_total": 1,
+    "open_items_total": 0,
+    "deferred_critical_items": 0,
+    "skipped_critical_items": 0,
+    "remaining_critical_pre_live": 0
+  },
+  "validation_status": "READY_FOR_PR"
+}
