@@ -274,4 +274,42 @@ export class EventEmitterService {
       recordedAt: event.recordedAt,
     };
   }
+
+  /**
+   * Retrieve all events for an aggregate in order
+   * Respects workspace isolation
+   */
+  static async getAggregateEvents(
+    aggregateId: string,
+    aggregateType: string,
+    workspaceId: string
+  ): Promise<EmittedEvent[]> {
+    const events = await db.canonicalEvent.findMany({
+      where: {
+        aggregateId,
+        aggregateType,
+        workspaceId,
+      },
+      orderBy: { eventNumber: "asc" },
+    });
+
+    return events.map((event) => ({
+      id: event.id,
+      aggregateId: event.aggregateId,
+      aggregateType: event.aggregateType,
+      eventType: event.eventType,
+      eventVersion: event.eventVersion,
+      eventNumber: event.eventNumber,
+      payload: event.payload as EventPayload,
+      actorId: event.actorId,
+      workspaceId: event.workspaceId,
+      causationId: event.causationId,
+      correlationId: event.correlationId,
+      idempotencyKey: event.idempotencyKey || undefined,
+      visibilityScope: event.visibilityScope,
+      sensitivityClassification: event.sensitivityClassification,
+      occurredAt: event.occurredAt,
+      recordedAt: event.recordedAt,
+    }));
+  }
 }
