@@ -1,0 +1,14 @@
+{
+  "inventory_status": "BUILDING - Awaiting exploration agent completion",
+  "task": "Rebuild complete DEAD_EMPTY_STATE inventory from source",
+  "governance_scan_warnings_total": 120,
+  "claimed_critical_pre_live": 35,
+  "claimed_deferred": 85,
+  "raw_matches_found": 0,
+  "matches_classified": 0,
+  "critical_matches": [],
+  "deferred_matches": [],
+  "false_positive_matches": [],
+  "needs_product_decision_matches": [],
+  "note": "This file is being populated by automated search. Check back after exploration agent completes."
+}
