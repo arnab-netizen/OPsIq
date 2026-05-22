@@ -4,6 +4,8 @@ import { getSession } from "@/services/auth";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import DecisionDetailView from "./DecisionDetailView";
 
+export const dynamic = "force-dynamic";
+
 async function getDecision(decisionId: string, workspaceId: string) {
   const decision = await db.operatorItem.findUnique({
     where: { id: decisionId },
