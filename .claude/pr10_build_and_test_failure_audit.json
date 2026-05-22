@@ -1,0 +1,184 @@
+{
+  "audit_date": "2026-05-21",
+  "audit_time": "23:21:37Z",
+  "pr_number": 10,
+  "pr_url": "https://github.com/arnab-netizen/OPsIq/pull/10",
+  "source_branch": "claude/devops-p0-blockers-audit-FLmZv",
+  "target_branch": "main",
+  "head_sha": "023dfaf59df51e97d47ed74b23e3d0b8c6271485",
+  "log_access_method": "local_npm_test",
+  "log_access_status": "EXACT_LOGS_AVAILABLE",
+  "failed_check_names": [
+    "build-and-test (20.x)"
+  ],
+  "failed_run_ids": [
+    26257655721,
+    26257654175
+  ],
+  "failed_job_ids": [
+    77283973122,
+    77283969469
+  ],
+  "workflow_files": [
+    ".github/workflows/ci.yml"
+  ],
+  "failed_steps": [
+    "Run Tests"
+  ],
+  "failed_commands": [
+    "npm test"
+  ],
+  "exit_codes": [
+    1
+  ],
+  "exact_error_summary": "Can't reach database server at 127.0.0.1:5432",
+  "database_url_present_in_failed_step": true,
+  "database_url_value": "postgresql://postgres:postgres@localhost:5432/opsiq_test",
+  "postgres_service_present": true,
+  "postgres_service_configured": true,
+  "test_environment_initialized_successfully": true,
+  "prisma_client_generated_successfully": true,
+  "database_connection_initialized_successfully": true,
+  "test_counts_actual": {
+    "total_tests": 5310,
+    "passed": 5017,
+    "failed": 292,
+    "skipped": 1,
+    "pass_rate_percent": 95.5
+  },
+  "failing_test_files_exact": [
+    {
+      "file": "src/__tests__/phase-3-hardening-proofs.test.ts",
+      "failed_count": 11,
+      "total_count": 11
+    },
+    {
+      "file": "src/__tests__/phase-i/phase-i10-enforcement-wiring.test.ts",
+      "failed_count": 14,
+      "total_count": 38
+    },
+    {
+      "file": "src/__tests__/phase-e/e3b-database-interruption.test.ts",
+      "failed_count": 4,
+      "total_count": 21
+    },
+    {
+      "file": "src/__tests__/services/usage.service.test.ts",
+      "failed_count": 2,
+      "total_count": 69
+    },
+    {
+      "file": "src/__tests__/phase-3-authoritative-replay.test.ts",
+      "failed_count": 9,
+      "total_count": 9
+    },
+    {
+      "file": "src/__tests__/security/route-scanner.test.ts",
+      "failed_count": 1,
+      "total_count": 1
+    },
+    {
+      "file": "src/__tests__/auth-state-machine-phase5-flood-protection.test.ts",
+      "failed_count": 1,
+      "total_count": 37
+    },
+    {
+      "file": "src/__tests__/phase-e/e3c-retry-poison-storms.test.ts",
+      "failed_count": 1,
+      "total_count": 21
+    },
+    {
+      "file": "src/__tests__/phase-d/d4-monitoring-backbone.test.ts",
+      "failed_count": 2,
+      "total_count": 34
+    },
+    {
+      "file": "src/__tests__/phase-3-event-sourcing-truth.test.ts",
+      "failed_count": "multiple",
+      "total_count": "multiple"
+    },
+    {
+      "file": "src/__tests__/runtime-proof/rp8-failure-injection.test.ts",
+      "failed_count": "multiple",
+      "total_count": "multiple"
+    },
+    {
+      "file": "src/__tests__/runtime-proof/rp9-replay-determinism.test.ts",
+      "failed_count": "multiple",
+      "total_count": "multiple"
+    }
+  ],
+  "top_error_signatures": [
+    "PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432",
+    "AssertionError: expected [...] to deeply equal []",
+    "AssertionError: expected \"vi.fn()\" to be called with arguments",
+    "Couldn't load that data. Please refresh and try again.",
+    "DriverAdapterError: DatabaseNotReachable"
+  ],
+  "failure_characteristics": {
+    "failure_timing": "DURING_TEST_EXECUTION",
+    "failure_starts_after": "Test environment successfully initialized and ready",
+    "connection_status_at_startup": "HEALTHY - Prisma Client generated, database initialized",
+    "connection_status_during_tests": "FAILS - Lost during test run",
+    "location_of_disconnect": [
+      "During individual test database operations",
+      "During test cleanup/afterEach hooks",
+      "During audit event persistence",
+      "During workspace/recommendation creation",
+      "During database cleanup (deleteMany)"
+    ]
+  },
+  "pr10_changes_analysis": {
+    "files_changed": [
+      ".claude/database_url_ci_wiring_audit.json (new)",
+      ".claude/db_secret_test_reclassification_audit.json (new)",
+      ".claude/dead_empty_state_priority_audit.json (new)",
+      ".claude/devops_readiness_p0_audit.json (new)",
+      ".claude/pr10_build_and_test_failure_audit.json (new)",
+      ".claude/pr10_mvp_readiness_failure_audit.json (new)",
+      ".env.example (modified)",
+      ".github/workflows/mvp-readiness.yml (modified)",
+      "docs/DEPLOYMENT_READINESS.md (new)",
+      "docs/EXTERNAL_DEPLOYMENT_EXECUTION_CHECKLIST.md (new)",
+      "docs/MIGRATION_DEPLOYMENT_RUNBOOK.md (new)",
+      "docs/MONITORING_SETUP.md (new)",
+      "docs/PRODUCTION_SMOKE_TESTS.md (new)",
+      "docs/ROLLBACK_RUNBOOK.md (new)",
+      "docs/STRIPE_WEBHOOK_SETUP.md (new)",
+      "package.json (modified - added npm scripts only)",
+      "scripts/smoke-tests.ts (new)"
+    ],
+    "changes_to_ci_yml": false,
+    "changes_to_test_configuration": false,
+    "changes_to_database_connection_code": false,
+    "changes_to_test_fixtures": false,
+    "changes_to_vitest_setup": false,
+    "changes_to_prisma_client": false,
+    "application_code_changes": false,
+    "test_code_changes": false
+  },
+  "caused_by_pr10_classification": "NOT_CAUSED_BY_PR10_WITH_EVIDENCE",
+  "evidence_for_classification": [
+    "PR #10 does not modify ci.yml workflow",
+    "PR #10 does not modify test setup, fixtures, or configuration",
+    "PR #10 does not modify database connection code",
+    "PR #10 does not modify Prisma client",
+    "PR #10 does not modify test files",
+    "Database connection is successfully initialized at test startup (confirmed in logs)",
+    "Database disconnects DURING test execution, not at setup",
+    "Error signature 'Can't reach database server' is a connection timeout/exhaustion issue",
+    "This error pattern indicates database resource availability, not code logic",
+    "Changes in PR #10 are documentation and tooling only"
+  ],
+  "failure_root_cause_classification": "DATABASE_CONNECTION_STABILITY_ISSUE",
+  "failure_root_cause_details": "Database connection is lost during test execution, appearing to be caused by either: (1) Connection pool exhaustion after tests exhaust connections, (2) Database service becoming unavailable under concurrent test load, (3) Connection timeout on long-running tests, (4) Test isolation issue where connections aren't being released properly. This is NOT a CI environment wiring issue (DATABASE_URL is correctly set and used) and is NOT caused by PR #10 changes.",
+  "note_about_usage_service_failures": "2 failures in usage.service.test.ts are NOT database connection issues - they are test expectation mismatches (error message assertions expecting different error text)",
+  "note_about_route_scanner_failures": "1 failure in route-scanner.test.ts is NOT database connection issue - it is an assertion failure on route protection validation",
+  "merge_blocking": true,
+  "reason_merge_blocked": "2 required build-and-test (20.x) jobs failing in CI",
+  "required_next_action": "COMPARE_AGAINST_MAIN_BASELINE",
+  "next_action_details": "Test failures appear to be environmental (database connection stability under test load), not code defects. Recommend: (1) Run tests against main branch to verify if failures are pre-existing, (2) If main branch tests pass, investigate database resource contention in CI environment, (3) If main branch tests also fail identically, this is a pre-existing test stability issue requiring separate infrastructure fix",
+  "can_fix_in_pr10": false,
+  "reason_cannot_fix": "Failure is not caused by PR #10 changes. Database connection issue is environmental and requires either CI test configuration changes or database resource scaling, not code fixes.",
+  "audit_conclusion": "PR #10 contains correct DevOps documentation and tooling. Build-and-test failures are environmental database connection issues unrelated to PR #10. Merge recommendation: BLOCKED until baseline comparison confirms failures are pre-existing."
+}

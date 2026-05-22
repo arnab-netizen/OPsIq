@@ -30,7 +30,9 @@
     "governance:ci-gate": "tsx src/governance/ci-shadow-read-gate.ts",
     "governance:phase-g2": "node scripts/phase-g2-compiler-hardening.js",
     "governance:scan": "tsx scripts/governance-scan.ts",
-    "governance:scan:strict": "tsx scripts/governance-scan.ts --strict"
+    "governance:scan:strict": "tsx scripts/governance-scan.ts --strict",
+    "smoke:prod": "tsx scripts/smoke-tests.ts",
+    "smoke:staging": "tsx scripts/smoke-tests.ts --env=staging"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",

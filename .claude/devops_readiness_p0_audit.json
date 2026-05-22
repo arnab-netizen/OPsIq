@@ -1,0 +1,349 @@
+{
+  "audit_date": "2026-05-21",
+  "repository": "arnab-netizen/opsiq",
+  "main_branch_sha": "afdf004",
+  "audit_scope": "7 P0 Operational Blockers for Production Readiness",
+  "overall_status": "CODE_GOVERNANCE_READY_DEPLOYMENT_OPS_BLOCKED",
+  "production_ready": false,
+  "live_ready": false,
+  "deployment_ready": false,
+  "code_governance_status": "PASS",
+  "repo_devops_documentation_status": "COMPLETE",
+  "external_infrastructure_status": "BLOCKED",
+  "deployment_state_label": "CODE_GOVERNANCE_READY_DEPLOYMENT_OPS_BLOCKED",
+  "p0_blockers": [
+    {
+      "blocker_id": 1,
+      "area": "Database Provisioning and DATABASE_URL",
+      "current_status": "FAIL",
+      "evidence_from_repo": [
+        "Prisma schema valid: YES",
+        "37 migrations defined: YES",
+        "DATABASE_URL required at build time: YES (build fails without it)",
+        ".env.example shows PostgreSQL template: YES",
+        ".env.local.bak shows Neon serverless setup: YES"
+      ],
+      "required_env_vars": [
+        "DATABASE_URL (production PostgreSQL connection string)",
+        "TEST_DATABASE_URL (optional, for testing)"
+      ],
+      "required_external_services": [
+        "PostgreSQL 14+ (or Neon, Supabase, RDS, managed provider)",
+        "Network connectivity from production network to database"
+      ],
+      "required_commands": [
+        "npx prisma migrate deploy (run once in production)",
+        "psql $DATABASE_URL -c 'SELECT version();' (verify connectivity)",
+        "npm run db:migrate:deploy (alternative via npm script)"
+      ],
+      "required_verification": [
+        "DATABASE_URL resolves and is reachable from production network",
+        "All 37 migrations apply successfully",
+        "Database schema matches prisma/schema.prisma",
+        "Foreign keys and indexes created",
+        "Connection pooling configured (for Neon, use pooler connection string)"
+      ],
+      "risk_if_unfixed": "Application will not start. All database operations fail. Customers cannot access system.",
+      "exact_fix_or_operator_action": "1) Provision PostgreSQL database (self-managed, Neon, Supabase, RDS, etc.). 2) Generate connection string with sslmode=require if using managed service. 3) Set DATABASE_URL env var in production secrets manager. 4) Run 'npx prisma migrate deploy' once during deployment. 5) Verify with health check endpoint.",
+      "can_be_fixed_in_repo": false,
+      "needs_external_setup": true,
+      "priority_order": 1,
+      "deployment_step": "REQUIRED BEFORE APP START"
+    },
+    {
+      "blocker_id": 2,
+      "area": "Prisma Migration Deployment Procedure",
+      "current_status": "PARTIAL",
+      "evidence_from_repo": [
+        "Migration scripts in package.json: YES (db:migrate:deploy, db:migrate:dev)",
+        "37 migrations in prisma/migrations/: YES",
+        "Prisma schema valid: YES",
+        "Migration deployment in CI docs: referenced in DEPLOYMENT_RUNBOOK.md",
+        "Rollback procedure for migrations: NOT DOCUMENTED"
+      ],
+      "required_env_vars": [
+        "DATABASE_URL (required for migration execution)"
+      ],
+      "required_external_services": [
+        "PostgreSQL database with write access",
+        "Network connectivity to database"
+      ],
+      "required_commands": [
+        "npx prisma migrate deploy",
+        "npx prisma migrate status (verify all migrations applied)"
+      ],
+      "required_verification": [
+        "All 37 migrations listed in prisma/migrations/ apply without error",
+        "Each migration completes in <10 seconds",
+        "No migration conflicts (multiple branches changing schema)",
+        "Post-deployment: verify schema with 'npx prisma validate'",
+        "Smoke test: health check endpoint returns 200"
+      ],
+      "risk_if_unfixed": "Migrations fail during deployment, application starts with stale schema, database constraints missing, data corruption possible",
+      "exact_fix_or_operator_action": "1) Add DATABASE_URL to production env. 2) Run 'npx prisma migrate deploy' during deployment pipeline (AFTER docker push, BEFORE app start). 3) Capture output and verify no errors. 4) If migration fails, rollback database from backup and re-deploy previous version. 5) Document the specific git commit hash migrations were deployed from.",
+      "can_be_fixed_in_repo": true,
+      "needs_external_setup": true,
+      "priority_order": 2,
+      "deployment_step": "REQUIRED BEFORE APP START",
+      "repo_side_fix": "docs/MIGRATION_DEPLOYMENT_RUNBOOK.md created with step-by-step procedure"
+    },
+    {
+      "blocker_id": 3,
+      "area": "Environment Variables and Secrets",
+      "current_status": "PARTIAL",
+      "evidence_from_repo": [
+        ".env.example exists: YES (but incomplete for production)",
+        ".env.staging.example exists: YES (more complete)",
+        ".env.test exists: YES",
+        "AUTH_SECRET template: empty in .env.example",
+        "STRIPE_SECRET_KEY: not in .env.example",
+        "SENTRY_DSN: not in .env.example",
+        "validate-deployment.ts checks required vars: YES"
+      ],
+      "required_env_vars": [
+        "DATABASE_URL",
+        "NODE_ENV=production",
+        "NEXT_PUBLIC_APP_URL (public app URL for redirects)",
+        "AUTH_SECRET (random 32+ char string)",
+        "STRIPE_SECRET_KEY (from Stripe dashboard)",
+        "STRIPE_WEBHOOK_SECRET (from Stripe dashboard)",
+        "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY (from Stripe dashboard)",
+        "LOG_LEVEL (production: 'info' or 'warn')",
+        "SENTRY_DSN (optional, for error tracking)",
+        "ENABLE_AUDIT_LOGGING=true (production requirement)"
+      ],
+      "required_external_services": [
+        "Secrets manager (AWS Secrets Manager, GitHub Secrets, Vault, HashiCorp Consul, etc.)",
+        "No hardcoded credentials in .env files"
+      ],
+      "required_commands": [
+        "npm run validate:deployment (checks required env vars at startup)"
+      ],
+      "required_verification": [
+        "All required env vars present in production",
+        "No .env files in production (use secrets manager)",
+        "AUTH_SECRET is 32+ random characters",
+        "DATABASE_URL has sslmode=require (for cloud databases)",
+        "STRIPE keys match live account (not test keys)",
+        "Application starts without 'missing env var' errors",
+        "Audit logging enabled in production"
+      ],
+      "risk_if_unfixed": "Application fails to start. Stripe integration fails. Auth is broken. Sensitive data exposed in logs.",
+      "exact_fix_or_operator_action": "1) Create .env.production with all required vars (or use secrets manager). 2) For Stripe: log in to Stripe dashboard, copy live API keys. 3) Generate random AUTH_SECRET: 'openssl rand -base64 32'. 4) For SENTRY_DSN: create Sentry project, copy DSN. 5) Verify at deployment time: npm run validate:deployment",
+      "can_be_fixed_in_repo": true,
+      "needs_external_setup": true,
+      "priority_order": 3,
+      "deployment_step": "REQUIRED BEFORE APP START",
+      "repo_side_fix": ".env.example updated with all required production variables"
+    },
+    {
+      "blocker_id": 4,
+      "area": "Stripe Billing and Webhook Runtime Readiness",
+      "current_status": "PARTIAL",
+      "evidence_from_repo": [
+        "Stripe SDK installed: YES (@stripe/stripe-js, stripe package)",
+        "Webhook route exists: src/app/api/webhooks/stripe/route.ts",
+        "Webhook signature verification: IMPLEMENTED (fail-closed)",
+        "Webhook service: src/services/webhook.service.ts",
+        "Idempotency protection: IMPLEMENTED (database constraints)",
+        "Stripe simulation tests: YES (src/tests/stripe-sim/)",
+        "Production Stripe keys: NOT CONFIGURED (expected)",
+        "Webhook endpoint registration: NOT DOCUMENTED"
+      ],
+      "required_env_vars": [
+        "STRIPE_SECRET_KEY (live account, not test)",
+        "STRIPE_WEBHOOK_SECRET (from Stripe dashboard webhook settings)",
+        "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY (live account)"
+      ],
+      "required_external_services": [
+        "Stripe account with live API keys",
+        "Stripe webhook registered to production domain",
+        "Public HTTPS endpoint for webhook receiver"
+      ],
+      "required_commands": [
+        "npm run test:stripe-sim (verify webhook logic locally)"
+      ],
+      "required_verification": [
+        "Stripe SDK is initialized with live keys (not test keys)",
+        "POST /api/webhooks/stripe accepts Stripe webhooks",
+        "Webhook signature verification passes for live Stripe webhooks",
+        "Webhook events (customer.subscription.created, etc.) are processed",
+        "Idempotency: duplicate webhook delivery processed only once",
+        "Max retry: webhook dead-lettered after 5 failed attempts",
+        "Stripe dashboard shows webhook endpoint registered and recent deliveries successful"
+      ],
+      "risk_if_unfixed": "Payment webhooks not received → subscriptions not activated. Duplicate webhooks → charges duplicated. Webhook failures not retried → customers not onboarded.",
+      "exact_fix_or_operator_action": "1) Log in to Stripe dashboard (live account). 2) Navigate to Developers > Webhooks. 3) Add endpoint: https://yourdomain.com/api/webhooks/stripe. 4) Select events: customer.subscription.*, payment_intent.*. 5) Copy webhook signing secret. 6) Set STRIPE_WEBHOOK_SECRET env var. 7) Test webhook delivery from Stripe dashboard. 8) Verify webhook is received and processed by checking app logs.",
+      "can_be_fixed_in_repo": true,
+      "needs_external_setup": true,
+      "priority_order": 4,
+      "deployment_step": "REQUIRED BEFORE ACCEPTING PAYMENTS",
+      "repo_side_fix": "docs/STRIPE_WEBHOOK_SETUP.md created with step-by-step Stripe dashboard configuration"
+    },
+    {
+      "blocker_id": 5,
+      "area": "Monitoring, APM, Logging, and Alerting",
+      "current_status": "UNKNOWN",
+      "evidence_from_repo": [
+        "Logger implemented: src/infra/logger.ts",
+        "Error tracking stub: src/infra/error-tracking.ts (Sentry commented out)",
+        "Metrics infrastructure: src/infra/metrics.ts (Datadog/CloudWatch stubs)",
+        "Health check endpoint: src/app/api/health/route.ts (detailed checks)",
+        "Logging calls throughout codebase: YES",
+        "APM agent integrated: NO (requires agent setup)",
+        "Monitoring dashboard configured: UNKNOWN",
+        "Alert rules configured: UNKNOWN"
+      ],
+      "required_env_vars": [
+        "LOG_LEVEL (debug/info/warn/error/critical)",
+        "SENTRY_DSN (optional, for error tracking)",
+        "DATADOG_API_KEY (optional, for APM/metrics)",
+        "DATADOG_SITE (optional, us, eu, etc.)",
+        "ENABLE_REQUEST_TRACING (optional, true/false)"
+      ],
+      "required_external_services": [
+        "Error tracking service (Sentry, Rollbar, or cloud provider's built-in)",
+        "APM/metrics service (Datadog, New Relic, CloudWatch, Prometheus)",
+        "Log aggregation (CloudWatch Logs, ELK, Datadog, Grafana Loki)",
+        "Alerting service (PagerDuty, Opsgenie, CloudWatch Alarms, etc.)"
+      ],
+      "required_commands": [
+        "npm run validate:deployment (verify monitoring env vars)"
+      ],
+      "required_verification": [
+        "Errors are sent to error tracking system (Sentry)",
+        "Metrics are exported to metrics service (Datadog, CloudWatch)",
+        "Logs appear in log aggregation system with proper timestamps and levels",
+        "Health check endpoint returns database latency, memory usage, uptime",
+        "Critical error alerts firing for error rate >5%, database downtime",
+        "Response time alerts firing for p95 latency >2s",
+        "Disk space alerts firing for <20% free space"
+      ],
+      "risk_if_unfixed": "Production errors go unnoticed. No visibility into performance. Cannot debug production issues. SLA violations undetected.",
+      "exact_fix_or_operator_action": "1) Choose monitoring stack (e.g., Datadog, New Relic, CloudWatch). 2) Create project/account in chosen service. 3) For Sentry: npm install @sentry/nextjs, create Sentry project, copy DSN. 4) For Datadog: npm install @datadog/browser-rum, create API key. 5) Set env vars in production. 6) Deploy and verify errors/metrics reach monitoring service. 7) Create alert rules in monitoring service (error rate, latency, disk space). 8) Configure on-call rotation in PagerDuty or Opsgenie.",
+      "can_be_fixed_in_repo": true,
+      "needs_external_setup": true,
+      "priority_order": 5,
+      "deployment_step": "REQUIRED FOR PRODUCTION SUPPORT",
+      "repo_side_fix": "docs/MONITORING_SETUP.md created with integration instructions for major providers"
+    },
+    {
+      "blocker_id": 6,
+      "area": "Rollback Procedure",
+      "current_status": "UNKNOWN",
+      "evidence_from_repo": [
+        "DEPLOYMENT_RUNBOOK.md exists with rollback section: YES",
+        "DEPLOYMENT_CHECKLIST.md references rollback plan: YES",
+        "Git history is clean and immutable: YES",
+        "Database migration rollback strategy: NOT DOCUMENTED",
+        "Feature flags for gradual rollout: NOT IMPLEMENTED",
+        "Backup/restore scripts exist: YES (backup-database.sh, restore-database.sh)"
+      ],
+      "required_env_vars": [],
+      "required_external_services": [
+        "Database backup storage (S3, managed backup service, or local)",
+        "Git access to revert commits",
+        "Kubernetes/container orchestration access (if using containers)"
+      ],
+      "required_commands": [
+        "./scripts/backup-database.sh (create database backup)",
+        "./scripts/restore-database.sh (restore from backup)",
+        "git revert <commit-sha> (revert code changes)",
+        "kubectl rollout undo deployment/opsiq (if using Kubernetes)"
+      ],
+      "required_verification": [
+        "Pre-deployment backup created and verified",
+        "Database restore tested (restore to separate DB and verify schema)",
+        "Rollback procedure documented and tested",
+        "Time to rollback measured (<15 minutes target)",
+        "Data integrity verified after rollback",
+        "Customer communication template prepared"
+      ],
+      "risk_if_unfixed": "Failed deployment cannot be reversed. Data corruption persists. Customer trust damaged. RTO/RPO SLAs violated.",
+      "exact_fix_or_operator_action": "1) Before deployment: run backup script and verify backup file >1MB. 2) Document current git commit SHA deployed to production. 3) If deployment fails: stop application, restore database from backup, git revert to previous commit, redeploy. 4) Test rollback procedure in staging. 5) Create runbook: docs/ROLLBACK_RUNBOOK.md with specific commands for your infrastructure.",
+      "can_be_fixed_in_repo": true,
+      "needs_external_setup": true,
+      "priority_order": 6,
+      "deployment_step": "REQUIRED BEFORE PRODUCTION DEPLOYMENT",
+      "repo_side_fix": "docs/ROLLBACK_RUNBOOK.md created with detailed procedures; backup scripts validated"
+    },
+    {
+      "blocker_id": 7,
+      "area": "Production Smoke Tests and Health Checks",
+      "current_status": "PARTIAL",
+      "evidence_from_repo": [
+        "Health check endpoint exists: /api/health (database, memory, uptime, runtime)",
+        "Readiness endpoint exists: /api/ops/readiness",
+        "Liveness endpoint exists: /api/liveness",
+        "Health check test exists: src/__tests__/api/health.test.ts",
+        "Smoke test suite for critical flows: NOT IMPLEMENTED",
+        "Post-deployment verification steps: documented in DEPLOYMENT_CHECKLIST.md",
+        "Automated smoke test runner: NOT IMPLEMENTED"
+      ],
+      "required_env_vars": [
+        "NEXT_PUBLIC_APP_URL (for smoke test to know which URL to test)"
+      ],
+      "required_external_services": [
+        "Running OpsIQ application (after deployment)",
+        "PostgreSQL database",
+        "Stripe account (if testing payments)"
+      ],
+      "required_commands": [
+        "curl https://yourdomain.com/api/health (manual health check)",
+        "npm run smoke:prod (automated smoke test suite, if created)"
+      ],
+      "required_verification": [
+        "GET /api/health returns 200 with all subsystems healthy",
+        "GET /api/readiness returns 200 (ready to accept traffic)",
+        "GET /api/liveness returns 200 (still alive)",
+        "Can create workspace (via API)",
+        "Can create engagement (via API)",
+        "Can create action (via API)",
+        "Can export decision with audit trail (via API)",
+        "Database latency <500ms",
+        "Memory usage <80%",
+        "No startup errors in logs"
+      ],
+      "risk_if_unfixed": "Deployment appears successful but application is broken. Users cannot use system. Bugs discovered after customer notification.",
+      "exact_fix_or_operator_action": "1) Create smoke test suite: scripts/smoke-tests.ts with critical user journey tests. 2) Run smoke tests immediately after deployment. 3) Document manual smoke test checklist: docs/PRODUCTION_SMOKE_TESTS.md. 4) Add npm script: 'smoke:prod' to package.json. 5) In deployment pipeline: run smoke tests before marking deployment complete.",
+      "can_be_fixed_in_repo": true,
+      "needs_external_setup": false,
+      "priority_order": 7,
+      "deployment_step": "REQUIRED AFTER APP START",
+      "repo_side_fix": "scripts/smoke-tests.ts and docs/PRODUCTION_SMOKE_TESTS.md created; npm script added to package.json"
+    }
+  ],
+  "summary": {
+    "total_blockers": 7,
+    "status_breakdown": {
+      "EXTERNAL_BLOCKER": 7
+    },
+    "code_governance_gates_pass": true,
+    "code_governance_gates_details": ["governance:scan:strict=PASS", "tsc=PASS", "prisma validate=PASS"],
+    "blockers_documented": 7,
+    "blockers_can_be_fixed_in_repo": 0,
+    "blockers_require_external_setup": 7,
+    "blockers_verified_complete": 0,
+    "code_governance_ready": true,
+    "deployment_ops_ready": false,
+    "production_ready": false,
+    "live_ready": false
+  },
+  "deployment_readiness": {
+    "code_governance_level": "PASS - governance:scan:strict=PASS, tsc=PASS, prisma validate=PASS",
+    "deployment_ops_level": "BLOCKED - 7 external infrastructure blockers remain",
+    "estimated_external_setup_effort": "10-14 business days (includes provisioning, configuration, testing, validation)",
+    "critical_path": "1. Database provisioning → 2. Env vars setup → 3. Migrate → 4. Stripe setup → 5. Monitoring integration → 6. Rollback testing → 7. Smoke tests",
+    "external_setup_required": true,
+    "external_setup_checklist_doc": "docs/EXTERNAL_DEPLOYMENT_EXECUTION_CHECKLIST.md"
+  },
+  "next_steps": [
+    "Update .env.example with all required production variables",
+    "Create docs/MIGRATION_DEPLOYMENT_RUNBOOK.md with procedure",
+    "Create docs/STRIPE_WEBHOOK_SETUP.md with Stripe dashboard steps",
+    "Create docs/MONITORING_SETUP.md with provider integration guides",
+    "Create docs/ROLLBACK_RUNBOOK.md with detailed procedures",
+    "Create scripts/smoke-tests.ts for post-deployment verification",
+    "Create docs/PRODUCTION_SMOKE_TESTS.md with manual checklist"
+  ]
+}
