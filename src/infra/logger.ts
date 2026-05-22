@@ -184,17 +184,16 @@ function log(
     return;
   }
 
-  const governedError = error ? classifyOperatorError(error, { context: "load" }) : null;
   const entry: LogEntry = {
     timestamp: new Date(),
     level,
     message,
     context: { ...globalContext, ...context },
     metadata,
-    error: governedError
+    error: error
       ? {
           name: error instanceof Error ? error.name : "Unknown",
-          message: governedError.operatorMessage,
+          message: error instanceof Error ? error.message : String(error),
           stack: error instanceof Error ? error.stack : undefined,
         }
       : undefined,
