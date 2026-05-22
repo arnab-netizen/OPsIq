@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 import { db } from "@/lib/db";
 
 describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {

@@ -11,6 +11,7 @@
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 
 // NOTE: These tests are designed to run against a live HTTP server
 // Set TEST_API_URL env var or use default localhost:3000

@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 import { v4 as uuidv4 } from "uuid";
 import { db, getDbInstance } from "@/lib/db";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -20,6 +21,7 @@ describe("Phase RP4: Capability Enforcement Runtime Proof", () => {
   let engagementId: string;
 
   beforeAll(async () => {
+    await ensureStartupStatusReady();
     await getDbInstance();
   });
 

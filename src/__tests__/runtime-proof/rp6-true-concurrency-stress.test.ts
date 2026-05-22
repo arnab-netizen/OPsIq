@@ -15,6 +15,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 import { v4 as uuidv4 } from "uuid";
 import { db, getDbInstance } from "@/lib/db";
 import { EventEmitterService } from "@/services/event-emitter";
@@ -62,6 +63,7 @@ describe("Phase RP6: TRUE Concurrency Stress Testing (Independent Connections)",
   let engagementId: string;
 
   beforeAll(async () => {
+    await ensureStartupStatusReady();
     await getDbInstance();
   });
 
