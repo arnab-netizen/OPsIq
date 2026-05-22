@@ -11,11 +11,33 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = "postgresql://user:password@localhost:5432/opsiq_dev?schema=public";
 }
 
-// Ensure database is initialized before tests run
+// Ensure database is initialized and ready before tests run
 beforeAll(async () => {
   try {
     const { getDbInstance } = await import("./src/lib/db");
-    await getDbInstance();
+    const db = await getDbInstance();
+
+    // Actually test the database connection with a simple query
+    // to ensure testcontainers is fully ready
+    let isReady = false;
+    let attempts = 0;
+    const maxAttempts = 30;
+
+    while (!isReady && attempts < maxAttempts) {
+      try {
+        await db.$queryRaw`SELECT 1`;
+        isReady = true;
+      } catch (error) {
+        attempts++;
+        if (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    }
+
+    if (!isReady) {
+      throw new Error(`Database not ready after ${maxAttempts * 100}ms`);
+    }
   } catch (error) {
     console.error("Failed to initialize database in test setup:", error);
     throw error;
