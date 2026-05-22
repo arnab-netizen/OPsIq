@@ -1,0 +1,50 @@
+{
+  "audit_timestamp": "2026-05-22T00:50:00Z",
+  "pr_number": 11,
+  "branch": "ci-test-stabilization-postgres",
+  "commit_before": "38fc85bfa331f04bf1785c411ebddbcd4ac82a5b",
+  "objective": "Stabilize build-and-test job failure after duplicate Phase 3 test removal",
+  "attempt_1_status": {
+    "timestamp": "2026-05-22T00:44:00Z",
+    "changes": [
+      "Removed 48 lines from ci.yml (duplicate Phase 3 test runs)",
+      "Added PostgreSQL 16 service container to mvp-readiness.yml",
+      "Added Prisma $disconnect() to vitest-global-setup.ts teardown"
+    ],
+    "result": "MVP Readiness PASSED, but build-and-test FAILED",
+    "failure_analysis": "Duplicate removal was correct, but single test run still exhausts database connections",
+    "root_cause_hypothesis": "Test suite runs with default Vitest parallelism (multiple threads), causing connection pool exhaustion even without duplicates"
+  },
+  "attempt_2_changes": {
+    "timestamp": "2026-05-22T00:55:00Z",
+    "strategy": "Reduce test concurrency to serial execution",
+    "modifications": [
+      {
+        "file": "package.json",
+        "change": "Added npm script: 'test:ci': 'vitest run --threads=1'",
+        "rationale": "Run tests serially instead of in parallel to reduce database connection pool pressure"
+      },
+      {
+        "file": ".github/workflows/ci.yml",
+        "change": "Changed 'npm test' to 'npm run test:ci' in build-and-test job",
+        "rationale": "CI now uses serial test execution to avoid connection exhaustion"
+      }
+    ],
+    "test_impact": "NONE - all tests still run; concurrency reduced",
+    "ci_impact": "NONE - all checks still required; CI strength unchanged",
+    "performance_impact": "CI execution time will increase (tests run serially), but stability improves"
+  },
+  "local_validation": {
+    "npm_governance_scan_strict": "PASS - 0 errors, 120 warnings",
+    "npm_tsc": "PASS - no type errors",
+    "npm_prisma_validate": "PASS - schema valid",
+    "status": "ALL_GATES_PASS"
+  },
+  "expected_outcome": {
+    "mvp_readiness": "PASS (unchanged from attempt_1)",
+    "build_and_test": "LIKELY_PASS (serial execution reduces connection exhaustion)",
+    "lint": "PASS (unchanged)",
+    "branch_protection": "PASS (if all checks pass)"
+  },
+  "next_step": "Commit, push, and monitor PR #11 CI completion with serial test execution"
+}
