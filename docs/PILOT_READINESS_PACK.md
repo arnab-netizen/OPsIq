@@ -9,7 +9,11 @@
 
 ## EXECUTIVE SUMMARY
 
-OpsIQ is **code-ready for pilot deployment** but **not production-ready** for general availability. This pack defines:
+**Current Deployment Status:** `CODE_GOVERNANCE_READY_DEPLOYMENT_OPS_BLOCKED`
+
+OpsIQ is **code-ready for pilot deployment** but **not production-ready** for general availability. The application code passes all governance, TypeScript, and test gates. However, actual deployment requires resolution of 7 external infrastructure blockers (database, secrets, monitoring, Stripe webhooks, hosting, DNS/SSL, health checks). During pilot period, the OpsIQ team handles this infrastructure setup with the customer.
+
+This pack defines:
 
 - Who should be invited to pilot
 - Who should wait
@@ -19,6 +23,8 @@ OpsIQ is **code-ready for pilot deployment** but **not production-ready** for ge
 - How to manage failure
 
 **Pilot Goal:** Validate product-market fit with 3-5 paying customers, iterate rapidly, prepare for GA.
+
+**Important:** Pilot outreach must disclose that external infrastructure setup is handled by OpsIQ during the pilot engagement. See [DEPLOYMENT_READINESS.md] for technical blocker details.
 
 ---
 

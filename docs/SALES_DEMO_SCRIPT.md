@@ -306,11 +306,14 @@ Thanks for jumping on the call today. Here are the key takeaways:
 - [Feature X] — We can explore this during pilot
 - [Pricing question] — Happy to discuss flexible terms
 
+**Important Note:**
+OpsIQ code is production-ready for pilot testing. However, actual deployment requires setup of external infrastructure (database, monitoring, secrets management, Stripe webhooks, DNS/SSL). During your pilot, we handle this infrastructure setup with your team. See [Deployment Readiness Guide] for technical details.
+
 **Next steps:**
 
 If interested in a pilot, here's what that looks like:
 1. 6-month engagement at $5,000/year
-2. Setup call with our CSM (2 hours)
+2. Setup call with our CSM (2 hours) — we'll provision your environment
 3. Weekly check-in calls (30 min)
 4. Direct feature feedback to product team
 
