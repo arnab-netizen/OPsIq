@@ -55,6 +55,17 @@ async function setup() {
     throw error;
   }
 
+  // Initialize startup status for test environment
+  console.log("  → Initializing startup status...");
+  try {
+    const { resetStartupStatus, setStartupStatus } = await import("./src/services/startup-status");
+    await resetStartupStatus();
+    await setStartupStatus("READY");
+    console.log("  ✓ Startup status initialized");
+  } catch (error) {
+    console.error("  ⚠ Failed to initialize startup status:", error);
+  }
+
   console.log("✓ Test environment ready\n");
 }
 
