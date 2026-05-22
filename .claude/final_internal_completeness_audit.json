@@ -18,18 +18,20 @@
     "scanner_unchanged": true
   },
   "ci": {
+    "test_ci_command": "vitest run --maxWorkers 1",
     "test_ci_script_exists": true,
     "test_ci_uses_valid_vitest": true,
-    "test_ci_exit_code": 0,
+    "test_ci_exit_code": 1,
+    "test_ci_exit_code_meaning": "FAILURE (test:ci command fails when tests fail, working correctly)",
     "test_ci_total": 5310,
-    "test_ci_passed": 5014,
-    "test_ci_failed": 294,
+    "test_ci_passed": 5016,
+    "test_ci_failed": 293,
     "test_ci_skipped": 1,
-    "test_ci_status_exit_code": "PASS",
-    "test_ci_regression_vs_baseline": "+2 failed tests (baseline 292, current 294)",
-    "test_ci_regression_detail": "New flaky failures in error-tracking tests; 3-test variance between runs suggests test flakiness not code defect",
-    "test_ci_regression_caused_by": "Unknown environmental factor; documentation-only commit cannot cause test failures",
-    "test_ci_blocking_status": "NON-BLOCKING (pre-existing pattern, test suite designed to exit 0 despite failures)",
+    "test_ci_status": "FAIL",
+    "test_ci_real_failures": true,
+    "test_ci_failures_blocking": true,
+    "test_ci_regression_vs_baseline": "+1 failed test (baseline 292, current 293)",
+    "test_ci_previous_audit_error": "CORRECTED: Previous audit incorrectly recorded exit code as 0; actual exit code is 1 (failure)",
     "ci_weakened": false,
     "tests_skipped": false,
     "tests_disabled": false,
@@ -201,9 +203,9 @@
     "tsc_passes": true,
     "prisma_validates": true,
     "build_succeeds": true,
-    "test_ci_exits_zero": true,
-    "test_ci_regression": true,
-    "test_ci_regression_note": "292→294 failed tests (minimal, pre-existing pattern, test suite non-blocking)",
+    "test_ci_exit_code": 1,
+    "test_ci_real_failures": 293,
+    "test_ci_failures_blocking": true,
     "no_unsafe_claims_in_new_docs": true,
     "deployment_limitations_disclosed": true,
     "pr_history_shows_all_required_merges": true,
@@ -211,27 +213,29 @@
     "pr11_ci_stabilization_merged": true,
     "pr12_ux_critical_merged": true,
     "r30_governance_closed": true,
-    "pilot_readiness_docs_committed": true
+    "pilot_readiness_docs_committed": true,
+    "test_ci_contradiction_resolved": true,
+    "test_ci_contradiction_classification": "TEST_CI_REPORT_PARSE_BUG (previous audit incorrectly recorded exit code 0; actual is 1)"
   },
-  "final_internal_status": "INTERNAL_REPO_READY_EXTERNAL_DEPLOYMENT_BLOCKED",
+  "final_internal_status": "INTERNAL_REPO_BLOCKED_BY_TEST_CI_FAILURES",
   "status_rationale": {
-    "internal_ready_because": [
-      "All governance gates PASS (tsc, prisma, governance scan, build)",
-      "Test suite exits 0 (non-blocking pre-existing failures)",
-      "All required internal documentation complete",
-      "Pilot readiness materials complete with deployment limitation disclosures",
-      "DevOps blockers clearly documented and external",
-      "No application business logic changes",
-      "No unsafe/misleading claims in documentation"
+    "blocked_because": [
+      "test:ci exits with code 1 (failure condition)",
+      "293 real test failures blocking internal completion",
+      "+1 regression from baseline (292→293)",
+      "Tests are real blocking failures, not false positives or non-blocking metadata"
     ],
-    "external_blocked_because": [
+    "what_must_happen": [
+      "Investigate 293 failing tests",
+      "Determine root causes of failures",
+      "Fix real defects or fix test setup issues",
+      "Achieve test:ci exit code 0 with all tests passing",
+      "Re-run internal completeness audit",
+      "Only then can final_internal_status become INTERNAL_REPO_READY_EXTERNAL_DEPLOYMENT_BLOCKED"
+    ],
+    "external_blockers_remain": [
       "7 P0 infrastructure blockers require external setup",
-      "Database provisioning not done",
-      "Secrets management not configured",
-      "Stripe webhooks not registered",
-      "Monitoring not deployed",
-      "DNS/SSL not configured",
-      "Health checks not verified against real infrastructure"
+      "These remain external and do not block internal repo completion"
     ]
   },
   "deployment_state_label": "CODE_GOVERNANCE_READY_DEPLOYMENT_OPS_BLOCKED",
@@ -241,13 +245,16 @@
     "pilot_sales_allowed": "With clear disclosure that deployment setup is pending and will be handled during pilot"
   },
   "next_action_for_external_team": [
-    "Database team: Provision PostgreSQL (Neon/RDS recommended)",
-    "DevOps team: Set up secrets management (AWS Secrets Manager recommended)",
-    "Billing team: Register Stripe webhooks",
-    "Infrastructure team: Deploy monitoring (Sentry recommended)",
-    "DevOps team: Configure DNS CNAME records",
-    "DevOps team: Run health checks against real environment",
-    "QA team: Execute smoke tests in staging"
+    "INTERNAL BLOCKER: test:ci must be fixed first (293 failures, exit code 1)",
+    "Once test:ci passes (exit code 0), external 7-blocker setup can begin in parallel:",
+    "  • Database team: Provision PostgreSQL (Neon/RDS recommended)",
+    "  • DevOps team: Set up secrets management (AWS Secrets Manager recommended)",
+    "  • Billing team: Register Stripe webhooks",
+    "  • Infrastructure team: Deploy monitoring (Sentry recommended)",
+    "  • DevOps team: Configure DNS CNAME records",
+    "  • DevOps team: Run health checks against real environment",
+    "  • QA team: Execute smoke tests in staging",
+    "Timeline: test:ci fix needed before external team can proceed"
   ],
   "audit_version": "1.0",
   "audit_completed": "2026-05-22T12:15:00Z"
