@@ -42,18 +42,21 @@ export function classifyError(
   context?: Record<string, unknown>
 ): ClassifiedError {
   const now = new Date().toISOString();
-  const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-  const message = governed.operatorMessage;
+  const actualError = error instanceof Error ? error : new Error(String(error));
+  const message = actualError.message.toLowerCase();
+
+  // Classify based on ORIGINAL error message, not operator-safe version
+  // The operator-safe transformation happens elsewhere for UI display
 
   // Auth errors
   if (
-    message.includes("Unauthorized") ||
+    message.includes("unauthorized") ||
     message.includes("authentication") ||
-    message.includes("EACCES")
+    message.includes("eacces")
   ) {
     return {
       classification: "AUTH_ERROR",
-      message,
+      message: actualError.message,
       statusCode: 401,
       context,
       timestamp: now,
@@ -63,13 +66,13 @@ export function classifyError(
 
   // Authorization errors
   if (
-    message.includes("Forbidden") ||
+    message.includes("forbidden") ||
     message.includes("permission") ||
     message.includes("capability")
   ) {
     return {
       classification: "AUTH_ERROR",
-      message,
+      message: actualError.message,
       statusCode: 403,
       context,
       timestamp: now,
@@ -80,12 +83,12 @@ export function classifyError(
   // Validation errors
   if (
     message.includes("validation") ||
-    message.includes("Invalid") ||
+    message.includes("invalid") ||
     message.includes("required")
   ) {
     return {
       classification: "VALIDATION_ERROR",
-      message,
+      message: actualError.message,
       statusCode: 400,
       context,
       timestamp: now,
@@ -96,13 +99,13 @@ export function classifyError(
   // Database errors
   if (
     message.includes("database") ||
-    message.includes("ECONNREFUSED") ||
-    message.includes("ETIMEDOUT") ||
-    message.includes("Connection refused")
+    message.includes("econnrefused") ||
+    message.includes("etimedout") ||
+    message.includes("connection refused")
   ) {
     return {
       classification: "DATABASE_ERROR",
-      message,
+      message: actualError.message,
       statusCode: 503,
       context,
       timestamp: now,
@@ -112,13 +115,13 @@ export function classifyError(
 
   // External API errors
   if (
-    message.includes("HTTP") ||
+    message.includes("http") ||
     message.includes("fetch") ||
     message.includes("request timeout")
   ) {
     return {
       classification: "EXTERNAL_API_ERROR",
-      message,
+      message: actualError.message,
       statusCode: 502,
       context,
       timestamp: now,
@@ -134,7 +137,7 @@ export function classifyError(
   ) {
     return {
       classification: "WORKSPACE_ERROR",
-      message,
+      message: actualError.message,
       statusCode: 403,
       context,
       timestamp: now,
@@ -145,7 +148,7 @@ export function classifyError(
   // Default to internal error
   return {
     classification: "INTERNAL_ERROR",
-    message,
+    message: actualError.message,
     statusCode: 500,
     context,
     timestamp: now,
