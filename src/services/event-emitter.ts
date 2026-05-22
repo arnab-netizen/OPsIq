@@ -129,10 +129,10 @@ export class EventEmitterService {
           // This ensures only one transaction at a time can allocate eventNumbers for this aggregate
           // The lock is per (aggregateId, aggregateType, workspaceId) tuple
           await tx.$executeRaw`
-            INSERT INTO aggregate_locks (aggregate_id, aggregate_type, workspace_id, version)
-            VALUES (${request.aggregateId}, ${request.aggregateType}, ${request.workspaceId}, 0)
+            INSERT INTO aggregate_locks (aggregate_id, aggregate_type, workspace_id, version, updated_at)
+            VALUES (${request.aggregateId}, ${request.aggregateType}, ${request.workspaceId}, 0, CURRENT_TIMESTAMP)
             ON CONFLICT (aggregate_id, aggregate_type, workspace_id)
-            DO UPDATE SET version = aggregate_locks.version + 1
+            DO UPDATE SET version = aggregate_locks.version + 1, updated_at = CURRENT_TIMESTAMP
           `;
 
           // Step 2: Within locked transaction, find the last event number for this aggregate
