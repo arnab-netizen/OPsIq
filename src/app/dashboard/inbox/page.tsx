@@ -2,6 +2,8 @@ import { getSession } from "@/services/auth";
 import { requireWorkspaceContext } from "@/services/workspace/context";
 import { InboxClient } from "./inbox-client";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Decision Inbox | OpsIQ",
   description: "View and manage pending decisions",

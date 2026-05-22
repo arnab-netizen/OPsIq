@@ -67,6 +67,10 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
         continue-on-error: false
 
+      - name: Regenerate Prisma client after migrations
+        run: npx prisma generate
+        continue-on-error: false
+
       - name: Build project
         run: npm run build
         env:
@@ -75,55 +79,7 @@ jobs:
         continue-on-error: false
 
       - name: Run full test suite
-        run: npm test
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          NODE_ENV: test
-        continue-on-error: false
-
-      - name: Run Phase 3 - Event Sourcing Truth Verification
-        run: npm test -- phase-3-event-sourcing-truth
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          NODE_ENV: test
-        continue-on-error: false
-
-      - name: Run Phase 3 - Event Emitter Integration
-        run: npm test -- phase-3-event-emitter-integration
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          NODE_ENV: test
-        continue-on-error: false
-
-      - name: Run Phase 3 - Event Replay Engine
-        run: npm test -- phase-3-event-replay-engine
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          NODE_ENV: test
-        continue-on-error: false
-
-      - name: Run Phase 3 - Hardening Proofs
-        run: npm test -- phase-3-hardening-proofs
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          NODE_ENV: test
-        continue-on-error: false
-
-      - name: Run Phase 3 - Snapshot Engine
-        run: npm test -- phase-3-snapshot-engine
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          NODE_ENV: test
-        continue-on-error: false
-
-      - name: Run Phase 3 - Projection Engine
-        run: npm test -- phase-3-projection-engine
+        run: npm run test:ci
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
           DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test

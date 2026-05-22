@@ -59,7 +59,15 @@ async function setup() {
 }
 
 async function teardown() {
-  // No cleanup needed
+  console.log("\n📊 Cleaning up test environment...");
+  try {
+    const { getDbInstance } = await import("./src/lib/db");
+    const prisma = await getDbInstance();
+    await prisma.$disconnect();
+    console.log("  ✓ Database connection closed");
+  } catch (error) {
+    console.error("  ⚠ Error closing database connection:", error);
+  }
 }
 
 export { setup, teardown };

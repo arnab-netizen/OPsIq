@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "@/lib/db-init"; // Ensure database is initialized on server startup
 
 export const metadata: Metadata = {
   title: "OpsIQ - Governed Business Intervention OS",

@@ -18,10 +18,28 @@ jobs:
     timeout-minutes: 30
     environment: test
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+          POSTGRES_INITDB_ARGS: "-c log_min_messages=warning"
+        options: >-
+          --health-cmd "pg_isready -U postgres -d opsiq_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          --health-start-period 10s
+        ports:
+          - 5432:5432
+
     env:
       NODE_ENV: test
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      DATABASE_URL_TEST: ${{ secrets.DATABASE_URL_TEST }}
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+      DIRECT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
 
     steps:
       - name: Checkout code
