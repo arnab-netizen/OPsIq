@@ -18,13 +18,16 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
       // Create event
       const event = await db.canonicalEvent.create({
         data: {
-          workspaceId: "test-ws-append-immutable",
+          workspaceId: "a0000000-0000-0000-0000-000000000001",
           aggregateId: "test-agg-1",
+          aggregateType: "test",
           eventNumber: 1,
-          eventName: "TEST_EVENT_IMMUTABLE",
-          eventData: { originalValue: "immutable" },
-          timestamp: new Date(),
-          actor: "test-actor",
+          eventType: "TEST_EVENT_IMMUTABLE",
+          payload: { originalValue: "immutable" },
+          occurredAt: new Date(),
+          actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
         },
       });
 
@@ -33,7 +36,7 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
         where: { id: event.id },
       });
 
-      expect(updateAttempt?.eventData).toEqual({ originalValue: "immutable" });
+      expect(updateAttempt?.payload).toEqual({ originalValue: "immutable" });
       // TODO: Verify immutability at DB schema level (NOT NULL constraints, audit triggers)
     });
 
@@ -43,37 +46,46 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
       // Append 3 events
       const event1 = await db.canonicalEvent.create({
         data: {
-          workspaceId: "test-ws-monotonic",
+          workspaceId: "a0000000-0000-0000-0000-000000000002",
           aggregateId: aggId,
+          aggregateType: "test",
           eventNumber: 1,
-          eventName: "E1",
-          eventData: {},
-          timestamp: new Date(),
-          actor: "test",
+          eventType: "E1",
+          payload: {},
+          occurredAt: new Date(),
+          actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
         },
       });
 
       const event2 = await db.canonicalEvent.create({
         data: {
-          workspaceId: "test-ws-monotonic",
+          workspaceId: "a0000000-0000-0000-0000-000000000002",
           aggregateId: aggId,
+          aggregateType: "test",
           eventNumber: 2,
-          eventName: "E2",
-          eventData: {},
-          timestamp: new Date(),
-          actor: "test",
+          eventType: "E2",
+          payload: {},
+          occurredAt: new Date(),
+          actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
         },
       });
 
       const event3 = await db.canonicalEvent.create({
         data: {
-          workspaceId: "test-ws-monotonic",
+          workspaceId: "a0000000-0000-0000-0000-000000000002",
           aggregateId: aggId,
+          aggregateType: "test",
           eventNumber: 3,
-          eventName: "E3",
-          eventData: {},
-          timestamp: new Date(),
-          actor: "test",
+          eventType: "E3",
+          payload: {},
+          occurredAt: new Date(),
+          actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
         },
       });
 
@@ -93,25 +105,30 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
       // Create initial state
       const event1 = await db.canonicalEvent.create({
         data: {
-          workspaceId: "test-ws-idempotent",
+          workspaceId: "a0000000-0000-0000-0000-000000000003",
           aggregateId: aggId,
+          aggregateType: "test",
           eventNumber: 1,
-          eventName: "STATE_INITIALIZED",
-          eventData: { state: "initial" },
-          timestamp: new Date(),
-          actor: "test",
+          eventType: "STATE_INITIALIZED",
+          payload: { state: "initial" },
+          occurredAt: new Date(),
+          actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
         },
       });
 
       // Fetch first time
       const fetch1 = await db.canonicalEvent.findMany({
         where: { aggregateId: aggId },
+          aggregateType: "test",
         orderBy: { eventNumber: "asc" },
       });
 
       // Fetch second time (identical query)
       const fetch2 = await db.canonicalEvent.findMany({
         where: { aggregateId: aggId },
+          aggregateType: "test",
         orderBy: { eventNumber: "asc" },
       });
 
@@ -127,13 +144,16 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
       // First post
       const event1 = await db.canonicalEvent.create({
         data: {
-          workspaceId: "test-ws-idempotent",
+          workspaceId: "a0000000-0000-0000-0000-000000000003",
           aggregateId: aggId,
+          aggregateType: "test",
           eventNumber: 1,
-          eventName: "DUPLICATE_TEST",
-          eventData: { idempotencyKey },
-          timestamp: new Date(),
-          actor: "test",
+          eventType: "DUPLICATE_TEST",
+          payload: { idempotencyKey },
+          occurredAt: new Date(),
+          actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
         },
       });
 
@@ -141,7 +161,8 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
       const checkCount = await db.canonicalEvent.count({
         where: {
           aggregateId: aggId,
-          eventData: { equals: { idempotencyKey } },
+          aggregateType: "test",
+          payload: { equals: { idempotencyKey } },
         },
       });
 
@@ -159,35 +180,44 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
       const results = await Promise.all([
         db.canonicalEvent.create({
           data: {
-            workspaceId: "test-ws-concurrent",
+            workspaceId: "a0000000-0000-0000-0000-000000000004",
             aggregateId: aggId,
+          aggregateType: "test",
             eventNumber: 1,
-            eventName: "CONCURRENT_E1",
-            eventData: {},
-            timestamp: new Date(),
-            actor: "test",
+            eventType: "CONCURRENT_E1",
+            payload: {},
+            occurredAt: new Date(),
+            actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
           },
         }),
         db.canonicalEvent.create({
           data: {
-            workspaceId: "test-ws-concurrent",
+            workspaceId: "a0000000-0000-0000-0000-000000000004",
             aggregateId: aggId,
+          aggregateType: "test",
             eventNumber: 2,
-            eventName: "CONCURRENT_E2",
-            eventData: {},
-            timestamp: new Date(),
-            actor: "test",
+            eventType: "CONCURRENT_E2",
+            payload: {},
+            occurredAt: new Date(),
+            actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
           },
         }),
         db.canonicalEvent.create({
           data: {
-            workspaceId: "test-ws-concurrent",
+            workspaceId: "a0000000-0000-0000-0000-000000000004",
             aggregateId: aggId,
+          aggregateType: "test",
             eventNumber: 3,
-            eventName: "CONCURRENT_E3",
-            eventData: {},
-            timestamp: new Date(),
-            actor: "test",
+            eventType: "CONCURRENT_E3",
+            payload: {},
+            occurredAt: new Date(),
+            actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
           },
         }),
       ]);
@@ -195,6 +225,7 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
       // Fetch all and verify order
       const stored = await db.canonicalEvent.findMany({
         where: { aggregateId: aggId },
+          aggregateType: "test",
         orderBy: { eventNumber: "asc" },
       });
 
@@ -272,11 +303,14 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
         data: {
           workspaceId: "test-ws-isolation-a",
           aggregateId: aggIdA,
+          aggregateType: "test",
           eventNumber: 1,
-          eventName: "WS_A_EVENT",
-          eventData: { secret: "ws-a-only" },
-          timestamp: new Date(),
-          actor: "test",
+          eventType: "WS_A_EVENT",
+          payload: { secret: "ws-a-only" },
+          occurredAt: new Date(),
+          actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
         },
       });
 
@@ -285,6 +319,7 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
         where: {
           workspaceId: "test-ws-isolation-b", // Different workspace
           aggregateId: aggIdA, // Same aggregate
+          aggregateType: "test",
         },
       });
 
@@ -317,10 +352,11 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
             data: {
               workspaceId: "test-ws-stress",
               aggregateId: aggId,
+          aggregateType: "test",
               eventNumber: i,
-              eventName: `STRESS_EVENT_${i}`,
-              eventData: { sequence: i },
-              timestamp: new Date(),
+              eventType: `STRESS_EVENT_${i}`,
+              payload: { sequence: i },
+              occurredAt: new Date(),
               actor: "stress-test",
             },
           })
@@ -332,6 +368,7 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
       // Verify all 100 events exist and are ordered
       const stored = await db.canonicalEvent.findMany({
         where: { aggregateId: aggId },
+          aggregateType: "test",
         orderBy: { eventNumber: "asc" },
       });
 
@@ -374,11 +411,14 @@ describe("PHASE RP1: Real PostgreSQL Runtime Persistence Proof", () => {
         data: {
           workspaceId: "test-ws-metrics",
           aggregateId: "metrics-agg-" + Date.now(),
+          aggregateType: "test",
           eventNumber: 1,
-          eventName: "LATENCY_TEST",
-          eventData: {},
-          timestamp: new Date(),
-          actor: "test",
+          eventType: "LATENCY_TEST",
+          payload: {},
+          occurredAt: new Date(),
+          actorId: "00000000-0000-0000-0000-000000000001",
+          causationId: "00000000-0000-0000-0000-000000000002",
+          correlationId: "00000000-0000-0000-0000-000000000003",
         },
       });
 
