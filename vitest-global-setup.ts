@@ -44,18 +44,6 @@ async function setup() {
     console.log("  ℹ Prisma Client already generated");
   }
 
-  // Run database migrations
-  console.log("  → Running database migrations...");
-  try {
-    execSync("npx prisma migrate deploy", {
-      cwd: __dirname,
-      env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
-    });
-    console.log("  ✓ Database migrations completed");
-  } catch (error) {
-    console.error("  ⚠ Migration error (continuing):", error);
-  }
-
   // Initialize database connection
   console.log("  → Initializing database connection...");
   try {
