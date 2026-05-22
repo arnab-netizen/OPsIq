@@ -63,7 +63,7 @@ export const POST = withCanonicalEnforcement(
 
       return Response.json({ success: true }, { status: 201 });
     } catch (error) {
-      logger.error("Error adding evidence to bundle", { error });
+      logger.error("Error adding evidence to bundle", error);
       const idempotencyKey = ctx.request!.headers.get("idempotency-key");
       if (idempotencyKey) {
         const err = error instanceof Error ? error : new Error("Unknown error");
@@ -103,7 +103,7 @@ export const DELETE = withCanonicalEnforcement(
 
       return Response.json({ success: true });
     } catch (error) {
-      logger.error("Error removing evidence from bundle", { error });
+      logger.error("Error removing evidence from bundle", error);
       return errorToResponse(error);
     }
   },

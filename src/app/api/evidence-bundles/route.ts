@@ -55,7 +55,7 @@ export const POST = withCanonicalEnforcement(
 
       return Response.json(result, { status: 201 });
     } catch (error) {
-      logger.error("Error creating evidence bundle", { error });
+      logger.error("Error creating evidence bundle", error);
       if (ctx.request?.headers.get("idempotency-key")) {
         const err = error instanceof Error ? error : new Error("Unknown error");
         await recordIdempotencyError(ctx.request.headers.get("idempotency-key")!, err);

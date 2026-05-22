@@ -79,7 +79,7 @@ export const POST = withEnforcementFull(async (request) => {
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
     await recordIdempotencyError(idempotencyKey, err);
-    logger.error("Root cause analysis error", { error: err.message });
+    logger.error("Root cause analysis error", err.message);
     return Response.json(
       { error: err.message || "Root cause analysis failed" },
       { status: 500 }

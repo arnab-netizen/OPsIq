@@ -51,7 +51,7 @@ export async function getStartupStatus(): Promise<{
       instance_id: result.instanceId,
     };
   } catch (error) {
-    logger.error("Failed to read startup status from DB", { error });
+    logger.error("Failed to read startup status from DB", error);
     // Fail open: assume not started if we can't read DB
     return {
       status: "NOT_STARTED",
@@ -94,7 +94,7 @@ export async function setStartupStatus(
       error: options?.error,
     });
   } catch (error) {
-    logger.error("Failed to write startup status to DB", { error, status });
+    logger.error("Failed to write startup status to DB", error, { status });
     // If we can't write to DB, we still proceed but log the error
     // This prevents DB write failures from blocking startup
   }
@@ -119,6 +119,6 @@ export async function resetStartupStatus(): Promise<void> {
     });
     logger.info("[STARTUP-STATUS] Status reset");
   } catch (error) {
-    logger.error("Failed to reset startup status", { error });
+    logger.error("Failed to reset startup status", error);
   }
 }

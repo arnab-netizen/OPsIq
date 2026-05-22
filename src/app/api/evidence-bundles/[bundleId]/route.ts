@@ -21,7 +21,7 @@ export const GET = withCanonicalEnforcement(
 
       return Response.json(result);
     } catch (error) {
-      logger.error("Error getting evidence bundle", { error });
+      logger.error("Error getting evidence bundle", error);
       return errorToResponse(error);
     }
   },
@@ -41,7 +41,7 @@ export const PUT = withCanonicalEnforcement(
 
       return Response.json({ success: true });
     } catch (error) {
-      logger.error("Error updating evidence bundle", { error });
+      logger.error("Error updating evidence bundle", error);
       return errorToResponse(error);
     }
   },

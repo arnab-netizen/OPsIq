@@ -26,7 +26,7 @@ export const GET = async () => {
       },
     });
   } catch (error) {
-    logger.error("Startup probe failed", { error });
+    logger.error("Startup probe failed", error);
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
 
     return Response.json(

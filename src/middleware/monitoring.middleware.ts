@@ -84,7 +84,7 @@ export async function withMonitoringMiddleware(
       // Record failed request with 500 status
       await recordHttpRequest(endpoint, method, 500, durationMs);
 
-      logger.error("Unhandled exception in monitored endpoint", { error, endpoint, method });
+      logger.error("Unhandled exception in monitored endpoint", error, { endpoint, method });
 
       throw error;
     }

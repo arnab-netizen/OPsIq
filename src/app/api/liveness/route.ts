@@ -33,7 +33,7 @@ export const GET = async () => {
       },
     });
   } catch (error) {
-    logger.error("Liveness probe failed", { error });
+    logger.error("Liveness probe failed", error);
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
 
     return Response.json(
