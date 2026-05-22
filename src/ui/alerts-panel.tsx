@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CompactEmptyState } from "@/components/ui/GovernedEmptyState";
 
 interface Alert {
   id: string;
@@ -72,7 +73,17 @@ export function AlertsPanel({
   };
 
   if (visible.length === 0) {
-    return null;
+    return (
+      <div className="fixed bottom-4 right-4 max-w-sm z-50">
+        <CompactEmptyState
+          reason="no_actions"
+          action={{
+            label: "Refresh",
+            onClick: () => window.location.reload(),
+          }}
+        />
+      </div>
+    );
   }
 
   return (
