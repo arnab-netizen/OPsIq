@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Badge, LoadingState, ErrorState } from "@/ui/primitives";
+import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { formatRole } from "@/domain/constants/role-labels";
 
@@ -32,7 +33,9 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchProfile = () => {
+    setLoading(true);
+    setErrorDetails(null);
     fetch("/api/me")
       .then(async (res) => {
         if (!res.ok) {
@@ -49,11 +52,26 @@ export default function SettingsPage() {
         setErrorDetails(classifyOperatorError(err, { context: "load" }).operatorMessage);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchProfile();
   }, []);
 
   if (loading) return <LoadingState message="Loading profile..." />;
   if (errorDetails) return <ErrorState message={errorDetails} />; // classifyOperatorError
-  if (!me) return null;
+  if (!me) {
+    return (
+      <GovernedEmptyState
+        reason="loading_failed"
+        primaryAction={{
+          label: "Retry",
+          onClick: fetchProfile,
+        }}
+        helpText="Your profile information could not be loaded."
+      />
+    );
+  }
 
   return (
     <div>
