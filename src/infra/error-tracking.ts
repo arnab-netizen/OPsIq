@@ -217,17 +217,15 @@ export function reportError(classified: ClassifiedError): void {
  * Safely extracts request/response context without exposing sensitive data
  */
 export function extractErrorContext(error: unknown): Record<string, unknown> {
-  if (!(error instanceof Error)) {
-    const governed = classifyOperatorError(new Error(String(error)), { context: "load" });
-    return { details: governed.operatorMessage };
+  if (error instanceof Error) {
+    return {
+      message: error.message,
+      name: error.name,
+      stack: error.stack?.split("\n").slice(0, 5).join("\n"), // First 5 stack frames
+    };
   }
 
-  const governed = classifyOperatorError(error, { context: "load" });
-  return {
-    operatorMessage: governed.operatorMessage,
-    stack: error.stack?.split("\n").slice(0, 5).join("\n"), // First 5 stack frames
-    name: error.name,
-  };
+  return { rawError: String(error) };
 }
 
 /**
