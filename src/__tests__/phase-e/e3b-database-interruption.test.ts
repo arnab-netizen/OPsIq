@@ -71,10 +71,9 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
       transaction.status = "committed";
       return { committed: true, result: transaction };
     } catch (error) {
-      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       return {
         committed: false,
-        error: governed.operatorMessage,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }

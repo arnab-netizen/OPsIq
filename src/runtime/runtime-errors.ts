@@ -326,7 +326,7 @@ export function createInfrastructureError(
   requires_escalation: boolean = true,
 ): RuntimeError {
   const safeMessage = getSafeErrorMessage(message);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "INFRASTRUCTURE",
     severity: "CRITICAL",
     retryable: "RETRYABLE_WITH_BACKOFF",

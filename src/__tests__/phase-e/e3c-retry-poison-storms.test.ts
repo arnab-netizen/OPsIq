@@ -130,10 +130,9 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
         processingQueue.push(poisonMessage);
       } catch (error) {
         // Send to DLQ
-        const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
         dlq.push({
           message: poisonMessage,
-          error: governed.operatorMessage,
+          error: error instanceof Error ? error.message : String(error),
           timestamp: Date.now(),
         });
       }

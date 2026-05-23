@@ -65,11 +65,10 @@ describe("PHASE E PRIORITY 3A: Hostile Durability - Worker Crash Recovery", () =
 
       return { persisted: true, state };
     } catch (error) {
-      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
       return {
         persisted: false,
         state,
-        error: governed.operatorMessage,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
