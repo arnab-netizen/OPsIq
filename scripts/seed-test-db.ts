@@ -71,7 +71,7 @@ async function seedTestDb() {
       const { Pool, neonConfig } = await import("@neondatabase/serverless");
       const { PrismaNeon } = await import("@prisma/adapter-neon");
       const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
-      // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
+      // @ts-expect-error - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
       const adapter = new PrismaNeon(pool);
       prisma = new PrismaClient({ adapter });
     }

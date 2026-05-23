@@ -46,7 +46,6 @@ function addIntegrity(
 export const POST = withEnforcementFull(async (request: NextRequest) => {
   await withAuth();
   let decisionResult: DecisionResult | null = null;
-  let workspace;
   let userId: string | null = null;
   let logger: ReturnType<typeof createEventLogger> | null = null;
   const startTime = Date.now();
@@ -55,7 +54,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
   const executedValidations: string[] = ["variable_registry"];
 
   // Get workspace context early (fail closed if missing)
-  workspace = await requireWorkspaceContext();
+  const workspace = await requireWorkspaceContext();
 
     // Initialize logger once workspace is available
     logger = createEventLogger("api_run", workspace.workspaceId);

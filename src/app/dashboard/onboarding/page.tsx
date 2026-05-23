@@ -148,7 +148,7 @@ export default function OnboardingFlow() {
             Welcome to OpsIQ
           </h1>
           <p className="text-gray-600">
-            Let's get you started in 4 simple steps
+            Let&apos;s get you started in 4 simple steps
           </p>
         </div>
 

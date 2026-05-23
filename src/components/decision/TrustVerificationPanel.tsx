@@ -208,7 +208,7 @@ export function TrustVerificationPanel({
       {!result && (
         <div className="rounded-lg border border-border bg-muted p-2 md:p-3">
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Click "Verify Decision Integrity" to cryptographically verify that this decision
+            Click &quot;Verify Decision Integrity&quot; to cryptographically verify that this decision
             has not been tampered with and was issued by the OpsIQ engine.
           </p>
         </div>
