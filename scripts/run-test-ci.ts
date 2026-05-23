@@ -196,26 +196,54 @@ async function cleanup() {
 async function main() {
   console.log("📋 OpsIQ Test CI Runner");
   console.log("=======================\n");
+  console.log(`Process started at ${new Date().toISOString()}`);
+  console.log(`Node version: ${process.version}`);
+  console.log(`Working directory: ${process.cwd()}`);
+  console.log("");
 
   try {
     // Setup infrastructure
+    console.log("[1/5] Starting PostgreSQL...");
     await startPostgres();
+    console.log("[1/5] ✓ PostgreSQL ready\n");
+
+    console.log("[2/5] Running migrations...");
     await runMigrations();
+    console.log("[2/5] ✓ Migrations complete\n");
+
+    console.log("[3/5] Generating Prisma client...");
     await generatePrismaClient();
+    console.log("[3/5] ✓ Prisma client generated\n");
+
+    console.log("[4/5] Building Next.js...");
     await buildNextJs();
+    console.log("[4/5] ✓ Next.js build complete\n");
+
+    console.log("[5/5] Starting test server...");
     await startNextServer();
+    console.log("[5/5] ✓ Server ready\n");
 
     // Run tests
+    console.log("[TESTS] Running vitest...");
     const testsPassed = await runTests();
+    console.log(`[TESTS] ${testsPassed ? "✓" : "✗"} Tests ${testsPassed ? "passed" : "failed"}\n`);
 
     // Cleanup
+    console.log("[CLEANUP] Cleaning up infrastructure...");
     await cleanup();
+    console.log("[CLEANUP] ✓ Cleanup complete\n");
 
     // Exit with appropriate code
-    process.exit(testsPassed ? 0 : 1);
+    const exitCode = testsPassed ? 0 : 1;
+    console.log(`Test runner exiting with code: ${exitCode}`);
+    process.exit(exitCode);
   } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error("\n❌ Test runner failed:", errorMsg);
+    console.error("\n❌ FATAL ERROR in test runner");
+    console.error("Error:", errorMsg);
+    if (error instanceof Error && error.stack) {
+      console.error("Stack:", error.stack);
+    }
     await cleanup();
     process.exit(1);
   }
