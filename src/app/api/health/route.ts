@@ -17,7 +17,7 @@ export const GET = withEnforcement(async (ctx) => {
   try {
     await getDbInstance();
   } catch (error) {
-    logger.error("Failed to initialize database on health check", { error });
+    logger.error("Failed to initialize database on health check", error);
   }
 
   // Trigger retention cleanup periodically (every 6 hours) - ONLY after startup complete
@@ -28,7 +28,7 @@ export const GET = withEnforcement(async (ctx) => {
     cleanupOldRecords().catch((err) => {
       const classified = classifyError(err, { operation: "retention-cleanup" });
       reportError(classified);
-      logger.error("Retention cleanup failed", { error: err });
+      logger.error("Retention cleanup failed", err);
     });
   }
 

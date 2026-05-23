@@ -81,7 +81,7 @@ export const POST = withCanonicalEnforcement(
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
     await recordIdempotencyError(idempotencyKey, err);
-    logger.error("Archetype analysis error", { error: err.message });
+    logger.error("Archetype analysis error", err.message);
     return Response.json(
       { error: err.message || "Archetype analysis failed" },
       { status: 500 }

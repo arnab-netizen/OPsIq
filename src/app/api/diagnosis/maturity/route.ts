@@ -86,7 +86,7 @@ export const POST = withEnforcementFull(async (request) => {
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
     await recordIdempotencyError(idempotencyKey, err);
-    logger.error("Maturity analysis error", { error: err.message });
+    logger.error("Maturity analysis error", err.message);
     return Response.json(
       { error: err.message || "Maturity analysis failed" },
       { status: 500 }

@@ -36,12 +36,11 @@ export async function recordUsage(
     // TODO: Add capability-usage audit event type to domain/constants/audit-events.ts
   } catch (error) {
     // Fail open: usage tracking should not block operations
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-    logger.error("Failed to record usage", {
+    const governedError = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+    logger.error("Failed to record usage", error, {
       workspaceId,
       key,
       value,
-      error: governed.operatorMessage,
     });
   }
 }

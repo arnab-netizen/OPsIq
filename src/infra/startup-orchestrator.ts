@@ -141,7 +141,7 @@ async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
   } catch (error) {
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     const msg = governed.operatorMessage;
-    logger.error("Database connectivity check failed", { error: msg });
+    logger.error("Database connectivity check failed", new Error(msg));
     return false;
   }
 }
@@ -170,7 +170,7 @@ async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolea
   } catch (error) {
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     const msg = governed.operatorMessage;
-    logger.error("Database schema check failed", { error: msg });
+    logger.error("Database schema check failed", new Error(msg));
     return false;
   }
 }

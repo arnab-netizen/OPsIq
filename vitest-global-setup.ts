@@ -55,6 +55,10 @@ async function setup() {
     throw error;
   }
 
+  // Note: Startup status initialization is deferred to individual tests
+  // because testcontainers may not be ready yet during global setup.
+  // Each test file that needs startup status should call it in beforeAll().
+
   console.log("✓ Test environment ready\n");
 }
 

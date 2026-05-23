@@ -11,7 +11,7 @@ export const GET = async () => {
   try {
     await ensureStartupComplete();
   } catch (error) {
-    logger.error("Startup checks failed", { error });
+    logger.error("Startup checks failed", error);
     // Fall through - readiness will report startup as failed
   }
 

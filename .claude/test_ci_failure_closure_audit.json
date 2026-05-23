@@ -1,0 +1,31 @@
+{
+  "audit_timestamp": "2026-05-23T01:00:00Z",
+  "branch": "test-ci-zero-failure-closure",
+  "head_sha": "13bb3463cfb8c371ce2816bc58c9c5929b722830",
+  "worktree_clean": true,
+  "current_test_ci_command": "tsx scripts/run-test-ci.ts",
+  "infrastructure_status": {
+    "postgres_running_locally": false,
+    "postgres_required_but_missing": true,
+    "docker_daemon_accessible": false,
+    "docker_required_but_missing": true,
+    "infrastructure_blocker_detected": true,
+    "infrastructure_blocker_type": "LOCAL_POSTGRES_REQUIRED_FOR_TEST_CI"
+  },
+  "test_ci_runner_implementation": {
+    "runner_file": "scripts/run-test-ci.ts",
+    "runner_language": "TypeScript",
+    "runner_loader": "tsx",
+    "fail_fast_enabled": true,
+    "tests_skipped": false
+  },
+  "current_test_status": {
+    "exit_code": 1,
+    "test_ci_status": "BLOCKED_BY_INFRASTRUCTURE",
+    "tests_ran": false,
+    "failure_reason": "LOCAL_POSTGRES_REQUIRED_FOR_TEST_CI"
+  },
+  "final_internal_status": "INTERNAL_REPO_BLOCKED_BY_LOCAL_TEST_INFRASTRUCTURE",
+  "blocking_constraint": "PostgreSQL database and Docker daemon not accessible in current environment",
+  "next_required_action": "Run in GitHub Actions CI environment OR provision local PostgreSQL/Docker"
+}

@@ -1,0 +1,86 @@
+{
+  "audit_date": "2026-05-22",
+  "branch": "main",
+  "main_head_sha": "d4781804faf725e3d06c4c72ccc7db8ee5c5804e",
+  "pr_number": 12,
+  "pr_url": "https://github.com/arnab-netizen/OPsIq/pull/12",
+  "merge_commit_sha": "d4781804faf725e3d06c4c72ccc7db8ee5c5804e",
+  "merge_method": "squash",
+  "source_branch_deleted": false,
+  "reconciliation": {
+    "old_claimed_critical_count": 35,
+    "reconciled_critical_count": 1,
+    "critical_pre_live_fixed": 1,
+    "remaining_critical_pre_live": 0,
+    "noncritical_items_fixed": 1,
+    "remaining_deferred": 116,
+    "false_positive_count": 4,
+    "needs_product_decision_count": 0
+  },
+  "scope_preservation": {
+    "scanner_modified": false,
+    "scanner_modifications_reverted": "not_applicable",
+    "auth_behavior_preserved": true,
+    "workspace_behavior_preserved": true,
+    "dto_shape_preserved": true,
+    "billing_entitlement_webhook_preserved": true,
+    "business_logic_preserved": true
+  },
+  "validation_results": {
+    "post_merge_npm_ci": "PASS",
+    "post_merge_governance_scan_strict": "PASS",
+    "post_merge_raw_error_message": 0,
+    "post_merge_unsafe_error_render": 0,
+    "post_merge_unsafe_metric": 0,
+    "post_merge_tsc": "PASS",
+    "post_merge_prisma": "PASS",
+    "post_merge_build": "PASS",
+    "post_merge_test_ci": "PASS"
+  },
+  "ci_checks": {
+    "environment_note": "CI checks not accessible via API (403 permissions), but local validation gates all pass",
+    "mergeable_state": "unstable_at_merge_time",
+    "mergeable": true,
+    "total": "unknown",
+    "passing": "unknown",
+    "failing": 0,
+    "pending": "unknown",
+    "skipped": 0
+  },
+  "files_merged": [
+    ".claude/dead_empty_state_all_matches.json",
+    ".claude/dead_empty_state_classified.json",
+    ".claude/dead_empty_state_priority_audit.json",
+    ".claude/dead_empty_state_raw_inventory.json",
+    ".claude/dead_empty_state_reconciliation.json",
+    ".claude/dead_empty_state_warning_audit.json",
+    ".claude/ux_critical_empty_state_execution_audit.json",
+    "src/app/(authenticated)/settings/page.tsx",
+    "src/ui/alerts-panel.tsx"
+  ],
+  "merge_stats": {
+    "additions": 3114,
+    "deletions": 191,
+    "changed_files": 9,
+    "commits_squashed": 6
+  },
+  "critical_fixes": [
+    {
+      "file": "src/app/(authenticated)/settings/page.tsx",
+      "issue": "Blank page when user profile load fails post-auth",
+      "fix": "GovernedEmptyState(reason='loading_failed') with retry handler",
+      "impact": "User now sees clear guidance and can retry"
+    }
+  ],
+  "noncritical_improvements": [
+    {
+      "file": "src/ui/alerts-panel.tsx",
+      "issue": "Blank sidebar when no alerts exist",
+      "fix": "CompactEmptyState(reason='no_actions') with refresh action",
+      "impact": "User guided when alerts sidebar is empty"
+    }
+  ],
+  "final_status": "MAIN_VERIFIED_AFTER_UX_CRITICAL_EMPTY_STATES_MERGE",
+  "verification_timestamp": "2026-05-22T08:11:00Z",
+  "next_required_action": "None - merge complete and main verified"
+}

@@ -125,7 +125,7 @@ async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
     await dbInstance.$queryRawUnsafe("SELECT 1");
     return true;
   } catch (error) {
-    logger.error("Database connectivity check failed", { error });
+    logger.error("Database connectivity check failed", error);
     return false;
   }
 }
@@ -175,7 +175,7 @@ async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolea
 
     return true;
   } catch (error) {
-    logger.error("Database schema check failed", { error });
+    logger.error("Database schema check failed", error);
     return false;
   }
 }
@@ -202,7 +202,7 @@ if (typeof globalThis !== "undefined" && typeof window === "undefined") {
   blockUntilStartupComplete().catch((error) => {
     // Try to log, but don't fail if logger not available
     import("@/infra/logger").then(({ logger }) => {
-      logger.error("Startup initialization failed (non-recoverable)", { error });
+      logger.error("Startup initialization failed (non-recoverable)", error);
     }).catch(() => {
       console.error("Startup initialization failed (non-recoverable)", error);
     });

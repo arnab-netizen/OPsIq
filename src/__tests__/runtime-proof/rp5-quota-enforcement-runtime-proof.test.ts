@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 import { v4 as uuidv4 } from "uuid";
 import { db, getDbInstance } from "@/lib/db";
 
@@ -18,6 +19,7 @@ describe("Phase RP5: Quota Enforcement Runtime Proof", () => {
   let engagementId: string;
 
   beforeAll(async () => {
+    await ensureStartupStatusReady();
     await getDbInstance();
   });
 

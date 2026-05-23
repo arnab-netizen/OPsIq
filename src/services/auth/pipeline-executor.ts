@@ -163,7 +163,7 @@ export async function executeAuthPipeline(
     executionTrace: trace,
     finalState: "SESSION_INVALID", // Fallback
     finalDecision: evaluateAuthState("SESSION_INVALID", correlationId),
-    error: new UnauthorizedError("AUTH_INVALID", "Auth pipeline unexpectedly failed"),
+    error: new UnauthorizedError("UNAUTHORIZED", "Auth pipeline unexpectedly failed"),
   };
 }
 

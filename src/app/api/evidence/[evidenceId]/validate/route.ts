@@ -58,7 +58,7 @@ export const POST = withCanonicalEnforcement(
 
       return Response.json(result);
     } catch (error) {
-      logger.error("Error validating evidence", { error });
+      logger.error("Error validating evidence", error);
       return errorToResponse(error);
     }
   },

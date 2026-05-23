@@ -12,6 +12,7 @@ import { db, getDbInstance } from "@/lib/db";
 import { EventEmitterService } from "@/services/event-emitter";
 import { EventReplayEngine } from "@/services/event-replay-engine";
 import { ProjectionRebuildEngine } from "@/services/projection-rebuild-engine";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 
 describe("Phase RP3: Workspace Isolation Runtime Proof", () => {
   let ws1Id: string;
@@ -26,7 +27,7 @@ describe("Phase RP3: Workspace Isolation Runtime Proof", () => {
   let recommendation2Id: string;
 
   beforeAll(async () => {
-    await getDbInstance();
+    await ensureStartupStatusReady();
   });
 
   beforeEach(async () => {

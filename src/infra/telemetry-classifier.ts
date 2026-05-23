@@ -41,6 +41,16 @@ export interface TelemetryClassification {
  */
 function classifyLayer1Error(code: Layer1ErrorCode): TelemetryClassification {
   switch (code) {
+    case "UNAUTHORIZED":
+      return {
+        eventType: "AUTH_FAILURE",
+        telemetryClass: "AUTH_INVALID",
+        authLayer: "identity",
+        severity: "LOW",
+        securityRelevant: false,
+        infrastructureRelevant: false,
+      };
+
     case "AUTH_MISSING":
       return {
         eventType: "AUTH_FAILURE",
@@ -110,6 +120,9 @@ function classifyLayer1Error(code: Layer1ErrorCode): TelemetryClassification {
         securityRelevant: false,
         infrastructureRelevant: true,
       };
+    default:
+      const _: never = code;
+      throw new Error(`Unhandled Layer 1 error code: ${_}`);
   }
 }
 
@@ -119,6 +132,16 @@ function classifyLayer1Error(code: Layer1ErrorCode): TelemetryClassification {
  */
 function classifyLayer2Error(code: Layer2ErrorCode): TelemetryClassification {
   switch (code) {
+    case "FORBIDDEN":
+      return {
+        eventType: "WORKSPACE_DENIED",
+        telemetryClass: "WORKSPACE_DENIED",
+        authLayer: "tenant",
+        severity: "LOW",
+        securityRelevant: false,
+        infrastructureRelevant: false,
+      };
+
     case "WORKSPACE_MISSING":
       return {
         eventType: "WORKSPACE_DENIED",
@@ -188,6 +211,9 @@ function classifyLayer2Error(code: Layer2ErrorCode): TelemetryClassification {
         securityRelevant: false,
         infrastructureRelevant: true,
       };
+    default:
+      const _: never = code;
+      throw new Error(`Unhandled Layer 2 error code: ${_}`);
   }
 }
 

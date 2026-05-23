@@ -129,10 +129,10 @@ export class EventEmitterService {
           // This ensures only one transaction at a time can allocate eventNumbers for this aggregate
           // The lock is per (aggregateId, aggregateType, workspaceId) tuple
           await tx.$executeRaw`
-            INSERT INTO aggregate_locks (aggregate_id, aggregate_type, workspace_id, version)
-            VALUES (${request.aggregateId}, ${request.aggregateType}, ${request.workspaceId}, 0)
+            INSERT INTO aggregate_locks (aggregate_id, aggregate_type, workspace_id, version, updated_at)
+            VALUES (${request.aggregateId}, ${request.aggregateType}, ${request.workspaceId}, 0, CURRENT_TIMESTAMP)
             ON CONFLICT (aggregate_id, aggregate_type, workspace_id)
-            DO UPDATE SET version = aggregate_locks.version + 1
+            DO UPDATE SET version = aggregate_locks.version + 1, updated_at = CURRENT_TIMESTAMP
           `;
 
           // Step 2: Within locked transaction, find the last event number for this aggregate
@@ -273,5 +273,43 @@ export class EventEmitterService {
       occurredAt: event.occurredAt,
       recordedAt: event.recordedAt,
     };
+  }
+
+  /**
+   * Retrieve all events for an aggregate in order
+   * Respects workspace isolation
+   */
+  static async getAggregateEvents(
+    aggregateId: string,
+    aggregateType: string,
+    workspaceId: string
+  ): Promise<EmittedEvent[]> {
+    const events = await db.canonicalEvent.findMany({
+      where: {
+        aggregateId,
+        aggregateType,
+        workspaceId,
+      },
+      orderBy: { eventNumber: "asc" },
+    });
+
+    return events.map((event: any) => ({
+      id: event.id,
+      aggregateId: event.aggregateId,
+      aggregateType: event.aggregateType,
+      eventType: event.eventType,
+      eventVersion: event.eventVersion,
+      eventNumber: event.eventNumber,
+      payload: event.payload as EventPayload,
+      actorId: event.actorId,
+      workspaceId: event.workspaceId,
+      causationId: event.causationId,
+      correlationId: event.correlationId,
+      idempotencyKey: event.idempotencyKey || undefined,
+      visibilityScope: event.visibilityScope,
+      sensitivityClassification: event.sensitivityClassification,
+      occurredAt: event.occurredAt,
+      recordedAt: event.recordedAt,
+    }));
   }
 }

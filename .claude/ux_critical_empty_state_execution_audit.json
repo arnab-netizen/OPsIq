@@ -1,0 +1,119 @@
+{
+  "audit_date": "2026-05-22",
+  "audit_version": "FINAL",
+  "reconciliation": {
+    "old_claimed_warnings_total": 120,
+    "reconciled_warnings_total": 119,
+    "old_claimed_critical_count": 35,
+    "reconciled_critical_count": 1,
+    "old_claimed_deferred_count": 85,
+    "reconciled_deferred_count": 116,
+    "false_positive_count": 4,
+    "needs_product_decision_count": 0,
+    "noncritical_items_fixed": 1,
+    "reconciliation_notes": "Manual audit found only 1 genuine pre-live UX critical blocker. Prior '35 critical' claim was unsupported by itemized inventory. Additional non-critical improvement (alerts-panel) also made."
+  },
+  "critical_items_fixed": [
+    {
+      "id": "CRITICAL-settings-page",
+      "file": "src/app/(authenticated)/settings/page.tsx",
+      "line": 56,
+      "issue": "return null on profile load failure (post-auth, no guidance)",
+      "pattern": "guard_clause_null",
+      "surface": "authenticated_route",
+      "route_or_component": "/settings",
+      "user_flow": "User loads settings page after successful auth → profile fetch fails → blank page with no guidance",
+      "user_facing": true,
+      "authenticated_flow": true,
+      "user_impact": "User cannot understand why page is blank, no next action available",
+      "fix": "Replaced 'return null' with GovernedEmptyState(reason='loading_failed', primaryAction=Retry)",
+      "fix_summary": "Added GovernedEmptyState component with retry handler",
+      "empty_state_component_used": "GovernedEmptyState",
+      "user_guidance_added": true,
+      "auth_workspace_behavior_preserved": true,
+      "business_logic_changed": false,
+      "status": "FIXED",
+      "priority": "critical",
+      "classification": "UX_BLOCKER_FIX_BEFORE_LIVE"
+    }
+  ],
+  "noncritical_items_fixed": [
+    {
+      "id": "IMPROVEMENT-alerts-panel",
+      "file": "src/ui/alerts-panel.tsx",
+      "line": 75,
+      "issue": "return null when visible.length === 0 (sidebar component, confusing when empty)",
+      "pattern": "conditional_null",
+      "surface": "ui_component",
+      "route_or_component": "AlertsPanel",
+      "user_flow": "User views alerts panel → no alerts exist → blank space with no indication",
+      "user_facing": true,
+      "critical_for_live": false,
+      "user_impact": "User confused about alerts panel state, no guidance available",
+      "fix": "Replaced 'return null' with CompactEmptyState(reason='no_actions', action=Refresh)",
+      "fix_summary": "Added CompactEmptyState component with refresh action",
+      "empty_state_component_used": "CompactEmptyState",
+      "user_guidance_added": true,
+      "auth_workspace_behavior_preserved": true,
+      "business_logic_changed": false,
+      "status": "FIXED",
+      "priority": "medium",
+      "classification": "UX_IMPROVEMENT_POLISH"
+    }
+  ],
+  "deferred_items": [
+    {
+      "id": "FP-kpi-trend-helper",
+      "file": "src/ui/kpi-trend.tsx:57",
+      "classification": "FALSE_POSITIVE",
+      "reason": "Helper function (getTrendDirection), returns null when <2 snapshots - intentional, component handles"
+    },
+    {
+      "id": "FP-decision-modal-helper",
+      "file": "src/ui/decision-acceptance-modal.tsx:110",
+      "classification": "FALSE_POSITIVE",
+      "reason": "Helper function (getRiskMessage), returns null for low risk - intentional design"
+    },
+    {
+      "id": "FP-modal-conditional",
+      "file": "src/ui/primitives/modal.tsx:32",
+      "classification": "FALSE_POSITIVE",
+      "reason": "Legitimate conditional render - modal returns null when isOpen is false"
+    },
+    {
+      "id": "FP-decision-detail-guardrail",
+      "file": "src/app/dashboard/decision/[id]/DecisionDetailView.tsx:286",
+      "classification": "FALSE_POSITIVE",
+      "reason": "Helper function (guardrail parser), returns null for missing data - intentional"
+    }
+  ],
+  "properly_handled_items": [
+    {
+      "file": "src/app/(authenticated)/clients/[clientId]/page.tsx:16",
+      "reason": "Fetch function returns null, page handles with notFound() at line 24"
+    },
+    {
+      "file": "src/app/(authenticated)/leads/[leadId]/page.tsx:18",
+      "reason": "Fetch function returns null, page handles with notFound()"
+    },
+    {
+      "file": "src/app/(authenticated)/engagements/[engagementId]/page.tsx:37",
+      "reason": "Fetch function returns null, page handles with notFound()"
+    },
+    {
+      "file": "src/app/(authenticated)/deliverables/[deliverableId]/page.tsx:17",
+      "reason": "Fetch function returns null, page handles with notFound()"
+    }
+  ],
+  "statistics": {
+    "critical_items_total": 1,
+    "critical_items_fixed": 1,
+    "noncritical_items_fixed": 1,
+    "fixed_items_total": 2,
+    "open_items_total": 0,
+    "deferred_critical_items": 0,
+    "skipped_critical_items": 0,
+    "remaining_critical_pre_live": 0
+  },
+  "validation_status": "READY_FOR_PR"
+}

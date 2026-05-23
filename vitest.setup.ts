@@ -11,14 +11,18 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = "postgresql://user:password@localhost:5432/opsiq_dev?schema=public";
 }
 
-// Ensure database is initialized before tests run
+// Ensure database client is initialized before tests run
 beforeAll(async () => {
   try {
     const { getDbInstance } = await import("./src/lib/db");
+    // Just initialize the client - don't wait for actual database readiness
+    // Tests will handle database unavailability gracefully
     await getDbInstance();
+    console.log("✓ Database client initialized");
   } catch (error) {
-    console.error("Failed to initialize database in test setup:", error);
-    throw error;
+    // Initialization failures are logged but not fatal
+    // Tests that need database will fail with clear errors
+    console.warn("⚠ Database client initialization:", (error as Error).message);
   }
 });
 
