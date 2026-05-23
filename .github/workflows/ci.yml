@@ -41,26 +41,38 @@ jobs:
           npm --version
           echo ""
           echo "=== Environment ==="
-          echo "DATABASE_URL present: $([ -z "$DATABASE_URL" ] && echo false || echo true)"
-          echo "DIRECT_DATABASE_URL present: $([ -z "$DIRECT_DATABASE_URL" ] && echo false || echo true)"
+          if [ -z "$DATABASE_URL" ]; then echo "DATABASE_URL: not set"; else echo "DATABASE_URL: set"; fi
+          if [ -z "$DIRECT_DATABASE_URL" ]; then echo "DIRECT_DATABASE_URL: not set"; else echo "DIRECT_DATABASE_URL: set"; fi
           echo "TEST_WITH_DB: ${TEST_WITH_DB:-unset}"
           echo "CI: ${CI:-unset}"
           echo "NODE_ENV: ${NODE_ENV:-unset}"
           echo "SKIP_ENV_VALIDATION: ${SKIP_ENV_VALIDATION:-unset}"
+          echo ""
+          echo "=== PATH ==="
+          echo "$PATH" | head -c 100
 
       - name: Governance compliance scan
         run: npm run governance:scan:strict
         continue-on-error: false
 
       - name: Run full test suite with build
-        run: npm run test:ci 2>&1 | tee test-ci-output.log
+        run: |
+          set -e
+          echo "Starting test:ci runner..."
+          npm run test:ci 2>&1 | tee test-ci-output.log
+          exit_code=${PIPESTATUS[0]}
+          echo "test:ci exit code: $exit_code"
+          exit $exit_code
         continue-on-error: false
 
       - name: Print test:ci output on failure
         if: failure()
         run: |
-          echo "=== Last 300 lines of test:ci output ==="
-          tail -300 test-ci-output.log || true
+          echo "=== Last 500 lines of test:ci output ==="
+          tail -500 test-ci-output.log || cat test-ci-output.log || echo "No output file found"
+          echo ""
+          echo "=== test:ci-output.log size ==="
+          ls -lh test-ci-output.log || echo "File does not exist"
 
       - name: Upload test diagnostics
         if: always()
