@@ -1,0 +1,29 @@
+{
+  "base_main_sha": "ca1e59e782aa74f97ec3fa4b8914904e22ca1f04",
+  "branch": "lint-baseline-closure",
+  "eslint_config_fixed": true,
+  "lint_exit_code_before_fix": 1,
+  "lint_error_count_before_fix": 1267,
+  "lint_warning_count_before_fix": 1059,
+  "lint_error_count_after_autofix": 1171,
+  "lint_warning_count_after_autofix": 1058,
+  "autofix_progress": "Reduced 1267 → 1171 errors (96 auto-fixed)",
+  "remaining_error_breakdown": {
+    "no-explicit-any": 1083,
+    "no-unused-vars": 1055,
+    "import-errors": 41,
+    "no-require-imports": 17,
+    "no-unsafe-function-type": 4,
+    "no-non-null-asserted-optional-chain": 4,
+    "no-empty-object-type": 4,
+    "no-unescaped-entities": 3,
+    "ban-ts-comment": 2,
+    "other": 5
+  },
+  "top_affected_files": [
+    "src/app/control/page.tsx (27 errors)",
+    "src/hooks/useOperatorMutation.tsx (3 errors)",
+    "src/app/dashboard/inbox/inbox-client.tsx (3 errors)"
+  ],
+  "analysis": "The majority of remaining errors (1083) are 'no-explicit-any' which require proper TypeScript type annotations throughout the codebase. This is a pre-existing code quality issue affecting hundreds of files across src/, tests/, and utility files. Auto-fix resolved 96 errors but 2229 total problems remain (1171 errors + 1058 warnings)."
+}
