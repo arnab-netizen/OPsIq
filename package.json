@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "lint:ratchet": "node scripts/lint-ratchet.mjs",
     "validate:deployment": "tsx scripts/validate-deployment.ts",
     "db:generate": "prisma generate",
     "db:migrate:dev": "prisma migrate dev",
