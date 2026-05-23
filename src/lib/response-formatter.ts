@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 
-export interface MutationResponse<T = any> {
+export interface MutationResponse<T = unknown> {
   data: T;
   meta: {
     id: string;
@@ -31,7 +31,7 @@ export async function createMutationResponse<T extends { id: string; version: nu
   };
 }
 
-export interface ListResponse<T = any> {
+export interface ListResponse<T = unknown> {
   items: T[];
   pagination: {
     limit: number;

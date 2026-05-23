@@ -135,7 +135,7 @@ export async function getControlSurface(
     )
   );
 
-  const validControls = controls.filter((c): c is any => c !== null);
+  const validControls = controls.filter((c): c is unknown => c !== null);
 
   // Build topActions: high priority, not blocked
   const topActions: ActionItem[] = validControls
