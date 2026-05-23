@@ -1,0 +1,65 @@
+{
+  "timestamp": "2026-05-23T22:38:15.397Z",
+  "node_version": "v22.22.2",
+  "npm_version": "10.9.7",
+  "environment_checks": [
+    {
+      "name": "NODE_ENV",
+      "category": "REQUIRED",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "DATABASE_URL",
+      "category": "EXTERNAL_RUNTIME_REQUIRED",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "NEXTAUTH_SECRET",
+      "category": "REQUIRED",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "NEXTAUTH_URL",
+      "category": "EXTERNAL_RUNTIME_REQUIRED",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "SKIP_ENV_VALIDATION",
+      "category": "LOCAL_ONLY",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "STRIPE_SECRET_KEY",
+      "category": "OPTIONAL",
+      "present": false,
+      "value": "[NOT SET]"
+    },
+    {
+      "name": "STRIPE_PUBLISHABLE_KEY",
+      "category": "OPTIONAL",
+      "present": false,
+      "value": "[NOT SET]"
+    }
+  ],
+  "package_integrity": {
+    "package_json_exists": true,
+    "node_modules_exists": true,
+    "package_lock_exists": true
+  },
+  "prisma_schema_valid": true,
+  "prisma_migrations_status": "DATABASE_URL_NOT_SET",
+  "overall_status": "BLOCKED",
+  "blockers": [
+    "Required env NODE_ENV not set",
+    "Required env NEXTAUTH_SECRET not set"
+  ],
+  "warnings": [
+    "External runtime env DATABASE_URL not set - will be needed at deployment",
+    "External runtime env NEXTAUTH_URL not set - will be needed at deployment"
+  ]
+}
