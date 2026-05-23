@@ -479,7 +479,7 @@ describe("Experiment Lifecycle Service", () => {
 
   describe("analyzeOutcome", () => {
     it("should classify as success when threshold met", () => {
-      let experiment = { id: "exp-1", workspaceId: "ws-123", engagementId: "eng-456", status: "analyzed" as const, name: "Test" } as Experiment;
+      const experiment = { id: "exp-1", workspaceId: "ws-123", engagementId: "eng-456", status: "analyzed" as const, name: "Test" } as Experiment;
       experiment.plan = basePlan;
       experiment.result = {
         classification: "success",
@@ -500,7 +500,7 @@ describe("Experiment Lifecycle Service", () => {
     });
 
     it("should classify as partial when between thresholds", () => {
-      let experiment = { id: "exp-1", workspaceId: "ws-123", engagementId: "eng-456", status: "analyzed" as const, name: "Test" } as Experiment;
+      const experiment = { id: "exp-1", workspaceId: "ws-123", engagementId: "eng-456", status: "analyzed" as const, name: "Test" } as Experiment;
       experiment.plan = basePlan;
       experiment.result = {
         classification: "partial",
@@ -521,7 +521,7 @@ describe("Experiment Lifecycle Service", () => {
     });
 
     it("should classify as failure when below failure threshold", () => {
-      let experiment = { id: "exp-1", workspaceId: "ws-123", engagementId: "eng-456", status: "analyzed" as const, name: "Test" } as Experiment;
+      const experiment = { id: "exp-1", workspaceId: "ws-123", engagementId: "eng-456", status: "analyzed" as const, name: "Test" } as Experiment;
       experiment.plan = basePlan;
       experiment.result = {
         classification: "failure",
@@ -542,7 +542,7 @@ describe("Experiment Lifecycle Service", () => {
     });
 
     it("should override to inconclusive if confidence low", () => {
-      let experiment = { id: "exp-1", workspaceId: "ws-123", engagementId: "eng-456", status: "analyzed" as const, name: "Test" } as Experiment;
+      const experiment = { id: "exp-1", workspaceId: "ws-123", engagementId: "eng-456", status: "analyzed" as const, name: "Test" } as Experiment;
       experiment.plan = basePlan;
       experiment.result = {
         classification: "success",

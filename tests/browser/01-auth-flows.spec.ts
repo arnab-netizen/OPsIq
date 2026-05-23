@@ -9,7 +9,7 @@ import {
 } from './helpers';
 
 test.describe('PHASE B: Authentication Flow Runtime', () => {
-  let authTimings: any[] = [];
+  const authTimings: any[] = [];
 
   test('1. Login flow - valid credentials', async ({ page, context }) => {
     const startTime = Date.now();

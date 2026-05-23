@@ -33,7 +33,7 @@ export function arbitrateConstraintConflict(
   }
 
   // Determine resolution
-  let resolution: "SUPPRESS_LOWER" | "ESCALATE" | "BUFFER" | "SEQUENCE" = "SUPPRESS_LOWER";
+  const resolution: "SUPPRESS_LOWER" | "ESCALATE" | "BUFFER" | "SEQUENCE" = "SUPPRESS_LOWER";
   let suppressed_recommendation_id: string | undefined;
 
   if (priority_a > priority_b) {

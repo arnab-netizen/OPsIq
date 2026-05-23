@@ -414,7 +414,7 @@ describe("PHASE E PRIORITY 5: Tenant Isolation Under Hostile Load", () => {
       ];
 
       // Replay A's events
-      let stateA = { members: 0, decisions: 0, tenant_id: "org-a" };
+      const stateA = { members: 0, decisions: 0, tenant_id: "org-a" };
       for (const evt of eventsA) {
         if (evt.tenant_id === "org-a") {
           if (evt.action === "member_added") stateA.members++;
@@ -423,7 +423,7 @@ describe("PHASE E PRIORITY 5: Tenant Isolation Under Hostile Load", () => {
       }
 
       // Replay B's events (separately)
-      let stateB = { members: 0, decisions: 0, tenant_id: "org-b" };
+      const stateB = { members: 0, decisions: 0, tenant_id: "org-b" };
       for (const evt of eventsB) {
         if (evt.tenant_id === "org-b") {
           if (evt.action === "member_added") stateB.members++;

@@ -71,7 +71,7 @@ export async function executeAuthPipeline(
 ): Promise<AuthPipelineResult> {
   const correlationId = options.correlationId || "unknown";
   const trace: AuthExecutionStage[] = [];
-  let currentState = authState;
+  const currentState = authState;
   let terminated = false;
 
   while (!terminated) {

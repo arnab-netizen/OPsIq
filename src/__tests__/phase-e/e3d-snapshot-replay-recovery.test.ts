@@ -74,7 +74,7 @@ describe("PHASE E PRIORITY 3D: Hostile Durability - Snapshot + Replay Recovery",
       ];
 
       // Since snapshot invalid, use event replay
-      let replayedState = { events_applied: 0 };
+      const replayedState = { events_applied: 0 };
       if (!snapshot.valid) {
         for (const evt of events) {
           replayedState.events_applied++;
@@ -98,7 +98,7 @@ describe("PHASE E PRIORITY 3D: Hostile Durability - Snapshot + Replay Recovery",
       ];
 
       // Path 1: Replay all events from start
-      let state1 = { count: 0, checksum: "" };
+      const state1 = { count: 0, checksum: "" };
       for (const evt of allEvents) {
         state1.count++;
       }
@@ -111,7 +111,7 @@ describe("PHASE E PRIORITY 3D: Hostile Durability - Snapshot + Replay Recovery",
       const snapshotAtSeq3 = { count: 3, lastSeq: 3 };
       const deltaEvents = allEvents.slice(3); // Events 4-5
 
-      let state2 = { count: snapshotAtSeq3.count, checksum: "" };
+      const state2 = { count: snapshotAtSeq3.count, checksum: "" };
       for (const evt of deltaEvents) {
         state2.count++;
       }
@@ -134,7 +134,7 @@ describe("PHASE E PRIORITY 3D: Hostile Durability - Snapshot + Replay Recovery",
       ];
 
       // Correct replay
-      let correctState = { seq: 3, member_count: 10 };
+      const correctState = { seq: 3, member_count: 10 };
       for (const evt of correctDelta) {
         correctState.member_count++;
       }
@@ -145,7 +145,7 @@ describe("PHASE E PRIORITY 3D: Hostile Durability - Snapshot + Replay Recovery",
         { seq: 5, action: "remove_member" }, // WRONG!
       ];
 
-      let wrongState = { seq: 3, member_count: 10 };
+      const wrongState = { seq: 3, member_count: 10 };
       for (const evt of wrongDelta) {
         wrongState.member_count--;
       }
@@ -201,7 +201,7 @@ describe("PHASE E PRIORITY 3D: Hostile Durability - Snapshot + Replay Recovery",
   describe("3D.4: Snapshot Generation Interruption", () => {
     it("should not finalize incomplete snapshot", async () => {
       // HOSTILE TEST: Snapshot generation interrupted mid-way
-      let snapshot = {
+      const snapshot = {
         id: "snap-incomplete",
         started: true,
         events_serialized: 0,
@@ -262,14 +262,14 @@ describe("PHASE E PRIORITY 3D: Hostile Durability - Snapshot + Replay Recovery",
       }));
 
       // Path A: Snapshot + delta
-      let stateA = { count: snapshot.seq };
+      const stateA = { count: snapshot.seq };
       const deltaA = allEvents.filter((e) => e.seq > snapshot.seq); // seq > 100: events 101-150
       for (const evt of deltaA) {
         stateA.count++;
       }
 
       // Path B: Full replay
-      let stateB = { count: 0 };
+      const stateB = { count: 0 };
       for (const evt of allEvents) {
         stateB.count++;
       }
@@ -377,7 +377,7 @@ describe("PHASE E PRIORITY 3D: Hostile Durability - Snapshot + Replay Recovery",
       const recoveryEvents = intervalsAfterSnapshot.filter((e) => e.timestamp <= targetTimestamp);
 
       // Apply to snapshot
-      let recoveredState = { ...oldSnapshot.state };
+      const recoveredState = { ...oldSnapshot.state };
       for (const evt of recoveryEvents) {
         if (evt.action === "add_member") {
           recoveredState.member_count++;
@@ -417,7 +417,7 @@ describe("PHASE E PRIORITY 3D: Hostile Durability - Snapshot + Replay Recovery",
       }));
 
       // Full event replay
-      let replayState = { total: 0 };
+      const replayState = { total: 0 };
       for (const evt of events) {
         replayState.total += evt.increment;
       }
@@ -446,7 +446,7 @@ describe("PHASE E PRIORITY 3D: Hostile Durability - Snapshot + Replay Recovery",
       ];
 
       // Correct replay
-      let correctState = { count: 0 };
+      const correctState = { count: 0 };
       for (const evt of events) {
         correctState.count++;
       }

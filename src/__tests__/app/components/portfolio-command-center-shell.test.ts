@@ -420,7 +420,7 @@ describe("Portfolio Command Center Shell - Component Existence", () => {
 describe("Portfolio Command Center Shell - Real-World Scenarios", () => {
   it("models a healthy portfolio with low risk", () => {
     const portfolio = generateMockPortfolioView();
-    let isHealthy =
+    const isHealthy =
       portfolio.averageHealth >= 75 &&
       portfolio.criticalCount === 0;
     if (isHealthy) {

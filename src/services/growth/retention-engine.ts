@@ -161,7 +161,7 @@ export class RetentionEngine {
     }
 
     const avgChurn = metrics.avgMonthlyChurn || 0;
-    let churnScore = avgChurn * 100;
+    const churnScore = avgChurn * 100;
     let riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
     let interventionUrgency: "IMMEDIATE" | "URGENT" | "PLANNED" | "MONITOR";
 

@@ -199,7 +199,7 @@ export function identifyCriticalIssues(
 
   for (const record of criticalRecords) {
     let impactType = "operation";
-    let severity = "critical";
+    const severity = "critical";
     let recommendation = "Review immediately";
 
     if (record.type === "financial" || record.metric?.includes("revenue")) {

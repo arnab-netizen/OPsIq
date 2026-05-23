@@ -233,7 +233,7 @@ describe("Entitlement Service", () => {
         incrementQuotaUsage("workspace-1", "user-1", "action");
       }
 
-      let result = canCreateAction("workspace-1", "user-1");
+      const result = canCreateAction("workspace-1", "user-1");
       expect(result.allowed).toBe(false);
       expect(result.remaining).toBe(0);
     });

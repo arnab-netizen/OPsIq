@@ -10,7 +10,7 @@ import path from "path";
 import { PUBLIC_ROUTE_EXEMPTIONS, EXEMPTION_REASONS } from "@/domain/constants/public-route-exemptions";
 
 describe("Route Security Scanner", () => {
-  let allRouteFiles: Array<{ path: string; file: string; content: string }> = [];
+  const allRouteFiles: Array<{ path: string; file: string; content: string }> = [];
 
   beforeAll(() => {
     const apiDir = path.join(process.cwd(), "src/app/api");

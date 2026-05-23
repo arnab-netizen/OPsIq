@@ -10,7 +10,7 @@ import {
 } from './helpers';
 
 test.describe('PHASE D: Multi-User Concurrent Execution', () => {
-  let concurrencyMetrics: any[] = [];
+  const concurrencyMetrics: any[] = [];
 
   test('1. Two-user concurrent workflows', async ({ browser }) => {
     const startTime = Date.now();

@@ -457,7 +457,7 @@ describe("PHASE 5: Audit Flood Protection", () => {
 
     it("should preserve critical incidents under attack", () => {
       // TIER_1 events should always persist regardless of sampling
-      for (let escalationState of ["NORMAL", "ELEVATED", "HIGH", "CRITICAL"] as const) {
+      for (const escalationState of ["NORMAL", "ELEVATED", "HIGH", "CRITICAL"] as const) {
         expect(shouldPersistAuditEvent("AUTH_REVOKED", escalationState, false)).toBe(true);
         expect(shouldPersistAuditEvent("SESSION_TAMPERED", escalationState, false)).toBe(true);
       }

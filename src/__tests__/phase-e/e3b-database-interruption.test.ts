@@ -41,7 +41,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
       }
 
       // Phase 2: Begin transaction
-      let transaction = {
+      const transaction = {
         id: crypto.randomBytes(8).toString("hex"),
         status: "active",
         writes: 0,
@@ -144,7 +144,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
 
     it("should detect in-flight transaction and rollback", async () => {
       // HOSTILE TEST: Connection lost mid-transaction
-      let txState = {
+      const txState = {
         started: false,
         writes: 0,
         committed: false,
@@ -227,7 +227,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
       };
 
       // Transaction A attempts update
-      let txA_result = executeDbTransaction("update_workspace", "deadlock");
+      const txA_result = executeDbTransaction("update_workspace", "deadlock");
       expect(txA_result.committed).toBe(false);
       expect(txA_result.error).toContain("Deadlock");
 
@@ -240,7 +240,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
 
     it("should not corrupt row when deadlock interrupts update", async () => {
       // HOSTILE TEST: Deadlock rolls back, row integrity maintained
-      let row = {
+      const row = {
         id: "row-123",
         value: 100,
         version: 1,
@@ -327,7 +327,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
   describe("3B.6: Connection Pool Exhaustion", () => {
     it("should queue requests when pool exhausted", async () => {
       // HOSTILE TEST: Connection pool full, queue waiting requests
-      let connectionPool = {
+      const connectionPool = {
         available: 5,
         total: 10,
         waitQueue: [] as any[],
@@ -360,7 +360,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
 
     it("should not timeout requests in queue", async () => {
       // HOSTILE TEST: Queued requests don't timeout while waiting
-      let queue = [] as any[];
+      const queue = [] as any[];
       let processed = 0;
 
       // Add 3 requests to queue
@@ -388,7 +388,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
   describe("3B.7: Transaction Rollback During Operation", () => {
     it("should cleanup resources on rollback", async () => {
       // HOSTILE TEST: Transaction rolls back mid-operation
-      let txState = {
+      const txState = {
         locks_acquired: [] as string[],
         rows_updated: 0,
         committed: false,
@@ -494,7 +494,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
   describe("3B.9: Network Timeout on Commit", () => {
     it("should retry commit after network timeout", async () => {
       // HOSTILE TEST: Commit message times out, retry on new connection
-      let transaction = {
+      const transaction = {
         prepared: true,
         committed: false,
         retries: 0,
@@ -541,7 +541,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
   describe("3B.10: Partial Write (Disk Full Scenario)", () => {
     it("should detect incomplete write on disk full", async () => {
       // HOSTILE TEST: Write fails mid-way due to disk full
-      let buffer: any[] = [];
+      const buffer: any[] = [];
       const maxSize = 100;
 
       try {
@@ -562,7 +562,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
 
     it("should rollback on incomplete write", async () => {
       // HOSTILE TEST: Incomplete write detected and rolled back
-      let database = {
+      const database = {
         records: [] as any[],
         lastGoodSnapshot: 0,
       };

@@ -1,7 +1,7 @@
 import { Entity, EntityLink } from "@/domain/entity/types";
 
-let entityStore: Entity[] = [];
-let linkStore: EntityLink[] = [];
+const entityStore: Entity[] = [];
+const linkStore: EntityLink[] = [];
 
 export function createEntity(entity: Entity): void {
   entityStore.push(entity);

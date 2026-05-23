@@ -211,7 +211,7 @@ describe("Rate Limiting Middleware", () => {
       }
 
       // Same workspace, workspace limit affected
-      let wsResult = checkWorkspaceRateLimit("ws-1", "free");
+      const wsResult = checkWorkspaceRateLimit("ws-1", "free");
       expect(wsResult.remaining).toBeLessThan(
         getTierConfig("free").limits.requestsPerHour
       );
@@ -221,7 +221,7 @@ describe("Rate Limiting Middleware", () => {
         checkIpRateLimit("192.168.1.1");
       }
 
-      let ipResult = checkIpRateLimit("192.168.1.1");
+      const ipResult = checkIpRateLimit("192.168.1.1");
       expect(ipResult.remaining).toBeLessThan(1000);
     });
 
@@ -266,14 +266,14 @@ describe("Rate Limiting Middleware", () => {
         checkWorkspaceRateLimit("ws-1", "free");
       }
 
-      let result1 = checkWorkspaceRateLimit("ws-1", "free");
+      const result1 = checkWorkspaceRateLimit("ws-1", "free");
       const remaining1 = result1.remaining;
 
       // Wait 2 seconds to allow refill (refill rate = limit/3600 tokens/sec)
       // At 2 seconds with 1000/3600 ≈ 0.28 tokens/sec, we should get ~0.56 tokens
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      let result2 = checkWorkspaceRateLimit("ws-1", "free");
+      const result2 = checkWorkspaceRateLimit("ws-1", "free");
       const remaining2 = result2.remaining;
 
       // Tokens should not decrease from refill + consume

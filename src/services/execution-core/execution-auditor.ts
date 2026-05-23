@@ -100,7 +100,7 @@ export class ExecutionAuditor {
     }
 
     // Apply remaining filters
-    let matchingEvents: ExecutionAuditEvent[] = [];
+    const matchingEvents: ExecutionAuditEvent[] = [];
 
     for (const eventId of candidateIds) {
       const event = this.events.get(eventId);

@@ -24,7 +24,7 @@ import crypto from "crypto";
  */
 
 describe("PHASE E.RUNTIME: Real Stack Verification", () => {
-  let appProcess: any = null;
+  const appProcess: any = null;
   let appStarted = false;
   let dbAvailable = false;
 
