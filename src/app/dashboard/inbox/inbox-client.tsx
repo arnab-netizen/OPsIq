@@ -68,8 +68,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
       const data: InboxResponse = await response.json();
       return { success: true, decisions: data.decisions, total: data.total, error: null };
     } catch (err) {
-      const governed = classifyOperatorError(err instanceof Error ? err : new Error("Failed to fetch decisions"), { context: "load" });
-      return { success: false, decisions: [], total: 0, error: governed.operatorMessage };
+      return { success: false, decisions: [], total: 0, error: classifyOperatorError(err instanceof Error ? err : new Error("Failed to fetch decisions"), { context: "load" }).operatorMessage };
     }
   }, [limit, selectedStatus, page, workspaceId]);
 

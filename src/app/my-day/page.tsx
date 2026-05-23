@@ -33,15 +33,13 @@ export default function MyDayPage() {
 
       if (!response.ok) {
         const errorData = data as MyDayError;
-        const governed = classifyOperatorError(new Error(errorData.error || 'Failed to fetch My Day items'), { context: "load" });
-        return { success: false, items: [], error: governed.operatorMessage };
+        return { success: false, items: [], error: classifyOperatorError(new Error(errorData.error || 'Failed to fetch My Day items'), { context: "load" }).operatorMessage };
       }
 
       const myDayData = data as MyDayResponse;
       return { success: true, items: myDayData.items, error: null };
     } catch (err) {
-      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
-      return { success: false, items: [], error: `Error: ${governed.operatorMessage}` };
+      return { success: false, items: [], error: `Error: ${classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' }).operatorMessage}` };
     }
   }, []);
 

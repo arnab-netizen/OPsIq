@@ -59,8 +59,7 @@ export default function ControlTodayPage() {
       const surface = await response.json();
       return { success: true, data: surface, error: null, id: wsId };
     } catch (err) {
-      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
-      return { success: false, data: null, error: governed.operatorMessage, id: wsId };
+      return { success: false, data: null, error: classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' }).operatorMessage, id: wsId };
     }
   }, []);
 

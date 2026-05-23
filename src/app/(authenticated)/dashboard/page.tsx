@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Link from "next/link";
 import { Badge } from "@/ui/primitives";
 

@@ -43,8 +43,7 @@ export default function SettingsPage() {
       const data = await res.json();
       return { success: true, data, error: null };
     } catch (err) {
-      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
-      return { success: false, data: null, error: governed.operatorMessage };
+      return { success: false, data: null, error: classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" }).operatorMessage };
     }
   }, []);
 

@@ -78,8 +78,7 @@ export default function UsersPage() {
       const json = await res.json();
       return { success: true, data: json, error: null };
     } catch (err) {
-      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
-      return { success: false, data: null, error: governed.operatorMessage };
+      return { success: false, data: null, error: classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' }).operatorMessage };
     }
   }, []);
 

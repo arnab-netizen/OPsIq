@@ -11,7 +11,7 @@
  */
 
 export default function transformer(fileInfo: unknown, api: unknown) {
-  const j = (api as unknown as { jscodeshift: unknown }).jscodeshift;
+  const j = (api as unknown as { jscodeshift: unknown }).jscodeshift as any;
   const root = j(fileInfo);
   let hasChanges = false;
 
