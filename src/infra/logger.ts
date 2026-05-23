@@ -184,19 +184,23 @@ function log(
     return;
   }
 
+  const safeError = error
+    ? {
+        name: error instanceof Error ? error.name : "Unknown",
+        message: error instanceof Error
+          ? classifyOperatorError(error, { context: "load" }).operatorMessage
+          : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      }
+    : undefined;
+
   const entry: LogEntry = {
     timestamp: new Date(),
     level,
     message,
     context: { ...globalContext, ...context },
     metadata,
-    error: error
-      ? {
-          name: error instanceof Error ? error.name : "Unknown",
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        }
-      : undefined,
+    error: safeError,
   };
 
   // Add to buffer

@@ -123,16 +123,21 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
       const poisonMessage: any = { malformed: "data", missing_required_field: undefined };
 
       // Attempt to process
+      let validationFailed = false;
       try {
         if (!poisonMessage.id) {
           throw new Error("Validation failed: missing required field 'id'");
         }
         processingQueue.push(poisonMessage);
       } catch (error) {
+        validationFailed = true;
         // Send to DLQ
+        const safeErrorMsg = error instanceof Error
+          ? classifyOperatorError(error, { context: "load" }).operatorMessage
+          : String(error);
         dlq.push({
           message: poisonMessage,
-          error: error instanceof Error ? error.message : String(error),
+          error: safeErrorMsg,
           timestamp: Date.now(),
         });
       }
@@ -140,7 +145,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
       // INVARIANT: Poison message in DLQ, not in processing queue
       expect(dlq.length).toBe(1);
       expect(processingQueue.length).toBe(0);
-      expect(dlq[0].error).toContain("missing required field");
+      expect(validationFailed).toBe(true);
     });
 
     it("should prevent poison message from blocking queue", async () => {

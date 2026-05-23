@@ -199,7 +199,7 @@ async function runTests() {
   try {
     process.env.DATABASE_URL = DATABASE_URL;
     process.env.TEST_API_URL = NEXT_SERVER_URL;
-    process.env.NODE_ENV = "test";
+    (process.env as any).NODE_ENV = "test";
 
     execSync("vitest run --maxWorkers 1", { stdio: "inherit" });
     console.log("✓ Tests completed");

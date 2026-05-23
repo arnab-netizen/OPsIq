@@ -279,7 +279,7 @@ describe("Phase RP9: Replay Determinism Verification", () => {
   });
 
   describe("D. PARTIAL REPLAY DETERMINISM - Event Subset Consistency", () => {
-    it.skip("should deterministically replay with growing event history", async () => {
+    it("should deterministically replay with growing event history", async () => {
       const aggId = uuidv4();
 
       // Create 5 events incrementally
