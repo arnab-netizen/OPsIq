@@ -11,6 +11,7 @@
  */
 
 export default function transformer(fileInfo: unknown, api: unknown) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const j = (api as unknown as { jscodeshift: unknown }).jscodeshift as any;
   const root = j(fileInfo);
   let hasChanges = false;

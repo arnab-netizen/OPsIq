@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { NotFoundError, ValidationError } from "@/infra/errors";
