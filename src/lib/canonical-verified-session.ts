@@ -8,6 +8,7 @@
  * Replay-deterministic.
  */
 
+import { v4 as uuidv4 } from "uuid";
 import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
 import type { CapabilityName } from "@/domain/constants/capabilities";
@@ -291,7 +292,6 @@ export class CanonicalVerifiedSessionBuilder {
   // ─── Private Helpers ────────────────────────────────────────────────────
 
   private generateSnapshotId(): string {
-    const { v4: uuidv4 } = require("uuid");
     return uuidv4();
   }
 

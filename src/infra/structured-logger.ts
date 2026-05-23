@@ -3,6 +3,7 @@
  * Production-grade JSON logging with correlation IDs and secret redaction
  */
 
+import crypto from "crypto";
 import { NextRequest } from "next/server";
 
 interface LogContext {
@@ -84,7 +85,6 @@ function serializePayload(payload: any): string {
 
 function payloadHash(payload: any): string {
   try {
-    const crypto = require("crypto");
     const serialized = JSON.stringify(payload);
     return crypto
       .createHash("sha256")

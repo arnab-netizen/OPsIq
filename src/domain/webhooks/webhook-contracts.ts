@@ -5,6 +5,7 @@
  * Supports registration, testing, retry logic, and HMAC-SHA256 signature verification.
  */
 
+import crypto from "crypto";
 import { z } from "zod";
 
 /**
@@ -108,7 +109,6 @@ export function validateWebhook(webhook: Webhook): string[] {
  * Creates signature from payload + timestamp + secret
  */
 export function createWebhookSignature(payload: string, timestamp: number, secret: string): string {
-  const crypto = require("crypto");
   const message = `${timestamp}.${payload}`;
   return crypto.createHmac("sha256", secret).update(message).digest("hex");
 }

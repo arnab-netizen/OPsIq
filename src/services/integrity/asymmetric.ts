@@ -1,4 +1,4 @@
-import { generateKeyPairSync, sign, verify } from "crypto";
+import { generateKeyPairSync, sign, verify, createHash } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -63,9 +63,7 @@ function getCachedKeyPair(): KeyPair {
 
 function getPublicKeyId(publicKey: string): string {
   // Simple hash of public key for identification
-  const crypto = require("crypto");
-  return crypto
-    .createHash("sha256")
+  return createHash("sha256")
     .update(publicKey)
     .digest("hex")
     .substring(0, 16);

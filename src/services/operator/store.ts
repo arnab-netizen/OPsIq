@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { OperatorItem } from "@/domain/operator/types";
 import { CalibrationRecord } from "@/domain/calibration/types";
@@ -484,7 +485,7 @@ export async function addBlockedDecision(params: {
   }
 
   const data: any = {
-    id: require("crypto").randomUUID(),
+    id: randomUUID(),
     workspaceId: params.workspaceId,
     ownerUserId: params.ownerUserId,
     createdBy: params.createdBy,

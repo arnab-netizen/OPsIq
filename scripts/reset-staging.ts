@@ -142,7 +142,7 @@ async function main() {
   if (shouldReseed) {
     console.log("[RESET] Running seed script...");
     // Import and run seed
-    const seedScript = require("./seed-staging");
+    const seedScript = await import("./seed-staging");
     await seedScript.main();
   }
 
