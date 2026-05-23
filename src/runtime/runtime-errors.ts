@@ -106,8 +106,7 @@ export function createValidationError(
   context: RuntimeErrorContext,
   internal_diagnostic: Record<string, unknown> = {},
 ): RuntimeError {
-  // Governance: RuntimeError constructor classifies message via classifyOperatorError
-  return new RuntimeError(classifyOperatorError(new Error(message), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "VALIDATION",
     severity: "WARNING",
     retryable: "NOT_RETRYABLE",
@@ -125,13 +124,12 @@ export function createAuthError(
   message: string,
   context: RuntimeErrorContext,
 ): RuntimeError {
-  const safeMessage = getSafeErrorMessage(message);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "AUTH",
     severity: "WARNING",
     retryable: "NOT_RETRYABLE",
     operator_safe_message: "Authentication failed",
-    internal_diagnostic: { original_message: safeMessage },
+    internal_diagnostic: { original_message: message },
     context,
     error_code: "ERR_AUTH_001",
     http_status: 401,
@@ -144,13 +142,12 @@ export function createPermissionError(
   message: string,
   context: RuntimeErrorContext,
 ): RuntimeError {
-  const safeMessage = getSafeErrorMessage(message);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "PERMISSION",
     severity: "WARNING",
     retryable: "NOT_RETRYABLE",
     operator_safe_message: "Permission denied",
-    internal_diagnostic: { original_message: safeMessage },
+    internal_diagnostic: { original_message: message },
     context,
     error_code: "ERR_PERMISSION_001",
     http_status: 403,
@@ -164,13 +161,12 @@ export function createRateLimitError(
   context: RuntimeErrorContext,
   reset_after_seconds: number,
 ): RuntimeError {
-  const safeMessage = getSafeErrorMessage(message);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "RATE_LIMIT",
     severity: "WARNING",
     retryable: "RETRYABLE_WITH_BACKOFF",
     operator_safe_message: `Rate limit exceeded. Retry after ${reset_after_seconds}s`,
-    internal_diagnostic: { reset_after_seconds, original_message: safeMessage },
+    internal_diagnostic: { reset_after_seconds, original_message: message },
     context,
     error_code: "ERR_RATE_LIMIT_001",
     http_status: 429,
@@ -185,13 +181,12 @@ export function createEntitlementError(
   context: RuntimeErrorContext,
   missing_capability: string,
 ): RuntimeError {
-  const safeMessage = getSafeErrorMessage(message);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "ENTITLEMENT",
     severity: "WARNING",
     retryable: "NOT_RETRYABLE",
     operator_safe_message: `Capability ${missing_capability} not available in your plan`,
-    internal_diagnostic: { missing_capability, original_message: safeMessage },
+    internal_diagnostic: { missing_capability, original_message: message },
     context,
     error_code: "ERR_ENTITLEMENT_001",
     http_status: 403,
@@ -205,13 +200,12 @@ export function createDBError(
   context: RuntimeErrorContext,
   is_transient: boolean,
 ): RuntimeError {
-  const safeMessage = getSafeErrorMessage(message);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "DB",
     severity: "ERROR",
     retryable: is_transient ? "RETRYABLE_WITH_BACKOFF" : "NOT_RETRYABLE",
     operator_safe_message: "Database operation failed",
-    internal_diagnostic: { original_message: safeMessage },
+    internal_diagnostic: { original_message: message },
     context,
     error_code: is_transient ? "ERR_DB_TRANSIENT_001" : "ERR_DB_PERMANENT_001",
     http_status: 500,
@@ -226,13 +220,12 @@ export function createQueueError(
   context: RuntimeErrorContext,
   is_transient: boolean,
 ): RuntimeError {
-  const safeMessage = getSafeErrorMessage(message);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "QUEUE",
     severity: "ERROR",
     retryable: is_transient ? "RETRYABLE" : "NOT_RETRYABLE",
     operator_safe_message: "Job processing failed",
-    internal_diagnostic: { original_message: safeMessage },
+    internal_diagnostic: { original_message: message },
     context,
     error_code: is_transient ? "ERR_QUEUE_TRANSIENT_001" : "ERR_QUEUE_PERMANENT_001",
     http_status: 500,
@@ -247,13 +240,12 @@ export function createExternalServiceError(
   context: RuntimeErrorContext,
   is_transient: boolean,
 ): RuntimeError {
-  const safeMessage = getSafeErrorMessage(message);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "EXTERNAL_SERVICE",
     severity: "ERROR",
     retryable: is_transient ? "RETRYABLE_WITH_BACKOFF" : "NOT_RETRYABLE",
     operator_safe_message: `External service ${service_name} unavailable`,
-    internal_diagnostic: { service_name, original_message: safeMessage },
+    internal_diagnostic: { service_name, original_message: message },
     context,
     error_code: is_transient ? "ERR_EXT_TRANSIENT_001" : "ERR_EXT_PERMANENT_001",
     http_status: 503,
@@ -267,12 +259,11 @@ export function createExecutionBlockedError(
   reason: string,
   context: RuntimeErrorContext,
 ): RuntimeError {
-  const safeMessage = getSafeErrorMessage(reason);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(reason, {
     classification: "EXECUTION_BLOCKED",
     severity: "WARNING",
     retryable: "NOT_RETRYABLE",
-    operator_safe_message: safeMessage,
+    operator_safe_message: reason,
     internal_diagnostic: {},
     context,
     error_code: "ERR_EXECUTION_BLOCKED_001",
@@ -286,13 +277,12 @@ export function createStaleDataError(
   message: string,
   context: RuntimeErrorContext,
 ): RuntimeError {
-  const safeMessage = getSafeErrorMessage(message);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "STALE_DATA",
     severity: "WARNING",
     retryable: "NOT_RETRYABLE",
     operator_safe_message: "Data has been modified. Please refresh and retry.",
-    internal_diagnostic: { original_message: safeMessage },
+    internal_diagnostic: { original_message: message },
     context,
     error_code: "ERR_STALE_DATA_001",
     http_status: 409,
@@ -305,12 +295,11 @@ export function createConflictError(
   message: string,
   context: RuntimeErrorContext,
 ): RuntimeError {
-  const safeMessage = getSafeErrorMessage(message);
-  return new RuntimeError(classifyOperatorError(new Error(safeMessage || ""), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "CONFLICT",
     severity: "WARNING",
     retryable: "NOT_RETRYABLE",
-    operator_safe_message: safeMessage,
+    operator_safe_message: message,
     internal_diagnostic: {},
     context,
     error_code: "ERR_CONFLICT_001",
@@ -345,7 +334,7 @@ export function createUnknownError(
   context: RuntimeErrorContext,
   error: unknown,
 ): RuntimeError {
-  return new RuntimeError(classifyOperatorError(new Error(message), { context: "load" }).operatorMessage, {
+  return new RuntimeError(message, {
     classification: "UNKNOWN",
     severity: "ERROR",
     retryable: "NOT_RETRYABLE",
