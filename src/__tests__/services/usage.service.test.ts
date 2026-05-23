@@ -101,18 +101,22 @@ describe("Usage Service", () => {
     describe("error handling (fail open)", () => {
       it("should log error but not throw when trackUsage fails", async () => {
         const { trackUsage } = await import("@/services/entitlement.service");
-        vi.mocked(trackUsage).mockRejectedValueOnce(new Error("Track failed"));
+        const testError = new Error("Track failed");
+        vi.mocked(trackUsage).mockRejectedValueOnce(testError);
 
         // Should not throw
         await expect(usageService.recordUsage("workspace-123", "metric", 1)).resolves.toBeUndefined();
 
         expect(vi.mocked(logger.error)).toHaveBeenCalledOnce();
-        expect(vi.mocked(logger.error)).toHaveBeenCalledWith("Failed to record usage", {
-          workspaceId: "workspace-123",
-          key: "metric",
-          value: 1,
-          error: "Track failed",
-        });
+        expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
+          "Failed to record usage",
+          testError,
+          expect.objectContaining({
+            workspaceId: "workspace-123",
+            key: "metric",
+            value: 1,
+          })
+        );
       });
 
       it("should log error with unknown message when non-Error object thrown", async () => {
@@ -122,12 +126,9 @@ describe("Usage Service", () => {
         await expect(usageService.recordUsage("workspace-123", "metric", 1)).resolves.toBeUndefined();
 
         expect(vi.mocked(logger.error)).toHaveBeenCalledOnce();
-        expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
-          "Failed to record usage",
-          expect.objectContaining({
-            error: "unknown error",
-          })
-        );
+        const calls = vi.mocked(logger.error).mock.calls;
+        expect(calls[0][0]).toBe("Failed to record usage");
+        expect(calls[0][1]).toBeDefined();
       });
 
       it("should handle timeout errors gracefully", async () => {

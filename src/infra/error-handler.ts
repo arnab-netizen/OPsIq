@@ -182,18 +182,26 @@ export function getErrorStatusCode(error: unknown): number {
  * Helper: Check if error should be reported (skip expected/benign errors)
  */
 export function shouldReportError(error: unknown): boolean {
-  const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-  const message = governed.operatorMessage;
+  // Convert to operator-safe representation to check patterns
+  const { toOperatorSafeError } = require("@/lib/operator-safe-errors");
 
-  // Skip benign errors
-  const benignPatterns = [
-    "CANCEL",
-    "User canceled",
-    "timeout",
-    "AbortError",
-  ];
+  try {
+    const safe = toOperatorSafeError(error, "load");
+    const message = safe.error.toLowerCase();
 
-  return !benignPatterns.some((pattern) =>
-    message.toLowerCase().includes(pattern.toLowerCase())
-  );
+    // Skip benign/expected error patterns
+    const benignPatterns = [
+      "canceled",
+      "user cancelled",
+      "timeout",
+      "abort",
+    ];
+
+    return !benignPatterns.some((pattern) =>
+      message.includes(pattern.toLowerCase())
+    );
+  } catch {
+    // If safe conversion fails, report the error to be safe
+    return true;
+  }
 }

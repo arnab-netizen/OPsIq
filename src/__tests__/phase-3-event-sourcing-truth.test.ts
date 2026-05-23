@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { ensureStartupStatusReady } from "./test-helpers/startup-helper";
 import { db } from "@/lib/db";
 import { EventEmitterService } from "@/services/event-emitter";
 import { EventReplayEngine } from "@/services/event-replay-engine";
@@ -8,6 +9,9 @@ import { ReplayFailureHandler } from "@/services/replay-failure-handler";
 import { v4 as uuidv4 } from "uuid";
 
 describe("Phase 3: Event Sourcing Truth Verification", () => {
+  beforeAll(async () => {
+    await ensureStartupStatusReady();
+  });
   let workspaceId: string;
   let recommendationId: string;
   let engagementId: string;

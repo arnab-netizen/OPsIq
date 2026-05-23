@@ -332,6 +332,7 @@ export function calculateConflictSeverity(
 
 /**
  * Generate idempotency key from operation context
+ * Ensures uniqueness even for consecutive calls using timestamp + random component
  */
 export function generateIdempotencyKey(operationType: string, context: Record<string, unknown>): string {
   const contextStr = JSON.stringify(context);
@@ -340,7 +341,12 @@ export function generateIdempotencyKey(operationType: string, context: Record<st
     .reduce((acc, char) => ((acc << 5) - acc + char.charCodeAt(0)) | 0, 0)
     .toString(16)
     .substring(0, 12);
-  return `${operationType}_${hash}_${Date.now()}`;
+
+  // Use timestamp + random nonce for uniqueness without state
+  const timestamp = Date.now();
+  const nonce = Math.random().toString(36).substring(2, 8);
+
+  return `${operationType}_${hash}_${timestamp}${nonce}`;
 }
 
 /**

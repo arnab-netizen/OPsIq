@@ -17,6 +17,7 @@
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 
 const TEST_API_URL = process.env.TEST_API_URL || "http://localhost:3000";
 

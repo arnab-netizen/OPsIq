@@ -9,12 +9,16 @@
  * 5. Correlation IDs are returned in response headers
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 import { NextRequest } from "next/server";
 import { withEnforcement } from "@/lib/enforced-route";
 import { requestContext } from "@/runtime/request-context";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 
 describe("PHASE I10.2: API Route Wrapping", () => {
+  beforeAll(async () => {
+    await ensureStartupStatusReady();
+  });
   describe("withEnforcement() wrapper", () => {
     it("should wrap handler and provide EnforcedRequestContext", async () => {
       let contextReceived = null;

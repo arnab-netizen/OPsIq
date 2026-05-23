@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { ensureStartupStatusReady } from "./test-helpers/startup-helper";
 import { db } from "@/lib/db";
 import { v4 as uuidv4 } from "uuid";
 

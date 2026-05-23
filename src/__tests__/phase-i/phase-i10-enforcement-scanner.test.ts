@@ -16,11 +16,15 @@
  * ✓ metrics recording
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import fs from "fs";
 import path from "path";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 
 describe("PHASE I10: Runtime Enforcement Scanner - ALL Routes", () => {
+  beforeAll(async () => {
+    await ensureStartupStatusReady();
+  });
   const apiDir = path.join(process.cwd(), "src/app/api");
 
   function findAllRouteFiles(): string[] {
@@ -74,8 +78,14 @@ describe("PHASE I10: Runtime Enforcement Scanner - ALL Routes", () => {
       "auth/login/route.ts": "Authentication entry point - uses OAuth provider",
       "auth/logout/route.ts": "Authentication exit point - simple redirect",
       "startup/route.ts": "System startup - runs before enforcement ready",
+      "readiness/route.ts": "Readiness probe - health check bypass for load balancers",
       "liveness/route.ts":
         "Health check bypass for load balancers - must not block",
+      "ops/runtime/route.ts": "Internal ops - diagnostic endpoint, no auth required",
+      "ops/readiness/route.ts": "Internal ops - readiness probe, health check bypass",
+      "ops/metrics/route.ts": "Internal ops - metrics endpoint, no auth required",
+      "ops/errors/route.ts": "Internal ops - error diagnostics endpoint",
+      "internal/startup/route.ts": "Internal startup - runs before enforcement ready",
     };
 
     if (exemptions[filePath]) {
@@ -87,7 +97,7 @@ describe("PHASE I10: Runtime Enforcement Scanner - ALL Routes", () => {
     }
 
     // Check enforcement status
-    if (content.includes("withEnforcement")) {
+    if (content.includes("withEnforcement") || content.includes("withCanonicalEnforcement")) {
       return { file: filePath, status: "WRAPPED_WITH_ENFORCEMENT" };
     } else if (content.includes("withRequestContext")) {
       return { file: filePath, status: "LEGACY_WRAPPED" };

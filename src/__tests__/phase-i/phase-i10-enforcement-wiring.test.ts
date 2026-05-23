@@ -9,7 +9,7 @@
  * 5. Enforcement is append-only and idempotent
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, beforeAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { requestContext } from "../../runtime/request-context";
 import { runtimeLogger } from "../../runtime/runtime-logger";
@@ -18,8 +18,13 @@ import { enforceRequest, getEnforcedContext, requireWorkspaceInEnforcedContext }
 import { runtimeHealthSystem } from "../../runtime/health/health-system";
 import { runtimeMetricsCollector } from "../../runtime/metrics/runtime-metrics";
 import { RuntimeError, createValidationError, createInfrastructureError } from "../../runtime/runtime-errors";
+import { ensureStartupStatusReady } from "../test-helpers/startup-helper";
 
 describe("PHASE I-10: Mandatory Runtime Enforcement Wiring", () => {
+  beforeAll(async () => {
+    await ensureStartupStatusReady();
+  });
+
   beforeEach(() => {
     runtimeLogger.clearLogs();
     executionEnforcer.clearAuditEvents();

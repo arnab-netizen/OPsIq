@@ -25,10 +25,10 @@ const eslintConfig = defineConfig([
     plugins: {
       "auth-enforcement": {
         rules: {
-          "no-any": authEnforcementRule.rule,
-          "no-union": authEnforcementRule.rule,
-          "no-unsafe-cast": authEnforcementRule.rule,
-          "no-legacy-in-canonical": authEnforcementRule.rule,
+          "no-any": authEnforcementRule,
+          "no-union": authEnforcementRule,
+          "no-unsafe-cast": authEnforcementRule,
+          "no-legacy-in-canonical": authEnforcementRule,
         },
       },
     },

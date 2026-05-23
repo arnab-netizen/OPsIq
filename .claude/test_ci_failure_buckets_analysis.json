@@ -1,0 +1,88 @@
+{
+  "total_failures": 46,
+  "buckets": {
+    "HTTP_SERVER_NOT_RUNNING": {
+      "count": 24,
+      "files": ["rp2-hostile-http-runtime-proofs.test.ts", "rp3-operational-survivability-runtime-proofs.test.ts"],
+      "root_cause": "Tests making HTTP requests to localhost:3000 which is not running",
+      "tests": [
+        "RP2: GET /api/audit without auth returns 401",
+        "RP2: GET /api/value/7day without auth returns 401",
+        "RP2: POST /api/verify without auth returns 401",
+        "RP2: GET /api/notifications with invalid token returns 401",
+        "RP2: request with forged workspace header is blocked",
+        "RP2: cannot export decision from other workspace",
+        "RP2: GET /api/audit requires auth",
+        "RP2: GET /api/value/summary requires auth",
+        "RP2: GET /api/value/7day requires auth",
+        "RP2: GET /api/intelligence/insights requires auth",
+        "RP2: GET /api/intelligence/patterns requires auth",
+        "RP2: GET /api/entitlement/quota requires auth",
+        "RP2: POST /api/entitlement/quota requires auth",
+        "RP2: GET /api/notifications requires auth",
+        "RP2: GET /api/notifications/preferences requires auth",
+        "RP2: GET /api/notifications/[id] requires auth",
+        "RP2: POST /api/webhooks/stripe with invalid signature returns 401",
+        "RP2: POST with payload > limit returns error",
+        "RP3: /api/health returns 200 when healthy",
+        "RP3: /api/readiness returns 200 when ready",
+        "RP3: /api/liveness returns 200 when alive"
+      ]
+    },
+    "REAL_RUNTIME_LOGIC_BUG_ERROR_MESSAGE": {
+      "count": 15,
+      "files": ["phase-e/e3a-crash-recovery.test.ts", "phase-e/e3b-database-interruption.test.ts", "phase-e/e3c-retry-poison-storms.test.ts", "phase-i/phase-i-runtime-discipline.test.ts", "phase-i/phase-i10-error-normalization.test.ts", "phase-i/phase-i10-queue-enforcement.test.ts"],
+      "root_cause": "Error messages being replaced with generic operator-safe messages instead of preserving original error details",
+      "tests": [
+        "Phase E 3A: should not lose event if crash during append",
+        "Phase E 3B: should retry append after timeout",
+        "Phase E 3B: should not leave orphaned transaction",
+        "Phase E 3B: should not corrupt table when constraint fails",
+        "Phase E 3B: should detect and retry after deadlock",
+        "Phase E 3C: should not crash on poison message",
+        "Phase I: should include diagnostic details separate from operator messages",
+        "Phase I10.5: should convert Error to RuntimeError",
+        "Phase I10.5: should convert string to RuntimeError",
+        "Phase I10.5: should include operation name in normalized error message",
+        "Phase I10.4: should move job to dead-letter queue after max retries exceeded"
+      ]
+    },
+    "PHASE_I_ROUTE_ENFORCEMENT_BUG": {
+      "count": 1,
+      "files": ["phase-i/phase-i10-enforcement-scanner.test.ts"],
+      "root_cause": "94 routes are UNWRAPPED - missing enforcement layer on routes",
+      "tests": ["MANDATORY: NO route may be UNWRAPPED"]
+    },
+    "RP1_DATABASE_OPERATIONS_BUG": {
+      "count": 6,
+      "files": ["rp1-phase3-persistence-runtime-proofs.test.ts"],
+      "root_cause": "PrismaClientValidationError or PrismaClientKnownRequestError when creating canonical events",
+      "tests": [
+        "RP1: replaying same event twice produces identical state",
+        "RP1: concurrent appends maintain order under database isolation",
+        "RP1: replay of aggregate from workspace A cannot access workspace B events",
+        "RP1: 100 parallel appends maintain ordering",
+        "RP1: all events have timestamp",
+        "RP1: measure append latency"
+      ]
+    },
+    "PHASE_D_HEALTH_PROBE_BUG": {
+      "count": 2,
+      "files": ["phase-d/d4-monitoring-backbone.test.ts"],
+      "root_cause": "Health probe checks returning false instead of true for startup/readiness validation",
+      "tests": [
+        "D4: should verify config loaded, database migrated, routes registered",
+        "D4: should verify database health and queue depth"
+      ]
+    },
+    "TEST_EXPECTATION_BROKEN": {
+      "count": 2,
+      "files": ["auth-state-machine-phase5-flood-protection.test.ts", "ci-cd/workflow-validation.test.ts"],
+      "root_cause": "Test assertions expecting specific values that have changed",
+      "tests": [
+        "Phase 5 Flood Protection: should bound entries to max size",
+        "CI/CD Workflow: build-and-test should run tests with DATABASE_URL"
+      ]
+    }
+  }
+}

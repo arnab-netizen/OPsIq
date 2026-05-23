@@ -1,0 +1,82 @@
+{
+  "audit_timestamp": "2026-05-23T18:45:00Z",
+  "branch_reconciliation": {
+    "correct_working_branch": "test-ci-zero-failure-closure",
+    "head_sha": "6dae104f05fda2e2e04433dc40917af45956a342",
+    "worktree_clean": true,
+    "branch_ahead_of_origin": 1,
+    "misplaced_branch_detected": true,
+    "misplaced_branch_name": "claude/devops-p0-blockers-audit-FLmZv",
+    "misplaced_branch_status": "contains all fixes via merge, but work should be on test-ci-zero-failure-closure",
+    "fixes_reconciled_to_correct_branch": true,
+    "reconciliation_action": "test-ci-zero-failure-closure pushed to origin with all governance and TypeScript fixes"
+  },
+  "local_infrastructure": {
+    "postgres_running_locally": false,
+    "postgres_required_but_missing": true,
+    "docker_daemon_accessible": false,
+    "docker_required_but_missing": true,
+    "infrastructure_blocker_detected": true,
+    "infrastructure_blocker_type": "LOCAL_POSTGRES_REQUIRED_FOR_TEST_CI"
+  },
+  "test_ci_runner": {
+    "runner_file": "scripts/run-test-ci.ts",
+    "runner_language": "TypeScript",
+    "runner_loader": "tsx",
+    "fail_fast_enabled": true,
+    "tests_skipped": false,
+    "no_cheating_detected": true,
+    "continue_on_error_not_used": true
+  },
+  "local_test_ci_status": {
+    "exit_code": 1,
+    "status": "INFRASTRUCTURE_BLOCKED",
+    "tests_ran": 0,
+    "failure_reason": "LOCAL_POSTGRES_REQUIRED_FOR_TEST_CI",
+    "remediation_shown": true
+  },
+  "local_gates": {
+    "npm_ci": "PASS",
+    "governance_scan_strict": "PASS (0 errors, 117 warnings)",
+    "raw_error_message": "PASS (0 violations - classifyOperatorError applied)",
+    "unsafe_error_render": "PASS (0 violations - inline governance)",
+    "unsafe_metric": "PASS",
+    "tsc_noEmit": "PASS",
+    "prisma_validate": "PASS",
+    "npm_run_build": "PASS"
+  },
+  "ci_workflow_verified": {
+    "ci_postgres_service_configured": true,
+    "ci_database_url_configured": true,
+    "ci_database_url_value": "postgresql://postgres:postgres@localhost:5432/opsiq_test",
+    "ci_direct_database_url_configured": false,
+    "ci_uses_test_ci_runner": true,
+    "ci_test_step": "run: npm run test:ci",
+    "ci_continue_on_error": false
+  },
+  "fixes_applied": {
+    "scripts_run_test_ci_ts": true,
+    "src_runtime_runtime_errors_ts": true,
+    "src_infra_logger_ts": true,
+    "src_infra_telemetry_classifier_ts": true,
+    "src_services_event_emitter_ts": true,
+    "src_tests_phase_e_e3c_test_ts": true,
+    "src_tests_runtime_proof_rp9_unskip": true,
+    "audit_file_created": true
+  },
+  "no_cheating": {
+    "tests_skipped": false,
+    "continue_on_error_added": false,
+    "scanner_modified": false,
+    "ci_weakened": false
+  },
+  "pr_status": {
+    "pr_created": false,
+    "pr_pending": true,
+    "source_branch": "test-ci-zero-failure-closure",
+    "target_branch": "main",
+    "pr_action": "awaiting creation"
+  },
+  "final_internal_status": "INTERNAL_REPO_BLOCKED_BY_LOCAL_TEST_INFRASTRUCTURE_PENDING_CI_PROOF",
+  "next_required_action": "Create PR from test-ci-zero-failure-closure to main and validate with GitHub Actions CI"
+}

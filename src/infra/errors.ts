@@ -2,6 +2,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 // Layer 1: Identity Authentication
 export type Layer1ErrorCode =
+  | "UNAUTHORIZED"
   | "AUTH_MISSING"
   | "AUTH_MALFORMED"
   | "AUTH_INVALID"
@@ -12,6 +13,7 @@ export type Layer1ErrorCode =
 
 // Layer 2: Tenant Authorization
 export type Layer2ErrorCode =
+  | "FORBIDDEN"
   | "WORKSPACE_MISSING"
   | "WORKSPACE_MALFORMED"
   | "WORKSPACE_NOT_FOUND"
@@ -170,16 +172,17 @@ export class AppError extends Error {
 
 export class UnauthorizedError extends AppError {
   constructor(
-    reasonOrMessage: Layer1ErrorCode | string = "AUTH_INVALID",
+    reasonOrMessage: Layer1ErrorCode | string = "UNAUTHORIZED",
     messageOrUndefined?: string | undefined,
     correlationId?: string
   ) {
     // Support both old style: new UnauthorizedError("message")
-    // and new style: new UnauthorizedError("AUTH_INVALID", "message")
-    let reason: Layer1ErrorCode = "AUTH_INVALID";
+    // and new style: new UnauthorizedError("UNAUTHORIZED", "message")
+    let reason: Layer1ErrorCode = "UNAUTHORIZED";
     let message: string = "Authentication required";
 
     if (
+      reasonOrMessage === "UNAUTHORIZED" ||
       reasonOrMessage === "AUTH_MISSING" ||
       reasonOrMessage === "AUTH_MALFORMED" ||
       reasonOrMessage === "AUTH_INVALID" ||
@@ -197,6 +200,17 @@ export class UnauthorizedError extends AppError {
     }
 
     const telemetryMap: Record<Layer1ErrorCode, TelemetryMetadata> = {
+      UNAUTHORIZED: {
+        telemetryClass: "AUTH_INVALID",
+        auditClass: "AUTH_FAILED",
+        severity: "MEDIUM",
+        retryable: false,
+        securityRelevant: true,
+        infrastructureRelevant: false,
+        abuseRelevant: true,
+        handlerAllowed: false,
+        mutationAllowed: false,
+      },
       AUTH_MISSING: {
         telemetryClass: "AUTH_INVALID",
         auditClass: "AUTH_FAILED",
@@ -291,16 +305,17 @@ export class UnauthorizedError extends AppError {
 
 export class ForbiddenError extends AppError {
   constructor(
-    reasonOrMessage: Layer2ErrorCode | Layer3ErrorCode | string = "WORKSPACE_DENIED",
+    reasonOrMessage: Layer2ErrorCode | Layer3ErrorCode | string = "FORBIDDEN",
     messageOrUndefined?: string,
     correlationId?: string
   ) {
     // Support both old style: new ForbiddenError("message")
-    // and new style: new ForbiddenError("WORKSPACE_DENIED", "message")
-    let reason: Layer2ErrorCode | Layer3ErrorCode = "WORKSPACE_MEMBERSHIP_MISSING";
+    // and new style: new ForbiddenError("FORBIDDEN", "message")
+    let reason: Layer2ErrorCode | Layer3ErrorCode = "FORBIDDEN";
     let message: string = "Insufficient permissions";
 
     const validReasons = new Set<string>([
+      "FORBIDDEN",
       "WORKSPACE_MISSING",
       "WORKSPACE_MALFORMED",
       "WORKSPACE_NOT_FOUND",
@@ -323,6 +338,17 @@ export class ForbiddenError extends AppError {
     }
 
     const telemetryMap: Record<Layer2ErrorCode | Layer3ErrorCode, TelemetryMetadata> = {
+      FORBIDDEN: {
+        telemetryClass: "WORKSPACE_DENIED",
+        auditClass: "PERMISSION_DENIED",
+        severity: "MEDIUM",
+        retryable: false,
+        securityRelevant: true,
+        infrastructureRelevant: false,
+        abuseRelevant: true,
+        handlerAllowed: false,
+        mutationAllowed: false,
+      },
       WORKSPACE_MISSING: {
         telemetryClass: "WORKSPACE_DENIED",
         auditClass: "CLIENT_ERROR",

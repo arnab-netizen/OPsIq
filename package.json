@@ -19,7 +19,7 @@
     "test:watch": "vitest",
     "test:all": "TEST_WITH_DB=true vitest run",
     "test:merge": "vitest run",
-    "test:ci": "vitest run --maxWorkers 1",
+    "test:ci": "tsx scripts/run-test-ci.ts",
     "test:integration": "vitest run --include='**/*.integration.test.ts' --exclude='**/*.placeholder.test.ts'",
     "test:mvp": "vitest run src/__tests__/mvp-operational-flow.test.ts",
     "test:db": "TEST_WITH_DB=true vitest run --testNamePattern='\\[db\\]'",

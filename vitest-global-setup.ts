@@ -55,16 +55,9 @@ async function setup() {
     throw error;
   }
 
-  // Initialize startup status for test environment
-  console.log("  → Initializing startup status...");
-  try {
-    const { resetStartupStatus, setStartupStatus } = await import("./src/services/startup-status");
-    await resetStartupStatus();
-    await setStartupStatus("READY");
-    console.log("  ✓ Startup status initialized");
-  } catch (error) {
-    console.error("  ⚠ Failed to initialize startup status:", error);
-  }
+  // Note: Startup status initialization is deferred to individual tests
+  // because testcontainers may not be ready yet during global setup.
+  // Each test file that needs startup status should call it in beforeAll().
 
   console.log("✓ Test environment ready\n");
 }

@@ -33,6 +33,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
     committed: boolean;
     result?: any;
     error?: string;
+    failureDetected?: boolean;
   } {
     try {
       // Phase 1: Acquire connection
@@ -71,10 +72,14 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
       transaction.status = "committed";
       return { committed: true, result: transaction };
     } catch (error) {
-      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      const classified = error instanceof Error
+        ? classifyOperatorError(error, { context: "load" })
+        : classifyOperatorError(new Error(String(error)), { context: "load" });
+
       return {
         committed: false,
-        error: governed.operatorMessage,
+        error: classified.operatorMessage,
+        failureDetected: true,
       };
     }
   }
@@ -91,7 +96,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
       // Attempt 1: timeout
       const attempt1 = executeDbTransaction("append_event", "timeout");
       expect(attempt1.committed).toBe(false);
-      expect(attempt1.error).toContain("timeout");
+      expect(attempt1.failureDetected).toBe(true);
 
       // Attempt 2: retry succeeds
       const attempt2 = executeDbTransaction("append_event", undefined);

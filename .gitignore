@@ -49,6 +49,12 @@ next-env.d.ts
 test.db
 *.db
 
+# test logs and temp files
+test-run-*.log
+test-output.log
+dev-server*.log
+.dev-server.pid
+
 # v8 reference architecture (not for production)
 /v8
 
