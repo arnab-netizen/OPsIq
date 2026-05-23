@@ -53,12 +53,17 @@ jobs:
 
       - name: TypeScript type checking
         run: npx tsc --noEmit
+        env:
+          NODE_ENV: test
+          SKIP_ENV_VALIDATION: "true"
         continue-on-error: false
 
       - name: Prisma schema validation
         run: npx prisma validate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          NODE_ENV: test
+          SKIP_ENV_VALIDATION: "true"
         continue-on-error: false
 
       - name: Run full test suite with build
