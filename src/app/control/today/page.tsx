@@ -37,16 +37,11 @@ export default function ControlTodayPage() {
   const [workspaceId, setWorkspaceId] = useState('');
 
   const fetchData = useCallback(async (wsId: string | null) => {
+    if (!wsId) {
+      return { success: false, data: null, error: 'Workspace ID required', id: null };
+    }
+
     try {
-      setLoading(true);
-      setError(null);
-
-      if (!wsId) {
-        setError('Workspace ID required');
-        setLoading(false);
-        return;
-      }
-
       const response = await fetch(
         `/api/control/today?workspaceId=${wsId}`,
         {
@@ -62,22 +57,28 @@ export default function ControlTodayPage() {
       }
 
       const surface = await response.json();
-      setData(surface);
-      setError(null);
-      setWorkspaceId(wsId);
+      return { success: true, data: surface, error: null, id: wsId };
     } catch (err) {
       const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
-      setError(governed.operatorMessage);
-    } finally {
-      setLoading(false);
+      return { success: false, data: null, error: governed.operatorMessage, id: wsId };
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const wsId = params.get('workspaceId');
-    fetchData(wsId);
+    (async () => {
+      const params = new URLSearchParams(window.location.search);
+      const wsId = params.get('workspaceId');
+      const result = await fetchData(wsId);
+      if (result.success) {
+        setData(result.data);
+        setError(null);
+        setWorkspaceId(result.id);
+      } else {
+        setError(result.error);
+        setData(null);
+      }
+      setLoading(false);
+    })();
   }, [fetchData]);
 
   if (loading) {

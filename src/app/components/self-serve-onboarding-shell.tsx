@@ -201,6 +201,7 @@ export function SelfServeOnboardingShell({
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [workspaceId] = useState(() => `ws_${Date.now()}`);
   const [startedAt] = useState(() => new Date());
+  const [sessionId] = useState(() => `session_${Date.now()}`);
 
   const progress: OnboardingProgress = {
     workspaceId,
@@ -234,10 +235,7 @@ export function SelfServeOnboardingShell({
 
   const handleComplete = () => {
     const session: OnboardingSession = {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      sessionId: `session_${
-        // eslint-disable-next-line react-hooks/rules-of-hooks
-        Date.now().toString()}`,
+      sessionId,
       userId: 'user_123',
       progress: { ...progress, completedAt: new Date() },
       status: 'completed',

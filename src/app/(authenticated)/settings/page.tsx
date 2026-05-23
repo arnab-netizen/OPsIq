@@ -34,8 +34,6 @@ export default function SettingsPage() {
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   const fetchProfile = useCallback(async () => {
-    setLoading(true);
-    setErrorDetails(null);
     try {
       const res = await fetch("/api/me");
       if (!res.ok) {
@@ -43,16 +41,23 @@ export default function SettingsPage() {
         throw new Error(body.error?.message ?? "Failed to load profile");
       }
       const data = await res.json();
-      setMe(data);
+      return { success: true, data, error: null };
     } catch (err) {
-      setErrorDetails(classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" }).operatorMessage);
-    } finally {
-      setLoading(false);
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" });
+      return { success: false, data: null, error: governed.operatorMessage };
     }
   }, []);
 
   useEffect(() => {
-    fetchProfile();
+    (async () => {
+      const result = await fetchProfile();
+      if (result.success) {
+        setMe(result.data);
+      } else {
+        setErrorDetails(result.error);
+      }
+      setLoading(false);
+    })();
   }, [fetchProfile]);
 
   if (loading) return <LoadingState message="Loading profile..." />;
@@ -63,7 +68,10 @@ export default function SettingsPage() {
         reason="loading_failed"
         primaryAction={{
           label: "Retry",
-          onClick: fetchProfile,
+          onClick: () => {
+            setLoading(true);
+            fetchProfile();
+          },
         }}
         helpText="Your profile information could not be loaded."
       />

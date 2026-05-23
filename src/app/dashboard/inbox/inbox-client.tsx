@@ -48,9 +48,6 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const offset = page * limit;
 
   const fetchDecisions = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
     try {
       const params = new URLSearchParams({
         workspaceId,
@@ -69,18 +66,24 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
       }
 
       const data: InboxResponse = await response.json();
-      setDecisions(data.decisions);
-      setTotal(data.total);
+      return { success: true, decisions: data.decisions, total: data.total, error: null };
     } catch (err) {
       const governed = classifyOperatorError(err instanceof Error ? err : new Error("Failed to fetch decisions"), { context: "load" });
-      setError(governed.operatorMessage);
-    } finally {
-      setLoading(false);
+      return { success: false, decisions: [], total: 0, error: governed.operatorMessage };
     }
   }, [limit, selectedStatus, page, workspaceId]);
 
   useEffect(() => {
-    fetchDecisions();
+    (async () => {
+      const result = await fetchDecisions();
+      if (result.success) {
+        setDecisions(result.decisions);
+        setTotal(result.total);
+      } else {
+        setError(result.error);
+      }
+      setLoading(false);
+    })();
   }, [fetchDecisions]);
 
   const formatDate = (dateString: string) => {

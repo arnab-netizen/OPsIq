@@ -69,8 +69,6 @@ export default function UsersPage() {
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    setErrorDetails(null);
     try {
       const res = await fetch("/api/users?limit=50");
       if (!res.ok) {
@@ -78,21 +76,27 @@ export default function UsersPage() {
         throw new Error(body.error?.message ?? "Failed to load users");
       }
       const json = await res.json();
-      setData(json);
+      return { success: true, data: json, error: null };
     } catch (err) {
       const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
-      setErrorDetails(governed.operatorMessage);
-    } finally {
-      setLoading(false);
+      return { success: false, data: null, error: governed.operatorMessage };
     }
   }, []);
 
   useEffect(() => {
-    fetchUsers();
+    (async () => {
+      const result = await fetchUsers();
+      if (result.success) {
+        setData(result.data);
+      } else {
+        setErrorDetails(result.error);
+      }
+      setLoading(false);
+    })();
   }, [fetchUsers]);
 
   if (loading) return <LoadingState message="Loading users..." />;
-  if (errorDetails) return <ErrorState message={errorDetails} onRetry={fetchUsers} />; // classifyOperatorError
+  if (errorDetails) return <ErrorState message={errorDetails} onRetry={() => { setLoading(true); fetchUsers(); }} />; // classifyOperatorError
 
   const users = data?.users ?? [];
 
