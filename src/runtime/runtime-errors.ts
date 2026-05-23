@@ -63,9 +63,9 @@ export class RuntimeError extends Error {
     super(safeMsg);
     this.name = "RuntimeError";
     this.metadata = {
-      ...(metadataInput as any),
+      ...metadataInput,
       timestamp: new Date(),
-    };
+    } as RuntimeErrorMetadata;
   }
 
   toOperatorSafeJSON() {

@@ -5,8 +5,7 @@
  */
 
 import { execSync, spawn } from "child_process";
-import * as fs from "fs";
-import * as path from "path";
+import type { ChildProcess } from "child_process";
 
 const DOCKER_CONTAINER_NAME = "opsiq-test-postgres";
 const POSTGRES_USER = "postgres";
@@ -17,25 +16,10 @@ const NEXT_SERVER_PORT = 3000;
 const NEXT_SERVER_URL = `http://localhost:${NEXT_SERVER_PORT}`;
 
 let postgresContainerId: string | null = null;
-let nextServerProcess: any = null;
+let nextServerProcess: ChildProcess | null = null;
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function execAsync(cmd: string, options: any = {}) {
-  return new Promise<string>((resolve, reject) => {
-    try {
-      const result = execSync(cmd, {
-        encoding: "utf-8",
-        stdio: options.silent ? "pipe" : "inherit",
-        ...options,
-      });
-      resolve(result);
-    } catch (error: any) {
-      reject(error);
-    }
-  });
 }
 
 async function checkPostgresRunning(): Promise<boolean> {
