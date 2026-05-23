@@ -1,0 +1,153 @@
+{
+  "timestamp": "2026-05-23T23:00:00Z",
+  "inventory_phase": "INITIAL_SCAN",
+  "existing_models": [
+    {
+      "name": "BillingAccount",
+      "fields": "id, workspaceId, stripeCustomerId, status, createdAt, updatedAt",
+      "relationships": "workspace, subscription"
+    },
+    {
+      "name": "Subscription",
+      "fields": "id, billingAccountId, planId, status, currentPeriodStart, currentPeriodEnd, stripeSubscriptionId",
+      "relationships": "billingAccount, plan"
+    },
+    {
+      "name": "Plan",
+      "fields": "id, name, priceMonthly, priceYearly, description",
+      "relationships": "planCapabilities, subscriptions"
+    },
+    {
+      "name": "PlanCapability",
+      "fields": "id, planId, key, limit, description",
+      "relationships": "plan"
+    },
+    {
+      "name": "UsageEvent",
+      "fields": "id, workspaceId, key, value, timestamp, metadata",
+      "relationships": "workspace"
+    },
+    {
+      "name": "WebhookEvent",
+      "fields": "id, stripeEventId, type, status, processedAt, rawData",
+      "relationships": "none"
+    }
+  ],
+  "existing_services": [
+    {
+      "file": "src/services/entitlement.service.ts",
+      "exports": [
+        "getWorkspacePlan()",
+        "getUsage()",
+        "resolveEntitlements()",
+        "checkCapability()",
+        "trackUsage()"
+      ],
+      "pattern": "Workspace-scoped, fails closed on missing subscription, returns safe DTOs"
+    },
+    {
+      "file": "src/services/usage.service.ts",
+      "exports": [
+        "recordUsage()",
+        "recordDecisionEngineUsage()",
+        "recordRecommendationUsage()",
+        "recordActionUsage()"
+      ],
+      "pattern": "High-level usage recording, fails open (logs not throws)"
+    },
+    {
+      "file": "src/services/webhook.service.ts",
+      "exports": "Webhook processing for Stripe events",
+      "pattern": "Handles subscription/payment events from Stripe"
+    }
+  ],
+  "existing_api_routes": [
+    {
+      "path": "/api/billing/plan",
+      "method": "GET",
+      "auth": "withCanonicalEnforcement",
+      "returns": "plan, status, currentPeriodStart, currentPeriodEnd"
+    },
+    {
+      "path": "/api/billing/usage",
+      "method": "GET",
+      "auth": "withCanonicalEnforcement",
+      "returns": "usage events for current period"
+    },
+    {
+      "path": "/api/billing/upgrade",
+      "method": "POST",
+      "auth": "withCanonicalEnforcement",
+      "returns": "upgrade status, redirect URL"
+    },
+    {
+      "path": "/api/admin/workspaces",
+      "method": "GET",
+      "auth": "withCanonicalEnforcement + SYSTEM_ADMIN capability",
+      "returns": "list of workspaces"
+    },
+    {
+      "path": "/api/admin/audit-log",
+      "method": "GET",
+      "auth": "withCanonicalEnforcement + SYSTEM_ADMIN capability",
+      "returns": "audit log entries"
+    }
+  ],
+  "existing_ui_pages": [
+    {
+      "path": "src/app/(owner)/billing",
+      "purpose": "User-facing billing dashboard"
+    },
+    {
+      "path": "src/app/(admin)",
+      "purpose": "Admin surfaces (if exists)"
+    }
+  ],
+  "existing_tests": [
+    {
+      "file": "src/__tests__/services/entitlement.service.test.ts",
+      "coverage": "resolveEntitlements, checkCapability, getWorkspacePlan, getUsage"
+    },
+    {
+      "file": "src/__tests__/services/usage.service.test.ts",
+      "coverage": "recordUsage, recordDecisionEngineUsage"
+    }
+  ],
+  "existing_plan_gates": [
+    "checkCapability() from entitlement service",
+    "Plan-based feature access enforcement at service layer"
+  ],
+  "existing_usage_tracking": [
+    "UsageEvent model in Prisma",
+    "recordUsage() in usage.service.ts",
+    "resolveEntitlements() aggregates usage for period"
+  ],
+  "existing_admin_surfaces": [
+    "/api/admin/workspaces",
+    "/api/admin/audit-log"
+  ],
+  "gaps_found": [
+    "No comprehensive admin billing diagnostic route (combines account+subscription+plan+capabilities+usage+entitlement decisions)",
+    "No admin-safe billing proof surface DTO",
+    "No support export of billing diagnostics",
+    "No admin UI for billing diagnostics",
+    "No entitlement decision explanation/audit trail"
+  ],
+  "reuse_plan": [
+    "Reuse BillingAccount, Subscription, Plan, PlanCapability, UsageEvent models",
+    "Reuse resolveEntitlements() from entitlement service",
+    "Reuse checkCapability() for entitlement decisions",
+    "Reuse withCanonicalEnforcement for auth",
+    "Reuse admin route pattern (/api/admin/*)",
+    "Reuse CAPABILITIES constant for SYSTEM_ADMIN enforcement"
+  ],
+  "create_plan": [
+    "Create src/lib/billing/admin-billing-diagnostics.dto.ts - proof DTOs",
+    "Create src/services/admin-billing-diagnostics.service.ts - diagnostic service",
+    "Create src/app/api/admin/billing/diagnostics/route.ts - admin diagnostic route",
+    "Create src/app/(admin)/billing/page.tsx - admin UI surface (minimal)",
+    "Create src/services/billing-export.service.ts - support export functionality",
+    "Add tests to src/__tests__/services/admin-billing-diagnostics.service.test.ts",
+    "Create docs/ADMIN_BILLING_ENTITLEMENT_PROOF.md"
+  ]
+}
