@@ -2,6 +2,8 @@
 /**
  * Self-contained test:ci runner
  * Ensures all required infrastructure is available before running tests
+ *
+ * Triggers fresh CI validation
  */
 
 import { execSync, spawn } from "child_process";
