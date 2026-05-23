@@ -235,7 +235,9 @@ export function SelfServeOnboardingShell({
   const handleComplete = () => {
     const session: OnboardingSession = {
       // eslint-disable-next-line react-hooks/rules-of-hooks
-      sessionId: `session_${Date.now().toString()}`,
+      sessionId: `session_${
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        Date.now().toString()}`,
       userId: 'user_123',
       progress: { ...progress, completedAt: new Date() },
       status: 'completed',

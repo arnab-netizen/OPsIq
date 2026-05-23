@@ -53,7 +53,6 @@ export default function MyDayPage() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     fetchMyDay();
   }, [fetchMyDay]);

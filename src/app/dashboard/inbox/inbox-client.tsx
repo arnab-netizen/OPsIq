@@ -79,7 +79,6 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     }
   }, [limit, selectedStatus, page, workspaceId]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     fetchDecisions();
   }, [fetchDecisions]);
