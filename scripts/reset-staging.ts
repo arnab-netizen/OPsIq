@@ -96,9 +96,10 @@ async function resetDatabase() {
       try {
         await prisma.$executeRawUnsafe(`DELETE FROM ${table};`);
         console.log(`[RESET] ✓ Cleared ${table}`);
-      } catch (error: any) {
-        if (!error.message.includes("does not exist")) {
-          console.warn(`[RESET] ⚠ Could not clear ${table}:`, error.message);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!message.includes("does not exist")) {
+          console.warn(`[RESET] ⚠ Could not clear ${table}:`, message);
         }
       }
     }
@@ -142,7 +143,7 @@ async function main() {
   if (shouldReseed) {
     console.log("[RESET] Running seed script...");
     // Import and run seed
-    const seedScript = require("./seed-staging");
+    const seedScript = await import("./seed-staging");
     await seedScript.main();
   }
 

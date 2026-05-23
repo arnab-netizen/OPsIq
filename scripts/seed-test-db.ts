@@ -56,7 +56,7 @@ async function seedTestDb() {
       throw new Error("DATABASE_URL or TEST_DATABASE_URL environment variable is not set");
     }
 
-    let prisma: any;
+    let prisma: InstanceType<typeof PrismaClient>;
 
     // Use appropriate adapter based on database URL
     if (databaseUrl.includes("localhost") || databaseUrl.includes("127.0.0.1")) {
@@ -71,7 +71,7 @@ async function seedTestDb() {
       const { Pool, neonConfig } = await import("@neondatabase/serverless");
       const { PrismaNeon } = await import("@prisma/adapter-neon");
       const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
-      // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
+      // @ts-expect-error - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
       const adapter = new PrismaNeon(pool);
       prisma = new PrismaClient({ adapter });
     }

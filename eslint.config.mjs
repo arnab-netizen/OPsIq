@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "*.cjs",
+    "scripts/*.js",
     "**/__ignored_tests__/**",
   ]),
   // PHASE G2: Auth enforcement rules
