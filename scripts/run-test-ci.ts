@@ -79,9 +79,9 @@ async function startPostgres() {
     }
 
     throw new Error("PostgreSQL failed to start within 30 seconds");
-  } catch (error: any) {
-    // Check if this is a Docker daemon error
-    if (error.message.includes("docker daemon") || error.message.includes("unix:///var/run/docker.sock")) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    if (errorMsg.includes("docker daemon") || errorMsg.includes("unix:///var/run/docker.sock")) {
       console.error("\n❌ INFRASTRUCTURE BLOCKER: LOCAL_POSTGRES_REQUIRED_FOR_TEST_CI");
       console.error("   PostgreSQL is not running and Docker daemon is not accessible.");
       console.error("");
@@ -96,7 +96,7 @@ async function startPostgres() {
       process.exit(1);
     }
 
-    console.error("✗ Failed to start PostgreSQL:", error.message);
+    console.error("✗ Failed to start PostgreSQL:", errorMsg);
     process.exit(1);
   }
 }
@@ -108,8 +108,9 @@ async function runMigrations() {
     process.env.DATABASE_URL = DATABASE_URL;
     execSync("npx prisma migrate deploy", { stdio: "inherit" });
     console.log("✓ Migrations completed");
-  } catch (error: any) {
-    console.error("✗ Migration failed:", error.message);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("✗ Migration failed:", errorMsg);
     process.exit(1);
   }
 }
@@ -120,8 +121,9 @@ async function generatePrismaClient() {
   try {
     execSync("npx prisma generate", { stdio: "inherit" });
     console.log("✓ Prisma client generated");
-  } catch (error: any) {
-    console.error("✗ Prisma generation failed:", error.message);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("✗ Prisma generation failed:", errorMsg);
     process.exit(1);
   }
 }
@@ -133,8 +135,9 @@ async function buildNextJs() {
     process.env.DATABASE_URL = DATABASE_URL;
     execSync("npm run build", { stdio: "inherit" });
     console.log("✓ Next.js build completed");
-  } catch (error: any) {
-    console.error("✗ Build failed:", error.message);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("✗ Build failed:", errorMsg);
     process.exit(1);
   }
 }
@@ -183,12 +186,12 @@ async function runTests() {
   try {
     process.env.DATABASE_URL = DATABASE_URL;
     process.env.TEST_API_URL = NEXT_SERVER_URL;
-    (process.env as any).NODE_ENV = "test";
+    process.env.NODE_ENV = "test";
 
     execSync("vitest run --maxWorkers 1", { stdio: "inherit" });
     console.log("✓ Tests completed");
     return true;
-  } catch (error: any) {
+  } catch {
     console.error("✗ Tests failed");
     return false;
   }
@@ -235,8 +238,9 @@ async function main() {
 
     // Exit with appropriate code
     process.exit(testsPassed ? 0 : 1);
-  } catch (error: any) {
-    console.error("\n❌ Test runner failed:", error.message);
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("\n❌ Test runner failed:", errorMsg);
     await cleanup();
     process.exit(1);
   }
