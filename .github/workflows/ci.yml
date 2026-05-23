@@ -61,14 +61,7 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
         continue-on-error: false
 
-      - name: Build project
-        run: npm run build
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          NODE_ENV: test
-        continue-on-error: false
-
-      - name: Run full test suite
+      - name: Run full test suite with build
         run: npm run test:ci
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
