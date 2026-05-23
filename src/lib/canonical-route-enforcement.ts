@@ -444,7 +444,7 @@ export function withCanonicalEnforcement(
       // ========================================
 
       // PHASE F: Mark auth as finalized before handler execution
-      // After this point, any auth reads will be blocked (shadow read enforcement)
+      // After this point, unknown auth reads will be blocked (shadow read enforcement)
       shadowReadEnforcer.setLifecycleStage(RequestLifecycleStage.AUTH_FINALIZED);
 
       // Handler can ONLY be called here, AFTER auth passed

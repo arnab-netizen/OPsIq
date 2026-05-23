@@ -14,7 +14,7 @@ export async function executeDecisionStub(
   success: boolean;
   message: string;
   executedAt: Date;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
 }> {
   // Fetch decision
   const decision = await db.operatorItem.findFirst({

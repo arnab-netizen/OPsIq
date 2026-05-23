@@ -62,7 +62,7 @@ export async function transitionDecisionState(
   }
 
   // Prepare update data based on target state
-  const updateData: Record<string, any> = {
+  const updateData: Record<string, unknown> = {
     status: mapStateToStatus(toState),
     lastUpdatedBy: actorId || null,
     updatedAt: new Date(),

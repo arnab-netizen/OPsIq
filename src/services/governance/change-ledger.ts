@@ -7,7 +7,7 @@ import crypto from "crypto";
  */
 
 export interface LedgerReconstruction {
-  current_state: Record<string, any>;
+  current_state: Record<string, unknown>;
   change_count: number;
   earliest_change: Date | null;
   latest_change: Date | null;
@@ -20,7 +20,7 @@ export function createChangeEvent(
   recommendation_id: string,
   event_type: ChangeEvent["event_type"],
   actor: string,
-  details: Record<string, any>
+  details: Record<string, unknown>
 ): ChangeEvent {
   return {
     event_id: `event-${crypto.randomBytes(16).toString("hex")}`,
@@ -62,7 +62,7 @@ export function preventMutation(ledger: ChangeEvent[], event_id: string): boolea
  * Replay ledger to reconstruct current state
  */
 export function replayLedger(ledger: ChangeEvent[]): LedgerReconstruction {
-  const state: Record<string, any> = {};
+  const state: Record<string, unknown> = {};
 
   for (const event of ledger) {
     switch (event.event_type) {

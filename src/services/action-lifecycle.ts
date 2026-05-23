@@ -12,7 +12,7 @@ export type ActionLifecycleState = "draft" | "created" | "in_progress" | "blocke
 export interface ActionStateTransition {
   from: ActionLifecycleState;
   to: ActionLifecycleState;
-  requiredContext?: Record<string, any>;
+  requiredContext?: Record<string, unknown>;
   requiresEvidence?: boolean;
   requiresReviewer?: boolean;
 }
@@ -229,7 +229,7 @@ export async function getActionsByEngagementAndState(
   engagementId: string,
   state: ActionLifecycleState,
   workspaceId: string
-): Promise<any[]> {
+): Promise<unknown[]> {
   return db.action.findMany({
     where: {
       engagementId,
@@ -240,7 +240,7 @@ export async function getActionsByEngagementAndState(
   });
 }
 
-export async function getActionsByState(state: ActionLifecycleState, workspaceId: string): Promise<any[]> {
+export async function getActionsByState(state: ActionLifecycleState, workspaceId: string): Promise<unknown[]> {
   return db.action.findMany({
     where: {
       status: state,

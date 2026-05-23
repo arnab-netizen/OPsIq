@@ -123,7 +123,7 @@ export async function changeDecisionStatus(
   workspaceId: string,
   userId: string,
   newStatus: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): Promise<{
   success: boolean;
   message: string;

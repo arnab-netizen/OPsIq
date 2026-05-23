@@ -17,7 +17,7 @@ export class FinancialEngine implements Engine {
   async assess(input: BusinessAssessment): Promise<EngineResult> {
     const signals: EngineSignal[] = [];
     const issues: string[] = [];
-    const metadata: Record<string, any> = {
+    const metadata: Record<string, unknown> = {
       hasFinancialData: !!(input.monthlyRevenue || input.monthlyCosts),
     };
 

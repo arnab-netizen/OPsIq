@@ -180,7 +180,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
     it("should deduplicate webhook event by idempotency key", async () => {
       // HOSTILE TEST: Stripe webhook delivered 100 times (duplicate delivery)
       const webhookId = "evt_1234567890";
-      const processedEvents = new Map<string, any>();
+      const processedEvents = new Map<string, unknown>();
 
       // Simulate 100 duplicate webhook deliveries
       for (let i = 0; i < 100; i++) {
@@ -345,7 +345,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
   describe("3C.6: Idempotency Key Storm", () => {
     it("should reject payload mismatch for same idempotency key", async () => {
       // HOSTILE TEST: Same idempotency key used with different payloads
-      const cache = new Map<string, any>();
+      const cache = new Map<string, unknown>();
       const key = "idempotent-key-001";
 
       // First request: idempotency key + payload A
@@ -376,7 +376,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
 
     it("should return cached result for exact duplicate idempotency request", async () => {
       // HOSTILE TEST: Exact duplicate idempotency key + payload succeeds
-      const idempotencyCache = new Map<string, any>();
+      const idempotencyCache = new Map<string, unknown>();
       const key = "idempotent-key-002";
 
       const request = {

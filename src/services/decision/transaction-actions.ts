@@ -112,7 +112,7 @@ export function getAvailableActions(
  */
 export function validateActionParams(
   action: string,
-  params: Record<string, any>
+  params: Record<string, unknown>
 ): boolean {
   if (action === "override") {
     return !!(params.overrideReason && params.overrideReason.trim().length > 0);

@@ -290,7 +290,7 @@ export function createOutcomeRecord(
     : "MEASURED_SUCCESS"; // Will be refined based on accuracy
 
   // Extract predicted metrics from success_metric and failure_metric
-  const predicted_metrics: Record<string, any> = {};
+  const predicted_metrics: Record<string, unknown> = {};
   if (rec.success_metric) {
     predicted_metrics["success"] = {
       metric_name: rec.success_metric.name,

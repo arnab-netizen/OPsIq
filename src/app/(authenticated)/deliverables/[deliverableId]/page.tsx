@@ -121,7 +121,7 @@ export default async function DeliverableDetailPage({
         </h2>
         {findings && typeof findings === "object" && Object.keys(findings).length > 0 ? (
           <div className="mt-4 space-y-3">
-            {Object.entries(findings).map(([key, value]: [string, any]) => (
+            {Object.entries(findings).map(([key, value]: [string, unknown]) => (
               <div key={key} className="rounded-md border border-border p-3">
                 <h3 className="text-sm font-medium text-foreground">{value.title || value}</h3>
                 {value.description && (
@@ -142,7 +142,7 @@ export default async function DeliverableDetailPage({
         </h2>
         {recommendations && typeof recommendations === "object" && Object.keys(recommendations).length > 0 ? (
           <div className="mt-4 space-y-3">
-            {Object.entries(recommendations).map(([key, value]: [string, any]) => (
+            {Object.entries(recommendations).map(([key, value]: [string, unknown]) => (
               <div key={key} className="rounded-md border border-border p-3">
                 <h3 className="text-sm font-medium text-foreground">{value.title || value}</h3>
                 {value.description && (
@@ -168,7 +168,7 @@ export default async function DeliverableDetailPage({
         </h2>
         {actions && typeof actions === "object" && Object.keys(actions).length > 0 ? (
           <div className="mt-4 space-y-3">
-            {Object.entries(actions).map(([key, value]: [string, any]) => (
+            {Object.entries(actions).map(([key, value]: [string, unknown]) => (
               <div key={key} className="rounded-md border border-border p-3">
                 <h3 className="text-sm font-medium text-foreground">{value.title || value}</h3>
                 {value.description && (
@@ -195,7 +195,7 @@ export default async function DeliverableDetailPage({
         </h2>
         {kpis && typeof kpis === "object" && Object.keys(kpis).length > 0 ? (
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-            {Object.entries(kpis).map(([key, value]: [string, any]) => (
+            {Object.entries(kpis).map(([key, value]: [string, unknown]) => (
               <div key={key} className="rounded-md border border-border p-3">
                 <h3 className="text-sm font-medium text-foreground">{value.name || value}</h3>
                 {value.currentValue && (

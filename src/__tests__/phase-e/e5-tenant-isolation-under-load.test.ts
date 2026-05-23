@@ -139,7 +139,7 @@ describe("PHASE E PRIORITY 5: Tenant Isolation Under Hostile Load", () => {
 
     it("should not cache auth incorrectly across tenants", async () => {
       // HOSTILE: Tenant A's auth token used for Tenant B's request
-      const authCache = new Map<string, any>();
+      const authCache = new Map<string, unknown>();
 
       // Tenant A authenticates
       const tokenA = "token-a-123";

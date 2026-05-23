@@ -174,7 +174,7 @@ export function redactErrorDetails(error: unknown): unknown {
     return {
       name: obj.name,
       message: "[ERROR MESSAGE REDACTED]",
-      // Remove stack, code, any internal details
+      // Remove stack, code, unknown internal details
     };
   }
 

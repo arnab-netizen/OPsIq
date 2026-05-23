@@ -14,7 +14,7 @@ interface TraceSpan {
   duration_ms?: number;
   status: "PENDING" | "SUCCESS" | "FAILED" | "ROLLED_BACK";
   error?: string;
-  tags: Record<string, any>;
+  tags: Record<string, unknown>;
 }
 
 interface RequestTrace {
@@ -67,7 +67,7 @@ export class RequestTracer {
   }
 
   // Start a span (nested operation)
-  startSpan(operation: string, tags: Record<string, any> = {}): string {
+  startSpan(operation: string, tags: Record<string, unknown> = {}): string {
     const span_id = `span-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     const span: TraceSpan = {

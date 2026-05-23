@@ -31,7 +31,7 @@ export interface IntegrityFinding {
   currentStatus: string;
   issue: string;
   requiredFix: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**

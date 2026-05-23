@@ -27,7 +27,7 @@ export interface EngineResult {
   engine: string;
   signals: EngineSignal[];
   issues: string[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 export interface OrchestratedDiagnosis {

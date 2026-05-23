@@ -86,10 +86,10 @@ export function enforceWorkspaceId(
  * Query builder helper to ensure workspaceId is always included
  * Usage: withWorkspace(db.operatorItem.findMany, { workspaceId }, { other: filters })
  */
-export function withWorkspace<T extends Record<string, any>>(
+export function withWorkspace<T extends Record<string, unknown>>(
   query: T,
   workspaceId: string,
-  whereClause?: Record<string, any>
+  whereClause?: Record<string, unknown>
 ): T {
   validateWorkspaceId(workspaceId);
   return {

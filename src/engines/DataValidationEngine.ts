@@ -17,7 +17,7 @@ export class DataValidationEngine implements Engine {
   async assess(input: BusinessAssessment): Promise<EngineResult> {
     const signals: EngineSignal[] = [];
     const issues: string[] = [];
-    const metadata: Record<string, any> = {
+    const metadata: Record<string, unknown> = {
       providedFields: this.countProvidedFields(input),
       dataQualityScore: 0,
     };

@@ -21,7 +21,7 @@ export interface TimelineEvent {
   status: string;
   eventName: string;
   actor?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   icon: string;
   label: string;
   color: string;

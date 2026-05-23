@@ -197,7 +197,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
 
     it("should detect duplicate and retry from idempotency cache", async () => {
       // HOSTILE TEST: Duplicate key detected, use cached result
-      const idempotencyCache = new Map<string, any>();
+      const idempotencyCache = new Map<string, unknown>();
       const key = "idempotent-append-001";
 
       // First attempt: execute and cache

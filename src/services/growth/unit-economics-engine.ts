@@ -14,7 +14,7 @@
  */
 export class UnitEconomicsEngine {
   // Workspace-scoped data stores (Map<workspaceId, DataArray>)
-  private static metricsStore = new Map<string, any[]>();
+  private static metricsStore = new Map<string, unknown[]>();
   /**
    * Calculate Customer Acquisition Cost (CAC) - WORKSPACE-SCOPED
    * CRITICAL: Returns zero if workspace doesn't own the data

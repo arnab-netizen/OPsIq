@@ -102,7 +102,7 @@ export async function getMetricsSnapshot(workspaceId: string) {
     "growth_block",
     "inefficiency",
   ];
-  const metricsSnapshot: Record<string, any> = {};
+  const metricsSnapshot: Record<string, unknown> = {};
 
   for (const problemType of problemTypes) {
     metricsSnapshot[problemType] = await calculateSuccessMetrics(

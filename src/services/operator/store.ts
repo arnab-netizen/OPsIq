@@ -168,7 +168,7 @@ export async function updateItem(
   updates: Partial<OperatorItem>,
   workspaceId?: string
 ): Promise<void> {
-  const updateData: Record<string, any> = {};
+  const updateData: Record<string, unknown> = {};
 
   if (updates.problem !== undefined) updateData.problem = updates.problem;
   if (updates.action !== undefined) updateData.action = updates.action;

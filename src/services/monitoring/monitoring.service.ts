@@ -296,7 +296,7 @@ export class MonitoringService {
   private emitAlert(
     alertType: string,
     message: string,
-    context: Record<string, any>
+    context: Record<string, unknown>
   ): void {
     // In production: emit to local event bus for subscribers to handle
     // (could eventually forward to Sentry/DataDog if configured)

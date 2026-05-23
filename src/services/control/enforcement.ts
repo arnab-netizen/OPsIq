@@ -227,7 +227,7 @@ export function createControlledRecommendationGenerator(
     items: unknown[],
     inputVariables?: Record<string, unknown>,
     scenarios?: ScenarioComparison
-  ) => any
+  ) => unknown
 ) {
   return (
     decision: unknown,

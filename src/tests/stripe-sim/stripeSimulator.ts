@@ -8,7 +8,7 @@ export interface StripeEvent {
   type: string;
   created: number;
   data: {
-    object: Record<string, any>;
+    object: Record<string, unknown>;
   };
 }
 

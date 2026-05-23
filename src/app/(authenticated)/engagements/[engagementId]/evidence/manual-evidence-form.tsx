@@ -70,7 +70,7 @@ export function ManualEvidenceForm({
       return;
     }
 
-    const body: Record<string, any> = {
+    const body: Record<string, unknown> = {
       engagementId,
       category: formData.get("category"),
       evidenceType: "FREE_TEXT",

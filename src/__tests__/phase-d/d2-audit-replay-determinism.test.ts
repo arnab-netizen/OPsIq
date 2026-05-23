@@ -133,7 +133,7 @@ describe("D2: Audit Trail - Replay Determinism Proofs", () => {
       const testEvents = createDeterministicEventSequence(100);
 
       // Verify isolation: each workspace only sees its own events
-      const wsToEvents = new Map<string, any[]>();
+      const wsToEvents = new Map<string, unknown[]>();
       testEvents.forEach((e) => {
         if (!wsToEvents.has(e.workspace_id)) {
           wsToEvents.set(e.workspace_id, []);
@@ -169,7 +169,7 @@ describe("D2: Audit Trail - Replay Determinism Proofs", () => {
       const testEvents = createDeterministicEventSequence(100);
 
       // Group by actor
-      const actorToEvents = new Map<string, any[]>();
+      const actorToEvents = new Map<string, unknown[]>();
       testEvents.forEach((e) => {
         if (!actorToEvents.has(e.actor_id)) {
           actorToEvents.set(e.actor_id, []);

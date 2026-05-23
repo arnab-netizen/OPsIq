@@ -53,11 +53,11 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
   function replayEvents(
     events: Array<unknown>
   ): {
-    state: Record<string, any>;
+    state: Record<string, unknown>;
     hash: string;
     eventCount: number;
   } {
-    const state: Record<string, any> = {
+    const state: Record<string, unknown> = {
       workspaces: new Map(),
       decisions: new Map(),
       members: new Map(),

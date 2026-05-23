@@ -115,7 +115,7 @@ export async function getControlSurface(
     where: { workspaceId },
   });
 
-  const decisionMap = new Map<string, any>();
+  const decisionMap = new Map<string, unknown>();
   for (const d of decisions) {
     decisionMap.set(d.id, d);
   }
