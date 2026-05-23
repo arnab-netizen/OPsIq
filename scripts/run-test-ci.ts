@@ -113,6 +113,7 @@ async function runMigrations() {
 
   try {
     process.env.DATABASE_URL = DATABASE_URL;
+    process.env.SKIP_ENV_VALIDATION = "true";
     execSync("npx prisma migrate deploy", { stdio: "inherit" });
     console.log("✓ Migrations completed");
   } catch (error: unknown) {
@@ -126,6 +127,7 @@ async function generatePrismaClient() {
   console.log("⚙️  Generating Prisma client...");
 
   try {
+    process.env.SKIP_ENV_VALIDATION = "true";
     execSync("npx prisma generate", { stdio: "inherit" });
     console.log("✓ Prisma client generated");
   } catch (error: unknown) {
@@ -140,6 +142,7 @@ async function buildNextJs() {
 
   try {
     process.env.DATABASE_URL = DATABASE_URL;
+    process.env.SKIP_ENV_VALIDATION = "true";
     execSync("npm run build", { stdio: "inherit" });
     console.log("✓ Next.js build completed");
   } catch (error: unknown) {
@@ -162,6 +165,7 @@ async function runTests() {
     const env = { ...process.env };
     env.DATABASE_URL = DATABASE_URL;
     env.NODE_ENV = "test";
+    env.SKIP_ENV_VALIDATION = "true";
 
     execSync("vitest run --maxWorkers 1", { stdio: "inherit", env });
     console.log("✓ Tests completed");
