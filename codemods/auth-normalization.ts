@@ -10,20 +10,21 @@
  * Uses jscodeshift for AST safety - preserves semantics & formatting.
  */
 
-export default function transformer(fileInfo: any, api: any) {
-  const j = api.jscodeshift;
-  const root = j(fileInfo.source);
+export default function transformer(fileInfo: unknown, api: unknown) {
+  const j = (api as unknown as { jscodeshift: unknown }).jscodeshift;
+  const root = j(fileInfo);
   let hasChanges = false;
 
   // Transform 1: Replace withRequestContext import
   root
     .find(j.ImportDeclaration)
-    .filter((path: any) => {
-      return path.value.source.value === '@/lib/api-handler';
+    .filter((path: unknown) => {
+      return (path as unknown as { value: { source: { value: string } } }).value.source.value === '@/lib/api-handler';
     })
-    .forEach((path: any) => {
-      path.value.source.value = '@/lib/enforced-route';
-      const spec = path.value.specifiers?.[0];
+    .forEach((path: unknown) => {
+      const typedPath = path as unknown as { value: { source: { value: string }; specifiers?: Array<{ type: string; imported: { name: string }; local: { name: string } }> } };
+      typedPath.value.source.value = '@/lib/enforced-route';
+      const spec = typedPath.value.specifiers?.[0];
       if (spec && spec.type === 'ImportSpecifier') {
         spec.imported.name = 'withEnforcementFull';
         spec.local.name = 'withEnforcementFull';
@@ -34,11 +35,12 @@ export default function transformer(fileInfo: any, api: any) {
   // Transform 2: Ensure NextRequest type is imported
   const hasNextRequestImport = root
     .find(j.ImportDeclaration)
-    .some((path: any) => {
+    .some((path: unknown) => {
+      const typedPath = path as unknown as { value: { source: { value: string }; specifiers?: Array<{ local?: { name: string } }> } };
       return (
-        path.value.source.value === 'next/server' &&
-        path.value.specifiers?.some(
-          (s: any) => s.local?.name === 'NextRequest'
+        typedPath.value.source.value === 'next/server' &&
+        typedPath.value.specifiers?.some(
+          (s: unknown) => (s as unknown as { local?: { name: string } }).local?.name === 'NextRequest'
         )
       );
     });
@@ -50,7 +52,7 @@ export default function transformer(fileInfo: any, api: any) {
         [j.importSpecifier(j.identifier('NextRequest'))],
         j.literal('next/server')
       );
-      (nextRequestImport as any).importKind = 'type';
+      (nextRequestImport as unknown as { importKind: string }).importKind = 'type';
       firstImport.insertAfter(nextRequestImport);
       hasChanges = true;
     }
@@ -59,13 +61,14 @@ export default function transformer(fileInfo: any, api: any) {
   // Transform 3: Ensure error imports
   const hasErrorImports = root
     .find(j.ImportDeclaration)
-    .some((path: any) => {
+    .some((path: unknown) => {
+      const typedPath = path as unknown as { value: { source: { value: string }; specifiers?: Array<{ imported?: { name: string } }> } };
       return (
-        path.value.source.value === '@/infra/errors' &&
-        path.value.specifiers?.some(
-          (s: any) =>
-            s.imported?.name === 'UnauthorizedError' ||
-            s.imported?.name === 'ForbiddenError'
+        typedPath.value.source.value === '@/infra/errors' &&
+        typedPath.value.specifiers?.some(
+          (s: unknown) =>
+            (s as unknown as { imported?: { name: string } }).imported?.name === 'UnauthorizedError' ||
+            (s as unknown as { imported?: { name: string } }).imported?.name === 'ForbiddenError'
         )
       );
     });
@@ -88,16 +91,18 @@ export default function transformer(fileInfo: any, api: any) {
   // Transform 4: Replace withRequestContext handlers
   root
     .find(j.ExportNamedDeclaration)
-    .filter((path: any) => {
-      const declaration = path.value.declaration;
+    .filter((path: unknown) => {
+      const typedPath = path as unknown as { value: { declaration: unknown } };
+      const declaration = typedPath.value.declaration as unknown as { type: string; declarations: Array<{ init?: { callee?: { name: string } } }> };
       return (
         declaration &&
         declaration.type === 'VariableDeclaration' &&
         declaration.declarations[0]?.init?.callee?.name === 'withRequestContext'
       );
     })
-    .forEach((path: any) => {
-      const declaration = path.value.declaration as any;
+    .forEach((path: unknown) => {
+      const typedPath = path as unknown as { value: { declaration: unknown } };
+      const declaration = typedPath.value.declaration as unknown as { declarations: Array<{ init: { callee: { name: string }; arguments: Array<{ type: string; params: Array<{ type: string; name?: string }> }> } }> };
       const varDecl = declaration.declarations[0];
       if (varDecl.init?.callee?.name === 'withRequestContext') {
         varDecl.init.callee.name = 'withEnforcementFull';
@@ -134,21 +139,22 @@ export default function transformer(fileInfo: any, api: any) {
   // Transform 5: Replace Response.json with 401/403 with throw statements
   root
     .find(j.CallExpression)
-    .filter((path: any) => {
-      const callee = path.value.callee;
+    .filter((path: unknown) => {
+      const typedPath = path as unknown as { value: { callee: unknown; arguments: Array<unknown> } };
+      const callee = typedPath.value.callee as unknown as { type: string; object?: { name: string }; property?: { name: string } };
       if (
         callee.type === 'MemberExpression' &&
-        (callee.object as any).name === 'Response' &&
-        (callee.property as any).name === 'json'
+        (callee.object as unknown as { name: string })?.name === 'Response' &&
+        (callee.property as unknown as { name: string })?.name === 'json'
       ) {
-        const args = path.value.arguments;
+        const args = typedPath.value.arguments;
         if (args.length >= 2) {
           const secondArg = args[1];
-          if (secondArg?.type === 'ObjectExpression') {
-            const statusProp = (secondArg as any).properties?.find(
-              (p: any) =>
-                p.key?.name === 'status' &&
-                (p.value?.value === 401 || p.value?.value === 403)
+          if ((secondArg as unknown as { type: string })?.type === 'ObjectExpression') {
+            const statusProp = (secondArg as unknown as { properties?: Array<{ key?: { name: string }; value?: { value: number } }> }).properties?.find(
+              (p: unknown) =>
+                (p as unknown as { key?: { name: string }; value?: { value: number } }).key?.name === 'status' &&
+                ((p as unknown as { key?: { name: string }; value?: { value: number } }).value?.value === 401 || (p as unknown as { key?: { name: string }; value?: { value: number } }).value?.value === 403)
             );
             return !!statusProp;
           }
@@ -156,18 +162,19 @@ export default function transformer(fileInfo: any, api: any) {
       }
       return false;
     })
-    .replaceWith((path: any) => {
+    .replaceWith((path: unknown) => {
       // Get the status code
-      const args = path.value.arguments;
-      const secondArg = args[1] as any;
+      const typedPath = path as unknown as { value: { arguments: Array<unknown> } };
+      const args = typedPath.value.arguments;
+      const secondArg = args[1] as unknown as { properties: Array<{ key: { name: string }; value?: { value: number } }> };
       const statusProp = secondArg.properties.find(
-        (p: any) => p.key.name === 'status'
+        (p: unknown) => (p as unknown as { key: { name: string } }).key.name === 'status'
       );
-      const statusCode = statusProp?.value?.value;
+      const statusCode = (statusProp as unknown as { value?: { value: number } })?.value?.value;
 
       const errorClass =
         statusCode === 401 ? 'UnauthorizedError' : 'ForbiddenError';
-      const errorMsg = args[0]?.properties?.[0]?.value?.value || 'Unauthorized';
+      const errorMsg = (args[0] as unknown as { properties?: Array<{ value?: { value: string } }> })?.properties?.[0]?.value?.value || 'Unauthorized';
 
       const throwStmt = j.throwStatement(
         j.newExpression(j.identifier(errorClass), [
@@ -183,12 +190,12 @@ export default function transformer(fileInfo: any, api: any) {
   root
     .find(j.NewExpression)
     .filter(
-      (path: any) =>
-        path.value.callee.name === 'Error' &&
-        path.value.arguments[0]?.value?.includes('nauthorized')
+      (path: unknown) =>
+        (path as unknown as { value: { callee: { name: string }; arguments: Array<{ value?: string }> } }).value.callee.name === 'Error' &&
+        (path as unknown as { value: { callee: { name: string }; arguments: Array<{ value?: string }> } }).value.arguments[0]?.value?.includes('nauthorized')
     )
-    .forEach((path: any) => {
-      path.value.callee.name = 'UnauthorizedError';
+    .forEach((path: unknown) => {
+      (path as unknown as { value: { callee: { name: string } } }).value.callee.name = 'UnauthorizedError';
       hasChanges = true;
     });
 
