@@ -13,7 +13,10 @@ const DOCKER_CONTAINER_NAME = "opsiq-test-postgres";
 const POSTGRES_USER = "postgres";
 const POSTGRES_PASSWORD = "postgres";
 const POSTGRES_DB = "opsiq_test";
-const DATABASE_URL = `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}`;
+const DEFAULT_DATABASE_URL = `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}`;
+// Use DATABASE_URL from environment if available (GitHub Actions CI), otherwise use default
+const DATABASE_URL = process.env.DATABASE_URL || DEFAULT_DATABASE_URL;
+const NEEDS_POSTGRES_MANAGEMENT = !process.env.DATABASE_URL; // Only manage PostgreSQL if not provided by CI
 const NEXT_SERVER_PORT = 3000;
 const NEXT_SERVER_URL = `http://localhost:${NEXT_SERVER_PORT}`;
 
@@ -36,6 +39,12 @@ async function checkPostgresRunning(): Promise<boolean> {
 }
 
 async function startPostgres() {
+  // Skip PostgreSQL management if DATABASE_URL is already set (GitHub Actions CI)
+  if (!NEEDS_POSTGRES_MANAGEMENT) {
+    console.log("✓ Using provided DATABASE_URL (GitHub Actions CI environment)");
+    return;
+  }
+
   console.log("🐘 Checking PostgreSQL...");
 
   // First check if it's already running locally
@@ -209,8 +218,8 @@ async function cleanup() {
     await sleep(2000);
   }
 
-  // Stop and remove PostgreSQL container
-  if (postgresContainerId) {
+  // Stop and remove PostgreSQL container (only if we started one)
+  if (postgresContainerId && NEEDS_POSTGRES_MANAGEMENT) {
     try {
       execSync(`docker stop ${DOCKER_CONTAINER_NAME} 2>/dev/null`, { stdio: "pipe" });
       execSync(`docker rm ${DOCKER_CONTAINER_NAME} 2>/dev/null`, { stdio: "pipe" });
