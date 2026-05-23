@@ -27,7 +27,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/infra/logger");
 
 describe("ExecutionDriftService", () => {
-  let mockDb: any;
+  let mockDb: unknown;
 
   beforeEach(async () => {
     vi.clearAllMocks();

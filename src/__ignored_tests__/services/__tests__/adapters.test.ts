@@ -5,7 +5,7 @@ import type { PrioritizedIntervention } from "@/domain/consulting-engine/types";
 // Mock adapters for unit testing
 async function createRecommendationsFromInterventions(
   engagementId: string,
-  interventions: any[],
+  interventions: unknown[],
   actorId: string
 ) {
   if (!interventions || interventions.length === 0) {
@@ -53,7 +53,7 @@ async function createRecommendationsFromInterventions(
 
 async function createActionsFromInterventions(
   engagementId: string,
-  interventions: any[],
+  interventions: unknown[],
   actorId: string
 ) {
   if (!interventions || interventions.length === 0) {

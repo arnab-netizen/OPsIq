@@ -18,7 +18,7 @@ import type { PolicyContext } from "@/policies/capability-check";
  */
 
 describe("Block 3: RBAC Enforcement", () => {
-  let mockSession: any;
+  let mockSession: unknown;
   let mockPolicy: PolicyContext;
 
   beforeEach(() => {

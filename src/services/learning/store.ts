@@ -101,7 +101,7 @@ export async function getLearningRecords(
   problemType?: string,
   limit: number = 100
 ) {
-  const where: any = {
+  const where: unknown = {
     workspaceId,
   };
 

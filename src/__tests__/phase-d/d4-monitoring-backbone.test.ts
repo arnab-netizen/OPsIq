@@ -15,7 +15,7 @@ import { MonitoringService } from "@/services/monitoring/monitoring.service";
  */
 
 describe("D4: Monitoring Backbone - Local Metrics Collection", () => {
-  let mockDb: any;
+  let mockDb: unknown;
   let monitoringService: MonitoringService;
 
   beforeEach(() => {

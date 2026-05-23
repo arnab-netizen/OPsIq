@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
             ? Date.now() - lastUpdate.getTime()
             : undefined,
       },
-      history: readinessAuditEvents.map((event: any) => ({
+      history: readinessAuditEvents.map((event: unknown) => ({
         event_name: event.event_name,
         occurred_at: event.occurred_at.toISOString(),
         payload: event.payload,

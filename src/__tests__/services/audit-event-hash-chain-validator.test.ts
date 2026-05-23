@@ -519,7 +519,7 @@ describe("AuditEventHashChainValidator - Hash Chain Integrity", () => {
     try {
       AuditEventHashChainValidator.validateChain([event1, event2]);
       expect.fail("Should have thrown");
-    } catch (e: any) {
+    } catch (e: unknown) {
       expect(e.message).toContain("Chain broken");
       expect(e.message).toContain("event-2");
       expect(e.message).toContain("previousHash");
@@ -539,7 +539,7 @@ describe("AuditEventHashChainValidator - Hash Chain Integrity", () => {
     try {
       AuditEventHashChainValidator.validateChain([event]);
       expect.fail("Should have thrown");
-    } catch (e: any) {
+    } catch (e: unknown) {
       expect(e.message).toContain("Hash mismatch");
       expect(e.message).toContain("event-1");
       expect(e.message).toContain("corrupted");

@@ -28,7 +28,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     throw new Error("Workspace ID required");
   }
 
-  let body: any = {};
+  let body: unknown = {};
   try {
     body = await request.json();
   } catch {

@@ -245,7 +245,7 @@ export default function BundleDetailPage({
               {
                 key: "title",
                 header: "Title",
-                render: (item: any) => (
+                render: (item: unknown) => (
                   <Link
                     href={`/engagements/${engagementId}/evidence/${item.evidenceItem.id}`}
                     className="font-medium text-primary hover:underline"
@@ -257,7 +257,7 @@ export default function BundleDetailPage({
               {
                 key: "category",
                 header: "Category",
-                render: (item: any) => (
+                render: (item: unknown) => (
                   <Badge
                     variant={
                       CATEGORY_COLORS[item.evidenceItem.category] ?? "muted"
@@ -270,7 +270,7 @@ export default function BundleDetailPage({
               {
                 key: "validationStatus",
                 header: "Status",
-                render: (item: any) => (
+                render: (item: unknown) => (
                   <Badge
                     variant={
                       VALIDATION_COLORS[item.evidenceItem.validationStatus] ??
@@ -284,7 +284,7 @@ export default function BundleDetailPage({
               {
                 key: "visibility",
                 header: "Visibility",
-                render: (item: any) => (
+                render: (item: unknown) => (
                   <span className="text-xs text-muted-foreground">
                     {item.evidenceItem.visibility.replace(/_/g, " ")}
                   </span>
@@ -293,7 +293,7 @@ export default function BundleDetailPage({
               {
                 key: "actions",
                 header: "",
-                render: (item: any) => (
+                render: (item: unknown) => (
                   <button
                     onClick={() => handleRemoveEvidence(item.evidenceItem.id)}
                     className="text-xs text-destructive hover:text-destructive/80 transition-colors"

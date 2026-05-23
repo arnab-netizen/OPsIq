@@ -46,7 +46,7 @@ async function getStripe() {
 export async function verifyWebhookSignature(
   body: string,
   signature: string
-): Promise<{ event: any; timestamp: number }> {
+): Promise<{ event: unknown; timestamp: number }> {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!secret) {
@@ -158,7 +158,7 @@ export async function getOrCreateWebhookEvent(
   type: string,
   timestamp: number
 ): Promise<{
-  event: any;
+  event: unknown;
   isNew: boolean;
   shouldProcess: boolean;
   shouldRetry: boolean;
@@ -326,7 +326,7 @@ async function validatePlanAndGetPriceId(planId: string): Promise<string> {
  */
 async function syncEntitlementsForSubscription(
   workspaceId: string,
-  subscription: any
+  subscription: unknown
 ): Promise<void> {
   try {
     if (subscription.status !== "active") {
@@ -385,7 +385,7 @@ async function checkEventOrdering(
     });
 
     // Find current event in list
-    const currentIndex = customerEvents.findIndex((e: any) => e.stripeEventId === stripeEventId);
+    const currentIndex = customerEvents.findIndex((e: unknown) => e.stripeEventId === stripeEventId);
     if (currentIndex === -1) {
       return; // Event not found (new event, proceed)
     }
@@ -762,7 +762,7 @@ export async function syncSubscriptionStatus(
  * Handle webhook event from Stripe with timeout protection
  * Throws on processing errors (caller marks event as failed)
  */
-export async function handleWebhookEvent(event: any): Promise<void> {
+export async function handleWebhookEvent(event: unknown): Promise<void> {
   const timeoutPromise = new Promise<never>((_, reject) =>
     setTimeout(
       () => reject(new Error(`Webhook processing timeout after ${PROCESSING_TIMEOUT_MS}ms`)),

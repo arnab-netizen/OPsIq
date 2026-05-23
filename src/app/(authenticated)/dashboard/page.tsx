@@ -51,7 +51,7 @@ async function fetchAllActions() {
   if (!res.ok) return [];
   const engagements = await res.json();
 
-  const allActions: any[] = [];
+  const allActions: unknown[] = [];
   for (const eng of engagements) {
     const actRes = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${eng.id}/actions`,
@@ -59,7 +59,7 @@ async function fetchAllActions() {
     );
     if (actRes.ok) {
       const acts = await actRes.json();
-      allActions.push(...acts.map((a: any) => ({ ...a, engagementId: eng.id, engagementCode: eng.code })));
+      allActions.push(...acts.map((a: unknown) => ({ ...a, engagementId: eng.id, engagementCode: eng.code })));
     }
   }
   return allActions;
@@ -73,7 +73,7 @@ async function fetchAllFindings() {
   if (!res.ok) return [];
   const engagements = await res.json();
 
-  const allFindings: any[] = [];
+  const allFindings: unknown[] = [];
   for (const eng of engagements) {
     const findRes = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/api/engagements/${eng.id}/findings`,
@@ -81,7 +81,7 @@ async function fetchAllFindings() {
     );
     if (findRes.ok) {
       const finds = await findRes.json();
-      allFindings.push(...finds.map((f: any) => ({ ...f, engagementId: eng.id, engagementCode: eng.code })));
+      allFindings.push(...finds.map((f: unknown) => ({ ...f, engagementId: eng.id, engagementCode: eng.code })));
     }
   }
   return allFindings;
@@ -94,11 +94,11 @@ export default async function DashboardPage() {
     fetchAllFindings(),
   ]);
 
-  const activeEngagements = engagements.filter((e: any) => e.status === "active");
-  const criticalFindings = allFindings.filter((f: any) => f.severity === "critical");
-  const blockedActions = allActions.filter((a: any) => a.status === "blocked");
-  const openActions = allActions.filter((a: any) => a.status === "open" || a.status === "in_progress");
-  const atRiskEngagements = activeEngagements.filter((e: any) => e.healthStatus === "critical" || e.healthStatus === "at_risk");
+  const activeEngagements = engagements.filter((e: unknown) => e.status === "active");
+  const criticalFindings = allFindings.filter((f: unknown) => f.severity === "critical");
+  const blockedActions = allActions.filter((a: unknown) => a.status === "blocked");
+  const openActions = allActions.filter((a: unknown) => a.status === "open" || a.status === "in_progress");
+  const atRiskEngagements = activeEngagements.filter((e: unknown) => e.healthStatus === "critical" || e.healthStatus === "at_risk");
 
   return (
     <div>
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
         </h2>
         {activeEngagements.length > 0 ? (
           <div className="mt-4 space-y-3">
-            {activeEngagements.slice(0, 5).map((e: any) => (
+            {activeEngagements.slice(0, 5).map((e: unknown) => (
               <Link
                 key={e.id}
                 href={`/engagements/${e.id}`}
@@ -171,7 +171,7 @@ export default async function DashboardPage() {
             ⚠️ At-Risk Engagements ({atRiskEngagements.length})
           </h2>
           <div className="mt-4 space-y-2">
-            {atRiskEngagements.map((e: any) => (
+            {atRiskEngagements.map((e: unknown) => (
               <Link
                 key={e.id}
                 href={`/engagements/${e.id}`}
@@ -196,7 +196,7 @@ export default async function DashboardPage() {
             🔴 Critical Findings ({criticalFindings.length})
           </h2>
           <div className="mt-4 space-y-2">
-            {criticalFindings.slice(0, 5).map((f: any) => (
+            {criticalFindings.slice(0, 5).map((f: unknown) => (
               <Link
                 key={f.id}
                 href={`/engagements/${f.engagementId}`}
@@ -227,7 +227,7 @@ export default async function DashboardPage() {
             ⚡ Blocked Actions ({blockedActions.length})
           </h2>
           <div className="mt-4 space-y-2">
-            {blockedActions.slice(0, 5).map((a: any) => (
+            {blockedActions.slice(0, 5).map((a: unknown) => (
               <Link
                 key={a.id}
                 href={`/engagements/${a.engagementId}`}
@@ -255,7 +255,7 @@ export default async function DashboardPage() {
         </h2>
         {openActions.length > 0 ? (
           <div className="mt-4 space-y-2">
-            {openActions.slice(0, 8).map((a: any) => (
+            {openActions.slice(0, 8).map((a: unknown) => (
               <Link
                 key={a.id}
                 href={`/engagements/${a.engagementId}`}

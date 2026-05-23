@@ -40,8 +40,8 @@ export interface ControlLayerExecutionResult {
 export async function executeDecisionThroughControlLayer(
   inputVariables: Record<string, unknown>,
   decisionMetrics: Record<string, number>,
-  patterns: any[],
-  variables: any[],
+  patterns: unknown[],
+  variables: unknown[],
   blockReasons: string[] = []
 ): Promise<ControlLayerExecutionResult> {
   const violations: Array<{
@@ -222,17 +222,17 @@ export function enforceControlLayer(
  */
 export function createControlledRecommendationGenerator(
   generateFn: (
-    decision: any,
-    patterns: any[],
-    items: any[],
+    decision: unknown,
+    patterns: unknown[],
+    items: unknown[],
     inputVariables?: Record<string, unknown>,
     scenarios?: ScenarioComparison
   ) => any
 ) {
   return (
-    decision: any,
-    patterns: any[],
-    items: any[],
+    decision: unknown,
+    patterns: unknown[],
+    items: unknown[],
     inputVariables?: Record<string, unknown>,
     scenarios?: ScenarioComparison
   ) => {

@@ -7,7 +7,7 @@ describe("Engagement Health Service", () => {
         { id: "f1", severity: "critical", status: "open" },
         { id: "f2", severity: "high", status: "open" },
       ];
-      const actions: any[] = [];
+      const actions: unknown[] = [];
 
       const hasBlockingCriticalFindings = findings.some(
         (f) => f.severity === "critical" && f.status !== "resolved"

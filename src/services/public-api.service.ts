@@ -27,7 +27,7 @@ export class PublicAPIError extends Error {
   }
 }
 
-export function toPublicEngagementDTO(engagement: any): PublicEngagementDTO {
+export function toPublicEngagementDTO(engagement: unknown): PublicEngagementDTO {
   const dto: PublicEngagementDTO = {
     id: engagement.id,
     name: engagement.name,
@@ -47,7 +47,7 @@ export function toPublicEngagementDTO(engagement: any): PublicEngagementDTO {
   return dto;
 }
 
-export function toPublicActionDTO(action: any): PublicActionDTO {
+export function toPublicActionDTO(action: unknown): PublicActionDTO {
   const dto: PublicActionDTO = {
     id: action.id,
     name: action.name,
@@ -69,7 +69,7 @@ export function toPublicActionDTO(action: any): PublicActionDTO {
   return dto;
 }
 
-export function toPublicKPIDTO(kpi: any): PublicKPIDTO {
+export function toPublicKPIDTO(kpi: unknown): PublicKPIDTO {
   const dto: PublicKPIDTO = {
     id: kpi.id || kpi.slug || "",
     name: kpi.name,
@@ -90,7 +90,7 @@ export function toPublicKPIDTO(kpi: any): PublicKPIDTO {
   return dto;
 }
 
-export function toPublicExperimentDTO(experiment: any): PublicExperimentDTO {
+export function toPublicExperimentDTO(experiment: unknown): PublicExperimentDTO {
   const dto: PublicExperimentDTO = {
     id: experiment.id,
     name: experiment.name,
@@ -125,7 +125,7 @@ export function toPublicExperimentDTO(experiment: any): PublicExperimentDTO {
   return dto;
 }
 
-export function toPublicFindingDTO(finding: any): PublicFindingDTO {
+export function toPublicFindingDTO(finding: unknown): PublicFindingDTO {
   return {
     id: finding.id,
     title: finding.title,
@@ -138,7 +138,7 @@ export function toPublicFindingDTO(finding: any): PublicFindingDTO {
   };
 }
 
-export function toPublicWorkspaceHealthDTO(health: any): PublicWorkspaceHealthDTO {
+export function toPublicWorkspaceHealthDTO(health: unknown): PublicWorkspaceHealthDTO {
   const dto: PublicWorkspaceHealthDTO = {
     workspaceId: health.workspaceId,
     assessedAt: health.assessedAt || new Date().toISOString(),

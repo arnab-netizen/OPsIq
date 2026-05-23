@@ -291,7 +291,7 @@ describe("Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE"
     });
 
     it("rejects event with missing workspaceId", async () => {
-      const invalidRequest: any = {
+      const invalidRequest: unknown = {
         aggregateId: uuidv4(),
         aggregateType: "recommendation",
         eventType: "recommendation.created",

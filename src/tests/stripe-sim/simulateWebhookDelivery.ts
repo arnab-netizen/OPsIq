@@ -26,7 +26,7 @@ export interface DeliveryResult {
   attempts: number;
   finalStatus: string;
   error?: string;
-  webhookEventRecord?: any;
+  webhookEventRecord?: unknown;
 }
 
 /**

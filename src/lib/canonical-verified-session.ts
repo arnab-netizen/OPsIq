@@ -311,7 +311,7 @@ export class CanonicalVerifiedSessionBuilder {
     return `hash_${hash.toString(16)}`;
   }
 
-  private deepFreeze(obj: any): any {
+  private deepFreeze(obj: unknown): unknown {
     Object.freeze(obj);
 
     Object.getOwnPropertyNames(obj).forEach((prop) => {

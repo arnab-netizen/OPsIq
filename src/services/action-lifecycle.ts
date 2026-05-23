@@ -20,7 +20,7 @@ export interface ActionStateTransition {
 export interface EnforcementRule {
   ruleId: string;
   name: string;
-  check: (action: any) => boolean;
+  check: (action: unknown) => boolean;
   error: string;
 }
 
@@ -100,7 +100,7 @@ export async function validateStateTransition(
   }
 }
 
-export async function enforceActionRules(action: any): Promise<string[]> {
+export async function enforceActionRules(action: unknown): Promise<string[]> {
   const violations: string[] = [];
 
   for (const rule of ENFORCEMENT_RULES) {
@@ -120,7 +120,7 @@ export async function transitionActionState(
   actionId: string,
   nextState: ActionLifecycleState,
   context: {
-    authContext?: any;
+    authContext?: unknown;
     actorId?: string;
     reason?: string;
     evidence?: string;

@@ -96,11 +96,11 @@ export class EventEmitterService {
     // - Deterministic ordering preserved
     // - Allows concurrent writes to different aggregates (scalability)
     // - Idempotency violations are caught and existing event returned
-    let event: any;
+    let event: unknown;
 
     try {
       event = await db.$transaction(
-        async (tx: any) => {
+        async (tx: unknown) => {
           // Step 0: Check for idempotent replay (atomic check within transaction)
           // This prevents duplicate events from concurrent requests with same idempotency key
           if (request.idempotencyKey) {
@@ -195,7 +195,7 @@ export class EventEmitterService {
       } else {
         event = event.event;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If unique constraint on idempotency_key failed, another transaction created it concurrently
       // This is expected and correct behavior under high concurrency
       const isIdempotencyConstraintError =

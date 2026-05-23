@@ -29,7 +29,7 @@ describe("Phase F7: Shadow Read Adversarial Tests", () => {
   // ============================================================================
 
   describe("GROUP 1: Route-Local getSession() Blocked", () => {
-    let enforcer: any;
+    let enforcer: unknown;
 
     beforeEach(() => {
       enforcer = initializeEnforcerForRequest(
@@ -70,7 +70,7 @@ describe("Phase F7: Shadow Read Adversarial Tests", () => {
   // ============================================================================
 
   describe("GROUP 2: Route-Local withAuth() Blocked", () => {
-    let enforcer: any;
+    let enforcer: unknown;
 
     beforeEach(() => {
       enforcer = initializeEnforcerForRequest(
@@ -107,7 +107,7 @@ describe("Phase F7: Shadow Read Adversarial Tests", () => {
       try {
         checkShadowRead("withAuth");
         expect.fail("Should have thrown");
-      } catch (error: any) {
+      } catch (error: unknown) {
         const message = error.message;
         // Verify context is included
         expect(message).toContain("withAuth");
@@ -122,7 +122,7 @@ describe("Phase F7: Shadow Read Adversarial Tests", () => {
   // ============================================================================
 
   describe("GROUP 3: Helper Function Auth Access Blocked", () => {
-    let enforcer: any;
+    let enforcer: unknown;
 
     beforeEach(() => {
       enforcer = initializeEnforcerForRequest(
@@ -167,7 +167,7 @@ describe("Phase F7: Shadow Read Adversarial Tests", () => {
   // ============================================================================
 
   describe("GROUP 4: Middleware Reentry Protection", () => {
-    let enforcer: any;
+    let enforcer: unknown;
 
     beforeEach(() => {
       enforcer = initializeEnforcerForRequest(
@@ -325,7 +325,7 @@ describe("Phase F7: Shadow Read Adversarial Tests", () => {
       try {
         checkShadowRead("withAuth");
         expect.fail("Should have thrown");
-      } catch (error: any) {
+      } catch (error: unknown) {
         expect(error.message).toContain("SHADOW_AUTH_READ_DETECTED");
       }
 
@@ -334,7 +334,7 @@ describe("Phase F7: Shadow Read Adversarial Tests", () => {
       try {
         checkShadowRead("withAuth");
         expect.fail("Should have thrown");
-      } catch (error: any) {
+      } catch (error: unknown) {
         expect(error.message).toContain("SHADOW_AUTH_READ_DETECTED");
       }
 
@@ -398,7 +398,7 @@ describe("Phase F7: Shadow Read Adversarial Tests", () => {
   // ============================================================================
 
   describe("GROUP 7: Lifecycle Progression Validation", () => {
-    let enforcer: any;
+    let enforcer: unknown;
 
     beforeEach(() => {
       enforcer = initializeEnforcerForRequest(

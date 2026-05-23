@@ -93,7 +93,7 @@ describe("Recommendation Priority Mapping", () => {
         id: "eng-1",
       } as any);
 
-      let createdData: any = {};
+      let createdData: unknown = {};
       vi.spyOn(db.recommendation, "create").mockImplementationOnce(({ data }) => {
         createdData = data;
         return Promise.resolve({

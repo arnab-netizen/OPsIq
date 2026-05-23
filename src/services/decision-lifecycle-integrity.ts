@@ -115,7 +115,7 @@ export async function runDecisionLifecycleIntegrityCheck(
     });
 
     // Check 1: Missing workspace ID
-    const missingWorkspace = decisions.filter((d: any) => !d.workspaceId);
+    const missingWorkspace = decisions.filter((d: unknown) => !d.workspaceId);
     for (const decision of missingWorkspace) {
       findings.push({
         severity: "critical",
@@ -130,7 +130,7 @@ export async function runDecisionLifecycleIntegrityCheck(
 
     // Check 2: Missing owner
     const missingOwner = decisions.filter(
-      (d: any) => !d.ownerUserId && !d.createdBy
+      (d: unknown) => !d.ownerUserId && !d.createdBy
     );
     for (const decision of missingOwner) {
       findings.push({
@@ -146,10 +146,10 @@ export async function runDecisionLifecycleIntegrityCheck(
 
     // Check 3: Executed decisions without execution record
     const executedDecisions = decisions.filter(
-      (d: any) => d.status === "in_progress" || mapStatusToState(d.status) === "EXECUTED"
+      (d: unknown) => d.status === "in_progress" || mapStatusToState(d.status) === "EXECUTED"
     );
     const executedWithoutRecord = executedDecisions.filter(
-      (d: any) => !d.startedAt && !d.executionStatus
+      (d: unknown) => !d.startedAt && !d.executionStatus
     );
     for (const decision of executedWithoutRecord) {
       findings.push({
@@ -173,7 +173,7 @@ export async function runDecisionLifecycleIntegrityCheck(
       Date.now() - executionWindowDays * 24 * 60 * 60 * 1000
     );
 
-    const executedWithoutTimelyClosure = executedDecisions.filter((d: any) => {
+    const executedWithoutTimelyClosure = executedDecisions.filter((d: unknown) => {
       const hasOutcome = d.actualOutcomeValue !== null && d.actualOutcomeValue !== undefined;
       const startedLongAgo = d.startedAt && d.startedAt < expectedOutcomeDeadline;
       return startedLongAgo && !hasOutcome;
@@ -202,10 +202,10 @@ export async function runDecisionLifecycleIntegrityCheck(
 
     // Check 5: Closed decisions without outcome
     const closedDecisions = decisions.filter(
-      (d: any) => d.status === "done" || d.status === "closed" || mapStatusToState(d.status) === "CLOSED"
+      (d: unknown) => d.status === "done" || d.status === "closed" || mapStatusToState(d.status) === "CLOSED"
     );
     const closedWithoutOutcome = closedDecisions.filter(
-      (d: any) => !d.actualOutcomeValue && !d.actualOutcome
+      (d: unknown) => !d.actualOutcomeValue && !d.actualOutcome
     );
     for (const decision of closedWithoutOutcome) {
       findings.push({
@@ -240,7 +240,7 @@ export async function runDecisionLifecycleIntegrityCheck(
       },
     });
 
-    const impactOnNonExecuted = impactRecords.filter((d: any) => {
+    const impactOnNonExecuted = impactRecords.filter((d: unknown) => {
       const state = mapStatusToState(d.status);
       const isExecutedOrBeyond = [
         "EXECUTED",
@@ -288,7 +288,7 @@ export async function runDecisionLifecycleIntegrityCheck(
       };
 
       const expected = expectedEvents[state as string] || [];
-      const eventNames = auditEvents.map((e: any) => e.eventName || "");
+      const eventNames = auditEvents.map((e: unknown) => e.eventName || "");
 
       // For terminal states, must have at least one matching audit event
       if (isTerminalState(state as DecisionState)) {
@@ -360,7 +360,7 @@ export async function runDecisionLifecycleIntegrityCheck(
  * Check if decision has all required fields for its state
  */
 export function validateDecisionFieldsForState(
-  decision: any,
+  decision: unknown,
   state: DecisionState
 ): string[] {
   const errors: string[] = [];

@@ -24,7 +24,7 @@ import crypto from "crypto";
 
 describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
   // Helper: Calculate deterministic hash of state
-  function hashState(state: any): string {
+  function hashState(state: unknown): string {
     const canonical = JSON.stringify(state, Object.keys(state).sort());
     return crypto.createHash("sha256").update(canonical).digest("hex");
   }

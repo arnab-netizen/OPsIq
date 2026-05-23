@@ -264,7 +264,7 @@ describe("Phase F-4: Execution Failure Scenario", () => {
       const successful_action = scenario.actions.find((a) => a.failure_mode === "NONE");
       expect(successful_action).toBeDefined();
 
-      let success_impact: any;
+      let success_impact: unknown;
       if (successful_action) {
         success_impact = impactTracker.trackImpact({
           action_id: successful_action.action_id,

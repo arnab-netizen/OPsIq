@@ -178,7 +178,7 @@ export function createWorkspaceEnforcementMiddleware() {
 /**
  * Check if workspaceId is present in a WHERE clause
  */
-function isWorkspaceIdInWhere(where: any): boolean {
+function isWorkspaceIdInWhere(where: unknown): boolean {
   if (!where || typeof where !== "object") {
     return false;
   }
@@ -190,12 +190,12 @@ function isWorkspaceIdInWhere(where: any): boolean {
 
   // Check in AND conditions
   if (Array.isArray(where.AND)) {
-    return where.AND.some((condition: any) => isWorkspaceIdInWhere(condition));
+    return where.AND.some((condition: unknown) => isWorkspaceIdInWhere(condition));
   }
 
   // Check in OR conditions (should be rare for workspace scoping)
   if (Array.isArray(where.OR)) {
-    return where.OR.every((condition: any) => isWorkspaceIdInWhere(condition));
+    return where.OR.every((condition: unknown) => isWorkspaceIdInWhere(condition));
   }
 
   return false;
@@ -206,8 +206,8 @@ function isWorkspaceIdInWhere(where: any): boolean {
  */
 function validateWorkspaceIdConsistency(
   model: string,
-  where: any,
-  data: any
+  where: unknown,
+  data: unknown
 ): void {
   const whereWorkspaceId = extractWorkspaceId(where);
   const dataWorkspaceId = data?.workspaceId;
@@ -226,7 +226,7 @@ function validateWorkspaceIdConsistency(
 /**
  * Extract workspaceId from a WHERE clause
  */
-function extractWorkspaceId(where: any): string | null {
+function extractWorkspaceId(where: unknown): string | null {
   if (!where || typeof where !== "object") {
     return null;
   }

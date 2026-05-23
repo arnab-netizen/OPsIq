@@ -34,7 +34,7 @@ describe("D2: Audit Trail - Replay Determinism Proofs", () => {
   }
 
   // Helper: Hash audit trail state
-  function hashAuditState(events: any[]): string {
+  function hashAuditState(events: unknown[]): string {
     const normalized = events
       .sort((a, b) => a.created_at?.localeCompare(b.created_at) || 0)
       .map((e) => JSON.stringify(e))
@@ -43,7 +43,7 @@ describe("D2: Audit Trail - Replay Determinism Proofs", () => {
   }
 
   // Helper: Verify audit trail consistency
-  function verifyAuditConsistency(events: any[]): {
+  function verifyAuditConsistency(events: unknown[]): {
     totalCount: number;
     distinctWorkspaces: number;
     distinctActors: number;

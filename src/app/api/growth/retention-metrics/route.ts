@@ -96,7 +96,7 @@ export const POST = withEnforcementFull(async (request) => {
  */
 export async function assessChurnRiskHandler(
   workspaceId: string,
-  metrics: any
+  metrics: unknown
 ): Promise<any> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };

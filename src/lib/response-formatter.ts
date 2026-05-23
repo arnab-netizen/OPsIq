@@ -87,7 +87,7 @@ export async function queryAuditEvents(
   const limit = Math.min(filters.limit || 50, 200);
   const offset = filters.offset || 0;
 
-  const where: any = {
+  const where: unknown = {
     workspaceId: filters.workspaceId,
   };
 
@@ -134,7 +134,7 @@ export async function queryAuditEvents(
   ]);
 
   return {
-    events: events.map((e: any) => ({
+    events: events.map((e: unknown) => ({
       id: e.id,
       eventName: e.eventName,
       actorId: e.actorId,

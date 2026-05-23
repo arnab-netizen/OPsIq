@@ -129,7 +129,7 @@ async function performStartupChecks(): Promise<void> {
   }
 }
 
-async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
+async function checkDatabase(dbInstance: unknown, logger: unknown): Promise<boolean> {
   try {
     await Promise.race([
       dbInstance.$queryRawUnsafe("SELECT 1"),
@@ -146,7 +146,7 @@ async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
   }
 }
 
-async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolean> {
+async function checkDatabaseSchema(dbInstance: unknown, logger: unknown): Promise<boolean> {
   try {
     const requiredTables = ["workspaces", "users", "actions", "audit_events", "webhook_events"];
 
@@ -175,7 +175,7 @@ async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolea
   }
 }
 
-function checkConfiguration(logger: any): boolean {
+function checkConfiguration(logger: unknown): boolean {
   const requiredEnvVars = ["DATABASE_URL", "STRIPE_API_KEY", "STRIPE_WEBHOOK_SECRET"];
 
   for (const envVar of requiredEnvVars) {

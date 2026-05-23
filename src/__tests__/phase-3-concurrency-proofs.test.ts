@@ -143,11 +143,11 @@ describe("Phase 3: Concurrency and Determinism Proofs", () => {
       }
 
       // ASSERT: Exactly one creation event
-      const createdEvents = events.filter((e: any) => e.eventType === "recommendation.created");
+      const createdEvents = events.filter((e: unknown) => e.eventType === "recommendation.created");
       expect(createdEvents).toHaveLength(1);
 
       // ASSERT: Remaining 50 are status changes
-      const statusChanges = events.filter((e: any) => e.eventType === "recommendation.status_changed");
+      const statusChanges = events.filter((e: unknown) => e.eventType === "recommendation.status_changed");
       expect(statusChanges).toHaveLength(50);
     });
 

@@ -61,7 +61,7 @@ export function convertToCSV(exportedData: ExportedData): string {
     lines.push(table.columns.map((col) => `"${col}"`).join(","));
 
     // CSV data rows
-    table.data.forEach((row: any) => {
+    table.data.forEach((row: unknown) => {
       const values = table.columns.map((col) => {
         const value = row[col];
         if (value === null || value === undefined) {

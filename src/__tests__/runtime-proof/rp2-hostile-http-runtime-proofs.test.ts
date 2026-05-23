@@ -20,7 +20,7 @@ const TEST_USER_TOKEN = process.env.TEST_AUTH_TOKEN || "invalid-token-for-testin
 
 describe("PHASE RP2: Hostile HTTP Runtime Security Proofs", () => {
   // Helper to make requests
-  async function makeRequest(method: string, path: string, options: any = {}) {
+  async function makeRequest(method: string, path: string, options: unknown = {}) {
     try {
       const url = new URL(path, TEST_API_URL).toString();
       const response = await fetch(url, {

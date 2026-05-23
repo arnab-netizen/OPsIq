@@ -5,7 +5,7 @@ vi.mock("@/lib/api-handler", () => ({
 }));
 
 vi.mock("@/lib/auth-guard", () => ({
-  withAuth: vi.fn(async (opts: any) => ({
+  withAuth: vi.fn(async (opts: unknown) => ({
     session: { user: { id: "user-1" } },
     capability: opts.capability,
   })),
@@ -120,7 +120,7 @@ describe("Idempotency Integration Tests", () => {
       try {
         await mockCheck();
         expect.fail("Should throw");
-      } catch (error: any) {
+      } catch (error: unknown) {
         expect(error.message).toContain("Duplicate request");
       }
     });
@@ -180,7 +180,7 @@ describe("Idempotency Integration Tests", () => {
       try {
         await mockCheck();
         expect.fail("Should throw");
-      } catch (error: any) {
+      } catch (error: unknown) {
         expect(error.message).toContain("reused for different operation");
       }
     });
@@ -236,7 +236,7 @@ describe("Idempotency Integration Tests", () => {
           payload: { title: "Different" },
         });
         expect.fail("Should throw");
-      } catch (error: any) {
+      } catch (error: unknown) {
         expect(error.message).toContain("Idempotency key reused");
       }
     });

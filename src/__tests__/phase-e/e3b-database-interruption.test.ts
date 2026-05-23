@@ -31,7 +31,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
     failureMode?: "timeout" | "connection_loss" | "constraint_violation" | "deadlock" | "corruption"
   ): {
     committed: boolean;
-    result?: any;
+    result?: unknown;
     error?: string;
   } {
     try {
@@ -541,7 +541,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
   describe("3B.10: Partial Write (Disk Full Scenario)", () => {
     it("should detect incomplete write on disk full", async () => {
       // HOSTILE TEST: Write fails mid-way due to disk full
-      const buffer: any[] = [];
+      const buffer: unknown[] = [];
       const maxSize = 100;
 
       try {

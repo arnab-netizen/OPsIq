@@ -69,12 +69,12 @@ export async function calculateSuccessMetrics(
     };
   }
 
-  const successCount = records.filter((r: any) => r.success).length;
+  const successCount = records.filter((r: unknown) => r.success).length;
   const successRate = successCount / records.length;
 
-  const avgImpact = records.reduce((sum: number, r: any) => sum + r.impact, 0) / records.length;
+  const avgImpact = records.reduce((sum: number, r: unknown) => sum + r.impact, 0) / records.length;
   const variance =
-    records.reduce((sum: number, r: any) => sum + Math.pow(r.impact - avgImpact, 2), 0) / records.length;
+    records.reduce((sum: number, r: unknown) => sum + Math.pow(r.impact - avgImpact, 2), 0) / records.length;
   const stdDeviation = Math.sqrt(variance);
 
   return {

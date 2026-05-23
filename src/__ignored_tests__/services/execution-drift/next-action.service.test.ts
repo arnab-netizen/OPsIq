@@ -12,7 +12,7 @@ vi.mock("@/lib/db", () => ({
 }));
 
 describe("NextActionService", () => {
-  let mockDb: any;
+  let mockDb: unknown;
 
   beforeEach(async () => {
     vi.clearAllMocks();

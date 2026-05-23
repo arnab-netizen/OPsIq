@@ -87,7 +87,7 @@ export function hasPermission(role: string, action: string): boolean {
 export function canActOnDecision(
   userId: string,
   role: string,
-  decision: any
+  decision: unknown
 ): boolean {
   // Admin can act on any decision
   if (role === "admin") return true;

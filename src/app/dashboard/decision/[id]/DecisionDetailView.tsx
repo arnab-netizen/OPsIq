@@ -16,11 +16,11 @@ interface DecisionData {
   status: string;
   blockStage: string | null;
   blockReason: string | null;
-  gateResult: any;
-  guardrailResult: any;
-  controlLayerViolations: any;
-  explanation: any;
-  inputsSnapshot: any;
+  gateResult: unknown;
+  guardrailResult: unknown;
+  controlLayerViolations: unknown;
+  explanation: unknown;
+  inputsSnapshot: unknown;
   createdAt: Date;
   updatedAt: Date;
   auditLog: Array<any>;
@@ -524,7 +524,7 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
                   <div>
                     <p className="font-semibold text-gray-700 mb-2">Violations ({guardrails.violations.length}):</p>
                     <ul className="space-y-1 text-xs">
-                      {guardrails.violations.map((v: any, idx: number) => (
+                      {guardrails.violations.map((v: unknown, idx: number) => (
                         <li key={idx} className="text-red-700">• {v.ruleId || "Unknown Rule"}: {v.message || "Violation detected"}</li>
                       ))}
                     </ul>
@@ -539,7 +539,7 @@ export default function DecisionDetailView({ decision, workspaceId = "" }: Decis
             <h2 className="font-bold text-gray-900 mb-4">Audit Trail</h2>
             <div className="space-y-3">
               {decision.auditLog && decision.auditLog.length > 0 ? (
-                decision.auditLog.map((event: any, idx: number) => (
+                decision.auditLog.map((event: unknown, idx: number) => (
                   <div key={idx} className="border-l-2 border-gray-200 pl-3 py-2">
                     <div className="flex justify-between items-start">
                       <span className="font-semibold text-sm text-gray-900">{event.eventName}</span>

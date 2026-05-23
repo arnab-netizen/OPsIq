@@ -343,10 +343,10 @@ export class BestPathOrchestrator {
   }
 
   private combineDiagnosticResults(
-    rootCauseResult: any,
-    bottleneckResult: any,
-    archetypeResult: any,
-    maturityResult: any
+    rootCauseResult: unknown,
+    bottleneckResult: unknown,
+    archetypeResult: unknown,
+    maturityResult: unknown
   ): Record<string, unknown> {
     return {
       // Root Cause Engine outputs
@@ -354,7 +354,7 @@ export class BestPathOrchestrator {
       rootCauseConfidence: rootCauseResult.overallConfidence,
       rootCauseAnalysisId: rootCauseResult.analysisId,
       causalChain: rootCauseResult.selectedHypothesis.causalChain,
-      rootCauseAlternatives: rootCauseResult.alternativeHypotheses.map((h: any) => h.statement),
+      rootCauseAlternatives: rootCauseResult.alternativeHypotheses.map((h: unknown) => h.statement),
 
       // Bottleneck Engine outputs
       primaryBottleneck: bottleneckResult.primaryBottleneck?.bottleneckVariable || "unknown",
@@ -363,7 +363,7 @@ export class BestPathOrchestrator {
       bottleneckVariable: bottleneckResult.primaryBottleneck.bottleneckVariable,
       bottleneckImpact: bottleneckResult.primaryBottleneck.throughputImpact.percentageImpact,
       bottleneckKpi: bottleneckResult.primaryBottleneck.downstreamImpact.affectedKpi,
-      bottleneckAlternatives: bottleneckResult.alternativeBottlenecks.map((b: any) => b.bottleneckVariable),
+      bottleneckAlternatives: bottleneckResult.alternativeBottlenecks.map((b: unknown) => b.bottleneckVariable),
 
       // Archetype Engine outputs
       archetype: archetypeResult.selectedArchetype.archetyppe,

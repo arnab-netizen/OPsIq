@@ -1,7 +1,7 @@
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: any | undefined;
+  prisma: unknown | undefined;
   prismaPromise: Promise<any> | undefined;
 };
 
@@ -136,7 +136,7 @@ export const db = new Proxy({} as any, {
     // Solution: return a lazy function that will complete when DB is ready
     if (globalForPrisma.prismaPromise) {
       // Return a function that defers DB access until initialization completes
-      return function deferredDbMethod(...args: any[]) {
+      return function deferredDbMethod(...args: unknown[]) {
         // This will be called when user invokes db.method()
         // At that point, we can safely await the initialization
         throw new Error(

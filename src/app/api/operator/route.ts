@@ -135,7 +135,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     }
   }
 
-  const updatePayload: any = {
+  const updatePayload: unknown = {
     status,
   };
 

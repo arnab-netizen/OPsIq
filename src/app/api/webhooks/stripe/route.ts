@@ -57,7 +57,7 @@ export const POST = withEnforcementFull(
     const signature = request.headers.get("stripe-signature");
 
     // Step 2: Verify webhook signature (fail-closed)
-    let event: any;
+    let event: unknown;
     let timestamp: number;
 
     try {
@@ -95,7 +95,7 @@ export const POST = withEnforcementFull(
     }
 
     // Step 5: Get or create webhook event record with stale recovery
-    let webhookEvent: any;
+    let webhookEvent: unknown;
     let shouldProcess = false;
     let isDeadLetter = false;
 

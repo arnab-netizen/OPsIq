@@ -5,7 +5,7 @@ vi.mock("@/lib/api-handler", () => ({
 }));
 
 vi.mock("@/lib/auth-guard", () => ({
-  withAuth: vi.fn(async (opts: any) => ({
+  withAuth: vi.fn(async (opts: unknown) => ({
     session: { user: { id: "user-1" } },
     capability: opts.capability,
   })),

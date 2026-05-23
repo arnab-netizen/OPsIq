@@ -87,7 +87,7 @@ export async function createAction(
       idempotencyKey,
       "action.create",
       async () => {
-        return await db.$transaction(async (tx: any) => {
+        return await db.$transaction(async (tx: unknown) => {
           const action = await tx.action.create({
             data: {
               engagementId: input.engagementId,
@@ -489,7 +489,7 @@ export async function updateAction(
     throw new ConflictError("Action was modified. Please refresh and try again.");
   }
 
-  const updates: any = { version: { increment: 1 } };
+  const updates: unknown = { version: { increment: 1 } };
 
   if (input.status) {
     validateActionTransition(action.status as ActionStatus, input.status as ActionStatus);
@@ -529,10 +529,10 @@ export async function updateAction(
   return updated;
 }
 
-export async function listActions(workspaceId: string, params: any) {
+export async function listActions(workspaceId: string, params: unknown) {
   enforceWorkspaceId(workspaceId, "listActions", "action");
 
-  const where: any = { workspaceId };
+  const where: unknown = { workspaceId };
   if (params.engagementId) where.engagementId = params.engagementId;
   if (params.status) where.status = params.status;
   if (params.assignedTo) where.owner = params.assignedTo;
@@ -558,7 +558,7 @@ export async function listActions(workspaceId: string, params: any) {
 
 export async function createActionsFromInterventions(
   engagementId: string,
-  interventions: any[], // PrioritizedIntervention[] from consulting-engine
+  interventions: unknown[], // PrioritizedIntervention[] from consulting-engine
   authContext: CanonicalAuthContext,
   workspaceId: string
 ) {

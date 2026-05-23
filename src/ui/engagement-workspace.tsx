@@ -11,12 +11,12 @@ import { KPITrend } from "@/ui/kpi-trend";
 import { ExecutionCertaintyCard } from "@/ui/execution-certainty-card";
 
 interface EngagementWorkspaceProps {
-  engagement: any;
-  initialFindings?: any[];
-  initialRecommendations?: any[];
-  initialActions?: any[];
-  initialKPIs?: any[];
-  initialEvidence?: any[];
+  engagement: unknown;
+  initialFindings?: unknown[];
+  initialRecommendations?: unknown[];
+  initialActions?: unknown[];
+  initialKPIs?: unknown[];
+  initialEvidence?: unknown[];
 }
 
 const STATUS_VARIANTS: Record<string, "default" | "success" | "warning" | "destructive" | "muted"> = {

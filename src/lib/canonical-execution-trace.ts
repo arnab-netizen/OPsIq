@@ -364,7 +364,7 @@ export class CanonicalExecutionTraceManager {
   /**
    * Deep freeze an object and all nested objects recursively
    */
-  private deepFreeze(obj: any): any {
+  private deepFreeze(obj: unknown): unknown {
     Object.freeze(obj);
 
     Object.getOwnPropertyNames(obj).forEach((prop) => {

@@ -1063,7 +1063,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     // 13. CONTROL LAYER: Verify all validations were executed (bypass prevention)
     try {
       enforceControlLayer("/api/run", executedValidations);
-    } catch (enforceError: any) {
+    } catch (enforceError: unknown) {
       // Control layer bypass detected - log and throw
       const governed = classifyOperatorError(enforceError instanceof Error ? enforceError : new Error(String(enforceError.reason || enforceError)), { context: "load" });
       const bypasMsg = `CONTROL_LAYER_BYPASS: ${governed.operatorMessage}`;

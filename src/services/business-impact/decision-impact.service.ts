@@ -150,7 +150,7 @@ export async function calculateWorkspaceImpactSummary(
 
   // Calculate metrics for each decision
   const metrics = await Promise.all(
-    decisions.map((d: any) => calculateDecisionImpact(d.id, workspaceId))
+    decisions.map((d: unknown) => calculateDecisionImpact(d.id, workspaceId))
   );
 
   // Aggregate metrics
@@ -164,9 +164,9 @@ export async function calculateWorkspaceImpactSummary(
   let roiMultipleCount = 0;
   let roiMultipleSum = 0;
 
-  const blockedCount = decisions.filter((d: any) => d.status === "blocked").length;
-  const failedCount = decisions.filter((d: any) => d.status === "failed").length;
-  const succeededCount = decisions.filter((d: any) => d.status === "done").length;
+  const blockedCount = decisions.filter((d: unknown) => d.status === "blocked").length;
+  const failedCount = decisions.filter((d: unknown) => d.status === "failed").length;
+  const succeededCount = decisions.filter((d: unknown) => d.status === "done").length;
 
   for (const metric of metrics) {
     totalExpectedImpact += metric.expected;
@@ -195,7 +195,7 @@ export async function calculateWorkspaceImpactSummary(
   const averagePriorityScore =
     decisions.length > 0
       ? Math.round(
-          (decisions.reduce((sum: number, d: any) => sum + (d.priorityScore ?? 0), 0) /
+          (decisions.reduce((sum: number, d: unknown) => sum + (d.priorityScore ?? 0), 0) /
             decisions.length) *
             100
         ) / 100

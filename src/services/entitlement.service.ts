@@ -309,7 +309,7 @@ export async function assertCapability(
       limit: capability.limit,
     };
   } catch (error) {
-    // Fail closed: any error means deny
+    // Fail closed: unknown error means deny
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
     return {
       allowed: false,

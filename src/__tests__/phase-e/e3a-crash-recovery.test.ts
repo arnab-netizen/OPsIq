@@ -22,14 +22,14 @@ import crypto from "crypto";
 describe("PHASE E PRIORITY 3A: Hostile Durability - Worker Crash Recovery", () => {
   // Helper: Simulate event persistence with crash points
   function persistEventWithCrashPoints(
-    event: any,
+    event: unknown,
     crashPoint?: "before_return" | "during_projection" | "during_snapshot" | "before_ack"
   ): {
     persisted: boolean;
-    state: any;
+    state: unknown;
     error?: string;
   } {
-    const state: any = {
+    const state: unknown = {
       event_appended: false,
       projection_updated: false,
       snapshot_created: false,
@@ -150,7 +150,7 @@ describe("PHASE E PRIORITY 3A: Hostile Durability - Worker Crash Recovery", () =
         { id: "evt-3", sequence: 3, action: "decision_created" },
       ];
 
-      const projectionState: any = { member_count: 0, decision_count: 0 };
+      const projectionState: unknown = { member_count: 0, decision_count: 0 };
 
       // Process first event
       projectionState.member_count = 0; // Event 1 processed

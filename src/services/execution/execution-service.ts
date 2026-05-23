@@ -27,7 +27,7 @@ export async function executeDecision(
   const now = new Date();
 
   try {
-    const updated = await db.$transaction(async (tx: any) => {
+    const updated = await db.$transaction(async (tx: unknown) => {
       const result = await tx.operatorItem.updateMany({
         where: {
           id: decisionId,
@@ -100,7 +100,7 @@ export async function markSuccess(
 
   const now = new Date();
 
-  const updated = await db.$transaction(async (tx: any) => {
+  const updated = await db.$transaction(async (tx: unknown) => {
     const result = await tx.operatorItem.updateMany({
       where: {
         id: decisionId,
@@ -191,7 +191,7 @@ export async function markFailure(
 
   const now = new Date();
 
-  const updated = await db.$transaction(async (tx: any) => {
+  const updated = await db.$transaction(async (tx: unknown) => {
     const result = await tx.operatorItem.updateMany({
       where: {
         id: decisionId,

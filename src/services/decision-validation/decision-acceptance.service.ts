@@ -189,7 +189,7 @@ export async function getDecisionAcceptanceHistory(
     orderBy: { occurredAt: "desc" },
   });
 
-  return events.map((event: any) => {
+  return events.map((event: unknown) => {
     const payload = event.payload as Record<string, any>;
     if (event.eventName === AUDIT_EVENTS.DECISION_ACCEPTED) {
       return {

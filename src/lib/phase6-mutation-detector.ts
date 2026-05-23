@@ -215,7 +215,7 @@ export function getGlobalMutationSpy(): MutationSpy {
  *
  * Wraps Prisma client to detect mutations
  */
-export function hookDatabaseMutations(prismaClient: any): void {
+export function hookDatabaseMutations(prismaClient: unknown): void {
   const spy = getGlobalMutationSpy();
 
   const originalCreate = prismaClient.$executeRaw?.bind(prismaClient);

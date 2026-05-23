@@ -4,7 +4,7 @@ import * as path from "path";
 import * as yaml from "js-yaml";
 
 describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)", () => {
-  let workflowContent: any;
+  let workflowContent: unknown;
   let workflowPath: string;
 
   beforeAll(() => {
@@ -65,7 +65,7 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
   });
 
   describe("Verify job (build + type + prisma)", () => {
-    let verifyJob: any;
+    let verifyJob: unknown;
 
     beforeAll(() => {
       verifyJob = workflowContent.jobs.verify;
@@ -132,7 +132,7 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
   });
 
   describe("Test job", () => {
-    let testJob: any;
+    let testJob: unknown;
 
     beforeAll(() => {
       testJob = workflowContent.jobs.test;
@@ -190,7 +190,7 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
   });
 
   describe("Branch protection job", () => {
-    let branchProtectionJob: any;
+    let branchProtectionJob: unknown;
 
     beforeAll(() => {
       branchProtectionJob = workflowContent.jobs["branch-protection"];
@@ -235,7 +235,7 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
   });
 
   describe("Deploy-staging job", () => {
-    let deployStagingJob: any;
+    let deployStagingJob: unknown;
 
     beforeAll(() => {
       deployStagingJob = workflowContent.jobs["deploy-staging"];
@@ -339,7 +339,7 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
   describe("CI/CD gates verification", () => {
     it("verify job runs: npm ci, prisma validate, tsc, build", () => {
       const verifyJob = workflowContent.jobs.verify;
-      const runs = verifyJob.steps.map((s: any) => s.run).filter(Boolean);
+      const runs = verifyJob.steps.map((s: unknown) => s.run).filter(Boolean);
       expect(runs).toContain("npm ci");
       expect(runs).toContain("npx prisma validate");
       expect(runs).toContain("npx tsc --noEmit");
@@ -348,7 +348,7 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
 
     it("test job runs: npm ci, npm test", () => {
       const testJob = workflowContent.jobs.test;
-      const runs = testJob.steps.map((s: any) => s.run).filter(Boolean);
+      const runs = testJob.steps.map((s: unknown) => s.run).filter(Boolean);
       expect(runs).toContain("npm ci");
       expect(runs).toContain("npm test");
     });

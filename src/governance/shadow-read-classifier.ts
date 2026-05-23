@@ -159,7 +159,7 @@ export async function classifyAllViolations(): Promise<ClassifiedViolation[]> {
   );
 
   const classified: ClassifiedViolation[] = violations.violations.map(
-    (v: any) => {
+    (v: unknown) => {
       return classifyViolation(v.file, v.line, v.pattern, v.context);
     }
   );

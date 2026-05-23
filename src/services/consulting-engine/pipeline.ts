@@ -80,7 +80,7 @@ export async function runConsultingPipeline(
     }
 
     // 3. Map findings to ConsultingEngineInput
-    const evidenceItems = findings.map((finding: any) => ({
+    const evidenceItems = findings.map((finding: unknown) => ({
       id: finding.id,
       dimension: mapSeverityToDimension(finding.severity),
       finding: finding.description || finding.title,

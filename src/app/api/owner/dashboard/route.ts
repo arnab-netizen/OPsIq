@@ -19,7 +19,7 @@ const querySchema = z.object({
   daysOfHistory: z.string().optional().default("30"),
 });
 
-function toOwnerDashboardDTO(data: any) {
+function toOwnerDashboardDTO(data: unknown) {
   return {
     workspaceId: data.workspaceId,
     assessedAt: data.config?.createdAt || new Date().toISOString(),

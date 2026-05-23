@@ -74,7 +74,7 @@ interface DashboardData {
   lossDrivers: LossDriver[];
   recommendedActions: RecommendedAction[];
   confidenceRisks: ConfidenceRisk[];
-  valueData: any;
+  valueData: unknown;
   blockedMetrics: BlockedMetrics | null;
 }
 
@@ -122,8 +122,8 @@ export default function ControlPage() {
           const myDayData = await myDayRes.json();
           if (Array.isArray(myDayData)) {
             const actions = myDayData
-              .filter((item: any) => item.status === 'pending')
-              .map((item: any) => ({
+              .filter((item: unknown) => item.status === 'pending')
+              .map((item: unknown) => ({
                 id: item.id,
                 action: item.action || 'Unknown',
                 estimatedLoss: item.estimatedLoss || 0,
@@ -131,7 +131,7 @@ export default function ControlPage() {
                 confidence: item.confidence || 0.7,
                 priority: item.priorityScore || 0,
               }))
-              .sort((a: any, b: any) => (b.priority || 0) - (a.priority || 0))
+              .sort((a: unknown, b: unknown) => (b.priority || 0) - (a.priority || 0))
               .slice(0, 3);
             recommendedActions.push(...actions);
           }
@@ -158,7 +158,7 @@ export default function ControlPage() {
 
         // Add confidence risk data based on item confidences
         if (Array.isArray(recommendedActions) && recommendedActions.length > 0) {
-          recommendedActions.forEach((action: any) => {
+          recommendedActions.forEach((action: unknown) => {
             const conf = action.confidence || 0;
             const status = conf >= 0.8 ? 'high' : conf >= 0.6 ? 'medium' : 'low';
             if (status !== 'high') {

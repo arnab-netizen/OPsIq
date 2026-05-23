@@ -127,7 +127,7 @@ export class RequestTracer {
   logMutation(
     type: string,
     idempotency_key: string,
-    payload: any,
+    payload: unknown,
     start_latency?: number
   ): void {
     const span_id = this.startSpan(`mutation:${type}`, {
@@ -189,7 +189,7 @@ export class RequestTracer {
   }
 
   // Log audit event creation
-  logAuditEvent(event_id: string, event_name: string, payload: any): void {
+  logAuditEvent(event_id: string, event_name: string, payload: unknown): void {
     const span_id = this.startSpan("audit_event", {
       event_id,
       event_name,
@@ -208,7 +208,7 @@ export class RequestTracer {
   }
 
   // Log idempotency collision
-  logIdempotencyCollision(idempotency_key: string, cached_response: any): void {
+  logIdempotencyCollision(idempotency_key: string, cached_response: unknown): void {
     this.logger.logIdempotencyCollision(idempotency_key);
     if (this.currentSpan) {
       this.currentSpan.tags.cached_response_returned = true;

@@ -117,10 +117,10 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
 
     it("should not crash on poison message, send to DLQ", async () => {
       // HOSTILE TEST: Poison message routed to dead letter queue
-      const dlq: any[] = [];
-      const processingQueue: any[] = [];
+      const dlq: unknown[] = [];
+      const processingQueue: unknown[] = [];
 
-      const poisonMessage: any = { malformed: "data", missing_required_field: undefined };
+      const poisonMessage: unknown = { malformed: "data", missing_required_field: undefined };
 
       // Attempt to process
       try {
@@ -146,15 +146,15 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
 
     it("should prevent poison message from blocking queue", async () => {
       // HOSTILE TEST: Poison message doesn't block other messages
-      const queue: any[] = [
+      const queue: unknown[] = [
         { id: "msg-1", valid: true },
         { id: "poison", valid: false }, // Poison
         { id: "msg-3", valid: true },
         { id: "msg-4", valid: true },
       ];
 
-      const processed: any[] = [];
-      const dlq: any[] = [];
+      const processed: unknown[] = [];
+      const dlq: unknown[] = [];
 
       for (const msg of queue) {
         if (msg.valid) {
@@ -296,7 +296,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
     it("should handle DLQ at capacity without losing messages", async () => {
       // HOSTILE TEST: DLQ full, new poison messages must still be captured
       const dlqCapacity = 1000;
-      const dlq: any[] = [];
+      const dlq: unknown[] = [];
 
       // Add 1000 poison messages
       for (let i = 0; i < 1000; i++) {
@@ -317,7 +317,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
 
     it("should not lose DLQ messages on replay", async () => {
       // HOSTILE TEST: DLQ messages persisted and recoverable
-      const dlqLog: any[] = [];
+      const dlqLog: unknown[] = [];
       const poisonMessages = [
         { id: "poison-1", error: "validation failed" },
         { id: "poison-2", error: "malformed json" },
@@ -489,7 +489,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
 
     it("should shed load by dropping low-priority retries", async () => {
       // HOSTILE TEST: Under extreme load, oldest retries dropped
-      const queue: any[] = [];
+      const queue: unknown[] = [];
       const maxQueueSize = 100;
 
       // Add 150 retry requests to queue

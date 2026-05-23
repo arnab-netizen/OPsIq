@@ -20,11 +20,11 @@ import {
 export class MonitoringService {
   private metrics: MetricPoint[] = [];
   private startTime = Date.now() - 100; // Initialize 100ms ago to ensure uptime > 0
-  private dbInstance: any;
+  private dbInstance: unknown;
   private version: string = "1.0.0";
   private environment: string = process.env.NODE_ENV || "development";
 
-  constructor(dbInstance: any) {
+  constructor(dbInstance: unknown) {
     this.dbInstance = dbInstance;
   }
 

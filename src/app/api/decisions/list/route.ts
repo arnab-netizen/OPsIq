@@ -13,7 +13,7 @@ export const GET = withCanonicalEnforcement(
     const offset = Math.max(parseInt(ctx.request?.nextUrl.searchParams.get("offset") || "0"), 0);
 
     // Build filter
-    const where: any = {
+    const where: unknown = {
       workspaceId,
     };
 

@@ -68,7 +68,7 @@ interface ObservabilitySummary {
         durationMs: number | null;
       }>;
     };
-    last7d: any;
+    last7d: unknown;
   };
 }
 

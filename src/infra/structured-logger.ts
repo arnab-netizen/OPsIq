@@ -61,7 +61,7 @@ const SECRET_PATTERNS = [
   /api[_-]key["\s:=]+([^\s",}]+)/gi,
 ];
 
-function redactSecrets(value: any): any {
+function redactSecrets(value: unknown): unknown {
   if (typeof value !== "string") return value;
 
   let redacted = value;
@@ -73,7 +73,7 @@ function redactSecrets(value: any): any {
   return redacted;
 }
 
-function serializePayload(payload: any): string {
+function serializePayload(payload: unknown): string {
   try {
     const serialized = JSON.stringify(payload);
     return redactSecrets(serialized);
@@ -82,7 +82,7 @@ function serializePayload(payload: any): string {
   }
 }
 
-function payloadHash(payload: any): string {
+function payloadHash(payload: unknown): string {
   try {
     const crypto = require("crypto");
     const serialized = JSON.stringify(payload);
@@ -191,7 +191,7 @@ export class StructuredLogger {
   logMutationStart(
     mutation_type: string,
     idempotency_key: string,
-    payload: any
+    payload: unknown
   ): void {
     this.emit(
       this.createEntry("INFO", "MUTATION", `Mutation starting: ${mutation_type}`, {

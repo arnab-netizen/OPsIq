@@ -31,7 +31,7 @@ describe("D3: Webhook Infrastructure - Queue Durability Proofs", () => {
   }
 
   // Helper: Simulate job persistence to database
-  function persistJobToDb(job: any): {
+  function persistJobToDb(job: unknown): {
     persisted: boolean;
     jobId: string;
     status: string;
@@ -44,7 +44,7 @@ describe("D3: Webhook Infrastructure - Queue Durability Proofs", () => {
   }
 
   // Helper: Simulate job recovery after process restart
-  function recoverJobFromDb(jobId: string): any | null {
+  function recoverJobFromDb(jobId: string): unknown | null {
     // In CI: SELECT * FROM webhook_jobs WHERE id = $1
     // Returns the job if persisted, null if not found
     return { id: jobId, status: "pending", retry_count: 0 };

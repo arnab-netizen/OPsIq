@@ -351,7 +351,7 @@ export async function getEvidenceById(
   if (!fullEvidence) throw new NotFoundError("Evidence", evidenceId);
 
   // Add backward compatibility fields for old interface
-  const result: any = fullEvidence;
+  const result: unknown = fullEvidence;
   result.category = fullEvidence.evidenceType === "document" ? "financial" : "operational";
   result.type = fullEvidence.evidenceType;
   result.sourceType = fullEvidence.evidenceType;
@@ -448,7 +448,7 @@ export async function listEvidence(
 
 export async function validateEvidence(
   input: { evidenceItemId: string; isValid: boolean; version: number } | string,
-  authContextOrActorId?: any | string,
+  authContextOrActorId?: unknown | string,
   workspaceIdOrUndefined?: string
 ) {
   // Handle both function signatures: new (any) and old (actorId) for backward compatibility
@@ -717,7 +717,7 @@ export async function updateEvidenceBundle(
     throw new Error("Bundle was modified. Please refresh and try again.");
   }
 
-  const updates: any = { version: { increment: 1 } };
+  const updates: unknown = { version: { increment: 1 } };
   if (input.title) updates.title = input.title;
   if (input.description !== undefined) updates.description = input.description;
   if (input.status) updates.status = input.status;

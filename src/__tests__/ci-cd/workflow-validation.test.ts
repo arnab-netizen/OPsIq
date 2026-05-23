@@ -12,7 +12,7 @@ import YAML from "js-yaml";
 
 describe("CI/CD Workflow Validation", () => {
   describe("Main CI Workflow (.github/workflows/ci.yml)", () => {
-    let ciWorkflow: any;
+    let ciWorkflow: unknown;
 
     beforeEach(() => {
       const ciPath = path.join(
@@ -50,7 +50,7 @@ describe("CI/CD Workflow Validation", () => {
       const buildJob = ciWorkflow.jobs["build-and-test"];
       const steps = buildJob.steps;
       const tsStep = steps.find(
-        (step: any) => step.name === "TypeScript type checking"
+        (step: unknown) => step.name === "TypeScript type checking"
       );
       expect(tsStep).toBeDefined();
       expect(tsStep.run).toContain("npx tsc --noEmit");
@@ -60,7 +60,7 @@ describe("CI/CD Workflow Validation", () => {
       const buildJob = ciWorkflow.jobs["build-and-test"];
       const steps = buildJob.steps;
       const prismaStep = steps.find(
-        (step: any) => step.name === "Prisma schema validation"
+        (step: unknown) => step.name === "Prisma schema validation"
       );
       expect(prismaStep).toBeDefined();
       expect(prismaStep.run).toContain("npx prisma validate");
@@ -70,7 +70,7 @@ describe("CI/CD Workflow Validation", () => {
       const buildJob = ciWorkflow.jobs["build-and-test"];
       const steps = buildJob.steps;
       const buildStep = steps.find(
-        (step: any) => step.name === "Build project"
+        (step: unknown) => step.name === "Build project"
       );
       expect(buildStep).toBeDefined();
       expect(buildStep.run).toContain("npm run build");
@@ -80,7 +80,7 @@ describe("CI/CD Workflow Validation", () => {
       const buildJob = ciWorkflow.jobs["build-and-test"];
       const steps = buildJob.steps;
       const testStep = steps.find(
-        (step: any) => step.name === "Run full test suite"
+        (step: unknown) => step.name === "Run full test suite"
       );
       expect(testStep).toBeDefined();
       expect(testStep.run).toContain("npm test");
@@ -91,7 +91,7 @@ describe("CI/CD Workflow Validation", () => {
       const lintJob = ciWorkflow.jobs["lint"];
       const steps = lintJob.steps;
       const lintStep = steps.find(
-        (step: any) => step.name === "Run linter"
+        (step: unknown) => step.name === "Run linter"
       );
       expect(lintStep).toBeDefined();
       expect(lintStep.run).toContain("npm run lint");
@@ -111,7 +111,7 @@ describe("CI/CD Workflow Validation", () => {
     it("should have Node.js setup step", () => {
       const buildJob = ciWorkflow.jobs["build-and-test"];
       const nodeSetup = buildJob.steps.find(
-        (step: any) => step.name === "Setup Node.js"
+        (step: unknown) => step.name === "Setup Node.js"
       );
       expect(nodeSetup).toBeDefined();
       expect(nodeSetup.uses).toContain("setup-node");
@@ -119,7 +119,7 @@ describe("CI/CD Workflow Validation", () => {
   });
 
   describe("Staging Deployment Workflow (.github/workflows/deploy-staging.yml)", () => {
-    let deployWorkflow: any;
+    let deployWorkflow: unknown;
 
     beforeEach(() => {
       const deployPath = path.join(
@@ -146,7 +146,7 @@ describe("CI/CD Workflow Validation", () => {
       const deployJob = deployWorkflow.jobs["deploy"];
       const steps = deployJob.steps;
       const checkStep = steps.find(
-        (step: any) => step.name === "Run pre-deployment checks"
+        (step: unknown) => step.name === "Run pre-deployment checks"
       );
       expect(checkStep).toBeDefined();
       expect(checkStep.run).toContain("npx tsc --noEmit");
@@ -221,8 +221,8 @@ describe("CI/CD Workflow Validation", () => {
   });
 
   describe("Security Configuration", () => {
-    let ciWorkflow: any;
-    let deployWorkflow: any;
+    let ciWorkflow: unknown;
+    let deployWorkflow: unknown;
 
     beforeEach(() => {
       const ciPath = path.join(
@@ -243,7 +243,7 @@ describe("CI/CD Workflow Validation", () => {
     it("CI should use checkout@v4 (secure version)", () => {
       const buildJob = ciWorkflow.jobs["build-and-test"];
       const checkoutStep = buildJob.steps.find(
-        (step: any) => step.uses && step.uses.includes("checkout")
+        (step: unknown) => step.uses && step.uses.includes("checkout")
       );
       expect(checkoutStep.uses).toContain("checkout@v4");
     });
@@ -257,7 +257,7 @@ describe("CI/CD Workflow Validation", () => {
     it("should use npm ci instead of npm install in CI", () => {
       const buildJob = ciWorkflow.jobs["build-and-test"];
       const installStep = buildJob.steps.find(
-        (step: any) => step.name === "Install dependencies"
+        (step: unknown) => step.name === "Install dependencies"
       );
       expect(installStep.run).toBe("npm ci");
     });

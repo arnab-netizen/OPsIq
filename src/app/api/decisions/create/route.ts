@@ -44,7 +44,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
     if (body.decisions && Array.isArray(body.decisions)) {
       // Bulk creation via JSON
-      const decisions = body.decisions.map((d: any) => ({
+      const decisions = body.decisions.map((d: unknown) => ({
         ...d,
         verifiedWorkspaceId: workspaceId,  // Verified at route level (enforcement)
         verifiedActorId: userId,  // Verified at route level (session)
@@ -102,7 +102,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     try {
       // parseCSV expects legacy format - convert to verified format after parsing
       const parsedDecisions = parseCSV(csvContent, workspaceId, userId);
-      const verifiedDecisions = parsedDecisions.map((d: any) => ({
+      const verifiedDecisions = parsedDecisions.map((d: unknown) => ({
         ...d,
         verifiedWorkspaceId: workspaceId,  // Verified at route level (enforcement)
         verifiedActorId: userId,  // Verified at route level (session)

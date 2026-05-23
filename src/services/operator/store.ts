@@ -35,7 +35,7 @@ export async function addItems(items: OperatorItem[]): Promise<void> {
       throw new Error("OperatorItem createdBy is required for audit trail");
     }
 
-    const data: any = {
+    const data: unknown = {
       id: item.id,
       workspaceId: item.workspaceId,
       ownerUserId: item.ownerUserId,
@@ -123,7 +123,7 @@ export async function getItems(): Promise<OperatorItem[]> {
   const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany({
     where: { workspaceId: workspace.workspaceId },
   });
-  return records.map((r: any) => ({
+  return records.map((r: unknown) => ({
     id: r.id,
     workspaceId: r.workspaceId,
     ownerUserId: r.ownerUserId,
@@ -406,7 +406,7 @@ export async function getQueuedItems(
     take: limit,
   });
 
-  return records.map((r: any) => ({
+  return records.map((r: unknown) => ({
     id: r.id,
     workspaceId: r.workspaceId,
     ownerUserId: r.ownerUserId,
@@ -483,7 +483,7 @@ export async function addBlockedDecision(params: {
     throw new Error("blockStage and blockReason are required for blocked decision records");
   }
 
-  const data: any = {
+  const data: unknown = {
     id: require("crypto").randomUUID(),
     workspaceId: params.workspaceId,
     ownerUserId: params.ownerUserId,

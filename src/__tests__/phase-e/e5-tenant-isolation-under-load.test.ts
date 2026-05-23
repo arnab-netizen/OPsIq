@@ -90,7 +90,7 @@ describe("PHASE E PRIORITY 5: Tenant Isolation Under Hostile Load", () => {
         workspace_id: "ws-victim-001", // Victim's workspace
       };
 
-      const isAuthorized = (req: any) => {
+      const isAuthorized = (req: unknown) => {
         return true; // Would check in real code
       };
 
@@ -170,7 +170,7 @@ describe("PHASE E PRIORITY 5: Tenant Isolation Under Hostile Load", () => {
         { token: "invalid-token-x", exists: false },
       ];
 
-      const timings: any[] = [];
+      const timings: unknown[] = [];
 
       for (const user of users) {
         const start = Date.now();
@@ -301,7 +301,7 @@ describe("PHASE E PRIORITY 5: Tenant Isolation Under Hostile Load", () => {
         normal: [] as any[],
       };
 
-      const enqueue = (op: any) => {
+      const enqueue = (op: unknown) => {
         if (op.priority === "critical") {
           criticalOpsQueue.urgent.push(op);
         } else {
@@ -370,14 +370,14 @@ describe("PHASE E PRIORITY 5: Tenant Isolation Under Hostile Load", () => {
       };
 
       // Tenant A updates ws-a-1
-      const updateA = (ws: any) => {
+      const updateA = (ws: unknown) => {
         ws.version++;
         ws.member_count++;
         return ws;
       };
 
       // Tenant B updates ws-b-1
-      const updateB = (ws: any) => {
+      const updateB = (ws: unknown) => {
         ws.version++;
         ws.member_count += 2;
         return ws;
@@ -476,8 +476,8 @@ describe("PHASE E PRIORITY 5: Tenant Isolation Under Hostile Load", () => {
   describe("5.7: Workspace Enforcement Under Burst Load", () => {
     it("should enforce workspace_id validation under 1000 concurrent requests", async () => {
       // HOSTILE: 1000 concurrent requests with invalid workspace_ids
-      const validRequests: any[] = [];
-      const rejectedRequests: any[] = [];
+      const validRequests: unknown[] = [];
+      const rejectedRequests: unknown[] = [];
 
       for (let i = 0; i < 1000; i++) {
         const req = {

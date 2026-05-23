@@ -7,7 +7,7 @@ import type { AuditRecord } from "@/domain/audit/types";
 // ============================================================================
 
 describe("Audit Log Service - logDecision()", () => {
-  let consoleSpy: any;
+  let consoleSpy: unknown;
 
   beforeEach(() => {
     consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});

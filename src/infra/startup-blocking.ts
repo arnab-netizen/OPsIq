@@ -120,7 +120,7 @@ async function performStartupChecks(): Promise<boolean> {
 /**
  * Verify database connectivity with basic query
  */
-async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
+async function checkDatabase(dbInstance: unknown, logger: unknown): Promise<boolean> {
   try {
     await dbInstance.$queryRawUnsafe("SELECT 1");
     return true;
@@ -134,7 +134,7 @@ async function checkDatabase(dbInstance: any, logger: any): Promise<boolean> {
  * Verify database schema matches expectations
  * This prevents silent schema divergence
  */
-async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolean> {
+async function checkDatabaseSchema(dbInstance: unknown, logger: unknown): Promise<boolean> {
   try {
     // Check 1: Verify critical tables exist
     const requiredTables = [
@@ -183,7 +183,7 @@ async function checkDatabaseSchema(dbInstance: any, logger: any): Promise<boolea
 /**
  * Verify critical configuration is present
  */
-function checkConfiguration(logger: any): boolean {
+function checkConfiguration(logger: unknown): boolean {
   const requiredEnvVars = ["DATABASE_URL", "STRIPE_API_KEY", "STRIPE_WEBHOOK_SECRET"];
 
   for (const envVar of requiredEnvVars) {

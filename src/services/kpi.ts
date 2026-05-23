@@ -40,7 +40,7 @@ export async function createKPI(
       idempotencyKey,
       "kpi.create",
       async () => {
-        return await db.$transaction(async (tx: any) => {
+        return await db.$transaction(async (tx: unknown) => {
           const kpi = await tx.kPI.create({
             data: {
               engagementId: input.engagementId,
@@ -166,7 +166,7 @@ export async function updateKPIValue(
       idempotencyKey,
       "kpi.record",
       async () => {
-        return await db.$transaction(async (tx: any) => {
+        return await db.$transaction(async (tx: unknown) => {
           const updateResult = await tx.kPI.updateMany({
             where: {
               id: kpiId,

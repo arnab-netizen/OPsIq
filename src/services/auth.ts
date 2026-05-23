@@ -151,7 +151,7 @@ export async function getPolicyContext(workspaceId?: string): Promise<PolicyCont
       scope: ra.scope,
       scopeId: ra.scopeId,
     })),
-    engagementMemberships: engagementMemberships.map((em: any) => ({
+    engagementMemberships: engagementMemberships.map((em: unknown) => ({
       engagementId: em.engagementId,
       role: em.role as RoleName,
     })),

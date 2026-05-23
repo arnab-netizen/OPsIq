@@ -144,8 +144,8 @@ export class ImpactTracker {
    * Validate baseline and actual have same unit
    */
   validateMetricCompatibility(
-    baseline_metric: any,
-    actual_metric: any
+    baseline_metric: unknown,
+    actual_metric: unknown
   ): boolean {
     if (!baseline_metric || !actual_metric) {
       return false;

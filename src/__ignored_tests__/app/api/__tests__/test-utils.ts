@@ -93,7 +93,7 @@ export function createMockRequest(
 }
 
 export function expectWorkspaceIsolation(
-  mockFn: any,
+  mockFn: unknown,
   workspaceId: string
 ) {
   expect(mockFn).toHaveBeenCalledWith(
@@ -107,7 +107,7 @@ export function expectWorkspaceIsolation(
 
 export function expectFailClosedPattern(
   status: number,
-  body: any
+  body: unknown
 ) {
   // Fail-closed means we return explicit error codes (400/403/422/500) before processing
   expect([400, 403, 422, 500]).toContain(status);

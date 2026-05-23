@@ -28,7 +28,7 @@ export interface ValidationError {
 export async function validateRequest(
   request: NextRequest,
   schemas: ValidationSchemas
-): Promise<{ valid: true; data: any } | { valid: false; errors: ValidationError[] }> {
+): Promise<{ valid: true; data: unknown } | { valid: false; errors: ValidationError[] }> {
   const errors: ValidationError[] = [];
 
   // Validate body if schema provided

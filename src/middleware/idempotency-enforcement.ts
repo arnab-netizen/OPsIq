@@ -48,10 +48,10 @@ function computePayloadHash(body: unknown): string {
  *   );
  */
 export function withIdempotencyEnforcement(
-  handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>,
+  handler: (request: NextRequest, ...args: unknown[]) => Promise<NextResponse>,
   options: IdempotencyOptions = {}
-): (request: NextRequest, ...args: any[]) => Promise<NextResponse> {
-  return (async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
+): (request: NextRequest, ...args: unknown[]) => Promise<NextResponse> {
+  return (async (request: NextRequest, ...args: unknown[]): Promise<NextResponse> => {
     const store = getIdempotencyStore();
     const idempotencyKey = request.headers.get("Idempotency-Key");
 
@@ -266,7 +266,7 @@ export function withIdempotencyEnforcement(
 
       throw error;
     }
-  }) as (request: NextRequest, ...args: any[]) => Promise<NextResponse>;
+  }) as (request: NextRequest, ...args: unknown[]) => Promise<NextResponse>;
 }
 
 /**

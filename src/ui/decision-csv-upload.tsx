@@ -4,7 +4,7 @@ import { classifyOperatorError, type ErrorGovernanceContext } from "@/lib/operat
 import { useState } from "react";
 
 interface BulkCreateResult {
-  successful: any[];
+  successful: unknown[];
   failed: Array<{ title: string; reason: string }>;
   summary: {
     total: number;

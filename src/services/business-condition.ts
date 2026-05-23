@@ -127,7 +127,7 @@ export async function assessCondition(
     async () => {
       // Use transaction to prevent race condition on isCurrent flag
       // Both updateMany and create happen atomically
-      const profile = await db.$transaction(async (tx: any) => {
+      const profile = await db.$transaction(async (tx: unknown) => {
         // Mark previous current profile as non-current
         await tx.businessConditionProfile.updateMany({
           where: { engagementId: input.engagementId, isCurrent: true },

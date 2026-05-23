@@ -186,8 +186,8 @@ export function assertConfidenceBounds(
  * Assert that deterministic replay produces identical results
  */
 export function assertDeterministicReplay(
-  first_result: any,
-  second_result: any,
+  first_result: unknown,
+  second_result: unknown,
   fields_to_compare: string[]
 ) {
   fields_to_compare.forEach((field) => {

@@ -196,7 +196,7 @@ export interface AlertEngine {
 export const MONITORING_ASSERTIONS = {
   // Database connectivity check
   DATABASE_HEALTHY: {
-    check: async (dbInstance: any) => {
+    check: async (dbInstance: unknown) => {
       const start = Date.now();
       try {
         await dbInstance.$queryRawUnsafe("SELECT 1");
@@ -209,7 +209,7 @@ export const MONITORING_ASSERTIONS = {
 
   // Queue depth check (webhook jobs pending)
   QUEUE_HEALTHY: {
-    check: async (dbInstance: any) => {
+    check: async (dbInstance: unknown) => {
       try {
         const result = await dbInstance.$queryRawUnsafe(
           "SELECT COUNT(*) as count FROM webhook_events WHERE status='pending' OR status='retrying'"
@@ -243,7 +243,7 @@ export const MONITORING_ASSERTIONS = {
       const cpus = require("os").cpus();
       let totalIdle = 0;
       let totalTick = 0;
-      cpus.forEach((cpu: any) => {
+      cpus.forEach((cpu: unknown) => {
         for (const type in cpu.times) {
           totalTick += cpu.times[type];
         }

@@ -207,7 +207,7 @@ async function evaluateBusinessConditionImpact(engagementId: string, workspaceId
   });
 
   if (kpis.length > 0) {
-    const deterior = kpis.filter((k: any) => {
+    const deterior = kpis.filter((k: unknown) => {
       if (k.direction === "up" && k.currentValue !== null && k.target !== null) {
         return k.currentValue < k.target;
       } else if (k.direction === "down" && k.currentValue !== null && k.target !== null) {
@@ -332,8 +332,8 @@ async function evaluateInterventionPhaseImpact(engagementId: string, workspaceId
   } else if (actions.length === 0) {
     recommendedPhase = "stabilization";
   } else {
-    const completedCount = actions.filter((a: any) => a.status === "completed").length;
-    const activeCount = actions.filter((a: any) => a.status !== "completed" && a.status !== "cancelled")
+    const completedCount = actions.filter((a: unknown) => a.status === "completed").length;
+    const activeCount = actions.filter((a: unknown) => a.status !== "completed" && a.status !== "cancelled")
       .length;
 
     if (activeCount > 0) {
@@ -577,7 +577,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
       };
 
   // Persist results in a transaction
-  const auditEventId = await db.$transaction(async (tx: any) => {
+  const auditEventId = await db.$transaction(async (tx: unknown) => {
     const auditPayload: Record<string, unknown> = {
       changeType: event.changeType,
       severity: event.severity,
@@ -674,7 +674,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         priorityImpact.recommendationPriorityShift === "escalate" ? priorityMap : deprioritizeMap;
 
       const updated = await Promise.all(
-        recs.map((r: any) =>
+        recs.map((r: unknown) =>
           tx.recommendation.update({
             where: { id: r.id },
             data: { priority: shiftMap[r.priority] || r.priority },
@@ -722,7 +722,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
         if (reRankResult.updated > 0) {
           auditPayload.recommendationReRankingResult = {
             count: reRankResult.updated,
-            recommendations: reRankResult.recommendations.map((r: any) => ({
+            recommendations: reRankResult.recommendations.map((r: unknown) => ({
               id: r.id,
               oldPriority: r.oldPriority,
               newPriority: r.newPriority,

@@ -19,7 +19,7 @@ interface UpgradeRequest {
 
 export const POST = withCanonicalEnforcement(async (ctx) => {
   // Initialize Stripe client
-  let stripe: any;
+  let stripe: unknown;
   try {
     stripe = await getStripe();
   } catch (error) {

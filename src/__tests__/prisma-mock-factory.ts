@@ -180,6 +180,6 @@ export function createPrismaMock() {
       deleteMany: vi.fn(),
       count: vi.fn(),
     },
-    $transaction: vi.fn((callback: (tx: any) => Promise<any>) => callback(createPrismaMock())),
+    $transaction: vi.fn((callback: (tx: unknown) => Promise<any>) => callback(createPrismaMock())),
   };
 }

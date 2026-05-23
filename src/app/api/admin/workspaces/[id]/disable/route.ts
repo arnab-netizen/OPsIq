@@ -33,7 +33,7 @@ export const POST = withEnforcementFull(
       throw new Error("Workspace ID required");
     }
 
-    let body: any = {};
+    let body: unknown = {};
     try {
       body = await request.json();
     } catch {

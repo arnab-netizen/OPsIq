@@ -36,7 +36,7 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
         workspaceId,
         myDay: myDayItems,
         count: myDayItems.length,
-        recommendedItemCount: myDayItems.filter((i: any) => i.recommended).length,
+        recommendedItemCount: myDayItems.filter((i: unknown) => i.recommended).length,
       },
       { status: 200 }
     );

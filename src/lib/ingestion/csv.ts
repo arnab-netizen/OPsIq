@@ -106,7 +106,7 @@ export function ingestCSV(text: string): CSVRecord[] {
  * Validate a single record for required fields.
  * Ensures both revenue and cost are valid numbers.
  */
-export function validateRecord(record: any): record is CSVRecord {
+export function validateRecord(record: unknown): record is CSVRecord {
   return (
     typeof record === "object" &&
     record !== null &&

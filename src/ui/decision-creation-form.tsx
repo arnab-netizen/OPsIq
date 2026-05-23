@@ -5,7 +5,7 @@ import { useState } from "react";
 
 interface DecisionCreationFormProps {
   workspaceId: string;
-  onSuccess?: (decision: any) => void;
+  onSuccess?: (decision: unknown) => void;
   onError?: (error: string) => void;
 }
 

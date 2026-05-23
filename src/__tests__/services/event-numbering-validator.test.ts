@@ -66,7 +66,7 @@ describe("EventNumberingValidator - Event Number Ordering", () => {
     try {
       EventNumberingValidator.validateEventNumber("agg-1", "Decision", 5);
       expect.fail("Should have thrown");
-    } catch (e: any) {
+    } catch (e: unknown) {
       expect(e.message).toContain("not sequential");
       expect(e.message).toContain("Event number 5");
       expect(e.message).toContain("Last event number was 5");
@@ -228,7 +228,7 @@ describe("EventNumberingValidator - Event Number Ordering", () => {
     try {
       EventNumberingValidator.validateSequence(events);
       expect.fail("Should have thrown");
-    } catch (e: any) {
+    } catch (e: unknown) {
       expect(e.message).toContain("Sequence violation");
       expect(e.message).toContain("Decision:agg-1");
       expect(e.message).toContain("strictly increasing");

@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 export type ActionType = "email" | "webhook" | "task";
 
 export interface ActionPayload {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ActionResult {

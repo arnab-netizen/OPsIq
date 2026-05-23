@@ -412,7 +412,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
 
     it("should prevent infinite amplification in retry storms", async () => {
       // HOSTILE: Retries should decay, not grow
-      let retryQueue: any[] = [];
+      let retryQueue: unknown[] = [];
 
       // Initial: 100 failed operations
       for (let i = 0; i < 100; i++) {
@@ -553,7 +553,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
     it("should track p95 latency degradation under CPU pressure", async () => {
       // HOSTILE: Measure latency at different CPU levels
       const cpuLoads = [25, 50, 75, 90];
-      const latencyProfiles: any[] = [];
+      const latencyProfiles: unknown[] = [];
 
       for (const cpuLoad of cpuLoads) {
         // Simulate CPU-constrained latencies

@@ -125,7 +125,7 @@ describe("Phase RP9: Replay Determinism Verification", () => {
       });
 
       // Replay 10 times sequentially
-      const replays: any[] = [];
+      const replays: unknown[] = [];
       for (let i = 0; i < 10; i++) {
         const result = await EventReplayEngine.replayAggregate(
           aggId,

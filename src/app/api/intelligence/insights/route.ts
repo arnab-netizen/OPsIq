@@ -31,7 +31,7 @@ export const GET = withCanonicalEnforcement(
   });
 
   // Map to OperatorItem type
-  const operatorItems = items.map((r: any) => ({
+  const operatorItems = items.map((r: unknown) => ({
     id: r.id,
     workspaceId: r.workspaceId,
     ownerUserId: r.ownerUserId,

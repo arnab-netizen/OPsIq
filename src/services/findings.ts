@@ -432,7 +432,7 @@ export async function linkEvidenceToFinding(
     throw new ValidationError("Evidence is already linked to this finding");
   }
 
-  const updated = await db.$transaction(async (tx: any) => {
+  const updated = await db.$transaction(async (tx: unknown) => {
     const updatedFinding = await tx.finding.update({
       where: { id: findingId },
       data: {
@@ -499,11 +499,11 @@ export async function unlinkEvidenceFromFinding(
     throw new ValidationError("Evidence is not linked to this finding");
   }
 
-  const updated = await db.$transaction(async (tx: any) => {
+  const updated = await db.$transaction(async (tx: unknown) => {
     const updatedFinding = await tx.finding.update({
       where: { id: findingId },
       data: {
-        linkedEvidence: finding.linkedEvidence.filter((id: any) => id !== evidenceId),
+        linkedEvidence: finding.linkedEvidence.filter((id: unknown) => id !== evidenceId),
       },
       select: { id: true, linkedEvidence: true },
     });

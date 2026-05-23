@@ -138,7 +138,7 @@ export async function updateWorkspaceThresholds(
     }
   }
 
-  const updateData: any = {
+  const updateData: unknown = {
     ...updates,
     updatedAt: new Date(),
   };
@@ -188,7 +188,7 @@ export async function resetWorkspaceThresholds(
   });
 }
 
-export function validateThresholdValue(field: string, value: any): void {
+export function validateThresholdValue(field: string, value: unknown): void {
   if (value === null || value === undefined) {
     return; // Null values skip validation
   }

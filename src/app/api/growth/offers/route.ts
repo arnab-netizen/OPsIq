@@ -144,7 +144,7 @@ export async function recordPerformanceHandler(
  */
 export async function compareOffersHandler(
   workspaceId: string,
-  offers: any[]
+  offers: unknown[]
 ): Promise<any> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };

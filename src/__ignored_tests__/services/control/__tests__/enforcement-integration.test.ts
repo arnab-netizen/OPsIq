@@ -31,8 +31,8 @@ describe("Control Layer Enforcement - Integration Tests", () => {
         expectedImpact: 50000,
       };
 
-      const mockPatterns: any[] = []; // Empty patterns - insufficient data
-      const mockVariables: any[] = [];
+      const mockPatterns: unknown[] = []; // Empty patterns - insufficient data
+      const mockVariables: unknown[] = [];
 
       const result = await executeDecisionThroughControlLayer(
         inputVariables,
@@ -254,7 +254,7 @@ describe("Control Layer Enforcement - Integration Tests", () => {
       try {
         enforceControlLayer(decisionPath, executedValidations);
         expect(true).toBe(false); // Should not reach here
-      } catch (e: any) {
+      } catch (e: unknown) {
         expect(e.reason).toBe("CONTROL_LAYER_BYPASS");
         expect(e.details.skippedValidations).toContain("dependency_validation");
       }
@@ -271,7 +271,7 @@ describe("Control Layer Enforcement - Integration Tests", () => {
       try {
         enforceControlLayer(decisionPath, executedValidations);
         expect(true).toBe(false); // Should not reach here
-      } catch (e: any) {
+      } catch (e: unknown) {
         expect(e.details.skippedValidations.length).toBe(4);
       }
     });
@@ -282,7 +282,7 @@ describe("Control Layer Enforcement - Integration Tests", () => {
 
       try {
         enforceControlLayer(decisionPath, executedValidations);
-      } catch (e: any) {
+      } catch (e: unknown) {
         expect(e.message).toContain(decisionPath);
       }
     });

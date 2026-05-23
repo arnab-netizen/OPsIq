@@ -34,7 +34,7 @@ interface DecisionResultProps {
 }
 
 // Type guard to check if result is a DecisionResultResponse
-function isDecisionResultResponse(result: any): result is DecisionResultResponse {
+function isDecisionResultResponse(result: unknown): result is DecisionResultResponse {
   return result && typeof result === 'object' && 'decision' in result;
 }
 
