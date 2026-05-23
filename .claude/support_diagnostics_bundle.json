@@ -1,0 +1,75 @@
+{
+  "timestamp": "2026-05-23T22:14:51.471Z",
+  "git": {
+    "sha": "935edb6f33b4",
+    "branch": "next-external-deployment-readiness",
+    "remote_url": "http://local_proxy@127.0.0.1:33355/git/arnab-netizen/OPsIq"
+  },
+  "environment": {
+    "node_version": "v22.22.2",
+    "npm_version": "10.9.7",
+    "environment_type": "unknown",
+    "skip_env_validation": false
+  },
+  "package": {
+    "version": "0.1.0",
+    "name": "opsiq",
+    "scripts_available": [
+      "postinstall",
+      "dev",
+      "build",
+      "start",
+      "lint",
+      "lint:ratchet",
+      "validate:deployment",
+      "db:generate",
+      "db:migrate:dev",
+      "db:migrate:deploy",
+      "db:push",
+      "db:studio",
+      "db:reset",
+      "test",
+      "test:watch",
+      "test:all",
+      "test:merge",
+      "test:ci",
+      "test:integration",
+      "test:mvp",
+      "test:db",
+      "test:stripe-sim",
+      "dev:backbone",
+      "governance:scan-shadow-reads",
+      "governance:classify-shadows",
+      "governance:ci-gate",
+      "governance:phase-g2",
+      "governance:scan",
+      "governance:scan:strict",
+      "smoke:prod",
+      "smoke:staging",
+      "deployment:preflight",
+      "deployment:smoke",
+      "support:diagnostics"
+    ]
+  },
+  "validation": {
+    "prisma_validate": "PASS",
+    "lint_ratchet": "PASS",
+    "governance_scan": "PASS",
+    "tsc": "PASS",
+    "build": "PASS"
+  },
+  "env_presence": {
+    "DATABASE_URL": false,
+    "NEXTAUTH_SECRET": false,
+    "NEXTAUTH_URL": false,
+    "NODE_ENV": false,
+    "STRIPE_SECRET_KEY": false
+  },
+  "routes": {
+    "health_endpoint_available": true,
+    "readiness_endpoint_available": true,
+    "startup_endpoint_available": true,
+    "ops_readiness_endpoint_available": true,
+    "ops_runtime_endpoint_available": true
+  }
+}
