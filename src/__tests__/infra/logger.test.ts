@@ -191,7 +191,7 @@ describe("Structured Logger", () => {
       logger.info("test message", { requestId: "req-123" });
 
       flushLogs();
-      const callArgs = (console.log as any).mock.calls[0][0];
+      const callArgs = (console.log as unknown).mock.calls[0][0];
 
       const parsed = JSON.parse(callArgs);
       expect(parsed.message).toBe("test message");
@@ -203,7 +203,7 @@ describe("Structured Logger", () => {
       logger.info("test message", {}, undefined, config);
 
       flushLogs(config);
-      const callArgs = (console.log as any).mock.calls[0][0];
+      const callArgs = (console.log as unknown).mock.calls[0][0];
 
       expect(callArgs).toContain("[INFO]");
       expect(callArgs).toContain("test message");
@@ -213,7 +213,7 @@ describe("Structured Logger", () => {
       logger.info("test message");
 
       flushLogs();
-      const callArgs = (console.log as any).mock.calls[0][0];
+      const callArgs = (console.log as unknown).mock.calls[0][0];
       const parsed = JSON.parse(callArgs);
 
       expect(parsed.timestamp).toBeDefined();
@@ -225,7 +225,7 @@ describe("Structured Logger", () => {
       logger.info("test message", {}, undefined, config);
 
       flushLogs(config);
-      const callArgs = (console.log as any).mock.calls[0][0];
+      const callArgs = (console.log as unknown).mock.calls[0][0];
 
       expect(callArgs).toMatch(/\d{4}-\d{2}-\d{2}T/);
     });
@@ -234,7 +234,7 @@ describe("Structured Logger", () => {
       logger.info("test message", {}, { statusCode: 201, duration: 123 });
 
       flushLogs();
-      const callArgs = (console.log as any).mock.calls[0][0];
+      const callArgs = (console.log as unknown).mock.calls[0][0];
       const parsed = JSON.parse(callArgs);
 
       expect(parsed.metadata.statusCode).toBe(201);
@@ -245,7 +245,7 @@ describe("Structured Logger", () => {
       logger.info("test message");
 
       flushLogs();
-      const callArgs = (console.log as any).mock.calls[0][0];
+      const callArgs = (console.log as unknown).mock.calls[0][0];
       const parsed = JSON.parse(callArgs);
 
       expect(parsed.context).toBeUndefined();
@@ -257,7 +257,7 @@ describe("Structured Logger", () => {
       logger.info("test message", {}, undefined, config);
 
       flushLogs(config);
-      const callArgs = (console.log as any).mock.calls[0][0];
+      const callArgs = (console.log as unknown).mock.calls[0][0];
       const parsed = JSON.parse(callArgs);
 
       expect(parsed.context).toBeUndefined();

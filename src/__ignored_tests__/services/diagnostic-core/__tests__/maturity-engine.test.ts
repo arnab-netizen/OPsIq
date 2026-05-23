@@ -26,7 +26,7 @@ describe("MaturityEngine (STRICT EXECUTION CAPABILITY MODE)", () => {
       const result = await engine.analyzeMaturity(
         engagementId,
         workspaceId,
-        indicators as any
+        indicators as unknown
       );
 
       expect(result).toBeNull();

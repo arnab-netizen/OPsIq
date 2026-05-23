@@ -28,7 +28,7 @@ vi.mock("@/services/execution-drift/execution-drift.service", () => ({
 describe("BusinessImpactService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement = { findUnique: vi.fn() };
     mockDb.finding = { findMany: vi.fn() };
     mockDb.recommendation = { findMany: vi.fn() };
@@ -56,7 +56,7 @@ describe("BusinessImpactService", () => {
   };
 
   it("returns null estimated loss when no revenue data exists", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
@@ -70,7 +70,7 @@ describe("BusinessImpactService", () => {
   });
 
   it("calculates existential impact for timeline <= 30 days with critical drift", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
@@ -93,7 +93,7 @@ describe("BusinessImpactService", () => {
     const { detectExecutionDrift } = await import(
       "@/services/execution-drift/execution-drift.service"
     );
-    (detectExecutionDrift as any).mockResolvedValue({
+    (detectExecutionDrift as unknown).mockResolvedValue({
       driftDetected: true,
       severity: "critical",
     });
@@ -105,7 +105,7 @@ describe("BusinessImpactService", () => {
   });
 
   it("calculates critical impact for execution certainty score < 40", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
@@ -117,7 +117,7 @@ describe("BusinessImpactService", () => {
     const { calculateExecutionCertainty } = await import(
       "@/services/execution-certainty"
     );
-    (calculateExecutionCertainty as any).mockReturnValue({
+    (calculateExecutionCertainty as unknown).mockReturnValue({
       score: 35,
       level: "low",
       blockers: [],
@@ -127,7 +127,7 @@ describe("BusinessImpactService", () => {
     const { detectExecutionDrift } = await import(
       "@/services/execution-drift/execution-drift.service"
     );
-    (detectExecutionDrift as any).mockResolvedValue({
+    (detectExecutionDrift as unknown).mockResolvedValue({
       driftDetected: false,
       severity: "low",
       reasons: [],
@@ -143,7 +143,7 @@ describe("BusinessImpactService", () => {
   });
 
   it("reduces recovery probability with blockers", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([
       {
@@ -168,7 +168,7 @@ describe("BusinessImpactService", () => {
     const { calculateExecutionCertainty } = await import(
       "@/services/execution-certainty"
     );
-    (calculateExecutionCertainty as any).mockReturnValue({
+    (calculateExecutionCertainty as unknown).mockReturnValue({
       score: 50,
       level: "medium",
       blockers: ["blocker-1", "blocker-2", "blocker-3"], // 3+ blockers
@@ -180,7 +180,7 @@ describe("BusinessImpactService", () => {
   });
 
   it("requires owner decision for high impact and above", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue({
       ...mockEngagement,
       healthStatus: "healthy",
@@ -202,7 +202,7 @@ describe("BusinessImpactService", () => {
     const { calculateExecutionCertainty } = await import(
       "@/services/execution-certainty"
     );
-    (calculateExecutionCertainty as any).mockReturnValue({
+    (calculateExecutionCertainty as unknown).mockReturnValue({
       score: 55,
       level: "medium",
       blockers: [],
@@ -216,7 +216,7 @@ describe("BusinessImpactService", () => {
   });
 
   it("returns success envelope from API", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([]);
     mockDb.recommendation.findMany.mockResolvedValue([]);
@@ -237,7 +237,7 @@ describe("BusinessImpactService", () => {
   });
 
   it("estimates loss only when revenue data available and impact >= medium", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([
       {
@@ -273,7 +273,7 @@ describe("BusinessImpactService", () => {
   });
 
   it("includes top impact drivers (max 5)", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.finding.findMany.mockResolvedValue([
       { id: "find-1", severity: "critical", status: "open", verified: false },
@@ -288,7 +288,7 @@ describe("BusinessImpactService", () => {
     const { calculateExecutionCertainty } = await import(
       "@/services/execution-certainty"
     );
-    (calculateExecutionCertainty as any).mockReturnValue({
+    (calculateExecutionCertainty as unknown).mockReturnValue({
       score: 45,
       level: "medium",
       blockers: ["blocker-1"],

@@ -81,7 +81,7 @@ vi.mock("@/services/decision-control/decision-control.service", () => ({
 describe("DecisionEvidenceService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement = { findUnique: vi.fn() };
     mockDb.action = { findMany: vi.fn() };
     mockDb.finding = { findMany: vi.fn() };
@@ -97,7 +97,7 @@ describe("DecisionEvidenceService", () => {
   };
 
   it("includes all input categories in evidence", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([
       { id: "action-1", title: "Action 1", priority: "high", status: "in_progress", dueDate: new Date() },
@@ -121,7 +121,7 @@ describe("DecisionEvidenceService", () => {
   });
 
   it("populates reasoning with triggers and rules", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([]);
     mockDb.finding.findMany.mockResolvedValue([
@@ -139,7 +139,7 @@ describe("DecisionEvidenceService", () => {
   });
 
   it("calculates confidence breakdown correctly", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([
       { id: "action-1", title: "Action", priority: "high", status: "in_progress", dueDate: new Date() },
@@ -160,7 +160,7 @@ describe("DecisionEvidenceService", () => {
   });
 
   it("includes impact basis with financial and timeline data", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([]);
     mockDb.finding.findMany.mockResolvedValue([]);
@@ -179,7 +179,7 @@ describe("DecisionEvidenceService", () => {
   });
 
   it("is deterministic - same input produces same output", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([
       { id: "action-1", title: "Action", priority: "critical", status: "pending", dueDate: new Date(Date.now() - 86400000) },
@@ -200,7 +200,7 @@ describe("DecisionEvidenceService", () => {
   });
 
   it("handles empty inputs without crashing", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([]);
     mockDb.finding.findMany.mockResolvedValue([]);
@@ -218,7 +218,7 @@ describe("DecisionEvidenceService", () => {
   });
 
   it("calculates action categories correctly", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     const futureDate = new Date(Date.now() + 86400000);
     const pastDate = new Date(Date.now() - 86400000);
 
@@ -241,7 +241,7 @@ describe("DecisionEvidenceService", () => {
   });
 
   it("categorizes findings by severity and status", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([]);
     mockDb.finding.findMany.mockResolvedValue([

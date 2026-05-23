@@ -77,7 +77,7 @@ export async function createAlert(input: CreateAlertInput): Promise<Alert> {
 
     // Deliver based on channel
     if (channel === "email") {
-      deliverEmailAlert(alert as any).catch((error) => {
+      deliverEmailAlert(alert as unknown).catch((error) => {
         logger.warn("Failed to deliver email alert", {
           alertId: alert.id,
           userId,

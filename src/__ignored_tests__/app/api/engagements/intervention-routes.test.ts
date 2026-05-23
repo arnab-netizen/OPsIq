@@ -43,7 +43,7 @@ describe("Intervention API Routes", () => {
   describe("GET /engagements/[engagementId]/intervention-state", () => {
     it("requires INTERVENTION_VIEW capability", async () => {
       const { withAuth } = await import("@/lib/auth-guard");
-      const mockAuth = withAuth as any;
+      const mockAuth = withAuth as unknown;
 
       mockAuth.mockResolvedValue({ session: { user: { id: "user-1" } } });
 
@@ -52,14 +52,14 @@ describe("Intervention API Routes", () => {
 
     it("validates engagementId is UUID", async () => {
       const { parseOrThrow } = await import("@/lib/validation");
-      const mockParse = parseOrThrow as any;
+      const mockParse = parseOrThrow as unknown;
 
       expect(mockParse).toBeDefined();
     });
 
     it("returns intervention state on success", async () => {
       const { getInterventionState } = await import("@/services/intervention-state");
-      const mockGet = getInterventionState as any;
+      const mockGet = getInterventionState as unknown;
 
       mockGet.mockResolvedValue({
         id: "state-1",
@@ -73,7 +73,7 @@ describe("Intervention API Routes", () => {
 
     it("returns 404 if engagement not found", async () => {
       const { getInterventionState } = await import("@/services/intervention-state");
-      const mockGet = getInterventionState as any;
+      const mockGet = getInterventionState as unknown;
 
       mockGet.mockRejectedValue(new Error("NotFoundError"));
 
@@ -84,7 +84,7 @@ describe("Intervention API Routes", () => {
   describe("PUT /engagements/[engagementId]/intervention-state", () => {
     it("requires INTERVENTION_MANAGE capability", async () => {
       const { withAuth } = await import("@/lib/auth-guard");
-      const mockAuth = withAuth as any;
+      const mockAuth = withAuth as unknown;
 
       expect(mockAuth).toBeDefined();
     });
@@ -95,14 +95,14 @@ describe("Intervention API Routes", () => {
 
     it("validates targetPhase enum", async () => {
       const { parseRequestBody } = await import("@/lib/validation");
-      const mockParse = parseRequestBody as any;
+      const mockParse = parseRequestBody as unknown;
 
       expect(mockParse).toBeDefined();
     });
 
     it("transitions phase successfully", async () => {
       const { transitionPhase } = await import("@/services/intervention-state");
-      const mockTransition = transitionPhase as any;
+      const mockTransition = transitionPhase as unknown;
 
       mockTransition.mockResolvedValue({
         id: "state-1",
@@ -115,7 +115,7 @@ describe("Intervention API Routes", () => {
 
     it("rejects invalid transitions", async () => {
       const { transitionPhase } = await import("@/services/intervention-state");
-      const mockTransition = transitionPhase as any;
+      const mockTransition = transitionPhase as unknown;
 
       mockTransition.mockRejectedValue(new Error("ValidationError"));
 
@@ -142,14 +142,14 @@ describe("Intervention API Routes", () => {
 
     it("validates engagementId is UUID", async () => {
       const { parseOrThrow } = await import("@/lib/validation");
-      const mockParse = parseOrThrow as any;
+      const mockParse = parseOrThrow as unknown;
 
       expect(mockParse).toBeDefined();
     });
 
     it("returns latest condition on success", async () => {
       const { getLatestCondition } = await import("@/services/business-condition");
-      const mockGet = getLatestCondition as any;
+      const mockGet = getLatestCondition as unknown;
 
       mockGet.mockResolvedValue({
         id: "cond-1",
@@ -181,7 +181,7 @@ describe("Intervention API Routes", () => {
 
     it("validates businessStatus enum", async () => {
       const { parseRequestBody } = await import("@/lib/validation");
-      const mockParse = parseRequestBody as any;
+      const mockParse = parseRequestBody as unknown;
 
       expect(mockParse).toBeDefined();
     });
@@ -196,7 +196,7 @@ describe("Intervention API Routes", () => {
 
     it("assesses condition successfully", async () => {
       const { assessBusinessCondition } = await import("@/services/business-condition");
-      const mockAssess = assessBusinessCondition as any;
+      const mockAssess = assessBusinessCondition as unknown;
 
       mockAssess.mockResolvedValue({
         id: "cond-1",
@@ -228,14 +228,14 @@ describe("Intervention API Routes", () => {
 
     it("validates engagementId is UUID", async () => {
       const { parseOrThrow } = await import("@/lib/validation");
-      const mockParse = parseOrThrow as any;
+      const mockParse = parseOrThrow as unknown;
 
       expect(mockParse).toBeDefined();
     });
 
     it("returns engagement with relations", async () => {
       const { getEngagementById } = await import("@/services/engagement");
-      const mockGet = getEngagementById as any;
+      const mockGet = getEngagementById as unknown;
 
       mockGet.mockResolvedValue({
         id: "eng-1",
@@ -273,7 +273,7 @@ describe("Intervention API Routes", () => {
 
     it("validates engagementId is UUID", async () => {
       const { parseOrThrow } = await import("@/lib/validation");
-      const mockParse = parseOrThrow as any;
+      const mockParse = parseOrThrow as unknown;
 
       expect(mockParse).toBeDefined();
     });
@@ -288,7 +288,7 @@ describe("Intervention API Routes", () => {
 
     it("updates engagement successfully", async () => {
       const { updateEngagement } = await import("@/services/engagement");
-      const mockUpdate = updateEngagement as any;
+      const mockUpdate = updateEngagement as unknown;
 
       mockUpdate.mockResolvedValue({
         id: "eng-1",
@@ -318,7 +318,7 @@ describe("Intervention API Routes", () => {
 
     it("lists engagements with pagination", async () => {
       const { listEngagements } = await import("@/services/engagement");
-      const mockList = listEngagements as any;
+      const mockList = listEngagements as unknown;
 
       mockList.mockResolvedValue({
         engagements: [
@@ -354,7 +354,7 @@ describe("Intervention API Routes", () => {
 
     it("validates required fields", async () => {
       const { parseRequestBody } = await import("@/lib/validation");
-      const mockParse = parseRequestBody as any;
+      const mockParse = parseRequestBody as unknown;
 
       expect(mockParse).toBeDefined();
     });
@@ -369,7 +369,7 @@ describe("Intervention API Routes", () => {
 
     it("creates engagement with InterventionState", async () => {
       const { createEngagement } = await import("@/services/engagement");
-      const mockCreate = createEngagement as any;
+      const mockCreate = createEngagement as unknown;
 
       mockCreate.mockResolvedValue({
         id: "eng-1",

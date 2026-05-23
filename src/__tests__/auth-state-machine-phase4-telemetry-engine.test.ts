@@ -88,9 +88,9 @@ describe("PHASE 4: Telemetry Engine", () => {
         retryable: false,
         handlerAllowed: true,
         mutationAllowed: false,
-        authLayer: "unknown" as any,
-        telemetryClass: "VALIDATION_ERROR" as any,
-        severity: "LOW" as any,
+        authLayer: "unknown" as unknown,
+        telemetryClass: "VALIDATION_ERROR" as unknown,
+        severity: "LOW" as unknown,
         sampled: true,
         sampleRate: 1.0,
       };
@@ -112,9 +112,9 @@ describe("PHASE 4: Telemetry Engine", () => {
         retryable: false,
         handlerAllowed: true,
         mutationAllowed: false,
-        authLayer: "unknown" as any,
-        telemetryClass: "VALIDATION_ERROR" as any,
-        severity: "LOW" as any,
+        authLayer: "unknown" as unknown,
+        telemetryClass: "VALIDATION_ERROR" as unknown,
+        severity: "LOW" as unknown,
         sampled: true,
         sampleRate: 1.0,
       };
@@ -164,7 +164,7 @@ describe("PHASE 4: Telemetry Engine", () => {
         eventId: uuidv4(),
         eventType: "INVALID_TYPE",
         // Missing required fields
-      } as any;
+      } as unknown;
 
       // Should not throw
       expect(() => emitTelemetry(invalidEvent)).not.toThrow();
@@ -287,29 +287,29 @@ describe("PHASE 4: Telemetry Engine", () => {
       const payload = { authorization: jwtToken };
 
       const sanitized = redactSecrets(payload);
-      expect((sanitized as any).authorization).not.toContain("eyJ");
-      expect((sanitized as any).authorization).toContain("[REDACTED]");
+      expect((sanitized as unknown).authorization).not.toContain("eyJ");
+      expect((sanitized as unknown).authorization).toContain("[REDACTED]");
     });
 
     it("redacts API keys", () => {
       const payload = { api_key: "sk-1234567890abcdef" };
 
       const sanitized = redactSecrets(payload);
-      expect((sanitized as any).api_key).toContain("[REDACTED]");
+      expect((sanitized as unknown).api_key).toContain("[REDACTED]");
     });
 
     it("redacts passwords", () => {
       const payload = { password: "super-secret-password" };
 
       const sanitized = redactSecrets(payload);
-      expect((sanitized as any).password).toContain("[REDACTED]");
+      expect((sanitized as unknown).password).toContain("[REDACTED]");
     });
 
     it("redacts session IDs", () => {
       const payload = { sessionId: "sess-abc123def456" };
 
       const sanitized = redactSecrets(payload);
-      expect((sanitized as any).sessionId).toContain("[REDACTED]");
+      expect((sanitized as unknown).sessionId).toContain("[REDACTED]");
     });
 
     it("redacts tenant existence (workspace IDs)", () => {
@@ -317,16 +317,16 @@ describe("PHASE 4: Telemetry Engine", () => {
       const payload = { workspaceId, resource: "data" };
 
       const sanitized = redactTenantExistence(payload, true);
-      expect((sanitized as any).workspaceId).toContain("[REDACTED]");
-      expect((sanitized as any).resource).toBe("data");
+      expect((sanitized as unknown).workspaceId).toContain("[REDACTED]");
+      expect((sanitized as unknown).resource).toBe("data");
     });
 
     it("redacts error details", () => {
       const error = new Error("Database connection failed at 192.168.1.1");
 
       const sanitized = redactErrorDetails(error);
-      expect((sanitized as any).message).not.toContain("Database connection");
-      expect((sanitized as any).message).toContain("REDACTED");
+      expect((sanitized as unknown).message).not.toContain("Database connection");
+      expect((sanitized as unknown).message).toContain("REDACTED");
     });
 
     it("validates no secret leakage in serialized events", () => {
@@ -351,7 +351,7 @@ describe("PHASE 4: Telemetry Engine", () => {
         actorId: "user-123",
         sourceIp: "192.168.1.1",
         executionTrace: [{ stage: "identity", state: "AUTH_INVALID" }],
-        telemetryClass: "AUTH_INVALID" as any,
+        telemetryClass: "AUTH_INVALID" as unknown,
       };
 
       const sanitized = sanitizeTelemetryForClient(telemetry);

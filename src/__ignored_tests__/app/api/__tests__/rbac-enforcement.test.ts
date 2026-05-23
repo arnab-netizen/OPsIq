@@ -404,7 +404,7 @@ describe("Block 3: RBAC Enforcement", () => {
             role: ROLES.CONSULTANT,
             scope: "engagement",
             scopeId: "eng-123",
-          } as any,
+          } as unknown,
         ],
       };
 

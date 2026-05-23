@@ -90,13 +90,13 @@ describe("Review Cycle Service", () => {
 
   afterAll(async () => {
     try {
-      await (db.reviewCycle.deleteMany as any)({ where: { engagementId } });
-      await (db.kPISnapshot.deleteMany as any)({ where: {} });
-      await (db.kPI.deleteMany as any)({ where: { engagementId } });
-      await (db.action.deleteMany as any)({ where: { engagementId } });
-      await (db.finding.deleteMany as any)({ where: { engagementId } });
-      await (db.engagement.deleteMany as any)({ where: { id: engagementId } });
-      await (db.clientAccount.deleteMany as any)({ where: { id: clientId } });
+      await (db.reviewCycle.deleteMany as unknown)({ where: { engagementId } });
+      await (db.kPISnapshot.deleteMany as unknown)({ where: {} });
+      await (db.kPI.deleteMany as unknown)({ where: { engagementId } });
+      await (db.action.deleteMany as unknown)({ where: { engagementId } });
+      await (db.finding.deleteMany as unknown)({ where: { engagementId } });
+      await (db.engagement.deleteMany as unknown)({ where: { id: engagementId } });
+      await (db.clientAccount.deleteMany as unknown)({ where: { id: clientId } });
     } catch {
       // Cleanup best-effort
     }
@@ -175,7 +175,7 @@ describe("Review Cycle Service", () => {
     it("should not expose visibilityStatus in response", async () => {
       const cycles = await listReviewCyclesForEngagement(engagementId);
       if (cycles.length > 0) {
-        expect((cycles[0] as any).visibilityStatus).toBeUndefined();
+        expect((cycles[0] as unknown).visibilityStatus).toBeUndefined();
       }
     });
 
@@ -213,8 +213,8 @@ describe("Review Cycle Service", () => {
       expect(cycle).toBeNull();
 
       // Cleanup
-      await (db.engagement.deleteMany as any)({ where: { id: eng2.id } });
-      await (db.clientAccount.deleteMany as any)({ where: { id: client2.id } });
+      await (db.engagement.deleteMany as unknown)({ where: { id: eng2.id } });
+      await (db.clientAccount.deleteMany as unknown)({ where: { id: client2.id } });
     });
 
     it("should respect visibility filtering", async () => {
@@ -228,7 +228,7 @@ describe("Review Cycle Service", () => {
     it("should not expose visibilityStatus", async () => {
       const cycle = await getLatestReviewCycle(engagementId);
       if (cycle) {
-        expect((cycle as any).visibilityStatus).toBeUndefined();
+        expect((cycle as unknown).visibilityStatus).toBeUndefined();
       }
     });
   });
@@ -298,9 +298,9 @@ describe("Review Cycle Service", () => {
       expect(cycle.unresolvedFindingsCount).toBe(0);
 
       // Cleanup
-      await (db.reviewCycle.deleteMany as any)({ where: { engagementId: eng2.id } });
-      await (db.engagement.deleteMany as any)({ where: { id: eng2.id } });
-      await (db.clientAccount.deleteMany as any)({ where: { id: client2.id } });
+      await (db.reviewCycle.deleteMany as unknown)({ where: { engagementId: eng2.id } });
+      await (db.engagement.deleteMany as unknown)({ where: { id: eng2.id } });
+      await (db.clientAccount.deleteMany as unknown)({ where: { id: client2.id } });
     });
   });
 
@@ -355,12 +355,12 @@ describe("Review Cycle Service", () => {
       expect(cycle.completedActionsCount).toBeGreaterThan(0);
 
       // Cleanup
-      await (db.reviewCycle.deleteMany as any)({ where: { engagementId: eng3.id } });
-      await (db.kPISnapshot.deleteMany as any)({ where: {} });
-      await (db.kPI.deleteMany as any)({ where: { engagementId: eng3.id } });
-      await (db.action.deleteMany as any)({ where: { engagementId: eng3.id } });
-      await (db.engagement.deleteMany as any)({ where: { id: eng3.id } });
-      await (db.clientAccount.deleteMany as any)({ where: { id: client2.id } });
+      await (db.reviewCycle.deleteMany as unknown)({ where: { engagementId: eng3.id } });
+      await (db.kPISnapshot.deleteMany as unknown)({ where: {} });
+      await (db.kPI.deleteMany as unknown)({ where: { engagementId: eng3.id } });
+      await (db.action.deleteMany as unknown)({ where: { engagementId: eng3.id } });
+      await (db.engagement.deleteMany as unknown)({ where: { id: eng3.id } });
+      await (db.clientAccount.deleteMany as unknown)({ where: { id: client2.id } });
     });
   });
 });

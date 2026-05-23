@@ -101,7 +101,7 @@ export async function transitionDecisionState(
   // Emit audit event for state transition
   const eventName = getAuditEventName(fromState, toState);
   await emitAuditEvent({
-    eventName: eventName as any,
+    eventName: eventName as unknown,
     entityType: "OperatorItem",
     entityId: decisionId,
     workspaceId,
@@ -353,7 +353,7 @@ export async function recordDecisionOutcome(
 
   // Emit audit event
   await emitAuditEvent({
-    eventName: "outcome.recorded" as any,
+    eventName: "outcome.recorded" as unknown,
     entityType: "OperatorItem",
     entityId: decisionId,
     workspaceId,

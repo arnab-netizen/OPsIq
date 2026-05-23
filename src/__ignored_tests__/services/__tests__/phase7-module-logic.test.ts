@@ -82,7 +82,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
         priority: "critical",
       });
 
-      const results = await detectOverdueActions(engagementId, mockAuthContext as any, '550e8400-e29b-41d4-a716-446655440000');
+      const results = await detectOverdueActions(engagementId, mockAuthContext as unknown, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(results).toHaveLength(1);
       expect(results[0]).toEqual({
@@ -107,7 +107,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
 
       vi.mocked(db.action.findMany).mockResolvedValueOnce([overdueAction]);
 
-      const results = await detectOverdueActions(engagementId, mockAuthContext as any, '550e8400-e29b-41d4-a716-446655440000');
+      const results = await detectOverdueActions(engagementId, mockAuthContext as unknown, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(results).toHaveLength(1);
       expect(results[0].priorityIncreased).toBe(false);
@@ -116,7 +116,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
     it("should skip completed, verified, or cancelled actions", async () => {
       vi.mocked(db.action.findMany).mockResolvedValueOnce([]);
 
-      const results = await detectOverdueActions(engagementId, mockAuthContext as any, '550e8400-e29b-41d4-a716-446655440000');
+      const results = await detectOverdueActions(engagementId, mockAuthContext as unknown, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(results).toHaveLength(0);
       expect(db.action.findMany).toHaveBeenCalledWith(
@@ -173,7 +173,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
               recordedBy: actorId,
             }),
           },
-        } as any);
+        } as unknown);
       });
 
       // Snapshot creation is part of the transaction, verified through mock setup
@@ -273,7 +273,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
       vi.mocked(db.engagement.findUnique).mockResolvedValueOnce(engagement);
       vi.mocked(db.reviewCycle.findFirst).mockResolvedValueOnce(null);
 
-      const result = await computeNextReviewDate(engagementId, mockAuthContext as any, '550e8400-e29b-41d4-a716-446655440000');
+      const result = await computeNextReviewDate(engagementId, mockAuthContext as unknown, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(result).toHaveProperty("nextReviewDate");
       expect(result).toHaveProperty("isDueSoon");
@@ -296,7 +296,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
         status: "improving",
       });
 
-      const result = await computeNextReviewDate(engagementId, mockAuthContext as any, '550e8400-e29b-41d4-a716-446655440000');
+      const result = await computeNextReviewDate(engagementId, mockAuthContext as unknown, '550e8400-e29b-41d4-a716-446655440000');
 
       // Review due if daysUntilDue <= 0 or <= 2
       expect(result.daysUntilDue).toBeLessThanOrEqual(2);
@@ -314,7 +314,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
       vi.mocked(db.engagement.findUnique).mockResolvedValueOnce(engagement);
       vi.mocked(db.reviewCycle.findFirst).mockResolvedValueOnce(null);
 
-      await computeNextReviewDate(engagementId, mockAuthContext as any, '550e8400-e29b-41d4-a716-446655440000');
+      await computeNextReviewDate(engagementId, mockAuthContext as unknown, '550e8400-e29b-41d4-a716-446655440000');
 
       // Event emission verified through mock
       expect(emitAuditEvent).toBeDefined();
@@ -337,7 +337,7 @@ describe("Phase 7: Module Logic - Intervention Automation Layer", () => {
       vi.mocked(db.action.findMany).mockResolvedValueOnce([criticalOverdueAction]);
       vi.mocked(db.kPI.findMany).mockResolvedValueOnce([]);
 
-      const alert = await checkEngagementEscalations(engagementId, mockAuthContext as any, '550e8400-e29b-41d4-a716-446655440000');
+      const alert = await checkEngagementEscalations(engagementId, mockAuthContext as unknown, '550e8400-e29b-41d4-a716-446655440000');
 
       expect(alert).toContainEqual(
         expect.objectContaining({

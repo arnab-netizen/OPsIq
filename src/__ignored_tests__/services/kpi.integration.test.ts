@@ -60,12 +60,12 @@ describe("KPI Service", () => {
 
   afterAll(async () => {
     try {
-      await (db.kPIImpact.deleteMany as any)({ where: {} });
-      await (db.kPISnapshot.deleteMany as any)({ where: {} });
-      await (db.kPI.deleteMany as any)({ where: { engagementId } });
-      await (db.action.deleteMany as any)({ where: { engagementId } });
-      await (db.engagement.deleteMany as any)({ where: { id: engagementId } });
-      await (db.clientAccount.deleteMany as any)({ where: { id: clientId } });
+      await (db.kPIImpact.deleteMany as unknown)({ where: {} });
+      await (db.kPISnapshot.deleteMany as unknown)({ where: {} });
+      await (db.kPI.deleteMany as unknown)({ where: { engagementId } });
+      await (db.action.deleteMany as unknown)({ where: { engagementId } });
+      await (db.engagement.deleteMany as unknown)({ where: { id: engagementId } });
+      await (db.clientAccount.deleteMany as unknown)({ where: { id: clientId } });
     } catch {
       // Cleanup best-effort
     }
@@ -121,7 +121,7 @@ describe("KPI Service", () => {
             baselineValue: 100,
             targetValue: 200,
             unit: "percentage",
-            direction: "sideways" as any,
+            direction: "sideways" as unknown,
           },
           actorId
         );
@@ -321,7 +321,7 @@ describe("KPI Service", () => {
     it("should not expose visibilityStatus in response", async () => {
       const kpis = await listKPIsForEngagement(engagementId);
       if (kpis.length > 0) {
-        expect((kpis[0] as any).visibilityStatus).toBeUndefined();
+        expect((kpis[0] as unknown).visibilityStatus).toBeUndefined();
       }
     });
   });
@@ -365,7 +365,7 @@ describe("KPI Service", () => {
 
     it("should not expose visibilityStatus in response", async () => {
       const kpi = await getKPIDetail(kpiId);
-      expect((kpi as any).visibilityStatus).toBeUndefined();
+      expect((kpi as unknown).visibilityStatus).toBeUndefined();
     });
   });
 
@@ -451,9 +451,9 @@ describe("KPI Service", () => {
       }).rejects.toThrow("same engagement");
 
       // Cleanup
-      await (db.action.deleteMany as any)({ where: { engagementId: eng2.id } });
-      await (db.engagement.deleteMany as any)({ where: { id: eng2.id } });
-      await (db.clientAccount.deleteMany as any)({ where: { id: client2.id } });
+      await (db.action.deleteMany as unknown)({ where: { engagementId: eng2.id } });
+      await (db.engagement.deleteMany as unknown)({ where: { id: eng2.id } });
+      await (db.clientAccount.deleteMany as unknown)({ where: { id: client2.id } });
     });
   });
 });

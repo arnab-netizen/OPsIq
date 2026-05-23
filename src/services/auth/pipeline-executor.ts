@@ -94,7 +94,7 @@ export async function executeAuthPipeline(
 
     // Emit telemetry if requested
     if (options.emitTelemetry) {
-      await emitTelemetry(decision.telemetryClass as any, {
+      await emitTelemetry(decision.telemetryClass as unknown, {
         state: currentState,
         httpStatus: decision.httpStatus,
         stage: currentState,
@@ -108,7 +108,7 @@ export async function executeAuthPipeline(
 
       // Emit audit event if requested
       if (options.emitAudit) {
-        await emitAudit(decision.auditClass as any, {
+        await emitAudit(decision.auditClass as unknown, {
           state: currentState,
           httpStatus: decision.httpStatus,
           reason: decision.telemetryClass,

@@ -124,7 +124,7 @@ export async function getDbInstance() {
 // This allows middleware to import db.ts without triggering Prisma initialization
 
 // Export db as a lazy-loading proxy that waits for initialization if needed
-export const db = new Proxy({} as any, {
+export const db = new Proxy({} as unknown, {
   get(target, prop) {
     // If already initialized, return immediately (fast path)
     if (globalForPrisma.prisma) {

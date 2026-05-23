@@ -32,7 +32,7 @@ vi.mock("@/services/decision-confidence/decision-confidence.service", () => ({
 describe("DecisionControlService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement = { findUnique: vi.fn() };
     mockDb.action = { findMany: vi.fn() };
     mockDb.finding = { findMany: vi.fn() };
@@ -50,7 +50,7 @@ describe("DecisionControlService", () => {
   };
 
   it("forces immediate decision on critical drift", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([
       {
@@ -69,7 +69,7 @@ describe("DecisionControlService", () => {
     const { detectExecutionDrift } = await import(
       "@/services/execution-drift/execution-drift.service"
     );
-    (detectExecutionDrift as any).mockResolvedValueOnce({
+    (detectExecutionDrift as unknown).mockResolvedValueOnce({
       engagementId: "eng-123",
       driftDetected: true,
       severity: "critical",
@@ -88,7 +88,7 @@ describe("DecisionControlService", () => {
   });
 
   it("forces immediate decision on overdue critical actions", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([
       {
@@ -111,7 +111,7 @@ describe("DecisionControlService", () => {
   });
 
   it("sets urgent on blocked critical actions with critical findings", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([
       {
@@ -142,7 +142,7 @@ describe("DecisionControlService", () => {
   });
 
   it("sets urgent on low confidence with critical findings", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([]);
     mockDb.finding.findMany.mockResolvedValue([
@@ -159,7 +159,7 @@ describe("DecisionControlService", () => {
     const { computeDecisionConfidence } = await import(
       "@/services/decision-confidence/decision-confidence.service"
     );
-    (computeDecisionConfidence as any).mockResolvedValueOnce({
+    (computeDecisionConfidence as unknown).mockResolvedValueOnce({
       score: 35,
       level: "low",
       factors: [],
@@ -173,7 +173,7 @@ describe("DecisionControlService", () => {
   });
 
   it("returns recommended for normal operations with unresolved findings", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([
       {
@@ -203,7 +203,7 @@ describe("DecisionControlService", () => {
   });
 
   it("includes recommendation when no critical issues exist", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([]);
     mockDb.finding.findMany.mockResolvedValue([]);
@@ -223,7 +223,7 @@ describe("DecisionControlService", () => {
   });
 
   it("is deterministic - same input produces same output", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([
       {
@@ -247,7 +247,7 @@ describe("DecisionControlService", () => {
   });
 
   it("returns only one primary decision", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([]);
     mockDb.finding.findMany.mockResolvedValue([]);
@@ -262,7 +262,7 @@ describe("DecisionControlService", () => {
   });
 
   it("deducts confidence on blocked/critical findings", async () => {
-    const mockDb = db as any;
+    const mockDb = db as unknown;
     mockDb.engagement.findUnique.mockResolvedValue(mockEngagement);
     mockDb.action.findMany.mockResolvedValue([
       {
@@ -287,7 +287,7 @@ describe("DecisionControlService", () => {
     const { computeDecisionConfidence } = await import(
       "@/services/decision-confidence/decision-confidence.service"
     );
-    (computeDecisionConfidence as any).mockResolvedValueOnce({
+    (computeDecisionConfidence as unknown).mockResolvedValueOnce({
       score: 75,
       level: "high",
       factors: [],

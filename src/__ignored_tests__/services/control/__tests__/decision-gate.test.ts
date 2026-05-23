@@ -358,7 +358,7 @@ describe("Decision Gate - Phase 4 Control 3", () => {
 
   describe("evaluateDecisionGate - Input Validation", () => {
     it("should reject non-object input", () => {
-      const result = evaluateDecisionGate(null as any);
+      const result = evaluateDecisionGate(null as unknown);
 
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain("Invalid input");

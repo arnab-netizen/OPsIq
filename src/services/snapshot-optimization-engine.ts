@@ -18,7 +18,7 @@ export class SnapshotOptimizationEngine {
       return "[" + obj.map(v => this.stableStringify(v)).join(",") + "]";
     }
     const keys = Object.keys(obj as Record<string, unknown>).sort();
-    const pairs = keys.map(k => `"${k}":${this.stableStringify((obj as any)[k])}`);
+    const pairs = keys.map(k => `"${k}":${this.stableStringify((obj as unknown)[k])}`);
     return "{" + pairs.join(",") + "}";
   }
 

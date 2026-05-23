@@ -48,7 +48,7 @@ describe("business-condition service", () => {
         growthReadinessLevel: "medium",
       };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.engagement = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockEngagementId,
@@ -73,11 +73,11 @@ describe("business-condition service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
       vi.mocked(triggerReEvaluation).mockResolvedValue({
-        targets: {} as any,
+        targets: {} as unknown,
         auditEventId: "eval-id",
       });
 
-      const result = await bcService.assessCondition(input, mockAuthContext as any);
+      const result = await bcService.assessCondition(input, mockAuthContext as unknown);
 
       expect(result.id).toBe(mockProfileId);
       // Verify append-only: old ones marked as non-current
@@ -103,7 +103,7 @@ describe("business-condition service", () => {
         growthReadinessLevel: "low",
       };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.engagement = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockEngagementId,
@@ -128,11 +128,11 @@ describe("business-condition service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
       vi.mocked(triggerReEvaluation).mockResolvedValue({
-        targets: {} as any,
+        targets: {} as unknown,
         auditEventId: "eval-id",
       });
 
-      await bcService.assessCondition(input, mockAuthContext as any);
+      await bcService.assessCondition(input, mockAuthContext as unknown);
 
       expect(triggerReEvaluation).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -160,7 +160,7 @@ describe("business-condition service", () => {
         growthReadinessLevel: "medium",
       };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.engagement = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockEngagementId,
@@ -168,7 +168,7 @@ describe("business-condition service", () => {
         }),
       };
 
-      await expect(bcService.assessCondition(input, mockAuthContext as any)).rejects.toThrow(
+      await expect(bcService.assessCondition(input, mockAuthContext as unknown)).rejects.toThrow(
         ValidationError
       );
     });
@@ -192,7 +192,7 @@ describe("business-condition service", () => {
         growthReadinessLevel: "medium",
       };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.engagement = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockEngagementId,
@@ -200,7 +200,7 @@ describe("business-condition service", () => {
         }),
       };
 
-      await expect(bcService.assessCondition(input, mockAuthContext as any)).rejects.toThrow(
+      await expect(bcService.assessCondition(input, mockAuthContext as unknown)).rejects.toThrow(
         ValidationError
       );
     });
@@ -208,7 +208,7 @@ describe("business-condition service", () => {
 
   describe("getConditionHistory", () => {
     it("returns profiles in recency order", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.engagement = {
         findUnique: vi.fn().mockResolvedValue({ id: mockEngagementId }),
       };
@@ -227,7 +227,7 @@ describe("business-condition service", () => {
 
   describe("getCurrentCondition", () => {
     it("returns current profile", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.businessConditionProfile = {
         findFirst: vi.fn().mockResolvedValue({
           id: mockProfileId,
@@ -241,7 +241,7 @@ describe("business-condition service", () => {
     });
 
     it("returns null when no current", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.businessConditionProfile = {
         findFirst: vi.fn().mockResolvedValue(null),
       };

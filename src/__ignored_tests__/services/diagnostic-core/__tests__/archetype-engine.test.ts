@@ -26,7 +26,7 @@ describe("ArchetypeEngine (STRICT CLASSIFICATION MODE)", () => {
       const result = await engine.analyzeArchetype(
         engagementId,
         workspaceId,
-        indicators as any
+        indicators as unknown
       );
 
       expect(result).toBeNull();
@@ -39,7 +39,7 @@ describe("ArchetypeEngine (STRICT CLASSIFICATION MODE)", () => {
       const result = await engine.analyzeArchetype(
         engagementId,
         workspaceId,
-        indicators as any
+        indicators as unknown
       );
 
       expect(result).toBeNull();
@@ -52,7 +52,7 @@ describe("ArchetypeEngine (STRICT CLASSIFICATION MODE)", () => {
       const result = await engine.analyzeArchetype(
         engagementId,
         workspaceId,
-        indicators as any
+        indicators as unknown
       );
 
       expect(result).toBeNull();
@@ -65,7 +65,7 @@ describe("ArchetypeEngine (STRICT CLASSIFICATION MODE)", () => {
       const result = await engine.analyzeArchetype(
         engagementId,
         workspaceId,
-        indicators as any
+        indicators as unknown
       );
 
       expect(result).toBeNull();

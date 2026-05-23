@@ -49,7 +49,7 @@ describe("Route Security Scanner", () => {
       const content = route.content;
 
       // Check if route is exempted
-      if (exemptedRoutes.includes(routePath as any)) {
+      if (exemptedRoutes.includes(routePath as unknown)) {
         continue;
       }
 
@@ -142,7 +142,7 @@ describe("Route Security Scanner", () => {
 
       // Check if exempted
       const exemptedRoutes = Object.values(PUBLIC_ROUTE_EXEMPTIONS).flat();
-      if (exemptedRoutes.includes(routePath as any)) {
+      if (exemptedRoutes.includes(routePath as unknown)) {
         continue;
       }
 

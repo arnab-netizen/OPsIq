@@ -44,7 +44,7 @@ export async function requireWorkspaceContext(): Promise<WorkspaceContext> {
   return {
     workspaceId: membership.workspace.id,
     userId,
-    role: membership.role as any,
+    role: membership.role as unknown,
     workspace: {
       name: membership.workspace.name,
       slug: membership.workspace.slug,

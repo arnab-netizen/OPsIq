@@ -330,7 +330,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
       const connectionPool = {
         available: 5,
         total: 10,
-        waitQueue: [] as any[],
+        waitQueue: [] as unknown[],
       };
 
       // Request 1-5: use available connections
@@ -360,7 +360,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
 
     it("should not timeout requests in queue", async () => {
       // HOSTILE TEST: Queued requests don't timeout while waiting
-      const queue = [] as any[];
+      const queue = [] as unknown[];
       let processed = 0;
 
       // Add 3 requests to queue
@@ -563,7 +563,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
     it("should rollback on incomplete write", async () => {
       // HOSTILE TEST: Incomplete write detected and rolled back
       const database = {
-        records: [] as any[],
+        records: [] as unknown[],
         lastGoodSnapshot: 0,
       };
 

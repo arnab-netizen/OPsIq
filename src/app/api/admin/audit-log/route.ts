@@ -48,8 +48,8 @@ export const GET = withCanonicalEnforcement(
       entityType: queryParams.entityType,
       entityId: queryParams.entityId,
       actorId: queryParams.actorId,
-      action: queryParams.action as any,
-      status: queryParams.status as any,
+      action: queryParams.action as unknown,
+      status: queryParams.status as unknown,
       fromDate: queryParams.fromDate ? new Date(queryParams.fromDate) : undefined,
       toDate: queryParams.toDate ? new Date(queryParams.toDate) : undefined,
     };

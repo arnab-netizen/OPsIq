@@ -322,7 +322,7 @@ describe("PHASE 2: Auth State Engine", () => {
       const correlationId = "test-corr-123";
       const decision = evaluateAuthState("SESSION_INVALID", correlationId);
       const error = decision.errorFactory(correlationId);
-      expect((error as any).correlationId).toBe(correlationId);
+      expect((error as unknown).correlationId).toBe(correlationId);
     });
   });
 

@@ -344,7 +344,7 @@ export class CanonicalExecutionTraceManager {
 
     const duration = Date.now() - this.trace.startedAt;
 
-    this.trace.stages = Object.freeze([...this.stages]) as any;
+    this.trace.stages = Object.freeze([...this.stages]) as unknown;
     this.trace.completedAt = Date.now();
     this.trace.outcome = {
       allowed: outcome.allowed,
@@ -486,7 +486,7 @@ export function isTraceImmutable(trace: CanonicalExecutionTrace): boolean {
  */
 export function attemptTraceMutation(trace: CanonicalExecutionTrace): boolean {
   try {
-    (trace as any).newField = "test";
+    (trace as unknown).newField = "test";
     return true; // Mutation succeeded (bad!)
   } catch {
     return false; // Mutation blocked (good!)

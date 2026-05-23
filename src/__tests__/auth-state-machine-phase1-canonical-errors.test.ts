@@ -228,7 +228,7 @@ describe("PHASE 1: Canonical Error System", () => {
       expect(json.error.code).toBe("AUTH_INVALID");
       expect(json.error.message).toBeDefined();
       expect(json.error.retryable).toBe(false);
-      expect((json as any).error.telemetry).toBeUndefined();
+      expect((json as unknown).error.telemetry).toBeUndefined();
     });
 
     it("toOperatorJSON includes telemetry for diagnostics", () => {
@@ -326,7 +326,7 @@ describe("PHASE 1: Canonical Error System", () => {
     it("Empty details don't leak to JSON", () => {
       const error = new BadRequestError("Invalid request");
       const json = error.toJSON();
-      expect((json as any).error.details).toBeUndefined();
+      expect((json as unknown).error.details).toBeUndefined();
     });
   });
 });

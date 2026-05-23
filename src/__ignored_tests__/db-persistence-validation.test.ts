@@ -141,19 +141,19 @@ describe("Database Persistence Validation [db]", () => {
       engagementId,
       findings.map((f) => ({
         id: f.id,
-        severity: (f.severity as any) || "low",
+        severity: (f.severity as unknown) || "low",
         resolved: f.status === "resolved",
         verified: f.verified ?? false,
       })),
       recommendations.map((r) => ({
         id: r.id,
-        priority: (r.priority as any) || "medium",
-        status: (r.status as any) || "in_progress",
+        priority: (r.priority as unknown) || "medium",
+        status: (r.status as unknown) || "in_progress",
       })),
       actions.map((a) => ({
         id: a.id,
-        priority: (a.priority as any) || "medium",
-        status: (a.status as any) || "pending",
+        priority: (a.priority as unknown) || "medium",
+        status: (a.status as unknown) || "pending",
       })),
       []
     );

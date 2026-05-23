@@ -313,12 +313,12 @@ describe("V72 Hostile Final Audit", () => {
           engagementId: "eng-input-001",
           ownerId: "owner-001",
           teamSize: -5, // HOSTILE: Negative team size
-          organizationalMaturity: "unknown" as any, // HOSTILE: Invalid maturity
-          communicationQuality: "invalid" as any,
-          teamMorale: "invalid" as any,
+          organizationalMaturity: "unknown" as unknown, // HOSTILE: Invalid maturity
+          communicationQuality: "invalid" as unknown,
+          teamMorale: "invalid" as unknown,
           ownerAvailability: 150, // HOSTILE: Over 100%
           keyPersonCount: -1, // HOSTILE: Negative count
-          accountabilityFramework: "invalid" as any,
+          accountabilityFramework: "invalid" as unknown,
         },
       };
 
@@ -419,8 +419,8 @@ describe("V72 Hostile Final Audit", () => {
 
       // All factor scores must be identical
       Object.keys(result1.profile.factors).forEach((factor) => {
-        expect(result1.profile.factors[factor as any].severity).toBe(
-          result2.profile.factors[factor as any].severity
+        expect(result1.profile.factors[factor as unknown].severity).toBe(
+          result2.profile.factors[factor as unknown].severity
         );
       });
     });

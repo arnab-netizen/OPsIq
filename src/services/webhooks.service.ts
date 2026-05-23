@@ -108,7 +108,7 @@ export async function registerWebhook(
     action: "create",
     status: "success",
     details: { url, events },
-  } as any);
+  } as unknown);
 
   return webhook;
 }
@@ -358,7 +358,7 @@ export async function deleteWebhook(webhookId: string, workspaceId: string): Pro
     actor_id: "system",
     action: "delete",
     status: "success",
-  } as any);
+  } as unknown);
 }
 
 /**

@@ -178,12 +178,12 @@ export function requireCapabilityForService(
   scope?: { type: string; id: string }
 ): void {
   // Support both AuthContext (legacy) and CanonicalAuthContext (new)
-  const policy = (authContext as AuthContext).policy || (authContext as any).policy;
+  const policy = (authContext as AuthContext).policy || (authContext as unknown).policy;
   if (policy) {
     requireCapability(policy, capability, scope);
-  } else if ((authContext as any).verifiedCapabilities) {
+  } else if ((authContext as unknown).verifiedCapabilities) {
     // For CanonicalAuthContext, verify capability is in the set
-    if (!(authContext as any).verifiedCapabilities.has(capability)) {
+    if (!(authContext as unknown).verifiedCapabilities.has(capability)) {
       throw new ForbiddenError(`Capability required: ${capability}`);
     }
   }

@@ -74,7 +74,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     offset: ctx.request.nextUrl.searchParams.get("offset")
       ? parseInt(ctx.request.nextUrl.searchParams.get("offset")!)
       : undefined,
-    status: (ctx.request.nextUrl.searchParams.get("status") as any) || undefined,
+    status: (ctx.request.nextUrl.searchParams.get("status") as unknown) || undefined,
   };
 
   const parsed = ListNotificationsSchema.parse(params);

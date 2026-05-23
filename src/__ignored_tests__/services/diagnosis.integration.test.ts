@@ -150,7 +150,7 @@ describe("diagnosis service", () => {
       };
 
       const result = await diagnoseBusiness(input, "test-actor");
-      expect(result.severity).toBeGreaterThanOrEqual("high" as any); // severity is string but should be high
+      expect(result.severity).toBeGreaterThanOrEqual("high" as unknown); // severity is string but should be high
       expect(["high", "critical"]).toContain(result.severity);
     });
 

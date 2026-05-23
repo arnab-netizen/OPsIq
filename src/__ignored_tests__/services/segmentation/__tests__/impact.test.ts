@@ -341,7 +341,7 @@ describe("segmentImpact - Impact Segmentation", () => {
 
   describe("Invalid Input Handling", () => {
     it("should handle non-array input", () => {
-      const result = segmentImpact(null as any);
+      const result = segmentImpact(null as unknown);
 
       expect(result.valid).toBe(false);
       expect(result.reason).toBeDefined();

@@ -46,7 +46,7 @@ describe("Cross-Engagement Isolation", () => {
 
   describe("assertEngagementAccess", () => {
     it("should allow access when user is member of engagement", async () => {
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce({
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce({
         id: "mem-1",
         userId: userId_A,
         engagementId: engagementId_A,
@@ -63,7 +63,7 @@ describe("Cross-Engagement Isolation", () => {
     });
 
     it("should deny access when user is not member of engagement", async () => {
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       await expect(
         assertEngagementAccess(userId_A, engagementId_B)
@@ -71,7 +71,7 @@ describe("Cross-Engagement Isolation", () => {
     });
 
     it("should deny access when membership is inactive", async () => {
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       await expect(
         assertEngagementAccess(userId_A, engagementId_A)
@@ -79,7 +79,7 @@ describe("Cross-Engagement Isolation", () => {
     });
 
     it("should prevent User A from accessing Engagement B", async () => {
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       const error = await assertEngagementAccess(
         userId_A,
@@ -92,7 +92,7 @@ describe("Cross-Engagement Isolation", () => {
     });
 
     it("should prevent User B from accessing Engagement A", async () => {
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       const error = await assertEngagementAccess(
         userId_B,
@@ -111,7 +111,7 @@ describe("Cross-Engagement Isolation", () => {
         "@/services/findings"
       );
 
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       const error = await listFindingsForEngagement(
         engagementId_B,
@@ -126,7 +126,7 @@ describe("Cross-Engagement Isolation", () => {
         "@/services/findings"
       );
 
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce({
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce({
         id: "mem-1",
         userId: userId_A,
         engagementId: engagementId_A,
@@ -137,7 +137,7 @@ describe("Cross-Engagement Isolation", () => {
         isActive: true,
       });
 
-      (db.finding.findMany as any).mockResolvedValueOnce([]);
+      (db.finding.findMany as unknown).mockResolvedValueOnce([]);
 
       const findings = await listFindingsForEngagement(
         engagementId_A,
@@ -152,7 +152,7 @@ describe("Cross-Engagement Isolation", () => {
     it("should deny User A access to User B's evidence", async () => {
       const { listEvidence } = await import("@/services/evidence");
 
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       const error = await listEvidence({
         engagementId: engagementId_B,
@@ -165,7 +165,7 @@ describe("Cross-Engagement Isolation", () => {
     it("should allow User A access to own evidence", async () => {
       const { listEvidence } = await import("@/services/evidence");
 
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce({
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce({
         id: "mem-1",
         userId: userId_A,
         engagementId: engagementId_A,
@@ -176,8 +176,8 @@ describe("Cross-Engagement Isolation", () => {
         isActive: true,
       });
 
-      (db.evidence.findMany as any).mockResolvedValueOnce([]);
-      (db.evidence.count as any).mockResolvedValueOnce(0);
+      (db.evidence.findMany as unknown).mockResolvedValueOnce([]);
+      (db.evidence.count as unknown).mockResolvedValueOnce(0);
 
       const result = await listEvidence({
         engagementId: engagementId_A,
@@ -193,7 +193,7 @@ describe("Cross-Engagement Isolation", () => {
     it("should deny User A access to User B's actions", async () => {
       const { getActionsForEngagement } = await import("@/services/action");
 
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       const error = await getActionsForEngagement(
         engagementId_B,
@@ -206,7 +206,7 @@ describe("Cross-Engagement Isolation", () => {
     it("should allow User A access to own actions", async () => {
       const { getActionsForEngagement } = await import("@/services/action");
 
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce({
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce({
         id: "mem-1",
         userId: userId_A,
         engagementId: engagementId_A,
@@ -217,7 +217,7 @@ describe("Cross-Engagement Isolation", () => {
         isActive: true,
       });
 
-      (db.action.findMany as any).mockResolvedValueOnce([]);
+      (db.action.findMany as unknown).mockResolvedValueOnce([]);
 
       const actions = await getActionsForEngagement(engagementId_A, userId_A);
 
@@ -229,7 +229,7 @@ describe("Cross-Engagement Isolation", () => {
     it("should deny User A access to User B's KPIs", async () => {
       const { getKPIsForEngagement } = await import("@/services/kpi");
 
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       const error = await getKPIsForEngagement(
         engagementId_B,
@@ -242,7 +242,7 @@ describe("Cross-Engagement Isolation", () => {
     it("should allow User A access to own KPIs", async () => {
       const { getKPIsForEngagement } = await import("@/services/kpi");
 
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce({
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce({
         id: "mem-1",
         userId: userId_A,
         engagementId: engagementId_A,
@@ -253,7 +253,7 @@ describe("Cross-Engagement Isolation", () => {
         isActive: true,
       });
 
-      (db.kPI.findMany as any).mockResolvedValueOnce([]);
+      (db.kPI.findMany as unknown).mockResolvedValueOnce([]);
 
       const kpis = await getKPIsForEngagement(engagementId_A, userId_A);
 
@@ -267,7 +267,7 @@ describe("Cross-Engagement Isolation", () => {
         "@/services/recommendation"
       );
 
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       const error = await getRecommendationsForEngagement(
         engagementId_B,
@@ -282,7 +282,7 @@ describe("Cross-Engagement Isolation", () => {
         "@/services/recommendation"
       );
 
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce({
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce({
         id: "mem-1",
         userId: userId_A,
         engagementId: engagementId_A,
@@ -293,7 +293,7 @@ describe("Cross-Engagement Isolation", () => {
         isActive: true,
       });
 
-      (db.recommendation.findMany as any).mockResolvedValueOnce([]);
+      (db.recommendation.findMany as unknown).mockResolvedValueOnce([]);
 
       const recommendations = await getRecommendationsForEngagement(
         engagementId_A,
@@ -306,7 +306,7 @@ describe("Cross-Engagement Isolation", () => {
 
   describe("Bidirectional isolation", () => {
     it("User B should not access User A engagement", async () => {
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       await expect(
         assertEngagementAccess(userId_B, engagementId_A)
@@ -314,7 +314,7 @@ describe("Cross-Engagement Isolation", () => {
     });
 
     it("User A should not access User B engagement", async () => {
-      (db.engagementMembership.findFirst as any).mockResolvedValueOnce(null);
+      (db.engagementMembership.findFirst as unknown).mockResolvedValueOnce(null);
 
       await expect(
         assertEngagementAccess(userId_A, engagementId_B)

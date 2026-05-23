@@ -81,7 +81,7 @@ describe("Evidence Service", () => {
         sourceLabel: "Test",
         captureMethod: "manual",
         capturedAt: "2026-04-22T10:00:00Z",
-      } as any;
+      } as unknown;
 
       await expect(async () => {
         await createEvidence(input, actorId);
@@ -97,7 +97,7 @@ describe("Evidence Service", () => {
         sourceLabel: "Test",
         captureMethod: "manual",
         capturedAt: "2026-04-22T10:00:00Z",
-      } as any;
+      } as unknown;
 
       await expect(async () => {
         await createEvidence(input, actorId);
@@ -113,7 +113,7 @@ describe("Evidence Service", () => {
         sourceLabel: "Test",
         captureMethod: "invalid_method",
         capturedAt: "2026-04-22T10:00:00Z",
-      } as any;
+      } as unknown;
 
       await expect(async () => {
         await createEvidence(input, actorId);
@@ -136,7 +136,7 @@ describe("Evidence Service", () => {
         const result = await createEvidence(
           {
             engagementId,
-            category: category as any,
+            category: category as unknown,
             type: "test",
             sourceType: "metric",
             sourceLabel: "Test Metric",

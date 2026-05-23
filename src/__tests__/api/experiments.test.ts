@@ -117,8 +117,8 @@ describe("Experiment API Routes", () => {
 
     it("should fail-closed on missing workspace context", () => {
       const noWorkspaceContext = { ...mockAuthContext };
-      delete (noWorkspaceContext.session as any).workspaceId;
-      expect((noWorkspaceContext.session as any).workspaceId).toBeUndefined();
+      delete (noWorkspaceContext.session as unknown).workspaceId;
+      expect((noWorkspaceContext.session as unknown).workspaceId).toBeUndefined();
     });
 
     // TIER 1: State Machine Enforcement

@@ -40,7 +40,7 @@ describe("client-account service", () => {
     it("creates client and emits audit event", async () => {
       const input = { name: "Test Corp" };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         create: vi.fn().mockResolvedValue({
           id: mockClientId,
@@ -64,7 +64,7 @@ describe("client-account service", () => {
 
   describe("updateClient", () => {
     it("updates client and emits event", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockClientId,
@@ -90,7 +90,7 @@ describe("client-account service", () => {
     });
 
     it("throws when updating archived client", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockClientId,
@@ -111,7 +111,7 @@ describe("client-account service", () => {
 
   describe("archiveClient", () => {
     it("archives active client", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockClientId,
@@ -133,7 +133,7 @@ describe("client-account service", () => {
 
   describe("getClientById", () => {
     it("returns client with data", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockClientId,
@@ -152,7 +152,7 @@ describe("client-account service", () => {
 
   describe("listClients", () => {
     it("returns paginated clients", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         findMany: vi.fn().mockResolvedValue([
           { id: "c1", name: "Client 1" },

@@ -111,7 +111,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
   describe("3. Audit Read API", () => {
     it("should support filtering by engagementId", async () => {
       const { db } = await import("@/lib/db");
-      const mockDb = db as any;
+      const mockDb = db as unknown;
 
       const result = await queryAuditEvents({
         engagementId: "eng-1",
@@ -126,7 +126,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
 
     it("should support filtering by entityType", async () => {
       const { db } = await import("@/lib/db");
-      const mockDb = db as any;
+      const mockDb = db as unknown;
 
       await queryAuditEvents({
         entityType: "action",
@@ -139,7 +139,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
 
     it("should support filtering by eventName", async () => {
       const { db } = await import("@/lib/db");
-      const mockDb = db as any;
+      const mockDb = db as unknown;
 
       await queryAuditEvents({
         eventName: "action.created",
@@ -152,7 +152,7 @@ describe("Phase 8: API Hardening + Audit Surface", () => {
 
     it("should support date range filtering", async () => {
       const { db } = await import("@/lib/db");
-      const mockDb = db as any;
+      const mockDb = db as unknown;
 
       await queryAuditEvents({
         startDate: "2024-01-01T00:00:00Z",

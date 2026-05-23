@@ -20,7 +20,7 @@ export function canonicalStringify(obj: unknown): string {
   const keys = Object.keys(obj).sort();
   const pairs = keys.map(
     (key) =>
-      JSON.stringify(key) + ":" + canonicalStringify((obj as any)[key])
+      JSON.stringify(key) + ":" + canonicalStringify((obj as unknown)[key])
   );
   return "{" + pairs.join(",") + "}";
 }

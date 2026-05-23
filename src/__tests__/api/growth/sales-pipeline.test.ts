@@ -43,7 +43,7 @@ describe("Sales Pipeline API Route - Service Integration", () => {
     it("should validate input schema before service call", () => {
       const result = SalesPipelineEngine.recordDeal(workspaceId, {
         companyName: "",
-        stage: "INVALID" as any,
+        stage: "INVALID" as unknown,
         value: -1000,
         currency: "USD",
         expectedCloseDate: new Date(),

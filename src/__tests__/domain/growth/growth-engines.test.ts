@@ -69,7 +69,7 @@ describe("Growth Operating Engines - Domain Contracts", () => {
     it("should reject revenue stream with invalid model", () => {
       const stream = {
         name: "Invalid Plan",
-        model: "INVALID_MODEL" as any,
+        model: "INVALID_MODEL" as unknown,
         basePrice: 99,
         currency: "USD",
       };

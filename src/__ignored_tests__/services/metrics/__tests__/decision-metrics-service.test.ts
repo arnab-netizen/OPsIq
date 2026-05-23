@@ -39,10 +39,10 @@ describe("Decision Metrics Service", () => {
     it("should create learning record for successful decision", async () => {
       vi.mocked(db.learningRecord.create).mockResolvedValue({
         id: "record-1",
-      } as any);
+      } as unknown);
 
       const mockCache = { delete: vi.fn().mockResolvedValue(undefined) };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       await recordDecisionMetrics("ws-123", {
         problemType: "revenue_leak",
@@ -66,10 +66,10 @@ describe("Decision Metrics Service", () => {
     it("should create learning record for failed decision", async () => {
       vi.mocked(db.learningRecord.create).mockResolvedValue({
         id: "record-2",
-      } as any);
+      } as unknown);
 
       const mockCache = { delete: vi.fn().mockResolvedValue(undefined) };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       await recordDecisionMetrics("ws-123", {
         problemType: "cost_overrun",
@@ -90,10 +90,10 @@ describe("Decision Metrics Service", () => {
     it("should invalidate metrics cache on success", async () => {
       vi.mocked(db.learningRecord.create).mockResolvedValue({
         id: "record-1",
-      } as any);
+      } as unknown);
 
       const mockCache = { delete: vi.fn().mockResolvedValue(undefined) };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       await recordDecisionMetrics("ws-123", {
         problemType: "revenue_leak",
@@ -111,10 +111,10 @@ describe("Decision Metrics Service", () => {
     it("should log metric recording", async () => {
       vi.mocked(db.learningRecord.create).mockResolvedValue({
         id: "record-1",
-      } as any);
+      } as unknown);
 
       const mockCache = { delete: vi.fn().mockResolvedValue(undefined) };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       await recordDecisionMetrics("ws-123", {
         problemType: "revenue_leak",
@@ -153,9 +153,9 @@ describe("Decision Metrics Service", () => {
 
     it("should calculate success rate correctly", async () => {
       vi.mocked(db.learningRecord.findMany).mockResolvedValue([
-        { success: true, impact: 100000 } as any,
-        { success: true, impact: 150000 } as any,
-        { success: false, impact: 0 } as any,
+        { success: true, impact: 100000 } as unknown,
+        { success: true, impact: 150000 } as unknown,
+        { success: false, impact: 0 } as unknown,
       ]);
 
       const result = await calculateSuccessMetrics("ws-123", "revenue_leak");
@@ -167,9 +167,9 @@ describe("Decision Metrics Service", () => {
 
     it("should calculate average impact", async () => {
       vi.mocked(db.learningRecord.findMany).mockResolvedValue([
-        { success: true, impact: 100000 } as any,
-        { success: true, impact: 200000 } as any,
-        { success: true, impact: 300000 } as any,
+        { success: true, impact: 100000 } as unknown,
+        { success: true, impact: 200000 } as unknown,
+        { success: true, impact: 300000 } as unknown,
       ]);
 
       const result = await calculateSuccessMetrics("ws-123", "revenue_leak");
@@ -179,9 +179,9 @@ describe("Decision Metrics Service", () => {
 
     it("should calculate variance", async () => {
       vi.mocked(db.learningRecord.findMany).mockResolvedValue([
-        { success: true, impact: 100000 } as any,
-        { success: true, impact: 200000 } as any,
-        { success: true, impact: 300000 } as any,
+        { success: true, impact: 100000 } as unknown,
+        { success: true, impact: 200000 } as unknown,
+        { success: true, impact: 300000 } as unknown,
       ]);
 
       const result = await calculateSuccessMetrics("ws-123", "revenue_leak");
@@ -192,9 +192,9 @@ describe("Decision Metrics Service", () => {
 
     it("should calculate standard deviation", async () => {
       vi.mocked(db.learningRecord.findMany).mockResolvedValue([
-        { success: true, impact: 100 } as any,
-        { success: true, impact: 100 } as any,
-        { success: true, impact: 100 } as any,
+        { success: true, impact: 100 } as unknown,
+        { success: true, impact: 100 } as unknown,
+        { success: true, impact: 100 } as unknown,
       ]);
 
       const result = await calculateSuccessMetrics("ws-123", "revenue_leak");
@@ -217,8 +217,8 @@ describe("Decision Metrics Service", () => {
 
     it("should handle 100% success rate", async () => {
       vi.mocked(db.learningRecord.findMany).mockResolvedValue([
-        { success: true, impact: 100000 } as any,
-        { success: true, impact: 200000 } as any,
+        { success: true, impact: 100000 } as unknown,
+        { success: true, impact: 200000 } as unknown,
       ]);
 
       const result = await calculateSuccessMetrics("ws-123", "revenue_leak");
@@ -228,8 +228,8 @@ describe("Decision Metrics Service", () => {
 
     it("should handle 0% success rate", async () => {
       vi.mocked(db.learningRecord.findMany).mockResolvedValue([
-        { success: false, impact: 0 } as any,
-        { success: false, impact: 0 } as any,
+        { success: false, impact: 0 } as unknown,
+        { success: false, impact: 0 } as unknown,
       ]);
 
       const result = await calculateSuccessMetrics("ws-123", "revenue_leak");
@@ -251,7 +251,7 @@ describe("Decision Metrics Service", () => {
         get: vi.fn().mockResolvedValue(cachedSnapshot),
         set: vi.fn().mockResolvedValue(undefined),
       };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       const result = await getMetricsSnapshot("ws-123");
 
@@ -264,7 +264,7 @@ describe("Decision Metrics Service", () => {
         get: vi.fn().mockResolvedValue(null),
         set: vi.fn().mockResolvedValue(undefined),
       };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       vi.mocked(db.learningRecord.findMany).mockResolvedValue([]);
 
@@ -284,7 +284,7 @@ describe("Decision Metrics Service", () => {
         get: vi.fn().mockResolvedValue(null),
         set: vi.fn().mockResolvedValue(undefined),
       };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       vi.mocked(db.learningRecord.findMany).mockResolvedValue([]);
 
@@ -301,7 +301,7 @@ describe("Decision Metrics Service", () => {
         get: vi.fn().mockResolvedValue(null),
         set: vi.fn().mockResolvedValue(undefined),
       };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       vi.mocked(db.learningRecord.findMany).mockResolvedValue([]);
 
@@ -321,7 +321,7 @@ describe("Decision Metrics Service", () => {
       ];
 
       vi.mocked(db.learningRecord.findMany).mockResolvedValue(
-        records as any
+        records as unknown
       );
 
       const result = await calculateSuccessMetrics(
@@ -339,7 +339,7 @@ describe("Decision Metrics Service", () => {
       );
 
       const mockCache = { delete: vi.fn().mockResolvedValue(undefined) };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       await expect(
         recordDecisionMetrics("ws-123", {
@@ -358,8 +358,8 @@ describe("Decision Metrics Service", () => {
   describe("Workspace Isolation in Metrics", () => {
     it("should isolate metrics by workspace", async () => {
       vi.mocked(db.learningRecord.findMany)
-        .mockResolvedValueOnce([{ success: true, impact: 100000 }] as any)
-        .mockResolvedValueOnce([{ success: true, impact: 200000 }] as any);
+        .mockResolvedValueOnce([{ success: true, impact: 100000 }] as unknown)
+        .mockResolvedValueOnce([{ success: true, impact: 200000 }] as unknown);
 
       const metrics1 = await calculateSuccessMetrics(
         "ws-123",
@@ -377,10 +377,10 @@ describe("Decision Metrics Service", () => {
     it("should include workspace in metric record", async () => {
       vi.mocked(db.learningRecord.create).mockResolvedValue({
         id: "record-1",
-      } as any);
+      } as unknown);
 
       const mockCache = { delete: vi.fn().mockResolvedValue(undefined) };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       await recordDecisionMetrics("ws-123", {
         problemType: "revenue_leak",
@@ -402,10 +402,10 @@ describe("Decision Metrics Service", () => {
     it("should invalidate cache on metrics record", async () => {
       vi.mocked(db.learningRecord.create).mockResolvedValue({
         id: "record-1",
-      } as any);
+      } as unknown);
 
       const mockCache = { delete: vi.fn().mockResolvedValue(undefined) };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       await recordDecisionMetrics("ws-123", {
         problemType: "revenue_leak",
@@ -421,12 +421,12 @@ describe("Decision Metrics Service", () => {
     it("should handle cache deletion errors gracefully", async () => {
       vi.mocked(db.learningRecord.create).mockResolvedValue({
         id: "record-1",
-      } as any);
+      } as unknown);
 
       const mockCache = {
         delete: vi.fn().mockRejectedValue(new Error("Cache error")),
       };
-      vi.mocked(getCache).mockReturnValue(mockCache as any);
+      vi.mocked(getCache).mockReturnValue(mockCache as unknown);
 
       await expect(
         recordDecisionMetrics("ws-123", {

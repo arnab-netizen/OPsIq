@@ -36,7 +36,7 @@ describe("Shock Event API Routes", () => {
   describe("GET /engagements/[engagementId]/shock-events", () => {
     it("requires ENGAGEMENT_VIEW capability", async () => {
       const { withAuth } = await import("@/lib/auth-guard");
-      const mockAuth = withAuth as any;
+      const mockAuth = withAuth as unknown;
 
       mockAuth.mockResolvedValue({ session: { user: { id: "user-1" } } });
 
@@ -45,14 +45,14 @@ describe("Shock Event API Routes", () => {
 
     it("validates engagementId is UUID", async () => {
       const { parseOrThrow } = await import("@/lib/validation");
-      const mockParse = parseOrThrow as any;
+      const mockParse = parseOrThrow as unknown;
 
       expect(mockParse).toBeDefined();
     });
 
     it("lists shock events successfully", async () => {
       const { listShockEvents } = await import("@/services/shock-event");
-      const mockList = listShockEvents as any;
+      const mockList = listShockEvents as unknown;
 
       mockList.mockResolvedValue([
         {
@@ -70,7 +70,7 @@ describe("Shock Event API Routes", () => {
 
     it("returns 404 if engagement not found", async () => {
       const { listShockEvents } = await import("@/services/shock-event");
-      const mockList = listShockEvents as any;
+      const mockList = listShockEvents as unknown;
 
       mockList.mockRejectedValue(new Error("NotFoundError"));
 
@@ -85,7 +85,7 @@ describe("Shock Event API Routes", () => {
   describe("POST /engagements/[engagementId]/shock-events", () => {
     it("requires ENGAGEMENT_UPDATE capability", async () => {
       const { withAuth } = await import("@/lib/auth-guard");
-      const mockAuth = withAuth as any;
+      const mockAuth = withAuth as unknown;
 
       expect(mockAuth).toBeDefined();
     });
@@ -101,28 +101,28 @@ describe("Shock Event API Routes", () => {
 
     it("validates severity enum", async () => {
       const { parseRequestBody } = await import("@/lib/validation");
-      const mockParse = parseRequestBody as any;
+      const mockParse = parseRequestBody as unknown;
 
       expect(mockParse).toBeDefined();
     });
 
     it("validates description required", async () => {
       const { parseRequestBody } = await import("@/lib/validation");
-      const mockParse = parseRequestBody as any;
+      const mockParse = parseRequestBody as unknown;
 
       expect(mockParse).toBeDefined();
     });
 
     it("validates detectedAt is datetime", async () => {
       const { parseRequestBody } = await import("@/lib/validation");
-      const mockParse = parseRequestBody as any;
+      const mockParse = parseRequestBody as unknown;
 
       expect(mockParse).toBeDefined();
     });
 
     it("creates shock event successfully", async () => {
       const { createShockEvent } = await import("@/services/shock-event");
-      const mockCreate = createShockEvent as any;
+      const mockCreate = createShockEvent as unknown;
 
       mockCreate.mockResolvedValue({
         id: "shock-1",
@@ -141,7 +141,7 @@ describe("Shock Event API Routes", () => {
 
     it("rejects if engagement in CLOSED phase", async () => {
       const { createShockEvent } = await import("@/services/shock-event");
-      const mockCreate = createShockEvent as any;
+      const mockCreate = createShockEvent as unknown;
 
       mockCreate.mockRejectedValue(new Error("CLOSED phase"));
 
@@ -162,7 +162,7 @@ describe("Shock Event API Routes", () => {
 
     it("emits audit event on creation", async () => {
       const { recordIdempotencyResponse } = await import("@/services/idempotency");
-      const mockRecord = recordIdempotencyResponse as any;
+      const mockRecord = recordIdempotencyResponse as unknown;
 
       mockRecord.mockResolvedValue({});
 
@@ -171,7 +171,7 @@ describe("Shock Event API Routes", () => {
 
     it("handles duplicate requests via idempotency", async () => {
       const { checkIdempotencyKey } = await import("@/services/idempotency");
-      const mockCheck = checkIdempotencyKey as any;
+      const mockCheck = checkIdempotencyKey as unknown;
 
       mockCheck.mockResolvedValue({
         isNew: false,

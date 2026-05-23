@@ -262,11 +262,11 @@ export function diagnoseRootCause(
   }
 
   const primary = matchedPatterns[0].pattern.diagnosis(evidence);
-  (primary as any).confidence = matchedPatterns[0].confidence;
+  (primary as unknown).confidence = matchedPatterns[0].confidence;
 
   const alternatives = matchedPatterns.slice(1).map((m) => {
     const diagnosis = m.pattern.diagnosis(evidence);
-    (diagnosis as any).confidence = m.confidence;
+    (diagnosis as unknown).confidence = m.confidence;
     return diagnosis;
   });
 

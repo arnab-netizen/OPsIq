@@ -78,7 +78,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(authServerRole.resolveServerRole).mockResolvedValue("viewer");
       vi.mocked(auth.getSession).mockResolvedValue({
         user: { id: "user-123" },
-      } as any);
+      } as unknown);
       vi.mocked(operatorStore.getItems).mockResolvedValue(mockItems);
       vi.mocked(calibrationEngine.computeCalibration).mockReturnValue(calibMetrics);
       vi.mocked(calibrationEngine.computeCalibrationBySegment).mockReturnValue({
@@ -103,7 +103,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(authServerRole.resolveServerRole).mockResolvedValue("admin");
       vi.mocked(auth.getSession).mockResolvedValue({
         user: { id: "user-123" },
-      } as any);
+      } as unknown);
     });
 
     it("should return computed calibration metrics", async () => {
@@ -281,7 +281,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(authServerRole.resolveServerRole).mockResolvedValue("admin");
       vi.mocked(auth.getSession).mockResolvedValue({
         user: { id: "user-123" },
-      } as any);
+      } as unknown);
       vi.mocked(operatorStore.getItems).mockResolvedValue([]);
       const emptyMetrics = {
         avgAccuracy: null,
@@ -396,7 +396,7 @@ describe("GET /api/calibration", () => {
       vi.mocked(authServerRole.resolveServerRole).mockResolvedValue("admin");
       vi.mocked(auth.getSession).mockResolvedValue({
         user: { id: "user-123" },
-      } as any);
+      } as unknown);
     });
 
     it("should handle errors from getItems", async () => {

@@ -34,7 +34,7 @@ describe("client-contact service", () => {
         email: "john@example.com",
       };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         findUnique: vi.fn().mockResolvedValue({ id: mockClientId }),
       };
@@ -47,7 +47,7 @@ describe("client-contact service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
 
-      const result = await contactService.createContact(input, mockAuthContext as any, mockWorkspaceId);
+      const result = await contactService.createContact(input, mockAuthContext as unknown, mockWorkspaceId);
 
       expect(result.id).toBe(mockContactId);
       expect(emitAuditEvent).toHaveBeenCalled();
@@ -59,20 +59,20 @@ describe("client-contact service", () => {
         name: "John Doe",
       };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         findUnique: vi.fn().mockResolvedValue(null),
       };
 
       await expect(
-        contactService.createContact(input, mockAuthContext as any, mockWorkspaceId)
+        contactService.createContact(input, mockAuthContext as unknown, mockWorkspaceId)
       ).rejects.toThrow(NotFoundError);
     });
   });
 
   describe("getContactsForClient", () => {
     it("returns active contacts ordered by primary then recency", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientContact = {
         findMany: vi.fn().mockResolvedValue([
           { id: "c1", isPrimary: true },
@@ -92,7 +92,7 @@ describe("client-contact service", () => {
     });
 
     it("returns empty when no contacts", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientContact = {
         findMany: vi.fn().mockResolvedValue([]),
       };

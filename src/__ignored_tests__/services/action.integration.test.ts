@@ -46,12 +46,12 @@ describe("Action Service", () => {
 
   describe("updateActionStatus", () => {
     it("should reject invalid status", async () => {
-      (db.action.findUnique as any).mockResolvedValue(mockAction);
+      (db.action.findUnique as unknown).mockResolvedValue(mockAction);
 
       const promise = updateActionStatus(
         mockAction.id,
         {
-          status: "invalid_status" as any,
+          status: "invalid_status" as unknown,
           version: 1,
         },
         actorId
@@ -62,7 +62,7 @@ describe("Action Service", () => {
     });
 
     it("should reject invalid transition", async () => {
-      (db.action.findUnique as any).mockResolvedValue(mockAction);
+      (db.action.findUnique as unknown).mockResolvedValue(mockAction);
 
       const promise = updateActionStatus(
         mockAction.id,
@@ -78,7 +78,7 @@ describe("Action Service", () => {
     });
 
     it("should reject stale version", async () => {
-      (db.action.findUnique as any).mockResolvedValue({
+      (db.action.findUnique as unknown).mockResolvedValue({
         ...mockAction,
         version: 2, // Current version is 2
       });
@@ -97,7 +97,7 @@ describe("Action Service", () => {
     });
 
     it("should succeed with valid transition and version", async () => {
-      (db.action.findUnique as any)
+      (db.action.findUnique as unknown)
         .mockResolvedValueOnce(mockAction) // Initial lookup
         .mockResolvedValueOnce({
           ...mockAction,
@@ -105,7 +105,7 @@ describe("Action Service", () => {
           version: 2,
         }); // After update
 
-      (db.action.updateMany as any).mockResolvedValue({ count: 1 });
+      (db.action.updateMany as unknown).mockResolvedValue({ count: 1 });
 
       const result = await updateActionStatus(
         mockAction.id,
@@ -132,7 +132,7 @@ describe("Action Service", () => {
     });
 
     it("should emit audit event on successful update", async () => {
-      (db.action.findUnique as any)
+      (db.action.findUnique as unknown)
         .mockResolvedValueOnce(mockAction)
         .mockResolvedValueOnce({
           ...mockAction,
@@ -140,7 +140,7 @@ describe("Action Service", () => {
           version: 2,
         });
 
-      (db.action.updateMany as any).mockResolvedValue({ count: 1 });
+      (db.action.updateMany as unknown).mockResolvedValue({ count: 1 });
 
       await updateActionStatus(
         mockAction.id,
@@ -166,8 +166,8 @@ describe("Action Service", () => {
     });
 
     it("should throw conflict error if optimistic lock fails", async () => {
-      (db.action.findUnique as any).mockResolvedValue(mockAction);
-      (db.action.updateMany as any).mockResolvedValue({ count: 0 }); // No rows updated
+      (db.action.findUnique as unknown).mockResolvedValue(mockAction);
+      (db.action.updateMany as unknown).mockResolvedValue({ count: 0 }); // No rows updated
 
       const promise = updateActionStatus(
         mockAction.id,
@@ -190,7 +190,7 @@ describe("Action Service", () => {
         blockerReason: "Waiting for client",
       };
 
-      (db.action.findUnique as any)
+      (db.action.findUnique as unknown)
         .mockResolvedValueOnce(actionWithBlockage)
         .mockResolvedValueOnce({
           ...actionWithBlockage,
@@ -198,7 +198,7 @@ describe("Action Service", () => {
           version: 3,
         });
 
-      (db.action.updateMany as any).mockResolvedValue({ count: 1 });
+      (db.action.updateMany as unknown).mockResolvedValue({ count: 1 });
 
       await updateActionStatus(
         mockAction.id,
@@ -223,14 +223,14 @@ describe("Action Service", () => {
     });
 
     it("should allow noop transition (same status)", async () => {
-      (db.action.findUnique as any)
+      (db.action.findUnique as unknown)
         .mockResolvedValueOnce(mockAction)
         .mockResolvedValueOnce({
           ...mockAction,
           version: 2,
         });
 
-      (db.action.updateMany as any).mockResolvedValue({ count: 1 });
+      (db.action.updateMany as unknown).mockResolvedValue({ count: 1 });
 
       const result = await updateActionStatus(
         mockAction.id,

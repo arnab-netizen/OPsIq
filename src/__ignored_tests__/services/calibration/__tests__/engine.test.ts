@@ -605,7 +605,7 @@ describe("computeCalibration - Calibration Engine", () => {
 
   describe("Invalid Input Handling", () => {
     it("should handle non-array input", () => {
-      const result = computeCalibration(null as any);
+      const result = computeCalibration(null as unknown);
 
       expect(result.valid).toBe(false);
       expect(result.reason).toBeDefined();

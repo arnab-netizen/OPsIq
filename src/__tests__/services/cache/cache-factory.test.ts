@@ -215,8 +215,8 @@ describe("Cache Factory - Cache Creation", () => {
     await cache.set("session:user-123", session);
     const cached = await cache.get("session:user-123");
 
-    expect((cached as any).userId).toBe("user-123");
-    expect((cached as any).workspaceId).toBe("ws-456");
+    expect((cached as unknown).userId).toBe("user-123");
+    expect((cached as unknown).workspaceId).toBe("ws-456");
   });
 
   it("supports caching computed results", async () => {
@@ -326,7 +326,7 @@ describe("Cache Factory - Cache Creation", () => {
     await cache.set("perms:user-456", perms, 3600);
     const cached = await cache.get("perms:user-456");
 
-    expect((cached as any).capabilities).toContain("decision.approve");
+    expect((cached as unknown).capabilities).toContain("decision.approve");
   });
 
   it("supports confidence score caching pattern", async () => {
@@ -341,7 +341,7 @@ describe("Cache Factory - Cache Creation", () => {
     await cache.set("confidence:dec-789", scores, 900);
     const cached = await cache.get("confidence:dec-789");
 
-    expect((cached as any).confidence).toBe(0.92);
+    expect((cached as unknown).confidence).toBe(0.92);
   });
 
   // ========== Lifecycle Management ==========

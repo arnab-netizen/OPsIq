@@ -73,7 +73,7 @@ export default async function DecisionDetailPage({
 
   // Verify user has access to workspace
   const membership = await enforceWorkspaceScoping(
-    { nextUrl: { searchParams: new URLSearchParams({ workspaceId }) } } as any,
+    { nextUrl: { searchParams: new URLSearchParams({ workspaceId }) } } as unknown,
     workspaceId
   );
 

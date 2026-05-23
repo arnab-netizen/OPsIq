@@ -99,10 +99,10 @@ describe("Visibility Enforcement", () => {
 
   afterAll(async () => {
     try {
-      await (db.finding.deleteMany as any)({ where: { engagementId } });
-      await (db.evidence.deleteMany as any)({ where: { engagementId } });
-      await (db.engagement.deleteMany as any)({ where: { id: engagementId } });
-      await (db.clientAccount.deleteMany as any)({ where: { id: clientId } });
+      await (db.finding.deleteMany as unknown)({ where: { engagementId } });
+      await (db.evidence.deleteMany as unknown)({ where: { engagementId } });
+      await (db.engagement.deleteMany as unknown)({ where: { id: engagementId } });
+      await (db.clientAccount.deleteMany as unknown)({ where: { id: clientId } });
     } catch {
       // Cleanup best-effort
     }
@@ -144,7 +144,7 @@ describe("Visibility Enforcement", () => {
 
     it("should not expose visibility classification in response", async () => {
       const evidence = await getEvidenceById(internalEvidenceId, "all");
-      expect((evidence as any).visibilityClassification).toBeUndefined();
+      expect((evidence as unknown).visibilityClassification).toBeUndefined();
     });
 
     it("should allow accessing all evidence with 'all' visibility", async () => {
@@ -194,7 +194,7 @@ describe("Visibility Enforcement", () => {
 
     it("should not expose clientVisibilityStatus in response", async () => {
       const finding = await getFindingDetail(internalFindingId, "all");
-      expect((finding as any).clientVisibilityStatus).toBeUndefined();
+      expect((finding as unknown).clientVisibilityStatus).toBeUndefined();
     });
 
     it("should allow accessing all findings with 'all' visibility", async () => {

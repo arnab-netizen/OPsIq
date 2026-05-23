@@ -74,7 +74,7 @@ describe("Consulting Engine Pipeline", () => {
     it("should return ERROR if engagement not found", async () => {
       vi.mocked(db.engagement.findFirst).mockResolvedValueOnce(null);
 
-      const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
+      const result = await runConsultingPipeline(engagementId, mockAuthContext as unknown);
 
       expect(result.status).toBe("ERROR");
       expect(result.decisionMemo).toBeNull();
@@ -91,11 +91,11 @@ describe("Consulting Engine Pipeline", () => {
         description: "Test description",
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
-      } as any);
+      } as unknown);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([]);
 
-      const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
+      const result = await runConsultingPipeline(engagementId, mockAuthContext as unknown);
 
       expect(result.status).toBe("INSUFFICIENT_DATA");
       expect(result.warnings[0]).toContain("No validated findings available");
@@ -111,7 +111,7 @@ describe("Consulting Engine Pipeline", () => {
         description: "Business in trouble",
         client: { industry: "manufacturing", size: "medium" },
         conditionProfiles: [{ urgencyLevel: "high" }],
-      } as any);
+      } as unknown);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
         {
@@ -121,10 +121,10 @@ describe("Consulting Engine Pipeline", () => {
           description: "Process is slow",
           severity: "critical",
           createdAt: new Date(),
-        } as any,
+        } as unknown,
       ]);
 
-      vi.mocked(runConsultingEngine as any).mockResolvedValueOnce({
+      vi.mocked(runConsultingEngine as unknown).mockResolvedValueOnce({
         status: "SUCCESS",
         decisionMemo: {
           id: uuidv4(),
@@ -154,10 +154,10 @@ describe("Consulting Engine Pipeline", () => {
         warnings: [],
       });
 
-      vi.mocked(createRecommendationsFromInterventions as any).mockResolvedValueOnce([]);
-      vi.mocked(createActionsFromInterventions as any).mockResolvedValueOnce([]);
+      vi.mocked(createRecommendationsFromInterventions as unknown).mockResolvedValueOnce([]);
+      vi.mocked(createActionsFromInterventions as unknown).mockResolvedValueOnce([]);
 
-      const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
+      const result = await runConsultingPipeline(engagementId, mockAuthContext as unknown);
 
       // Verify orchestrator was called with evidence mapped from findings
       expect(runConsultingEngine).toHaveBeenCalledWith(
@@ -194,7 +194,7 @@ describe("Consulting Engine Pipeline", () => {
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
         workspaceId,
-      } as any);
+      } as unknown);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
         {
@@ -203,7 +203,7 @@ describe("Consulting Engine Pipeline", () => {
           title: "Finding",
           description: "Issue",
           createdAt: new Date(),
-        } as any,
+        } as unknown,
       ]);
 
       const mockIntervention = {
@@ -230,7 +230,7 @@ describe("Consulting Engine Pipeline", () => {
         sequencingReason: "First step",
       };
 
-      vi.mocked(runConsultingEngine as any).mockResolvedValueOnce({
+      vi.mocked(runConsultingEngine as unknown).mockResolvedValueOnce({
         status: "SUCCESS",
         decisionMemo: {
           id: uuidv4(),
@@ -263,12 +263,12 @@ describe("Consulting Engine Pipeline", () => {
       const mockRec = { id: uuidv4(), title: "Recommendation" };
       const mockAction = { id: uuidv4(), title: "Action" };
 
-      vi.mocked(createRecommendationsFromInterventions as any).mockResolvedValueOnce([
+      vi.mocked(createRecommendationsFromInterventions as unknown).mockResolvedValueOnce([
         mockRec,
       ]);
-      vi.mocked(createActionsFromInterventions as any).mockResolvedValueOnce([mockAction]);
+      vi.mocked(createActionsFromInterventions as unknown).mockResolvedValueOnce([mockAction]);
 
-      const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
+      const result = await runConsultingPipeline(engagementId, mockAuthContext as unknown);
 
       // Verify adapters were called with interventions
       expect(createRecommendationsFromInterventions).toHaveBeenCalledWith(
@@ -297,7 +297,7 @@ describe("Consulting Engine Pipeline", () => {
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
         workspaceId,
-      } as any);
+      } as unknown);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
         {
@@ -306,10 +306,10 @@ describe("Consulting Engine Pipeline", () => {
           title: "Finding",
           description: "Issue",
           createdAt: new Date(),
-        } as any,
+        } as unknown,
       ]);
 
-      vi.mocked(runConsultingEngine as any).mockResolvedValueOnce({
+      vi.mocked(runConsultingEngine as unknown).mockResolvedValueOnce({
         status: "SUCCESS",
         decisionMemo: {
           id: uuidv4(),
@@ -339,10 +339,10 @@ describe("Consulting Engine Pipeline", () => {
         warnings: [],
       });
 
-      vi.mocked(createRecommendationsFromInterventions as any).mockResolvedValueOnce([]);
-      vi.mocked(createActionsFromInterventions as any).mockResolvedValueOnce([]);
+      vi.mocked(createRecommendationsFromInterventions as unknown).mockResolvedValueOnce([]);
+      vi.mocked(createActionsFromInterventions as unknown).mockResolvedValueOnce([]);
 
-      await runConsultingPipeline(engagementId, mockAuthContext as any);
+      await runConsultingPipeline(engagementId, mockAuthContext as unknown);
 
       expect(emitAuditEvent).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -367,7 +367,7 @@ describe("Consulting Engine Pipeline", () => {
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
         workspaceId,
-      } as any);
+      } as unknown);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
         {
@@ -376,10 +376,10 @@ describe("Consulting Engine Pipeline", () => {
           title: "Finding",
           description: "Minor issue",
           createdAt: new Date(),
-        } as any,
+        } as unknown,
       ]);
 
-      vi.mocked(runConsultingEngine as any).mockResolvedValueOnce({
+      vi.mocked(runConsultingEngine as unknown).mockResolvedValueOnce({
         status: "SUCCESS",
         decisionMemo: {
           id: uuidv4(),
@@ -410,12 +410,12 @@ describe("Consulting Engine Pipeline", () => {
       });
 
       const error = new Error("Adapter failure");
-      vi.mocked(createRecommendationsFromInterventions as any).mockRejectedValueOnce(
+      vi.mocked(createRecommendationsFromInterventions as unknown).mockRejectedValueOnce(
         error
       );
 
       try {
-        await runConsultingPipeline(engagementId, mockAuthContext as any);
+        await runConsultingPipeline(engagementId, mockAuthContext as unknown);
         expect.fail("Should have thrown error");
       } catch (e) {
         expect((e as Error).message).toBe("Adapter failure");
@@ -430,7 +430,7 @@ describe("Consulting Engine Pipeline", () => {
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
         workspaceId,
-      } as any);
+      } as unknown);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
         {
@@ -439,16 +439,16 @@ describe("Consulting Engine Pipeline", () => {
           title: "Finding",
           description: "Weak evidence",
           createdAt: new Date(),
-        } as any,
+        } as unknown,
       ]);
 
-      vi.mocked(runConsultingEngine as any).mockResolvedValueOnce({
+      vi.mocked(runConsultingEngine as unknown).mockResolvedValueOnce({
         status: "INSUFFICIENT_EVIDENCE",
         decisionMemo: null,
         warnings: ["Not enough evidence for diagnosis"],
       });
 
-      const result = await runConsultingPipeline(engagementId, mockAuthContext as any);
+      const result = await runConsultingPipeline(engagementId, mockAuthContext as unknown);
 
       expect(result.status).toBe("ERROR");
       expect(result.decisionMemo).toBeNull();
@@ -474,7 +474,7 @@ describe("Consulting Engine Pipeline", () => {
         client: { industry: "retail", size: "small" },
         conditionProfiles: [],
         workspaceId,
-      } as any);
+      } as unknown);
 
       vi.mocked(db.finding.findMany).mockResolvedValueOnce([
         {
@@ -483,10 +483,10 @@ describe("Consulting Engine Pipeline", () => {
           title: "Finding",
           description: "Issue",
           createdAt: new Date(),
-        } as any,
+        } as unknown,
       ]);
 
-      vi.mocked(runConsultingEngine as any).mockResolvedValueOnce({
+      vi.mocked(runConsultingEngine as unknown).mockResolvedValueOnce({
         status: "SUCCESS",
         decisionMemo: {
           id: uuidv4(),
@@ -516,10 +516,10 @@ describe("Consulting Engine Pipeline", () => {
         warnings: [],
       });
 
-      vi.mocked(createRecommendationsFromInterventions as any).mockResolvedValueOnce([]);
-      vi.mocked(createActionsFromInterventions as any).mockResolvedValueOnce([]);
+      vi.mocked(createRecommendationsFromInterventions as unknown).mockResolvedValueOnce([]);
+      vi.mocked(createActionsFromInterventions as unknown).mockResolvedValueOnce([]);
 
-      await runConsultingPipeline(engagementId, engineAuthContext as any);
+      await runConsultingPipeline(engagementId, engineAuthContext as unknown);
 
       // Should use "consulting-engine" for audit event
       expect(emitAuditEvent).toHaveBeenCalledWith(

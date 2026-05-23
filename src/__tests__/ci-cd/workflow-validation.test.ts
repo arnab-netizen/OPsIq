@@ -203,7 +203,7 @@ describe("CI/CD Workflow Validation", () => {
         ".github/workflows/ci.yml"
       );
       const ciContent = fs.readFileSync(ciPath, "utf-8");
-      const parsed = YAML.load(ciContent) as any;
+      const parsed = YAML.load(ciContent) as unknown;
       expect(parsed).toBeDefined();
       expect(parsed.jobs).toBeDefined();
     });
@@ -214,7 +214,7 @@ describe("CI/CD Workflow Validation", () => {
         ".github/workflows/deploy-staging.yml"
       );
       const deployContent = fs.readFileSync(deployPath, "utf-8");
-      const parsed = YAML.load(deployContent) as any;
+      const parsed = YAML.load(deployContent) as unknown;
       expect(parsed).toBeDefined();
       expect(parsed.jobs).toBeDefined();
     });

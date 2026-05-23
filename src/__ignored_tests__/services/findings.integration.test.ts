@@ -97,7 +97,7 @@ describe("Findings Service", () => {
         title: "Test",
         summary: "Test finding",
         severity: "extreme",
-      } as any;
+      } as unknown;
 
       await expect(async () => {
         await createFinding(input, actorId);
@@ -111,7 +111,7 @@ describe("Findings Service", () => {
         title: "Test",
         summary: "Test finding",
         severity: "high",
-      } as any;
+      } as unknown;
 
       await expect(async () => {
         await createFinding(input, actorId);
@@ -157,7 +157,7 @@ describe("Findings Service", () => {
             primaryEvidenceId: evidenceId,
             title: `Finding - ${severity}`,
             summary: `This is a ${severity} severity finding`,
-            severity: severity as any,
+            severity: severity as unknown,
             impactArea: "execution",
           },
           actorId
@@ -226,7 +226,7 @@ describe("Findings Service", () => {
           {
             status: "invalid_status",
             version: existing.version,
-          } as any,
+          } as unknown,
           actorId
         );
       }).rejects.toThrow("Invalid finding status");
@@ -453,7 +453,7 @@ describe("Findings Service", () => {
         await linkEvidenceToFinding(
           findingId,
           evidenceId,
-          "invalid_type" as any,
+          "invalid_type" as unknown,
           actorId
         );
       }).rejects.toThrow("Invalid link type");
@@ -554,7 +554,7 @@ describe("Findings Service", () => {
           await updateFinding(
             result.id,
             {
-              status: status as any,
+              status: status as unknown,
               version: existing.version,
             },
             actorId

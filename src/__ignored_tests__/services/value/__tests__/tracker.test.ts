@@ -341,7 +341,7 @@ describe("calculateValue - Value Tracker", () => {
 
   describe("Invalid Input Handling", () => {
     it("should handle non-array input", () => {
-      const result = calculateValue(null as any);
+      const result = calculateValue(null as unknown);
 
       expect(result.valid).toBe(false);
       expect(result.reason).toBeDefined();

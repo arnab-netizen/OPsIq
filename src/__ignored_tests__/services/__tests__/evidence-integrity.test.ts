@@ -72,7 +72,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         return callback(mockTx);
       });
 
-      const result = await linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId);
+      const result = await linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as unknown, undefined, workspaceId);
 
       expect(result.findingId).toBe(findingId1);
       expect(result.evidenceId).toBe(evidenceId1);
@@ -95,7 +95,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as unknown, undefined, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -116,7 +116,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as unknown, undefined, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -137,7 +137,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as unknown, undefined, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -158,7 +158,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId)
+        linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as unknown, undefined, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -197,7 +197,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         return callback(mockTx);
       });
 
-      const result = await unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as any, workspaceId);
+      const result = await unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as unknown, workspaceId);
 
       expect(result.findingId).toBe(findingId1);
       expect(result.evidenceId).toBe(evidenceId1);
@@ -218,7 +218,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as any, workspaceId)
+        unlinkEvidenceFromFinding(findingId1, evidenceId1, mockAuthContext as unknown, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
   });
@@ -233,7 +233,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
       } as never);
 
       await expect(
-        validateFinding(findingId1, mockAuthContext as any, workspaceId)
+        validateFinding(findingId1, mockAuthContext as unknown, workspaceId)
       ).rejects.toThrow(ValidationError);
     });
 
@@ -250,7 +250,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         engagementId: engagementId1,
       } as never);
 
-      const result = await validateFinding(findingId1, mockAuthContext as any, workspaceId);
+      const result = await validateFinding(findingId1, mockAuthContext as unknown, workspaceId);
 
       expect(result.id).toBe(findingId1);
     });
@@ -288,7 +288,7 @@ describe("Evidence Integrity - Link/Unlink", () => {
         return callback(mockTx);
       });
 
-      const result = await linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as any, undefined, workspaceId);
+      const result = await linkEvidenceToFinding(findingId1, evidenceId1, mockAuthContext as unknown, undefined, workspaceId);
       expect(result).toBeDefined();
     });
   });

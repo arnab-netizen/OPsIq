@@ -92,7 +92,7 @@ export function validateProjectedImpactRecording(
 ): ImpactValidationResult {
   const allowedStates: (DecisionState | string)[] = ["DRAFT", "SUBMITTED", "APPROVED"];
 
-  if (allowedStates.includes(state as any)) {
+  if (allowedStates.includes(state as unknown)) {
     return { allowed: true };
   }
 
@@ -117,7 +117,7 @@ export function validateRealizedImpactRecording(
 ): ImpactValidationResult {
   // Cannot record realized impact for decisions that failed/cancelled/rejected
   const excludedTerminalStates = ["FAILED", "CANCELLED", "REJECTED"];
-  if (excludedTerminalStates.includes(state as any)) {
+  if (excludedTerminalStates.includes(state as unknown)) {
     return {
       allowed: false,
       reason: `Cannot record realized impact for ${state} decisions. Failed/cancelled/rejected decisions are excluded from realized ROI.`,
@@ -126,7 +126,7 @@ export function validateRealizedImpactRecording(
 
   // Must be in outcome recorded or closed state
   const allowedStates: (DecisionState | string)[] = ["OUTCOME_RECORDED", "CLOSED"];
-  if (allowedStates.includes(state as any)) {
+  if (allowedStates.includes(state as unknown)) {
     return { allowed: true };
   }
 
@@ -331,7 +331,7 @@ export async function recordROIWithGating(
     });
 
     // Check if decision is in terminal failure state
-    if (["FAILED", "CANCELLED", "REJECTED"].includes(state as any)) {
+    if (["FAILED", "CANCELLED", "REJECTED"].includes(state as unknown)) {
       throw new ValidationError(
         `Cannot record ROI for ${state} decisions. Failed/cancelled/rejected decisions are excluded from realized ROI.`
       );
@@ -403,7 +403,7 @@ export function validateImpactModificationAllowed(
   }
 
   // Cannot modify for terminal failure states
-  if (["FAILED", "CANCELLED", "REJECTED"].includes(state as any)) {
+  if (["FAILED", "CANCELLED", "REJECTED"].includes(state as unknown)) {
     return {
       allowed: false,
       reason: `Cannot modify impact for ${state} decisions.`,
@@ -421,12 +421,12 @@ export function validateImpactModificationAllowed(
  */
 export function canContributeToRealizedROI(state: DecisionState | string): boolean {
   // Excluded terminal states
-  if (["FAILED", "CANCELLED", "REJECTED"].includes(state as any)) {
+  if (["FAILED", "CANCELLED", "REJECTED"].includes(state as unknown)) {
     return false;
   }
 
   // Only outcome recorded and closed can contribute
-  return ["OUTCOME_RECORDED", "CLOSED"].includes(state as any);
+  return ["OUTCOME_RECORDED", "CLOSED"].includes(state as unknown);
 }
 
 /**

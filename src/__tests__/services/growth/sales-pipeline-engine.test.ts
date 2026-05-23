@@ -50,7 +50,7 @@ describe("Sales Pipeline Engine Service", () => {
     it("should fail with invalid deal data", () => {
       const data = {
         companyName: "",
-        stage: "INVALID" as any,
+        stage: "INVALID" as unknown,
         value: -1000,
         currency: "USD",
       };

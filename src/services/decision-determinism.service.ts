@@ -18,8 +18,8 @@ export async function captureDecisionSnapshot(
   const snapshot = await db.decisionSnapshot.create({
     data: {
       engagementId,
-      decisionInput: input as any,
-      decisionOutput: output as any,
+      decisionInput: input as unknown,
+      decisionOutput: output as unknown,
       version: 1,
     },
   });

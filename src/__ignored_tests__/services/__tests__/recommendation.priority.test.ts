@@ -66,13 +66,13 @@ describe("Recommendation Priority Mapping", () => {
     it("should use provided priority when no scoring input", async () => {
       vi.spyOn(db.engagement, "findUnique").mockResolvedValueOnce({
         id: "eng-1",
-      } as any);
+      } as unknown);
 
       vi.spyOn(db.recommendation, "create").mockResolvedValueOnce({
         id: "rec-1",
         priority: "critical",
         score: null,
-      } as any);
+      } as unknown);
 
       const result = await createRecommendation(
         {
@@ -80,7 +80,7 @@ describe("Recommendation Priority Mapping", () => {
           priority: "critical",
           title: "Test Recommendation",
         },
-        mockAuthContext as any,
+        mockAuthContext as unknown,
         mockWorkspaceId
       );
 
@@ -91,7 +91,7 @@ describe("Recommendation Priority Mapping", () => {
     it("should derive priority from score when scoring input provided", async () => {
       vi.spyOn(db.engagement, "findUnique").mockResolvedValueOnce({
         id: "eng-1",
-      } as any);
+      } as unknown);
 
       let createdData: unknown = {};
       vi.spyOn(db.recommendation, "create").mockImplementationOnce(({ data }) => {
@@ -99,7 +99,7 @@ describe("Recommendation Priority Mapping", () => {
         return Promise.resolve({
           id: "rec-1",
           ...data,
-        } as any);
+        } as unknown);
       });
 
       await createRecommendation(
@@ -120,7 +120,7 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 5,
           },
         },
-        mockAuthContext as any,
+        mockAuthContext as unknown,
         mockWorkspaceId
       );
 
@@ -130,7 +130,7 @@ describe("Recommendation Priority Mapping", () => {
     it("should calculate HIGH priority for high-scoring input", async () => {
       vi.spyOn(db.engagement, "findUnique").mockResolvedValueOnce({
         id: "eng-1",
-      } as any);
+      } as unknown);
 
       let priority = "";
       vi.spyOn(db.recommendation, "create").mockImplementationOnce(({ data }) => {
@@ -138,7 +138,7 @@ describe("Recommendation Priority Mapping", () => {
         return Promise.resolve({
           id: "rec-1",
           ...data,
-        } as any);
+        } as unknown);
       });
 
       await createRecommendation(
@@ -159,7 +159,7 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 5,
           },
         },
-        mockAuthContext as any,
+        mockAuthContext as unknown,
         mockWorkspaceId
       );
 
@@ -169,7 +169,7 @@ describe("Recommendation Priority Mapping", () => {
     it("should calculate MEDIUM priority for medium-scoring input", async () => {
       vi.spyOn(db.engagement, "findUnique").mockResolvedValueOnce({
         id: "eng-1",
-      } as any);
+      } as unknown);
 
       let priority = "";
       vi.spyOn(db.recommendation, "create").mockImplementationOnce(({ data }) => {
@@ -177,7 +177,7 @@ describe("Recommendation Priority Mapping", () => {
         return Promise.resolve({
           id: "rec-1",
           ...data,
-        } as any);
+        } as unknown);
       });
 
       await createRecommendation(
@@ -198,7 +198,7 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 3,
           },
         },
-        mockAuthContext as any,
+        mockAuthContext as unknown,
         mockWorkspaceId
       );
 
@@ -208,7 +208,7 @@ describe("Recommendation Priority Mapping", () => {
     it("should calculate LOW priority for low-scoring input", async () => {
       vi.spyOn(db.engagement, "findUnique").mockResolvedValueOnce({
         id: "eng-1",
-      } as any);
+      } as unknown);
 
       let priority = "";
       vi.spyOn(db.recommendation, "create").mockImplementationOnce(({ data }) => {
@@ -216,7 +216,7 @@ describe("Recommendation Priority Mapping", () => {
         return Promise.resolve({
           id: "rec-1",
           ...data,
-        } as any);
+        } as unknown);
       });
 
       await createRecommendation(
@@ -237,7 +237,7 @@ describe("Recommendation Priority Mapping", () => {
             strategicAlignment: 1,
           },
         },
-        mockAuthContext as any,
+        mockAuthContext as unknown,
         mockWorkspaceId
       );
 
@@ -255,13 +255,13 @@ describe("Recommendation Priority Mapping", () => {
         id: "rec-1",
         priority: "low",
         score: 0.3,
-      } as any);
+      } as unknown);
 
       vi.spyOn(db.recommendation, "update").mockResolvedValueOnce({
         id: "rec-1",
         score: 0.8,
         priority: "high",
-      } as any);
+      } as unknown);
 
       const result = await updateRecommendationPriorityFromScore(
         "rec-1",
@@ -277,7 +277,7 @@ describe("Recommendation Priority Mapping", () => {
           dependency: 0,
           strategicAlignment: 5,
         },
-        mockAuthContext as any,
+        mockAuthContext as unknown,
         mockWorkspaceId
       );
 
@@ -303,7 +303,7 @@ describe("Recommendation Priority Mapping", () => {
             dependency: 5,
             strategicAlignment: 3,
           },
-          mockAuthContext as any,
+          mockAuthContext as unknown,
           mockWorkspaceId
         )
       ).rejects.toThrow(NotFoundError);
@@ -312,13 +312,13 @@ describe("Recommendation Priority Mapping", () => {
     it("should update recommendation without error", async () => {
       vi.spyOn(db.recommendation, "findUnique").mockResolvedValueOnce({
         id: "rec-1",
-      } as any);
+      } as unknown);
 
       vi.spyOn(db.recommendation, "update").mockResolvedValueOnce({
         id: "rec-1",
         score: 0.75,
         priority: "high",
-      } as any);
+      } as unknown);
 
       const result = await updateRecommendationPriorityFromScore(
         "rec-1",
@@ -334,7 +334,7 @@ describe("Recommendation Priority Mapping", () => {
           dependency: 1,
           strategicAlignment: 4,
         },
-        mockAuthContext as any,
+        mockAuthContext as unknown,
         mockWorkspaceId
       );
 

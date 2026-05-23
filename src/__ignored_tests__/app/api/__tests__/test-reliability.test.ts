@@ -102,7 +102,7 @@ describe("PHASE 5: Test Reliability - Factory Patterns", () => {
       expect(item.blockStage).toBe("guardrails");
       expect(item.blockReason).toBe("high_impact_approval_required");
       expect(item.guardrailResult).toBeDefined();
-      expect((item.guardrailResult as any).violations).toBeDefined();
+      expect((item.guardrailResult as unknown).violations).toBeDefined();
     });
 
     it("should allow overriding block stage metadata", () => {
@@ -121,7 +121,7 @@ describe("PHASE 5: Test Reliability - Factory Patterns", () => {
       });
 
       expect(item.blockReason).toBe(customReason);
-      expect((item.guardrailResult as any).violations[0].ruleId).toBe("custom-rule");
+      expect((item.guardrailResult as unknown).violations[0].ruleId).toBe("custom-rule");
     });
   });
 

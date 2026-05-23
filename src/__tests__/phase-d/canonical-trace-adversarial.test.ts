@@ -186,7 +186,7 @@ describe("PHASE D STEPS 4-5: Canonical Trace Adversarial Testing", () => {
 
       // Attempt mutation
       expect(() => {
-        (finalTrace as any).authSnapshot.actorId = "actor2";
+        (finalTrace as unknown).authSnapshot.actorId = "actor2";
       }).toThrow();
     });
 
@@ -214,7 +214,7 @@ describe("PHASE D STEPS 4-5: Canonical Trace Adversarial Testing", () => {
 
       // Attempt mutation
       expect(() => {
-        (finalTrace as any).authSnapshot.workspaceId = "ws2";
+        (finalTrace as unknown).authSnapshot.workspaceId = "ws2";
       }).toThrow();
     });
 
@@ -242,7 +242,7 @@ describe("PHASE D STEPS 4-5: Canonical Trace Adversarial Testing", () => {
 
       // Attempt mutation
       expect(() => {
-        (finalTrace as any).decision.allowed = true;
+        (finalTrace as unknown).decision.allowed = true;
       }).toThrow();
     });
 
@@ -266,7 +266,7 @@ describe("PHASE D STEPS 4-5: Canonical Trace Adversarial Testing", () => {
 
       // Attempt mutation
       expect(() => {
-        (finalTrace as any).correlationId = "corr-modified";
+        (finalTrace as unknown).correlationId = "corr-modified";
       }).toThrow();
     });
 
@@ -290,7 +290,7 @@ describe("PHASE D STEPS 4-5: Canonical Trace Adversarial Testing", () => {
 
       // Attempt mutation
       expect(() => {
-        (finalTrace as any).requestId = "req-modified";
+        (finalTrace as unknown).requestId = "req-modified";
       }).toThrow();
     });
   });
@@ -578,7 +578,7 @@ describe("PHASE D STEPS 4-5: Canonical Trace Adversarial Testing", () => {
 
       // Object should be frozen (no new properties)
       expect(() => {
-        (finalTrace as any).newField = "value";
+        (finalTrace as unknown).newField = "value";
       }).toThrow();
     });
   });
@@ -642,7 +642,7 @@ describe("PHASE D STEPS 4-5: Canonical Trace Adversarial Testing", () => {
 
       // Verify immutability
       expect(() => {
-        (finalTrace as any).stages = [];
+        (finalTrace as unknown).stages = [];
       }).toThrow();
     });
   });

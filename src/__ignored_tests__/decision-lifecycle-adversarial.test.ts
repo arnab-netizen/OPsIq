@@ -78,7 +78,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
   describe("Attack Vector 1: Execute Draft Decision", () => {
     it("MUST FAIL: Should reject execution of DRAFT decision", async () => {
       const draftDecision = createDecision("draft");
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(draftDecision as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(draftDecision as unknown);
 
       let error: Error | null = null;
       try {
@@ -96,7 +96,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
   describe("Attack Vector 2: Execute Submitted But Unapproved Decision", () => {
     it("MUST FAIL: Should reject execution of SUBMITTED decision", async () => {
       const submittedDecision = createDecision("submitted");
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(submittedDecision as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(submittedDecision as unknown);
 
       let error: Error | null = null;
       try {
@@ -114,7 +114,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
   describe("Attack Vector 3: Execute Same Decision Twice (Duplicate Execution)", () => {
     it("MUST FAIL: Should reject duplicate execution (already EXECUTED)", async () => {
       const executedDecision = createDecision("in_progress");
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(executedDecision as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(executedDecision as unknown);
 
       let error: Error | null = null;
       try {
@@ -132,7 +132,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
   describe("Attack Vector 4: Record Outcome Before Execution", () => {
     it("MUST FAIL: Should reject outcome recording before execution", async () => {
       const approvedDecision = createDecision("approved");
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(approvedDecision as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(approvedDecision as unknown);
 
       let error: Error | null = null;
       try {
@@ -158,7 +158,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
         ...createDecision("outcome_recorded"),
         actualOutcomeValue: 5000, // Already has outcome
       };
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(outcomeRecordedDecision as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(outcomeRecordedDecision as unknown);
 
       let error: Error | null = null;
       try {
@@ -188,7 +188,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
         actualOutcomeValue: null, // No outcome recorded
       };
       vi.mocked(db.operatorItem.findFirst).mockResolvedValue(
-        executedNoOutcomeDecision as any
+        executedNoOutcomeDecision as unknown
       );
 
       let error: Error | null = null;
@@ -210,7 +210,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
         ...createDecision("closed"),
         actualOutcomeValue: 5000, // Already closed with outcome
       };
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(closedDecision as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(closedDecision as unknown);
 
       let error: Error | null = null;
       try {
@@ -236,7 +236,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
   describe("Attack Vector 8: Generate Final ROI From Non-Closed Decision", () => {
     it("MUST FAIL: Should reject final ROI marking for OUTCOME_RECORDED", async () => {
       const outcomeRecordedDecision = createDecision("outcome_recorded");
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(outcomeRecordedDecision as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(outcomeRecordedDecision as unknown);
 
       let error: Error | null = null;
       try {
@@ -279,7 +279,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
 
   describe("Attack Vector 10: Bypass Route by Calling Service Directly Without AuthContext", () => {
     it("MUST FAIL: Should reject service call without authContext", async () => {
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(createDecision("approved") as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(createDecision("approved") as unknown);
 
       let error: Error | null = null;
       try {
@@ -307,7 +307,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
         workspace: { id: "workspace-123" },
       };
 
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(createDecision("approved") as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(createDecision("approved") as unknown);
 
       let error: Error | null = null;
       try {
@@ -318,7 +318,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
             impactType: "realized",
             actualOutcomeValue: 5000,
           },
-          badAuthContext as any
+          badAuthContext as unknown
         );
       } catch (e) {
         error = e as Error;
@@ -333,7 +333,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
         workspace: null,
       };
 
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(createDecision("approved") as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(createDecision("approved") as unknown);
 
       let error: Error | null = null;
       try {
@@ -344,7 +344,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
             impactType: "realized",
             actualOutcomeValue: 5000,
           },
-          badAuthContext as any
+          badAuthContext as unknown
         );
       } catch (e) {
         error = e as Error;
@@ -357,7 +357,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
   describe("Comprehensive Lifecycle Violation Tests", () => {
     it("MUST FAIL: Should reject failed decision from producing realized ROI", async () => {
       const failedDecision = createDecision("failed");
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(failedDecision as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(failedDecision as unknown);
 
       let error: Error | null = null;
       try {
@@ -379,7 +379,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
 
     it("MUST FAIL: Should reject cancelled decision from producing realized ROI", async () => {
       const cancelledDecision = createDecision("cancelled");
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(cancelledDecision as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(cancelledDecision as unknown);
 
       let error: Error | null = null;
       try {
@@ -400,7 +400,7 @@ describe("Adversarial Decision Lifecycle Audit", () => {
 
     it("MUST FAIL: Should reject rejected decision from producing realized ROI", async () => {
       const rejectedDecision = createDecision("blocked");
-      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(rejectedDecision as any);
+      vi.mocked(db.operatorItem.findFirst).mockResolvedValue(rejectedDecision as unknown);
 
       let error: Error | null = null;
       try {

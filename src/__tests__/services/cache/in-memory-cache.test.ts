@@ -384,7 +384,7 @@ describe("InMemoryCache - Basic Operations", () => {
     const cached = await cache.get("briefing:ws-123");
 
     expect(cached).toEqual(briefing);
-    expect((cached as any).metrics.confidence).toBe(0.87);
+    expect((cached as unknown).metrics.confidence).toBe(0.87);
   });
 
   it("caches user permission sets", async () => {
@@ -398,7 +398,7 @@ describe("InMemoryCache - Basic Operations", () => {
     const cached = await cache.get(`perms:user-456`);
 
     expect(cached).toEqual(permissions);
-    expect((cached as any).capabilities).toContain("decision.approve");
+    expect((cached as unknown).capabilities).toContain("decision.approve");
   });
 
   it("caches computed decision confidence scores", async () => {

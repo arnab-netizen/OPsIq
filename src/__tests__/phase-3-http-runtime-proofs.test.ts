@@ -127,7 +127,7 @@ describe("Phase 3: HTTP Runtime Event Flow", () => {
       expect(persistedEvent?.workspaceId).toBe(workspaceId);
 
       // ASSERT: Event contains expected payload
-      const payload = persistedEvent?.payload as any;
+      const payload = persistedEvent?.payload as unknown;
       expect(payload.title).toBe("API Created Recommendation");
       expect(payload.priority).toBe("high");
       expect(payload.engagementId).toBe(engagementId);
@@ -173,7 +173,7 @@ describe("Phase 3: HTTP Runtime Event Flow", () => {
       });
 
       expect(persistedUpdate?.eventType).toBe("recommendation.status_changed");
-      expect((persistedUpdate?.payload as any).status).toBe("in_progress");
+      expect((persistedUpdate?.payload as unknown).status).toBe("in_progress");
 
       // ASSERT: Both events in canonical store
       const allEvents = await db.canonicalEvent.findMany({
@@ -300,7 +300,7 @@ describe("Phase 3: HTTP Runtime Event Flow", () => {
         await EventEmitterService.emit({
           aggregateId: recommendationId,
           aggregateType: "recommendation",
-          eventType: mutation.eventType as any,
+          eventType: mutation.eventType as unknown,
           eventVersion: 1,
           payload: mutation.payload,
           actorId: userId,

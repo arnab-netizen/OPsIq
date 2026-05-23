@@ -289,7 +289,7 @@ describe("Owner Dashboard Service", () => {
       };
 
       try {
-        await buildOwnerDashboardView(context, invalidConfig as any, health, actionQueue, []);
+        await buildOwnerDashboardView(context, invalidConfig as unknown, health, actionQueue, []);
         expect.fail("Should have thrown validation error");
       } catch (error) {
         expect(error).toBeInstanceOf(DashboardServiceError);

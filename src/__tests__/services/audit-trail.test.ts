@@ -44,7 +44,7 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(),
       };
 
-      addAuditEvent(event as any);
+      addAuditEvent(event as unknown);
 
       const filter = { workspaceId, entityType: "action" };
       const result = await queryAuditTrail(filter);
@@ -69,7 +69,7 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(),
       };
 
-      addAuditEvent(event as any);
+      addAuditEvent(event as unknown);
 
       const filter = { workspaceId, entityId };
       const result = await queryAuditTrail(filter);
@@ -95,7 +95,7 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(),
       };
 
-      addAuditEvent(event as any);
+      addAuditEvent(event as unknown);
 
       const filter = { workspaceId, action: "update" as const };
       const result = await queryAuditTrail(filter);
@@ -121,7 +121,7 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(),
       };
 
-      addAuditEvent(event as any);
+      addAuditEvent(event as unknown);
 
       const filter = { workspaceId, status: "failure" as const };
       const result = await queryAuditTrail(filter);
@@ -147,7 +147,7 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(),
       };
 
-      addAuditEvent(event as any);
+      addAuditEvent(event as unknown);
 
       const filter = { workspaceId }; // Different workspace
       const result = await queryAuditTrail(filter);
@@ -171,7 +171,7 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
           occurredAt: new Date(Date.now() - i * 1000),
           recordedAt: new Date(Date.now() - i * 1000),
         };
-        addAuditEvent(event as any);
+        addAuditEvent(event as unknown);
       }
 
       const filter = { workspaceId };
@@ -200,7 +200,7 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(),
       };
 
-      addAuditEvent(event as any);
+      addAuditEvent(event as unknown);
 
       const trail = await getAuditTrailForEntity(workspaceId, entityId);
       expect(trail).toHaveLength(1);
@@ -223,7 +223,7 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(),
       };
 
-      addAuditEvent(event as any);
+      addAuditEvent(event as unknown);
 
       const trail = await getAuditTrailForActor(workspaceId, actorId);
       expect(trail).toHaveLength(1);
@@ -264,8 +264,8 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(),
       };
 
-      addAuditEvent(event1 as any);
-      addAuditEvent(event2 as any);
+      addAuditEvent(event1 as unknown);
+      addAuditEvent(event2 as unknown);
 
       const stats = await getAuditStatistics(workspaceId);
 
@@ -292,7 +292,7 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(),
       };
 
-      addAuditEvent(event as any);
+      addAuditEvent(event as unknown);
 
       const rows = await exportAuditTrail(workspaceId);
 
@@ -335,8 +335,8 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(Date.now() + 1000),
       };
 
-      addAuditEvent(event1 as any);
-      addAuditEvent(event2 as any);
+      addAuditEvent(event1 as unknown);
+      addAuditEvent(event2 as unknown);
 
       const trail = await getAuditTrailForEntity(workspaceId, actionId);
       expect(trail).toHaveLength(2);
@@ -361,7 +361,7 @@ describe("STAGE 17 Slice 3: Audit Trail Queryability", () => {
         recordedAt: new Date(),
       };
 
-      addAuditEvent(event1 as any);
+      addAuditEvent(event1 as unknown);
 
       const result = await queryAuditTrail({
         workspaceId,

@@ -56,7 +56,7 @@ describe("Idempotency Integration Tests", () => {
 
     it("returns cached response on duplicate request", async () => {
       const { checkIdempotencyKey } = await import("@/services/idempotency");
-      const mockCheck = checkIdempotencyKey as any;
+      const mockCheck = checkIdempotencyKey as unknown;
 
       mockCheck.mockResolvedValue({
         isNew: false,
@@ -71,7 +71,7 @@ describe("Idempotency Integration Tests", () => {
 
     it("calls recordIdempotencyResponse on success", async () => {
       const { recordIdempotencyResponse } = await import("@/services/idempotency");
-      const mockRecord = recordIdempotencyResponse as any;
+      const mockRecord = recordIdempotencyResponse as unknown;
 
       mockRecord.mockResolvedValue({});
 
@@ -80,7 +80,7 @@ describe("Idempotency Integration Tests", () => {
 
     it("calls recordIdempotencyError on failure", async () => {
       const { recordIdempotencyError } = await import("@/services/idempotency");
-      const mockError = recordIdempotencyError as any;
+      const mockError = recordIdempotencyError as unknown;
 
       mockError.mockResolvedValue({});
 
@@ -96,7 +96,7 @@ describe("Idempotency Integration Tests", () => {
 
     it("detects duplicate phase transitions", async () => {
       const { checkIdempotencyKey } = await import("@/services/idempotency");
-      const mockCheck = checkIdempotencyKey as any;
+      const mockCheck = checkIdempotencyKey as unknown;
 
       mockCheck.mockResolvedValue({
         isNew: false,
@@ -111,7 +111,7 @@ describe("Idempotency Integration Tests", () => {
 
     it("prevents duplicate phase transitions", async () => {
       const { checkIdempotencyKey } = await import("@/services/idempotency");
-      const mockCheck = checkIdempotencyKey as any;
+      const mockCheck = checkIdempotencyKey as unknown;
 
       mockCheck.mockRejectedValue(
         new Error("Duplicate request in flight with same idempotency key")
@@ -134,7 +134,7 @@ describe("Idempotency Integration Tests", () => {
 
     it("prevents duplicate condition assessments", async () => {
       const { checkIdempotencyKey } = await import("@/services/idempotency");
-      const mockCheck = checkIdempotencyKey as any;
+      const mockCheck = checkIdempotencyKey as unknown;
 
       mockCheck.mockResolvedValue({
         isNew: false,
@@ -156,7 +156,7 @@ describe("Idempotency Integration Tests", () => {
 
     it("returns same engagement state on duplicate update", async () => {
       const { checkIdempotencyKey } = await import("@/services/idempotency");
-      const mockCheck = checkIdempotencyKey as any;
+      const mockCheck = checkIdempotencyKey as unknown;
 
       mockCheck.mockResolvedValue({
         isNew: false,
@@ -171,7 +171,7 @@ describe("Idempotency Integration Tests", () => {
 
     it("rejects conflicting updates with same key", async () => {
       const { checkIdempotencyKey } = await import("@/services/idempotency");
-      const mockCheck = checkIdempotencyKey as any;
+      const mockCheck = checkIdempotencyKey as unknown;
 
       mockCheck.mockRejectedValue(
         new Error("Idempotency key reused for different operation")
@@ -189,7 +189,7 @@ describe("Idempotency Integration Tests", () => {
   describe("Idempotency guarantees", () => {
     it("same key + same payload => same response", async () => {
       const { checkIdempotencyKey } = await import("@/services/idempotency");
-      const mockCheck = checkIdempotencyKey as any;
+      const mockCheck = checkIdempotencyKey as unknown;
 
       const response = {
         isNew: false,
@@ -222,7 +222,7 @@ describe("Idempotency Integration Tests", () => {
 
     it("same key + different payload => error", async () => {
       const { checkIdempotencyKey } = await import("@/services/idempotency");
-      const mockCheck = checkIdempotencyKey as any;
+      const mockCheck = checkIdempotencyKey as unknown;
 
       mockCheck.mockRejectedValue(
         new Error("Idempotency key reused for different operation")
@@ -243,14 +243,14 @@ describe("Idempotency Integration Tests", () => {
 
     it("no duplicate rows created", async () => {
       const { recordIdempotencyResponse } = await import("@/services/idempotency");
-      const mockRecord = recordIdempotencyResponse as any;
+      const mockRecord = recordIdempotencyResponse as unknown;
 
       // First request creates engagement and records response
       mockRecord.mockResolvedValue({});
 
       // Second request with same key returns cached, no new record created
       const { checkIdempotencyKey } = await import("@/services/idempotency");
-      const mockCheck = checkIdempotencyKey as any;
+      const mockCheck = checkIdempotencyKey as unknown;
 
       mockCheck.mockResolvedValue({
         isNew: false,

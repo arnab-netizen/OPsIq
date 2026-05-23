@@ -47,8 +47,8 @@ describe("Public API Service", () => {
 
       const dto = toPublicEngagementDTO(engagement);
 
-      expect((dto as any).costBudget).toBeUndefined();
-      expect((dto as any).actualCost).toBeUndefined();
+      expect((dto as unknown).costBudget).toBeUndefined();
+      expect((dto as unknown).actualCost).toBeUndefined();
     });
   });
 
@@ -188,8 +188,8 @@ describe("Public API Service", () => {
 
       const dto = toPublicExperimentDTO(experiment);
 
-      expect((dto as any).plan?.estimatedCost).toBeUndefined();
-      expect((dto as any).plan?.actualCost).toBeUndefined();
+      expect((dto as unknown).plan?.estimatedCost).toBeUndefined();
+      expect((dto as unknown).plan?.actualCost).toBeUndefined();
     });
   });
 

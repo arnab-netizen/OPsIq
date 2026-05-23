@@ -344,7 +344,7 @@ export function isSessionSnapshotImmutable(snapshot: CanonicalVerifiedSession): 
  */
 export function attemptSessionSnapshotMutation(snapshot: CanonicalVerifiedSession): boolean {
   try {
-    (snapshot as any).newField = "test";
+    (snapshot as unknown).newField = "test";
     return true;  // Mutation succeeded (bad!)
   } catch {
     return false;  // Mutation blocked (good!)

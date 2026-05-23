@@ -29,7 +29,7 @@ describe("D1: Admin Dashboard - Concurrency Safety Proofs", () => {
       operations.push({
         id: `op-${i}`,
         workspace_id: `ws-${i % workspaceCount}`,
-        operation: ["disable", "list_members", "create_member"][i % 3] as any,
+        operation: ["disable", "list_members", "create_member"][i % 3] as unknown,
         timestamp: Date.now() + Math.random() * 1000, // Randomize timestamps
       });
     }

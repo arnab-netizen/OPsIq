@@ -285,10 +285,10 @@ export class BestPathOrchestrator {
       rootCauseIdentified: !!diagnosticData.rootCause,
       bottlenecksDetected:
         // Support both old format (bottlenecks array) and new format (primaryBottleneck string)
-        (diagnosticData.bottlenecks as any[])?.length ||
+        (diagnosticData.bottlenecks as unknown[])?.length ||
         (diagnosticData.primaryBottleneck ? 1 : 0),
       rfmSegment: diagnosticData.rfmSegment || "unknown",
-      metricsHealthy: (diagnosticData.metrics as any[])?.length > 0,
+      metricsHealthy: (diagnosticData.metrics as unknown[])?.length > 0,
       archetype: diagnosticData.archetype || "unknown",
       maturityLevel: diagnosticData.maturityLevel || 0,
     };

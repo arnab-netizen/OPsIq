@@ -36,7 +36,7 @@ describe("GET /api/value", () => {
       vi.mocked(authServerRole.resolveServerRole).mockResolvedValue("viewer");
       vi.mocked(auth.getSession).mockResolvedValue({
         user: { id: "user-123" },
-      } as any);
+      } as unknown);
       vi.mocked(operatorStore.getItems).mockResolvedValue(mockItems);
       vi.mocked(valueTracker.calculateValue).mockReturnValue({
         totalExpected: 100000,
@@ -63,7 +63,7 @@ describe("GET /api/value", () => {
       vi.mocked(authServerRole.resolveServerRole).mockResolvedValue("admin");
       vi.mocked(auth.getSession).mockResolvedValue({
         user: { id: "user-123" },
-      } as any);
+      } as unknown);
     });
 
     it("should return computed value metrics", async () => {
@@ -187,7 +187,7 @@ describe("GET /api/value", () => {
       vi.mocked(authServerRole.resolveServerRole).mockResolvedValue("admin");
       vi.mocked(auth.getSession).mockResolvedValue({
         user: { id: "user-123" },
-      } as any);
+      } as unknown);
       vi.mocked(operatorStore.getItems).mockResolvedValue([]);
       vi.mocked(valueTracker.calculateValue).mockReturnValue({
         totalExpected: 100000,
@@ -256,7 +256,7 @@ describe("GET /api/value", () => {
       vi.mocked(authServerRole.resolveServerRole).mockResolvedValue("admin");
       vi.mocked(auth.getSession).mockResolvedValue({
         user: { id: "user-123" },
-      } as any);
+      } as unknown);
     });
 
     it("should handle errors from getItems", async () => {

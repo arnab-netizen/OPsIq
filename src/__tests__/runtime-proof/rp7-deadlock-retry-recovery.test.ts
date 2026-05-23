@@ -379,7 +379,7 @@ describe("Phase RP7: Deadlock & Retry Recovery", () => {
         }).catch((e) => {
           const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "load" });
           console.error(`Emit failed: ${governed.operatorMessage}`);
-          return { details: governed.operatorMessage, code: (e as any).code };
+          return { details: governed.operatorMessage, code: (e as unknown).code };
         });
       });
 
@@ -451,7 +451,7 @@ describe("Phase RP7: Deadlock & Retry Recovery", () => {
         }).catch((e) => {
           const governed = classifyOperatorError(e instanceof Error ? e : new Error(String(e)), { context: "load" });
           console.error(`Emit ${i} failed: ${governed.operatorMessage}`);
-          return { details: governed.operatorMessage, code: (e as any).code };
+          return { details: governed.operatorMessage, code: (e as unknown).code };
         })
       );
 

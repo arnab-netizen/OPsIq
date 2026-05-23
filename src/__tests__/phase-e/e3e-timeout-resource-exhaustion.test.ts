@@ -27,7 +27,7 @@ describe("PHASE E PRIORITY 3E: Hostile Durability - Timeout + Resource Exhaustio
         total: 10,
         available: 0, // All in use
         active: 10,
-        queue: [] as any[],
+        queue: [] as unknown[],
       };
 
       // Incoming request

@@ -109,10 +109,10 @@ describe.skip("Decision Determinism", () => {
     // Create a deliberately different decision output to test the comparison
     const differentDecision = {
       ...snapshot.decisionOutput,
-      type: "different" as any,
+      type: "different" as unknown,
     };
 
-    const determinismCheck = await verifyDecisionDeterminism(snapshotId, differentDecision as any);
+    const determinismCheck = await verifyDecisionDeterminism(snapshotId, differentDecision as unknown);
 
     expect(determinismCheck.isDeterministic).toBe(false);
     expect(determinismCheck.differences).toBeDefined();

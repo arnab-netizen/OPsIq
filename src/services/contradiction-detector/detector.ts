@@ -39,7 +39,7 @@ export class ContradictionDetector {
       };
     } catch (err: unknown) {
       if (err instanceof ZodError) {
-        const messages = (err as any).errors
+        const messages = (err as unknown).errors
           ?.map((e: unknown) => e.message)
           .join("; ") || String(err);
         throw new Error(`Invalid contract format: ${messages}`);

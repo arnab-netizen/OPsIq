@@ -51,11 +51,11 @@ describe("Recommendation Service", () => {
 
   afterAll(async () => {
     try {
-      await (db.recommendation.deleteMany as any)({ where: { engagementId } });
-      await (db.finding.deleteMany as any)({ where: { engagementId } });
-      await (db.evidenceItem.deleteMany as any)({ where: { engagementId } });
-      await (db.engagement.deleteMany as any)({ where: { id: engagementId } });
-      await (db.clientAccount.deleteMany as any)({ where: { id: clientId } });
+      await (db.recommendation.deleteMany as unknown)({ where: { engagementId } });
+      await (db.finding.deleteMany as unknown)({ where: { engagementId } });
+      await (db.evidenceItem.deleteMany as unknown)({ where: { engagementId } });
+      await (db.engagement.deleteMany as unknown)({ where: { id: engagementId } });
+      await (db.clientAccount.deleteMany as unknown)({ where: { id: clientId } });
     } catch {
       // Cleanup best-effort
     }
@@ -165,8 +165,8 @@ describe("Recommendation Service", () => {
       expect(result).toEqual([]);
 
       // Cleanup
-      await (db.engagement.deleteMany as any)({ where: { id: eng2.id } });
-      await (db.clientAccount.deleteMany as any)({ where: { id: client2.id } });
+      await (db.engagement.deleteMany as unknown)({ where: { id: eng2.id } });
+      await (db.clientAccount.deleteMany as unknown)({ where: { id: client2.id } });
     });
   });
 
@@ -204,7 +204,7 @@ describe("Recommendation Service", () => {
       expect(recs.length).toBeGreaterThan(0);
 
       // Ensure visibilityStatus is not in response
-      const rec = recs[0] as any;
+      const rec = recs[0] as unknown;
       expect(rec.visibilityStatus).toBeUndefined();
     });
   });

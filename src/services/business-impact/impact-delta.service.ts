@@ -45,7 +45,7 @@ function reduceSeverity(
 ): "low" | "medium" | "high" | "critical" | "existential" {
   const currentIndex = severityProgression.indexOf(level);
   if (currentIndex === 0) return "low";
-  return severityProgression[currentIndex - 1] as any;
+  return severityProgression[currentIndex - 1] as unknown;
 }
 
 function increaseSeverity(
@@ -53,7 +53,7 @@ function increaseSeverity(
 ): "low" | "medium" | "high" | "critical" | "existential" {
   const currentIndex = severityProgression.indexOf(level);
   if (currentIndex === severityProgression.length - 1) return "existential";
-  return severityProgression[currentIndex + 1] as any;
+  return severityProgression[currentIndex + 1] as unknown;
 }
 
 function improveProbability(

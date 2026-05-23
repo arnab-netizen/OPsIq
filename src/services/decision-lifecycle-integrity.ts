@@ -246,7 +246,7 @@ export async function runDecisionLifecycleIntegrityCheck(
         "EXECUTED",
         "OUTCOME_RECORDED",
         "CLOSED",
-      ].includes(state as any);
+      ].includes(state as unknown);
       return !isExecutedOrBeyond;
     });
 

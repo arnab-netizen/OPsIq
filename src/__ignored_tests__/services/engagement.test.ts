@@ -73,7 +73,7 @@ describe("engagement service", () => {
         interventionMode: "recovery",
       };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockClientId,
@@ -131,7 +131,7 @@ describe("engagement service", () => {
         interventionMode: "invalid",
       };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         findUnique: vi.fn().mockResolvedValue({
           status: "active",
@@ -153,7 +153,7 @@ describe("engagement service", () => {
         interventionMode: "recovery",
       };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.clientAccount = {
         findUnique: vi.fn().mockResolvedValue({ status: "archived" }),
       };
@@ -166,7 +166,7 @@ describe("engagement service", () => {
 
   describe("updateEngagement", () => {
     it("updates status and emits event", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.engagement = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockEngagementId,
@@ -192,7 +192,7 @@ describe("engagement service", () => {
     });
 
     it("triggers re-evaluation on intervention mode change", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.engagement = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockEngagementId,
@@ -207,7 +207,7 @@ describe("engagement service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
       vi.mocked(triggerReEvaluation).mockResolvedValue({
-        targets: {} as any,
+        targets: {} as unknown,
         auditEventId: "eval-id",
       });
 
@@ -226,7 +226,7 @@ describe("engagement service", () => {
     });
 
     it("emits completed event on status transition", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.engagement = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockEngagementId,
@@ -258,7 +258,7 @@ describe("engagement service", () => {
 
   describe("getEngagementById", () => {
     it("returns engagement with relations", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.engagement = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockEngagementId,
@@ -281,7 +281,7 @@ describe("engagement service", () => {
 
   describe("listEngagements", () => {
     it("returns paginated engagements", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.engagement = {
         findMany: vi.fn().mockResolvedValue([
           { id: "eng-1", code: "TEST-001" },

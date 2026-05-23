@@ -239,8 +239,8 @@ describe("POST /api/opsiq/consulting-engine/run", () => {
         limitations: [],
         nextReviewTriggers: [],
       },
-      recommendations: [mockRec as any],
-      actions: [mockAction as any],
+      recommendations: [mockRec as unknown],
+      actions: [mockAction as unknown],
       warnings: [],
     });
 

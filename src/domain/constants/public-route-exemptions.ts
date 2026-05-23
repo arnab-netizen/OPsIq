@@ -49,7 +49,7 @@ export const EXEMPTION_REASONS = {
 
 export function isPublicRouteExempted(path: string): boolean {
   const allExempted = Object.values(PUBLIC_ROUTE_EXEMPTIONS).flat();
-  return allExempted.includes(path as any);
+  return allExempted.includes(path as unknown);
 }
 
 export function getExemptionReason(path: string): string | undefined {

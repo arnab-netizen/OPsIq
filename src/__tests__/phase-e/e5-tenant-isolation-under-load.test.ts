@@ -297,8 +297,8 @@ describe("PHASE E PRIORITY 5: Tenant Isolation Under Hostile Load", () => {
     it("should prevent one tenant from blocking another's critical ops", async () => {
       // HOSTILE: Tenant A fills queue, Tenant B critical ops blocked
       const criticalOpsQueue = {
-        urgent: [] as any[],
-        normal: [] as any[],
+        urgent: [] as unknown[],
+        normal: [] as unknown[],
       };
 
       const enqueue = (op: unknown) => {

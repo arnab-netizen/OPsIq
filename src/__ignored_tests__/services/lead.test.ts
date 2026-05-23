@@ -45,7 +45,7 @@ describe("lead service", () => {
         contactName: "John Doe",
       };
 
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.leadRecord = {
         create: vi.fn().mockResolvedValue({
           id: mockLeadId,
@@ -74,7 +74,7 @@ describe("lead service", () => {
 
   describe("updateLead", () => {
     it("updates lead status with valid transition", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.leadRecord = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
@@ -101,7 +101,7 @@ describe("lead service", () => {
     });
 
     it("throws ValidationError when updating converted lead", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.leadRecord = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
@@ -123,7 +123,7 @@ describe("lead service", () => {
 
   describe("linkLeadToEngagement", () => {
     it("links qualified lead to engagement and triggers re-evaluation", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.leadRecord = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
@@ -150,7 +150,7 @@ describe("lead service", () => {
 
       vi.mocked(emitAuditEvent).mockResolvedValue("event-id");
       vi.mocked(triggerReEvaluation).mockResolvedValue({
-        targets: {} as any,
+        targets: {} as unknown,
         auditEventId: "eval-id",
       });
 
@@ -171,7 +171,7 @@ describe("lead service", () => {
     });
 
     it("validates engagement belongs to client", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.leadRecord = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
@@ -198,7 +198,7 @@ describe("lead service", () => {
     });
 
     it("throws ValidationError when lead not qualified", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.leadRecord = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
@@ -221,7 +221,7 @@ describe("lead service", () => {
 
   describe("getLeadById", () => {
     it("returns lead with relations", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.leadRecord = {
         findUnique: vi.fn().mockResolvedValue({
           id: mockLeadId,
@@ -240,7 +240,7 @@ describe("lead service", () => {
 
   describe("listLeads", () => {
     it("returns paginated leads", async () => {
-      const mockDb = db as any;
+      const mockDb = db as unknown;
       mockDb.leadRecord = {
         findMany: vi.fn().mockResolvedValue([
           {

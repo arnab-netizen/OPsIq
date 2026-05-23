@@ -94,7 +94,7 @@ export class RevenueEngine {
     }
 
     const values = scopedStreams
-      .map((s) => (s as any)[metricName] || 0)
+      .map((s) => (s as unknown)[metricName] || 0)
       .filter((v) => typeof v === "number" && v > 0);
 
     const sum = values.reduce((a, b) => a + b, 0);

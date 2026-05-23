@@ -164,12 +164,12 @@ describe("Consulting Engine Adapters (Unit Tests)", () => {
 
       const recommendations1 = await createRecommendationsFromInterventions(
         engagementId,
-        null as any,
+        null as unknown,
         actorId
       );
       const recommendations2 = await createRecommendationsFromInterventions(
         engagementId,
-        undefined as any,
+        undefined as unknown,
         actorId
       );
 
@@ -354,12 +354,12 @@ describe("Consulting Engine Adapters (Unit Tests)", () => {
 
       const actions1 = await createActionsFromInterventions(
         engagementId,
-        null as any,
+        null as unknown,
         actorId
       );
       const actions2 = await createActionsFromInterventions(
         engagementId,
-        undefined as any,
+        undefined as unknown,
         actorId
       );
 

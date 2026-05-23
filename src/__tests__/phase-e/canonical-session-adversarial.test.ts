@@ -82,7 +82,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
       // Simulate external revocation (pretend DB was updated)
       // Snapshot should be IMMUTABLE - cannot reflect this change
       expect(() => {
-        (snapshot.session as any).isValid = false;
+        (snapshot.session as unknown).isValid = false;
       }).toThrow();
 
       // Snapshot still shows original valid state
@@ -147,7 +147,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
 
       // Attempt to modify roles
       expect(() => {
-        (snapshot.roles as any).push({ role: "NEW_ROLE", scope: "workspace", scopeId: "ws-1", grantedAt: new Date() });
+        (snapshot.roles as unknown).push({ role: "NEW_ROLE", scope: "workspace", scopeId: "ws-1", grantedAt: new Date() });
       }).toThrow();
 
       // Original roles unchanged
@@ -176,7 +176,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
 
       // Attempt to mutate workspace state
       expect(() => {
-        (snapshot.workspace.membership as any).isActive = false;
+        (snapshot.workspace.membership as unknown).isActive = false;
       }).toThrow();
 
       // Snapshot still shows original active state
@@ -202,7 +202,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
 
       // Handler receives read-only snapshot
       expect(() => {
-        (readOnlySnapshot as any).actor.id = "user-2";
+        (readOnlySnapshot as unknown).actor.id = "user-2";
       }).toThrow();
 
       // Handler cannot modify snapshot
@@ -231,7 +231,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
 
       // Any attempt to change snapshot throws
       expect(() => {
-        (snapshot as any).session.expiresAt = new Date(Date.now());
+        (snapshot as unknown).session.expiresAt = new Date(Date.now());
       }).toThrow();
     });
   });
@@ -275,7 +275,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
 
       // Concurrent requests don't interfere
       expect(() => {
-        (snapshot1 as any).snapshotId = snapshot2.snapshotId;
+        (snapshot1 as unknown).snapshotId = snapshot2.snapshotId;
       }).toThrow();
 
       // Snapshot1 unchanged
@@ -412,7 +412,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
 
       // Hash cannot be mutated
       expect(() => {
-        (snapshot1 as any).snapshotHash = "FORGED_HASH";
+        (snapshot1 as unknown).snapshotHash = "FORGED_HASH";
       }).toThrow();
 
       // Replay with same data should produce same hash
@@ -470,7 +470,7 @@ describe("PHASE E STEPS 4-6: Canonical Session Adversarial Testing", () => {
       expect(readOnly.actor.id).toBe("user-1");
 
       expect(() => {
-        (readOnly as any).actor.id = "user-2";
+        (readOnly as unknown).actor.id = "user-2";
       }).toThrow();
 
       // 5. Snapshot is sealed and frozen after finalization

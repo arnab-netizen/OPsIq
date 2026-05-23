@@ -55,7 +55,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
   const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
 
-  const nextRequest = ctx.request as any;
+  const nextRequest = ctx.request as unknown;
   const body = await nextRequest.json();
   const parsed = IncrementQuotaSchema.parse(body);
 
@@ -66,8 +66,8 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
   const quotaField = `${parsed.type}sCreated` as const;
   const limitField = `${parsed.type}sPerMonth` as const;
-  const currentUsage = (usage as any)[quotaField] || 0;
-  const limit = (config as any)[limitField] || Infinity;
+  const currentUsage = (usage as unknown)[quotaField] || 0;
+  const limit = (config as unknown)[limitField] || Infinity;
 
   if (currentUsage >= limit) {
     throw new Error(`Quota exceeded for ${parsed.type}s`);

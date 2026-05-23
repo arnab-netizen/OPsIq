@@ -46,9 +46,9 @@ describe("ShockEvent Service", () => {
     // Clean up test data
     // Note: Clean up may fail if records don't exist - that's OK
     try {
-      await (db.shockEvent.deleteMany as any)({ where: { engagementId } });
-      await (db.engagement.deleteMany as any)({ where: { id: engagementId } });
-      await (db.clientAccount.deleteMany as any)({ where: { id: clientId } });
+      await (db.shockEvent.deleteMany as unknown)({ where: { engagementId } });
+      await (db.engagement.deleteMany as unknown)({ where: { id: engagementId } });
+      await (db.clientAccount.deleteMany as unknown)({ where: { id: clientId } });
     } catch {
       // Cleanup is best-effort
     }
@@ -81,7 +81,7 @@ describe("ShockEvent Service", () => {
         type: "invalid_type",
         severity: "high",
         happenedAt: "2026-04-22T10:00:00Z",
-      } as any;
+      } as unknown;
 
       await expect(async () => {
         await createShockEvent(input, actorId);
@@ -94,7 +94,7 @@ describe("ShockEvent Service", () => {
         type: "major_client_loss",
         severity: "extreme",
         happenedAt: "2026-04-22T10:00:00Z",
-      } as any;
+      } as unknown;
 
       await expect(async () => {
         await createShockEvent(input, actorId);
@@ -183,7 +183,7 @@ describe("ShockEvent Service", () => {
           {
             severity: "invalid",
             version: existing.version,
-          } as any,
+          } as unknown,
           actorId
         );
       }).rejects.toThrow("Invalid severity");
@@ -280,7 +280,7 @@ describe("ShockEvent Service", () => {
         const result = await createShockEvent(
           {
             engagementId,
-            type: type as any,
+            type: type as unknown,
             severity: "medium",
             happenedAt: "2026-04-22T10:00:00Z",
           },

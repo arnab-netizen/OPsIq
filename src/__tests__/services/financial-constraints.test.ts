@@ -286,7 +286,7 @@ describe("STAGE 10 Slice 1: Financial Constraints Engine", () => {
     });
 
     it("should return false for unknown action types", () => {
-      expect(isActionPermitted(healthyEval, "unknown" as any)).toBe(false);
+      expect(isActionPermitted(healthyEval, "unknown" as unknown)).toBe(false);
     });
   });
 

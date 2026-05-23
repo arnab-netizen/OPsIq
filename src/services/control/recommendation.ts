@@ -173,7 +173,7 @@ export function validateRecommendationContract(
   if (!Array.isArray(rec.variablesUsed)) {
     errors.push("variablesUsed must be an array");
   } else {
-    const invalidVars = (rec.variablesUsed as any[]).filter(
+    const invalidVars = (rec.variablesUsed as unknown[]).filter(
       (v) => typeof v !== "string"
     );
     if (invalidVars.length > 0) {
@@ -183,7 +183,7 @@ export function validateRecommendationContract(
   if (!Array.isArray(rec.variablesIgnored)) {
     errors.push("variablesIgnored must be an array");
   } else {
-    const invalidVars = (rec.variablesIgnored as any[]).filter(
+    const invalidVars = (rec.variablesIgnored as unknown[]).filter(
       (v) => typeof v !== "string"
     );
     if (invalidVars.length > 0) {
@@ -236,8 +236,8 @@ export function validateRecommendationContract(
     if (!Array.isArray(scenarios.alternatives)) {
       errors.push("scenarios.alternatives must be an array");
     } else {
-      for (let i = 0; i < (scenarios.alternatives as any[]).length; i++) {
-        const alt = (scenarios.alternatives as any[])[i];
+      for (let i = 0; i < (scenarios.alternatives as unknown[]).length; i++) {
+        const alt = (scenarios.alternatives as unknown[])[i];
         if (typeof alt.name !== "string") {
           errors.push(
             `scenarios.alternatives[${i}].name must be a string, got ${typeof alt.name}`

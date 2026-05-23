@@ -272,7 +272,7 @@ export default function ConsultingEnginePage() {
                 <div key={rec.id} className="border-l-4 border-blue-500 pl-4 py-2">
                   <div className="flex items-start justify-between">
                     <h3 className="font-semibold text-foreground">{rec.title}</h3>
-                    <Badge variant={SEVERITY_COLORS[rec.priority.toLowerCase()] as any}>
+                    <Badge variant={SEVERITY_COLORS[rec.priority.toLowerCase()] as unknown}>
                       {rec.priority}
                     </Badge>
                   </div>
@@ -292,7 +292,7 @@ export default function ConsultingEnginePage() {
                 <div key={action.id} className="border-l-4 border-green-500 pl-4 py-2">
                   <div className="flex items-start justify-between">
                     <h3 className="font-semibold text-foreground">{action.title}</h3>
-                    <Badge variant={SEVERITY_COLORS[action.priority.toLowerCase()] as any}>
+                    <Badge variant={SEVERITY_COLORS[action.priority.toLowerCase()] as unknown}>
                       {action.priority}
                     </Badge>
                   </div>

@@ -133,7 +133,7 @@ function scanFileForShadowReads(filePath: string, content: string): ShadowReadVi
           line: lineNum + 1,
           column: match.index + 1,
           pattern: rule.name,
-          severity: rule.severity as any,
+          severity: rule.severity as unknown,
           replacement: rule.replacement,
           context: line.trim(),
         });
