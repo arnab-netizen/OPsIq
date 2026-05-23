@@ -33,7 +33,10 @@
     "governance:scan": "tsx scripts/governance-scan.ts",
     "governance:scan:strict": "tsx scripts/governance-scan.ts --strict",
     "smoke:prod": "tsx scripts/smoke-tests.ts",
-    "smoke:staging": "tsx scripts/smoke-tests.ts --env=staging"
+    "smoke:staging": "tsx scripts/smoke-tests.ts --env=staging",
+    "deployment:preflight": "node scripts/deployment-preflight.mjs",
+    "deployment:smoke": "node scripts/production-smoke.mjs",
+    "support:diagnostics": "node scripts/support-diagnostics.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
