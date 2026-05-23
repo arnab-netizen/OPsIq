@@ -1,0 +1,129 @@
+{
+  "timestamp": "2026-05-23T21:50:00Z",
+  "existing_health_routes": [
+    {
+      "path": "/api/health",
+      "method": "GET",
+      "status": "OPERATIONAL",
+      "checks": [
+        "database connection and latency",
+        "memory usage (heap %)",
+        "uptime",
+        "Node version and environment"
+      ],
+      "response_code_healthy": 200,
+      "response_code_degraded": 200,
+      "auth_bypass": true
+    }
+  ],
+  "existing_readiness_routes": [
+    {
+      "path": "/api/readiness",
+      "method": "GET",
+      "status": "OPERATIONAL",
+      "checks": [
+        "startup complete",
+        "database healthy",
+        "queue healthy",
+        "cache healthy",
+        "external services status"
+      ],
+      "response_code_ready": 200,
+      "response_code_not_ready": 503
+    },
+    {
+      "path": "/api/ops/readiness",
+      "method": "GET",
+      "status": "OPERATIONAL",
+      "checks": [
+        "current startup status",
+        "readiness audit history",
+        "system health",
+        "protected routes operational"
+      ],
+      "response_code": 200
+    }
+  ],
+  "existing_startup_routes": [
+    {
+      "path": "/api/startup",
+      "method": "GET",
+      "status": "OPERATIONAL",
+      "checks": [
+        "config loaded",
+        "database migrated",
+        "routes registered",
+        "test request successful"
+      ],
+      "response_code_ready": 200,
+      "response_code_not_ready": 503
+    }
+  ],
+  "existing_diagnostics_routes": [
+    {
+      "path": "/api/ops/runtime",
+      "method": "GET",
+      "status": "OPERATIONAL",
+      "checks": [
+        "active requests count",
+        "memory usage breakdown",
+        "request latency (avg + p95)",
+        "database latency (avg + p95)",
+        "error counts and classification",
+        "idempotency collisions",
+        "slow requests (>1000ms)",
+        "active request traces"
+      ],
+      "response_code": 200
+    }
+  ],
+  "existing_env_validation": [
+    {
+      "file": "scripts/validate-deployment.ts",
+      "purpose": "Production deployment readiness validation",
+      "checks": [
+        "CI status",
+        "environment variables presence",
+        "database schema validity",
+        "build artifacts",
+        "tests status"
+      ]
+    }
+  ],
+  "existing_smoke_scripts": [
+    {
+      "file": "scripts/smoke-tests.ts",
+      "purpose": "Production smoke testing",
+      "status": "EXISTS"
+    }
+  ],
+  "existing_runbooks": [
+    {
+      "file": "docs/*",
+      "status": "PARTIAL - need to inventory"
+    }
+  ],
+  "gaps_found": [
+    "Deployment preflight checker script (environment presence, Node version, schema validation)",
+    "Production smoke test runner that works offline (without BASE_URL requirement)",
+    "Support diagnostics bundle generator",
+    "External deployment readiness runbook (unified documentation)"
+  ],
+  "reuse_plan": [
+    "Use existing /api/health for health checks",
+    "Use existing /api/readiness for readiness checks",
+    "Use existing /api/startup for startup checks",
+    "Use existing /api/ops/readiness for audit history",
+    "Use existing /api/ops/runtime for diagnostics",
+    "Extend validate-deployment.ts with preflight checks",
+    "Extend smoke-tests.ts with BASE_URL handling"
+  ],
+  "create_plan": [
+    "Create scripts/deployment-preflight.mjs - environment validation",
+    "Create scripts/production-smoke.mjs - offline smoke tests",
+    "Create scripts/support-diagnostics.mjs - bundle generator",
+    "Create docs/EXTERNAL_DEPLOYMENT_READINESS_RUNBOOK.md - unified documentation",
+    "Add package.json scripts for preflight, smoke, diagnostics",
+    "Create audit artifact summarizing all readiness checks"
+  ]
+}
