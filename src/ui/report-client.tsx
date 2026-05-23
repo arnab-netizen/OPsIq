@@ -17,15 +17,15 @@ interface Report {
       assessedAt: string;
     };
   };
-  findings: Array<any>;
-  recommendations: Array<any>;
-  actions: Array<any>;
-  kpis: Array<any>;
-  reviewStatus: any;
+  findings: Array<unknown>;
+  recommendations: Array<unknown>;
+  actions: Array<unknown>;
+  kpis: Array<unknown>;
+  reviewStatus: unknown;
   metadata: {
     generatedAt: string;
     version: string;
-    dataCompleteness: any;
+    dataCompleteness: unknown;
   };
 }
 

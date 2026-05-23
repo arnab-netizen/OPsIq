@@ -12,7 +12,7 @@ import {
 } from './helpers';
 
 test.describe('PHASE C: Core Product Workflow Execution', () => {
-  const workflowMetrics: any[] = [];
+  const workflowMetrics: Array<Record<string, unknown>> = [];
 
   test('1. Dashboard rendering and state', async ({ page }) => {
     // Login

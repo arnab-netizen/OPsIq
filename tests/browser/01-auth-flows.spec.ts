@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import {
   TEST_USERS,
   authenticateUser,
@@ -9,7 +9,7 @@ import {
 } from './helpers';
 
 test.describe('PHASE B: Authentication Flow Runtime', () => {
-  const authTimings: any[] = [];
+  const authTimings: Array<{ flow: string; authTime: number; loadTime: number }> = [];
 
   test('1. Login flow - valid credentials', async ({ page, context }) => {
     const startTime = Date.now();
