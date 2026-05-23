@@ -68,6 +68,8 @@ jobs:
 
       - name: Run full test suite with build
         run: npm run test:ci
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
         continue-on-error: false
 
       - name: Upload coverage (if generated)
