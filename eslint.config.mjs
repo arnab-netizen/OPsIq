@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
     "*.cjs",
     "scripts/*.js",
     "**/__ignored_tests__/**",
+    "**/generated/**",
   ]),
   // PHASE G2: Auth enforcement rules
   {

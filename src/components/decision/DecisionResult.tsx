@@ -30,7 +30,7 @@ interface DecisionResultResponse {
 }
 
 interface DecisionResultProps {
-  result: DecisionResult | DecisionResultResponse | any;
+  result: DecisionResult | DecisionResultResponse | unknown;
 }
 
 // Type guard to check if result is a DecisionResultResponse
