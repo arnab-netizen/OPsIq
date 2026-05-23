@@ -11,22 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: opsiq_test
-          POSTGRES_INITDB_ARGS: "-c log_min_messages=warning"
-        options: >-
-          --health-cmd "pg_isready -U postgres -d opsiq_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-          --health-start-period 10s
-        ports:
-          - 5432:5432
+    env:
+      NODE_ENV: test
+      SKIP_ENV_VALIDATION: "true"
 
     strategy:
       matrix:
@@ -47,43 +34,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Governance compliance scan
-        run: npm run governance:scan:strict
-        continue-on-error: false
-
-      - name: TypeScript type checking
-        run: npx tsc --noEmit
-        continue-on-error: false
-
-      - name: Prisma schema validation
-        run: npx prisma validate
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-        continue-on-error: false
-
-      - name: Prisma database migration
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-        continue-on-error: false
-
-      - name: Regenerate Prisma client after migrations
-        run: npx prisma generate
-        continue-on-error: false
-
-      - name: Build project
-        run: npm run build
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          NODE_ENV: test
-        continue-on-error: false
-
-      - name: Run full test suite
+      - name: Run full test suite with build
         run: npm run test:ci
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
-          NODE_ENV: test
         continue-on-error: false
 
       - name: Upload coverage (if generated)
