@@ -170,8 +170,10 @@ async function runTests() {
     execSync("vitest run --maxWorkers 1", { stdio: "inherit", env });
     console.log("✓ Tests completed");
     return true;
-  } catch {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     console.error("✗ Tests failed");
+    console.error("Error details:", errorMsg);
     return false;
   }
 }
