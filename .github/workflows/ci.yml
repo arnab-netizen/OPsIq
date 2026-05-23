@@ -57,12 +57,15 @@ jobs:
 
       - name: Run full test suite with build
         run: |
-          set -e
           echo "Starting test:ci runner..."
           npm run test:ci 2>&1 | tee test-ci-output.log
           exit_code=${PIPESTATUS[0]}
           echo "test:ci exit code: $exit_code"
-          exit $exit_code
+          if [ $exit_code -ne 0 ]; then
+            echo "FAILED: test:ci exited with code $exit_code"
+            exit $exit_code
+          fi
+          echo "SUCCESS: test:ci completed"
         continue-on-error: false
 
       - name: Print test:ci output on failure
