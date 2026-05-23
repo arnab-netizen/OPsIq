@@ -184,11 +184,12 @@ async function runTests() {
   console.log("🧪 Running tests...");
 
   try {
-    process.env.DATABASE_URL = DATABASE_URL;
-    process.env.TEST_API_URL = NEXT_SERVER_URL;
-    process.env.NODE_ENV = "test";
+    const env = { ...process.env };
+    env.DATABASE_URL = DATABASE_URL;
+    env.TEST_API_URL = NEXT_SERVER_URL;
+    env.NODE_ENV = "test";
 
-    execSync("vitest run --maxWorkers 1", { stdio: "inherit" });
+    execSync("vitest run --maxWorkers 1", { stdio: "inherit", env });
     console.log("✓ Tests completed");
     return true;
   } catch {
