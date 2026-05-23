@@ -111,7 +111,7 @@ describe("Usage Service", () => {
           workspaceId: "workspace-123",
           key: "metric",
           value: 1,
-          error: "Track failed",
+          error: "Couldn't load that data. Please refresh and try again.",
         });
       });
 
@@ -125,7 +125,7 @@ describe("Usage Service", () => {
         expect(vi.mocked(logger.error)).toHaveBeenCalledWith(
           "Failed to record usage",
           expect.objectContaining({
-            error: "unknown error",
+            error: "Couldn't load that data. Please refresh and try again.",
           })
         );
       });
