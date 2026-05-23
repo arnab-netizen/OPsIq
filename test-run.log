@@ -1,0 +1,2849 @@
+
+> opsiq@0.1.0 test:ci
+> vitest run --maxWorkers 1
+
+
+ RUN  v4.1.5 /home/user/OPsIq
+
+
+📊 Initializing test environment...
+  → Loading .env.test...
+◇ injected env (10) from .env.test // tip: ⌁ auth for agents [www.vestauth.com]
+  ✓ .env.test loaded
+  → Database URL: postgresql:***@localhost:5432/opsiq_test
+  → Generating Prisma client...
+  ✓ Prisma Client generated
+  → Initializing database connection...
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+  ✓ Database initialized
+✓ Test environment ready
+
+stdout | src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ suppress logs { quiet: true }
+
+stdout | src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts (16 tests | 10 failed) 390ms
+       × event cannot be mutated after append 144ms
+       × eventNumber is monotonically increasing per aggregate 4ms
+       × replaying same event twice produces identical state 3ms
+       × posting duplicate event with idempotencyKey is safe 3ms
+       × concurrent appends maintain order under database isolation 14ms
+       × replay of aggregate from workspace A cannot access workspace B events 3ms
+       × 100 parallel appends maintain ordering 55ms
+       × all events have valid eventNumber >= 1 15ms
+       × all events have timestamp 34ms
+       × measure append latency 3ms
+stdout | src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts
+◇ injected env (0) from .env.test // tip: ⌁ auth for agents [www.vestauth.com]
+
+stdout | src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts (28 tests | 21 failed) 346ms
+       × GET /api/audit without auth returns 401 25ms
+       × GET /api/value/7day without auth returns 401 2ms
+       × POST /api/verify without auth returns 401 4ms
+       × GET /api/notifications with invalid token returns 401 2ms
+       × request with forged workspace header is blocked 3ms
+       × cannot export decision from other workspace 2ms
+       × GET /api/audit requires auth 2ms
+       × GET /api/value/summary requires auth 2ms
+       × GET /api/value/7day requires auth 3ms
+       × GET /api/intelligence/insights requires auth 2ms
+       × GET /api/intelligence/patterns requires auth 12ms
+       × GET /api/entitlement/quota requires auth 1ms
+       × POST /api/entitlement/quota requires auth 1ms
+       × GET /api/notifications requires auth 1ms
+       × GET /api/notifications/preferences requires auth 1ms
+       × GET /api/notifications/[id] requires auth 1ms
+       × POST /api/webhooks/stripe with invalid signature returns 401 1ms
+       × POST with payload > limit returns error 74ms
+       × /api/health accessible without auth 5ms
+       × /api/readiness accessible without auth 1ms
+       × /api/liveness accessible without auth 1ms
+stderr | src/__tests__/phase-i/phase-i10-enforcement-scanner.test.ts > PHASE I10: Runtime Enforcement Scanner - ALL Routes
+{"level":"ERROR","message":"Failed to write startup status to DB","timestamp":"2026-05-23T00:20:38.696Z","context":{"status":"READY"},"error":{"name":"PrismaClientKnownRequestError","message":"\nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432\n    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)\n    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)\n    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)\n    at setStartupStatus (/home/user/OPsIq/src/services/startup-status.ts:77:5)\n    at ensureStartupStatusReady (/home/user/OPsIq/src/__tests__/test-helpers/startup-helper.ts:25:5)\n    at /home/user/OPsIq/src/__tests__/phase-i/phase-i10-enforcement-scanner.test.ts:26:5"}}
+
+stdout | src/__tests__/phase-i/phase-i10-enforcement-scanner.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ suppress logs { quiet: true }
+
+stdout | src/__tests__/phase-i/phase-i10-enforcement-scanner.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-i/phase-i10-enforcement-scanner.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-i/phase-i10-enforcement-scanner.test.ts (5 tests | 1 failed) 648ms
+     × MANDATORY: NO route may be UNWRAPPED 11ms
+stdout | src/__tests__/phase-d/d4-monitoring-backbone.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
+stdout | src/__tests__/phase-d/d4-monitoring-backbone.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-d/d4-monitoring-backbone.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-d/d4-monitoring-backbone.test.ts (34 tests | 2 failed) 177ms
+       × should verify config loaded, database migrated, routes registered 11ms
+       × should verify database health and queue depth 1ms
+stdout | src/__tests__/ci-cd/workflow-validation.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ enable debugging { debug: true }
+
+stdout | src/__tests__/ci-cd/workflow-validation.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/ci-cd/workflow-validation.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/ci-cd/workflow-validation.test.ts (28 tests | 1 failed) 168ms
+       × build-and-test should run tests with DATABASE_URL 8ms
+stdout | src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+stdout | src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts (29 tests | 3 failed) 187ms
+       × /api/health returns 200 when healthy 25ms
+       × /api/readiness returns 200 when ready 2ms
+       × /api/liveness returns 200 when alive 2ms
+stdout | src/__tests__/phase-i/phase-i10-error-normalization.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ override existing { override: true }
+
+stdout | src/__tests__/phase-i/phase-i10-error-normalization.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-i/phase-i10-error-normalization.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-i/phase-i10-error-normalization.test.ts (23 tests | 3 failed) 187ms
+       × should convert Error to RuntimeError 15ms
+       × should convert string to RuntimeError 2ms
+       × should include operation name in normalized error message 2ms
+stdout | src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts > PHASE I10.4: Queue Worker Enforcement > I10.4: Poison Job Detection > should move job to dead-letter queue after max retries exceeded
+{"level":"INFO","category":"QUEUE","message":"Queue job started","correlation_id":"corr_1779495647572_1pkzr34","request_id":"req_1779495647572_wgu4fek","workspace_id":"workspace-123","execution_id":"exec-123","context":{"job_id":"job_test_123","queue_name":"test-queue","idempotency_key":"idempotent_1779495647572","retry_count":2},"tags":["queue_job_start"],"timestamp":"2026-05-23T00:20:47.572Z"}
+
+stdout | src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts > PHASE I10.4: Queue Worker Enforcement > I10.4: Poison Job Detection > should move job to dead-letter queue after max retries exceeded
+{"level":"ERROR","category":"QUEUE","message":"Poison job moved to dead-letter queue (max retries exceeded)","correlation_id":"corr_1779495647572_1pkzr34","request_id":"req_1779495647572_wgu4fek","workspace_id":"workspace-123","execution_id":"exec-123","context":{"job_id":"job_test_123","queue_name":"test-queue","retry_count":2,"max_retries":3,"error":"Couldn't load that data. Please refresh and try again."},"tags":["queue_poison_job","queue_dead_letter"],"timestamp":"2026-05-23T00:20:47.573Z"}
+{"level":"WARN","category":"EXECUTION","message":"Execution blocked: Infrastructure error. Operations team notified.","correlation_id":"corr_1779495647572_1pkzr34","execution_id":"exec-123","workspace_id":"workspace-123","context":{"blocking_reason":"Infrastructure error. Operations team notified.","details":{"recommendation_id":"queue_job","job_id":"job_test_123","queue_name":"test-queue"}},"tags":["execution_blocked"],"timestamp":"2026-05-23T00:20:47.574Z"}
+{"level":"ERROR","category":"QUEUE","message":"Queue job execution error","correlation_id":"corr_1779495647572_1pkzr34","request_id":"req_1779495647572_wgu4fek","workspace_id":"workspace-123","execution_id":"exec-123","context":{"job_id":"job_test_123","queue_name":"test-queue","error":"Infrastructure error. Operations team notified.","duration_ms":2},"tags":["queue_job_error"],"timestamp":"2026-05-23T00:20:47.574Z"}
+
+stdout | src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts
+◇ injected env (0) from .env.test // tip: ⌁ auth for agents [www.vestauth.com]
+
+stdout | src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts (17 tests | 1 failed) 167ms
+       × should move job to dead-letter queue after max retries exceeded 7ms
+stdout | src/__tests__/phase-3-serialization-hardening.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ override existing { override: true }
+
+stdout | src/__tests__/phase-3-serialization-hardening.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-serialization-hardening.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-serialization-hardening.test.ts (7 tests | 7 failed) 317ms
+       × should guarantee no duplicate eventNumbers under 100 concurrent writes to same aggregate 176ms
+       × should handle 500 concurrent writes without deadlock or timeout 5ms
+       × should replay deterministically while concurrent writes are happening 3ms
+       × should maintain isolation across 50 concurrent aggregates 7ms
+       × should prevent duplicate events even with concurrent identical idempotency keys 5ms
+       × should recover from transaction timeout and retry safely 4ms
+       × should maintain append-only ordering invariant 2ms
+stderr | src/__tests__/runtime-proof/rp10-serialization-performance.test.ts > Phase RP10: Serialization Performance Audit
+{"level":"ERROR","message":"Failed to write startup status to DB","timestamp":"2026-05-23T00:21:20.005Z","context":{"status":"READY"},"error":{"name":"PrismaClientKnownRequestError","message":"\nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432\n    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)\n    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)\n    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)\n    at setStartupStatus (/home/user/OPsIq/src/services/startup-status.ts:77:5)\n    at ensureStartupStatusReady (/home/user/OPsIq/src/__tests__/test-helpers/startup-helper.ts:25:5)\n    at /home/user/OPsIq/src/__tests__/runtime-proof/rp10-serialization-performance.test.ts:29:5"}}
+
+stdout | src/__tests__/runtime-proof/rp10-serialization-performance.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+
+stdout | src/__tests__/runtime-proof/rp10-serialization-performance.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp10-serialization-performance.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp10-serialization-performance.test.ts (5 tests | 5 failed) 383ms
+       × should measure append latency p50/p95/p99 11ms
+       × should measure lock wait time under high contention 4ms
+       × should measure replay latency for aggregates with varying event counts 3ms
+       × should measure concurrent throughput with multiple aggregates 4ms
+       × should verify uniqueness constraint doesn't introduce severe overhead 3ms
+stdout | src/__tests__/phase-3-concurrency-proofs.test.ts
+◇ injected env (0) from .env.test // tip: ◈ secrets for agents [www.dotenvx.com]
+
+stdout | src/__tests__/phase-3-concurrency-proofs.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-concurrency-proofs.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-concurrency-proofs.test.ts (6 tests | 6 failed) 453ms
+       × should maintain strictly monotonic eventNumbers across concurrent updates 277ms
+       × should maintain workspace-scoped isolation 6ms
+       × should produce identical replay results for same event stream 4ms
+       × should maintain deterministic state with mixed concurrent event types 3ms
+       × should not corrupt state with concurrent mutations on same aggregate 5ms
+       × should prevent event loss under concurrent pressure 3ms
+stderr | src/__tests__/runtime-proof/rp9-replay-determinism.test.ts > Phase RP9: Replay Determinism Verification
+{"level":"ERROR","message":"Failed to write startup status to DB","timestamp":"2026-05-23T00:21:25.157Z","context":{"status":"READY"},"error":{"name":"PrismaClientKnownRequestError","message":"\nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432\n    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)\n    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)\n    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)\n    at setStartupStatus (/home/user/OPsIq/src/services/startup-status.ts:77:5)\n    at ensureStartupStatusReady (/home/user/OPsIq/src/__tests__/test-helpers/startup-helper.ts:25:5)\n    at /home/user/OPsIq/src/__tests__/runtime-proof/rp9-replay-determinism.test.ts:31:5"}}
+
+stdout | src/__tests__/runtime-proof/rp9-replay-determinism.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
+stdout | src/__tests__/runtime-proof/rp9-replay-determinism.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp9-replay-determinism.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp9-replay-determinism.test.ts (6 tests | 5 failed | 1 skipped) 447ms
+       × should replay identically 10 consecutive times 41ms
+       × should maintain determinism across 100 parallel replays 5ms
+       × should maintain determinism while concurrent writes happen 4ms
+       × should maintain determinism with 50 concurrent replays and 50 concurrent writes 7ms
+       × should produce same final state regardless of event count 4ms
+stderr | src/__tests__/runtime-proof/rp8-failure-injection.test.ts > Phase RP8: Failure Injection & Recovery
+{"level":"ERROR","message":"Failed to write startup status to DB","timestamp":"2026-05-23T00:21:27.413Z","context":{"status":"READY"},"error":{"name":"PrismaClientKnownRequestError","message":"\nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432\n    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)\n    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)\n    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)\n    at setStartupStatus (/home/user/OPsIq/src/services/startup-status.ts:77:5)\n    at ensureStartupStatusReady (/home/user/OPsIq/src/__tests__/test-helpers/startup-helper.ts:25:5)\n    at /home/user/OPsIq/src/__tests__/runtime-proof/rp8-failure-injection.test.ts:29:5"}}
+
+stdout | src/__tests__/runtime-proof/rp8-failure-injection.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
+stdout | src/__tests__/runtime-proof/rp8-failure-injection.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp8-failure-injection.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp8-failure-injection.test.ts (7 tests | 7 failed) 451ms
+       × should serialize concurrent writes to same aggregate correctly 15ms
+       × should recover from idempotency key constraint violation 7ms
+       × should distinguish concurrent identical requests via idempotency 8ms
+       × should replay identically even after partial failures 9ms
+       × should correctly query event sequence despite concurrent failures 6ms
+       × should maintain workspace isolation even under concurrent write pressure 4ms
+       × should maintain invariants with 100+ concurrent writes and failures 3ms
+stderr | src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts > Phase RP6: TRUE Concurrency Stress Testing (Independent Connections)
+{"level":"ERROR","message":"Failed to write startup status to DB","timestamp":"2026-05-23T00:21:29.598Z","context":{"status":"READY"},"error":{"name":"PrismaClientKnownRequestError","message":"\nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432\n    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)\n    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)\n    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)\n    at setStartupStatus (/home/user/OPsIq/src/services/startup-status.ts:77:5)\n    at ensureStartupStatusReady (/home/user/OPsIq/src/__tests__/test-helpers/startup-helper.ts:25:5)\n    at /home/user/OPsIq/src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts:66:5"}}
+
+stdout | src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts
+◇ injected env (0) from .env.test // tip: ⌁ auth for agents [www.vestauth.com]
+
+stdout | src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts (4 tests | 4 failed) 316ms
+       × should allocate 100 unique monotonic eventNumbers under concurrent pressure 12ms
+       × should replay identically while concurrent writes happen 4ms
+       × should create only ONE event from 20 concurrent identical requests 4ms
+       × verifies unique constraint prevents race condition collisions 5ms
+stderr | src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts > Phase RP7: Deadlock & Retry Recovery
+{"level":"ERROR","message":"Failed to write startup status to DB","timestamp":"2026-05-23T00:21:31.583Z","context":{"status":"READY"},"error":{"name":"PrismaClientKnownRequestError","message":"\nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432\n    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)\n    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)\n    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)\n    at setStartupStatus (/home/user/OPsIq/src/services/startup-status.ts:77:5)\n    at ensureStartupStatusReady (/home/user/OPsIq/src/__tests__/test-helpers/startup-helper.ts:25:5)\n    at /home/user/OPsIq/src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts:29:5"}}
+
+stdout | src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts
+◇ injected env (0) from .env.test // tip: ◈ secrets for agents [www.dotenvx.com]
+
+stdout | src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts (6 tests | 6 failed) 442ms
+       × should handle concurrent writes to different aggregates without deadlock 31ms
+       × should recover from unique constraint violations via idempotency lookup 6ms
+       × should distinguish between different idempotency keys even under high concurrency 4ms
+       × should allow retry after transient conflict 5ms
+       × should handle writes to many aggregates without deadlock 3ms
+       × should maintain invariants even with failed requests 3ms
+stdout | src/__tests__/phase-3-hardening-proofs.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
+stdout | src/__tests__/phase-3-hardening-proofs.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-hardening-proofs.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-hardening-proofs.test.ts (11 tests | 11 failed) 595ms
+       × should rebuild recommendation with all fields from events only 305ms
+       × should have identical parity between replayed and live state 15ms
+       × should delete corrupted snapshot and fall back to full replay 12ms
+       × should delete stale snapshot and fall back to full replay 9ms
+       × should produce identical state from replaying same events twice 9ms
+       × should not create duplicate mutations when replaying duplicate events 13ms
+       × should handle events in order and not allow out-of-order mutations 5ms
+       × should not allow replay to cross workspace boundaries 7ms
+       × should only rebuild projections within workspace scope 8ms
+       × should block approval if replay validation fails 3ms
+       × should replay multiple events maintaining state consistency 6ms
+stdout | src/__tests__/phase-3-authoritative-replay.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
+stdout | src/__tests__/phase-3-authoritative-replay.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-authoritative-replay.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-authoritative-replay.test.ts (9 tests | 9 failed) 370ms
+       × should reconstruct created state from events only 208ms
+       × should reconstruct state after update from events only 5ms
+       × should reconstruct status changes from events only 3ms
+       × should reconstruct priority updates from events only 3ms
+       × should reconstruct state after multiple updates deterministically 5ms
+       × should replay deterministically across multiple runs 4ms
+       × should rebuild projection from events alone after complete deletion 3ms
+       × should maintain strict event ordering 3ms
+       × should produce identical state whether using snapshot or full replay 3ms
+stderr | src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts > Phase RP3: Workspace Isolation Runtime Proof
+{"level":"ERROR","message":"Failed to write startup status to DB","timestamp":"2026-05-23T00:21:40.596Z","context":{"status":"READY"},"error":{"name":"PrismaClientKnownRequestError","message":"\nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432\n    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)\n    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)\n    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)\n    at setStartupStatus (/home/user/OPsIq/src/services/startup-status.ts:77:5)\n    at ensureStartupStatusReady (/home/user/OPsIq/src/__tests__/test-helpers/startup-helper.ts:25:5)\n    at /home/user/OPsIq/src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts:30:5"}}
+
+stdout | src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts
+◇ injected env (0) from .env.test // tip: ◈ encrypted .env [www.dotenvx.com]
+
+stdout | src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts (8 tests | 8 failed) 386ms
+       × EventEmitterService cannot see events from other workspace 15ms
+       × EventReplayEngine cannot replay from other workspace 4ms
+       × projection query in workspace A cannot see workspace B data 7ms
+       × projection rebuild respects workspace boundaries 4ms
+       × concurrent events in different workspaces maintain isolation 12ms
+       × eventNumbers are scoped per workspace + aggregate, not global 3ms
+       × query for one workspace never returns data from another 2ms
+       × cannot indirectly access workspace data through relationship 2ms
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 1: Projection rebuilds solely from CanonicalEvent > should rebuild recommendation projection from events only (no other sources)
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 2: Replay reconstructs aggregate from events > should reconstruct full aggregate state from event stream
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 3: Replay output equals live Recommendation state > should produce identical state between replay and live database
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 4: Projection deletion/rebuild without truth loss > should rebuild identical projection after deletion
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 5: Snapshot speeds replay and is used > should use snapshot to skip early events during replay
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 6: Stale snapshot invalidates/fails closed > should detect and invalidate stale snapshots
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 6: Stale snapshot invalidates/fails closed > should detect snapshot corruption via checksum mismatch
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 7: Replay/projection corruption detected > should detect event corruption
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 8: Failed replay blocks unsafe decisions > should block update operations if replay fails
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 8: Failed replay blocks unsafe decisions > should allow fallback for read operations
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 9: No system marked ACTIVE only through audit/debug path > should have replay integrated into operational paths (not just audit)
+Cleanup error: PrismaClientKnownRequestError: 
+Invalid `prisma.recommendation.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:78:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Recommendation',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stderr | src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification
+{"level":"ERROR","message":"Failed to write startup status to DB","timestamp":"2026-05-23T00:21:42.962Z","context":{"status":"READY"},"error":{"name":"PrismaClientKnownRequestError","message":"\nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432\n    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)\n    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)\n    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)\n    at setStartupStatus (/home/user/OPsIq/src/services/startup-status.ts:77:5)\n    at ensureStartupStatusReady (/home/user/OPsIq/src/__tests__/test-helpers/startup-helper.ts:25:5)\n    at /home/user/OPsIq/src/__tests__/phase-3-event-sourcing-truth.test.ts:13:5"}}
+
+stdout | src/__tests__/phase-3-event-sourcing-truth.test.ts
+◇ injected env (0) from .env.test // tip: ◈ encrypted .env [www.dotenvx.com]
+
+stdout | src/__tests__/phase-3-event-sourcing-truth.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-event-sourcing-truth.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-event-sourcing-truth.test.ts (11 tests | 11 failed) 530ms
+       × should rebuild recommendation projection from events only (no other sources) 14ms
+       × should reconstruct full aggregate state from event stream 6ms
+       × should produce identical state between replay and live database 8ms
+       × should rebuild identical projection after deletion 5ms
+       × should use snapshot to skip early events during replay 21ms
+       × should detect and invalidate stale snapshots 8ms
+       × should detect snapshot corruption via checksum mismatch 11ms
+       × should detect event corruption 9ms
+       × should block update operations if replay fails 4ms
+       × should allow fallback for read operations 13ms
+       × should have replay integrated into operational paths (not just audit) 6ms
+stdout | src/__tests__/phase-3-idempotency-proofs.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+
+stdout | src/__tests__/phase-3-idempotency-proofs.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-idempotency-proofs.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-idempotency-proofs.test.ts (7 tests | 7 failed) 373ms
+       × should return same event for duplicate creation requests with same idempotency key 206ms
+       × should create different events for different idempotency keys 5ms
+       × should prevent duplicate mutations with same idempotency key 3ms
+       × should enforce idempotency within workspace boundaries 6ms
+       × should allow same idempotency key in different workspaces 9ms
+       × should replay same events deterministically regardless of idempotency keys 7ms
+       × should preserve state correctness with idempotent duplicate submission 3ms
+stdout | src/__tests__/phase-3-live-runtime-integration.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ suppress logs { quiet: true }
+
+stdout | src/__tests__/phase-3-live-runtime-integration.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-live-runtime-integration.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-live-runtime-integration.test.ts (8 tests | 8 failed) 357ms
+       × should emit canonical event on recommendation creation 196ms
+       × should allow replay of created recommendation 4ms
+       × should emit update event through canonical event flow 3ms
+       × should replay multiple events in order 3ms
+       × should rebuild projection from events after deletion 5ms
+       × should not cross workspace boundaries during replay 3ms
+       × should rebuild only within workspace scope 2ms
+       × should process events in strict order 5ms
+stderr | src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts > Phase RP5: Quota Enforcement Runtime Proof
+{"level":"ERROR","message":"Failed to write startup status to DB","timestamp":"2026-05-23T00:21:51.892Z","context":{"status":"READY"},"error":{"name":"PrismaClientKnownRequestError","message":"\nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432\n    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)\n    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)\n    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)\n    at setStartupStatus (/home/user/OPsIq/src/services/startup-status.ts:77:5)\n    at ensureStartupStatusReady (/home/user/OPsIq/src/__tests__/test-helpers/startup-helper.ts:25:5)\n    at /home/user/OPsIq/src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts:22:5"}}
+
+stdout | src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts
+◇ injected env (0) from .env.test // tip: ⌁ auth for agents [www.vestauth.com]
+
+stdout | src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts (9 tests | 9 failed) 495ms
+       × allows operations when under quota limit 26ms
+       × tracks resource usage per workspace 9ms
+       × workspace isolation prevents quota from affecting other workspaces 4ms
+       × records timestamp of operations for quota calculation 8ms
+       × can query recent operations for quota rate limiting 3ms
+       × different service tiers have different quota levels 3ms
+       × workspaces can have quota limits configured 3ms
+       × can track total operations per user per workspace 4ms
+       × quota enforcement database schema is sound 3ms
+stdout | src/__tests__/phase-3-http-runtime-proofs.test.ts
+◇ injected env (0) from .env.test // tip: ◈ secrets for agents [www.dotenvx.com]
+
+stdout | src/__tests__/phase-3-http-runtime-proofs.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-http-runtime-proofs.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-http-runtime-proofs.test.ts (7 tests | 7 failed) 319ms
+       × should verify canonical events are created when recommendations are created via API simulation 170ms
+       × should verify update mutations emit events through service layer 5ms
+       × should verify complete flow from API mutation through event replay 4ms
+       × should handle complex mutation sequences through simulated API 3ms
+       × should verify workspace boundaries enforced in event flow 8ms
+       × should validate and persist events with proper error handling 3ms
+       × should handle idempotent requests through API simulation 2ms
+stderr | src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts > Phase RP4: Capability Enforcement Runtime Proof
+{"level":"ERROR","message":"Failed to write startup status to DB","timestamp":"2026-05-23T00:21:55.871Z","context":{"status":"READY"},"error":{"name":"PrismaClientKnownRequestError","message":"\nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432","stack":"PrismaClientKnownRequestError: \nInvalid `prisma.startupStatus.upsert()` invocation:\n\n\nCan't reach database server at 127.0.0.1:5432\n    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)\n    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)\n    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)\n    at setStartupStatus (/home/user/OPsIq/src/services/startup-status.ts:77:5)\n    at ensureStartupStatusReady (/home/user/OPsIq/src/__tests__/test-helpers/startup-helper.ts:25:5)\n    at /home/user/OPsIq/src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts:24:5"}}
+
+stdout | src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ enable debugging { debug: true }
+
+stdout | src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts (8 tests | 8 failed) 351ms
+       × user with RECOMMENDATION_CREATE capability can create recommendation 14ms
+       × database enforces createdBy field for audit trail 4ms
+       × user without capability cannot be in createdBy for privileged operations 3ms
+       × approval operations require specific capability 11ms
+       × workspace isolation prevents cross-workspace capability exploitation 5ms
+       × tracks which user performed action (for capability audit) 3ms
+       × all major capability constants are defined 3ms
+       × capabilities are namespace-qualified 3ms
+stdout | src/__tests__/phase-3-event-replay-engine.test.ts
+◇ injected env (0) from .env.test // tip: ⌘ suppress logs { quiet: true }
+
+stdout | src/__tests__/phase-3-event-replay-engine.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-event-replay-engine.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-event-replay-engine.test.ts (7 tests | 7 failed) 316ms
+       × reconstructs aggregate state from event stream 125ms
+       × applies event-specific state transformations 5ms
+       × maintains event history in state 2ms
+       × replays aggregate as of specific event number 2ms
+       × throws when no events found 48ms
+       × throws when replaying as of past timestamp with no events 7ms
+       × does not replay events from different workspace 4ms
+stdout | src/__tests__/phase-3-event-emitter-integration.test.ts
+◇ injected env (0) from .env.test // tip: ◈ encrypted .env [www.dotenvx.com]
+
+stdout | src/__tests__/phase-3-event-emitter-integration.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-event-emitter-integration.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts (16 tests | 12 failed) 313ms
+       × validates emitted event structure 113ms
+       × persists events to database 2ms
+       × enforces monotonic event numbering per aggregate 2ms
+       × detects idempotent replay with idempotencyKey 2ms
+       × allows same request without idempotencyKey to create new event 2ms
+       × prevents cross-workspace event access 2ms
+       × idempotency key is scoped to workspace 2ms
+       × retrieves events scoped to workspace 1ms
+       × retrieves aggregate events in order 3ms
+       × returns empty array for nonexistent aggregate 42ms
+       × criterion: Append-only enforced at database level 1ms
+       × criterion: Tenant isolation verified (cross-workspace check) 1ms
+stdout | src/__tests__/phase-3-snapshot-engine.test.ts
+◇ injected env (0) from .env.test // tip: ⌁ auth for agents [www.vestauth.com]
+
+stdout | src/__tests__/phase-3-snapshot-engine.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-snapshot-engine.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-snapshot-engine.test.ts (11 tests | 5 failed) 243ms
+       × creates snapshot from replayed aggregate state 111ms
+       × preserves aggregate state in snapshot 2ms
+       × falls back to full replay when no snapshot available 2ms
+       × respects event number limit in replay 2ms
+       × snapshots are workspace-scoped 2ms
+stdout | src/__tests__/phase-3-db-smoke-verification.test.ts > Phase 3: Database Connectivity & Persistence Smoke Test
+✓ Database proxy initialized
+
+stderr | src/__tests__/phase-3-db-smoke-verification.test.ts > Phase 3: Database Connectivity & Persistence Smoke Test
+Cleanup failed: PrismaClientKnownRequestError: 
+Invalid `prisma.engagement.deleteMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+    at zr.handleRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:8286)
+    at zr.handleAndLogRequestError (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7581)
+    at zr.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:7288)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:75:6862)
+    at /home/user/OPsIq/src/__tests__/phase-3-db-smoke-verification.test.ts:27:7 {
+  code: 'P1001',
+  meta: {
+    modelName: 'Engagement',
+    driverAdapterError: DriverAdapterError: DatabaseNotReachable
+        at PrismaPgAdapter.onError (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:642:11)
+        at PrismaPgAdapter.performIO (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:637:12)
+        at processTicksAndRejections (node:internal/process/task_queues:103:5)
+        at PrismaPgAdapter.executeRaw (file:///home/user/OPsIq/node_modules/@prisma/adapter-pg/dist/index.mjs:607:13)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:44389)
+        at e.interpretNode (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:46285)
+        at e.run (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:11:43335)
+        at execute (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:57:815)
+        at jt.request (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:58:2401)
+        at Object.singleLoader (/home/user/OPsIq/node_modules/@prisma/client/runtime/client.js:65:6569) {
+      cause: [Object]
+    }
+  },
+  clientVersion: '7.8.0'
+}
+
+stdout | src/__tests__/phase-3-db-smoke-verification.test.ts
+◇ injected env (0) from .env.test // tip: ⌁ auth for agents [www.vestauth.com]
+
+stdout | src/__tests__/phase-3-db-smoke-verification.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-db-smoke-verification.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-db-smoke-verification.test.ts (6 tests | 5 failed) 296ms
+       × verifies database is reachable (workspace CRUD) 151ms
+       × verifies canonical event append works 7ms
+       × verifies event replay query works 3ms
+       × verifies snapshot storage works 4ms
+       × verifies events are scoped to workspace 2ms
+stdout | src/__tests__/phase-3-projection-engine.test.ts
+◇ injected env (0) from .env.test // tip: ◈ secrets for agents [www.dotenvx.com]
+
+stdout | src/__tests__/phase-3-projection-engine.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-3-projection-engine.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-3-projection-engine.test.ts (9 tests | 4 failed) 255ms
+       × updates recommendation denormalized fields from event payload 119ms
+       × rebuilds projection from entire event stream 2ms
+       × tracks rebuilt aggregate IDs 7ms
+       × projects events scoped to workspace 5ms
+stdout | src/__tests__/phase-c/canonical-telemetry-lifecycle.test.ts
+◇ injected env (0) from .env.test // tip: ◈ encrypted .env [www.dotenvx.com]
+
+stdout | src/__tests__/phase-c/canonical-telemetry-lifecycle.test.ts
+[DB] Initializing Prisma with PostgreSQL (standard) adapter
+[DB] Database: opsiq_test
+[DB] Using @prisma/adapter-pg
+
+stdout | src/__tests__/phase-c/canonical-telemetry-lifecycle.test.ts
+✓ Database client initialized
+
+ ❯ src/__tests__/phase-c/canonical-telemetry-lifecycle.test.ts (18 tests | 1 failed) 206ms
+       × Start time and end time track request duration 13ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 194 ⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/phase-3-authoritative-replay.test.ts > Phase 3: Authoritative Replay from Canonical Events > CREATE → REPLAY authoritative proof > should reconstruct created state from events only
+ FAIL  src/__tests__/phase-3-authoritative-replay.test.ts > Phase 3: Authoritative Replay from Canonical Events > CREATE → UPDATE → REPLAY authoritative proof > should reconstruct state after update from events only
+ FAIL  src/__tests__/phase-3-authoritative-replay.test.ts > Phase 3: Authoritative Replay from Canonical Events > CREATE → STATUS_CHANGE → REPLAY authoritative proof > should reconstruct status changes from events only
+ FAIL  src/__tests__/phase-3-authoritative-replay.test.ts > Phase 3: Authoritative Replay from Canonical Events > CREATE → PRIORITY_UPDATE → REPLAY authoritative proof > should reconstruct priority updates from events only
+ FAIL  src/__tests__/phase-3-authoritative-replay.test.ts > Phase 3: Authoritative Replay from Canonical Events > Multiple updates → REPLAY authoritative proof > should reconstruct state after multiple updates deterministically
+ FAIL  src/__tests__/phase-3-authoritative-replay.test.ts > Phase 3: Authoritative Replay from Canonical Events > Multiple updates → REPLAY authoritative proof > should replay deterministically across multiple runs
+ FAIL  src/__tests__/phase-3-authoritative-replay.test.ts > Phase 3: Authoritative Replay from Canonical Events > Projection deletion + rebuild authoritative proof > should rebuild projection from events alone after complete deletion
+ FAIL  src/__tests__/phase-3-authoritative-replay.test.ts > Phase 3: Authoritative Replay from Canonical Events > Canonical event ordering proof > should maintain strict event ordering
+ FAIL  src/__tests__/phase-3-authoritative-replay.test.ts > Phase 3: Authoritative Replay from Canonical Events > Snapshot does not alter replay truth > should produce identical state whether using snapshot or full replay
+PrismaClientKnownRequestError: 
+Invalid `prisma.user.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-authoritative-replay.test.ts:33:5
+     31|
+     32|     // Setup test data
+     33|     await db.user.create({
+       |     ^
+     34|       data: {
+     35|         id: userId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/194]⎯
+
+ FAIL  src/__tests__/phase-3-concurrency-proofs.test.ts > Phase 3: Concurrency and Determinism Proofs > Monotonic Event Ordering > should maintain strictly monotonic eventNumbers across concurrent updates
+ FAIL  src/__tests__/phase-3-concurrency-proofs.test.ts > Phase 3: Concurrency and Determinism Proofs > Monotonic Event Ordering > should maintain workspace-scoped isolation
+ FAIL  src/__tests__/phase-3-concurrency-proofs.test.ts > Phase 3: Concurrency and Determinism Proofs > Deterministic Replay Across Concurrent Operations > should produce identical replay results for same event stream
+ FAIL  src/__tests__/phase-3-concurrency-proofs.test.ts > Phase 3: Concurrency and Determinism Proofs > Deterministic Replay Across Concurrent Operations > should maintain deterministic state with mixed concurrent event types
+ FAIL  src/__tests__/phase-3-concurrency-proofs.test.ts > Phase 3: Concurrency and Determinism Proofs > Concurrent Safety Guarantees > should not corrupt state with concurrent mutations on same aggregate
+ FAIL  src/__tests__/phase-3-concurrency-proofs.test.ts > Phase 3: Concurrency and Determinism Proofs > Concurrent Safety Guarantees > should prevent event loss under concurrent pressure
+PrismaClientKnownRequestError: 
+Invalid `prisma.user.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-concurrency-proofs.test.ts:30:5
+     28|
+     29|     // Setup test data
+     30|     await db.user.create({
+       |     ^
+     31|       data: {
+     32|         id: userId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/194]⎯
+
+ FAIL  src/__tests__/phase-3-db-smoke-verification.test.ts > Phase 3: Database Connectivity & Persistence Smoke Test > Connectivity & Schema Verification > verifies database is reachable (workspace CRUD)
+PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-db-smoke-verification.test.ts:51:25
+     49|     it("verifies database is reachable (workspace CRUD)", async () => {
+     50|       // CREATE
+     51|       const workspace = await db.workspace.create({
+       |                         ^
+     52|         data: {
+     53|           id: testWorkspaceId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/194]⎯
+
+ FAIL  src/__tests__/phase-3-db-smoke-verification.test.ts > Phase 3: Database Connectivity & Persistence Smoke Test > Connectivity & Schema Verification > verifies canonical event append works
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-db-smoke-verification.test.ts:82:21
+     80|
+     81|       const actorId = uuidv4();
+     82|       const event = await db.canonicalEvent.create({
+       |                     ^
+     83|         data: {
+     84|           id: uuidv4(),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/194]⎯
+
+ FAIL  src/__tests__/phase-3-db-smoke-verification.test.ts > Phase 3: Database Connectivity & Persistence Smoke Test > Connectivity & Schema Verification > verifies event replay query works
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-db-smoke-verification.test.ts:139:9
+    137|       const actorId = uuidv4();
+    138|       for (let i = 1; i <= 3; i++) {
+    139|         await db.canonicalEvent.create({
+       |         ^
+    140|           data: {
+    141|             id: uuidv4(),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/194]⎯
+
+ FAIL  src/__tests__/phase-3-db-smoke-verification.test.ts > Phase 3: Database Connectivity & Persistence Smoke Test > Connectivity & Schema Verification > verifies snapshot storage works
+PrismaClientKnownRequestError: 
+Invalid `prisma.snapshotData.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-db-smoke-verification.test.ts:184:24
+    182|       };
+    183|
+    184|       const snapshot = await db.snapshotData.create({
+       |                        ^
+    185|         data: {
+    186|           id: uuidv4(),
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/194]⎯
+
+ FAIL  src/__tests__/phase-3-db-smoke-verification.test.ts > Phase 3: Database Connectivity & Persistence Smoke Test > Workspace Isolation Verification > verifies events are scoped to workspace
+PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-db-smoke-verification.test.ts:216:7
+    214|
+    215|       // Create workspaces
+    216|       await db.workspace.create({
+       |       ^
+    217|         data: {
+    218|           id: workspace1,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Contract > validates emitted event structure
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:34:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Append-Only Enforcement > persists events to database
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:59:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Append-Only Enforcement > enforces monotonic event numbering per aggregate
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:77:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Idempotency > detects idempotent replay with idempotencyKey
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:108:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Idempotency > allows same request without idempotencyKey to create new event
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:139:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Tenant Isolation > prevents cross-workspace event access
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:170:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Tenant Isolation > idempotency key is scoped to workspace
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:205:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Tenant Isolation > retrieves events scoped to workspace
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:237:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Event Retrieval > retrieves aggregate events in order
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:314:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Event Retrieval > returns empty array for nonexistent aggregate
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.findMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ Function.getAggregateEvents src/services/event-emitter.ts:287:20
+    285|     workspaceId: string
+    286|   ): Promise<EmittedEvent[]> {
+    287|     const events = await db.canonicalEvent.findMany({
+       |                    ^
+    288|       where: {
+    289|         aggregateId,
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:360:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Acceptance Criteria > criterion: Append-only enforced at database level
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:375:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-emitter-integration.test.ts > Phase 3 Slice 2 — EventEmitterService Runtime Wiring: Proven ACTIVE > Acceptance Criteria > criterion: Tenant isolation verified (cross-workspace check)
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-emitter-integration.test.ts:408:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-replay-engine.test.ts > Phase 3 Slice 3 — EventReplayEngine: Aggregate State Reconstruction > Event Folding and State Reconstruction > reconstructs aggregate state from event stream
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-replay-engine.test.ts:23:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-replay-engine.test.ts > Phase 3 Slice 3 — EventReplayEngine: Aggregate State Reconstruction > Event Folding and State Reconstruction > applies event-specific state transformations
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-replay-engine.test.ts:60:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-replay-engine.test.ts > Phase 3 Slice 3 — EventReplayEngine: Aggregate State Reconstruction > Event Folding and State Reconstruction > maintains event history in state
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-replay-engine.test.ts:91:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-replay-engine.test.ts > Phase 3 Slice 3 — EventReplayEngine: Aggregate State Reconstruction > Point-in-Time Replay > replays aggregate as of specific event number
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-replay-engine.test.ts:125:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-replay-engine.test.ts > Phase 3 Slice 3 — EventReplayEngine: Aggregate State Reconstruction > Error Handling > throws when no events found
+AssertionError: expected [Function] to throw error matching /No events found/ but got '\nInvalid `prisma.snapshotData.findFi…'
+
+- Expected:
+/No events found/
+
++ Received:
+"
+Invalid `prisma.snapshotData.findFirst()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432"
+
+ ❯ src/__tests__/phase-3-event-replay-engine.test.ts:178:8
+    176|           testWorkspaceId
+    177|         )
+    178|       ).rejects.toThrow(/No events found/);
+       |        ^
+    179|     });
+    180|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-replay-engine.test.ts > Phase 3 Slice 3 — EventReplayEngine: Aggregate State Reconstruction > Error Handling > throws when replaying as of past timestamp with no events
+AssertionError: expected [Function] to throw error matching /No events found/ but got '\nInvalid `prisma.canonicalEvent.find…'
+
+- Expected:
+/No events found/
+
++ Received:
+"
+Invalid `prisma.canonicalEvent.findFirst()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432"
+
+ ❯ src/__tests__/phase-3-event-replay-engine.test.ts:192:8
+    190|           pastDate
+    191|         )
+    192|       ).rejects.toThrow(/No events found/);
+       |        ^
+    193|     });
+    194|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-replay-engine.test.ts > Phase 3 Slice 3 — EventReplayEngine: Aggregate State Reconstruction > Tenant Isolation > does not replay events from different workspace
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-event-replay-engine.test.ts:203:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/194]⎯
+
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 1: Projection rebuilds solely from CanonicalEvent > should rebuild recommendation projection from events only (no other sources)
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 2: Replay reconstructs aggregate from events > should reconstruct full aggregate state from event stream
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 3: Replay output equals live Recommendation state > should produce identical state between replay and live database
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 4: Projection deletion/rebuild without truth loss > should rebuild identical projection after deletion
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 5: Snapshot speeds replay and is used > should use snapshot to skip early events during replay
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 6: Stale snapshot invalidates/fails closed > should detect and invalidate stale snapshots
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 6: Stale snapshot invalidates/fails closed > should detect snapshot corruption via checksum mismatch
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 7: Replay/projection corruption detected > should detect event corruption
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 8: Failed replay blocks unsafe decisions > should block update operations if replay fails
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 8: Failed replay blocks unsafe decisions > should allow fallback for read operations
+ FAIL  src/__tests__/phase-3-event-sourcing-truth.test.ts > Phase 3: Event Sourcing Truth Verification > Requirement 9: No system marked ACTIVE only through audit/debug path > should have replay integrated into operational paths (not just audit)
+PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-event-sourcing-truth.test.ts:39:5
+     37|
+     38|     // Create test workspace
+     39|     await db.workspace.create({
+       |     ^
+     40|       data: {
+     41|         id: workspaceId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/194]⎯
+
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 1: Rebuild aggregate from CanonicalEvent only > should rebuild recommendation with all fields from events only
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 2: Compare replay with live DB state (PARITY) > should have identical parity between replayed and live state
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 3: Corrupted snapshot must fail-closed > should delete corrupted snapshot and fall back to full replay
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 3: Corrupted snapshot must fail-closed > should delete stale snapshot and fall back to full replay
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 4: Deterministic replay (same stream twice = same output) > should produce identical state from replaying same events twice
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 5: Idempotent replay (duplicate stream = no extra mutations) > should not create duplicate mutations when replaying duplicate events
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 6: Event ordering safety (deterministic handling) > should handle events in order and not allow out-of-order mutations
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 7: Tenant isolation under replay > should not allow replay to cross workspace boundaries
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 7: Tenant isolation under replay > should only rebuild projections within workspace scope
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 8: Approval fail-closed on replay integrity failure > should block approval if replay validation fails
+ FAIL  src/__tests__/phase-3-hardening-proofs.test.ts > HARDENING: Phase 3 Critical Properties > PROOF 9: Multi-event replay (realistic scenario) > should replay multiple events maintaining state consistency
+PrismaClientKnownRequestError: 
+Invalid `prisma.user.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-hardening-proofs.test.ts:58:5
+     56|
+     57|     // Setup users first (should succeed with unique userId)
+     58|     await db.user.create({
+       |     ^
+     59|       data: {
+     60|         id: userId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/194]⎯
+
+ FAIL  src/__tests__/phase-3-http-runtime-proofs.test.ts > Phase 3: HTTP Runtime Event Flow > Event Emission Through API Routes > should verify canonical events are created when recommendations are created via API simulation
+ FAIL  src/__tests__/phase-3-http-runtime-proofs.test.ts > Phase 3: HTTP Runtime Event Flow > Event Emission Through API Routes > should verify update mutations emit events through service layer
+ FAIL  src/__tests__/phase-3-http-runtime-proofs.test.ts > Phase 3: HTTP Runtime Event Flow > Full Event Flow: Creation through Replay > should verify complete flow from API mutation through event replay
+ FAIL  src/__tests__/phase-3-http-runtime-proofs.test.ts > Phase 3: HTTP Runtime Event Flow > Full Event Flow: Creation through Replay > should handle complex mutation sequences through simulated API
+ FAIL  src/__tests__/phase-3-http-runtime-proofs.test.ts > Phase 3: HTTP Runtime Event Flow > Workspace Isolation Through API Simulation > should verify workspace boundaries enforced in event flow
+ FAIL  src/__tests__/phase-3-http-runtime-proofs.test.ts > Phase 3: HTTP Runtime Event Flow > Error Handling and Validation Through API > should validate and persist events with proper error handling
+ FAIL  src/__tests__/phase-3-http-runtime-proofs.test.ts > Phase 3: HTTP Runtime Event Flow > Error Handling and Validation Through API > should handle idempotent requests through API simulation
+PrismaClientKnownRequestError: 
+Invalid `prisma.user.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-http-runtime-proofs.test.ts:28:5
+     26|
+     27|     // Setup test data
+     28|     await db.user.create({
+       |     ^
+     29|       data: {
+     30|         id: userId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/194]⎯
+
+ FAIL  src/__tests__/phase-3-idempotency-proofs.test.ts > Phase 3: Idempotency Proofs > Idempotency Key Enforcement > should return same event for duplicate creation requests with same idempotency key
+ FAIL  src/__tests__/phase-3-idempotency-proofs.test.ts > Phase 3: Idempotency Proofs > Idempotency Key Enforcement > should create different events for different idempotency keys
+ FAIL  src/__tests__/phase-3-idempotency-proofs.test.ts > Phase 3: Idempotency Proofs > Idempotency Key Enforcement > should prevent duplicate mutations with same idempotency key
+ FAIL  src/__tests__/phase-3-idempotency-proofs.test.ts > Phase 3: Idempotency Proofs > Workspace-Scoped Idempotency > should enforce idempotency within workspace boundaries
+ FAIL  src/__tests__/phase-3-idempotency-proofs.test.ts > Phase 3: Idempotency Proofs > Workspace-Scoped Idempotency > should allow same idempotency key in different workspaces
+ FAIL  src/__tests__/phase-3-idempotency-proofs.test.ts > Phase 3: Idempotency Proofs > Idempotent Replay > should replay same events deterministically regardless of idempotency keys
+ FAIL  src/__tests__/phase-3-idempotency-proofs.test.ts > Phase 3: Idempotency Proofs > Idempotent Replay > should preserve state correctness with idempotent duplicate submission
+PrismaClientKnownRequestError: 
+Invalid `prisma.user.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-idempotency-proofs.test.ts:30:5
+     28|
+     29|     // Setup test data
+     30|     await db.user.create({
+       |     ^
+     31|       data: {
+     32|         id: userId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/194]⎯
+
+ FAIL  src/__tests__/phase-3-live-runtime-integration.test.ts > Phase 3: Live Runtime Event Flow Integration > CREATE Event Path Runtime > should emit canonical event on recommendation creation
+ FAIL  src/__tests__/phase-3-live-runtime-integration.test.ts > Phase 3: Live Runtime Event Flow Integration > CREATE Event Path Runtime > should allow replay of created recommendation
+ FAIL  src/__tests__/phase-3-live-runtime-integration.test.ts > Phase 3: Live Runtime Event Flow Integration > UPDATE Event Path Runtime > should emit update event through canonical event flow
+ FAIL  src/__tests__/phase-3-live-runtime-integration.test.ts > Phase 3: Live Runtime Event Flow Integration > UPDATE Event Path Runtime > should replay multiple events in order
+ FAIL  src/__tests__/phase-3-live-runtime-integration.test.ts > Phase 3: Live Runtime Event Flow Integration > Projection Rebuild from Events > should rebuild projection from events after deletion
+ FAIL  src/__tests__/phase-3-live-runtime-integration.test.ts > Phase 3: Live Runtime Event Flow Integration > Workspace Isolation > should not cross workspace boundaries during replay
+ FAIL  src/__tests__/phase-3-live-runtime-integration.test.ts > Phase 3: Live Runtime Event Flow Integration > Workspace Isolation > should rebuild only within workspace scope
+ FAIL  src/__tests__/phase-3-live-runtime-integration.test.ts > Phase 3: Live Runtime Event Flow Integration > Event Ordering and Safety > should process events in strict order
+PrismaClientKnownRequestError: 
+Invalid `prisma.user.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-live-runtime-integration.test.ts:33:5
+     31|
+     32|     // Setup test data
+     33|     await db.user.create({
+       |     ^
+     34|       data: {
+     35|         id: userId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[31/194]⎯
+
+ FAIL  src/__tests__/phase-3-projection-engine.test.ts > Phase 3 Slice 3 — ProjectionEngine: Event Projection and Denormalization > Projection Update Verification > updates recommendation denormalized fields from event payload
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-projection-engine.test.ts:98:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[32/194]⎯
+
+ FAIL  src/__tests__/phase-3-projection-engine.test.ts > Phase 3 Slice 3 — ProjectionEngine: Event Projection and Denormalization > Projection Rebuild > rebuilds projection from entire event stream
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-projection-engine.test.ts:126:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[33/194]⎯
+
+ FAIL  src/__tests__/phase-3-projection-engine.test.ts > Phase 3 Slice 3 — ProjectionEngine: Event Projection and Denormalization > Projection Rebuild > tracks rebuilt aggregate IDs
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-projection-engine.test.ts:161:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[34/194]⎯
+
+ FAIL  src/__tests__/phase-3-projection-engine.test.ts > Phase 3 Slice 3 — ProjectionEngine: Event Projection and Denormalization > Tenant Isolation > projects events scoped to workspace
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-projection-engine.test.ts:215:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[35/194]⎯
+
+ FAIL  src/__tests__/phase-3-serialization-hardening.test.ts > Phase 3: Serialization Hardening - Real Concurrency Stress > A. CONCURRENT APPEND STORM - Race Condition Prevention > should guarantee no duplicate eventNumbers under 100 concurrent writes to same aggregate
+ FAIL  src/__tests__/phase-3-serialization-hardening.test.ts > Phase 3: Serialization Hardening - Real Concurrency Stress > A. CONCURRENT APPEND STORM - Race Condition Prevention > should handle 500 concurrent writes without deadlock or timeout
+ FAIL  src/__tests__/phase-3-serialization-hardening.test.ts > Phase 3: Serialization Hardening - Real Concurrency Stress > B. CONCURRENT REPLAY DURING WRITES - Determinism Under Contention > should replay deterministically while concurrent writes are happening
+ FAIL  src/__tests__/phase-3-serialization-hardening.test.ts > Phase 3: Serialization Hardening - Real Concurrency Stress > C. MULTI-AGGREGATE PARALLEL WRITES - Isolation Verification > should maintain isolation across 50 concurrent aggregates
+ FAIL  src/__tests__/phase-3-serialization-hardening.test.ts > Phase 3: Serialization Hardening - Real Concurrency Stress > D. IDEMPOTENCY UNDER CONCURRENT PRESSURE > should prevent duplicate events even with concurrent identical idempotency keys
+ FAIL  src/__tests__/phase-3-serialization-hardening.test.ts > Phase 3: Serialization Hardening - Real Concurrency Stress > E. FAILURE INJECTION - Deadlock and Timeout Handling > should recover from transaction timeout and retry safely
+ FAIL  src/__tests__/phase-3-serialization-hardening.test.ts > Phase 3: Serialization Hardening - Real Concurrency Stress > F. EVENT ORDERING CORRECTNESS UNDER CONCURRENCY > should maintain append-only ordering invariant
+PrismaClientKnownRequestError: 
+Invalid `prisma.user.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/phase-3-serialization-hardening.test.ts:30:5
+     28|
+     29|     // Setup test data
+     30|     await db.user.create({
+       |     ^
+     31|       data: {
+     32|         id: userId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[36/194]⎯
+
+ FAIL  src/__tests__/phase-3-snapshot-engine.test.ts > Phase 3 Slice 3 — SnapshotEngine: Snapshot Creation and Recovery > Snapshot Creation > creates snapshot from replayed aggregate state
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-snapshot-engine.test.ts:41:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[37/194]⎯
+
+ FAIL  src/__tests__/phase-3-snapshot-engine.test.ts > Phase 3 Slice 3 — SnapshotEngine: Snapshot Creation and Recovery > Snapshot Creation > preserves aggregate state in snapshot
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-snapshot-engine.test.ts:76:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[38/194]⎯
+
+ FAIL  src/__tests__/phase-3-snapshot-engine.test.ts > Phase 3 Slice 3 — SnapshotEngine: Snapshot Creation and Recovery > Replay with Snapshot Optimization > falls back to full replay when no snapshot available
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-snapshot-engine.test.ts:122:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[39/194]⎯
+
+ FAIL  src/__tests__/phase-3-snapshot-engine.test.ts > Phase 3 Slice 3 — SnapshotEngine: Snapshot Creation and Recovery > Replay with Snapshot Optimization > respects event number limit in replay
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-snapshot-engine.test.ts:154:22
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[40/194]⎯
+
+ FAIL  src/__tests__/phase-3-snapshot-engine.test.ts > Phase 3 Slice 3 — SnapshotEngine: Snapshot Creation and Recovery > Tenant Isolation > snapshots are workspace-scoped
+PrismaClientKnownRequestError: Can't reach database server at 127.0.0.1:5432
+ ❯ jt.#c node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:305:13
+ ❯ error node_modules/@prisma/client/src/runtime/core/engines/client/ClientEngine.ts:458:40
+ ❯ Proxy._transactionWithCallback node_modules/@prisma/client/src/runtime/getPrismaClient.ts:798:15
+ ❯ Function.emit src/services/event-emitter.ts:102:15
+    100|
+    101|     try {
+    102|       event = await db.$transaction(
+       |               ^
+    103|         async (tx: any) => {
+    104|           // Step 0: Check for idempotent replay (atomic check within …
+ ❯ src/__tests__/phase-3-snapshot-engine.test.ts:220:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[41/194]⎯
+
+ FAIL  src/__tests__/ci-cd/workflow-validation.test.ts > CI/CD Workflow Validation > Main CI Workflow (.github/workflows/ci.yml) > build-and-test should run tests with DATABASE_URL
+AssertionError: expected 'npm run test:ci' to contain 'npm test'
+
+Expected: "npm test"
+Received: "npm run test:ci"
+
+ ❯ src/__tests__/ci-cd/workflow-validation.test.ts:86:28
+     84|       );
+     85|       expect(testStep).toBeDefined();
+     86|       expect(testStep.run).toContain("npm test");
+       |                            ^
+     87|       expect(testStep.env).toHaveProperty("DATABASE_URL");
+     88|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[42/194]⎯
+
+ FAIL  src/__tests__/phase-c/canonical-telemetry-lifecycle.test.ts > PHASE C STEP 4: Telemetry Duplicate Detection > Timing Information > Start time and end time track request duration
+AssertionError: expected 9 to be greater than or equal to 10
+ ❯ src/__tests__/phase-c/canonical-telemetry-lifecycle.test.ts:406:46
+    404|       const ctx2 = lifecycle.getContext();
+    405|       expect(ctx2.endTime).toBeDefined();
+    406|       expect(ctx2.endTime! - ctx2.startTime).toBeGreaterThanOrEqual(10…
+       |                                              ^
+    407|     });
+    408|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[43/194]⎯
+
+ FAIL  src/__tests__/phase-d/d4-monitoring-backbone.test.ts > D4: Monitoring Backbone - Local Metrics Collection > Health Probes: Startup Check > should verify config loaded, database migrated, routes registered
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/__tests__/phase-d/d4-monitoring-backbone.test.ts:42:40
+     40|       // ASSERTION: All startup conditions checked
+     41|       expect(result.config_loaded).toBe(true);
+     42|       expect(result.database_migrated).toBe(true);
+       |                                        ^
+     43|       expect(result.routes_registered).toBeGreaterThan(0);
+     44|       expect(result.test_request_successful).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[44/194]⎯
+
+ FAIL  src/__tests__/phase-d/d4-monitoring-backbone.test.ts > D4: Monitoring Backbone - Local Metrics Collection > Health Probes: Readiness Check > should verify database health and queue depth
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/__tests__/phase-d/d4-monitoring-backbone.test.ts:119:39
+    117|
+    118|       // ASSERTION: Database and queue checked
+    119|       expect(result.database_healthy).toBe(true);
+       |                                       ^
+    120|       expect(result.database_latency_ms).toBeGreaterThanOrEqual(0);
+    121|       expect(result.queue_healthy).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[45/194]⎯
+
+ FAIL  src/__tests__/phase-i/phase-i10-enforcement-scanner.test.ts > PHASE I10: Runtime Enforcement Scanner - ALL Routes > MANDATORY: NO route may be UNWRAPPED
+Error: I10 ENFORCEMENT BLOCKER: 94 routes are UNWRAPPED (no enforcement layer):
+  - actions/[actionId]/complete/route.ts
+  - actions/[actionId]/impact-delta/route.ts
+  - actions/[actionId]/route.ts
+  - actions/[actionId]/start/route.ts
+  - actions/route.ts
+  - admin/audit-log/route.ts
+  - admin/workspaces/[id]/members/route.ts
+  - admin/workspaces/route.ts
+  - audit/events/route.ts
+  - audit/route.ts
+  - billing/plan/route.ts
+  - billing/upgrade/route.ts
+  - billing/usage/route.ts
+  - business-impact/decision/[id]/route.ts
+  - business-impact/summary/route.ts
+  - clients/route.ts
+  - control/blocked-metrics/route.ts
+  - control/today/route.ts
+  - decision/export/route.ts
+  - decisions/[decisionId]/accept/route.ts
+  - decisions/[decisionId]/close/route.ts
+  - decisions/[decisionId]/reject/route.ts
+  - decisions/list/route.ts
+  - deliverables/[deliverableId]/route.ts
+  - deliverables/route.ts
+  - diagnosis/archetype/route.ts
+  - engagements/[engagementId]/acknowledge/route.ts
+  - engagements/[engagementId]/actions/route.ts
+  - engagements/[engagementId]/business-impact/detail/route.ts
+  - engagements/[engagementId]/business-impact/route.ts
+  - engagements/[engagementId]/condition/route.ts
+  - engagements/[engagementId]/dashboard/route.ts
+  - engagements/[engagementId]/decision-evidence/route.ts
+  - engagements/[engagementId]/drift/route.ts
+  - engagements/[engagementId]/escalation-checks/route.ts
+  - engagements/[engagementId]/execution-certainty/route.ts
+  - engagements/[engagementId]/findings/route.ts
+  - engagements/[engagementId]/intervention-state/route.ts
+  - engagements/[engagementId]/kpis/route.ts
+  - engagements/[engagementId]/outcomes/route.ts
+  - engagements/[engagementId]/recommendations/rerank/route.ts
+  - engagements/[engagementId]/recommendations/route.ts
+  - engagements/[engagementId]/report/route.ts
+  - engagements/[engagementId]/review-cycles/route.ts
+  - entitlement/quota/route.ts
+  - entitlement/route.ts
+  - entity/route.ts
+  - evidence-bundles/[bundleId]/items/route.ts
+  - evidence-bundles/[bundleId]/route.ts
+  - evidence/[evidenceId]/route.ts
+  - evidence/[evidenceId]/validate/route.ts
+  - evidence/route.ts
+  - export/route.ts
+  - findings/[findingId]/evidence/route.ts
+  - findings/[findingId]/route.ts
+  - findings/route.ts
+  - governance/alerts/route.ts
+  - growth/acquisition-metrics/route.ts
+  - growth/revenue-streams/route.ts
+  - growth/sales-pipeline/route.ts
+  - growth/unit-economics/route.ts
+  - intelligence/insights/route.ts
+  - intelligence/patterns/route.ts
+  - intelligence/recommendations/route.ts
+  - intelligence/summary/route.ts
+  - internal/startup/route.ts
+  - leads/route.ts
+  - me/route.ts
+  - notifications/[id]/route.ts
+  - notifications/preferences/route.ts
+  - notifications/route.ts
+  - observability/summary/route.ts
+  - operator/my-day/route.ts
+  - operator/myday/route.ts
+  - operator/queue/route.ts
+  - operator/route.ts
+  - ops/errors/route.ts
+  - ops/metrics/route.ts
+  - ops/readiness/route.ts
+  - ops/runtime/route.ts
+  - override/route.ts
+  - owner/config/route.ts
+  - owner/dashboard/route.ts
+  - readiness/route.ts
+  - recommendations/[recommendationId]/route.ts
+  - recommendations/route.ts
+  - report/route.ts
+  - scenario/route.ts
+  - users/[userId]/memberships/route.ts
+  - users/[userId]/roles/route.ts
+  - users/route.ts
+  - value/7day/route.ts
+  - value/route.ts
+  - value/summary/route.ts
+
+All routes MUST use withEnforcement() wrapper.
+ ❯ src/__tests__/phase-i/phase-i10-enforcement-scanner.test.ts:155:13
+    153|   it("MANDATORY: NO route may be UNWRAPPED", () => {
+    154|     const routes = findAllRouteFiles();
+    155|     const unwrapped = routes
+       |             ^
+    156|       .map(classifyRoute)
+    157|       .filter((c) => c.status === "UNWRAPPED");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[46/194]⎯
+
+ FAIL  src/__tests__/phase-i/phase-i10-error-normalization.test.ts > PHASE I10.5: Error Normalization Enforcement > normalizeError() function > should convert Error to RuntimeError
+AssertionError: expected 'Couldn\'t load that data. Please refr…' to contain 'test_operation'
+
+Expected: "test_operation"
+Received: "Couldn't load that data. Please refresh and try again."
+
+ ❯ src/__tests__/phase-i/phase-i10-error-normalization.test.ts:37:34
+     35|       expect(normalized).toBeInstanceOf(RuntimeError);
+     36|       expect(normalized.metadata.classification).toBe("INFRASTRUCTURE"…
+     37|       expect(normalized.message).toContain("test_operation");
+       |                                  ^
+     38|     });
+     39|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[47/194]⎯
+
+ FAIL  src/__tests__/phase-i/phase-i10-error-normalization.test.ts > PHASE I10.5: Error Normalization Enforcement > normalizeError() function > should convert string to RuntimeError
+AssertionError: expected 'Couldn\'t load that data. Please refr…' to contain 'Error message'
+
+Expected: "Error message"
+Received: "Couldn't load that data. Please refresh and try again."
+
+ ❯ src/__tests__/phase-i/phase-i10-error-normalization.test.ts:44:34
+     42|
+     43|       expect(normalized).toBeInstanceOf(RuntimeError);
+     44|       expect(normalized.message).toContain("Error message");
+       |                                  ^
+     45|     });
+     46|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[48/194]⎯
+
+ FAIL  src/__tests__/phase-i/phase-i10-error-normalization.test.ts > PHASE I10.5: Error Normalization Enforcement > normalizeError() function > should include operation name in normalized error message
+AssertionError: expected 'Server is having trouble. We\'re work…' to contain 'database_query'
+
+Expected: "database_query"
+Received: "Server is having trouble. We're working on it."
+
+ ❯ src/__tests__/phase-i/phase-i10-error-normalization.test.ts:62:34
+     60|       const normalized = normalizeError(error, "database_query");
+     61|
+     62|       expect(normalized.message).toContain("database_query");
+       |                                  ^
+     63|       expect(normalized.message).toContain("DB connection lost");
+     64|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[49/194]⎯
+
+ FAIL  src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts > PHASE I10.4: Queue Worker Enforcement > I10.4: Poison Job Detection > should move job to dead-letter queue after max retries exceeded
+AssertionError: expected 'Couldn\'t load that data. Please refr…' to contain 'dead-letter queue'
+
+Expected: "dead-letter queue"
+Received: "Couldn't load that data. Please refresh and try again."
+
+ ❯ src/__tests__/phase-i/phase-i10-queue-enforcement.test.ts:255:57
+    253|         // Expected to throw due to max retries exceeded
+    254|         expect(error).toBeTruthy();
+    255|         expect(error instanceof Error && error.message).toContain("dea…
+       |                                                         ^
+    256|       }
+    257|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[50/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts > PHASE RP1: Real PostgreSQL Runtime Persistence Proof > A. Append-Only Guarantee > event cannot be mutated after append
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts:19:21
+     17|     it("event cannot be mutated after append", async () => {
+     18|       // Create event
+     19|       const event = await db.canonicalEvent.create({
+       |                     ^
+     20|         data: {
+     21|           workspaceId: "a0000000-0000-0000-0000-000000000001",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[51/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts > PHASE RP1: Real PostgreSQL Runtime Persistence Proof > A. Append-Only Guarantee > eventNumber is monotonically increasing per aggregate
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts:47:22
+     45|
+     46|       // Append 3 events
+     47|       const event1 = await db.canonicalEvent.create({
+       |                      ^
+     48|         data: {
+     49|           workspaceId: "a0000000-0000-0000-0000-000000000002",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[52/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts > PHASE RP1: Real PostgreSQL Runtime Persistence Proof > B. Duplicate Replay Idempotency > replaying same event twice produces identical state
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts:106:22
+    104|
+    105|       // Create initial state
+    106|       const event1 = await db.canonicalEvent.create({
+       |                      ^
+    107|         data: {
+    108|           workspaceId: "a0000000-0000-0000-0000-000000000003",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[53/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts > PHASE RP1: Real PostgreSQL Runtime Persistence Proof > B. Duplicate Replay Idempotency > posting duplicate event with idempotencyKey is safe
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts:145:22
+    143|
+    144|       // First post
+    145|       const event1 = await db.canonicalEvent.create({
+       |                      ^
+    146|         data: {
+    147|           workspaceId: "a0000000-0000-0000-0000-000000000003",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[54/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts > PHASE RP1: Real PostgreSQL Runtime Persistence Proof > C. Concurrent Event Append Ordering > concurrent appends maintain order under database isolation
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts:180:23
+    178|
+    179|       // Simulate 5 concurrent appends (sequential in test, but DB ens…
+    180|       const results = await Promise.all([
+       |                       ^
+    181|         db.canonicalEvent.create({
+    182|           data: {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[55/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts > PHASE RP1: Real PostgreSQL Runtime Persistence Proof > I. Workspace Isolation Under Replay > replay of aggregate from workspace A cannot access workspace B events
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts:302:7
+    300|
+    301|       // Create event in workspace A
+    302|       await db.canonicalEvent.create({
+       |       ^
+    303|         data: {
+    304|           workspaceId: "test-ws-isolation-a",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[56/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts > PHASE RP1: Real PostgreSQL Runtime Persistence Proof > STRESS TESTS: Concurrent Operations > 100 parallel appends maintain ordering
+PrismaClientValidationError: 
+Invalid `prisma.canonicalEvent.create()` invocation:
+
+{
+  data: {
+    workspaceId: "test-ws-stress",
+    aggregateId: "stress-test-parallel-1779495634530",
+    aggregateType: "test",
+    eventNumber: 1,
+    eventType: "STRESS_EVENT_1",
+    payload: {
+      sequence: 1
+    },
+    occurredAt: new Date("2026-05-23T00:20:34.530Z"),
+    actor: "stress-test",
++   actorId: String
+  }
+}
+
+Argument `actorId` is missing.
+ ❯ ar node_modules/@prisma/client/src/runtime/core/errorRendering/throwValidationException.ts:46:8
+ ❯ throwValidationException node_modules/@prisma/client/src/runtime/RequestHandler.ts:211:6
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts:366:7
+    364|       }
+    365|
+    366|       await Promise.all(promises);
+       |       ^
+    367|
+    368|       // Verify all 100 events exist and are ordered
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[57/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts > PHASE RP1: Real PostgreSQL Runtime Persistence Proof > INTEGRITY ASSERTIONS > all events have valid eventNumber >= 1
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.findMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts:384:22
+    382|   describe("INTEGRITY ASSERTIONS", () => {
+    383|     it("all events have valid eventNumber >= 1", async () => {
+    384|       const events = await db.canonicalEvent.findMany({
+       |                      ^
+    385|         take: 1000,
+    386|       });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[58/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts > PHASE RP1: Real PostgreSQL Runtime Persistence Proof > INTEGRITY ASSERTIONS > all events have timestamp
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.findMany()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts:395:22
+    393|
+    394|     it("all events have timestamp", async () => {
+    395|       const events = await db.canonicalEvent.findMany({
+       |                      ^
+    396|         take: 1000,
+    397|       });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[59/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts > PHASE RP1: Real PostgreSQL Runtime Persistence Proof > METRICS CAPTURE > measure append latency
+PrismaClientKnownRequestError: 
+Invalid `prisma.canonicalEvent.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp1-phase3-persistence-runtime-proofs.test.ts:410:7
+    408|       const startTime = performance.now();
+    409|
+    410|       await db.canonicalEvent.create({
+       |       ^
+    411|         data: {
+    412|           workspaceId: "test-ws-metrics",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[60/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp10-serialization-performance.test.ts > Phase RP10: Serialization Performance Audit > A. APPEND LATENCY - Single Event Append Performance > should measure append latency p50/p95/p99
+ FAIL  src/__tests__/runtime-proof/rp10-serialization-performance.test.ts > Phase RP10: Serialization Performance Audit > B. LOCK CONTENTION - Per-Aggregate Lock Wait Time > should measure lock wait time under high contention
+ FAIL  src/__tests__/runtime-proof/rp10-serialization-performance.test.ts > Phase RP10: Serialization Performance Audit > C. REPLAY LATENCY - Event Replay Performance > should measure replay latency for aggregates with varying event counts
+ FAIL  src/__tests__/runtime-proof/rp10-serialization-performance.test.ts > Phase RP10: Serialization Performance Audit > D. CONCURRENT THROUGHPUT - Events/Sec Under Load > should measure concurrent throughput with multiple aggregates
+ FAIL  src/__tests__/runtime-proof/rp10-serialization-performance.test.ts > Phase RP10: Serialization Performance Audit > E. MONOTONIC ORDERING OVERHEAD - Unique Constraint Cost > should verify uniqueness constraint doesn't introduce severe overhead
+PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp10-serialization-performance.test.ts:39:5
+     37|     engagementId = uuidv4();
+     38|
+     39|     await db.workspace.create({
+       |     ^
+     40|       data: {
+     41|         id: workspaceId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[61/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 1. Missing Auth Token → 401 > GET /api/audit without auth returns 401
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:58:26
+     56|       });
+     57|
+     58|       expect(res.status).toBe(401);
+       |                          ^
+     59|     });
+     60|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[62/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 1. Missing Auth Token → 401 > GET /api/value/7day without auth returns 401
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:66:26
+     64|       });
+     65|
+     66|       expect(res.status).toBe(401);
+       |                          ^
+     67|     });
+     68|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[63/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 1. Missing Auth Token → 401 > POST /api/verify without auth returns 401
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:75:26
+     73|       });
+     74|
+     75|       expect(res.status).toBe(401);
+       |                          ^
+     76|     });
+     77|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[64/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 2. Invalid Auth Token → 401 > GET /api/notifications with invalid token returns 401
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:88:26
+     86|       });
+     87|
+     88|       expect(res.status).toBe(401);
+       |                          ^
+     89|     });
+     90|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[65/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 4. Workspace Spoofing → Blocked > request with forged workspace header is blocked
+AssertionError: expected [ 401, 403, 400 ] to include 503
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:122:31
+    120|
+    121|       // Should be 401 (not authenticated) or 403 (not authorized)
+    122|       expect([401, 403, 400]).toContain(res.status);
+       |                               ^
+    123|     });
+    124|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[66/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 5. Cross-Workspace Data Access → Blocked > cannot export decision from other workspace
+AssertionError: expected [ 401, 403, 400 ] to include 503
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:138:31
+    136|
+    137|       // Should be 401 or 403
+    138|       expect([401, 403, 400]).toContain(res.status);
+       |                               ^
+    139|     });
+    140|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[67/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 6. Unauthenticated Audit Access → Blocked > GET /api/audit requires auth
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:146:26
+    144|       const res = await makeRequest("GET", "/api/audit");
+    145|
+    146|       expect(res.status).toBe(401);
+       |                          ^
+    147|     });
+    148|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[68/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 7. Unauthenticated Value Access → Blocked > GET /api/value/summary requires auth
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:154:26
+    152|       const res = await makeRequest("GET", "/api/value/summary");
+    153|
+    154|       expect(res.status).toBe(401);
+       |                          ^
+    155|     });
+    156|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[69/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 7. Unauthenticated Value Access → Blocked > GET /api/value/7day requires auth
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:160:26
+    158|       const res = await makeRequest("GET", "/api/value/7day");
+    159|
+    160|       expect(res.status).toBe(401);
+       |                          ^
+    161|     });
+    162|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[70/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 8. Unauthenticated Intelligence Access → Blocked > GET /api/intelligence/insights requires auth
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:170:26
+    168|       });
+    169|
+    170|       expect(res.status).toBe(401);
+       |                          ^
+    171|     });
+    172|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[71/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 8. Unauthenticated Intelligence Access → Blocked > GET /api/intelligence/patterns requires auth
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:178:26
+    176|       });
+    177|
+    178|       expect(res.status).toBe(401);
+       |                          ^
+    179|     });
+    180|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[72/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 9. Unauthenticated Quota Access → Blocked > GET /api/entitlement/quota requires auth
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:188:26
+    186|       });
+    187|
+    188|       expect(res.status).toBe(401);
+       |                          ^
+    189|     });
+    190|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[73/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 9. Unauthenticated Quota Access → Blocked > POST /api/entitlement/quota requires auth
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:197:26
+    195|       });
+    196|
+    197|       expect(res.status).toBe(401);
+       |                          ^
+    198|     });
+    199|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[74/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 10. Unauthenticated Notification Access → Blocked > GET /api/notifications requires auth
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:207:26
+    205|       });
+    206|
+    207|       expect(res.status).toBe(401);
+       |                          ^
+    208|     });
+    209|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[75/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 10. Unauthenticated Notification Access → Blocked > GET /api/notifications/preferences requires auth
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:215:26
+    213|       });
+    214|
+    215|       expect(res.status).toBe(401);
+       |                          ^
+    216|     });
+    217|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[76/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 10. Unauthenticated Notification Access → Blocked > GET /api/notifications/[id] requires auth
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:223:26
+    221|       });
+    222|
+    223|       expect(res.status).toBe(401);
+       |                          ^
+    224|     });
+    225|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[77/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 11. Invalid Stripe Signature → 401 > POST /api/webhooks/stripe with invalid signature returns 401
+AssertionError: expected 503 to be 401 // Object.is equality
+
+- Expected
++ Received
+
+- 401
++ 503
+
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:236:26
+    234|       });
+    235|
+    236|       expect(res.status).toBe(401);
+       |                          ^
+    237|     });
+    238|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[78/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > 13. Oversized Payload → Rejected > POST with payload > limit returns error
+AssertionError: expected [ 400, 413, 401 ] to include 503
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:257:31
+    255|       });
+    256|
+    257|       expect([400, 413, 401]).toContain(res.status);
+       |                               ^
+    258|     });
+    259|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[79/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > ENDPOINT EXEMPTIONS VERIFIED > /api/health accessible without auth
+AssertionError: expected [ 200, 500 ] to include 503
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:348:26
+    346|       const res = await makeRequest("GET", "/api/health");
+    347|
+    348|       expect([200, 500]).toContain(res.status); // 500 is OK if server…
+       |                          ^
+    349|     });
+    350|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[80/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > ENDPOINT EXEMPTIONS VERIFIED > /api/readiness accessible without auth
+AssertionError: expected [ 200, 500 ] to include 503
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:354:26
+    352|       const res = await makeRequest("GET", "/api/readiness");
+    353|
+    354|       expect([200, 500]).toContain(res.status);
+       |                          ^
+    355|     });
+    356|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[81/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts > PHASE RP2: Hostile HTTP Runtime Security Proofs > ENDPOINT EXEMPTIONS VERIFIED > /api/liveness accessible without auth
+AssertionError: expected [ 200, 500 ] to include 503
+ ❯ src/__tests__/runtime-proof/rp2-hostile-http-runtime-proofs.test.ts:360:26
+    358|       const res = await makeRequest("GET", "/api/liveness");
+    359|
+    360|       expect([200, 500]).toContain(res.status);
+       |                          ^
+    361|     });
+    362|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[82/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts > PHASE RP3: Operational Survivability Runtime Proofs > 1. Health Check Endpoint > /api/health returns 200 when healthy
+AssertionError: expected [ 200, 500 ] to include undefined
+ ❯ src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts:43:26
+     41|
+     42|       // 500 is acceptable if server not running (test environment)
+     43|       expect([200, 500]).toContain(res.status);
+       |                          ^
+     44|     });
+     45|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[83/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts > PHASE RP3: Operational Survivability Runtime Proofs > 2. Readiness Degradation > /api/readiness returns 200 when ready
+AssertionError: expected [ 200, 500 ] to include undefined
+ ❯ src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts:60:26
+     58|       const res = await makeRequest("/api/readiness");
+     59|
+     60|       expect([200, 500]).toContain(res.status);
+       |                          ^
+     61|     });
+     62|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[84/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts > PHASE RP3: Operational Survivability Runtime Proofs > 3. Liveness Probe > /api/liveness returns 200 when alive
+AssertionError: expected [ 200, 500 ] to include undefined
+ ❯ src/__tests__/runtime-proof/rp3-operational-survivability-runtime-proofs.test.ts:78:26
+     76|       const res = await makeRequest("/api/liveness");
+     77|
+     78|       expect([200, 500]).toContain(res.status);
+       |                          ^
+     79|     });
+     80|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[85/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts > Phase RP3: Workspace Isolation Runtime Proof > Event Stream Isolation > EventEmitterService cannot see events from other workspace
+ FAIL  src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts > Phase RP3: Workspace Isolation Runtime Proof > Event Stream Isolation > EventReplayEngine cannot replay from other workspace
+ FAIL  src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts > Phase RP3: Workspace Isolation Runtime Proof > Projection Data Isolation > projection query in workspace A cannot see workspace B data
+ FAIL  src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts > Phase RP3: Workspace Isolation Runtime Proof > Projection Data Isolation > projection rebuild respects workspace boundaries
+ FAIL  src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts > Phase RP3: Workspace Isolation Runtime Proof > Concurrent Multi-Workspace Safety > concurrent events in different workspaces maintain isolation
+ FAIL  src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts > Phase RP3: Workspace Isolation Runtime Proof > Event Number Scoping > eventNumbers are scoped per workspace + aggregate, not global
+ FAIL  src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts > Phase RP3: Workspace Isolation Runtime Proof > Tenant Isolation Boundary Enforcement > query for one workspace never returns data from another
+ FAIL  src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts > Phase RP3: Workspace Isolation Runtime Proof > Tenant Isolation Boundary Enforcement > cannot indirectly access workspace data through relationship
+PrismaClientKnownRequestError: 
+Invalid `prisma.user.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp3-workspace-isolation-runtime-proof.test.ts:47:5
+     45|
+     46|     // Workspace 1 setup
+     47|     await db.user.create({
+       |     ^
+     48|       data: {
+     49|         id: user1Id,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[86/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts > Phase RP4: Capability Enforcement Runtime Proof > Capability-Based Access Control > user with RECOMMENDATION_CREATE capability can create recommendation
+ FAIL  src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts > Phase RP4: Capability Enforcement Runtime Proof > Capability-Based Access Control > database enforces createdBy field for audit trail
+ FAIL  src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts > Phase RP4: Capability Enforcement Runtime Proof > Capability-Based Access Control > user without capability cannot be in createdBy for privileged operations
+ FAIL  src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts > Phase RP4: Capability Enforcement Runtime Proof > Capability-Based Access Control > approval operations require specific capability
+ FAIL  src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts > Phase RP4: Capability Enforcement Runtime Proof > Capability-Based Access Control > workspace isolation prevents cross-workspace capability exploitation
+ FAIL  src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts > Phase RP4: Capability Enforcement Runtime Proof > Audit Trail for Capability Enforcement > tracks which user performed action (for capability audit)
+ FAIL  src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts > Phase RP4: Capability Enforcement Runtime Proof > Capability Constants Are Defined > all major capability constants are defined
+ FAIL  src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts > Phase RP4: Capability Enforcement Runtime Proof > Capability Constants Are Defined > capabilities are namespace-qualified
+PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp4-capability-enforcement-runtime-proof.test.ts:36:5
+     34|
+     35|     // Create workspace
+     36|     await db.workspace.create({
+       |     ^
+     37|       data: {
+     38|         id: workspaceId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[87/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts > Phase RP5: Quota Enforcement Runtime Proof > Quota Limit Enforcement > allows operations when under quota limit
+ FAIL  src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts > Phase RP5: Quota Enforcement Runtime Proof > Quota Limit Enforcement > tracks resource usage per workspace
+ FAIL  src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts > Phase RP5: Quota Enforcement Runtime Proof > Quota Limit Enforcement > workspace isolation prevents quota from affecting other workspaces
+ FAIL  src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts > Phase RP5: Quota Enforcement Runtime Proof > Rate Limiting via Quota System > records timestamp of operations for quota calculation
+ FAIL  src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts > Phase RP5: Quota Enforcement Runtime Proof > Rate Limiting via Quota System > can query recent operations for quota rate limiting
+ FAIL  src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts > Phase RP5: Quota Enforcement Runtime Proof > Quota Constants and Configuration > different service tiers have different quota levels
+ FAIL  src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts > Phase RP5: Quota Enforcement Runtime Proof > Quota Constants and Configuration > workspaces can have quota limits configured
+ FAIL  src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts > Phase RP5: Quota Enforcement Runtime Proof > Quota Tracking Across Entities > can track total operations per user per workspace
+ FAIL  src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts > Phase RP5: Quota Enforcement Runtime Proof > Quota Tracking Across Entities > quota enforcement database schema is sound
+PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp5-quota-enforcement-runtime-proof.test.ts:33:5
+     31|
+     32|     // Create workspace
+     33|     await db.workspace.create({
+       |     ^
+     34|       data: {
+     35|         id: workspaceId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[88/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts > Phase RP6: TRUE Concurrency Stress Testing (Independent Connections) > A. SAME AGGREGATE STORM - 100 Concurrent Writes > should allocate 100 unique monotonic eventNumbers under concurrent pressure
+ FAIL  src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts > Phase RP6: TRUE Concurrency Stress Testing (Independent Connections) > B. DETERMINISTIC REPLAY UNDER CONTENTION > should replay identically while concurrent writes happen
+ FAIL  src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts > Phase RP6: TRUE Concurrency Stress Testing (Independent Connections) > C. IDEMPOTENCY UNDER EXTREME CONCURRENCY > should create only ONE event from 20 concurrent identical requests
+ FAIL  src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts > Phase RP6: TRUE Concurrency Stress Testing (Independent Connections) > Serialization Guarantees > verifies unique constraint prevents race condition collisions
+PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp6-true-concurrency-stress.test.ts:76:5
+     74|     engagementId = uuidv4();
+     75|
+     76|     await db.workspace.create({
+       |     ^
+     77|       data: {
+     78|         id: workspaceId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[89/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts > Phase RP7: Deadlock & Retry Recovery > A. CONCURRENT WRITES TO DIFFERENT AGGREGATES - Lock Order Independence > should handle concurrent writes to different aggregates without deadlock
+ FAIL  src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts > Phase RP7: Deadlock & Retry Recovery > B. IDEMPOTENCY KEY RECOVERY - Constraint Violation Handling > should recover from unique constraint violations via idempotency lookup
+ FAIL  src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts > Phase RP7: Deadlock & Retry Recovery > B. IDEMPOTENCY KEY RECOVERY - Constraint Violation Handling > should distinguish between different idempotency keys even under high concurrency
+ FAIL  src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts > Phase RP7: Deadlock & Retry Recovery > C. RETRY SUCCESS UNDER CONFLICT > should allow retry after transient conflict
+ FAIL  src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts > Phase RP7: Deadlock & Retry Recovery > D. MANY-AGGREGATE DEADLOCK POTENTIAL - Lock Order Invariance > should handle writes to many aggregates without deadlock
+ FAIL  src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts > Phase RP7: Deadlock & Retry Recovery > E. STRESS RECOVERY - High Volume With Failures > should maintain invariants even with failed requests
+PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp7-deadlock-retry-recovery.test.ts:39:5
+     37|     engagementId = uuidv4();
+     38|
+     39|     await db.workspace.create({
+       |     ^
+     40|       data: {
+     41|         id: workspaceId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[90/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp8-failure-injection.test.ts > Phase RP8: Failure Injection & Recovery > A. CONCURRENT WRITE INTERFERENCE - Lock Serialization > should serialize concurrent writes to same aggregate correctly
+ FAIL  src/__tests__/runtime-proof/rp8-failure-injection.test.ts > Phase RP8: Failure Injection & Recovery > B. DUPLICATE IDEMPOTENCY KEY - Constraint Violation Recovery > should recover from idempotency key constraint violation
+ FAIL  src/__tests__/runtime-proof/rp8-failure-injection.test.ts > Phase RP8: Failure Injection & Recovery > B. DUPLICATE IDEMPOTENCY KEY - Constraint Violation Recovery > should distinguish concurrent identical requests via idempotency
+ FAIL  src/__tests__/runtime-proof/rp8-failure-injection.test.ts > Phase RP8: Failure Injection & Recovery > C. REPLAY CONSISTENCY UNDER FAILURE > should replay identically even after partial failures
+ FAIL  src/__tests__/runtime-proof/rp8-failure-injection.test.ts > Phase RP8: Failure Injection & Recovery > D. VERIFICATION QUERIES UNDER FAILURE > should correctly query event sequence despite concurrent failures
+ FAIL  src/__tests__/runtime-proof/rp8-failure-injection.test.ts > Phase RP8: Failure Injection & Recovery > E. WORKSPACE ISOLATION UNDER CONCURRENT WRITE FAILURE > should maintain workspace isolation even under concurrent write pressure
+ FAIL  src/__tests__/runtime-proof/rp8-failure-injection.test.ts > Phase RP8: Failure Injection & Recovery > F. HIGH-CONCURRENCY FAILURE RESILIENCE > should maintain invariants with 100+ concurrent writes and failures
+PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp8-failure-injection.test.ts:39:5
+     37|     engagementId = uuidv4();
+     38|
+     39|     await db.workspace.create({
+       |     ^
+     40|       data: {
+     41|         id: workspaceId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[91/194]⎯
+
+ FAIL  src/__tests__/runtime-proof/rp9-replay-determinism.test.ts > Phase RP9: Replay Determinism Verification > A. SAME AGGREGATE REPLAYED 10x - Deterministic State > should replay identically 10 consecutive times
+ FAIL  src/__tests__/runtime-proof/rp9-replay-determinism.test.ts > Phase RP9: Replay Determinism Verification > B. SAME AGGREGATE REPLAYED 100x - High Volume Determinism > should maintain determinism across 100 parallel replays
+ FAIL  src/__tests__/runtime-proof/rp9-replay-determinism.test.ts > Phase RP9: Replay Determinism Verification > C. REPLAY UNDER CONCURRENT WRITES - Write Safety > should maintain determinism while concurrent writes happen
+ FAIL  src/__tests__/runtime-proof/rp9-replay-determinism.test.ts > Phase RP9: Replay Determinism Verification > E. MANY CONCURRENT REPLAYS + WRITES - Contention Determinism > should maintain determinism with 50 concurrent replays and 50 concurrent writes
+ FAIL  src/__tests__/runtime-proof/rp9-replay-determinism.test.ts > Phase RP9: Replay Determinism Verification > F. REPLAY COMPRESSION - State Consistency > should produce same final state regardless of event count
+PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation:
+
+
+Can't reach database server at 127.0.0.1:5432
+ ❯ zr.handleRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:237:12
+ ❯ zr.handleAndLogRequestError node_modules/@prisma/client/src/runtime/RequestHandler.ts:183:11
+ ❯ zr.request node_modules/@prisma/client/src/runtime/RequestHandler.ts:152:11
+ ❯ a node_modules/@prisma/client/src/runtime/getPrismaClient.ts:963:23
+ ❯ src/__tests__/runtime-proof/rp9-replay-determinism.test.ts:41:5
+     39|     engagementId = uuidv4();
+     40|
+     41|     await db.workspace.create({
+       |     ^
+     42|       data: {
+     43|         id: workspaceId,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[92/194]⎯
+
+
+ Test Files  30 failed | 139 passed (169)
+      Tests  194 failed | 5115 passed | 1 skipped (5310)
+   Start at  00:20:19
+   Duration  300.19s (transform 6.39s, setup 14.56s, import 12.33s, tests 65.42s, environment 157.60s)
+
+
+📊 Cleaning up test environment...
+  ✓ Database connection closed
