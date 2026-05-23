@@ -6,8 +6,7 @@
  * Triggers fresh CI validation
  */
 
-import { execSync, spawn } from "child_process";
-import type { ChildProcess } from "child_process";
+import { execSync } from "child_process";
 
 const DOCKER_CONTAINER_NAME = "opsiq-test-postgres";
 const POSTGRES_USER = "postgres";
@@ -17,11 +16,8 @@ const DEFAULT_DATABASE_URL = `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}
 // Use DATABASE_URL from environment if available (GitHub Actions CI), otherwise use default
 const DATABASE_URL = process.env.DATABASE_URL || DEFAULT_DATABASE_URL;
 const NEEDS_POSTGRES_MANAGEMENT = !process.env.DATABASE_URL; // Only manage PostgreSQL if not provided by CI
-const NEXT_SERVER_PORT = 3000;
-const NEXT_SERVER_URL = `http://localhost:${NEXT_SERVER_PORT}`;
 
 let postgresContainerId: string | null = null;
-let nextServerProcess: ChildProcess | null = null;
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -154,41 +150,9 @@ async function buildNextJs() {
 }
 
 async function startNextServer() {
-  console.log("🚀 Starting Next.js server...");
-
-  return new Promise<void>((resolve, reject) => {
-    process.env.DATABASE_URL = DATABASE_URL;
-    process.env.PORT = String(NEXT_SERVER_PORT);
-
-    nextServerProcess = spawn("npm", ["run", "start"], {
-      stdio: "inherit",
-      env: process.env,
-    });
-
-    // Wait for server to be ready
-    let retries = 30;
-    const checkServer = async () => {
-      while (retries > 0) {
-        try {
-          const response = await fetch(`${NEXT_SERVER_URL}/api/health`);
-          if (response.ok) {
-            console.log(`✓ Next.js server is ready on ${NEXT_SERVER_URL}`);
-            resolve();
-            return;
-          }
-        } catch {
-          // Server not ready yet
-        }
-
-        await sleep(1000);
-        retries--;
-      }
-
-      reject(new Error("Next.js server failed to start within 30 seconds"));
-    };
-
-    checkServer();
-  });
+  // Note: Tests run directly with vitest, not through a server
+  // Database is already configured and migrations are applied
+  console.log("✓ Database infrastructure ready for tests");
 }
 
 async function runTests() {
@@ -197,7 +161,6 @@ async function runTests() {
   try {
     const env = { ...process.env };
     env.DATABASE_URL = DATABASE_URL;
-    env.TEST_API_URL = NEXT_SERVER_URL;
     env.NODE_ENV = "test";
 
     execSync("vitest run --maxWorkers 1", { stdio: "inherit", env });
@@ -211,12 +174,6 @@ async function runTests() {
 
 async function cleanup() {
   console.log("🧹 Cleaning up...");
-
-  // Stop Next.js server
-  if (nextServerProcess) {
-    nextServerProcess.kill();
-    await sleep(2000);
-  }
 
   // Stop and remove PostgreSQL container (only if we started one)
   if (postgresContainerId && NEEDS_POSTGRES_MANAGEMENT) {
