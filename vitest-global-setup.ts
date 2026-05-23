@@ -12,10 +12,12 @@ async function setup() {
   console.log("\n📊 Initializing test environment...");
 
   // Set test environment
-  (process.env as any).NODE_ENV = "test";
-  (process.env as any).VITEST = "true";
-  (process.env as any).SKIP_ENV_VALIDATION = "true";
-  (process.env as any).TEST_WITH_DB = "true";
+  Object.assign(process.env, {
+    NODE_ENV: "test",
+    VITEST: "true",
+    SKIP_ENV_VALIDATION: "true",
+    TEST_WITH_DB: "true",
+  });
 
   // Load .env.test for database configuration
   const envTestPath = path.resolve(__dirname, ".env.test");
@@ -27,7 +29,7 @@ async function setup() {
     console.log("  → .env.test not found, using defaults");
     // Fallback: use development database
     if (!process.env.DATABASE_URL) {
-      (process.env as any).DATABASE_URL = "postgresql://user:password@localhost:5432/opsiq_dev?schema=public";
+      process.env.DATABASE_URL = "postgresql://user:password@localhost:5432/opsiq_dev?schema=public";
     }
   }
 

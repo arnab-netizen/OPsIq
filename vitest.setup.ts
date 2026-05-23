@@ -26,8 +26,8 @@ beforeAll(async () => {
 beforeEach(() => {
   // Each test should get a fresh db context
   const globalForPrisma = globalThis as unknown as {
-    prisma: any | undefined;
-    prismaPromise: Promise<any> | undefined;
+    prisma: unknown;
+    prismaPromise: Promise<unknown>;
   };
   // Keep the connection alive but clear test-specific state
 });
