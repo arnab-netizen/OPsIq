@@ -1,7 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { withEnforcementFull } from "@/lib/enforced-route";
-import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createContact, getContactsForClient } from "@/services/client-contact";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";

@@ -4,6 +4,7 @@
  */
 
 import { NextRequest } from "next/server";
+import * as crypto from "crypto";
 
 interface LogContext {
   request_id: string;
@@ -84,7 +85,6 @@ function serializePayload(payload: unknown): string {
 
 function payloadHash(payload: unknown): string {
   try {
-    const crypto = require("crypto");
     const serialized = JSON.stringify(payload);
     return crypto
       .createHash("sha256")

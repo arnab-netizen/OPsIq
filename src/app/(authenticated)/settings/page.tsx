@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Badge, LoadingState, ErrorState } from "@/ui/primitives";
 import { GovernedEmptyState } from "@/components/ui/GovernedEmptyState";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -33,30 +33,28 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
-  const fetchProfile = () => {
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     setErrorDetails(null);
-    fetch("/api/me")
-      .then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error?.message ?? "Failed to load profile");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        setMe(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setErrorDetails(classifyOperatorError(err, { context: "load" }).operatorMessage);
-        setLoading(false);
-      });
-  };
+    try {
+      const res = await fetch("/api/me");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error?.message ?? "Failed to load profile");
+      }
+      const data = await res.json();
+      setMe(data);
+    } catch (err) {
+      setErrorDetails(classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: "load" }).operatorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     fetchProfile();
-  }, []);
+  }, [fetchProfile]);
 
   if (loading) return <LoadingState message="Loading profile..." />;
   if (errorDetails) return <ErrorState message={errorDetails} />; // classifyOperatorError

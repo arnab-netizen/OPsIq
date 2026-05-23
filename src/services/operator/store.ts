@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { OperatorItem } from "@/domain/operator/types";
 import { CalibrationRecord } from "@/domain/calibration/types";
@@ -120,7 +121,7 @@ export async function getItems(): Promise<OperatorItem[]> {
   const workspace = await requireWorkspaceContext();
 
   // Filter by workspaceId to prevent cross-workspace access
-  const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany({
+  const records: Prisma.OperatorItemGetPayload<unknown>[] = await db.operatorItem.findMany({
     where: { workspaceId: workspace.workspaceId },
   });
   return records.map((r: unknown) => ({
@@ -392,7 +393,7 @@ export async function getQueuedItems(
     : ["pending", "in_progress"];
 
   // Filter by workspaceId to prevent cross-workspace access
-  const records: Prisma.OperatorItemGetPayload<{}>[] = await db.operatorItem.findMany({
+  const records: Prisma.OperatorItemGetPayload<unknown>[] = await db.operatorItem.findMany({
     where: {
       workspaceId: workspace.workspaceId,
       status: {
@@ -484,7 +485,7 @@ export async function addBlockedDecision(params: {
   }
 
   const data: unknown = {
-    id: require("crypto").randomUUID(),
+    id: randomUUID(),
     workspaceId: params.workspaceId,
     ownerUserId: params.ownerUserId,
     createdBy: params.createdBy,

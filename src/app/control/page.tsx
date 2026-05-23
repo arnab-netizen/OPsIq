@@ -4,6 +4,27 @@ import { classifyOperatorError } from '@/lib/operator-error-governance';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
+  <div className={`rounded-lg border border-border bg-card p-4 md:p-6 ${className}`}>
+    {children}
+  </div>
+);
+
+const LoadingCard = () => (
+  <Card className="animate-pulse">
+    <div className="h-4 bg-muted rounded mb-2 w-3/4"></div>
+    <div className="h-8 bg-muted rounded w-1/2"></div>
+  </Card>
+);
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
 interface BlockedDecision {
   id: string;
   problem: string;
@@ -207,27 +228,6 @@ export default function ControlPage() {
     const interval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  const Card = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <div className={`rounded-lg border border-border bg-card p-4 md:p-6 ${className}`}>
-      {children}
-    </div>
-  );
-
-  const LoadingCard = () => (
-    <Card className="animate-pulse">
-      <div className="h-4 bg-muted rounded mb-2 w-3/4"></div>
-      <div className="h-8 bg-muted rounded w-1/2"></div>
-    </Card>
-  );
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   return (
     <div className="min-h-screen bg-background p-3 md:p-8 sm:p-4">

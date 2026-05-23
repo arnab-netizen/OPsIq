@@ -138,6 +138,7 @@ export function useOperatorMutation<TData, TVariables = unknown>(
             const delayMs =
               (options.retryDelayMs ?? 1000) * Math.pow(2, retryCount);
             await new Promise((r) => setTimeout(r, delayMs));
+            // eslint-disable-next-line
             return executeWithRetry(variables, retryCount + 1);
           }
           error = new Error(

@@ -11,6 +11,8 @@
  * - Structured telemetry (trace IDs, span context)
  */
 
+import * as os from "os";
+
 /**
  * Health Status: What the `/health` endpoint reports
  */
@@ -240,7 +242,7 @@ export const MONITORING_ASSERTIONS = {
   // CPU saturation check
   CPU_OK: {
     check: async () => {
-      const cpus = require("os").cpus();
+      const cpus = os.cpus();
       let totalIdle = 0;
       let totalTick = 0;
       cpus.forEach((cpu: unknown) => {

@@ -27,11 +27,11 @@ export function AlertsPanel({
   onClose,
   maxVisible = 5,
 }: AlertsPanelProps) {
-  const [visible, setVisible] = useState(alerts.slice(0, maxVisible));
+  const [closedIds, setClosedIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    setVisible(alerts.slice(0, maxVisible));
-  }, [alerts, maxVisible]);
+  const visible = alerts
+    .filter((a) => !closedIds.has(a.id))
+    .slice(0, maxVisible);
 
   const getAlertIcon = (type: Alert["type"]) => {
     switch (type) {
@@ -66,7 +66,11 @@ export function AlertsPanel({
   };
 
   const handleClose = (alertId: string) => {
-    setVisible(visible.filter((a) => a.id !== alertId));
+    setClosedIds((prev) => {
+      const next = new Set(prev);
+      next.add(alertId);
+      return next;
+    });
     if (onClose) {
       onClose(alertId);
     }

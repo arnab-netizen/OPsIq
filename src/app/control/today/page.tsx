@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { classifyOperatorError } from '@/lib/operator-error-governance';
 
 interface ActionItem {
@@ -36,46 +36,50 @@ export default function ControlTodayPage() {
   const [error, setError] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState('');
 
+  const fetchData = useCallback(async (wsId: string | null) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!wsId) {
+        setError('Workspace ID required');
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `/api/control/today?workspaceId=${wsId}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const surface = await response.json();
+      setData(surface);
+      setError(null);
+      setWorkspaceId(wsId);
+    } catch (err) {
+      const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
+      setError(governed.operatorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const wsId = params.get('workspaceId');
-
-    if (!wsId) {
-      setError('Workspace ID required');
-      setLoading(false);
-      return;
-    }
-
-    setWorkspaceId(wsId);
-
-    const fetchData = async () => {
-      try {
-        const response = await fetch(
-          `/api/control/today?workspaceId=${wsId}`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-
-        const surface = await response.json();
-        setData(surface);
-      } catch (err) {
-        const governed = classifyOperatorError(err instanceof Error ? err : new Error(String(err)), { context: 'load' });
-        setError(governed.operatorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+    fetchData(wsId);
+  }, [fetchData]);
 
   if (loading) {
     return <div style={{ padding: '20px' }}>Loading...</div>;

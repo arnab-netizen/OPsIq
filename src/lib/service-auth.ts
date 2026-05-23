@@ -16,7 +16,7 @@ import { UnauthorizedError } from "@/infra/errors";
  * Throws UnauthorizedError if authContext is missing or invalid.
  * Returns the authenticated userId from the verified session snapshot.
  */
-export function requireServiceAuth(authContext: CanonicalAuthContext | null | undefined): string {
+export function requireServiceAuth(authContext: CanonicalAuthContext): string {
   if (!authContext) {
     throw new UnauthorizedError("Service requires authentication context");
   }
@@ -46,8 +46,8 @@ export function requireWorkspaceContext(workspaceId: string | null | undefined):
  * Returns tuple of [userId, workspaceId] for convenience.
  */
 export function requireServiceContext(
-  authContext: CanonicalAuthContext | null | undefined,
-  workspaceId: string | null | undefined
+  authContext: CanonicalAuthContext,
+  workspaceId: string
 ): [string, string] {
   const userId = requireServiceAuth(authContext);
   const workspace = requireWorkspaceContext(workspaceId);

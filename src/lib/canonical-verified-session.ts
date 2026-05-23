@@ -11,6 +11,7 @@
 import type { SessionInfo, AuthenticatedUser } from "@/services/auth";
 import type { PolicyContext } from "@/policies/capability-check";
 import type { CapabilityName } from "@/domain/constants/capabilities";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * Immutable snapshot of user role assignment
@@ -291,7 +292,6 @@ export class CanonicalVerifiedSessionBuilder {
   // ─── Private Helpers ────────────────────────────────────────────────────
 
   private generateSnapshotId(): string {
-    const { v4: uuidv4 } = require("uuid");
     return uuidv4();
   }
 

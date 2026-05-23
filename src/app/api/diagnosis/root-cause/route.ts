@@ -1,6 +1,4 @@
-import { withEnforcementFull } from "@/lib/enforced-route";
 import type { NextRequest } from "next/server";
-import { withAuth } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { rootCauseEngine } from "@/services/diagnostic-core/root-cause-engine";
 import { parseRequestBody } from "@/lib/validation";

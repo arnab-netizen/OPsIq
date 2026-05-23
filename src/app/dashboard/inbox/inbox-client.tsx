@@ -1,7 +1,7 @@
 "use client";
 
 import { classifyOperatorError } from "@/lib/operator-error-governance";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -47,11 +47,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
   const limit = 20;
   const offset = page * limit;
 
-  useEffect(() => {
-    fetchDecisions();
-  }, [selectedStatus, page]);
-
-  async function fetchDecisions() {
+  const fetchDecisions = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -59,7 +55,7 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
       const params = new URLSearchParams({
         workspaceId,
         limit: limit.toString(),
-        offset: offset.toString(),
+        offset: (page * limit).toString(),
       });
 
       if (selectedStatus) {
@@ -81,7 +77,12 @@ export function InboxClient({ workspaceId }: { workspaceId: string }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [limit, selectedStatus, page, workspaceId]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => {
+    fetchDecisions();
+  }, [fetchDecisions]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

@@ -66,7 +66,7 @@ export const GET = withCanonicalEnforcement(
     const events = await queryAuditEvents(filter);
 
     return {
-      events: events.map((event: Prisma.AuditEventGetPayload<{}>) => ({
+      events: events.map((event: Prisma.AuditEventGetPayload<unknown>) => ({
         id: event.id,
         eventName: event.eventName,
         actorId: event.actorId,

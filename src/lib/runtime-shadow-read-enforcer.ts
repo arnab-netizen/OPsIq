@@ -98,6 +98,7 @@ export class RuntimeShadowReadEnforcer {
     };
 
     // Register as global enforcer
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     globalEnforcer = this;
   }
 

@@ -1,7 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
-import { getActorHierarchyLevel } from "@/lib/auth-guard";
 import { resolveServerRole } from "@/services/auth/server-role";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {

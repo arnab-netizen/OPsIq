@@ -6,6 +6,7 @@
  */
 
 import { z } from "zod";
+import * as crypto from "crypto";
 
 /**
  * Webhook registration schema
@@ -108,7 +109,6 @@ export function validateWebhook(webhook: Webhook): string[] {
  * Creates signature from payload + timestamp + secret
  */
 export function createWebhookSignature(payload: string, timestamp: number, secret: string): string {
-  const crypto = require("crypto");
   const message = `${timestamp}.${payload}`;
   return crypto.createHmac("sha256", secret).update(message).digest("hex");
 }

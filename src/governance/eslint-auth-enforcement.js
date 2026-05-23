@@ -10,6 +10,8 @@
  * These rules catch violations at compile time.
  */
 
+import * as fs from "fs";
+
 const rule = {
   meta: {
     type: "problem",
@@ -30,7 +32,7 @@ const rule = {
     const filename = context.getFilename();
     const isRoute = filename.includes("/app/api/") && filename.endsWith("route.ts");
     const isCanonicalRoute = isRoute &&
-      require("fs").readFileSync(filename, "utf-8").includes("withCanonicalEnforcement");
+      fs.readFileSync(filename, "utf-8").includes("withCanonicalEnforcement");
 
     return {
       // Rule 1: NO `any` type in auth contexts
@@ -100,4 +102,4 @@ const rule = {
   },
 };
 
-module.exports = { rule };
+export { rule };

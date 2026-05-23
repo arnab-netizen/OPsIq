@@ -245,8 +245,11 @@ describe('ADDENDUM F: Admin Billing UI Mock-Backed Shell', () => {
     it('should have realistic pricing', () => {
       const plans = generateMockBillingPlans();
 
-      expect(plans[0]?.monthlyPrice).toBeLessThan(plans[1]?.monthlyPrice!);
-      expect(plans[1]?.monthlyPrice).toBeLessThan(plans[2]?.monthlyPrice!);
+      expect(plans[0]).toBeDefined();
+      expect(plans[1]).toBeDefined();
+      expect(plans[2]).toBeDefined();
+      expect(plans[0]!.monthlyPrice).toBeLessThan(plans[1]!.monthlyPrice);
+      expect(plans[1]!.monthlyPrice).toBeLessThan(plans[2]!.monthlyPrice);
     });
 
     it('should validate all generated plans', () => {

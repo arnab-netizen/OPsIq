@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 
 export interface ThresholdConfig {
@@ -147,7 +148,7 @@ export async function updateWorkspaceThresholds(
     where: { workspaceId },
     update: updateData,
     create: {
-      id: require("crypto").randomUUID(),
+      id: randomUUID(),
       workspaceId,
       ...DEFAULT_THRESHOLDS,
       ...updateData,

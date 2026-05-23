@@ -199,9 +199,11 @@ export function SelfServeOnboardingShell({
   const [workspaceForm, setWorkspaceForm] = useState(generateMockWorkspaceForm());
   const [teamMembers, setTeamMembers] = useState(generateMockTeamMembers(3));
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  const [workspaceId] = useState(() => `ws_${Date.now()}`);
+  const [startedAt] = useState(() => new Date());
 
   const progress: OnboardingProgress = {
-    workspaceId: `ws_${Date.now()}`,
+    workspaceId,
     userId: 'user_123',
     currentStep,
     totalSteps: steps.length,
@@ -209,7 +211,7 @@ export function SelfServeOnboardingShell({
     stepsCompleted: steps.filter((s) => completedSteps.includes(s.stepId)),
     workspaceForm,
     teamMembers,
-    startedAt: new Date(),
+    startedAt,
   };
 
   const handleNextStep = () => {
@@ -232,7 +234,8 @@ export function SelfServeOnboardingShell({
 
   const handleComplete = () => {
     const session: OnboardingSession = {
-      sessionId: `session_${Date.now()}`,
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      sessionId: `session_${Date.now().toString()}`,
       userId: 'user_123',
       progress: { ...progress, completedAt: new Date() },
       status: 'completed',

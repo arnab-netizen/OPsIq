@@ -109,12 +109,12 @@ export default function DecisionPage() {
 
   // Fetch smart insights when result is available
   useEffect(() => {
-    if (!result || !result.decision || !result.decision.problemType) {
-      setSmartInsights(null);
-      return;
-    }
-
     const fetchInsights = async () => {
+      if (!result || !result.decision || !result.decision.problemType) {
+        setSmartInsights(null);
+        return;
+      }
+
       try {
         setInsightsLoading(true);
         const response = await fetch('/api/intelligence/summary');

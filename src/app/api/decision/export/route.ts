@@ -93,7 +93,7 @@ export const GET = withCanonicalEnforcement(
       actualOutcome: item!.actualOutcome,
       delta: item!.outcomeDelta ? Number(item!.outcomeDelta) : null,
       accuracy: item!.decisionAccuracy ? Number(item!.decisionAccuracy) : null,
-      auditTrail: auditEvents.map((event: Prisma.AuditEventGetPayload<{}>) => ({
+      auditTrail: auditEvents.map((event: Prisma.AuditEventGetPayload<unknown>) => ({
         eventName: event.eventName,
         actorId: event.actorId,
         occurredAt: event.occurredAt ? event.occurredAt.toISOString() : null,

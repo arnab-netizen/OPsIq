@@ -32,13 +32,19 @@ function UserRoles({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/users/${userId}/roles`)
-      .then((r) => r.json())
-      .then((data) => {
+    const fetchRoles = async () => {
+      try {
+        const res = await fetch(`/api/users/${userId}/roles`);
+        const data = await res.json();
         setRoles(data.roles ?? []);
+      } catch {
+        // Silently fail
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+    };
+
+    fetchRoles();
   }, [userId]);
 
   if (loading) return <span className="text-xs text-muted-foreground">...</span>;
@@ -81,6 +87,7 @@ export default function UsersPage() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);

@@ -148,8 +148,10 @@ describe("ADDENDUM F: Owner Briefing Engine", () => {
       ];
 
       const ranked = prioritizeActions(actions);
-      expect(ranked[0]?.actionId).toBe("act_2");
-      expect(ranked[0]?.impactScore).toBeGreaterThan(ranked[1]?.impactScore!);
+      expect(ranked[0]).toBeDefined();
+      expect(ranked[1]).toBeDefined();
+      expect(ranked[0]!.actionId).toBe("act_2");
+      expect(ranked[0]!.impactScore).toBeGreaterThan(ranked[1]!.impactScore);
     });
 
     it("should calculate impact scores between 0-100", () => {
@@ -428,7 +430,9 @@ describe("ADDENDUM F: Owner Briefing Engine", () => {
 
       expect(briefing.topPriorities).toHaveLength(briefing.topPriorities.length);
       if (briefing.topPriorities.length > 1) {
-        expect(briefing.topPriorities[0]?.impactScore).toBeGreaterThanOrEqual(briefing.topPriorities[1]?.impactScore!);
+        expect(briefing.topPriorities[0]).toBeDefined();
+        expect(briefing.topPriorities[1]).toBeDefined();
+        expect(briefing.topPriorities[0]!.impactScore).toBeGreaterThanOrEqual(briefing.topPriorities[1]!.impactScore);
       }
     });
   });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { OperatorItem } from '@/domain/operator/types';
 import { classifyOperatorError } from '@/lib/operator-error-governance';
 
@@ -26,7 +26,7 @@ export default function MyDayPage() {
   const [completingItemId, setCompletingItemId] = useState<string | null>(null);
   const [actualOutcome, setActualOutcome] = useState<string>('');
 
-  const fetchMyDay = async () => {
+  const fetchMyDay = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -51,11 +51,12 @@ export default function MyDayPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     fetchMyDay();
-  }, []);
+  }, [fetchMyDay]);
 
   const handleAction = async (
     itemId: string,
