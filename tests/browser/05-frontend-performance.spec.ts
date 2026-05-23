@@ -31,7 +31,7 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
     await waitForPageReady(page);
 
     // Measure route transitions
-    const transitions: any[] = [];
+    const transitions: Array<{ transition: number; time: number }> = [];
 
     for (let i = 0; i < 5; i++) {
       const links = await page.locator('a').all();
@@ -68,10 +68,11 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
 
     const memoryBaseline = await page.evaluate(() => {
       if (performance.memory) {
+        const memory = performance.memory as unknown as { usedJSHeapSize: number; jsHeapSizeLimit: number };
         return {
-          heapUsed: (performance.memory as any).usedJSHeapSize,
-          heapLimit: (performance.memory as any).jsHeapSizeLimit,
-          heapUsagePercent: ((performance.memory as any).usedJSHeapSize / (performance.memory as any).jsHeapSizeLimit) * 100,
+          heapUsed: memory.usedJSHeapSize,
+          heapLimit: memory.jsHeapSizeLimit,
+          heapUsagePercent: (memory.usedJSHeapSize / memory.jsHeapSizeLimit) * 100,
         };
       }
       return null;
@@ -90,26 +91,27 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
     await waitForPageReady(page);
 
     // Monitor for long tasks or render blocking
-    const longTasks: any[] = [];
+    const longTasks: Array<{ name: string; duration: number; startTime: number }> = [];
 
     const observer = await page.evaluateHandle(() => {
-      const tasks: any[] = [];
+      const tasks: Array<{ name: string; duration: number; startTime: number }> = [];
 
       if ('PerformanceObserver' in window) {
         try {
           const obs = new PerformanceObserver((list) => {
             for (const entry of list.getEntries()) {
-              if ((entry as any).duration > 50) {
+              const duration = (entry as unknown as { duration: number }).duration;
+              if (duration > 50) {
                 tasks.push({
                   name: entry.name,
-                  duration: (entry as any).duration,
+                  duration,
                   startTime: entry.startTime,
                 });
               }
             }
           });
           obs.observe({ entryTypes: ['longtask', 'measure'] });
-        } catch (e) {
+        } catch {
           // LongTask not supported
         }
       }
@@ -129,10 +131,10 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
     }
 
     const cpu_metrics = await page.evaluate(() => {
-      const tasks: any[] = [];
+      const tasks: Array<{ name: string; duration: number }> = [];
       if ('PerformanceObserver' in window) {
         const entries = performance.getEntriesByType('longtask');
-        return entries.map((e) => ({ name: e.name, duration: (e as any).duration }));
+        return entries.map((e) => ({ name: e.name, duration: (e as unknown as { duration: number }).duration }));
       }
       return [];
     });
@@ -147,7 +149,7 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
 
     const initialConnections = await page.evaluate(() => {
       return {
-        activeConnections: (navigator as any).connection?.saveData || 0,
+        activeConnections: (navigator as unknown as { connection?: { saveData?: number } }).connection?.saveData || 0,
       };
     });
 
@@ -166,7 +168,7 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
 
     const finalConnections = await page.evaluate(() => {
       return {
-        activeConnections: (navigator as any).connection?.saveData || 0,
+        activeConnections: (navigator as unknown as { connection?: { saveData?: number } }).connection?.saveData || 0,
       };
     });
 
@@ -189,7 +191,7 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
 
     const startMemory = await page.evaluate(() => {
       if (performance.memory) {
-        return (performance.memory as any).usedJSHeapSize;
+        return (performance.memory as unknown as { usedJSHeapSize: number }).usedJSHeapSize;
       }
       return 0;
     });
@@ -236,7 +238,7 @@ test.describe('PHASE F: Frontend Performance + Memory', () => {
       if (Date.now() - lastCheckTime > checkInterval) {
         const currentMemory = await page.evaluate(() => {
           if (performance.memory) {
-            return (performance.memory as any).usedJSHeapSize;
+            return (performance.memory as unknown as { usedJSHeapSize: number }).usedJSHeapSize;
           }
           return 0;
         });

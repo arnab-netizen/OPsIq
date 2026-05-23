@@ -1,4 +1,4 @@
-import { Page, BrowserContext } from '@playwright/test';
+import { Page, BrowserContext, Browser } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -50,10 +50,10 @@ export async function authenticateUser(
 
 // Helper: Create isolated browser context with pre-authenticated session
 export async function createAuthenticatedContext(
-  browser: any,
+  browser: Browser,
   email: string,
   password: string
-): Promise<{ context: BrowserContext; page: Page; session: any }> {
+): Promise<{ context: BrowserContext; page: Page; session: { sessionToken: string; timestamp: string } }> {
   const context = await browser.newContext();
   const page = await context.newPage();
 
@@ -88,8 +88,8 @@ export async function captureScreenshot(page: Page, label: string): Promise<stri
 }
 
 // Helper: Get console messages (errors, warnings, logs)
-export async function captureConsoleMessages(page: Page): Promise<any[]> {
-  const messages: any[] = [];
+export async function captureConsoleMessages(page: Page): Promise<Array<{ type: string; text: string; location: unknown; timestamp: string }>> {
+  const messages: Array<{ type: string; text: string; location: unknown; timestamp: string }> = [];
 
   page.on('console', (msg) => {
     messages.push({
@@ -104,8 +104,8 @@ export async function captureConsoleMessages(page: Page): Promise<any[]> {
 }
 
 // Helper: Monitor network traffic
-export async function captureNetworkMetrics(page: Page): Promise<any[]> {
-  const metrics: any[] = [];
+export async function captureNetworkMetrics(page: Page): Promise<Array<{ method: string; url: string; status: number; duration: number; timestamp: string }>> {
+  const metrics: Array<{ method: string; url: string; status: number; duration: number; timestamp: string }> = [];
 
   page.on('request', (request) => {
     const startTime = Date.now();
@@ -131,7 +131,7 @@ export async function checkClientHealth(page: Page): Promise<{ healthy: boolean;
 
   // Check for React hydration mismatches
   const hydrationErrors = await page.evaluate(() => {
-    return (window as any).__HYDRATION_ERRORS__ || [];
+    return (window as unknown as { __HYDRATION_ERRORS__?: string[] }).__HYDRATION_ERRORS__ || [];
   });
 
   if (hydrationErrors.length > 0) {
@@ -140,7 +140,7 @@ export async function checkClientHealth(page: Page): Promise<{ healthy: boolean;
 
   // Check for console errors
   const consoleErrors = await page.evaluate(() => {
-    return (window as any).__CONSOLE_ERRORS__ || [];
+    return (window as unknown as { __CONSOLE_ERRORS__?: string[] }).__CONSOLE_ERRORS__ || [];
   });
 
   if (consoleErrors.length > 0) {
@@ -173,7 +173,7 @@ export function getUrlPath(page: Page): string {
 // Helper: Save test context for debugging
 export function saveTestContext(
   label: string,
-  data: any
+  data: unknown
 ): void {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `context-${label}-${timestamp}.json`;
