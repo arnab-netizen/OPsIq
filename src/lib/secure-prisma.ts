@@ -36,7 +36,7 @@ export async function secureFindUnique<T extends { id: string; workspaceId: stri
   }
   // This is a placeholder - actual implementation depends on model
   // In real usage, this would be called per-model with type safety
-  return null as any;
+  return null;
 }
 
 /**
@@ -44,12 +44,12 @@ export async function secureFindUnique<T extends { id: string; workspaceId: stri
  */
 export async function secureFindMany<T extends { workspaceId: string }>(
   modelName: string,
-  where: Record<string, any>,
+  where: Record<string, unknown>,
   workspaceId: string,
   options?: {
-    select?: Record<string, any>;
-    include?: Record<string, any>;
-    orderBy?: Record<string, any>;
+    select?: Record<string, unknown>;
+    include?: Record<string, unknown>;
+    orderBy?: Record<string, unknown>;
     take?: number;
     skip?: number;
   }
@@ -62,7 +62,7 @@ export async function secureFindMany<T extends { workspaceId: string }>(
   const scopedWhere = { ...where, workspaceId };
 
   // This is a template - actual implementation would dispatch to correct model
-  return [] as any;
+  return [];
 }
 
 /**
@@ -70,12 +70,12 @@ export async function secureFindMany<T extends { workspaceId: string }>(
  */
 export async function secureFindFirst<T extends { workspaceId: string }>(
   modelName: string,
-  where: Record<string, any>,
+  where: Record<string, unknown>,
   workspaceId: string,
   options?: {
-    select?: Record<string, any>;
-    include?: Record<string, any>;
-    orderBy?: Record<string, any>;
+    select?: Record<string, unknown>;
+    include?: Record<string, unknown>;
+    orderBy?: Record<string, unknown>;
   }
 ): Promise<T | null> {
   if (!workspaceId) {
@@ -85,7 +85,7 @@ export async function secureFindFirst<T extends { workspaceId: string }>(
   // Inject workspaceId into WHERE clause
   const scopedWhere = { ...where, workspaceId };
 
-  return null as any;
+  return null;
 }
 
 /**
@@ -93,12 +93,12 @@ export async function secureFindFirst<T extends { workspaceId: string }>(
  */
 export async function secureUpdate<T extends { workspaceId: string }>(
   modelName: string,
-  where: Record<string, any>,
-  data: Record<string, any>,
+  where: Record<string, unknown>,
+  data: Record<string, unknown>,
   workspaceId: string,
   options?: {
-    select?: Record<string, any>;
-    include?: Record<string, any>;
+    select?: Record<string, unknown>;
+    include?: Record<string, unknown>;
   }
 ): Promise<T> {
   if (!workspaceId) {
@@ -108,7 +108,7 @@ export async function secureUpdate<T extends { workspaceId: string }>(
   // Verify workspace ownership by adding to WHERE clause
   const scopedWhere = { ...where, workspaceId };
 
-  return {} as any;
+  return {} as T;
 }
 
 /**
@@ -116,8 +116,8 @@ export async function secureUpdate<T extends { workspaceId: string }>(
  */
 export async function secureUpdateMany<T>(
   modelName: string,
-  where: Record<string, any>,
-  data: Record<string, any>,
+  where: Record<string, unknown>,
+  data: Record<string, unknown>,
   workspaceId: string
 ): Promise<{ count: number }> {
   if (!workspaceId) {
@@ -135,11 +135,11 @@ export async function secureUpdateMany<T>(
  */
 export async function secureDelete<T extends { workspaceId: string }>(
   modelName: string,
-  where: Record<string, any>,
+  where: Record<string, unknown>,
   workspaceId: string,
   options?: {
-    select?: Record<string, any>;
-    include?: Record<string, any>;
+    select?: Record<string, unknown>;
+    include?: Record<string, unknown>;
   }
 ): Promise<T> {
   if (!workspaceId) {
@@ -149,7 +149,7 @@ export async function secureDelete<T extends { workspaceId: string }>(
   // Verify workspace ownership
   const scopedWhere = { ...where, workspaceId };
 
-  return {} as any;
+  return {} as T;
 }
 
 /**
@@ -157,7 +157,7 @@ export async function secureDelete<T extends { workspaceId: string }>(
  */
 export async function secureDeleteMany(
   modelName: string,
-  where: Record<string, any>,
+  where: Record<string, unknown>,
   workspaceId: string
 ): Promise<{ count: number }> {
   if (!workspaceId) {
@@ -175,7 +175,7 @@ export async function secureDeleteMany(
  */
 export async function secureCount(
   modelName: string,
-  where: Record<string, any>,
+  where: Record<string, unknown>,
   workspaceId: string
 ): Promise<number> {
   if (!workspaceId) {
@@ -194,17 +194,17 @@ export async function secureCount(
 export async function secureGroupBy<T>(
   modelName: string,
   by: string[],
-  where: Record<string, any>,
+  where: Record<string, unknown>,
   workspaceId: string,
   options?: {
-    orderBy?: Record<string, any>;
+    orderBy?: Record<string, unknown>;
     take?: number;
     skip?: number;
-    _count?: Record<string, any>;
-    _sum?: Record<string, any>;
-    _avg?: Record<string, any>;
-    _min?: Record<string, any>;
-    _max?: Record<string, any>;
+    _count?: Record<string, unknown>;
+    _sum?: Record<string, unknown>;
+    _avg?: Record<string, unknown>;
+    _min?: Record<string, unknown>;
+    _max?: Record<string, unknown>;
   }
 ): Promise<T[]> {
   if (!workspaceId) {
@@ -214,7 +214,7 @@ export async function secureGroupBy<T>(
   // Inject workspaceId into WHERE clause
   const scopedWhere = { ...where, workspaceId };
 
-  return [] as any;
+  return [];
 }
 
 /**
