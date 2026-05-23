@@ -29,7 +29,7 @@ describe("PHASE E PRIORITY 3A: Hostile Durability - Worker Crash Recovery", () =
     state: any;
     error?: string;
   } {
-    let state: any = {
+    const state: any = {
       event_appended: false,
       projection_updated: false,
       snapshot_created: false,
@@ -150,7 +150,7 @@ describe("PHASE E PRIORITY 3A: Hostile Durability - Worker Crash Recovery", () =
         { id: "evt-3", sequence: 3, action: "decision_created" },
       ];
 
-      let projectionState: any = { member_count: 0, decision_count: 0 };
+      const projectionState: any = { member_count: 0, decision_count: 0 };
 
       // Process first event
       projectionState.member_count = 0; // Event 1 processed
@@ -213,7 +213,7 @@ describe("PHASE E PRIORITY 3A: Hostile Durability - Worker Crash Recovery", () =
   describe("3A.4: Crash During Queue Lease", () => {
     it("should not lose lease if crash during acquisition", async () => {
       // HOSTILE TEST: Crash while acquiring job lease
-      let leaseState = {
+      const leaseState = {
         job_id: "job-lease-crash",
         leased_by: null as string | null,
         lease_until: null as number | null,
@@ -332,7 +332,7 @@ describe("PHASE E PRIORITY 3A: Hostile Durability - Worker Crash Recovery", () =
   describe("3A.6: Crash After Partial Commit", () => {
     it("should complete or rollback, never partial", async () => {
       // HOSTILE TEST: Transaction partially committed when crash occurs
-      let dbState = {
+      const dbState = {
         event_appended: false,
         projection_updated: false,
         snapshot_created: false,
@@ -411,7 +411,7 @@ describe("PHASE E PRIORITY 3A: Hostile Durability - Worker Crash Recovery", () =
       ];
 
       // Recovery attempt 1
-      let state1 = { events_processed: 0, checksum: "" };
+      const state1 = { events_processed: 0, checksum: "" };
       for (const evt of events) {
         state1.events_processed++;
       }
@@ -421,7 +421,7 @@ describe("PHASE E PRIORITY 3A: Hostile Durability - Worker Crash Recovery", () =
         .digest("hex");
 
       // Crash and recover attempt 2
-      let state2 = { events_processed: 0, checksum: "" };
+      const state2 = { events_processed: 0, checksum: "" };
       for (const evt of events) {
         state2.events_processed++;
       }
@@ -431,7 +431,7 @@ describe("PHASE E PRIORITY 3A: Hostile Durability - Worker Crash Recovery", () =
         .digest("hex");
 
       // Crash and recover attempt 3
-      let state3 = { events_processed: 0, checksum: "" };
+      const state3 = { events_processed: 0, checksum: "" };
       for (const evt of events) {
         state3.events_processed++;
       }

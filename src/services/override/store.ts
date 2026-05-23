@@ -1,6 +1,6 @@
 import { OverrideRecord } from "@/domain/override/types";
 
-let overrideStore: OverrideRecord[] = [];
+const overrideStore: OverrideRecord[] = [];
 
 export function addOverride(record: OverrideRecord): void {
   overrideStore.push(record);

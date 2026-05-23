@@ -43,7 +43,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
 
     it("should apply backoff to prevent retry amplification", async () => {
       // HOSTILE TEST: Retry storm with exponential backoff
-      let job = {
+      const job = {
         id: "job-backoff",
         retryCount: 0,
         maxRetries: 10,
@@ -257,7 +257,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
 
     it("should not process requests when circuit is open", async () => {
       // HOSTILE TEST: Circuit open, requests fail fast
-      let circuitState = "OPEN";
+      const circuitState = "OPEN";
       const incomingRequests = 100;
       let processed = 0;
       let rejectedFast = 0;
@@ -403,9 +403,9 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
   describe("3C.7: Timeout Cascade Attack", () => {
     it("should prevent timeout from cascading to dependent services", async () => {
       // HOSTILE TEST: Parent timeout shouldn't timeout children
-      let service1Timeout = 5000; // ms
-      let service2Timeout = 3000; // Child service
-      let service3Timeout = 2000; // Grandchild service
+      const service1Timeout = 5000; // ms
+      const service2Timeout = 3000; // Child service
+      const service3Timeout = 2000; // Grandchild service
 
       const elapsedTime = 4000; // Elapsed
 
@@ -431,7 +431,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
 
       // Service A uses 3 seconds
       const serviceATime = 3000;
-      let remainingBudget = totalBudgetMs - serviceATime;
+      const remainingBudget = totalBudgetMs - serviceATime;
 
       // Service A calls Service B with remaining budget
       // Service B should timeout after remaining budget

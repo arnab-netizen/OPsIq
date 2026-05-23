@@ -205,6 +205,6 @@ export async function waitForTelemetryFlush(): Promise<void> {
  * Type augmentation for Node.js global
  */
 declare global {
-  // eslint-disable-next-line no-var
+   
   var __telemetryFlushTimer: NodeJS.Timeout | undefined;
 }

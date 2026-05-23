@@ -104,7 +104,7 @@ describe("PHASE E PRIORITY 3E: Hostile Durability - Timeout + Resource Exhaustio
 
     it("should gracefully handle OOM without crashing", async () => {
       // HOSTILE TEST: OOM error handled, not crash
-      let heapState = {
+      const heapState = {
         used: 1000, // MB
         total: 1000, // MB
         oomTriggered: false,
@@ -134,7 +134,7 @@ describe("PHASE E PRIORITY 3E: Hostile Durability - Timeout + Resource Exhaustio
 
     it("should shed load to reduce memory usage", async () => {
       // HOSTILE TEST: Under memory pressure, drop low-priority requests
-      let cache = {
+      const cache = {
         entries: 1000,
         maxEntries: 1000,
         memoryMB: 900,
@@ -188,7 +188,7 @@ describe("PHASE E PRIORITY 3E: Hostile Durability - Timeout + Resource Exhaustio
 
     it("should not allow CPU starvation to corrupt state", async () => {
       // HOSTILE TEST: Even under CPU starvation, no state corruption
-      let transaction = {
+      const transaction = {
         started: true,
         writes: 0,
         committed: false,
@@ -234,7 +234,7 @@ describe("PHASE E PRIORITY 3E: Hostile Durability - Timeout + Resource Exhaustio
 
     it("should not write partial records on disk full", async () => {
       // HOSTILE TEST: Disk full during write, transaction rolls back
-      let record = {
+      const record = {
         id: "rec-disk-full",
         size: 100, // MB
         written: 0,
@@ -259,7 +259,7 @@ describe("PHASE E PRIORITY 3E: Hostile Durability - Timeout + Resource Exhaustio
 
     it("should prevent subsequent writes after disk full", async () => {
       // HOSTILE TEST: After disk full error, reject new writes
-      let diskState = {
+      const diskState = {
         full: true,
         lastError: "DISK_FULL",
       };
@@ -276,7 +276,7 @@ describe("PHASE E PRIORITY 3E: Hostile Durability - Timeout + Resource Exhaustio
   describe("3E.5: Timeout Without Corruption", () => {
     it("should complete or timeout, never partial", async () => {
       // HOSTILE TEST: Transaction either completes or times out
-      let operation = {
+      const operation = {
         step1_done: false,
         step2_done: false,
         step3_done: false,
@@ -309,7 +309,7 @@ describe("PHASE E PRIORITY 3E: Hostile Durability - Timeout + Resource Exhaustio
 
     it("should not corrupt state if timeout interrupts write", async () => {
       // HOSTILE TEST: Timeout during write doesn't corrupt
-      let workspace = {
+      const workspace = {
         id: "ws-timeout",
         version: 1,
         members: 10,
@@ -398,7 +398,7 @@ describe("PHASE E PRIORITY 3E: Hostile Durability - Timeout + Resource Exhaustio
       // HOSTILE TEST: Under severe load, return 503 to clients
       const queueDepth = 50000; // 50k requests queued
       const maxQueue = 10000; // Max 10k
-      let shouldReturn503 = queueDepth > maxQueue;
+      const shouldReturn503 = queueDepth > maxQueue;
 
       // INVARIANT: Overload detected
       expect(shouldReturn503).toBe(true);

@@ -18,7 +18,7 @@ export class ExecutionSequencer {
 
     const steps: ExecutionScheduleStep[] = [];
     let current_date = new Date(input.start_date);
-    let action_end_times: Record<string, Date> = {};
+    const action_end_times: Record<string, Date> = {};
 
     // Process each action in topological order
     for (let i = 0; i < input.execution_order.length; i++) {
@@ -110,7 +110,7 @@ export class ExecutionSequencer {
     current_date: Date,
     friction_delay_days: number
   ): Date {
-    let start_time = new Date(current_date);
+    const start_time = new Date(current_date);
 
     // Add friction delay (in calendar days)
     start_time.setDate(start_time.getDate() + friction_delay_days);

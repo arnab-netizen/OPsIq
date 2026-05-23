@@ -37,7 +37,7 @@ export class ConfidenceUpdater {
     let confidence_change = 0;
     let capped_due_to_measurement = false;
     let repeated_failure_penalty = false;
-    let reason_parts: string[] = [];
+    const reason_parts: string[] = [];
 
     // Determine base confidence change from variance
     if (input.variance_pct > 0) {

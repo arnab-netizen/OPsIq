@@ -314,7 +314,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
     const inputCurrency = currency || "INR";
 
     // 2a. FAIL-CLOSED: Require FX rates for non-base currencies
-    let fxRatesInput = fxRates || {};
+    const fxRatesInput = fxRates || {};
     if (inputCurrency !== "INR" && !fxRatesInput[inputCurrency]) {
       const baseResult = createDecisionResult(
         {

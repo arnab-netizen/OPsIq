@@ -58,7 +58,7 @@ export const GET = withCanonicalEnforcement(
     const page = await queryAuditTrail(filter, queryParams.limit, queryParams.cursor);
 
     // Include statistics if requested
-    let response: any = { ...page };
+    const response: any = { ...page };
 
     if (queryParams.includeTotalCount) {
       const stats = await getAuditStatistics(ctx.verifiedWorkspaceId);

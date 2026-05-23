@@ -406,7 +406,7 @@ export function transformRecord(
   }
 
   // Step 2: Apply normalization rules
-  let normalizedRecord = mappingResult.transformedRecord || {};
+  const normalizedRecord = mappingResult.transformedRecord || {};
   const appliedRules: string[] = [];
 
   if (normalizationRules) {

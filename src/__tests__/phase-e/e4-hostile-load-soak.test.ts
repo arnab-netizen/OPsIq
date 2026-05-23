@@ -29,7 +29,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
       }));
 
       // Replay 1: calculate checksum
-      let state1 = { count: 0, checksum: "" };
+      const state1 = { count: 0, checksum: "" };
       const startTime1 = Date.now();
       for (const evt of events) {
         state1.count++;
@@ -41,7 +41,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
       const replayTime1 = Date.now() - startTime1;
 
       // Replay 2: verify identical
-      let state2 = { count: 0, checksum: "" };
+      const state2 = { count: 0, checksum: "" };
       const startTime2 = Date.now();
       for (const evt of events) {
         state2.count++;
@@ -71,7 +71,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
         data: `evt-${i}`,
       }));
 
-      let replayState = { processed: 0, resumed: false };
+      const replayState = { processed: 0, resumed: false };
       const checkpoints: number[] = [];
 
       // Partial replay: 5000 events
@@ -111,12 +111,12 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
         action: i % 2 === 0 ? "write" : "read",
       }));
 
-      let replayState = { count: 0, checksum: "" };
-      let writeState = { count: 0 };
+      const replayState = { count: 0, checksum: "" };
+      const writeState = { count: 0 };
 
       // Concurrent simulation
       const replayChecksum = () => {
-        let state = { count: 0 };
+        const state = { count: 0 };
         for (const evt of events) {
           state.count++;
         }
@@ -230,7 +230,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
 
     it("should not amplify retries during sustained load", async () => {
       // HOSTILE: Retry count should not grow unbounded
-      let retryHistory: number[] = [];
+      const retryHistory: number[] = [];
       const operationCount = 1000; // Simulated operations
 
       let totalRetries = 0;
@@ -297,7 +297,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
 
     it("should shed load when memory exhausted", async () => {
       // HOSTILE: Memory exhaustion triggers shedding
-      let memoryState = {
+      const memoryState = {
         used: 750, // Start at 75% to have room for shedding
         total: 1000, // MB
         operationsProcessed: 0,
@@ -331,7 +331,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
     it("should survive connection pool exhaustion", async () => {
       // HOSTILE: All connections in use
       const poolSize = 10;
-      let connections = {
+      const connections = {
         available: poolSize,
         active: 0,
         queued: 0,
@@ -382,7 +382,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
       const burstSize = 10000;
       const processRatePerInterval = 100; // events per interval
 
-      let state = {
+      const state = {
         backlog: burstSize,
         processed: 0,
         maxBacklog: burstSize,
@@ -449,7 +449,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
 
     it("should correctly drain queue backlog", async () => {
       // HOSTILE: Queue at 50k depth, measure drain behavior
-      let queue = {
+      const queue = {
         depth: 50000,
         drainRate: 200, // ops/sec
         processedPerInterval: 0,
@@ -618,7 +618,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
 
     it("should cleanup cache entries to prevent unbounded growth", async () => {
       // HOSTILE: Cache growing, verify eviction works
-      let cache = {
+      const cache = {
         entries: 0,
         maxSize: 10000,
         evictionRate: 0.1, // 10% eviction when full
@@ -648,7 +648,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
 
     it("should detect event log growth and compact", async () => {
       // HOSTILE: Event log growing unbounded, verify cleanup
-      let eventLog = {
+      const eventLog = {
         count: 0,
         sizeBytes: 0,
         lastSnapshot: 0,
@@ -684,7 +684,7 @@ describe("PHASE E PRIORITY 4: Hostile Load + Soak Verification", () => {
 
     it("should verify no unbounded replay cache growth", async () => {
       // HOSTILE: Replay cache accumulating, verify bounds
-      let replayCache = {
+      const replayCache = {
         entries: 0,
         maxEntries: 1000,
         hits: 0,

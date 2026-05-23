@@ -150,7 +150,7 @@ export const GET = withCanonicalEnforcement(
   executedValidations.push("decision_gate");
 
   // Generate primary recommendation
-  let recommendation = generateRecommendation(
+  const recommendation = generateRecommendation(
     decisionResult,
     patterns,
     operatorItems,

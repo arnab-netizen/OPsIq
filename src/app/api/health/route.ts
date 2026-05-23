@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 let lastCleanupTime = 0;
-let applicationStartTime = Date.now();
+const applicationStartTime = Date.now();
 
 export const GET = withEnforcement(async (ctx) => {
   // Ensure database is initialized before any operations

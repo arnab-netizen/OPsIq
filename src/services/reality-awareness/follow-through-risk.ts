@@ -51,8 +51,8 @@ export function detectFollowThroughRisks(
   let completionRate = 0.95; // Start optimistic
   let avgDelay = 0;
   let partialRate = 0;
-  let changeOrders = 0;
-  let regressions = 0;
+  const changeOrders = 0;
+  const regressions = 0;
 
   // Analyze historical outcomes
   if (context.pastInitiativeOutcomes.length > 0) {

@@ -239,7 +239,7 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
 
       // Create snapshot at event 50
       const snapshotEvents = events.slice(0, 50);
-      let snapshotState = replayEvents(snapshotEvents);
+      const snapshotState = replayEvents(snapshotEvents);
 
       // Corrupt snapshot
       snapshotState.state.decisions = {}; // Wipe decisions

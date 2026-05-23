@@ -52,7 +52,7 @@ export async function simulateWebhookDelivery(
   }
 
   // Adjust timestamp if simulating old webhook
-  let eventToProcess = { ...event };
+  const eventToProcess = { ...event };
   if (oldTimestamp) {
     eventToProcess.created = Math.floor(Date.now() / 1000) - 360; // 6 minutes old
   }

@@ -9,7 +9,7 @@ import {
 } from './helpers';
 
 test.describe('PHASE E: Failure + Recovery UX', () => {
-  let failureMetrics: any[] = [];
+  const failureMetrics: any[] = [];
 
   test('1. Network interruption handling', async ({ page, context }) => {
     // Login
