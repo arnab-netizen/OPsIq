@@ -245,7 +245,7 @@ describe("PHASE 4: Telemetry Engine", () => {
     });
 
     it("classifies all error codes exhaustively", () => {
-      const errorCodes: Array<any> = [
+      const errorCodes: Array<unknown> = [
         "AUTH_MISSING",
         "AUTH_MALFORMED",
         "AUTH_INVALID",

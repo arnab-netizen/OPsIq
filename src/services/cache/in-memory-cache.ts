@@ -1,7 +1,7 @@
 import { CacheBackend, CacheEntry, CacheStats } from "./cache";
 
 export class InMemoryCache implements CacheBackend {
-  private store = new Map<string, CacheEntry<any>>();
+  private store = new Map<string, CacheEntry<unknown>>();
   private stats = { hits: 0, misses: 0 };
   private cleanupInterval: NodeJS.Timeout;
 

@@ -294,7 +294,7 @@ describe("Phase 3: Serialization Hardening - Real Concurrency Stress", () => {
       // ASSERT: All replays succeeded
       const successfulReplays = replayResults
         .filter((r) => r.status === "fulfilled")
-        .map((r) => (r as PromiseFulfilledResult<any>).value);
+        .map((r) => (r as PromiseFulfilledResult<unknown>).value);
 
       expect(successfulReplays.length).toBeGreaterThan(0);
 

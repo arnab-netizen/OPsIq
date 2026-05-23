@@ -33,7 +33,7 @@ describe("PHASE E PRIORITY 1: Hostile Concurrency Verification", () => {
       // Outcome: Workspace has single "disabled" timestamp, not 100
 
       const workspaceId = "ws-hostile-disable";
-      const disablePromises: Promise<any>[] = [];
+      const disablePromises: Promise<unknown>[] = [];
 
       // Simulate 100 concurrent disable requests
       for (let i = 0; i < 100; i++) {
@@ -153,7 +153,7 @@ describe("PHASE E PRIORITY 1: Hostile Concurrency Verification", () => {
       // Expected: All updates persist (no lost updates)
 
       const decisionId = "decision-hostile-100-threads";
-      const updatePromises: Promise<any>[] = [];
+      const updatePromises: Promise<unknown>[] = [];
 
       for (let i = 0; i < 100; i++) {
         updatePromises.push(

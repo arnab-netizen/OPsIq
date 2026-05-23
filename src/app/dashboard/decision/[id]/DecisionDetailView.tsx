@@ -23,7 +23,7 @@ interface DecisionData {
   inputsSnapshot: unknown;
   createdAt: Date;
   updatedAt: Date;
-  auditLog: Array<any>;
+  auditLog: Array<unknown>;
   ownerUserId?: string;
   createdBy?: string;
   assignedTo?: string | null;

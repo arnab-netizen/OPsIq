@@ -97,7 +97,7 @@ export const POST = withEnforcementFull(async (request) => {
 export async function assessChurnRiskHandler(
   workspaceId: string,
   metrics: unknown
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }
@@ -115,7 +115,7 @@ export async function forecastChurnHandler(
   workspaceId: string,
   monthlyRetention: Record<number, number>,
   trendDays?: number
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }

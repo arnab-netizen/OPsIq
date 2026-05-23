@@ -98,7 +98,7 @@ export async function calculateEffectivePriceHandler(
   workspaceId: string,
   basePrice: number,
   discountPercent: number
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }
@@ -120,7 +120,7 @@ export async function recordPerformanceHandler(
   baselineConversions: number,
   baselineRevenue: number,
   productionCost: number
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }
@@ -145,7 +145,7 @@ export async function recordPerformanceHandler(
 export async function compareOffersHandler(
   workspaceId: string,
   offers: unknown[]
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }

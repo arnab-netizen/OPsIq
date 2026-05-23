@@ -127,7 +127,7 @@ export async function transitionActionState(
     reviewerId?: string;
     workspaceId: string;
   }
-): Promise<any> {
+): Promise<unknown> {
   const resolvedActorId = context.authContext?.session?.user?.id || context.actorId;
   if (!resolvedActorId) {
     throw new Error("Either authContext or actorId must be provided");

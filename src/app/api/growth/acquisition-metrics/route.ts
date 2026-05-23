@@ -97,7 +97,7 @@ export const POST = withCanonicalEnforcement(
 export async function analyzeConversionHandler(
   workspaceId: string,
   metrics: unknown
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }
@@ -115,7 +115,7 @@ export async function calculateROIHandler(
   workspaceId: string,
   metrics: unknown,
   ltv: number
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }

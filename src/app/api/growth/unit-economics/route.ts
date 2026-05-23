@@ -135,7 +135,7 @@ export async function calculateLTVCACRatioHandler(
   workspaceId: string,
   ltv: number,
   cac: number
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }
@@ -155,7 +155,7 @@ export async function calculateContributionHandler(
   variableCostPerUnit: number,
   fixedCostsPerMonth: number,
   unitsSoldPerMonth: number
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }
@@ -181,7 +181,7 @@ export async function calculateRetentionValueHandler(
   monthlyProfit: number,
   monthlyChurnRate: number,
   retentionImprovementPercent: number
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }

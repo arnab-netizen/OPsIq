@@ -2,7 +2,7 @@ import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: unknown | undefined;
-  prismaPromise: Promise<any> | undefined;
+  prismaPromise: Promise<unknown> | undefined;
 };
 
 /**
@@ -109,7 +109,7 @@ async function getDb() {
   return globalForPrisma.prisma;
 }
 
-let dbInitPromise: Promise<any> | null = null;
+let dbInitPromise: Promise<unknown> | null = null;
 
 export async function getDbInstance() {
   if (!dbInitPromise) {

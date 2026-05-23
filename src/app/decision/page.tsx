@@ -61,7 +61,7 @@ export default function DecisionPage() {
   const [metricsLoading, setMetricsLoading] = useState(true);
   const [metricsError, setMetricsError] = useState<string | null>(null);
 
-  const [smartInsights, setSmartInsights] = useState<any>(null);
+  const [smartInsights, setSmartInsights] = useState<unknown>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
 
   useEffect(() => {

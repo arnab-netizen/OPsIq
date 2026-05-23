@@ -64,7 +64,7 @@ export interface CanonicalAuthContext {
   // PHASE D: ROOT CONTAINER - Single execution lineage authority
   // Optional: not required for service layer, only for logging/tracing
   traceId?: string;
-  executionTrace?: Readonly<any>;  // Read-only reference to unified trace
+  executionTrace?: Readonly<unknown>;  // Read-only reference to unified trace
 
   // PHASE E: IMMUTABLE SESSION SNAPSHOT - Single request reality
   verifiedSessionSnapshot: {
@@ -124,7 +124,7 @@ export interface ServiceAuthEnvelope {
  * Handler receives verified context, never auth data.
  * Handler is impossible to execute if auth failed.
  */
-export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string, string>) => Promise<any>;
+export type CanonicalHandler = (ctx: CanonicalAuthContext, params: Record<string, string>) => Promise<unknown>;
 
 /**
  * CANONICAL ROUTE WRAPPER

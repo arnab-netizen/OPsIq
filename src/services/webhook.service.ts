@@ -287,7 +287,7 @@ export async function getOrCreateWebhookEvent(
  */
 async function getBillingAccountByStripeCustomer(
   stripeCustomerId: string
-): Promise<any> {
+): Promise<unknown> {
   const billingAccount = await db.billingAccount.findUnique({
     where: { stripeCustomerId },
     include: { subscription: true },

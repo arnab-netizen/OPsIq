@@ -168,7 +168,7 @@ export async function simulateWebhookDelivery(
   })();
 
   // Simulate timeout if requested (30s limit)
-  const timeoutPromise = new Promise<any>((resolve) => {
+  const timeoutPromise = new Promise<unknown>((resolve) => {
     setTimeout(() => {
       resolve({
         success: false,

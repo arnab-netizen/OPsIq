@@ -106,7 +106,7 @@ export async function progressDealHandler(
   workspaceId: string,
   dealId: string,
   newStage: DealStage
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }
@@ -123,7 +123,7 @@ export async function progressDealHandler(
 export async function calculateMetricsHandler(
   workspaceId: string,
   deals: unknown[]
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }
@@ -141,7 +141,7 @@ export async function forecastRevenueHandler(
   workspaceId: string,
   deals: unknown[],
   months?: number
-): Promise<any> {
+): Promise<unknown> {
   if (!workspaceId) {
     return { error: "Workspace ID required" };
   }

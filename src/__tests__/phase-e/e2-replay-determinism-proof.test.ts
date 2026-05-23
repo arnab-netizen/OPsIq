@@ -30,8 +30,8 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
   }
 
   // Helper: Create deterministic audit events
-  function createDeterministicEvents(seed: number, count: number): Array<any> {
-    const events: Array<any> = [];
+  function createDeterministicEvents(seed: number, count: number): Array<unknown> {
+    const events: Array<unknown> = [];
     for (let i = 0; i < count; i++) {
       events.push({
         id: `evt-${seed}-${i}`, // Deterministic ID
@@ -51,7 +51,7 @@ describe("PHASE E PRIORITY 2: Replay Determinism Proof", () => {
 
   // Helper: Replay events and build projection state
   function replayEvents(
-    events: Array<any>
+    events: Array<unknown>
   ): {
     state: Record<string, any>;
     hash: string;

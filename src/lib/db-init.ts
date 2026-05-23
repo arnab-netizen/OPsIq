@@ -9,7 +9,7 @@
 
 import { getDbInstance } from "@/lib/db";
 
-let initPromise: Promise<any> | null = null;
+let initPromise: Promise<unknown> | null = null;
 
 export async function ensureDbInitialized() {
   if (!initPromise) {

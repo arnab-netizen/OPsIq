@@ -155,7 +155,7 @@ async function checkDatabaseSchema(dbInstance: unknown, logger: unknown): Promis
         dbInstance.$queryRawUnsafe(
           `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '${table}')`
         ),
-        new Promise<any>((_, reject) =>
+        new Promise<unknown>((_, reject) =>
           setTimeout(() => reject(new Error(`Schema check for ${table} timed out after 5s`)), 5000)
         ),
       ]);

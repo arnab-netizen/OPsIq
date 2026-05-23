@@ -12,13 +12,13 @@ import { enforceRequest, EnforcedRequestContext } from "@/runtime/enforcement/re
 export type EnforcedHandler = (
   context: EnforcedRequestContext,
   params: Record<string, string>
-) => Promise<any>;
+) => Promise<unknown>;
 
 export type EnforcedHandlerWithRequest = (
   req: NextRequest,
   context: EnforcedRequestContext,
   params: Record<string, string>
-) => Promise<any>;
+) => Promise<unknown>;
 
 /**
  * MANDATORY: Wrap all API route handlers with enforceRequest() enforcement.
