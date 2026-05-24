@@ -1,0 +1,69 @@
+{
+  "timestamp": "2026-05-24T00:40:00Z",
+  "pr_number": 19,
+  "source_branch": "admin-billing-entitlement-test-hardening",
+  "target_branch": "main",
+  "local_head_sha": "1b9f758f1f29458e582095004984251e8b1c075b",
+  "pr_head_sha": "1b9f758f1f29458e582095004984251e8b1c075b",
+  "heads_match": true,
+
+  "workflow_comparison": {
+    "failing_check": "build-and-test (20.x)",
+    "owning_workflow": ".github/workflows/ci.yml",
+
+    "passing_advisory_check": "Run Tests",
+    "advisory_workflow": ".github/workflows/ci-cd-foundations.yml",
+
+    "continue_on_error_found": true,
+    "continue_on_error_location": ".github/workflows/ci-cd-foundations.yml:79",
+    "continue_on_error_impact": "Run Tests passes even if npm test fails - FAKE GREEN"
+  },
+
+  "key_differences": {
+    "test_command_difference": {
+      "ci_cd_foundations": "npm test (= vitest run with default workers)",
+      "ci": "npm run test:ci (= vitest run --maxWorkers 1)",
+      "impact": "CRITICAL: different worker counts cause different test ordering/state"
+    },
+
+    "database_setup_difference": {
+      "ci_cd_foundations": {
+        "postgres_service": false,
+        "database_url": "not set",
+        "prisma_migrate": false,
+        "prisma_generate": false
+      },
+      "ci": {
+        "postgres_service": true,
+        "postgres_image": "postgres:16",
+        "database_url": "postgresql://postgres:postgres@localhost:5432/opsiq_test",
+        "database_url_test": "postgresql://postgres:postgres@localhost:5432/opsiq_test",
+        "prisma_migrate": "prisma migrate deploy",
+        "prisma_generate": "prisma generate after migrate"
+      },
+      "impact": "CRITICAL: ci.yml has real database, ci-cd-foundations.yml does not"
+    },
+
+    "env_var_difference": {
+      "ci_cd_foundations": {
+        "NODE_ENV": "test",
+        "SKIP_ENV_VALIDATION": "true"
+      },
+      "ci": {
+        "NODE_ENV": "test",
+        "SKIP_ENV_VALIDATION": "not set"
+      },
+      "impact": "MODERATE: SKIP_ENV_VALIDATION differs"
+    },
+
+    "continue_on_error_difference": {
+      "ci_cd_foundations": true,
+      "ci": false,
+      "impact": "CRITICAL: ci-cd-foundations hides failures"
+    }
+  },
+
+  "hypothesis": "build-and-test fails because tests run serially (--maxWorkers 1) with a real database. Tests may have state interdependencies or database isolation issues that don't occur with parallel execution or no database.",
+
+  "next_steps": "Run vitest run --maxWorkers 1 locally against real test database to reproduce"
+}

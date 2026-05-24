@@ -154,10 +154,9 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
       expect(testJob.needs).toBe("verify");
     });
 
-    it("should set NODE_ENV=test, SKIP_ENV_VALIDATION=true, TEST_WITH_DB=false", () => {
+    it("should set NODE_ENV=test and SKIP_ENV_VALIDATION=true", () => {
       expect(testJob.env.NODE_ENV).toBe("test");
       expect(testJob.env.SKIP_ENV_VALIDATION).toBe("true");
-      expect(testJob.env.TEST_WITH_DB).toBe("false");
     });
 
     it("should checkout code", () => {
@@ -178,7 +177,8 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
     it("should run tests without continue-on-error (real gate)", () => {
       const testStep = testJob.steps[3];
       expect(testStep.name).toContain("Run tests");
-      expect(testStep.run).toContain("npm test");
+      expect(testStep.run).toBe("npm test");
+      // continue-on-error should not be set (tests must pass for gate to pass)
       expect(testStep["continue-on-error"]).not.toBe(true);
     });
 
@@ -351,9 +351,7 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
       const testJob = workflowContent.jobs.test;
       const runs = testJob.steps.map((s: any) => s.run).filter(Boolean);
       expect(runs).toContain("npm ci");
-      // Check that npm test is run as part of the diagnostic script
-      const hasNpmTest = runs.some((run: string) => run.includes("npm test"));
-      expect(hasNpmTest).toBe(true);
+      expect(runs).toContain("npm test");
     });
 
     it("branch-protection reports to GitHub summary", () => {

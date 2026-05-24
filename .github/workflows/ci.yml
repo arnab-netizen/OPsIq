@@ -107,6 +107,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
           DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
+          TEST_WITH_DB: "true"
           NODE_ENV: test
         continue-on-error: false
 
