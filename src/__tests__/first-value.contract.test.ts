@@ -3,7 +3,6 @@ import type {
   FirstValueActionDTO,
   FirstValueDTO,
   FirstValueExportDTO,
-  FirstValueEvidenceRefDTO,
 } from "@/lib/first-value/first-value.dto";
 
 /**
