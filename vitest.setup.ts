@@ -11,8 +11,11 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = "postgresql://user:password@localhost:5432/opsiq_dev?schema=public";
 }
 
-// Ensure database is initialized before tests run
+// Ensure database is initialized before tests run (only if TEST_WITH_DB=true)
 beforeAll(async () => {
+  if (process.env.TEST_WITH_DB !== "true") {
+    return; // Skip DB initialization if not in DB test mode
+  }
   try {
     const { getDbInstance } = await import("./src/lib/db");
     await getDbInstance();
