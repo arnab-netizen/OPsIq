@@ -9,7 +9,6 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   }
 
   const workspaceId = ctx.verifiedWorkspaceId;
-  const userId = ctx.verifiedActorId;
 
   const membership = await enforceWorkspaceScoping(ctx.request, workspaceId);
   if (!membership) {

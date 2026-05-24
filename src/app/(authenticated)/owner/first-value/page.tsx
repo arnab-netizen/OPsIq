@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FirstValueDTO } from "@/lib/first-value/first-value.dto";
+import { toOperatorSafeError } from "@/lib/operator-safe-errors";
 
 export default function FirstValuePage() {
   const [firstValue, setFirstValue] = useState<FirstValueDTO | null>(null);
@@ -18,9 +19,8 @@ export default function FirstValuePage() {
         const data = await response.json();
         setFirstValue(data);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Unknown error occurred"
-        );
+        const safeError = toOperatorSafeError(err, "load");
+        setError(safeError.error);
       } finally {
         setLoading(false);
       }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from "@/lib/db";
 import { requireServiceContext } from "@/lib/service-auth";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";

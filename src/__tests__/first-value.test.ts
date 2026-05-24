@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 
@@ -25,7 +26,7 @@ describe("First-Value Service [db]", () => {
     verifiedWorkspaceId: mockWorkspaceId,
     verifiedActorId: mockUserId,
     verifiedUserEmail: "test@example.com",
-    request: {} as any,
+    request: new Request("http://localhost/api/owner/first-value"),
   };
 
   let getFirstValue: any;
