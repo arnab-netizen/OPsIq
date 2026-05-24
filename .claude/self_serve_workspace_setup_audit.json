@@ -1,0 +1,28 @@
+{
+  "branch": "self-serve-workspace-setup",
+  "main_head_sha": "587accc4dd0e413a758ab5a027bc070a14146ecc",
+  "files_created": 10,
+  "total_additions": 1957,
+  "setup_dto": "src/lib/workspace-setup/workspace-setup.dto.ts",
+  "setup_service": "src/services/workspace-setup.service.ts",
+  "api_routes": "src/app/api/owner/workspace-setup/route.ts",
+  "ui_page": "src/app/(authenticated)/owner/workspace-setup/page.tsx",
+  "non_db_tests": "src/__tests__/workspace-setup.contract.test.ts (7 tests)",
+  "db_tests": "src/__tests__/workspace-setup.test.ts (9 tests marked [db])",
+  "gates_status": {
+    "npm_ci": "PASS",
+    "lint_ratchet": "PASS (1264 errors, 1061 warnings)",
+    "governance_scan": "PASS (0 errors, 117 warnings)",
+    "tsc": "PASS",
+    "prisma": "PASS",
+    "build": "PASS (/owner/workspace-setup route verified)",
+    "contract_tests": "PASS (7/7)",
+    "test_with_db_false": "PASS (95 baseline failures excluded, 4425 passed)"
+  },
+  "security": {
+    "no_secrets_exposed": true,
+    "no_raw_errors": true,
+    "workspace_scoped": true,
+    "auth_enforced": true
+  }
+}
