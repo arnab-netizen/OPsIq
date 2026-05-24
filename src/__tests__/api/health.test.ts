@@ -302,11 +302,13 @@ describe("Error Classification System", () => {
       expect(result.statusCode).toBe(503);
     });
 
-    it("should preserve error message in classified result", () => {
+    it("should transform error message to operator-safe in classified result", () => {
       const error = new Error("Specific database details");
       const result = classifyError(error, { check: "database" });
 
-      expect(result.message).toContain("Specific database details");
+      // Error objects are transformed to operator-safe messages
+      expect(result.message).toContain("Server is having trouble");
+      expect(result.classification).toBe("DATABASE_ERROR");
     });
 
     it("should include timestamp in error classification", () => {

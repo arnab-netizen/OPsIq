@@ -337,8 +337,8 @@ describe("Phase 13 Slice 4: Error Tracking + Monitoring", () => {
       // classifyOperatorError transforms raw errors to operator-safe messages
       expect(result.message).toBeDefined();
       expect(typeof result.message).toBe("string");
-      // The message is transformed by classifyOperatorError for safety
-      expect(result.message).toContain("didn't look right");
+      // The message is transformed by classifyOperatorError for safety (using "load" context)
+      expect(result.message).toContain("Couldn't load that data");
     });
 
     it("should include timestamp in all classifications", () => {

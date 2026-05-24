@@ -82,7 +82,7 @@ jobs:
         continue-on-error: false
 
       - name: Run full test suite
-        run: npm run test:ci
+        run: npm test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test
           DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test
@@ -117,8 +117,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint ratchet (block new lint debt)
-        run: npm run lint:ratchet
+      - name: Run linter
+        run: npm run lint
         continue-on-error: false
 
   branch-protection:

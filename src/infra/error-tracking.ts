@@ -42,8 +42,11 @@ export function classifyError(
   context?: Record<string, unknown>
 ): ClassifiedError {
   const now = new Date().toISOString();
+  const isErrorObject = error instanceof Error;
   const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-  const message = governed.operatorMessage;
+  // For non-Error objects, preserve the original input as the message
+  // For Error objects, use the transformed operator-safe message
+  const message = isErrorObject ? governed.operatorMessage : String(error);
   // Use technical details for classification (contains original error message)
   const technicalContext = governed.technicalDetails.toLowerCase();
 

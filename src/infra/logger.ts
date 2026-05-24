@@ -185,6 +185,17 @@ function log(
   }
 
   const governedError = error ? classifyOperatorError(error, { context: "load" }) : null;
+  // Extract original message from technicalDetails for internal logging
+  let errorMessage = "Unknown error";
+  if (governedError && governedError.technicalDetails) {
+    try {
+      const details = JSON.parse(governedError.technicalDetails);
+      errorMessage = details.message || "Unknown error";
+    } catch {
+      // If technicalDetails is not JSON, use it as-is
+      errorMessage = governedError.technicalDetails;
+    }
+  }
   const entry: LogEntry = {
     timestamp: new Date(),
     level,
@@ -194,7 +205,7 @@ function log(
     error: governedError
       ? {
           name: error instanceof Error ? error.name : "Unknown",
-          message: governedError.operatorMessage,
+          message: errorMessage,
           stack: error instanceof Error ? error.stack : undefined,
         }
       : undefined,
