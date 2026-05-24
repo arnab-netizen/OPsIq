@@ -5,8 +5,15 @@
  * Requires: DATABASE_URL environment variable
  */
 
-import { PrismaClient } from "@prisma/client";
+const databaseUrl = process.env.DATABASE_URL || process.env.TEST_DATABASE_URL;
 
+if (!databaseUrl) {
+  console.error("\n✗ DATABASE_URL_REQUIRED_FOR_DEMO_SEED");
+  console.error("  Set DATABASE_URL=postgresql://user:password@host/dbname");
+  process.exit(1);
+}
+
+const { PrismaClient } = await import("@prisma/client");
 const prisma = new PrismaClient();
 
 async function seedDemoWorkspace() {
