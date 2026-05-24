@@ -12,15 +12,11 @@ async function setup() {
   console.log("\n📊 Initializing test environment...");
 
   // Set test environment
-  Object.assign(process.env, {
-    NODE_ENV: "test",
-    VITEST: "true",
-    SKIP_ENV_VALIDATION: "true",
-  });
-  // Force TEST_WITH_DB based on environment or default to true for backward compatibility with CI
-  if (process.env.TEST_WITH_DB !== "false") {
-    Object.assign(process.env, { TEST_WITH_DB: "true" });
-  }
+  (process.env as any).NODE_ENV = "test";
+  (process.env as any).VITEST = "true";
+  (process.env as any).SKIP_ENV_VALIDATION = "true";
+  // TEST_WITH_DB should be set by CI workflow if database tests are needed
+  // Default to empty to allow vitest config's test filter to work
 
   // Load .env.test for database configuration
   const envTestPath = path.resolve(__dirname, ".env.test");
@@ -32,9 +28,7 @@ async function setup() {
     console.log("  → .env.test not found, using defaults");
     // Fallback: use development database
     if (!process.env.DATABASE_URL) {
-      Object.assign(process.env, {
-        DATABASE_URL: "postgresql://user:password@localhost:5432/opsiq_dev?schema=public",
-      });
+      (process.env as any).DATABASE_URL = "postgresql://user:password@localhost:5432/opsiq_dev?schema=public";
     }
   }
 
@@ -47,12 +41,12 @@ async function setup() {
       stdio: "pipe",
     });
     console.log("  ✓ Prisma Client generated");
-  } catch {
+  } catch (error) {
     console.log("  ℹ Prisma Client already generated");
   }
 
-  // Initialize database connection only if TEST_WITH_DB is explicitly true
-  const testWithDb = process.env.TEST_WITH_DB === "true";
+  // Initialize database connection if TEST_WITH_DB is set
+  const testWithDb = process.env.DATABASE_URL && process.env.DATABASE_URL.includes("localhost");
   if (testWithDb) {
     console.log("  → Initializing database connection...");
     try {
@@ -75,7 +69,7 @@ async function setup() {
       console.error("  ⚠ Failed to initialize startup status:", error);
     }
   } else {
-    console.log("  ℹ Skipping database initialization (TEST_WITH_DB not set)");
+    console.log("  ℹ DATABASE_URL not configured for local testing, skipping DB initialization");
   }
 
   console.log("✓ Test environment ready\n");
@@ -83,16 +77,13 @@ async function setup() {
 
 async function teardown() {
   console.log("\n📊 Cleaning up test environment...");
-  const testWithDb = process.env.TEST_WITH_DB === "true";
-  if (testWithDb) {
-    try {
-      const { getDbInstance } = await import("./src/lib/db");
-      const prisma = await getDbInstance();
-      await prisma.$disconnect();
-      console.log("  ✓ Database connection closed");
-    } catch (error) {
-      console.error("  ⚠ Error closing database connection:", error);
-    }
+  try {
+    const { getDbInstance } = await import("./src/lib/db");
+    const prisma = await getDbInstance();
+    await prisma.$disconnect();
+    console.log("  ✓ Database connection closed");
+  } catch (error) {
+    console.error("  ⚠ Error closing database connection:", error);
   }
 }
 
