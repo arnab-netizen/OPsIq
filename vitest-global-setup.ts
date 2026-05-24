@@ -15,7 +15,7 @@ async function setup() {
   (process.env as any).NODE_ENV = "test";
   (process.env as any).VITEST = "true";
   (process.env as any).SKIP_ENV_VALIDATION = "true";
-  (process.env as any).TEST_WITH_DB = "true";
+  // TEST_WITH_DB is controlled by CI environment - don't override it
 
   // Load .env.test for database configuration
   const envTestPath = path.resolve(__dirname, ".env.test");
@@ -44,26 +44,31 @@ async function setup() {
     console.log("  ℹ Prisma Client already generated");
   }
 
-  // Initialize database connection
-  console.log("  → Initializing database connection...");
-  try {
-    const { getDbInstance } = await import("./src/lib/db");
-    await getDbInstance();
-    console.log("  ✓ Database initialized");
-  } catch (error) {
-    console.error("  ✗ Failed to initialize database:", error);
-    throw error;
-  }
+  // Initialize database connection only if TEST_WITH_DB is explicitly true
+  const testWithDb = process.env.TEST_WITH_DB === "true";
+  if (testWithDb) {
+    console.log("  → Initializing database connection...");
+    try {
+      const { getDbInstance } = await import("./src/lib/db");
+      await getDbInstance();
+      console.log("  ✓ Database initialized");
+    } catch (error) {
+      console.error("  ✗ Failed to initialize database:", error);
+      throw error;
+    }
 
-  // Initialize startup status for test environment
-  console.log("  → Initializing startup status...");
-  try {
-    const { resetStartupStatus, setStartupStatus } = await import("./src/services/startup-status");
-    await resetStartupStatus();
-    await setStartupStatus("READY");
-    console.log("  ✓ Startup status initialized");
-  } catch (error) {
-    console.error("  ⚠ Failed to initialize startup status:", error);
+    // Initialize startup status for test environment
+    console.log("  → Initializing startup status...");
+    try {
+      const { resetStartupStatus, setStartupStatus } = await import("./src/services/startup-status");
+      await resetStartupStatus();
+      await setStartupStatus("READY");
+      console.log("  ✓ Startup status initialized");
+    } catch (error) {
+      console.error("  ⚠ Failed to initialize startup status:", error);
+    }
+  } else {
+    console.log("  ℹ Skipping database initialization (TEST_WITH_DB not set)");
   }
 
   console.log("✓ Test environment ready\n");
@@ -71,13 +76,16 @@ async function setup() {
 
 async function teardown() {
   console.log("\n📊 Cleaning up test environment...");
-  try {
-    const { getDbInstance } = await import("./src/lib/db");
-    const prisma = await getDbInstance();
-    await prisma.$disconnect();
-    console.log("  ✓ Database connection closed");
-  } catch (error) {
-    console.error("  ⚠ Error closing database connection:", error);
+  const testWithDb = process.env.TEST_WITH_DB === "true";
+  if (testWithDb) {
+    try {
+      const { getDbInstance } = await import("./src/lib/db");
+      const prisma = await getDbInstance();
+      await prisma.$disconnect();
+      console.log("  ✓ Database connection closed");
+    } catch (error) {
+      console.error("  ⚠ Error closing database connection:", error);
+    }
   }
 }
 

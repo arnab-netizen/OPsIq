@@ -58,6 +58,7 @@ jobs:
     env:
       NODE_ENV: test
       SKIP_ENV_VALIDATION: "true"
+      TEST_WITH_DB: "false"
 
     steps:
       - name: Checkout code
@@ -76,7 +77,6 @@ jobs:
 
       - name: Run tests
         run: npm test
-        continue-on-error: true
 
       - name: Test Summary
         if: always()

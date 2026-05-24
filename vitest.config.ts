@@ -16,6 +16,11 @@ export default defineConfig({
       "**/*.integration.test.ts",
       "**/*.placeholder.test.ts",
       "**/__ignored_tests__/**",
+      ...(testWithDb ? [] : [
+        "src/__tests__/runtime-proof/**", // Runtime proof tests require database
+        "src/__tests__/phase-*/**", // Phase tests (phase-a through phase-i) require database
+        "src/__tests__/phase-3-*.test.ts", // Phase-3 database dependency tests
+      ]),
     ],
     testTimeout: 30000,
     hookTimeout: 30000,
