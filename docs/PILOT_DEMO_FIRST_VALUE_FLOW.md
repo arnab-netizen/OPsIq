@@ -68,15 +68,6 @@ Returns `FirstValueDTO` with all visibility data.
 - Export is JSON only (no PDF/HTML yet)
 - Static snapshot (no real-time updates)
 
-## Files Created
-
-- `scripts/seed-demo-workspace.mjs` - Deterministic seed
-- `src/services/first-value.service.ts` - Core logic
-- `src/app/api/owner/first-value/route.ts` - API
-- `src/app/(authenticated)/owner/first-value/page.tsx` - UI
-- `src/lib/first-value/first-value.dto.ts` - Data contracts
-- `src/__tests__/first-value.test.ts` - Tests (marked [db])
-
 ## Known Constraints
 
 - No schema migrations
