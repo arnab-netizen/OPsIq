@@ -58,6 +58,7 @@ jobs:
     env:
       NODE_ENV: test
       SKIP_ENV_VALIDATION: "true"
+      TEST_WITH_DB: "false"
 
     steps:
       - name: Checkout code
@@ -75,14 +76,49 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm test
-        continue-on-error: true
+        run: |
+          set +e
+          npm test 2>&1 | tee ci-cd-foundations-tests.log
+          GATE_EXIT_CODE=${PIPESTATUS[0]}
+          set -e
+
+          echo "## ci-cd-foundations-tests diagnostic summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- exit_code: ${GATE_EXIT_CODE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- commit: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- command: npm test (with TEST_WITH_DB=false)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- purpose: Non-database tests only (fast gate)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          tail -400 ci-cd-foundations-tests.log >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          FIRST_ERROR="$(grep -nE 'FAIL|Failed|Error:|AssertionError|Expected|Received|TypeError|ReferenceError|vitest|exit code' ci-cd-foundations-tests.log | head -1 || true)"
+          if [ -n "$FIRST_ERROR" ]; then
+            echo "::error title=ci-cd-foundations-tests first error::$FIRST_ERROR"
+          fi
+
+          exit "$GATE_EXIT_CODE"
 
       - name: Test Summary
         if: always()
         run: |
           echo "### Test Execution Complete" >> $GITHUB_STEP_SUMMARY
           echo "Tests executed on ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+
+  upload-test-logs:
+    name: Upload Test Logs
+    runs-on: ubuntu-latest
+    if: always()
+    needs: test
+
+    steps:
+      - name: Upload ci-cd-foundations test logs (on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-cd-foundations-test-logs
+          path: ci-cd-foundations-tests.log
+          retention-days: 7
 
   branch-protection:
     name: Enforce Branch Protection

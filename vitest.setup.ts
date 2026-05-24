@@ -1,4 +1,4 @@
-import { vi, beforeEach, afterEach, beforeAll } from "vitest";
+import { vi, afterEach, beforeAll } from "vitest";
 import dotenv from "dotenv";
 import path from "path";
 import "@testing-library/jest-dom/vitest";
@@ -11,8 +11,11 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = "postgresql://user:password@localhost:5432/opsiq_dev?schema=public";
 }
 
-// Ensure database is initialized before tests run
+// Ensure database is initialized before tests run (only if TEST_WITH_DB=true)
 beforeAll(async () => {
+  if (process.env.TEST_WITH_DB !== "true") {
+    return; // Skip DB initialization if not in DB test mode
+  }
   try {
     const { getDbInstance } = await import("./src/lib/db");
     await getDbInstance();
@@ -20,16 +23,6 @@ beforeAll(async () => {
     console.error("Failed to initialize database in test setup:", error);
     throw error;
   }
-});
-
-// Clear Prisma client cache between tests for isolation
-beforeEach(() => {
-  // Each test should get a fresh db context
-  const globalForPrisma = globalThis as unknown as {
-    prisma: any | undefined;
-    prismaPromise: Promise<any> | undefined;
-  };
-  // Keep the connection alive but clear test-specific state
 });
 
 afterEach(() => {

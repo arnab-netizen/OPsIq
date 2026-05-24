@@ -31,7 +31,7 @@ describe('Auth Governance - Regression Prevention', () => {
       const error = new UnauthorizedError('Unauthorized access');
       const json = error.toJSON();
       // Should NOT be infrastructure error
-      expect(json.error?.code).toBe('UNAUTHORIZED');
+      expect(json.error?.code).toBe('AUTH_INVALID');
       expect(error.statusCode).not.toBe(500);
       expect(error.statusCode).toBe(401);
     });
@@ -108,7 +108,7 @@ describe('Auth Governance - Regression Prevention', () => {
       // and preserve the 401 status code
       const error = new UnauthorizedError('Unauthorized');
       expect(error.statusCode).toBe(401);
-      expect(error.code).toBe('UNAUTHORIZED');
+      expect(error.code).toBe('AUTH_INVALID');
     });
   });
 
@@ -176,8 +176,11 @@ describe('Auth Governance - Regression Prevention', () => {
       authErrors.forEach((error) => {
         // Check the error code is NOT infrastructure
         expect(error.code).not.toContain('INFRASTRUCTURE');
-        // Auth errors should use proper codes
-        expect(['UNAUTHORIZED', 'FORBIDDEN']).toContain(error.code);
+        // Auth errors should use AUTH_, WORKSPACE_, or CAPABILITY_ codes
+        const isAuthCode = error.code.startsWith('AUTH_') ||
+                           error.code.startsWith('WORKSPACE_') ||
+                           error.code.startsWith('CAPABILITY_');
+        expect(isAuthCode).toBe(true);
       });
     });
   });

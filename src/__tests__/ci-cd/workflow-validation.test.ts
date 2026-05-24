@@ -83,7 +83,7 @@ describe("CI/CD Workflow Validation", () => {
         (step: any) => step.name === "Run full test suite"
       );
       expect(testStep).toBeDefined();
-      expect(testStep.run).toContain("npm test");
+      expect(testStep.run).toContain("npm run test:ci");
       expect(testStep.env).toHaveProperty("DATABASE_URL");
     });
 

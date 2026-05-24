@@ -284,8 +284,8 @@ describe("ADDENDUM F: Sync Engine Contracts", () => {
     it("should generate unique idempotency keys", async () => {
       const context = { sourceId: "source_123", targetId: "target_456" };
       const key1 = generateIdempotencyKey("sync", context);
-      // Small delay to ensure different timestamp
-      await new Promise(resolve => setTimeout(resolve, 1));
+      // Ensure different timestamp (need at least 1ms difference for millisecond resolution)
+      await new Promise(resolve => setTimeout(resolve, 2));
       const key2 = generateIdempotencyKey("sync", context);
 
       expect(key1).toBeDefined();

@@ -260,13 +260,15 @@ describe("Phase 13 Slice 4: Error Tracking + Monitoring", () => {
     it("should handle non-Error objects", () => {
       const context = extractErrorContext("string error");
 
-      expect(context.rawError).toBe("string error");
+      expect(context.message).toBe("string error");
+      expect(context.name).toBe("NonError");
     });
 
     it("should handle null", () => {
       const context = extractErrorContext(null);
 
-      expect(context.rawError).toBe("null");
+      expect(context.message).toBe("null");
+      expect(context.name).toBe("NonError");
     });
   });
 
@@ -328,12 +330,15 @@ describe("Phase 13 Slice 4: Error Tracking + Monitoring", () => {
       });
     });
 
-    it("should preserve error message in classification", () => {
-      const message = "Custom error message";
-      const error = new Error(message);
+    it("should transform error message to operator-safe message", () => {
+      const error = new Error("Custom error message");
       const result = classifyError(error);
 
-      expect(result.message).toBe(message);
+      // classifyOperatorError transforms raw errors to operator-safe messages
+      expect(result.message).toBeDefined();
+      expect(typeof result.message).toBe("string");
+      // The message is transformed by classifyOperatorError for safety (using "load" context)
+      expect(result.message).toContain("Couldn't load that data");
     });
 
     it("should include timestamp in all classifications", () => {

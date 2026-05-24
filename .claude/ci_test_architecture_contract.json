@@ -1,0 +1,185 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "created": "2026-05-24",
+    "description": "Definitive test architecture contract for OpsIQ CI/CD pipeline. Documents exact commands, environment variables, and test execution strategy across all gates.",
+    "purpose": "Prevents command flapping, fake-green testing, and ensures reproducible test execution across all CI gates"
+  },
+  "ci_gates": {
+    "ci_yml_build_and_test": {
+      "workflow_file": ".github/workflows/ci.yml",
+      "job_name": "build-and-test",
+      "purpose": "Comprehensive test suite with full database access and all test types",
+      "test_command": "npm run test:ci",
+      "test_command_expanded": "vitest run --maxWorkers 1",
+      "test_with_db": "true",
+      "database_service": "postgres:16",
+      "database_availability": "localhost:5432/opsiq_test",
+      "environment_variables": {
+        "TEST_WITH_DB": "true",
+        "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/opsiq_test",
+        "NODE_ENV": "test"
+      },
+      "includes": [
+        "All unit tests (test:id pattern)",
+        "All database-dependent tests ([db] pattern)",
+        "All phase tests (phase-a through phase-i)",
+        "Runtime proof tests",
+        "Integration tests with database"
+      ],
+      "security": {
+        "continue_on_error": false,
+        "fake_green_removed": true,
+        "reason": "Tests must pass to allow merge; failures block the gate"
+      }
+    },
+    "ci_cd_foundations_test": {
+      "workflow_file": ".github/workflows/ci-cd-foundations.yml",
+      "job_name": "test",
+      "purpose": "Fast, lightweight test gate without database dependency for quick PR feedback",
+      "test_command": "npm test",
+      "test_command_expanded": "vitest run",
+      "test_with_db": "false",
+      "database_service": null,
+      "database_availability": "none",
+      "environment_variables": {
+        "TEST_WITH_DB": "false",
+        "NODE_ENV": "test"
+      },
+      "includes": [
+        "All unit tests except those marked [db]",
+        "Non-database error classification tests",
+        "Non-database governance tests",
+        "Core logic tests that don't need persistence"
+      ],
+      "excludes": [
+        "src/__tests__/runtime-proof/** (requires database)",
+        "src/__tests__/phase-*/** (requires database)",
+        "src/__tests__/phase-3-*.test.ts (requires database)",
+        "All tests with [db] in name (requires database)"
+      ],
+      "security": {
+        "continue_on_error": false,
+        "fake_green_removed": true,
+        "reason": "Tests must pass; any failure must be visible and actionable"
+      }
+    }
+  },
+  "package_json_scripts": {
+    "test": {
+      "command": "npm test",
+      "expanded": "vitest run",
+      "test_with_db": "false",
+      "purpose": "Default test command - includes all non-DB tests",
+      "use_case": "Developer workflows, ci-cd-foundations gate"
+    },
+    "test:all": {
+      "command": "npm run test:all",
+      "expanded": "TEST_WITH_DB=true vitest run",
+      "test_with_db": "true",
+      "purpose": "Full suite including database tests",
+      "use_case": "Manual verification before merge"
+    },
+    "test:ci": {
+      "command": "npm run test:ci",
+      "expanded": "vitest run --maxWorkers 1",
+      "test_with_db": false,
+      "purpose": "CI-safe serial execution without database",
+      "use_case": "Default for CI execution when combined with TEST_WITH_DB env var",
+      "note": "When TEST_WITH_DB=true is set in CI workflow, this becomes the full test suite"
+    }
+  },
+  "vitest_configuration": {
+    "file": "vitest.config.ts",
+    "dynamic_exclusion": {
+      "enabled": true,
+      "logic": "const testWithDb = process.env.TEST_WITH_DB === 'true'",
+      "excluded_when_no_db": [
+        "src/__tests__/runtime-proof/**",
+        "src/__tests__/phase-*/**",
+        "src/__tests__/phase-3-*.test.ts"
+      ],
+      "testNamePattern_when_no_db": "^(?!.*\\[db\\]).*$"
+    },
+    "setup_files": [
+      "vitest.setup.ts - conditional DB initialization based on TEST_WITH_DB",
+      "vitest-global-setup.ts - global test environment setup"
+    ]
+  },
+  "test_isolation_strategy": {
+    "database_dependent_tests": {
+      "identification": "Tests marked with [db] in name OR in excluded directories",
+      "execution": "Only run when TEST_WITH_DB=true AND database service is available",
+      "examples": "sync-engine tests, runtime-proof tests, phase-a through phase-i tests"
+    },
+    "non_database_tests": {
+      "identification": "All other tests, especially error classification and governance tests",
+      "execution": "Run in both TEST_WITH_DB=true and TEST_WITH_DB=false contexts",
+      "purpose": "Fast feedback, no infrastructure dependencies"
+    }
+  },
+  "command_equivalence_verification": {
+    "relationship": [
+      {
+        "context": "ci-cd-foundations.yml",
+        "command": "npm test",
+        "equivalent_to": "vitest run",
+        "env": "TEST_WITH_DB=false (default)",
+        "database": "none",
+        "exclusions_active": true
+      },
+      {
+        "context": "ci.yml build-and-test job",
+        "command": "npm run test:ci",
+        "equivalent_to": "vitest run --maxWorkers 1",
+        "env": "TEST_WITH_DB=true (set in job)",
+        "database": "postgresql://postgres:postgres@localhost:5432/opsiq_test",
+        "exclusions_active": false
+      }
+    ]
+  },
+  "fake_green_testing_prevention": {
+    "pattern_to_prevent": "Using continue-on-error: true to hide test failures",
+    "status": "REMOVED",
+    "enforcement": [
+      "All test steps in ci.yml have continue-on-error: false",
+      "All test steps in ci-cd-foundations.yml have no continue-on-error (default: false)",
+      "vitest.config.ts uses dynamic exclusion instead of ignore-patterns workaround",
+      "No tests are skipped; they are either run or excluded based on TEST_WITH_DB"
+    ]
+  },
+  "test_execution_guarantee": {
+    "ci_cd_foundations": "Fast gate runs all non-DB tests without PostgreSQL service",
+    "ci_yml": "Full gate runs all tests with PostgreSQL service for complete coverage",
+    "non_production": "TEST_WITH_DB=false is never forced; respects environment (defaults to true if not set)",
+    "no_silent_failures": "All test failures surface in CI, no continue-on-error hiding"
+  },
+  "self_reporting_diagnostics": {
+    "purpose": "Make CI workflow failures self-report their root cause",
+    "implementation": [
+      "github.step_summary annotations for test failure details",
+      "Error logs captured in job output on test failure",
+      "Workflow status table showing which gate failed"
+    ],
+    "files_to_update": [
+      ".github/workflows/ci.yml - add failure handling to build-and-test job",
+      ".github/workflows/ci-cd-foundations.yml - add failure handling to test job"
+    ]
+  },
+  "rationale": {
+    "why_two_gates": "ci-cd-foundations provides fast PR feedback (no DB setup), ci.yml provides comprehensive validation (full DB tests). Developers get quick signal from foundations, maintainers verify full suite before merge.",
+    "why_test_with_db_env": "Controls which tests run without modifying test files. Allows same codebase to run fast subset or full suite depending on CI environment.",
+    "why_maxworkers_1": "Prevents test flakiness from race conditions and resource contention in CI environments with limited resources.",
+    "why_dynamic_exclusion": "Tests are conditionally excluded (not skipped/marked), ensuring coverage metrics and test discovery remain accurate.",
+    "why_no_continue_on_error": "Failures must be visible. continue-on-error: true is a false-green pattern that hides real problems and delays root cause analysis."
+  },
+  "validation_checklist": {
+    "test_command_consistency": "npm test, npm run test:ci, and npm run test:all must match their expanded vitest equivalents",
+    "test_with_db_propagation": "TEST_WITH_DB=true in ci.yml job env must be visible to all test steps",
+    "database_availability": "ci.yml must have postgres service; ci-cd-foundations must not",
+    "exclusion_logic": "vitest.config.ts exclude array and testNamePattern must match TEST_WITH_DB logic",
+    "no_fake_green": "No continue-on-error: true on test steps (other steps may use it, but not tests)",
+    "failure_visibility": "All test failures must appear in CI logs and workflow summary",
+    "merge_blocker": "Test failures must prevent merge (no overrides, no skips, no force-push workarounds)"
+  }
+}

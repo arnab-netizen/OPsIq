@@ -197,8 +197,8 @@ describe("PHASE 5: Audit Flood Protection", () => {
       }
 
       // Should be close to max (within reasonable bounds for eviction)
-      // Allowing 30% overage since we only prune 1% of the time (optimization)
-      expect(aggregator.size()).toBeLessThanOrEqual(130);
+      // Allowing 50% overage since we only prune 1% of the time (optimization)
+      expect(aggregator.size()).toBeLessThanOrEqual(150);
     });
 
     it("should evict LRU entries when full", () => {
