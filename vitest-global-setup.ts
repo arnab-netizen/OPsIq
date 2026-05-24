@@ -15,7 +15,10 @@ async function setup() {
   (process.env as any).NODE_ENV = "test";
   (process.env as any).VITEST = "true";
   (process.env as any).SKIP_ENV_VALIDATION = "true";
-  // TEST_WITH_DB is controlled by CI environment - don't override it
+  // Force TEST_WITH_DB based on environment or default to true for backward compatibility with CI
+  if (process.env.TEST_WITH_DB !== "false") {
+    (process.env as any).TEST_WITH_DB = "true";
+  }
 
   // Load .env.test for database configuration
   const envTestPath = path.resolve(__dirname, ".env.test");
