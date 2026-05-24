@@ -207,7 +207,7 @@ async function saveWorkspaceSetup(
 ): Promise<WorkspaceSetupResultDTO> {
   requireServiceContext(ctx, workspaceId);
 
-  const workspace = await db.workspace.findUniqueOrThrow({
+  await db.workspace.findUniqueOrThrow({
     where: { id: workspaceId },
   });
 
