@@ -44,12 +44,14 @@ export function classifyError(
   const now = new Date().toISOString();
   const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
   const message = governed.operatorMessage;
+  // Use technical details for classification (contains original error message)
+  const technicalContext = governed.technicalDetails.toLowerCase();
 
   // Auth errors
   if (
-    message.includes("Unauthorized") ||
-    message.includes("authentication") ||
-    message.includes("EACCES")
+    technicalContext.includes("unauthorized") ||
+    technicalContext.includes("authentication") ||
+    technicalContext.includes("eacces")
   ) {
     return {
       classification: "AUTH_ERROR",
@@ -63,9 +65,9 @@ export function classifyError(
 
   // Authorization errors
   if (
-    message.includes("Forbidden") ||
-    message.includes("permission") ||
-    message.includes("capability")
+    technicalContext.includes("forbidden") ||
+    technicalContext.includes("permission") ||
+    technicalContext.includes("capability")
   ) {
     return {
       classification: "AUTH_ERROR",
@@ -79,9 +81,9 @@ export function classifyError(
 
   // Validation errors
   if (
-    message.includes("validation") ||
-    message.includes("Invalid") ||
-    message.includes("required")
+    technicalContext.includes("validation") ||
+    technicalContext.includes("invalid") ||
+    technicalContext.includes("required")
   ) {
     return {
       classification: "VALIDATION_ERROR",
@@ -95,10 +97,10 @@ export function classifyError(
 
   // Database errors
   if (
-    message.includes("database") ||
-    message.includes("ECONNREFUSED") ||
-    message.includes("ETIMEDOUT") ||
-    message.includes("Connection refused")
+    technicalContext.includes("database") ||
+    technicalContext.includes("econnrefused") ||
+    technicalContext.includes("etimedout") ||
+    technicalContext.includes("connection refused")
   ) {
     return {
       classification: "DATABASE_ERROR",
@@ -112,9 +114,9 @@ export function classifyError(
 
   // External API errors
   if (
-    message.includes("HTTP") ||
-    message.includes("fetch") ||
-    message.includes("request timeout")
+    technicalContext.includes("http") ||
+    technicalContext.includes("fetch") ||
+    technicalContext.includes("request timeout")
   ) {
     return {
       classification: "EXTERNAL_API_ERROR",
@@ -128,9 +130,10 @@ export function classifyError(
 
   // Workspace enforcement errors
   if (
-    message.includes("workspace") ||
-    message.includes("workspace scoping") ||
-    message.includes("tenant")
+    technicalContext.includes("workspace") ||
+    technicalContext.includes("workspace scoping") ||
+    technicalContext.includes("tenant") ||
+    technicalContext.includes("workspace violation")
   ) {
     return {
       classification: "WORKSPACE_ERROR",
@@ -215,13 +218,15 @@ export function reportError(classified: ClassifiedError): void {
  */
 export function extractErrorContext(error: unknown): Record<string, unknown> {
   if (!(error instanceof Error)) {
-    const governed = classifyOperatorError(new Error(String(error)), { context: "load" });
-    return { details: governed.operatorMessage };
+    return {
+      message: String(error),
+      stack: undefined,
+      name: "NonError",
+    };
   }
 
-  const governed = classifyOperatorError(error, { context: "load" });
   return {
-    operatorMessage: governed.operatorMessage,
+    message: error.message,
     stack: error.stack?.split("\n").slice(0, 5).join("\n"), // First 5 stack frames
     name: error.name,
   };
