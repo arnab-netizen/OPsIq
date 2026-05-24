@@ -45,8 +45,8 @@ async function setup() {
     console.log("  ℹ Prisma Client already generated");
   }
 
-  // Initialize database connection if TEST_WITH_DB is set
-  const testWithDb = process.env.DATABASE_URL && process.env.DATABASE_URL.includes("localhost");
+  // Initialize database connection only if TEST_WITH_DB is explicitly true
+  const testWithDb = process.env.TEST_WITH_DB === "true";
   if (testWithDb) {
     console.log("  → Initializing database connection...");
     try {
