@@ -17,11 +17,8 @@ export default defineConfig({
       "**/*.placeholder.test.ts",
       "**/__ignored_tests__/**",
       ...(testWithDb ? [] : [
-        "src/__tests__/runtime-proof/**", // Runtime proof tests require database
-        "src/__tests__/phase-*/**", // Phase tests (phase-a through phase-i) require database
-        "src/__tests__/phase-3-*.test.ts", // Phase-3 database dependency tests
-        "src/__tests__/services/notifications/**", // Notification service requires persistence
-        "src/__tests__/domain/**/*.integration.test.ts", // Integration tests require database
+        "**/runtime-proof/**",
+        "**/phase-*/**", // Exclude phase tests (have implicit DB dependencies via enforceRequest)
       ]),
     ],
     testTimeout: 30000,
