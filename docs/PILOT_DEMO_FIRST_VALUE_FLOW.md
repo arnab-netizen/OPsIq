@@ -84,5 +84,3 @@ Returns `FirstValueDTO` with all visibility data.
 - No recommendation engine redesign
 - No full onboarding product
 - Demo workspace only (no multi-tenant demo support yet)
-
-See `.claude/pilot_demo_first_value_implementation.json` for detailed verification checklist.
