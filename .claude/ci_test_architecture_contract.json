@@ -1,0 +1,126 @@
+{
+  "version": "1.0",
+  "date_created": "2026-05-24",
+  "purpose": "Source of truth for CI test architecture to prevent test command flapping and ensure consistent test behavior across gates",
+
+  "test_commands": {
+    "package_test_command": {
+      "command": "vitest run",
+      "environment": "TEST_WITH_DB not set (defaults to testing behavior controlled by config)",
+      "purpose": "Local developer testing",
+      "location": "package.json scripts.test"
+    },
+    "package_test_ci_command": {
+      "command": "vitest run --maxWorkers 1",
+      "environment": "TEST_WITH_DB set via shell or CI environment",
+      "purpose": "CI-grade testing with serialized workers for safety",
+      "location": "package.json scripts.test:ci"
+    },
+    "npm_test": {
+      "resolves_to": "vitest run",
+      "test_with_db": "false",
+      "excludes": ["src/__tests__/runtime-proof/**", "src/__tests__/phase-*/**", "src/__tests__/phase-3-*.test.ts"],
+      "excludes_via": "vitest.config.ts exclude array + testNamePattern",
+      "purpose": "Non-database test suite (fast, no external dependencies)"
+    },
+    "npm_run_test:ci": {
+      "resolves_to": "vitest run --maxWorkers 1",
+      "test_with_db": "not set, inherits from environment",
+      "purpose": "CI-grade testing with serialized execution (safer for concurrent CI environments)",
+      "note": "Actual behavior depends on TEST_WITH_DB environment variable at runtime"
+    }
+  },
+
+  "workflow_gates": {
+    "ci_yml_build_and_test": {
+      "workflow": ".github/workflows/ci.yml",
+      "job": "build-and-test",
+      "is_blocking": true,
+      "test_command": "npm run test:ci",
+      "test_with_db": "true",
+      "database_service": "postgres:16",
+      "database_env": {
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "postgres",
+        "POSTGRES_DB": "opsiq_test"
+      },
+      "include_tests": "all database-dependent + all non-database tests (comprehensive gate)",
+      "purpose": "Comprehensive blocking gate: type check → prisma validate → build → full test suite",
+      "continue_on_error": false,
+      "enforcement": "All checks must pass to merge"
+    },
+    "ci_cd_foundations_test": {
+      "workflow": ".github/workflows/ci-cd-foundations.yml",
+      "job": "test",
+      "is_blocking": true,
+      "test_command": "npm test",
+      "test_with_db": "false",
+      "database_service": "none",
+      "include_tests": "non-database tests only (excludes phase tests, runtime-proof tests)",
+      "purpose": "Fast non-database gate: validates core logic without external dependencies",
+      "continue_on_error": false,
+      "enforcement": "Must pass to merge"
+    }
+  },
+
+  "test_isolation_mechanism": {
+    "test_with_db_false": {
+      "mechanism": "vitest.config.ts exclude array + testNamePattern",
+      "excluded_paths": [
+        "src/__tests__/runtime-proof/**",
+        "src/__tests__/phase-*/**",
+        "src/__tests__/phase-3-*.test.ts"
+      ],
+      "excluded_pattern": "/^(?!.*\\[db\\]).*/",
+      "database_initialization": "skipped (TEST_WITH_DB check in vitest-global-setup.ts and vitest.setup.ts)",
+      "behavior": "Tests that require database are not executed; DB initialization is not attempted"
+    },
+    "test_with_db_true": {
+      "mechanism": "no exclusions, testNamePattern includes all",
+      "database_initialization": "required and executed (vitest-global-setup.ts and vitest.setup.ts)",
+      "behavior": "All tests including database-dependent tests are executed; test fails if DB unavailable",
+      "enforcement": "DATABASE_URL must be valid and PostgreSQL must be accessible"
+    }
+  },
+
+  "environment_variable_contracts": {
+    "TEST_WITH_DB": {
+      "when_not_set": "defaults to false (backward compatible with non-DB testing in development)",
+      "when_false": {
+        "string_value": "\"false\"",
+        "behavior": "Non-database tests only; database initialization skipped",
+        "used_by": ["vitest-global-setup.ts", "vitest.setup.ts", "vitest.config.ts"]
+      },
+      "when_true": {
+        "string_value": "\"true\"",
+        "behavior": "All tests including database-dependent; database initialization required",
+        "used_by": ["vitest-global-setup.ts", "vitest.setup.ts", "vitest.config.ts"]
+      },
+      "error_if_true_but_db_unavailable": "Test suite fails fast (intentional: DB required)",
+      "error_if_false_but_test_needs_db": "Test is excluded by config (intentional: isolation enforced)"
+    }
+  },
+
+  "ci_gate_stability_rules": {
+    "command_stability": "ci.yml build-and-test command must remain 'npm run test:ci'; ci-cd-foundations must remain 'npm test'",
+    "reason": "Package scripts are the stable interface; workflows reference scripts, not raw vitest commands",
+    "violation_detector": "If command changes without documented architectural reason, revert immediately",
+    "test_with_db_stability": "ci.yml must have TEST_WITH_DB=true; ci-cd-foundations must have TEST_WITH_DB=false",
+    "fake_green_rules": {
+      "forbidden": ["continue-on-error on test gates", "|| true on test gates", "skip tests with markers"],
+      "allowed": ["continue-on-error only on summary/report steps", "set +e only to capture exit codes with explicit set -e restoration"]
+    },
+    "proof_of_real_testing": "Each gate must allow tests to run fully and fail visibly if tests fail"
+  },
+
+  "current_state": {
+    "command_not_weakened": true,
+    "fake_green_removed": true,
+    "db_tests_run_in_db_gate": true,
+    "db_tests_excluded_from_non_db_gate": true,
+    "vitest_config_respects_test_with_db": true,
+    "database_initialization_conditional": true
+  },
+
+  "rationale": "The test architecture separates database-dependent testing from non-database testing to enable: (1) fast non-DB gates in ci-cd-foundations (no external resource requirement), (2) comprehensive DB-inclusive testing in ci.yml (proof that all database interactions work), (3) predictable CI behavior regardless of which workflow runs first, (4) developer clarity: TEST_WITH_DB=false means 'no database needed'; TEST_WITH_DB=true means 'database required and will be used', (5) prevention of fake green: all test failures are visible and blocking unless explicitly designed to be non-blocking. The contract enforces that ci.yml is the comprehensive gate (with database) and ci-cd-foundations is the fast gate (without database), and both are real blocking gates with no hidden errors."
+}
