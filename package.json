@@ -36,7 +36,8 @@
     "smoke:staging": "tsx scripts/smoke-tests.ts --env=staging",
     "deployment:preflight": "node scripts/deployment-preflight.mjs",
     "deployment:smoke": "node scripts/production-smoke.mjs",
-    "support:diagnostics": "node scripts/support-diagnostics.mjs"
+    "support:diagnostics": "node scripts/support-diagnostics.mjs",
+    "demo:seed": "node scripts/seed-demo-workspace.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",
