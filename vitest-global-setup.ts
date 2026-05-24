@@ -12,12 +12,14 @@ async function setup() {
   console.log("\n📊 Initializing test environment...");
 
   // Set test environment
-  (process.env as any).NODE_ENV = "test";
-  (process.env as any).VITEST = "true";
-  (process.env as any).SKIP_ENV_VALIDATION = "true";
+  Object.assign(process.env, {
+    NODE_ENV: "test",
+    VITEST: "true",
+    SKIP_ENV_VALIDATION: "true",
+  });
   // Force TEST_WITH_DB based on environment or default to true for backward compatibility with CI
   if (process.env.TEST_WITH_DB !== "false") {
-    (process.env as any).TEST_WITH_DB = "true";
+    Object.assign(process.env, { TEST_WITH_DB: "true" });
   }
 
   // Load .env.test for database configuration
@@ -30,7 +32,9 @@ async function setup() {
     console.log("  → .env.test not found, using defaults");
     // Fallback: use development database
     if (!process.env.DATABASE_URL) {
-      (process.env as any).DATABASE_URL = "postgresql://user:password@localhost:5432/opsiq_dev?schema=public";
+      Object.assign(process.env, {
+        DATABASE_URL: "postgresql://user:password@localhost:5432/opsiq_dev?schema=public",
+      });
     }
   }
 
@@ -43,7 +47,7 @@ async function setup() {
       stdio: "pipe",
     });
     console.log("  ✓ Prisma Client generated");
-  } catch (error) {
+  } catch {
     console.log("  ℹ Prisma Client already generated");
   }
 
