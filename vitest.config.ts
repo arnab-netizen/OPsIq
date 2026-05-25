@@ -18,7 +18,7 @@ export default defineConfig({
       "**/__ignored_tests__/**",
       ...(testWithDb ? [] : [
         "**/runtime-proof/**",
-        "**/phase-*/**", // Exclude phase tests (have implicit DB dependencies via enforceRequest)
+        "**/phase-*.test.ts", // Exclude phase tests (have implicit DB dependencies via enforceRequest)
       ]),
     ],
     testTimeout: 30000,
