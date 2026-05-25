@@ -87,14 +87,14 @@ describe("CI/CD Workflow Validation", () => {
       expect(testStep.env).toHaveProperty("DATABASE_URL");
     });
 
-    it("lint job should run npm run lint", () => {
+    it("lint job should run npm run lint:ratchet", () => {
       const lintJob = ciWorkflow.jobs["lint"];
       const steps = lintJob.steps;
       const lintStep = steps.find(
-        (step: any) => step.name === "Run linter"
+        (step: any) => step.name === "Run linter ratchet"
       );
       expect(lintStep).toBeDefined();
-      expect(lintStep.run).toContain("npm run lint");
+      expect(lintStep.run).toContain("npm run lint:ratchet");
     });
 
     it("branch-protection job should depend on build-and-test and lint", () => {
