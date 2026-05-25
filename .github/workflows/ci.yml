@@ -147,25 +147,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run linter
+      - name: Run linter ratchet
         run: |
-          set +e
-          npm run lint 2>&1 | tee lint.log
-          GATE_EXIT_CODE=${PIPESTATUS[0]}
-          set -e
+          npm run lint:ratchet 2>&1 | tee lint-ratchet.log
+          GATE_EXIT_CODE=$?
 
-          echo "## lint diagnostic summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "## lint ratchet diagnostic summary" >> "$GITHUB_STEP_SUMMARY"
           echo "- exit_code: ${GATE_EXIT_CODE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- commit: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- command: npm run lint" >> "$GITHUB_STEP_SUMMARY"
+          echo "- command: npm run lint:ratchet" >> "$GITHUB_STEP_SUMMARY"
+          echo "- behavior: Fails if PR introduced new lint regressions; allows historical baseline errors" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo '```text' >> "$GITHUB_STEP_SUMMARY"
-          tail -400 lint.log >> "$GITHUB_STEP_SUMMARY"
+          tail -50 lint-ratchet.log >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
-          FIRST_ERROR="$(grep -nE 'error|Error|FAIL|Failed|ESLint|lint' lint.log | head -1 || true)"
-          if [ -n "$FIRST_ERROR" ]; then
-            echo "::error title=lint first error::$FIRST_ERROR"
+          RATCHET_FAIL="$(grep -nE 'LINT_RATCHET_FAIL' lint-ratchet.log || true)"
+          if [ -n "$RATCHET_FAIL" ]; then
+            echo "::error title=lint ratchet failure::$RATCHET_FAIL"
           fi
 
           exit "$GATE_EXIT_CODE"

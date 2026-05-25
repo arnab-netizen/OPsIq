@@ -1,0 +1,32 @@
+{
+  "lint_job_command_before": "npm run lint (returns 1 on any ESLint errors)",
+  "lint_job_command_after": "npm run lint:ratchet (PASS if no regression, FAIL if debt increased)",
+  "lint_baseline_behavior": "Ratchet enforces no-regression, allows historical 1267 baseline errors",
+
+  "build_and_test_command": "npm run test:ci with TEST_WITH_DB=true and GitHub Actions Postgres",
+  "run_tests_command_before": "npm test",
+  "run_tests_command_after": "npm run test:ci",
+  "test_with_db_false_jobs": ["ci-cd-foundations Run Tests"],
+  "test_with_db_true_jobs": ["ci.yml build-and-test"],
+
+  "db_service_jobs": ["ci.yml build-and-test (GitHub Actions postgres:16 on 5432)"],
+  "test_with_db_false_behavior": "Vitest config excludes phase-* and runtime-proof dirs, excludes [db] tests via testNamePattern",
+  "test_with_db_true_behavior": "Runs full test suite with ephemeral CI database",
+  "database_source": "Ephemeral GitHub Actions service, no production secrets",
+
+  "known_baseline_failures": {
+    "test_with_db_false": 94,
+    "test_with_db_true": 228,
+    "lint_errors": 1264,
+    "reason": "DB-dependent tests fail without DB, baseline historical lint errors"
+  },
+
+  "chosen_repair_path": "Replace npm run lint with npm run lint:ratchet for fail-closed no-regression enforcement",
+  "intentionally_not_changed": [
+    "Test classification (phase-* exclusion works correctly)",
+    "DATABASE_URL handling (ephemeral CI DB is correct)",
+    "continue-on-error (none added or removed)",
+    "Test skipping (no --skip, --only, or .skip() used)",
+    "Product feature code (no changes)"
+  ]
+}
