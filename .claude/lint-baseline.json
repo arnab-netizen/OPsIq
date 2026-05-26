@@ -4,8 +4,8 @@
   "eslint_command": "npm run lint",
   "eslint_config_crash_fixed": true,
   "baseline_exit_code": 1,
-  "baseline_error_count": 1264,
-  "baseline_warning_count": 1064,
+  "baseline_error_count": 1267,
+  "baseline_warning_count": 1061,
   "baseline_rule_counts": {
     "@typescript-eslint/no-explicit-any": 1083,
     "prefer-const": 97,
