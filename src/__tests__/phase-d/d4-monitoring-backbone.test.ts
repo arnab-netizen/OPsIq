@@ -47,7 +47,7 @@ describe("D4: Monitoring Backbone - Local Metrics Collection", () => {
 
     it("should fail if database not healthy", async () => {
       const badDb = {
-        query: async () => {
+        $queryRawUnsafe: async () => {
           throw new Error("Database connection failed");
         },
       };
