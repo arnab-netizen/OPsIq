@@ -5,7 +5,8 @@
  * user preferences, and notification tracking.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, beforeAll } from "vitest";
+import { ensureStartupStatusReady } from "../../test-helpers/startup-helper";
 import {
   sendNotification,
   getNotification,
@@ -23,10 +24,13 @@ import {
 } from "@/services/notifications/notification-service";
 
 describe("Notification Service", () => {
+  beforeAll(async () => {
+    await ensureStartupStatusReady();
+  });
+
   beforeEach(() => {
     clearAllNotifications();
-    // Enable deterministic delivery for tests (all succeed)
-    _setChannelDeliverySimulatorForTesting(() => ({ status: "success" }));
+    _setChannelDeliverySimulatorForTesting(() => true);
   });
 
   afterEach(() => {

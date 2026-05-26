@@ -92,8 +92,22 @@ const notificationStore = new Map<string, Notification>();
 const templateStore = new Map<string, NotificationTemplate>();
 const preferencesStore = new Map<string, NotificationPreferences>();
 
-// Test seam for controlling delivery simulation
-let _testDeliverySimulator: ((channel: NotificationChannel) => { status: "success" | "failed" | "bounced" | "unsubscribed"; error?: string }) | null = null;
+// Configurable channel delivery simulator for testing
+type ChannelDeliverySimulator = (channel: NotificationChannel, recipientId: string) => boolean | Promise<boolean>;
+
+const defaultChannelDeliverySimulator: ChannelDeliverySimulator = () => {
+  return Math.random() > 0.05;
+};
+
+let channelDeliverySimulator: ChannelDeliverySimulator = defaultChannelDeliverySimulator;
+
+export function _setChannelDeliverySimulatorForTesting(simulator: ChannelDeliverySimulator): void {
+  channelDeliverySimulator = simulator;
+}
+
+export function _resetChannelDeliverySimulatorForTesting(): void {
+  channelDeliverySimulator = defaultChannelDeliverySimulator;
+}
 
 /**
  * Send a notification through specified channels
@@ -169,18 +183,8 @@ async function simulateChannelDelivery(
   sentAt: Date;
   error?: string;
 }> {
-  // Use test seam if set (for deterministic testing)
-  if (_testDeliverySimulator) {
-    const simResult = _testDeliverySimulator(channel);
-    return {
-      channel,
-      sentAt: new Date(),
-      ...simResult,
-    };
-  }
-
-  // Simulate 95% success rate
-  const success = Math.random() > 0.05;
+  // Use configurable simulator (default: 95% success rate)
+  const success = await channelDeliverySimulator(channel, notification.recipientId);
 
   if (!success) {
     return {
@@ -344,20 +348,4 @@ export function clearAllNotifications(): void {
   notificationStore.clear();
   templateStore.clear();
   preferencesStore.clear();
-}
-
-/**
- * Set delivery simulator for testing (ensures deterministic results)
- */
-export function _setChannelDeliverySimulatorForTesting(
-  simulator: (channel: NotificationChannel) => { status: "success" | "failed" | "bounced" | "unsubscribed"; error?: string }
-): void {
-  _testDeliverySimulator = simulator;
-}
-
-/**
- * Reset delivery simulator (restore randomness)
- */
-export function _resetChannelDeliverySimulatorForTesting(): void {
-  _testDeliverySimulator = null;
 }

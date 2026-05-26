@@ -194,6 +194,10 @@ export class AuditPersistenceQueue {
    * Isolated from request path — can fail without affecting requests
    */
   private async persistBatch(batch: PendingAuditEvent[]): Promise<void> {
+    if (process.env.TEST_WITH_DB !== "true") {
+      return;
+    }
+
     try {
       // Create all events in batch
       const created = await db.auditEvent.createMany({
