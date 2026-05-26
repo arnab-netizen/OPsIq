@@ -20,11 +20,11 @@ describe("D4: Monitoring Backbone - Local Metrics Collection", () => {
 
   beforeEach(() => {
     mockDb = {
-      query: async (sql: string) => {
+      $queryRawUnsafe: async (sql: string) => {
         if (sql.includes("SELECT 1")) {
-          return [{ count: 1 }];
+          return { status: "ok" };
         }
-        if (sql.includes("webhook_jobs")) {
+        if (sql.includes("webhook_events")) {
           return [{ count: 50 }]; // 50 pending jobs
         }
         return [];
