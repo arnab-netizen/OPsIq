@@ -1,0 +1,123 @@
+name: 🔥 Reset Staging Database (DESTRUCTIVE)
+
+# Manual trigger only - requires explicit confirmation
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type RESET_STAGING_DATABASE to confirm destructive reset'
+        required: true
+        type: string
+
+concurrency:
+  group: reset-staging-db
+  cancel-in-progress: false
+
+jobs:
+  reset:
+    name: Reset Staging Database Schema and Reapply Migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: staging
+
+    steps:
+      - name: Confirm destructive reset
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "RESET_STAGING_DATABASE" ]; then
+            echo "::error::Confirmation input must be exactly: RESET_STAGING_DATABASE"
+            echo "You typed: ${{ github.event.inputs.confirmation }}"
+            exit 1
+          fi
+          echo "✓ Destructive reset confirmed"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Preflight check - STAGING_DATABASE_URL secret exists
+        run: |
+          if [ -z "${{ secrets.STAGING_DATABASE_URL }}" ]; then
+            echo "::error::STAGING_DATABASE_URL secret is missing or empty"
+            exit 1
+          fi
+          echo "✓ STAGING_DATABASE_URL secret is configured"
+
+      - name: Remove local environment files
+        run: |
+          rm -f .env .env.local .env.production .env.staging .env.postgres .env.local.bak
+          echo "✓ Removed all local .env files"
+
+      - name: Validate Prisma schema
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          # Fail if placeholder strings detected
+          if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
+            echo "::error::DATABASE_URL contains placeholder value - secret not properly configured"
+            exit 1
+          fi
+          npx prisma validate
+
+      - name: Install PostgreSQL client
+        run: |
+          apt-get update -qq
+          apt-get install -qq -y postgresql-client
+
+      - name: Drop and recreate public schema
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "Dropping public schema..."
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c 'DROP SCHEMA IF EXISTS public CASCADE;'
+          echo "Creating fresh public schema..."
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c 'CREATE SCHEMA public;'
+          echo "✓ Schema reset complete"
+
+      - name: Deploy Prisma migrations (fresh)
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          # Double-check no placeholders before destructive operation
+          if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
+            echo "::error::DATABASE_URL contains placeholder value - aborting migration deployment"
+            exit 1
+          fi
+          npx prisma migrate deploy
+
+      - name: Verify migration status
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          echo "Checking migration status..."
+          npx prisma migrate status
+
+      - name: Reset summary
+        if: always()
+        run: |
+          echo "## 🔥 Staging Database Reset Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**WARNING: Destructive operation completed**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Actions Taken:" >> $GITHUB_STEP_SUMMARY
+          echo "- Dropped public schema" >> $GITHUB_STEP_SUMMARY
+          echo "- Recreated empty public schema" >> $GITHUB_STEP_SUMMARY
+          echo "- Reapplied all Prisma migrations from zero" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Verify staging app is still running and accessible" >> $GITHUB_STEP_SUMMARY
+          echo "2. Check staging app logs for any database errors" >> $GITHUB_STEP_SUMMARY
+          echo "3. If errors appear, **do NOT redeploy** - investigate first" >> $GITHUB_STEP_SUMMARY
+          echo "4. Reseed staging data if needed (manual step)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Important:** All data in staging database has been deleted." >> $GITHUB_STEP_SUMMARY
+          echo "This operation cannot be undone." >> $GITHUB_STEP_SUMMARY
