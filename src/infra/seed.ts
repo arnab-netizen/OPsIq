@@ -1,11 +1,50 @@
 // @ts-nocheck - seed script uses data definitions that don't strictly match schema but are handled at runtime
-import type { PrismaClient as PrismaClientType } from "@/generated/prisma/client";
 import { PrismaClient } from "@/generated/prisma/client";
 import * as bcrypt from "bcryptjs";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
 
-const prisma = new PrismaClient();
+async function createStagingSeedClient() {
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL environment variable is not set");
+  }
+
+  // Fail if placeholder detected
+  if (/REPLACE_|PLACEHOLDER|your_neon_url|example\.com/.test(databaseUrl)) {
+    throw new Error("DATABASE_URL contains placeholder value");
+  }
+
+  console.log("DATABASE_URL present for staging seed");
+
+  // Detect if it's a Neon endpoint
+  const isNeon = databaseUrl.includes("neon.tech") ||
+                 databaseUrl.includes("neon.database") ||
+                 (databaseUrl.includes("sslmode=require") && databaseUrl.includes("?"));
+
+  let client;
+
+  if (isNeon) {
+    // Neon: Use WebSocket adapter
+    const { Pool, neonConfig } = await import("@neondatabase/serverless");
+    const { PrismaNeon } = await import("@prisma/adapter-neon");
+
+    const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
+    const adapter = new PrismaNeon(pool);
+    client = new PrismaClient({ adapter });
+  } else {
+    // Standard PostgreSQL: Use PG adapter
+    const pg = await import("pg");
+    const { PrismaPg } = await import("@prisma/adapter-pg");
+
+    const pool = new pg.Pool({ connectionString: databaseUrl });
+    const adapter = new PrismaPg(pool);
+    client = new PrismaClient({ adapter });
+  }
+
+  return client;
+}
 
 async function seedDemoData(db: PrismaClient) {
   console.log("Seeding demo data...");
@@ -343,14 +382,16 @@ async function seedDemoData(db: PrismaClient) {
 }
 
 async function main() {
+  const prisma = await createStagingSeedClient();
   await seedDemoData(prisma);
+  return prisma;
 }
 
 main()
+  .then(async (prisma) => {
+    await prisma.$disconnect();
+  })
   .catch((error) => {
     console.error("Error seeding demo data:", error);
     process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   });
