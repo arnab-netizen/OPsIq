@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
     env:
       TEST_WITH_DB: "true"
 
@@ -111,6 +116,62 @@ jobs:
           NODE_ENV: test
         continue-on-error: false
 
+      - name: Post build-and-test failure to PR comment
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const logContent = fs.readFileSync('build-and-test.log', 'utf8');
+            const lines = logContent.split('\n');
+
+            // Extract first 120 error lines
+            const errorLines = lines.filter(l => /FAIL|Failed|Error:|AssertionError|Expected|Received|TypeError|ReferenceError|Prisma|vitest|exit code|Cannot|failed|timeout|DATABASE_URL|TEST_WITH_DB/.test(l)).slice(0, 120);
+
+            // Get final 120 lines
+            const finalLines = lines.slice(-120);
+
+            // Build comment
+            let comment = `## PR #28 CI Diagnostic — Build/Test Failed\n\n`;
+            comment += `**Workflow:** CI - Build & Test\n`;
+            comment += `**Job:** build-and-test (20.x)\n`;
+            comment += `**Commit:** ${context.payload.pull_request.head.sha.substring(0, 7)}\n`;
+            comment += `**Command:** npm run test:ci\n`;
+            comment += `**Environment:** TEST_WITH_DB=true, DATABASE_URL configured\n`;
+            comment += `**Status:** FAILED\n\n`;
+
+            if (errorLines.length > 0) {
+              comment += `**First Error Lines:**\n\`\`\`\n${errorLines.join('\n')}\n\`\`\`\n\n`;
+            }
+
+            comment += `**Final 120 Log Lines:**\n\`\`\`\n${finalLines.join('\n')}\n\`\`\`\n\n`;
+            comment += `<!-- PR28-CI-BUILD-TEST-DIAGNOSTIC -->`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.find(c => c.body.includes('PR28-CI-BUILD-TEST-DIAGNOSTIC'));
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: comment,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment,
+              });
+            }
+
       - name: Upload test logs (on failure)
         if: always()
         uses: actions/upload-artifact@v4
@@ -129,6 +190,11 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
 
     strategy:
       matrix:
@@ -170,6 +236,61 @@ jobs:
 
           exit "$GATE_EXIT_CODE"
         continue-on-error: false
+
+      - name: Post lint failure to PR comment
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const logContent = fs.readFileSync('lint.log', 'utf8');
+            const lines = logContent.split('\n');
+
+            // Extract first 120 error lines
+            const errorLines = lines.filter(l => /error|Error|FAIL|Failed|ESLint|lint|warning|Warning/.test(l)).slice(0, 120);
+
+            // Get final 120 lines
+            const finalLines = lines.slice(-120);
+
+            // Build comment
+            let comment = `## PR #28 CI Diagnostic — Lint Failed\n\n`;
+            comment += `**Workflow:** CI - Build & Test\n`;
+            comment += `**Job:** lint (20.x)\n`;
+            comment += `**Commit:** ${context.payload.pull_request.head.sha.substring(0, 7)}\n`;
+            comment += `**Command:** npm run lint\n`;
+            comment += `**Status:** FAILED\n\n`;
+
+            if (errorLines.length > 0) {
+              comment += `**First Error Lines:**\n\`\`\`\n${errorLines.join('\n')}\n\`\`\`\n\n`;
+            }
+
+            comment += `**Final 120 Log Lines:**\n\`\`\`\n${finalLines.join('\n')}\n\`\`\`\n\n`;
+            comment += `<!-- PR28-CI-LINT-DIAGNOSTIC -->`;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.find(c => c.body.includes('PR28-CI-LINT-DIAGNOSTIC'));
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: comment,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment,
+              });
+            }
 
       - name: Upload lint logs (on failure)
         if: always()
