@@ -1,7 +1,10 @@
 // @ts-nocheck - seed script uses data definitions that don't strictly match schema but are handled at runtime
 import { PrismaClient } from "@/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
 import * as bcrypt from "bcryptjs";
 
+const { Pool } = pg;
 const DEMO_USER_EMAIL = "operator@demo.local";
 
 async function createStagingSeedClient() {
@@ -18,32 +21,18 @@ async function createStagingSeedClient() {
 
   console.log("DATABASE_URL present for staging seed");
 
-  // Detect if it's a Neon endpoint
-  const isNeon = databaseUrl.includes("neon.tech") ||
-                 databaseUrl.includes("neon.database") ||
-                 (databaseUrl.includes("sslmode=require") && databaseUrl.includes("?"));
+  // Always use pg adapter for staging seed (not Neon serverless)
+  const pool = new Pool({
+    connectionString: databaseUrl,
+    ssl: databaseUrl.includes("sslmode=require")
+      ? { rejectUnauthorized: false }
+      : undefined,
+  });
 
-  let client;
+  const adapter = new PrismaPg(pool);
+  const prisma = new PrismaClient({ adapter });
 
-  if (isNeon) {
-    // Neon: Use WebSocket adapter
-    const { Pool, neonConfig } = await import("@neondatabase/serverless");
-    const { PrismaNeon } = await import("@prisma/adapter-neon");
-
-    const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
-    const adapter = new PrismaNeon(pool);
-    client = new PrismaClient({ adapter });
-  } else {
-    // Standard PostgreSQL: Use PG adapter
-    const pg = await import("pg");
-    const { PrismaPg } = await import("@prisma/adapter-pg");
-
-    const pool = new pg.Pool({ connectionString: databaseUrl });
-    const adapter = new PrismaPg(pool);
-    client = new PrismaClient({ adapter });
-  }
-
-  return client;
+  return { prisma, pool };
 }
 
 async function seedDemoData(db: PrismaClient) {
@@ -382,15 +371,16 @@ async function seedDemoData(db: PrismaClient) {
 }
 
 async function main() {
-  const prisma = await createStagingSeedClient();
-  await seedDemoData(prisma);
-  return prisma;
+  const { prisma, pool } = await createStagingSeedClient();
+  try {
+    await seedDemoData(prisma);
+  } finally {
+    await prisma.$disconnect();
+    await pool.end();
+  }
 }
 
 main()
-  .then(async (prisma) => {
-    await prisma.$disconnect();
-  })
   .catch((error) => {
     console.error("Error seeding demo data:", error);
     process.exit(1);

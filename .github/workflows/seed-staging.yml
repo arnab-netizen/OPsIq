@@ -81,33 +81,26 @@ jobs:
           echo "Running seed script..."
           npx tsx src/infra/seed.ts
 
+      - name: Install PostgreSQL client
+        run: |
+          apt-get update -qq && apt-get install -qq -y postgresql-client
+
       - name: Verify seed user exists
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
-          # Safely verify demo user exists without printing database URL
-          node -e "
-            const { PrismaClient } = require('@prisma/client');
-            const db = new PrismaClient();
-            (async () => {
-              try {
-                const user = await db.user.findUnique({
-                  where: { email: 'operator@demo.local' }
-                });
-                if (user) {
-                  console.log('✓ Demo user (operator@demo.local) verified in database');
-                  process.exit(0);
-                } else {
-                  console.error('✗ Demo user (operator@demo.local) not found after seed');
-                  process.exit(1);
-                }
-              } catch (e) {
-                console.error('Error verifying user:', e.message);
-                process.exit(1);
-              } finally {
-                await db.$disconnect();
-              }
-            })();
+          # Verify demo user exists in database using psql
+          # Extract connection details from DATABASE_URL
+          # Format: postgresql://user:password@host:port/database?params
+          user_count=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM \"user\" WHERE email = 'operator@demo.local';" 2>/dev/null || echo "0")
+
+          if [ "$user_count" = "1" ]; then
+            echo "✓ Demo user (operator@demo.local) verified in database"
+            exit 0
+          else
+            echo "✗ Demo user (operator@demo.local) not found after seed"
+            exit 1
+          fi
           "
 
       - name: Seed summary
