@@ -177,14 +177,14 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
     it("should run tests without continue-on-error (real gate)", () => {
       const testStep = testJob.steps[3];
       expect(testStep.name).toContain("Run tests");
-      expect(testStep.run).toBe("npm test");
+      expect(testStep.run).toContain("npm test");
       // continue-on-error should not be set (tests must pass for gate to pass)
       expect(testStep["continue-on-error"]).not.toBe(true);
     });
 
     it("should add test summary to GitHub Step Summary", () => {
-      const summaryStep = testJob.steps[4];
-      expect(summaryStep.name).toContain("Test Summary");
+      const summaryStep = testJob.steps.find((s: any) => s.name && s.name.includes("Test Summary"));
+      expect(summaryStep).toBeDefined();
       expect(summaryStep.if).toBe("always()");
       expect(summaryStep.run).toContain("GITHUB_STEP_SUMMARY");
     });
@@ -351,7 +351,7 @@ describe("CI/CD Foundations Workflow (.github/workflows/ci-cd-foundations.yml)",
       const testJob = workflowContent.jobs.test;
       const runs = testJob.steps.map((s: any) => s.run).filter(Boolean);
       expect(runs).toContain("npm ci");
-      expect(runs).toContain("npm test");
+      expect(runs.some((run: string) => run.includes("npm test"))).toBe(true);
     });
 
     it("branch-protection reports to GitHub summary", () => {

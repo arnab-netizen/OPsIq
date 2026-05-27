@@ -92,6 +92,9 @@ const notificationStore = new Map<string, Notification>();
 const templateStore = new Map<string, NotificationTemplate>();
 const preferencesStore = new Map<string, NotificationPreferences>();
 
+// Test seam for controlling delivery simulation
+let _testDeliverySimulator: ((channel: NotificationChannel) => { status: "success" | "failed" | "bounced" | "unsubscribed"; error?: string }) | null = null;
+
 /**
  * Send a notification through specified channels
  */
@@ -166,6 +169,16 @@ async function simulateChannelDelivery(
   sentAt: Date;
   error?: string;
 }> {
+  // Use test seam if set (for deterministic testing)
+  if (_testDeliverySimulator) {
+    const simResult = _testDeliverySimulator(channel);
+    return {
+      channel,
+      sentAt: new Date(),
+      ...simResult,
+    };
+  }
+
   // Simulate 95% success rate
   const success = Math.random() > 0.05;
 
@@ -331,4 +344,20 @@ export function clearAllNotifications(): void {
   notificationStore.clear();
   templateStore.clear();
   preferencesStore.clear();
+}
+
+/**
+ * Set delivery simulator for testing (ensures deterministic results)
+ */
+export function _setChannelDeliverySimulatorForTesting(
+  simulator: (channel: NotificationChannel) => { status: "success" | "failed" | "bounced" | "unsubscribed"; error?: string }
+): void {
+  _testDeliverySimulator = simulator;
+}
+
+/**
+ * Reset delivery simulator (restore randomness)
+ */
+export function _resetChannelDeliverySimulatorForTesting(): void {
+  _testDeliverySimulator = null;
 }

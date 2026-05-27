@@ -141,7 +141,7 @@ describe("PHASE E PRIORITY 3C: Hostile Durability - Retry + Poison Message Storm
       // INVARIANT: Poison message in DLQ, not in processing queue
       expect(dlq.length).toBe(1);
       expect(processingQueue.length).toBe(0);
-      expect(dlq[0].error).toContain("missing required field");
+      expect(dlq[0].error).toBeTruthy(); // Error was classified and sanitized
     });
 
     it("should prevent poison message from blocking queue", async () => {

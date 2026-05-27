@@ -18,15 +18,20 @@ import {
   NotificationType,
   NotificationChannel,
   clearAllNotifications,
+  _setChannelDeliverySimulatorForTesting,
+  _resetChannelDeliverySimulatorForTesting,
 } from "@/services/notifications/notification-service";
 
 describe("Notification Service", () => {
   beforeEach(() => {
     clearAllNotifications();
+    // Enable deterministic delivery for tests (all succeed)
+    _setChannelDeliverySimulatorForTesting(() => ({ status: "success" }));
   });
 
   afterEach(() => {
     clearAllNotifications();
+    _resetChannelDeliverySimulatorForTesting();
   });
 
   describe("Send Notification", () => {

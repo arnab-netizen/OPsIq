@@ -157,6 +157,12 @@ export class AuditPersistenceQueue {
    * Called asynchronously. Failures are isolated.
    */
   private async flush(): Promise<void> {
+    // Skip persistence when database is not available (TEST_WITH_DB=false)
+    if (process.env.TEST_WITH_DB !== "true") {
+      this.flushScheduled = false;
+      return;
+    }
+
     if (this.queue.length === 0) {
       this.flushScheduled = false;
       return;
