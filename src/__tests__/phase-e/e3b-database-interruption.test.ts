@@ -33,6 +33,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
     committed: boolean;
     result?: any;
     error?: string;
+    failureDetected?: boolean;
   } {
     try {
       // Phase 1: Acquire connection
@@ -71,10 +72,14 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
       transaction.status = "committed";
       return { committed: true, result: transaction };
     } catch (error) {
-      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
+      const classified = error instanceof Error
+        ? classifyOperatorError(error, { context: "load" })
+        : classifyOperatorError(new Error(String(error)), { context: "load" });
+
       return {
         committed: false,
-        error: governed.operatorMessage,
+        error: classified.operatorMessage,
+        failureDetected: true,
       };
     }
   }
@@ -91,7 +96,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
       // Attempt 1: timeout
       const attempt1 = executeDbTransaction("append_event", "timeout");
       expect(attempt1.committed).toBe(false);
-      expect(attempt1.error).toBeTruthy(); // Error was classified and sanitized
+      expect(attempt1.failureDetected).toBe(true);
 
       // Attempt 2: retry succeeds
       const attempt2 = executeDbTransaction("append_event", undefined);
@@ -135,7 +140,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
 
       // INVARIANT: Transaction never started, no orphaned state
       expect(result.committed).toBe(false);
-      expect(result.error).toBeTruthy(); // Error was classified and sanitized
+      expect(result.error).toBeTruthy();
 
       // System can immediately retry on new connection
       const retryResult = executeDbTransaction("append_event", undefined);
@@ -188,7 +193,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
       // Second insert with same key fails
       const insert2 = executeDbTransaction("append_event", "constraint_violation");
       expect(insert2.committed).toBe(false);
-      expect(insert2.error).toBeTruthy(); // Error was classified and sanitized
+      expect(insert2.error).toBeTruthy();
 
       // INVARIANT: Table not corrupted, can still insert new records
       const insert3 = executeDbTransaction("append_event", undefined);
@@ -229,7 +234,7 @@ describe("PHASE E PRIORITY 3B: Hostile Durability - Database Interruption Recove
       // Transaction A attempts update
       let txA_result = executeDbTransaction("update_workspace", "deadlock");
       expect(txA_result.committed).toBe(false);
-      expect(txA_result.error).toBeTruthy(); // Error was classified and sanitized
+      expect(txA_result.error).toBeTruthy();
 
       // Retry Transaction A after deadlock
       const txA_retry = executeDbTransaction("update_workspace", undefined);

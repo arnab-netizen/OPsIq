@@ -6,6 +6,7 @@ import { maturityEngine } from "@/services/diagnostic-core/maturity-engine";
 import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { logger } from "@/infra/logger";
+import { RuntimeError } from "@/runtime/runtime-errors";
 import { z } from "zod/v4";
 
 const maturitySchema = z.object({
@@ -87,8 +88,16 @@ export const POST = withEnforcementFull(async (request) => {
     const err = error instanceof Error ? error : new Error("Unknown error");
     await recordIdempotencyError(idempotencyKey, err);
     logger.error("Maturity analysis error", err.message);
+
+    if (error instanceof RuntimeError) {
+      return Response.json(
+        error.toOperatorSafeJSON(),
+        { status: error.metadata.http_status }
+      );
+    }
+
     return Response.json(
-      { error: err.message || "Maturity analysis failed" },
+      { error: "Maturity analysis failed" },
       { status: 500 }
     );
   }
