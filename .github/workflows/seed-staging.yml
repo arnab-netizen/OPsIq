@@ -1,0 +1,140 @@
+name: Seed Staging Database
+
+# Manual trigger only - requires explicit confirmation
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type SEED_STAGING_DATABASE to confirm staging seed'
+        required: true
+        type: string
+
+concurrency:
+  group: seed-staging-db
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Seed Staging Database with Demo Data
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+
+    steps:
+      - name: Confirm staging seed
+        run: |
+          if [ "${{ github.event.inputs.confirmation }}" != "SEED_STAGING_DATABASE" ]; then
+            echo "::error::Confirmation input must be exactly: SEED_STAGING_DATABASE"
+            echo "You typed: ${{ github.event.inputs.confirmation }}"
+            exit 1
+          fi
+          echo "✓ Staging seed confirmed"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Preflight check - STAGING_DATABASE_URL secret exists
+        run: |
+          if [ -z "${{ secrets.STAGING_DATABASE_URL }}" ]; then
+            echo "::error::STAGING_DATABASE_URL secret is missing or empty"
+            exit 1
+          fi
+          echo "✓ STAGING_DATABASE_URL secret is configured"
+
+      - name: Remove local environment files
+        run: |
+          rm -f .env .env.local .env.production .env.staging .env.postgres .env.local.bak
+          echo "✓ Removed all local .env files"
+
+      - name: Validate Prisma schema
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          # Fail if placeholder strings detected
+          if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
+            echo "::error::DATABASE_URL contains placeholder value - secret not properly configured"
+            exit 1
+          fi
+          npx prisma validate
+
+      - name: Run database seed
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          NODE_ENV: staging
+        run: |
+          # Double-check no placeholders before seed
+          if echo "$DATABASE_URL" | grep -qE 'REPLACE_|PLACEHOLDER|your_neon_url|example\.com'; then
+            echo "::error::DATABASE_URL contains placeholder value - aborting seed"
+            exit 1
+          fi
+          echo "Running seed script..."
+          npx tsx src/infra/seed.ts
+
+      - name: Verify seed user exists
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          # Safely verify demo user exists without printing database URL
+          node -e "
+            const { PrismaClient } = require('@prisma/client');
+            const db = new PrismaClient();
+            (async () => {
+              try {
+                const user = await db.user.findUnique({
+                  where: { email: 'operator@demo.local' }
+                });
+                if (user) {
+                  console.log('✓ Demo user (operator@demo.local) verified in database');
+                  process.exit(0);
+                } else {
+                  console.error('✗ Demo user (operator@demo.local) not found after seed');
+                  process.exit(1);
+                }
+              } catch (e) {
+                console.error('Error verifying user:', e.message);
+                process.exit(1);
+              } finally {
+                await db.$disconnect();
+              }
+            })();
+          "
+
+      - name: Seed summary
+        if: always()
+        run: |
+          echo "## ✅ Staging Database Seeding Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Demo User Created:" >> $GITHUB_STEP_SUMMARY
+          echo "**Email:** operator@demo.local" >> $GITHUB_STEP_SUMMARY
+          echo "**Password:** demo-password-123" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Demo Data Included:" >> $GITHUB_STEP_SUMMARY
+          echo "- Demo client account: Demo Manufacturing Corp" >> $GITHUB_STEP_SUMMARY
+          echo "- Demo engagement: ENG-001 (Operational Excellence Initiative)" >> $GITHUB_STEP_SUMMARY
+          echo "- Demo business condition profile (at_risk status)" >> $GITHUB_STEP_SUMMARY
+          echo "- Demo findings: Cash flow, key person dependency, outdated processes" >> $GITHUB_STEP_SUMMARY
+          echo "- Demo recommendations: Cash management, delegation, digitization" >> $GITHUB_STEP_SUMMARY
+          echo "- Demo actions: Implementation tasks across 4 items" >> $GITHUB_STEP_SUMMARY
+          echo "- Demo KPIs: Cash Position, Gross Margin, Owner Delegation Rate, Process Automation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Log in to staging app at https://o-ps-iq.vercel.app" >> $GITHUB_STEP_SUMMARY
+          echo "2. Use credentials:" >> $GITHUB_STEP_SUMMARY
+          echo "   - Email: operator@demo.local" >> $GITHUB_STEP_SUMMARY
+          echo "   - Password: demo-password-123" >> $GITHUB_STEP_SUMMARY
+          echo "3. Verify demo data loads correctly" >> $GITHUB_STEP_SUMMARY
+          echo "4. Test application workflows with demo engagement" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Reminder:** This is demo data for staging only." >> $GITHUB_STEP_SUMMARY
+          echo "Do not use these credentials in production." >> $GITHUB_STEP_SUMMARY
