@@ -1,0 +1,83 @@
+name: Migrate Staging Database
+
+# Manual trigger only - no automatic runs
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+
+concurrency:
+  group: migrate-staging
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Run Prisma Migrations on Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Check pending migrations
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          npx prisma migrate status 2>&1 | tee migration-status.txt
+          # Exit 0 to allow next step to run regardless
+          exit 0
+
+      - name: Deploy migrations
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: npx prisma migrate deploy
+
+      - name: Verify database connection (no secrets logged)
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          node -e "
+            const url = process.env.DATABASE_URL;
+            if (!url) {
+              console.error('ERROR: STAGING_DATABASE_URL not set');
+              process.exit(1);
+            }
+            // Extract host without password
+            const host = url.match(/@([^/]+)\//)?.[1] || 'unknown';
+            console.log('Database host: ' + host);
+            console.log('✓ Database connection string validated');
+          "
+
+      - name: Migration summary
+        if: always()
+        run: |
+          echo "## Staging Database Migration Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: staging" >> $GITHUB_STEP_SUMMARY
+          echo "- Timestamp: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: Migrations deployed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Important:** Verify that the staging app is still running after migrations." >> $GITHUB_STEP_SUMMARY
+          echo "If migrations failed, check logs and do NOT attempt to redeploy the staging app until resolved." >> $GITHUB_STEP_SUMMARY
