@@ -1,9 +1,11 @@
-import { db } from "@/lib/db";
+import { getDbInstance } from "@/lib/db";
 import * as bcrypt from "bcryptjs";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
 
 async function seedDemoData() {
+  // Initialize database before seeding
+  const db = await getDbInstance();
   console.log("Seeding demo data...");
 
   // Create demo user
@@ -338,7 +340,12 @@ async function seedDemoData() {
   console.log("✅ Demo data seeding complete");
 }
 
-seedDemoData().catch((e) => {
-  console.error("Error seeding demo data:", e);
-  process.exit(1);
-});
+seedDemoData()
+  .catch((e) => {
+    console.error("Error seeding demo data:", e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    // Note: db is the shared app instance, so we don't disconnect it
+    // Connection lifecycle is managed by the app runtime
+  });
