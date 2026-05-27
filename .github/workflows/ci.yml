@@ -171,6 +171,14 @@ jobs:
           exit "$GATE_EXIT_CODE"
         continue-on-error: false
 
+      - name: Upload lint logs (on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-logs
+          path: lint.log
+          retention-days: 7
+
   branch-protection:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

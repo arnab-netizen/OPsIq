@@ -76,7 +76,45 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm test
+        run: |
+          set +e
+          npm test 2>&1 | tee run-tests.log
+          GATE_EXIT_CODE=${PIPESTATUS[0]}
+          set -e
+
+          echo "## run-tests diagnostic summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "- exit_code: ${GATE_EXIT_CODE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- commit: ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- command: npm test" >> "$GITHUB_STEP_SUMMARY"
+          echo "- environment: TEST_WITH_DB=false, NODE_ENV=test" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$GATE_EXIT_CODE" -ne 0 ]; then
+            echo "**First 120 error-related lines:**" >> "$GITHUB_STEP_SUMMARY"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            grep -nE 'FAIL|Failed|Error:|AssertionError|Expected|Received|TypeError|ReferenceError|DATABASE_URL|Prisma|vitest|exit code|Cannot|failed|timeout' run-tests.log | head -120 >> "$GITHUB_STEP_SUMMARY" || echo "(no matching error lines)" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Final 120 lines of output:**" >> "$GITHUB_STEP_SUMMARY"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            tail -120 run-tests.log >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          FIRST_ERROR="$(grep -nE 'FAIL|Failed|Error:|AssertionError|Expected|Received|TypeError|ReferenceError|DATABASE_URL|Prisma|vitest|exit code' run-tests.log | head -1 || true)"
+          if [ -n "$FIRST_ERROR" ]; then
+            echo "::error title=run-tests first error::$FIRST_ERROR"
+          fi
+
+          exit "$GATE_EXIT_CODE"
+
+      - name: Upload test logs (on failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: run-tests-logs
+          path: run-tests.log
+          retention-days: 7
 
       - name: Test Summary
         if: always()
