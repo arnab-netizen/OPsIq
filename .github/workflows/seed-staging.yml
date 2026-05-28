@@ -85,49 +85,33 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
-          npx tsx <<'EOF'
-          import { PrismaClient } from "./src/generated/prisma/client";
-          import { PrismaPg } from "@prisma/adapter-pg";
-          import pg from "pg";
+          # Anti-regression checks
+          if grep -q "apt-get" .github/workflows/seed-staging.yml; then
+            echo "::error::Regression detected: apt-get found in workflow"
+            exit 1
+          fi
+          if grep -q "psql" .github/workflows/seed-staging.yml; then
+            echo "::error::Regression detected: psql found in workflow"
+            exit 1
+          fi
+          if grep -q 'from "./src/generated/prisma/client"' .github/workflows/seed-staging.yml; then
+            echo "::error::Regression detected: wrong import path in workflow"
+            exit 1
+          fi
+          if grep -q "select count" .github/workflows/seed-staging.yml; then
+            echo "::error::Regression detected: raw SQL found in workflow"
+            exit 1
+          fi
+          if grep -q '"user"' .github/workflows/seed-staging.yml; then
+            echo "::error::Regression detected: table name guessing found in workflow"
+            exit 1
+          fi
+          if grep -q '"User"' .github/workflows/seed-staging.yml; then
+            echo "::error::Regression detected: table name guessing found in workflow"
+            exit 1
+          fi
 
-          const databaseUrl = process.env.DATABASE_URL;
-
-          if (!databaseUrl) {
-            throw new Error("DATABASE_URL missing for seed verification");
-          }
-
-          if (/REPLACE_|PLACEHOLDER|your_neon_url|example\.com/.test(databaseUrl)) {
-            throw new Error("DATABASE_URL contains placeholder value");
-          }
-
-          const { Pool } = pg;
-
-          const pool = new Pool({
-            connectionString: databaseUrl,
-            ssl: databaseUrl.includes("sslmode=require")
-              ? { rejectUnauthorized: false }
-              : undefined,
-          });
-
-          const adapter = new PrismaPg(pool);
-          const prisma = new PrismaClient({ adapter });
-
-          try {
-            const user = await prisma.user.findUnique({
-              where: { email: "operator@demo.local" },
-              select: { id: true, email: true },
-            });
-
-            if (!user) {
-              throw new Error("Demo user not found after seed");
-            }
-
-            console.log("Demo user verified");
-          } finally {
-            await prisma.$disconnect();
-            await pool.end();
-          }
-          EOF
+          npx tsx scripts/verify-staging-seed.ts
 
       - name: Seed summary
         if: always()
