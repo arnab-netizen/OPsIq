@@ -74,6 +74,22 @@ async function seedDemoData(db: PrismaClient) {
     console.log("✓ Created demo user");
   }
 
+  // Create workspace membership for demo user
+  let membership = await db.workspaceMembership.findUnique({
+    where: { workspaceId_userId: { workspaceId: workspace.id, userId: user.id } },
+  });
+
+  if (!membership) {
+    membership = await db.workspaceMembership.create({
+      data: {
+        workspaceId: workspace.id,
+        userId: user.id,
+        role: "admin",
+      },
+    });
+    console.log("✓ Created workspace membership");
+  }
+
   // Create demo client
   let client = await db.clientAccount.findFirst({
     where: { name: "Demo Manufacturing Corp" },
