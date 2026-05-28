@@ -86,6 +86,8 @@ jobs:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
           npx tsx <<'EOF'
+          import { PrismaClient } from "./src/generated/prisma/client";
+          import { PrismaPg } from "@prisma/adapter-pg";
           import pg from "pg";
 
           const databaseUrl = process.env.DATABASE_URL;
@@ -107,36 +109,22 @@ jobs:
               : undefined,
           });
 
+          const adapter = new PrismaPg(pool);
+          const prisma = new PrismaClient({ adapter });
+
           try {
-            const tables = ['"User"', '"user"'];
-            let verified = false;
-            let lastError = null;
+            const user = await prisma.user.findUnique({
+              where: { email: "operator@demo.local" },
+              select: { id: true, email: true },
+            });
 
-            for (const table of tables) {
-              try {
-                const result = await pool.query(
-                  `select count(*)::int as count from ${table} where email = $1`,
-                  ["operator@demo.local"]
-                );
-
-                const count = Number(result.rows[0]?.count ?? 0);
-
-                if (count === 1) {
-                  verified = true;
-                  console.log("Demo user verified");
-                  break;
-                }
-
-                lastError = new Error(`Expected one demo user in ${table}, found ${count}`);
-              } catch (error) {
-                lastError = error;
-              }
+            if (!user) {
+              throw new Error("Demo user not found after seed");
             }
 
-            if (!verified) {
-              throw lastError ?? new Error("Demo user verification failed");
-            }
+            console.log("Demo user verified");
           } finally {
+            await prisma.$disconnect();
             await pool.end();
           }
           EOF
