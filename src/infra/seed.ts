@@ -126,6 +126,7 @@ async function seedDemoData(db: PrismaClient) {
         code: "ENG-001",
         title: "Operational Excellence Initiative",
         clientId: client.id,
+        workspaceId: workspace.id,
         serviceTier: "premium",
         engagementMode: "expert",
         status: "active",
