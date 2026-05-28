@@ -4,6 +4,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError, PlanLimitError } from "@/infra/errors";
+import { ClassifiedApiError } from "@/infra/classified-error";
 import {
   optimisticUpdate,
   withVersionCheck,
@@ -406,6 +407,20 @@ export async function getEngagementById(engagementId: string, workspaceId: strin
   return engagement;
 }
 
+// Typed Prisma select for engagements list to catch relation name errors at compile time
+// Using relation name 'clientAccount' which matches the Prisma schema
+const engagementListSelect = {
+  id: true,
+  code: true,
+  title: true,
+  status: true,
+  healthStatus: true,
+  interventionMode: true,
+  serviceTier: true,
+  createdAt: true,
+  clientAccount: { select: { id: true, name: true } },
+} as const;
+
 export async function listEngagements(
   workspaceId: string,
   params: {
@@ -436,46 +451,91 @@ export async function listEngagements(
     }),
   };
 
+  // Stage 1: Build where clause
+  if (!where) {
+    throw new ClassifiedApiError(
+      "failed to build query where clause",
+      "engagements_build_where_failed",
+      "build_where"
+    );
+  }
+
+  // Stage 2: Execute findMany
+  let engagements;
   try {
-    const [engagements, total] = await Promise.all([
-      db.engagement.findMany({
-        where,
-        select: {
-          id: true,
-          code: true,
-          title: true,
-          status: true,
-          healthStatus: true,
-          interventionMode: true,
-          serviceTier: true,
-          createdAt: true,
-          clientAccount: { select: { id: true, name: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        skip: offset,
-      }),
-      db.engagement.count({ where }),
-    ]);
+    engagements = await db.engagement.findMany({
+      where,
+      select: engagementListSelect,
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      skip: offset,
+    });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.error("listEngagements findMany failed", {
+      workspaceId,
+      errorName: error instanceof Error ? error.name : "unknown",
+      errorMessage: msg,
+    });
+    throw new ClassifiedApiError(
+      msg,
+      "engagements_find_many_failed",
+      "find_many",
+      500,
+      error
+    );
+  }
 
-    // Validate response
-    if (!Array.isArray(engagements)) {
-      throw new Error("prisma_query_returned_non_array");
-    }
-    if (typeof total !== "number") {
-      throw new Error("prisma_count_returned_non_number");
-    }
+  // Stage 3: Validate findMany result
+  if (!Array.isArray(engagements)) {
+    throw new ClassifiedApiError(
+      "findMany did not return array",
+      "engagements_find_many_failed",
+      "find_many"
+    );
+  }
 
+  // Stage 4: Execute count
+  let total;
+  try {
+    total = await db.engagement.count({ where });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.error("listEngagements count failed", {
+      workspaceId,
+      errorName: error instanceof Error ? error.name : "unknown",
+      errorMessage: msg,
+    });
+    throw new ClassifiedApiError(
+      msg,
+      "engagements_count_failed",
+      "count",
+      500,
+      error
+    );
+  }
+
+  // Stage 5: Validate count result
+  if (typeof total !== "number") {
+    throw new ClassifiedApiError(
+      "count did not return number",
+      "engagements_count_failed",
+      "count"
+    );
+  }
+
+  // Stage 6: Map response
+  try {
     return { engagements, total, limit, offset };
   } catch (error) {
-    const err = error instanceof Error ? error : new Error(String(error));
-    logger.error("listEngagements failed", {
-      workspaceId,
-      errorName: err.name,
-      errorMessage: err.message,
-      params: { limit, offset, status, clientId, search: search ? "present" : "absent" },
-    });
-    throw err;
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new ClassifiedApiError(
+      msg,
+      "engagements_map_response_failed",
+      "map_response",
+      500,
+      error
+    );
   }
 }
 

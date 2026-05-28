@@ -66,11 +66,16 @@ export const GET = withCanonicalEnforcement(
       const hasAccess = ctx.policy ? hasInternalAccess(ctx.policy) : false;
       result = await listEngagements(workspaceId, params, hasAccess);
     } catch (error) {
+      // If service throws ClassifiedApiError, preserve it
+      if (error instanceof ClassifiedApiError) {
+        throw error;
+      }
+      // Otherwise wrap unknown error
       const errorMsg =
         error instanceof Error ? error.message : String(error);
       throw new ClassifiedApiError(
         errorMsg,
-        "engagements_service_failed",
+        "service_call_failed",
         "service_call",
         500,
         error

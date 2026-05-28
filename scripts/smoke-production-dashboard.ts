@@ -185,8 +185,18 @@ async function smokeTest(): Promise<void> {
         console.log(`   Stage: ${errorData.stage}`);
         console.log(`   Error: ${errorData.error}`);
         console.log("");
-        console.log("This indicates an internal crash in the engagements API.");
-        console.log("Use the correlationId and stage to locate the issue in production logs.");
+
+        if (errorData.classification === "handler_invocation_failed") {
+          console.log("DIAGNOSIS: Canonical wrapper caught handler failure.");
+          console.log("This means the route/service did not throw ClassifiedApiError.");
+          console.log("The actual inner error classification was lost.");
+          console.log("");
+          console.log("FIX: Ensure route/service throws ClassifiedApiError with");
+          console.log("proper stage at every failure point.");
+        } else {
+          console.log("This indicates an internal crash in the engagements API.");
+          console.log("Use the correlationId and stage to locate the issue in production logs.");
+        }
       } catch {
         const text = await engagementsResponse.text();
         console.log(`   Response: ${text.substring(0, 200)}`);
