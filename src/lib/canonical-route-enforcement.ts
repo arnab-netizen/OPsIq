@@ -170,32 +170,41 @@ export function withCanonicalEnforcement(
 
     try {
       // ========================================
-      // STARTUP READINESS CHECK (fail-closed)
+      // CRITICAL READINESS CHECK (fail-closed, per-request)
       // ========================================
       if (!skipReadinessCheck) {
         try {
-          const { getStartupStatus } = await import("@/services/startup-status");
-          const status = await getStartupStatus();
+          const { ensureCriticalReadiness } = await import("@/infra/critical-readiness");
+          const readiness = await ensureCriticalReadiness();
 
-          if (status.status !== "READY") {
-            logger.warn("Service not ready - request blocked", {
-              status: status.status,
-              error: status.error,
+          if (readiness.status === "FAILED_CRITICAL") {
+            logger.warn("Critical readiness failed - request blocked", {
               endpoint: req.nextUrl.pathname,
               method: req.method,
+              errors: readiness.errors,
               correlationId,
             });
             return new NextResponse(
               JSON.stringify({
                 error: "SERVICE_UNAVAILABLE",
-                message: `Service starting up (${status.status})`,
+                message: "Service critical dependency unavailable",
               }),
               { status: 503 }
             );
           }
+
+          if (readiness.status === "DEGRADED_NON_BLOCKING") {
+            logger.warn("Service degraded but continuing", {
+              endpoint: req.nextUrl.pathname,
+              method: req.method,
+              errors: readiness.errors,
+              correlationId,
+            });
+            // Continue - non-critical issues don't block authenticated APIs
+          }
         } catch (error) {
           const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: "load" });
-          logger.error("Failed to check startup status", {
+          logger.error("Failed to assess critical readiness", {
             error: governed.operatorMessage,
             endpoint: req.nextUrl.pathname,
             method: req.method,

@@ -91,32 +91,48 @@ export async function enforceRequest<T>(
       }
     }
 
-    // 2. MANDATORY: Verify startup readiness (fail-closed)
+    // 2. MANDATORY: Verify critical readiness (fail-closed, per-request)
     if (!options?.skipReadinessCheck) {
       try {
-        const { getStartupStatus } = await import("@/services/startup-status");
-        const status = await getStartupStatus();
+        const { ensureCriticalReadiness } = await import("@/infra/critical-readiness");
+        const readiness = await ensureCriticalReadiness();
 
-        if (status.status !== "READY") {
+        if (readiness.status === "FAILED_CRITICAL") {
           runtimeLogger.log({
             level: "WARN",
             category: "EXECUTION",
-            message: `Request blocked: service not ready`,
+            message: `Request blocked: critical dependency unavailable`,
             correlation_id: requestContext.generateCorrelationId(),
             context: {
-              status: status.status,
-              error: status.error,
+              status: readiness.status,
+              errors: readiness.errors,
               endpoint: req.nextUrl.pathname,
               method: req.method,
             },
-            tags: ["readiness_blocked", "startup"],
+            tags: ["readiness_blocked", "critical"],
           });
 
           throw createInfrastructureError(
-            `Service starting up (${status.status})`,
+            "Service critical dependency unavailable",
             requestContext.createErrorContext(),
             false,
           );
+        }
+
+        if (readiness.status === "DEGRADED_NON_BLOCKING") {
+          runtimeLogger.log({
+            level: "WARN",
+            category: "EXECUTION",
+            message: `Service degraded but continuing`,
+            correlation_id: requestContext.generateCorrelationId(),
+            context: {
+              errors: readiness.errors,
+              endpoint: req.nextUrl.pathname,
+              method: req.method,
+            },
+            tags: ["readiness_degraded"],
+          });
+          // Continue - non-critical issues don't block authenticated APIs
         }
       } catch (error) {
         // If readiness check itself fails, treat as infrastructure error
