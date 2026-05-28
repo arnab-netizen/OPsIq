@@ -123,7 +123,7 @@ export async function getDbInstance() {
 // Auto-initialization now happens explicitly in app startup (see src/app/route.ts or startup sequence)
 // This allows middleware to import db.ts without triggering Prisma initialization
 
-// Export db as a lazy-loading proxy that waits for initialization if needed
+// Export db as a lazy-loading proxy that auto-initializes on first access
 export const db = new Proxy({} as any, {
   get(target, prop) {
     // If already initialized, return immediately (fast path)
@@ -131,27 +131,28 @@ export const db = new Proxy({} as any, {
       return Reflect.get(globalForPrisma.prisma, prop);
     }
 
-    // If initialization is in progress, we have a problem:
-    // Prisma methods expect synchronous access but initialization is async
-    // Solution: return a lazy function that will complete when DB is ready
-    if (globalForPrisma.prismaPromise) {
-      // Return a function that defers DB access until initialization completes
-      return function deferredDbMethod(...args: any[]) {
-        // This will be called when user invokes db.method()
-        // At that point, we can safely await the initialization
-        throw new Error(
-          `[DB INIT RACE] Attempted to access db.${String(prop)} before database was initialized. ` +
-          `This indicates middleware/auth is running before getDbInstance() has completed. ` +
-          `This is a lifecycle ordering bug, not a database failure.`
-        );
-      };
+    // Ensure initialization is in progress (auto-start if needed)
+    if (!globalForPrisma.prismaPromise) {
+      globalForPrisma.prismaPromise = getDb();
     }
 
-    // No initialization attempted - this is a real error
-    throw new Error(
-      `Database not initialized. Instance: ${typeof globalForPrisma.prisma}. ` +
-      `Ensure vitest global setup completed or call await getDbInstance() in test setup.`
-    );
+    // Return a proxy for this property that defers to the actual model once ready
+    // This allows db.user.findUnique(...) to work even if DB isn't initialized yet
+    return new Proxy({}, {
+      get(modelTarget, modelProp) {
+        // When accessing a method on the model (like findUnique), return a deferred function
+        return function deferredMethod(...args: any[]) {
+          return globalForPrisma.prismaPromise!.then(prisma => {
+            const model = Reflect.get(prisma, prop);
+            const method = Reflect.get(model, modelProp);
+            if (typeof method === 'function') {
+              return method.apply(model, args);
+            }
+            return method;
+          });
+        };
+      },
+    });
   },
 });
 
