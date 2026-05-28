@@ -47,7 +47,23 @@ async function smokeTestLogin(): Promise<void> {
 
     console.log(`   Status: ${response.status}`);
 
-    const data: LoginResponse = (await response.json()) as LoginResponse;
+    let data: LoginResponse;
+    const contentType = response.headers.get("content-type");
+
+    try {
+      data = (await response.json()) as LoginResponse;
+    } catch (parseError) {
+      const text = await response.text();
+      console.log(`   Response body (first 200 chars): ${text.substring(0, 200)}`);
+
+      if (response.status === 403 || response.status === 404) {
+        console.error("   ❌ Got 403/404 - Production may not have deployed latest code yet");
+        console.error("   Waiting for Vercel deployment...");
+        process.exit(1);
+      }
+
+      throw new Error(`Failed to parse response as JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+    }
 
     // Test 2: Check response format
     console.log("2️⃣  Checking response format...");
