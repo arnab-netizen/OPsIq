@@ -495,6 +495,26 @@ export function withCanonicalEnforcement(
       });
     } catch (error) {
       // Unhandled error in handler or pipeline
+      let classification = "handler_invocation_failed";
+      let stage = "handler_invocation";
+
+      // Try to extract more specific stage from error
+      if (error instanceof Error) {
+        if (error.message?.includes("workspace")) {
+          classification = "workspace_context_failed";
+          stage = "workspace_context";
+        } else if (error.message?.includes("auth")) {
+          classification = "auth_context_failed";
+          stage = "auth_context";
+        } else if (error.message?.includes("readiness")) {
+          classification = "critical_readiness_failed";
+          stage = "critical_readiness";
+        } else if (error.message?.includes("capability")) {
+          classification = "capability_check_failed";
+          stage = "capability_check";
+        }
+      }
+
       try {
         if (traceManager) {
           traceManager.recordStage("HANDLER_FAILED", "failed", String(error));
@@ -518,10 +538,20 @@ export function withCanonicalEnforcement(
       telemetry?.emitHandlerFailed(error as Error);
       telemetry?.emitRequestCompleted();
 
+      logger.error("[WRAPPER_FAILED]", {
+        correlationId,
+        stage,
+        classification,
+        errorName: error instanceof Error ? error.name : "unknown",
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+
       return new NextResponse(
         JSON.stringify({
           error: "Internal server error",
           correlationId: telemetryCtx?.correlationId || "unknown",
+          classification,
+          stage,
         }),
         {
           status: 500,
