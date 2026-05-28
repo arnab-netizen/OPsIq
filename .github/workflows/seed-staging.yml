@@ -85,32 +85,9 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
-          # Anti-regression checks
-          if grep -q "apt-get" .github/workflows/seed-staging.yml; then
-            echo "::error::Regression detected: apt-get found in workflow"
-            exit 1
-          fi
-          if grep -q "psql" .github/workflows/seed-staging.yml; then
-            echo "::error::Regression detected: psql found in workflow"
-            exit 1
-          fi
-          if grep -q 'from "./src/generated/prisma/client"' .github/workflows/seed-staging.yml; then
-            echo "::error::Regression detected: wrong import path in workflow"
-            exit 1
-          fi
-          if grep -q "select count" .github/workflows/seed-staging.yml; then
-            echo "::error::Regression detected: raw SQL found in workflow"
-            exit 1
-          fi
-          if grep -q '"user"' .github/workflows/seed-staging.yml; then
-            echo "::error::Regression detected: table name guessing found in workflow"
-            exit 1
-          fi
-          if grep -q '"User"' .github/workflows/seed-staging.yml; then
-            echo "::error::Regression detected: table name guessing found in workflow"
-            exit 1
-          fi
-
+          echo "Running anti-regression checks..."
+          npx tsx scripts/check-staging-seed-workflow.ts
+          echo "Running seed verification..."
           npx tsx scripts/verify-staging-seed.ts
 
       - name: Seed summary
