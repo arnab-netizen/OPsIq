@@ -6,12 +6,10 @@ import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { UnauthorizedError } from "@/infra/errors";
 import { requireRateLimit, LOGIN_RATE_LIMIT } from "@/infra/rate-limit";
 import { getSessionCookieName, getSessionDurationMs } from "@/services/auth";
-import { ensureStartupComplete } from "@/infra/startup-orchestrator";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod/v4";
 import { cookies } from "next/headers";
 import * as bcrypt from "bcryptjs";
-import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,46 +20,47 @@ const loginSchema = z.object({
 });
 
 export const POST = async (request: NextRequest) => {
-  let classification = "unknown";
+  let stage = "start";
+
   try {
     console.log("[LOGIN] START");
 
-    try {
-      console.log("[LOGIN] ENV_DATABASE_URL_PRESENT", { present: !!process.env.DATABASE_URL });
-    } catch (logError) {
-      console.error("[LOGIN] LOG_ENV_CHECK_FAILED", logError instanceof Error ? logError.message : String(logError));
-    }
-
-    // Ensure database is initialized before attempting login
-    try {
-      console.log("[LOGIN] STARTUP_START");
-      await ensureStartupComplete();
-      console.log("[LOGIN] DB_INIT_OK");
-    } catch (startupError) {
-      const errorName = startupError instanceof Error ? startupError.constructor.name : "UnknownError";
-      const errorMsg = startupError instanceof Error ? startupError.message : String(startupError);
-      console.error("[LOGIN] STARTUP_FAILED", { error: errorName, message: errorMsg });
-      throw startupError;
-    }
-
-    console.log("[LOGIN] PARSE_START");
+    // Parse request body
+    stage = "parse_body";
     const { email, password } = await parseRequestBody(request, loginSchema);
-    console.log("[LOGIN] EMAIL_PARSED", { email: email ? "yes" : "no" });
+    console.log("[LOGIN] BODY_PARSED");
 
     // Extract idempotency key for session deduplication
+    stage = "headers";
     const idempotencyKey = request.headers.get("idempotency-key");
+    const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+    console.log("[LOGIN] HEADERS_READ");
 
     // Rate limit by IP + email to prevent brute force
-    const ip = request.headers.get("x-forwarded-for") ?? "unknown";
+    stage = "rate_limit";
     requireRateLimit(`login:${ip}`, LOGIN_RATE_LIMIT);
     requireRateLimit(`login:${email}`, LOGIN_RATE_LIMIT);
+    console.log("[LOGIN] RATE_LIMIT_OK");
 
+    // Database initialization - ensure DB is ready before operations
+    stage = "db_init";
+    try {
+      const { getDbInstance } = await import("@/lib/db");
+      await getDbInstance();
+      console.log("[LOGIN] DB_INIT_OK");
+    } catch (dbInitError) {
+      const errName = dbInitError instanceof Error ? dbInitError.constructor.name : "UnknownError";
+      console.error("[LOGIN] DB_INIT_FAILED", { error: errName });
+      throw dbInitError;
+    }
+
+    // User lookup
+    stage = "user_lookup";
     const user = await db.user.findUnique({ where: { email } });
-    console.log("[LOGIN] USER_LOOKUP", { found: !!user, isActive: user?.isActive, hasPassword: !!user?.hashedPassword });
-    console.log("[LOGIN] USER_FOUND", { found: !!user });
+    console.log("[LOGIN] USER_LOOKUP_OK", { found: !!user });
 
     if (!user || !user.isActive || !user.hashedPassword) {
-      console.log("[LOGIN] FAILED_USER_VALIDATION");
+      console.log("[LOGIN] USER_VALIDATION_FAILED", { found: !!user, active: user?.isActive, hasPassword: !!user?.hashedPassword });
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
         payload: { email, reason: "user_not_found_or_inactive" },
@@ -71,22 +70,21 @@ export const POST = async (request: NextRequest) => {
     }
 
     // Get user's workspace membership for audit scope
+    stage = "membership_lookup";
     const membership = await db.workspaceMembership.findFirst({
       where: { userId: user.id, isActive: true },
       orderBy: { addedAt: "asc" },
     });
 
     const workspaceId = membership?.workspaceId;
-    console.log("[LOGIN] MEMBERSHIP_LOOKUP", { found: !!membership, hasWorkspace: !!workspaceId });
-    console.log("[LOGIN] MEMBERSHIP_FOUND", { found: !!membership });
+    console.log("[LOGIN] MEMBERSHIP_LOOKUP_OK", { found: !!membership });
 
     // Password verification using bcrypt
+    stage = "password_compare";
     const passwordValid = await bcrypt.compare(password, user.hashedPassword);
-    console.log("[LOGIN] PASSWORD_MATCH", { valid: passwordValid });
-    console.log("[LOGIN] PASSWORD_VALID", { valid: passwordValid });
+    console.log("[LOGIN] PASSWORD_COMPARE_OK", { valid: passwordValid });
 
     if (!passwordValid) {
-      console.log("[LOGIN] FAILED_PASSWORD_MISMATCH");
       await emitAuditEvent({
         eventName: AUDIT_EVENTS.USER_LOGIN_FAILED,
         actorId: user.id,
@@ -97,30 +95,27 @@ export const POST = async (request: NextRequest) => {
       throw new UnauthorizedError("Invalid email or password");
     }
 
+    // Session creation
+    stage = "session_create";
     const sessionId = uuidv4();
     const token = uuidv4();
     const expiresAt = new Date(Date.now() + getSessionDurationMs());
 
     console.log("[LOGIN] SESSION_CREATE_START");
-    let session;
-    try {
-      session = await db.session.create({
-        data: {
-          id: sessionId,
-          userId: user.id,
-          token,
-          expiresAt,
-          ipAddress: ip !== "unknown" ? ip : null,
-          userAgent: request.headers.get("user-agent") ?? null,
-        },
-      });
-      console.log("[LOGIN] SESSION_CREATE_OK");
-    } catch (error) {
-      const errName = error instanceof Error ? error.constructor.name : "UnknownError";
-      console.log("[LOGIN] SESSION_CREATE_FAILED", { error: errName });
-      throw error;
-    }
+    const session = await db.session.create({
+      data: {
+        id: sessionId,
+        userId: user.id,
+        token,
+        expiresAt,
+        ipAddress: ip !== "unknown" ? ip : null,
+        userAgent: request.headers.get("user-agent") ?? null,
+      },
+    });
+    console.log("[LOGIN] SESSION_CREATE_OK");
 
+    // Audit event
+    stage = "audit_write";
     console.log("[LOGIN] AUDIT_CREATE_START");
     try {
       await emitAuditEvent({
@@ -132,12 +127,14 @@ export const POST = async (request: NextRequest) => {
         visibility: "internal",
       });
       console.log("[LOGIN] AUDIT_CREATE_OK");
-    } catch (error) {
-      const errName = error instanceof Error ? error.constructor.name : "UnknownError";
-      console.log("[LOGIN] AUDIT_CREATE_FAILED", { error: errName });
+    } catch (auditError) {
+      const errName = auditError instanceof Error ? auditError.constructor.name : "UnknownError";
+      console.error("[LOGIN] AUDIT_CREATE_FAILED", { error: errName });
       // Don't throw - audit failure shouldn't block login
     }
 
+    // Set cookie
+    stage = "cookie_set";
     const cookieStore = await cookies();
     cookieStore.set(getSessionCookieName(), token, {
       httpOnly: true,
@@ -146,9 +143,10 @@ export const POST = async (request: NextRequest) => {
       path: "/",
       expires: expiresAt,
     });
-
     console.log("[LOGIN] COOKIE_SET_OK");
-    console.log("[LOGIN] REDIRECT_DASHBOARD_START");
+
+    // Success response
+    stage = "response";
     console.log("[LOGIN] SUCCESS");
 
     return Response.json({
@@ -161,47 +159,49 @@ export const POST = async (request: NextRequest) => {
   } catch (error) {
     const errorName = error instanceof Error ? error.constructor.name : "UnknownError";
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error("[LOGIN_FAILED]", { errorName, errorMsg });
 
-    try {
-      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'auth' });
-      console.error("[LOGIN_ERROR]", governed.operatorMessage);
-    } catch (classifyError) {
-      console.error("[LOGIN] CLASSIFY_FAILED", classifyError instanceof Error ? classifyError.message : String(classifyError));
-    }
+    console.error("[LOGIN_FAILED]", { stage, errorName });
 
-    classification = "unknown_error";
+    let classification = "unknown_error";
     if (error instanceof UnauthorizedError) {
-      classification = "unauthorized";
-    } else if (errorMsg.includes("Database not initialized")) {
-      classification = "db_not_initialized";
-    } else if (errorMsg.includes("Startup previously failed")) {
-      classification = "startup_failed";
-    } else if (errorMsg.includes("Startup checks timed out")) {
-      classification = "startup_timeout";
-    } else if (errorMsg.includes("database") || errorMsg.includes("Database")) {
-      classification = "db_error";
-    } else if (errorMsg.includes("ENOENT") || errorMsg.includes("connection")) {
-      classification = "connection_error";
-    } else if (errorMsg.includes("parse") || errorMsg.includes("Parse")) {
-      classification = "request_parse_error";
+      classification = "invalid_credentials";
+    } else if (stage === "parse_body") {
+      classification = "validation_failed";
+    } else if (stage === "rate_limit") {
+      classification = "rate_limit_exceeded";
+    } else if (stage === "db_init") {
+      classification = "db_init_failed";
+    } else if (stage === "user_lookup") {
+      classification = "user_lookup_failed";
+    } else if (stage === "password_compare") {
+      classification = "password_compare_failed";
+    } else if (stage === "membership_lookup") {
+      classification = "membership_lookup_failed";
+    } else if (stage === "session_create") {
+      classification = "session_create_failed";
+    } else if (stage === "audit_write") {
+      classification = "audit_write_failed";
+    } else if (stage === "cookie_set") {
+      classification = "cookie_set_failed";
+    } else if (stage === "response") {
+      classification = "response_failed";
     }
-    console.log("[LOGIN] FAILED_CLASSIFICATION", { classification });
 
-    let errorMessage = "Login failed";
-    try {
-      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'auth' });
-      errorMessage = governed.operatorMessage;
-    } catch {
-      // If classification fails, use generic message
-    }
+    console.log("[LOGIN] CLASSIFICATION", { stage, classification });
 
     if (error instanceof UnauthorizedError) {
-      return Response.json({ error: classifyOperatorError(error, { context: "auth" }).operatorMessage }, { status: 401 });
+      return Response.json({
+        error: "Invalid email or password",
+        classification: "invalid_credentials"
+      }, { status: 401 });
     }
 
     return Response.json(
-      { error: errorMessage },
+      {
+        error: "Login failed",
+        classification,
+        stage
+      },
       { status: 500 }
     );
   }
