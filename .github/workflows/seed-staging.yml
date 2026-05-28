@@ -108,18 +108,34 @@ jobs:
           });
 
           try {
-            const result = await pool.query(
-              'SELECT COUNT(*)::int as count FROM "users" WHERE email = $1',
-              ["operator@demo.local"]
-            );
+            const tables = ['"User"', '"user"'];
+            let verified = false;
+            let lastError = null;
 
-            const count = Number(result.rows[0]?.count ?? 0);
+            for (const table of tables) {
+              try {
+                const result = await pool.query(
+                  `select count(*)::int as count from ${table} where email = $1`,
+                  ["operator@demo.local"]
+                );
 
-            if (count !== 1) {
-              throw new Error(`Expected one demo user, found ${count}`);
+                const count = Number(result.rows[0]?.count ?? 0);
+
+                if (count === 1) {
+                  verified = true;
+                  console.log("Demo user verified");
+                  break;
+                }
+
+                lastError = new Error(`Expected one demo user in ${table}, found ${count}`);
+              } catch (error) {
+                lastError = error;
+              }
             }
 
-            console.log("✓ Demo user (operator@demo.local) verified in database");
+            if (!verified) {
+              throw lastError ?? new Error("Demo user verification failed");
+            }
           } finally {
             await pool.end();
           }
