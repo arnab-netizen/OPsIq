@@ -448,7 +448,7 @@ export async function listEngagements(
         interventionMode: true,
         serviceTier: true,
         createdAt: true,
-        client: { select: { id: true, name: true } },
+        clientAccount: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
       take: limit,
