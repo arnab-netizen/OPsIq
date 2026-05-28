@@ -7,9 +7,13 @@ const DEMO_PASSWORD = "demo-password-123";
 const DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY;
 
 export async function GET(request: NextRequest) {
-  // Verify diagnostic key
+  // Verify diagnostic key from query param (mobile-friendly)
+  const { searchParams } = new URL(request.url);
+  const queryKey = searchParams.get("key");
   const headerKey = request.headers.get("x-opsiq-diagnostic-key");
-  if (!DIAGNOSTIC_KEY || headerKey !== DIAGNOSTIC_KEY) {
+
+  const providedKey = queryKey || headerKey;
+  if (!DIAGNOSTIC_KEY || providedKey !== DIAGNOSTIC_KEY) {
     return Response.json({ error: "Unauthorized" }, { status: 403 });
   }
 
