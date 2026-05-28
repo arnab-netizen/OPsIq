@@ -33,35 +33,20 @@ async function createPrismaClient() {
     const { PrismaClient } = await import("@/generated/prisma/client");
     const { createWorkspaceEnforcementMiddleware } = await import("@/lib/prisma-workspace-enforcement");
 
-    let client;
-    const useNeon = isNeonEndpoint(databaseUrl);
-    const dbType = useNeon ? "Neon (serverless)" : "PostgreSQL (standard)";
+    // Use standard PostgreSQL adapter for all environments (proven safe path)
+    // Works for both local and Neon cloud PostgreSQL
+    console.log("[DB] Using @prisma/adapter-pg (standard PostgreSQL)");
+    const pg = await import("pg");
+    const { PrismaPg } = await import("@prisma/adapter-pg");
 
-    // Log adapter selection (without exposing secrets)
-    const sanitizedUrl = databaseUrl.replace(/:[^@]*@/, ":***@");
-    console.log(`[DB] Initializing Prisma with ${dbType} adapter`);
-    console.log(`[DB] Database: ${sanitizedUrl.split("?")[0].split("/").pop()}`);
-
-    if (useNeon) {
-      // Production/serverless: Use Neon WebSocket adapter
-      console.log("[DB] Using @prisma/adapter-neon");
-      const { Pool, neonConfig } = await import("@neondatabase/serverless");
-      const { PrismaNeon } = await import("@prisma/adapter-neon");
-
-      const pool = new Pool({ connectionString: databaseUrl, ...neonConfig });
-      // @ts-ignore - Pool type mismatch between @neondatabase/serverless and @prisma/adapter-neon
-      const adapter = new PrismaNeon(pool);
-      client = new PrismaClient({ adapter });
-    } else {
-      // Local/CI: Use standard PostgreSQL adapter
-      console.log("[DB] Using @prisma/adapter-pg");
-      const pg = await import("pg");
-      const { PrismaPg } = await import("@prisma/adapter-pg");
-
-      const pool = new pg.Pool({ connectionString: databaseUrl });
-      const adapter = new PrismaPg(pool);
-      client = new PrismaClient({ adapter });
-    }
+    const pool = new pg.Pool({
+      connectionString: databaseUrl,
+      ssl: databaseUrl.includes("sslmode=require")
+        ? { rejectUnauthorized: false }
+        : undefined,
+    });
+    const adapter = new PrismaPg(pool);
+    const client = new PrismaClient({ adapter });
 
     // Apply workspace isolation enforcement middleware
     const withEnforcement = client.$extends(createWorkspaceEnforcementMiddleware());

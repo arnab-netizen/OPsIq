@@ -22,6 +22,39 @@ export async function GET(request: NextRequest) {
     const databaseUrlPresent = !!process.env.DATABASE_URL;
     const authSecretPresent = !!process.env.AUTH_SECRET || !!process.env.NEXTAUTH_SECRET;
 
+    // Validate DATABASE_URL structure before trying to connect
+    let databaseUrlNonEmpty = false;
+    let databaseUrlProtocolOk = false;
+    let databaseUrlHostPresent = false;
+    let databaseUrlDatabasePresent = false;
+    let databaseUrlLooksPlaceholder = false;
+    let databaseUrlParseOk = false;
+
+    if (databaseUrlPresent) {
+      const dbUrl = process.env.DATABASE_URL!.trim();
+      databaseUrlNonEmpty = dbUrl.length > 0;
+
+      // Check for obvious placeholders
+      databaseUrlLooksPlaceholder =
+        /REPLACE_|PLACEHOLDER|your_neon_url|example\.com|runner/.test(dbUrl);
+
+      // Try to parse URL
+      try {
+        const parsed = new URL(dbUrl);
+        databaseUrlProtocolOk =
+          parsed.protocol === "postgresql:" || parsed.protocol === "postgres:";
+        databaseUrlHostPresent = !!parsed.hostname;
+        databaseUrlDatabasePresent = !!(parsed.pathname && parsed.pathname.length > 1);
+        databaseUrlParseOk =
+          databaseUrlProtocolOk &&
+          databaseUrlHostPresent &&
+          databaseUrlDatabasePresent &&
+          !databaseUrlLooksPlaceholder;
+      } catch {
+        databaseUrlParseOk = false;
+      }
+    }
+
     // Check user
     let userFound = false;
     let passwordHashPresent = false;
@@ -30,7 +63,7 @@ export async function GET(request: NextRequest) {
     let workspaceFound = false;
     let role = null;
 
-    if (databaseUrlPresent) {
+    if (databaseUrlPresent && databaseUrlParseOk) {
       const user = await db.user.findUnique({
         where: { email: DEMO_EMAIL },
         select: {
@@ -66,26 +99,47 @@ export async function GET(request: NextRequest) {
     }
 
     // Classify
+    let dbConnectionOk = databaseUrlParseOk; // Will be updated if DB ops succeed
     let classification = "unknown";
+
     if (!databaseUrlPresent) {
       classification = "database_url_missing";
+    } else if (!databaseUrlNonEmpty) {
+      classification = "database_url_empty";
+    } else if (databaseUrlLooksPlaceholder) {
+      classification = "database_url_placeholder";
+    } else if (!databaseUrlParseOk) {
+      classification = "database_url_malformed";
     } else if (!userFound) {
       classification = "user_not_found";
+      dbConnectionOk = true; // URL was valid, DB connected, but user missing
     } else if (!passwordHashPresent) {
       classification = "password_hash_missing";
+      dbConnectionOk = true;
     } else if (!passwordMatch) {
       classification = "password_mismatch";
+      dbConnectionOk = true;
     } else if (!workspaceMembershipFound) {
       classification = "workspace_membership_missing";
+      dbConnectionOk = true;
     } else if (!workspaceFound) {
       classification = "workspace_not_found";
+      dbConnectionOk = true;
     } else {
       classification = "all_prerequisites_ok";
+      dbConnectionOk = true;
     }
 
     return Response.json({
       databaseUrlPresent,
+      databaseUrlNonEmpty,
+      databaseUrlProtocolOk,
+      databaseUrlHostPresent,
+      databaseUrlDatabasePresent,
+      databaseUrlLooksPlaceholder,
+      databaseUrlParseOk,
       authSecretPresent,
+      dbConnectionOk,
       userFound,
       passwordHashPresent,
       passwordMatch,
@@ -96,11 +150,28 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
+
+    // Try to parse DATABASE_URL for structure validation
+    let databaseUrlParseOk = false;
+    if (process.env.DATABASE_URL) {
+      try {
+        const parsed = new URL(process.env.DATABASE_URL);
+        databaseUrlParseOk =
+          (parsed.protocol === "postgresql:" || parsed.protocol === "postgres:") &&
+          !!parsed.hostname &&
+          !!(parsed.pathname && parsed.pathname.length > 1);
+      } catch {
+        databaseUrlParseOk = false;
+      }
+    }
+
     return Response.json(
       {
         databaseUrlPresent: !!process.env.DATABASE_URL,
+        databaseUrlParseOk,
         authSecretPresent: !!process.env.AUTH_SECRET || !!process.env.NEXTAUTH_SECRET,
-        classification: "diagnostic_failed",
+        dbConnectionOk: false,
+        classification: databaseUrlParseOk ? "db_adapter_construction_failure" : "database_url_malformed",
         error: errorMsg,
       },
       { status: 500 }
