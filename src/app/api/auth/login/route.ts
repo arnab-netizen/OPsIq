@@ -25,8 +25,10 @@ export const POST = async (request: NextRequest) => {
   try {
     // Ensure database is initialized before attempting login
     await ensureStartupComplete();
+    console.log("[LOGIN] START");
 
     const { email, password } = await parseRequestBody(request, loginSchema);
+    console.log("[LOGIN] EMAIL_PARSED", { email: email ? "yes" : "no" });
 
     // Extract idempotency key for session deduplication
     const idempotencyKey = request.headers.get("idempotency-key");
@@ -37,6 +39,7 @@ export const POST = async (request: NextRequest) => {
     requireRateLimit(`login:${email}`, LOGIN_RATE_LIMIT);
 
     const user = await db.user.findUnique({ where: { email } });
+    console.log("[LOGIN] USER_LOOKUP", { found: !!user, isActive: user?.isActive, hasPassword: !!user?.hashedPassword });
 
     if (!user || !user.isActive || !user.hashedPassword) {
       await emitAuditEvent({
@@ -54,9 +57,11 @@ export const POST = async (request: NextRequest) => {
     });
 
     const workspaceId = membership?.workspaceId;
+    console.log("[LOGIN] MEMBERSHIP_LOOKUP", { found: !!membership, hasWorkspace: !!workspaceId });
 
     // Password verification using bcrypt
     const passwordValid = await bcrypt.compare(password, user.hashedPassword);
+    console.log("[LOGIN] PASSWORD_MATCH", { valid: passwordValid });
 
     if (!passwordValid) {
       await emitAuditEvent({
@@ -73,6 +78,7 @@ export const POST = async (request: NextRequest) => {
     const token = uuidv4();
     const expiresAt = new Date(Date.now() + getSessionDurationMs());
 
+    console.log("[LOGIN] SESSION_CREATE_START");
     const session = await db.session.create({
       data: {
         id: sessionId,
@@ -83,7 +89,9 @@ export const POST = async (request: NextRequest) => {
         userAgent: request.headers.get("user-agent") ?? null,
       },
     });
+    console.log("[LOGIN] SESSION_CREATE_OK");
 
+    console.log("[LOGIN] AUDIT_CREATE_START");
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.USER_LOGGED_IN,
       actorId: user.id,
@@ -92,6 +100,7 @@ export const POST = async (request: NextRequest) => {
       workspaceId,
       visibility: "internal",
     });
+    console.log("[LOGIN] AUDIT_CREATE_OK");
 
     const cookieStore = await cookies();
     cookieStore.set(getSessionCookieName(), token, {
@@ -102,6 +111,9 @@ export const POST = async (request: NextRequest) => {
       expires: expiresAt,
     });
 
+    console.log("[LOGIN] COOKIE_SET_OK");
+    console.log("[LOGIN] SUCCESS");
+
     return Response.json({
       user: {
         id: user.id,
@@ -110,6 +122,10 @@ export const POST = async (request: NextRequest) => {
       },
     });
   } catch (error) {
+    const errorName = error instanceof Error ? error.constructor.name : "UnknownError";
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error("[LOGIN_FAILED]", { errorName, errorMsg });
+
     const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'auth' });
     console.error("[LOGIN_ERROR]", governed.operatorMessage, error);
 
