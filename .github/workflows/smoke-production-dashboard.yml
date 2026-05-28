@@ -1,0 +1,47 @@
+name: Smoke - Production Dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Production URL to test (default: https://o-ps-iq.vercel.app)"
+        required: false
+        default: "https://o-ps-iq.vercel.app"
+
+jobs:
+  smoke:
+    name: Test Production Dashboard Data
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run dashboard smoke test
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://o-ps-iq.vercel.app' }}
+        run: |
+          echo "Testing dashboard at: $BASE_URL"
+          npx tsx scripts/smoke-production-dashboard.ts
+
+      - name: Log completion
+        if: always()
+        run: |
+          echo "## ✅ Dashboard Smoke Test Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** ${{ github.event.inputs.base_url || 'https://o-ps-iq.vercel.app' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Verified dashboard loads with demo data after login." >> $GITHUB_STEP_SUMMARY

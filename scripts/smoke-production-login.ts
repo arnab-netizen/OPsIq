@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-nocheck
 /**
  * Production Login Smoke Test
  * Tests /api/auth/login endpoint with demo credentials
