@@ -13,6 +13,7 @@ import { paginationSchema } from "@/lib/validation";
 import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES } from "@/domain/constants/statuses";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError, UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { logger } from "@/infra/logger";
 
 const createEngagementSchema = z.object({
   title: z.string().min(1),
@@ -36,12 +37,65 @@ const listEngagementsSchema = paginationSchema.extend({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const workspaceId = ctx.verifiedWorkspaceId;
+    const correlationId = ctx.correlationId || `unknown-${Date.now()}`;
+    let stage = "route_start";
 
-    const params = parseSearchParams(ctx.request?.url || "", listEngagementsSchema);
-    const result = await listEngagements(workspaceId, params, ctx.policy ? hasInternalAccess(ctx.policy) : false);
+    try {
+      // Stage 1: Extract context
+      stage = "auth_context";
+      const workspaceId = ctx.verifiedWorkspaceId;
+      if (!workspaceId) {
+        throw new Error("workspace_context_missing");
+      }
 
-    return Response.json(result);
+      // Stage 2: Parse query parameters
+      stage = "parse_query";
+      const params = parseSearchParams(ctx.request?.url || "", listEngagementsSchema);
+
+      // Stage 3: Call service
+      stage = "service_call";
+      const hasAccess = ctx.policy ? hasInternalAccess(ctx.policy) : false;
+      const result = await listEngagements(workspaceId, params, hasAccess);
+
+      // Stage 4: Validate response shape
+      stage = "response_validation";
+      if (!result || typeof result !== "object") {
+        throw new Error("invalid_response_shape");
+      }
+      if (!Array.isArray(result.engagements)) {
+        throw new Error("engagements_not_array");
+      }
+      if (typeof result.total !== "number") {
+        throw new Error("total_not_number");
+      }
+
+      // Stage 5: Return response
+      stage = "response_return";
+      return Response.json(result);
+    } catch (error) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      const errorName = errorObj.name || "UnknownError";
+      const errorMessage = errorObj.message || "unknown error";
+
+      logger.error("[ENGAGEMENTS_FAILED]", {
+        correlationId,
+        stage,
+        errorName,
+        errorMessage,
+        workspaceId: ctx.verifiedWorkspaceId,
+      });
+
+      // Return safe error response with stage classification
+      return Response.json(
+        {
+          error: "Internal server error",
+          correlationId,
+          classification: `${stage}_failed`,
+          stage,
+        },
+        { status: 500 }
+      );
+    }
   },
   { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
 );

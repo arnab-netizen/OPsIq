@@ -436,28 +436,47 @@ export async function listEngagements(
     }),
   };
 
-  const [engagements, total] = await Promise.all([
-    db.engagement.findMany({
-      where,
-      select: {
-        id: true,
-        code: true,
-        title: true,
-        status: true,
-        healthStatus: true,
-        interventionMode: true,
-        serviceTier: true,
-        createdAt: true,
-        clientAccount: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: offset,
-    }),
-    db.engagement.count({ where }),
-  ]);
+  try {
+    const [engagements, total] = await Promise.all([
+      db.engagement.findMany({
+        where,
+        select: {
+          id: true,
+          code: true,
+          title: true,
+          status: true,
+          healthStatus: true,
+          interventionMode: true,
+          serviceTier: true,
+          createdAt: true,
+          clientAccount: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      }),
+      db.engagement.count({ where }),
+    ]);
 
-  return { engagements, total, limit, offset };
+    // Validate response
+    if (!Array.isArray(engagements)) {
+      throw new Error("prisma_query_returned_non_array");
+    }
+    if (typeof total !== "number") {
+      throw new Error("prisma_count_returned_non_number");
+    }
+
+    return { engagements, total, limit, offset };
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error("listEngagements failed", {
+      workspaceId,
+      errorName: err.name,
+      errorMessage: err.message,
+      params: { limit, offset, status, clientId, search: search ? "present" : "absent" },
+    });
+    throw err;
+  }
 }
 
 export async function computeNextReviewDate(

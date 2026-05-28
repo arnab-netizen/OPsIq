@@ -121,7 +121,7 @@ async function smokeTest(): Promise<void> {
 
     if (engagementsResponse.status === 200) {
       const data = await engagementsResponse.json();
-      const engagementCount = Array.isArray(data) ? data.length : 0;
+      const engagementCount = Array.isArray(data) ? data.length : data.engagements?.length || 0;
 
       if (engagementCount > 0) {
         console.log(`   ✓ Found ${engagementCount} engagement(s)\n`);
@@ -152,6 +152,22 @@ async function smokeTest(): Promise<void> {
     } else if (engagementsResponse.status === 401) {
       console.log("❌ UNAUTHORIZED (401)");
       console.log("   Session is invalid or workspace context failed");
+      process.exit(1);
+    } else if (engagementsResponse.status === 500) {
+      console.log("❌ INTERNAL SERVER ERROR (500)");
+      try {
+        const errorData = await engagementsResponse.json();
+        console.log(`   CorrelationId: ${errorData.correlationId}`);
+        console.log(`   Classification: ${errorData.classification}`);
+        console.log(`   Stage: ${errorData.stage}`);
+        console.log(`   Error: ${errorData.error}`);
+        console.log("");
+        console.log("This indicates an internal crash in the engagements API.");
+        console.log("Use the correlationId and stage to locate the issue in production logs.");
+      } catch {
+        const text = await engagementsResponse.text();
+        console.log(`   Response: ${text.substring(0, 200)}`);
+      }
       process.exit(1);
     } else {
       console.log(`❌ UNEXPECTED STATUS (${engagementsResponse.status})`);
