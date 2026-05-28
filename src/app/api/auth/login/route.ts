@@ -22,14 +22,29 @@ const loginSchema = z.object({
 });
 
 export const POST = async (request: NextRequest) => {
+  let classification = "unknown";
   try {
     console.log("[LOGIN] START");
-    console.log("[LOGIN] ENV_DATABASE_URL_PRESENT", { present: !!process.env.DATABASE_URL });
+
+    try {
+      console.log("[LOGIN] ENV_DATABASE_URL_PRESENT", { present: !!process.env.DATABASE_URL });
+    } catch (logError) {
+      console.error("[LOGIN] LOG_ENV_CHECK_FAILED", logError instanceof Error ? logError.message : String(logError));
+    }
 
     // Ensure database is initialized before attempting login
-    await ensureStartupComplete();
-    console.log("[LOGIN] DB_INIT_OK");
+    try {
+      console.log("[LOGIN] STARTUP_START");
+      await ensureStartupComplete();
+      console.log("[LOGIN] DB_INIT_OK");
+    } catch (startupError) {
+      const errorName = startupError instanceof Error ? startupError.constructor.name : "UnknownError";
+      const errorMsg = startupError instanceof Error ? startupError.message : String(startupError);
+      console.error("[LOGIN] STARTUP_FAILED", { error: errorName, message: errorMsg });
+      throw startupError;
+    }
 
+    console.log("[LOGIN] PARSE_START");
     const { email, password } = await parseRequestBody(request, loginSchema);
     console.log("[LOGIN] EMAIL_PARSED", { email: email ? "yes" : "no" });
 
@@ -148,27 +163,45 @@ export const POST = async (request: NextRequest) => {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error("[LOGIN_FAILED]", { errorName, errorMsg });
 
-    const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'auth' });
-    console.error("[LOGIN_ERROR]", governed.operatorMessage);
+    try {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'auth' });
+      console.error("[LOGIN_ERROR]", governed.operatorMessage);
+    } catch (classifyError) {
+      console.error("[LOGIN] CLASSIFY_FAILED", classifyError instanceof Error ? classifyError.message : String(classifyError));
+    }
 
-    let classification = "unknown_error";
+    classification = "unknown_error";
     if (error instanceof UnauthorizedError) {
       classification = "unauthorized";
     } else if (errorMsg.includes("Database not initialized")) {
       classification = "db_not_initialized";
+    } else if (errorMsg.includes("Startup previously failed")) {
+      classification = "startup_failed";
+    } else if (errorMsg.includes("Startup checks timed out")) {
+      classification = "startup_timeout";
     } else if (errorMsg.includes("database") || errorMsg.includes("Database")) {
       classification = "db_error";
     } else if (errorMsg.includes("ENOENT") || errorMsg.includes("connection")) {
       classification = "connection_error";
+    } else if (errorMsg.includes("parse") || errorMsg.includes("Parse")) {
+      classification = "request_parse_error";
     }
     console.log("[LOGIN] FAILED_CLASSIFICATION", { classification });
+
+    let errorMessage = "Login failed";
+    try {
+      const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'auth' });
+      errorMessage = governed.operatorMessage;
+    } catch {
+      // If classification fails, use generic message
+    }
 
     if (error instanceof UnauthorizedError) {
       return Response.json({ error: classifyOperatorError(error, { context: "auth" }).operatorMessage }, { status: 401 });
     }
 
     return Response.json(
-      { error: "Login failed", details: governed.operatorMessage },
+      { error: errorMessage },
       { status: 500 }
     );
   }
