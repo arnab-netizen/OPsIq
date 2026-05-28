@@ -14,6 +14,7 @@ import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES } from "@/domain/co
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError, UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
+import { ClassifiedApiError } from "@/infra/classified-error";
 
 const createEngagementSchema = z.object({
   title: z.string().min(1),
@@ -37,65 +38,70 @@ const listEngagementsSchema = paginationSchema.extend({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    const correlationId = ctx.correlationId || `unknown-${Date.now()}`;
-    let stage = "route_start";
-
-    try {
-      // Stage 1: Extract context
-      stage = "auth_context";
-      const workspaceId = ctx.verifiedWorkspaceId;
-      if (!workspaceId) {
-        throw new Error("workspace_context_missing");
-      }
-
-      // Stage 2: Parse query parameters
-      stage = "parse_query";
-      const params = parseSearchParams(ctx.request?.url || "", listEngagementsSchema);
-
-      // Stage 3: Call service
-      stage = "service_call";
-      const hasAccess = ctx.policy ? hasInternalAccess(ctx.policy) : false;
-      const result = await listEngagements(workspaceId, params, hasAccess);
-
-      // Stage 4: Validate response shape
-      stage = "response_validation";
-      if (!result || typeof result !== "object") {
-        throw new Error("invalid_response_shape");
-      }
-      if (!Array.isArray(result.engagements)) {
-        throw new Error("engagements_not_array");
-      }
-      if (typeof result.total !== "number") {
-        throw new Error("total_not_number");
-      }
-
-      // Stage 5: Return response
-      stage = "response_return";
-      return Response.json(result);
-    } catch (error) {
-      const errorObj = error instanceof Error ? error : new Error(String(error));
-      const errorName = errorObj.name || "UnknownError";
-      const errorMessage = errorObj.message || "unknown error";
-
-      logger.error("[ENGAGEMENTS_FAILED]", {
-        correlationId,
-        stage,
-        errorName,
-        errorMessage,
-        workspaceId: ctx.verifiedWorkspaceId,
-      });
-
-      // Return safe error response with stage classification
-      return Response.json(
-        {
-          error: "Internal server error",
-          correlationId,
-          classification: `${stage}_failed`,
-          stage,
-        },
-        { status: 500 }
+    // Stage 1: Extract context
+    const workspaceId = ctx.verifiedWorkspaceId;
+    if (!workspaceId) {
+      throw new ClassifiedApiError(
+        "workspace context missing",
+        "workspace_context_failed",
+        "workspace_context"
       );
     }
+
+    // Stage 2: Parse query parameters
+    let params;
+    try {
+      params = parseSearchParams(ctx.request?.url || "", listEngagementsSchema);
+    } catch (error) {
+      throw new ClassifiedApiError(
+        error instanceof Error ? error.message : "invalid query parameters",
+        "parse_query_failed",
+        "parse_query"
+      );
+    }
+
+    // Stage 3: Call service
+    let result;
+    try {
+      const hasAccess = ctx.policy ? hasInternalAccess(ctx.policy) : false;
+      result = await listEngagements(workspaceId, params, hasAccess);
+    } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : String(error);
+      throw new ClassifiedApiError(
+        errorMsg,
+        "engagements_service_failed",
+        "service_call",
+        500,
+        error
+      );
+    }
+
+    // Stage 4: Validate response shape
+    if (!result || typeof result !== "object") {
+      throw new ClassifiedApiError(
+        "service returned invalid response shape",
+        "response_mapping_failed",
+        "response_mapping"
+      );
+    }
+    if (!Array.isArray(result.engagements)) {
+      throw new ClassifiedApiError(
+        "engagements must be array",
+        "response_validation_failed",
+        "response_validation"
+      );
+    }
+    if (typeof result.total !== "number") {
+      throw new ClassifiedApiError(
+        "total must be number",
+        "response_validation_failed",
+        "response_validation"
+      );
+    }
+
+    // Stage 5: Return response
+    return Response.json(result);
   },
   { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
 );

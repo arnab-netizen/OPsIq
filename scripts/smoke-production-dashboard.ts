@@ -157,6 +157,29 @@ async function smokeTest(): Promise<void> {
       console.log("❌ INTERNAL SERVER ERROR (500)");
       try {
         const errorData = await engagementsResponse.json();
+
+        // CRITICAL: Error boundary MUST include classification and stage
+        if (!errorData.classification || errorData.classification === "undefined") {
+          console.log("❌ CLASSIFICATION_MISSING_FROM_ERROR_RESPONSE");
+          console.log(`   CorrelationId: ${errorData.correlationId}`);
+          console.log("   Classification: MISSING");
+          console.log("   Stage: MISSING");
+          console.log("");
+          console.log("DEFECT: API error boundary is not classifying failures.");
+          console.log("Every 500 response MUST include classification and stage.");
+          process.exit(1);
+        }
+
+        if (!errorData.stage || errorData.stage === "undefined") {
+          console.log("❌ STAGE_MISSING_FROM_ERROR_RESPONSE");
+          console.log(`   CorrelationId: ${errorData.correlationId}`);
+          console.log(`   Classification: ${errorData.classification}`);
+          console.log("   Stage: MISSING");
+          console.log("");
+          console.log("DEFECT: API error boundary is not including stage information.");
+          process.exit(1);
+        }
+
         console.log(`   CorrelationId: ${errorData.correlationId}`);
         console.log(`   Classification: ${errorData.classification}`);
         console.log(`   Stage: ${errorData.stage}`);

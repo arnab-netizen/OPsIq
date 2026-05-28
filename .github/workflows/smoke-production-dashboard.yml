@@ -1,6 +1,8 @@
 name: Smoke - Production Dashboard
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       base_url:
@@ -10,9 +12,9 @@ on:
 
 jobs:
   smoke:
-    name: Test Production Dashboard Data
+    name: Test Production Dashboard
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -30,6 +32,42 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Get current commit SHA
+        id: commit
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Wait for Vercel deployment
+        if: github.event_name == 'push'
+        run: |
+          BASE_URL="https://o-ps-iq.vercel.app"
+          TARGET_COMMIT="${{ steps.commit.outputs.sha }}"
+          MAX_RETRIES=30
+          RETRY_INTERVAL=10
+
+          echo "Waiting for Vercel to deploy commit ${TARGET_COMMIT:0:7}..."
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i/$MAX_RETRIES..."
+
+            RESPONSE=$(curl -s "$BASE_URL/api/internal/build-info" 2>/dev/null || echo '{}')
+            DEPLOYED_COMMIT=$(echo "$RESPONSE" | jq -r '.commit // "unknown"' 2>/dev/null)
+
+            if [ "$DEPLOYED_COMMIT" = "$TARGET_COMMIT" ]; then
+              echo "✓ Vercel deployed commit $TARGET_COMMIT"
+              exit 0
+            fi
+
+            echo "  Current: ${DEPLOYED_COMMIT:0:7}, Target: ${TARGET_COMMIT:0:7}"
+
+            if [ $i -lt $MAX_RETRIES ]; then
+              sleep $RETRY_INTERVAL
+            fi
+          done
+
+          echo "❌ Timeout waiting for Vercel deployment"
+          exit 1
+
       - name: Run dashboard smoke test
         env:
           BASE_URL: ${{ github.event.inputs.base_url || 'https://o-ps-iq.vercel.app' }}
@@ -44,4 +82,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Target:** ${{ github.event.inputs.base_url || 'https://o-ps-iq.vercel.app' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Verified dashboard loads with demo data after login." >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Dashboard verification passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Dashboard verification failed" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -41,6 +41,7 @@ import {
   RequestLifecycleStage,
   type RuntimeShadowReadEnforcer,
 } from "@/lib/runtime-shadow-read-enforcer";
+import { ClassifiedApiError, ensureClassification } from "@/infra/classified-error";
 
 /**
  * Verified context passed to handler
@@ -494,26 +495,10 @@ export function withCanonicalEnforcement(
         },
       });
     } catch (error) {
-      // Unhandled error in handler or pipeline
-      let classification = "handler_invocation_failed";
-      let stage = "handler_invocation";
-
-      // Try to extract more specific stage from error
-      if (error instanceof Error) {
-        if (error.message?.includes("workspace")) {
-          classification = "workspace_context_failed";
-          stage = "workspace_context";
-        } else if (error.message?.includes("auth")) {
-          classification = "auth_context_failed";
-          stage = "auth_context";
-        } else if (error.message?.includes("readiness")) {
-          classification = "critical_readiness_failed";
-          stage = "critical_readiness";
-        } else if (error.message?.includes("capability")) {
-          classification = "capability_check_failed";
-          stage = "capability_check";
-        }
-      }
+      // Ensure error is classified (never undefined classification/stage)
+      const classifiedError = error instanceof ClassifiedApiError
+        ? error
+        : ensureClassification(error, "handler_invocation", "handler_invocation_failed");
 
       try {
         if (traceManager) {
@@ -538,10 +523,12 @@ export function withCanonicalEnforcement(
       telemetry?.emitHandlerFailed(error as Error);
       telemetry?.emitRequestCompleted();
 
+      const finalCorrelationId = telemetryCtx?.correlationId || correlationId || "unknown";
+
       logger.error("[WRAPPER_FAILED]", {
-        correlationId,
-        stage,
-        classification,
+        correlationId: finalCorrelationId,
+        stage: classifiedError.stage,
+        classification: classifiedError.classification,
         errorName: error instanceof Error ? error.name : "unknown",
         errorMessage: error instanceof Error ? error.message : String(error),
       });
@@ -549,9 +536,9 @@ export function withCanonicalEnforcement(
       return new NextResponse(
         JSON.stringify({
           error: "Internal server error",
-          correlationId: telemetryCtx?.correlationId || "unknown",
-          classification,
-          stage,
+          correlationId: finalCorrelationId,
+          classification: classifiedError.classification,
+          stage: classifiedError.stage,
         }),
         {
           status: 500,
