@@ -48,20 +48,18 @@ async function smokeTestLogin(): Promise<void> {
     console.log(`   Status: ${response.status}`);
 
     let data: LoginResponse;
-    const contentType = response.headers.get("content-type");
+    const responseText = await response.text();
+
+    if (response.status === 403 || response.status === 404) {
+      console.error("   ❌ Got 403/404 - Production may not have deployed latest code yet");
+      console.error(`   Response: ${responseText.substring(0, 200)}`);
+      process.exit(1);
+    }
 
     try {
-      data = (await response.json()) as LoginResponse;
+      data = JSON.parse(responseText) as LoginResponse;
     } catch (parseError) {
-      const text = await response.text();
-      console.log(`   Response body (first 200 chars): ${text.substring(0, 200)}`);
-
-      if (response.status === 403 || response.status === 404) {
-        console.error("   ❌ Got 403/404 - Production may not have deployed latest code yet");
-        console.error("   Waiting for Vercel deployment...");
-        process.exit(1);
-      }
-
+      console.log(`   Response body (first 200 chars): ${responseText.substring(0, 200)}`);
       throw new Error(`Failed to parse response as JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     }
 
