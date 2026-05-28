@@ -81,6 +81,11 @@ jobs:
           echo "Running seed script..."
           npx tsx src/infra/seed.ts
 
+      - name: Check login prerequisites
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: npx tsx scripts/check-staging-login-prerequisites.ts
+
       - name: Verify seed user exists
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
