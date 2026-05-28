@@ -81,27 +81,49 @@ jobs:
           echo "Running seed script..."
           npx tsx src/infra/seed.ts
 
-      - name: Install PostgreSQL client
-        run: |
-          apt-get update -qq && apt-get install -qq -y postgresql-client
-
       - name: Verify seed user exists
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         run: |
-          # Verify demo user exists in database using psql
-          # Extract connection details from DATABASE_URL
-          # Format: postgresql://user:password@host:port/database?params
-          user_count=$(psql "$DATABASE_URL" -t -c "SELECT COUNT(*) FROM \"user\" WHERE email = 'operator@demo.local';" 2>/dev/null || echo "0")
+          npx tsx <<'EOF'
+          import pg from "pg";
 
-          if [ "$user_count" = "1" ]; then
-            echo "✓ Demo user (operator@demo.local) verified in database"
-            exit 0
-          else
-            echo "✗ Demo user (operator@demo.local) not found after seed"
-            exit 1
-          fi
-          "
+          const databaseUrl = process.env.DATABASE_URL;
+
+          if (!databaseUrl) {
+            throw new Error("DATABASE_URL missing for seed verification");
+          }
+
+          if (/REPLACE_|PLACEHOLDER|your_neon_url|example\.com/.test(databaseUrl)) {
+            throw new Error("DATABASE_URL contains placeholder value");
+          }
+
+          const { Pool } = pg;
+
+          const pool = new Pool({
+            connectionString: databaseUrl,
+            ssl: databaseUrl.includes("sslmode=require")
+              ? { rejectUnauthorized: false }
+              : undefined,
+          });
+
+          try {
+            const result = await pool.query(
+              'SELECT COUNT(*)::int as count FROM "users" WHERE email = $1',
+              ["operator@demo.local"]
+            );
+
+            const count = Number(result.rows[0]?.count ?? 0);
+
+            if (count !== 1) {
+              throw new Error(`Expected one demo user, found ${count}`);
+            }
+
+            console.log("✓ Demo user (operator@demo.local) verified in database");
+          } finally {
+            await pool.end();
+          }
+          EOF
 
       - name: Seed summary
         if: always()
