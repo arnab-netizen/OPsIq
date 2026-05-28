@@ -111,11 +111,12 @@ export function useOperatorMutation<TData, TVariables = unknown>(
           signal: controller.signal,
         });
 
-        if (!response.ok) {
-          throw new Error(`API error: ${response.statusText}`);
-        }
-
         const data = await response.json();
+
+        if (!response.ok) {
+          const errorMessage = typeof data?.error === 'string' ? data.error : `API error: ${response.statusText}`;
+          throw new Error(errorMessage);
+        }
 
         setState((s) => ({
           ...s,
