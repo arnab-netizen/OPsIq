@@ -42,6 +42,7 @@ import {
   type RuntimeShadowReadEnforcer,
 } from "@/lib/runtime-shadow-read-enforcer";
 import { ClassifiedApiError, ensureClassification, hasClassification } from "@/infra/classified-error";
+import { db } from "@/lib/db";
 
 /**
  * Verified context passed to handler
@@ -281,17 +282,61 @@ export function withCanonicalEnforcement(
       traceManager.recordStage("PIPELINE_STARTED", "success");
 
       // ========================================
-      // STEP 1: EXTRACT WORKSPACE ID
+      // STEP 1: EXTRACT WORKSPACE ID FROM SESSION
       // ========================================
 
-      const workspaceId: string | undefined = req.headers.get("x-workspace-id") ?? undefined;
-      traceManager.recordStage("WORKSPACE_EXTRACTED", "success", workspaceId || "not_specified");
+      let headerWorkspaceId: string | undefined = req.headers.get("x-workspace-id") ?? undefined;
+      let workspaceId: string | undefined = headerWorkspaceId;
 
       // ========================================
       // STEP 2: GATHER AUTH FACTS (NO ERRORS THROWN)
       // ========================================
 
       const sessionFact = await getSessionFact(workspaceId);
+
+      // If session is valid, look up workspace UUID from user's workspace membership
+      // This ensures we use the actual Workspace.id UUID, not the header value
+      if (sessionFact.valid && sessionFact.session?.user) {
+        try {
+          const membership = await db.workspaceMembership.findFirst({
+            where: {
+              userId: sessionFact.session.user.id,
+              isActive: true,
+            },
+            select: {
+              workspaceId: true,
+            },
+          });
+
+          if (membership?.workspaceId) {
+            // Validate it's UUID-like format
+            const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+            if (uuidRegex.test(membership.workspaceId)) {
+              workspaceId = membership.workspaceId;
+              logger.debug("Workspace UUID resolved from membership", {
+                correlationId,
+                userId: sessionFact.session.user.id,
+                workspaceId,
+              });
+            } else {
+              logger.warn("Workspace membership workspaceId is not UUID-like format", {
+                correlationId,
+                userId: sessionFact.session.user.id,
+                workspaceId: membership.workspaceId,
+              });
+            }
+          }
+        } catch (error) {
+          logger.error("Failed to look up workspace membership", {
+            correlationId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          // Fall back to header value if lookup fails
+        }
+      }
+
+      traceManager.recordStage("WORKSPACE_EXTRACTED", "success", workspaceId || "not_specified");
+
       const policyFact = await getPolicyContextFact(workspaceId);
 
       // TELEMETRY: Facts gathered
