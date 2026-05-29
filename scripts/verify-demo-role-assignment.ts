@@ -4,6 +4,7 @@
  */
 
 import { db, getDbInstance } from "@/lib/db";
+import type { UserRoleAssignment } from "@/generated/prisma/client";
 
 async function checkDemoUserState() {
   console.log("\n📋 Checking demo user role assignment state...\n");
@@ -57,7 +58,7 @@ async function checkDemoUserState() {
     }
 
     // Check UserRoleAssignment
-    const roleAssignments = await db.userRoleAssignment.findMany({
+    const roleAssignments: UserRoleAssignment[] = await db.userRoleAssignment.findMany({
       where: {
         userId: user.id,
         scope: "workspace",
@@ -98,7 +99,7 @@ async function checkDemoUserState() {
   }
 }
 
-checkDemoUserState().catch((error) => {
-  console.error("Error:", error.message);
+checkDemoUserState().catch((error: unknown) => {
+  console.error("Error:", error instanceof Error ? error.message : String(error));
   process.exit(1);
 });
