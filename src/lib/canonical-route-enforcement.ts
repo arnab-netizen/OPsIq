@@ -154,6 +154,8 @@ export function withCanonicalEnforcement(
     requireCapabilities?: string[];
     requireActorType?: "user" | "service" | ("user" | "service")[];
     skipReadinessCheck?: boolean;
+    errorNamespace?: string;
+    operationName?: string;
   }
 ): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
   return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
@@ -497,9 +499,33 @@ export function withCanonicalEnforcement(
     } catch (error) {
       // Ensure error is classified (never undefined classification/stage)
       // Use hasClassification (structural) instead of instanceof to work across module boundaries
-      const classifiedError = hasClassification(error)
-        ? ensureClassification(error, "handler_invocation", "handler_invocation_failed")
-        : ensureClassification(error, "handler_invocation", "handler_invocation_failed");
+      const errorNamespace = options?.errorNamespace;
+      const operationName = options?.operationName;
+
+      let classifiedError: ClassifiedApiError;
+
+      if (hasClassification(error)) {
+        // Error already has classification/stage, preserve it
+        classifiedError = ensureClassification(
+          error,
+          "handler_invocation",
+          "handler_invocation_failed"
+        );
+      } else {
+        // Raw unclassified error - use namespace-specific fallback
+        const fallbackClassification = errorNamespace
+          ? `${errorNamespace}_handler_invocation_failed`
+          : "handler_invocation_failed";
+        const fallbackStage = "handler_invocation";
+
+        classifiedError = new ClassifiedApiError(
+          error instanceof Error ? error.message : String(error),
+          fallbackClassification,
+          fallbackStage,
+          500,
+          error
+        );
+      }
 
       try {
         if (traceManager) {
@@ -525,27 +551,38 @@ export function withCanonicalEnforcement(
       telemetry?.emitRequestCompleted();
 
       const finalCorrelationId = telemetryCtx?.correlationId || correlationId || "unknown";
+      const safErrorName = error instanceof Error ? error.name : typeof error === "object" ? error?.constructor?.name : "unknown";
 
       logger.error("[WRAPPER_FAILED]", {
         correlationId: finalCorrelationId,
         stage: classifiedError.stage,
         classification: classifiedError.classification,
-        errorName: error instanceof Error ? error.name : "unknown",
+        errorName: safErrorName,
         errorMessage: error instanceof Error ? error.message : String(error),
+        operation: operationName,
       });
 
-      return new NextResponse(
-        JSON.stringify({
-          error: "Internal server error",
-          correlationId: finalCorrelationId,
-          classification: classifiedError.classification,
-          stage: classifiedError.stage,
-        }),
-        {
-          status: 500,
-          headers: { "content-type": "application/json" },
-        }
-      );
+      const responseBody: any = {
+        error: "Internal server error",
+        correlationId: finalCorrelationId,
+        classification: classifiedError.classification,
+        stage: classifiedError.stage,
+      };
+
+      // Include safe error name for diagnostics
+      if (safErrorName && safErrorName !== "unknown") {
+        responseBody.errorName = safErrorName;
+      }
+
+      // Include operation if provided
+      if (operationName) {
+        responseBody.operation = operationName;
+      }
+
+      return new NextResponse(JSON.stringify(responseBody), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
     }
   };
 }

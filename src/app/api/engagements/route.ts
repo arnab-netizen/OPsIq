@@ -149,6 +149,8 @@ async function engagementsGetHandler(
 export const GET = withCanonicalEnforcement(engagementsGetHandler, {
   requireCapabilities: ["ENGAGEMENT_VIEW"],
   requireWorkspace: true,
+  errorNamespace: "engagements",
+  operationName: "list_engagements",
 });
 
 export const POST = withCanonicalEnforcement(

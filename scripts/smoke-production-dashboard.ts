@@ -183,21 +183,35 @@ async function smokeTest(): Promise<void> {
         console.log(`   CorrelationId: ${errorData.correlationId}`);
         console.log(`   Classification: ${errorData.classification}`);
         console.log(`   Stage: ${errorData.stage}`);
+        if (errorData.operation) {
+          console.log(`   Operation: ${errorData.operation}`);
+        }
+        if (errorData.errorName) {
+          console.log(`   ErrorName: ${errorData.errorName}`);
+        }
         console.log(`   Error: ${errorData.error}`);
         console.log("");
 
+        // Generic handler_invocation_failed is a regression
         if (errorData.classification === "handler_invocation_failed") {
-          console.log("❌ HANDLER_INVOCATION_FAILED");
+          console.log("❌ GENERIC_HANDLER_INVOCATION_FAILED");
           console.log("");
-          console.log("CRITICAL: Route/service allowed raw error to escape to wrapper.");
-          console.log("The route MUST wrap its handler body in try-catch to convert");
-          console.log("all errors to ClassifiedApiError before they reach the wrapper.");
+          console.log("REGRESSION: Wrapper returned generic handler_invocation_failed.");
+          console.log("Route should have set errorNamespace option to avoid generic fallback.");
           console.log("");
-          console.log("Expected: classification starting with 'engagements_'");
-          console.log("Actual: handler_invocation_failed (outer wrapper caught raw error)");
+          console.log("Fix: Ensure route passes errorNamespace to withCanonicalEnforcement.");
+          process.exit(1);
+        }
+
+        // Route-specific handler invocation failure
+        if (errorData.classification === "engagements_handler_invocation_failed") {
+          console.log("❌ ENGAGEMENTS_HANDLER_INVOCATION_FAILED");
           console.log("");
-          console.log("Fix: Wrap GET handler body in try-catch that converts all errors");
-          console.log("to ClassifiedApiError with proper stage classification.");
+          console.log("Route-specific handler failure. Raw error escaped classification:");
+          console.log(`   ErrorName: ${errorData.errorName || "unknown"}`);
+          console.log("");
+          console.log("Fix: Find the raw error source (check errorName).");
+          console.log("Ensure all code paths in handler throw ClassifiedApiError.");
           process.exit(1);
         }
 
