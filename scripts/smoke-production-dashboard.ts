@@ -353,6 +353,115 @@ async function smokeTest(): Promise<void> {
             console.log(`   RouteVersion: ${errorData.routeVersion}`);
             console.log(`   EngagementsServiceVersion: ${errorData.engagementsServiceVersion}`);
             console.log("");
+
+            // TASK D: If P2007, call probe endpoint to identify exact failing operation
+            if (errorData.prismaCode === "P2007") {
+              console.log("🔍 Prisma Error P2007 detected - Running diagnostic probes...");
+              console.log("");
+
+              try {
+                const probeResponse = await fetch(
+                  `${BASE_URL}/api/internal/debug-engagements-p2007`,
+                  {
+                    headers: {
+                      "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+                    },
+                  }
+                );
+
+                if (probeResponse.status === 200) {
+                  const probeData = await probeResponse.json();
+                  const probes = probeData.probes || [];
+
+                  console.log("P2007 Probe Results:");
+                  console.log("");
+                  console.log("┌─────────────────────────────────┬────────┐");
+                  console.log("│ Probe Name                      │ Status │");
+                  console.log("├─────────────────────────────────┼────────┤");
+
+                  for (const probe of probes) {
+                    const name = probe.name.padEnd(31);
+                    const status = probe.status === "pass" ? "✅ PASS" : "❌ FAIL";
+                    console.log(`│ ${name} │ ${status.padEnd(6)} │`);
+
+                    if (probe.status === "fail") {
+                      if (probe.prismaCode) {
+                        console.log(`│   └─ prismaCode: ${probe.prismaCode}`);
+                      }
+                      if (probe.safeMessage) {
+                        console.log(
+                          `│   └─ message: ${probe.safeMessage.substring(0, 40)}`
+                        );
+                      }
+                      if (probe.driverAdapterErrorName) {
+                        console.log(
+                          `│   └─ adapterError: ${probe.driverAdapterErrorName}`
+                        );
+                      }
+                    }
+                  }
+
+                  console.log("└─────────────────────────────────┴────────┘");
+                  console.log("");
+
+                  // TASK E: Decision tree analysis
+                  const countFailed = probes.find(
+                    (p) => p.name === "probe_01_count_minimal"
+                  )?.status === "fail";
+                  const findFirstIdFailed = probes.find(
+                    (p) => p.name === "probe_02_findFirst_id_only"
+                  )?.status === "fail";
+                  const findManyIdFailed = probes.find(
+                    (p) => p.name === "probe_03_findMany_id_only"
+                  )?.status === "fail";
+                  const relationFailed = probes.find(
+                    (p) => p.name === "probe_06_relation_only"
+                  )?.status === "fail";
+
+                  console.log("Diagnosis:");
+                  if (countFailed && findFirstIdFailed && findManyIdFailed) {
+                    console.log(
+                      "   ❌ Basic model/where clause broken (affects count, findFirst, findMany)"
+                    );
+                    console.log(
+                      "   Issue: workspaceId filter or base engagement model issue"
+                    );
+                  } else if (
+                    !countFailed &&
+                    !findFirstIdFailed &&
+                    !findManyIdFailed &&
+                    relationFailed
+                  ) {
+                    console.log("   ❌ Relation failed but basic queries work");
+                    console.log("   Issue: clientAccount relation issue");
+                  } else if (!relationFailed && probes.some((p) => p.name.includes("select") && p.status === "fail")) {
+                    console.log("   ❌ Specific field in select failing");
+                    console.log("   Issue: One of these fields invalid: healthStatus, interventionMode, serviceTier");
+                  } else if (
+                    probes.find((p) => p.name === "probe_07_full_select")
+                      ?.status === "fail"
+                  ) {
+                    console.log("   ❌ Full select fails but parts work");
+                    console.log("   Issue: Service mapper combining valid fields incorrectly");
+                  } else {
+                    console.log("   ❌ Unexpected probe pattern");
+                  }
+
+                  process.exit(1);
+                } else {
+                  console.log(
+                    `❌ Probe endpoint failed with status ${probeResponse.status}`
+                  );
+                  process.exit(1);
+                }
+              } catch (probeError) {
+                console.log(
+                  `❌ Probe request failed: ${probeError instanceof Error ? probeError.message : String(probeError)}`
+                );
+                process.exit(1);
+              }
+            }
+
             console.log("Next action: Fix the exact Prisma code.");
             process.exit(1);
           }

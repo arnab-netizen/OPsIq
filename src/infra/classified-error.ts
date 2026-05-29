@@ -113,6 +113,27 @@ export function extractSafePrismaError(error: unknown): Record<string, unknown> 
     if (keys.length > 0) {
       result.safeMetaKeys = keys.slice(0, 10); // Limit to 10 keys
     }
+
+    // Extract safe driver adapter error details if present
+    if (obj.meta.driverAdapterError && typeof obj.meta.driverAdapterError === "object") {
+      const adapterError = obj.meta.driverAdapterError as any;
+      if (typeof adapterError.name === "string") {
+        result.driverAdapterErrorName = adapterError.name;
+      }
+      if (typeof adapterError.code === "string" || typeof adapterError.code === "number") {
+        result.driverAdapterErrorCode = adapterError.code;
+      }
+      if (typeof adapterError.message === "string") {
+        // First line only, sanitize secrets
+        const msg = adapterError.message.split("\n")[0];
+        const safe = msg
+          .replace(/postgres:\/\/[^\s]+/, "postgres://***")
+          .replace(/password[=:]\S+/gi, "password=***")
+          .replace(/token[=:]\S+/gi, "token=***")
+          .replace(/key[=:]\S+/gi, "key=***");
+        result.driverAdapterErrorMessage = safe.slice(0, 300);
+      }
+    }
   }
 
   // Prisma client version
@@ -165,6 +186,27 @@ export function extractSafeKnownError(error: unknown): Record<string, unknown> {
     const keys = Object.keys(obj.meta as Record<string, unknown>);
     if (keys.length > 0) {
       result.safeMetaKeys = keys.slice(0, 10); // Limit to 10 keys
+    }
+
+    // Extract safe driver adapter error details if present
+    if (obj.meta.driverAdapterError && typeof obj.meta.driverAdapterError === "object") {
+      const adapterError = obj.meta.driverAdapterError as any;
+      if (typeof adapterError.name === "string") {
+        result.driverAdapterErrorName = adapterError.name;
+      }
+      if (typeof adapterError.code === "string" || typeof adapterError.code === "number") {
+        result.driverAdapterErrorCode = adapterError.code;
+      }
+      if (typeof adapterError.message === "string") {
+        // First line only, sanitize secrets
+        const msg = adapterError.message.split("\n")[0];
+        const safe = msg
+          .replace(/postgres:\/\/[^\s]+/, "postgres://***")
+          .replace(/password[=:]\S+/gi, "password=***")
+          .replace(/token[=:]\S+/gi, "token=***")
+          .replace(/key[=:]\S+/gi, "key=***");
+        result.driverAdapterErrorMessage = safe.slice(0, 300);
+      }
     }
   }
 
