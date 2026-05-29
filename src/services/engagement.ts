@@ -22,6 +22,9 @@ import { requireServiceContext } from "@/lib/service-auth";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordEngagementCreationUsage } from "@/services/usage.service";
 
+// Service version for diagnostics
+const ENGAGEMENTS_SERVICE_VERSION = "engagements-service-prisma-debug-v1";
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export interface CreateEngagementInput {
@@ -489,10 +492,12 @@ export async function listEngagements(
         500,
         error
       );
-      // Add safe Prisma details for diagnostics
-      if (Object.keys(safeDetails).length > 0) {
-        (classifiedError as any).safeDetails = safeDetails;
-      }
+      // Add safe Prisma details with operation context for diagnostics
+      classifiedError.safeDetails = {
+        ...safeDetails,
+        failingOperation: "engagement.findMany",
+        engagementsServiceVersion: ENGAGEMENTS_SERVICE_VERSION
+      };
       throw classifiedError;
     }
 
@@ -526,10 +531,12 @@ export async function listEngagements(
         500,
         error
       );
-      // Add safe Prisma details for diagnostics
-      if (Object.keys(safeDetails).length > 0) {
-        (classifiedError as any).safeDetails = safeDetails;
-      }
+      // Add safe Prisma details with operation context for diagnostics
+      classifiedError.safeDetails = {
+        ...safeDetails,
+        failingOperation: "engagement.count",
+        engagementsServiceVersion: ENGAGEMENTS_SERVICE_VERSION
+      };
       throw classifiedError;
     }
 

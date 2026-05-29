@@ -86,11 +86,12 @@ export function extractSafePrismaError(error: unknown): Record<string, unknown> 
   // Get first line of message only
   if (typeof obj.message === "string") {
     const firstLine = obj.message.split("\n")[0];
-    // Remove query details if present
+    // Remove query details if present (sanitize field/arg names)
     const safeMessage = firstLine
-      .replace(/Unknown arg `\w+` in.*/, "Unknown field in query")
-      .replace(/`\w+` doesn't exist/, "Field doesn't exist")
-      .replace(/Unknown field name/, "Unknown field");
+      .replace(/Unknown arg `[^`]*` in.*/, "Unknown field in query")
+      .replace(/Unknown field `[^`]*` in.*/, "Unknown field in model")
+      .replace(/`[^`]*` doesn't exist/, "Field doesn't exist")
+      .replace(/Unknown field name.*/, "Unknown field");
     if (safeMessage.length > 0) {
       result.safeMessage = safeMessage;
     }

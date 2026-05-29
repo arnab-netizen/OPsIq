@@ -189,14 +189,36 @@ async function smokeTest(): Promise<void> {
         if (errorData.errorName) {
           console.log(`   ErrorName: ${errorData.errorName}`);
         }
+        if (errorData.failingOperation) {
+          console.log(`   FailingOperation: ${errorData.failingOperation}`);
+        }
         if (errorData.prismaCode) {
           console.log(`   PrismaCode: ${errorData.prismaCode}`);
         }
         if (errorData.safeMessage) {
           console.log(`   SafeMessage: ${errorData.safeMessage}`);
         }
+        if (errorData.engagementsServiceVersion) {
+          console.log(`   EngagementsServiceVersion: ${errorData.engagementsServiceVersion}`);
+        }
         console.log(`   Error: ${errorData.error}`);
         console.log("");
+
+        // CRITICAL: If Prisma error, must have prismaCode
+        if (errorData.errorName === "PrismaClientKnownRequestError") {
+          if (!errorData.prismaCode) {
+            console.log("❌ PRISMA_CODE_MISSING");
+            console.log("");
+            console.log("CRITICAL: PrismaClientKnownRequestError occurred but prismaCode was not propagated.");
+            console.log("This means the error detail propagation chain is broken.");
+            console.log(`   CorrelationId: ${errorData.correlationId}`);
+            console.log(`   Classification: ${errorData.classification}`);
+            console.log(`   Stage: ${errorData.stage}`);
+            console.log(`   FailingOperation: ${errorData.failingOperation || "unknown"}`);
+            console.log("   EngagementsServiceVersion: " + (errorData.engagementsServiceVersion || "NOT_INCLUDED"));
+            process.exit(1);
+          }
+        }
 
         // Generic handler_invocation_failed is a regression
         if (errorData.classification === "handler_invocation_failed") {

@@ -579,14 +579,14 @@ export function withCanonicalEnforcement(
         responseBody.operation = operationName;
       }
 
-      // Include safe Prisma details if available
+      // Include safe Prisma details if available (allowlisted keys only)
       const safeDetails = (classifiedError as any).safeDetails;
       if (safeDetails && typeof safeDetails === "object") {
-        if (safeDetails.prismaCode) {
-          responseBody.prismaCode = safeDetails.prismaCode;
-        }
-        if (safeDetails.safeMessage) {
-          responseBody.safeMessage = safeDetails.safeMessage;
+        const allowlistedKeys = ["prismaCode", "safeMessage", "failingOperation", "engagementsServiceVersion"];
+        for (const key of allowlistedKeys) {
+          if (safeDetails[key] !== undefined && safeDetails[key] !== null) {
+            responseBody[key] = safeDetails[key];
+          }
         }
       }
 
