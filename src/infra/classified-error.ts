@@ -123,6 +123,9 @@ export function extractSafePrismaError(error: unknown): Record<string, unknown> 
       if (typeof adapterError.code === "string" || typeof adapterError.code === "number") {
         result.driverAdapterErrorCode = adapterError.code;
       }
+      if (typeof adapterError.kind === "string") {
+        result.driverAdapterErrorKind = adapterError.kind;
+      }
       if (typeof adapterError.message === "string") {
         // First line only, sanitize secrets
         const msg = adapterError.message.split("\n")[0];
@@ -132,6 +135,36 @@ export function extractSafePrismaError(error: unknown): Record<string, unknown> 
           .replace(/token[=:]\S+/gi, "token=***")
           .replace(/key[=:]\S+/gi, "key=***");
         result.driverAdapterErrorMessage = safe.slice(0, 300);
+      }
+
+      // Extract cause details if present
+      if (adapterError.cause && typeof adapterError.cause === "object") {
+        const cause = adapterError.cause as any;
+        if (typeof cause.name === "string") {
+          result.driverAdapterErrorCauseName = cause.name;
+        }
+        if (typeof cause.code === "string" || typeof cause.code === "number") {
+          result.driverAdapterErrorCauseCode = cause.code;
+        }
+        if (typeof cause.message === "string") {
+          const msg = cause.message.split("\n")[0];
+          const safe = msg
+            .replace(/postgres:\/\/[^\s]+/, "postgres://***")
+            .replace(/password[=:]\S+/gi, "password=***")
+            .replace(/token[=:]\S+/gi, "token=***")
+            .replace(/key[=:]\S+/gi, "key=***");
+          result.driverAdapterErrorCauseMessage = safe.slice(0, 300);
+        }
+      }
+
+      // List enumerable keys for diagnosis
+      try {
+        const adapterKeys = Object.keys(adapterError);
+        if (adapterKeys.length > 0) {
+          result.driverAdapterErrorKeys = adapterKeys.slice(0, 10);
+        }
+      } catch {
+        // Ignore if keys enumeration fails
       }
     }
   }
@@ -197,6 +230,9 @@ export function extractSafeKnownError(error: unknown): Record<string, unknown> {
       if (typeof adapterError.code === "string" || typeof adapterError.code === "number") {
         result.driverAdapterErrorCode = adapterError.code;
       }
+      if (typeof adapterError.kind === "string") {
+        result.driverAdapterErrorKind = adapterError.kind;
+      }
       if (typeof adapterError.message === "string") {
         // First line only, sanitize secrets
         const msg = adapterError.message.split("\n")[0];
@@ -206,6 +242,36 @@ export function extractSafeKnownError(error: unknown): Record<string, unknown> {
           .replace(/token[=:]\S+/gi, "token=***")
           .replace(/key[=:]\S+/gi, "key=***");
         result.driverAdapterErrorMessage = safe.slice(0, 300);
+      }
+
+      // Extract cause details if present
+      if (adapterError.cause && typeof adapterError.cause === "object") {
+        const cause = adapterError.cause as any;
+        if (typeof cause.name === "string") {
+          result.driverAdapterErrorCauseName = cause.name;
+        }
+        if (typeof cause.code === "string" || typeof cause.code === "number") {
+          result.driverAdapterErrorCauseCode = cause.code;
+        }
+        if (typeof cause.message === "string") {
+          const msg = cause.message.split("\n")[0];
+          const safe = msg
+            .replace(/postgres:\/\/[^\s]+/, "postgres://***")
+            .replace(/password[=:]\S+/gi, "password=***")
+            .replace(/token[=:]\S+/gi, "token=***")
+            .replace(/key[=:]\S+/gi, "key=***");
+          result.driverAdapterErrorCauseMessage = safe.slice(0, 300);
+        }
+      }
+
+      // List enumerable keys for diagnosis
+      try {
+        const adapterKeys = Object.keys(adapterError);
+        if (adapterKeys.length > 0) {
+          result.driverAdapterErrorKeys = adapterKeys.slice(0, 10);
+        }
+      } catch {
+        // Ignore if keys enumeration fails
       }
     }
   }

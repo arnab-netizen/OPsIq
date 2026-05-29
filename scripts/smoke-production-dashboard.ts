@@ -404,49 +404,149 @@ async function smokeTest(): Promise<void> {
                   console.log("└─────────────────────────────────┴────────┘");
                   console.log("");
 
-                  // TASK E: Decision tree analysis
+                  // Print raw catalog results
+                  const rawCatalog = probeData.rawCatalog || [];
+                  if (rawCatalog.length > 0) {
+                    console.log("Raw SQL Catalog Results:");
+                    console.log("");
+                    for (const result of rawCatalog) {
+                      const status = result.status === "pass" ? "✅" : "❌";
+                      console.log(`${status} ${result.name}`);
+                      if (result.message) {
+                        console.log(`   └─ ${result.message}`);
+                      }
+                      if (result.data) {
+                        if (result.data.database) {
+                          console.log(`   └─ database: ${result.data.database}`);
+                        }
+                        if (result.data.tables) {
+                          console.log(
+                            `   └─ tables: ${(result.data.tables as string[]).join(", ")}`
+                          );
+                        }
+                        if (result.data.columns) {
+                          const cols = result.data.columns as Array<{ name: string; type: string }>;
+                          console.log(
+                            `   └─ columns: ${cols.map((c) => `${c.name}:${c.type}`).join(", ")}`
+                          );
+                        }
+                        if (result.data.count !== undefined) {
+                          console.log(`   └─ count: ${result.data.count}`);
+                        }
+                        if (result.data.found) {
+                          console.log(`   └─ found: ${(result.data.found as string[]).join(", ")}`);
+                        }
+                        if (result.data.missing && (result.data.missing as string[]).length > 0) {
+                          console.log(
+                            `   └─ missing columns: ${(result.data.missing as string[]).join(", ")}`
+                          );
+                        }
+                      }
+                    }
+                    console.log("");
+                  }
+
+                  // TASK E: Enhanced decision tree analysis
+                  const noWhereCountFailed = probes.find(
+                    (p) => p.name === "probe_00a_count_no_where"
+                  )?.status === "fail";
+                  const emptyWhereCountFailed = probes.find(
+                    (p) => p.name === "probe_00b_count_empty_where"
+                  )?.status === "fail";
+                  const noWhereFindFirstIdFailed = probes.find(
+                    (p) => p.name === "probe_00c_findFirst_id_no_where"
+                  )?.status === "fail";
+                  const noWhereFindManyIdFailed = probes.find(
+                    (p) => p.name === "probe_00d_findMany_id_no_where"
+                  )?.status === "fail";
                   const countFailed = probes.find(
                     (p) => p.name === "probe_01_count_minimal"
                   )?.status === "fail";
-                  const findFirstIdFailed = probes.find(
-                    (p) => p.name === "probe_02_findFirst_id_only"
+
+                  // Check raw catalog results
+                  const hasEngagementTable = rawCatalog.some(
+                    (r) => r.name === "raw_02_find_engagement_tables" && r.status === "pass"
+                  );
+                  const missingRequiredColumns = rawCatalog.find(
+                    (r) => r.name === "raw_06_required_columns_check"
                   )?.status === "fail";
-                  const findManyIdFailed = probes.find(
-                    (p) => p.name === "probe_03_findMany_id_only"
-                  )?.status === "fail";
-                  const relationFailed = probes.find(
-                    (p) => p.name === "probe_06_relation_only"
+                  const workspaceIdMissing = rawCatalog.find(
+                    (r) => r.name === "raw_05_workspaceId_column_check"
                   )?.status === "fail";
 
-                  console.log("Diagnosis:");
-                  if (countFailed && findFirstIdFailed && findManyIdFailed) {
+                  console.log("Decision Tree Analysis:");
+                  console.log("");
+
+                  let classification = "unknown_p2007_pattern";
+
+                  if (noWhereCountFailed && hasEngagementTable) {
+                    classification = "base_engagement_model_or_adapter_failure";
                     console.log(
-                      "   ❌ Basic model/where clause broken (affects count, findFirst, findMany)"
+                      "❌ CLASSIFICATION: base_engagement_model_or_adapter_failure"
                     );
                     console.log(
-                      "   Issue: workspaceId filter or base engagement model issue"
+                      "   No-where count fails but table exists in raw catalog"
+                    );
+                    console.log(
+                      "   Issue: Prisma model/adapter cannot read base Engagement table"
+                    );
+                  } else if (noWhereCountFailed && !hasEngagementTable) {
+                    classification = "engagement_table_missing_or_mapping_wrong";
+                    console.log(
+                      "❌ CLASSIFICATION: engagement_table_missing_or_mapping_wrong"
+                    );
+                    console.log("   No-where count fails AND table missing in raw catalog");
+                    console.log(
+                      "   Issue: Engagement table missing or @@map annotation wrong in schema"
                     );
                   } else if (
+                    !noWhereCountFailed &&
+                    !emptyWhereCountFailed &&
+                    countFailed
+                  ) {
+                    classification = "workspaceId_column_mapping_or_type_failure";
+                    console.log(
+                      "❌ CLASSIFICATION: workspaceId_column_mapping_or_type_failure"
+                    );
+                    console.log(
+                      "   No-where count passes but workspaceId filter count fails"
+                    );
+                    console.log(
+                      "   Issue: workspaceId column mapping, type, or value mismatch"
+                    );
+                  } else if (missingRequiredColumns) {
+                    classification = "production_schema_missing_columns";
+                    console.log(
+                      "❌ CLASSIFICATION: production_schema_missing_columns"
+                    );
+                    console.log(
+                      "   Raw catalog found missing required columns in Engagement table"
+                    );
+                    console.log(
+                      "   Issue: Run migrations or seed script to create missing columns"
+                    );
+                  } else if (
+                    !noWhereCountFailed &&
                     !countFailed &&
-                    !findFirstIdFailed &&
-                    !findManyIdFailed &&
-                    relationFailed
+                    noWhereFindFirstIdFailed
                   ) {
-                    console.log("   ❌ Relation failed but basic queries work");
-                    console.log("   Issue: clientAccount relation issue");
-                  } else if (!relationFailed && probes.some((p) => p.name.includes("select") && p.status === "fail")) {
-                    console.log("   ❌ Specific field in select failing");
-                    console.log("   Issue: One of these fields invalid: healthStatus, interventionMode, serviceTier");
-                  } else if (
-                    probes.find((p) => p.name === "probe_07_full_select")
-                      ?.status === "fail"
-                  ) {
-                    console.log("   ❌ Full select fails but parts work");
-                    console.log("   Issue: Service mapper combining valid fields incorrectly");
+                    classification = "prisma_adapter_or_generated_client_mapping_failure";
+                    console.log(
+                      "❌ CLASSIFICATION: prisma_adapter_or_generated_client_mapping_failure"
+                    );
+                    console.log(
+                      "   Count passes but findFirst with id-only select fails"
+                    );
+                    console.log(
+                      "   Issue: Prisma adapter cannot decode row into id field"
+                    );
                   } else {
-                    console.log("   ❌ Unexpected probe pattern");
+                    console.log("❌ CLASSIFICATION: unexpected_p2007_pattern");
+                    console.log("   Probe pattern does not match known classifications");
                   }
 
+                  console.log("");
+                  console.log(`Result: ${classification}`);
                   process.exit(1);
                 } else {
                   console.log(
