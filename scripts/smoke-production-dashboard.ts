@@ -189,6 +189,15 @@ async function smokeTest(): Promise<void> {
         if (errorData.errorName) {
           console.log(`   ErrorName: ${errorData.errorName}`);
         }
+        if (errorData.routeVersion) {
+          console.log(`   RouteVersion: ${errorData.routeVersion}`);
+        }
+        if (errorData.serviceImportPath) {
+          console.log(`   ServiceImportPath: ${errorData.serviceImportPath}`);
+        }
+        if (errorData.handlerName) {
+          console.log(`   HandlerName: ${errorData.handlerName}`);
+        }
         if (errorData.failingOperation) {
           console.log(`   FailingOperation: ${errorData.failingOperation}`);
         }

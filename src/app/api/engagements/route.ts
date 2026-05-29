@@ -36,6 +36,11 @@ const listEngagementsSchema = paginationSchema.extend({
   search: z.string().optional(),
 });
 
+// Route version for diagnostics
+const ROUTE_VERSION = "engagements-route-debug-v1";
+const SERVICE_IMPORT_PATH = "@/services/engagement";
+const HANDLER_NAME = "engagementsGetHandler";
+
 // Explicit safe handler function
 // Must match wrapper signature: handler(ctx: CanonicalAuthContext, params: Record<string, string>)
 async function engagementsGetHandler(
@@ -74,7 +79,10 @@ async function engagementsGetHandler(
       );
     }
 
-    // Stage 3: Call service
+    // Stage 3: Before service call
+    stage = "before_service_call";
+
+    // Stage 4: Call service
     stage = "service_call";
     let result;
     try {
@@ -88,16 +96,23 @@ async function engagementsGetHandler(
       // Otherwise wrap unknown error with service_call stage
       const errorMsg =
         error instanceof Error ? error.message : String(error);
-      throw new ClassifiedApiError(
+      const classifiedError = new ClassifiedApiError(
         errorMsg,
         "engagements_service_call_failed",
         stage,
         500,
         error
       );
+      // Add route context for diagnostics
+      classifiedError.safeDetails = {
+        routeVersion: ROUTE_VERSION,
+        serviceImportPath: SERVICE_IMPORT_PATH,
+        handlerName: HANDLER_NAME,
+      };
+      throw classifiedError;
     }
 
-    // Stage 4: Validate response shape
+    // Stage 5: Validate response shape
     stage = "response_validation";
     if (!result || typeof result !== "object") {
       throw new ClassifiedApiError(
@@ -124,25 +139,44 @@ async function engagementsGetHandler(
       );
     }
 
-    // Stage 5: Return response
+    // Stage 6: Return response
     stage = "response_return";
-    return Response.json(result);
+    return Response.json({
+      ...result,
+      _routeVersion: ROUTE_VERSION,
+    });
   } catch (error) {
     // Catch ANY error that escaped the inner handlers
     // Ensure it's always ClassifiedApiError before throwing to wrapper
     if (hasClassification(error)) {
-      // Preserve inner classification
-      throw error;
+      // Preserve inner classification and add route context if missing
+      const classifiedError = error as any;
+      if (!classifiedError.safeDetails) {
+        classifiedError.safeDetails = {};
+      }
+      if (!classifiedError.safeDetails.routeVersion) {
+        classifiedError.safeDetails.routeVersion = ROUTE_VERSION;
+      }
+      if (!classifiedError.safeDetails.handlerName) {
+        classifiedError.safeDetails.handlerName = HANDLER_NAME;
+      }
+      throw classifiedError;
     }
     // Wrap any unexpected raw error
     const msg = error instanceof Error ? error.message : String(error);
-    throw new ClassifiedApiError(
+    const classifiedError = new ClassifiedApiError(
       `GET /api/engagements failed at ${stage}: ${msg}`,
       `engagements_${stage}_failed`,
       stage,
       500,
       error
     );
+    classifiedError.safeDetails = {
+      routeVersion: ROUTE_VERSION,
+      serviceImportPath: SERVICE_IMPORT_PATH,
+      handlerName: HANDLER_NAME,
+    };
+    throw classifiedError;
   }
 }
 

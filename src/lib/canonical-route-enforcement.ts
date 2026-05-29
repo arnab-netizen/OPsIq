@@ -582,7 +582,15 @@ export function withCanonicalEnforcement(
       // Include safe Prisma details if available (allowlisted keys only)
       const safeDetails = (classifiedError as any).safeDetails;
       if (safeDetails && typeof safeDetails === "object") {
-        const allowlistedKeys = ["prismaCode", "safeMessage", "failingOperation", "engagementsServiceVersion"];
+        const allowlistedKeys = [
+          "prismaCode",
+          "safeMessage",
+          "failingOperation",
+          "engagementsServiceVersion",
+          "routeVersion",
+          "serviceImportPath",
+          "handlerName",
+        ];
         for (const key of allowlistedKeys) {
           if (safeDetails[key] !== undefined && safeDetails[key] !== null) {
             responseBody[key] = safeDetails[key];
