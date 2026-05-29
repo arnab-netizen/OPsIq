@@ -38,75 +38,104 @@ const listEngagementsSchema = paginationSchema.extend({
 
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    // Stage 1: Extract context
-    const workspaceId = ctx.verifiedWorkspaceId;
-    if (!workspaceId) {
-      throw new ClassifiedApiError(
-        "workspace context missing",
-        "workspace_context_failed",
-        "workspace_context"
-      );
-    }
-
-    // Stage 2: Parse query parameters
-    let params;
+    let stage = "route_start";
     try {
-      params = parseSearchParams(ctx.request?.url || "", listEngagementsSchema);
-    } catch (error) {
-      throw new ClassifiedApiError(
-        error instanceof Error ? error.message : "invalid query parameters",
-        "parse_query_failed",
-        "parse_query"
-      );
-    }
+      // Stage 1: Extract context
+      stage = "workspace_context";
+      const workspaceId = ctx.verifiedWorkspaceId;
+      if (!workspaceId) {
+        throw new ClassifiedApiError(
+          "workspace context missing",
+          "engagements_workspace_context_failed",
+          stage,
+          403
+        );
+      }
 
-    // Stage 3: Call service
-    let result;
-    try {
-      const hasAccess = ctx.policy ? hasInternalAccess(ctx.policy) : false;
-      result = await listEngagements(workspaceId, params, hasAccess);
+      // Stage 2: Parse query parameters
+      stage = "parse_query";
+      let params;
+      try {
+        params = parseSearchParams(ctx.request?.url || "", listEngagementsSchema);
+      } catch (error) {
+        throw new ClassifiedApiError(
+          error instanceof Error ? error.message : "invalid query parameters",
+          "engagements_parse_query_failed",
+          stage,
+          400
+        );
+      }
+
+      // Stage 3: Call service
+      stage = "service_call";
+      let result;
+      try {
+        const hasAccess = ctx.policy ? hasInternalAccess(ctx.policy) : false;
+        result = await listEngagements(workspaceId, params, hasAccess);
+      } catch (error) {
+        // If service throws ClassifiedApiError, preserve it
+        if (error instanceof ClassifiedApiError) {
+          throw error;
+        }
+        // Otherwise wrap unknown error with service_call stage
+        const errorMsg =
+          error instanceof Error ? error.message : String(error);
+        throw new ClassifiedApiError(
+          errorMsg,
+          "engagements_service_call_failed",
+          stage,
+          500,
+          error
+        );
+      }
+
+      // Stage 4: Validate response shape
+      stage = "response_validation";
+      if (!result || typeof result !== "object") {
+        throw new ClassifiedApiError(
+          "service returned invalid response shape",
+          "engagements_response_mapping_failed",
+          "response_mapping",
+          500
+        );
+      }
+      if (!Array.isArray(result.engagements)) {
+        throw new ClassifiedApiError(
+          "engagements must be array",
+          "engagements_response_validation_failed",
+          stage,
+          500
+        );
+      }
+      if (typeof result.total !== "number") {
+        throw new ClassifiedApiError(
+          "total must be number",
+          "engagements_response_validation_failed",
+          stage,
+          500
+        );
+      }
+
+      // Stage 5: Return response
+      stage = "response_return";
+      return Response.json(result);
     } catch (error) {
-      // If service throws ClassifiedApiError, preserve it
+      // Catch ANY error that escaped the inner handlers
+      // Ensure it's always ClassifiedApiError before throwing to wrapper
       if (error instanceof ClassifiedApiError) {
+        // Preserve inner classification
         throw error;
       }
-      // Otherwise wrap unknown error
-      const errorMsg =
-        error instanceof Error ? error.message : String(error);
+      // Wrap any unexpected raw error
+      const msg = error instanceof Error ? error.message : String(error);
       throw new ClassifiedApiError(
-        errorMsg,
-        "service_call_failed",
-        "service_call",
+        `GET /api/engagements failed at ${stage}: ${msg}`,
+        `engagements_${stage}_failed`,
+        stage,
         500,
         error
       );
     }
-
-    // Stage 4: Validate response shape
-    if (!result || typeof result !== "object") {
-      throw new ClassifiedApiError(
-        "service returned invalid response shape",
-        "response_mapping_failed",
-        "response_mapping"
-      );
-    }
-    if (!Array.isArray(result.engagements)) {
-      throw new ClassifiedApiError(
-        "engagements must be array",
-        "response_validation_failed",
-        "response_validation"
-      );
-    }
-    if (typeof result.total !== "number") {
-      throw new ClassifiedApiError(
-        "total must be number",
-        "response_validation_failed",
-        "response_validation"
-      );
-    }
-
-    // Stage 5: Return response
-    return Response.json(result);
   },
   { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
 );

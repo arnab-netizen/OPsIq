@@ -432,107 +432,117 @@ export async function listEngagements(
   } = {},
   hasInternalAccess: boolean = false
 ) {
-  enforceWorkspaceId(workspaceId, "listEngagements", "engagement");
-
-  const { limit = 25, offset = 0, status, clientId, search } = params;
-
-  const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
-
-  const where = {
-    workspaceId,
-    ...visibilityFilter,
-    ...(status && { status }),
-    ...(clientId && { clientId }),
-    ...(search && {
-      OR: [
-        { title: { contains: search, mode: "insensitive" as const } },
-        { code: { contains: search, mode: "insensitive" as const } },
-      ],
-    }),
-  };
-
-  // Stage 1: Build where clause
-  if (!where) {
-    throw new ClassifiedApiError(
-      "failed to build query where clause",
-      "engagements_build_where_failed",
-      "build_where"
-    );
-  }
-
-  // Stage 2: Execute findMany
-  let engagements;
+  let stage = "service_start";
   try {
-    engagements = await db.engagement.findMany({
-      where,
-      select: engagementListSelect,
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: offset,
-    });
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    logger.error("listEngagements findMany failed", {
+    enforceWorkspaceId(workspaceId, "listEngagements", "engagement");
+
+    const { limit = 25, offset = 0, status, clientId, search } = params;
+
+    const visibilityFilter = hasInternalAccess ? { visibility: { in: ["internal", "client_visible"] } } : { visibility: "client_visible" };
+
+    stage = "build_where";
+    const where = {
       workspaceId,
-      errorName: error instanceof Error ? error.name : "unknown",
-      errorMessage: msg,
-    });
-    throw new ClassifiedApiError(
-      msg,
-      "engagements_find_many_failed",
-      "find_many",
-      500,
-      error
-    );
-  }
+      ...visibilityFilter,
+      ...(status && { status }),
+      ...(clientId && { clientId }),
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: "insensitive" as const } },
+          { code: { contains: search, mode: "insensitive" as const } },
+        ],
+      }),
+    };
 
-  // Stage 3: Validate findMany result
-  if (!Array.isArray(engagements)) {
-    throw new ClassifiedApiError(
-      "findMany did not return array",
-      "engagements_find_many_failed",
-      "find_many"
-    );
-  }
+    if (!where) {
+      throw new ClassifiedApiError(
+        "failed to build query where clause",
+        "engagements_build_where_failed",
+        stage
+      );
+    }
 
-  // Stage 4: Execute count
-  let total;
-  try {
-    total = await db.engagement.count({ where });
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    logger.error("listEngagements count failed", {
-      workspaceId,
-      errorName: error instanceof Error ? error.name : "unknown",
-      errorMessage: msg,
-    });
-    throw new ClassifiedApiError(
-      msg,
-      "engagements_count_failed",
-      "count",
-      500,
-      error
-    );
-  }
+    // Stage 2: Execute findMany
+    stage = "find_many";
+    let engagements;
+    try {
+      engagements = await db.engagement.findMany({
+        where,
+        select: engagementListSelect,
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: offset,
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error("listEngagements findMany failed", {
+        workspaceId,
+        errorName: error instanceof Error ? error.name : "unknown",
+        errorMessage: msg,
+      });
+      throw new ClassifiedApiError(
+        msg,
+        "engagements_find_many_failed",
+        stage,
+        500,
+        error
+      );
+    }
 
-  // Stage 5: Validate count result
-  if (typeof total !== "number") {
-    throw new ClassifiedApiError(
-      "count did not return number",
-      "engagements_count_failed",
-      "count"
-    );
-  }
+    // Stage 3: Validate findMany result
+    if (!Array.isArray(engagements)) {
+      throw new ClassifiedApiError(
+        "findMany did not return array",
+        "engagements_find_many_failed",
+        stage
+      );
+    }
 
-  // Stage 6: Map response
-  try {
+    // Stage 4: Execute count
+    stage = "count";
+    let total;
+    try {
+      total = await db.engagement.count({ where });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      logger.error("listEngagements count failed", {
+        workspaceId,
+        errorName: error instanceof Error ? error.name : "unknown",
+        errorMessage: msg,
+      });
+      throw new ClassifiedApiError(
+        msg,
+        "engagements_count_failed",
+        stage,
+        500,
+        error
+      );
+    }
+
+    // Stage 5: Validate count result
+    if (typeof total !== "number") {
+      throw new ClassifiedApiError(
+        "count did not return number",
+        "engagements_count_failed",
+        stage
+      );
+    }
+
+    // Stage 6: Map response
+    stage = "map_response";
     return { engagements, total, limit, offset };
   } catch (error) {
+    // Catch ANY error that escaped inner handlers
+    // Ensure it's always ClassifiedApiError before throwing
+    if (error instanceof ClassifiedApiError) {
+      throw error;
+    }
+    // Wrap any unexpected raw error
     const msg = error instanceof Error ? error.message : String(error);
     throw new ClassifiedApiError(
-      msg,
-      "engagements_map_response_failed",
-      "map_response",
+      `listEngagements failed at ${stage}: ${msg}`,
+      `engagements_${stage}_failed`,
+      stage,
       500,
       error
     );

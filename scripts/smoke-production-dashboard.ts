@@ -187,16 +187,29 @@ async function smokeTest(): Promise<void> {
         console.log("");
 
         if (errorData.classification === "handler_invocation_failed") {
-          console.log("DIAGNOSIS: Canonical wrapper caught handler failure.");
-          console.log("This means the route/service did not throw ClassifiedApiError.");
-          console.log("The actual inner error classification was lost.");
+          console.log("❌ HANDLER_INVOCATION_FAILED");
           console.log("");
-          console.log("FIX: Ensure route/service throws ClassifiedApiError with");
-          console.log("proper stage at every failure point.");
-        } else {
-          console.log("This indicates an internal crash in the engagements API.");
-          console.log("Use the correlationId and stage to locate the issue in production logs.");
+          console.log("CRITICAL: Route/service allowed raw error to escape to wrapper.");
+          console.log("The route MUST wrap its handler body in try-catch to convert");
+          console.log("all errors to ClassifiedApiError before they reach the wrapper.");
+          console.log("");
+          console.log("Expected: classification starting with 'engagements_'");
+          console.log("Actual: handler_invocation_failed (outer wrapper caught raw error)");
+          console.log("");
+          console.log("Fix: Wrap GET handler body in try-catch that converts all errors");
+          console.log("to ClassifiedApiError with proper stage classification.");
+          process.exit(1);
         }
+
+        if (!errorData.classification || !errorData.classification.startsWith("engagements_")) {
+          console.log("❌ UNEXPECTED_CLASSIFICATION");
+          console.log(`   Got: ${errorData.classification}`);
+          console.log("   Expected: engagements_* classification");
+          process.exit(1);
+        }
+
+        console.log("This indicates an internal crash in the engagements API.");
+        console.log("Use the correlationId and stage to locate the issue in production logs.");
       } catch {
         const text = await engagementsResponse.text();
         console.log(`   Response: ${text.substring(0, 200)}`);
