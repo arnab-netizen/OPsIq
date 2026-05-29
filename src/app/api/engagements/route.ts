@@ -49,10 +49,22 @@ async function engagementsGetHandler(
 ) {
   let stage = "route_start";
 
+  // Helper: workspaceId shape diagnostics
+  function getUuidShapeDetails(value: unknown): { uuidLike: boolean; type: string; length?: number; sample?: string } {
+    const type = typeof value;
+    const sample = type === "string" && value ? `${(value as string).substring(0, 8)}...${(value as string).substring(Math.max(0, (value as string).length - 4))}` : undefined;
+    const length = type === "string" ? (value as string).length : undefined;
+    const uuidLike = type === "string" && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value as string);
+    return { type, length, uuidLike, sample };
+  }
+
+  let workspaceIdShape: { uuidLike: boolean; type: string; length?: number; sample?: string } = { uuidLike: false, type: "unknown" };
+
   try {
     // Stage 1: Extract context
     stage = "workspace_context";
     const workspaceId = ctx.verifiedWorkspaceId;
+    workspaceIdShape = getUuidShapeDetails(workspaceId);
     if (!workspaceId) {
       throw new ClassifiedApiError(
         "workspace context missing",
@@ -108,6 +120,7 @@ async function engagementsGetHandler(
         routeVersion: ROUTE_VERSION,
         serviceImportPath: SERVICE_IMPORT_PATH,
         handlerName: HANDLER_NAME,
+        workspaceIdShape,
       };
       throw classifiedError;
     }
@@ -175,6 +188,7 @@ async function engagementsGetHandler(
       routeVersion: ROUTE_VERSION,
       serviceImportPath: SERVICE_IMPORT_PATH,
       handlerName: HANDLER_NAME,
+      workspaceIdShape,
     };
     throw classifiedError;
   }

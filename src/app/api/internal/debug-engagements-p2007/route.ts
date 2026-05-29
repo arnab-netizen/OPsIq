@@ -464,59 +464,70 @@ export const GET = async (req: NextRequest) => {
 
       // RAW 06: Check for required engagement columns
       if (engagementTables.length > 0) {
-        const mainTable = engagementTables[0];
-        try {
-          const colsResult = await pool.query(
-            `SELECT column_name FROM information_schema.columns
-             WHERE table_schema = 'public' AND table_name = $1`,
-            [mainTable]
-          );
-          const columnNames = colsResult.rows.map((r) => r.column_name as string);
-          // Expected DB column names (snake_case) after Prisma @map translation
-          const expectedDbColumns = [
-            "id",
-            "workspace_id",
-            "client_id",
-            "code",
-            "title",
-            "status",
-            "health_status",
-            "intervention_mode",
-            "service_tier",
-            "created_at",
-            "updated_at",
-            "engagement_mode",
-            "intervention_phase",
-            "start_date",
-            "target_end_date",
-            "actual_end_date",
-            "owner_id",
-            "assigned_consultant_id",
-            "current_scope_version_id",
-            "parent_engagement_id",
-            "version",
-            "visibility",
-            "created_by",
-            "is_blocked",
-            "blocker_reason",
-            "blocked_at",
-          ];
-          const missing = expectedDbColumns.filter((f) => !columnNames.includes(f));
-          rawCatalogResults.push({
-            name: "raw_06_required_columns_check",
-            status: missing.length === 0 ? "pass" : "fail",
-            data: {
-              table: mainTable,
-              expectedDbColumns,
-              missing,
-              actual: columnNames,
-            },
-          });
-        } catch (error) {
+        // Explicitly find the "engagements" table (Engagement model), not engagement_memberships
+        const engagementsTable = engagementTables.find((t) => t === "engagements");
+        if (engagementsTable) {
+          try {
+            const colsResult = await pool.query(
+              `SELECT column_name FROM information_schema.columns
+               WHERE table_schema = 'public' AND table_name = $1`,
+              [engagementsTable]
+            );
+            // Normalize column names to lowercase for comparison
+            const columnNames = colsResult.rows.map((r) => (r.column_name as string).toLowerCase());
+            // Expected DB column names (snake_case) after Prisma @map translation
+            const expectedDbColumns = [
+              "id",
+              "code",
+              "title",
+              "client_id",
+              "service_tier",
+              "engagement_mode",
+              "status",
+              "health_status",
+              "intervention_mode",
+              "intervention_phase",
+              "description",
+              "start_date",
+              "target_end_date",
+              "actual_end_date",
+              "owner_id",
+              "assigned_consultant_id",
+              "current_scope_version_id",
+              "parent_engagement_id",
+              "version",
+              "visibility",
+              "created_by",
+              "created_at",
+              "updated_at",
+              "is_blocked",
+              "blocker_reason",
+              "blocked_at",
+              "workspace_id",
+            ];
+            const missing = expectedDbColumns.filter((f) => !columnNames.includes(f));
+            rawCatalogResults.push({
+              name: "raw_06_required_columns_check",
+              status: missing.length === 0 ? "pass" : "fail",
+              data: {
+                checkedTable: engagementsTable,
+                expectedColumns: expectedDbColumns.sort(),
+                missingColumns: missing.sort(),
+                foundColumns: columnNames.sort(),
+              },
+            });
+          } catch (error) {
+            rawCatalogResults.push({
+              name: "raw_06_required_columns_check",
+              status: "fail",
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
+        } else {
           rawCatalogResults.push({
             name: "raw_06_required_columns_check",
             status: "fail",
-            message: error instanceof Error ? error.message : String(error),
+            message: "engagements table not found (found: " + engagementTables.join(", ") + ")",
           });
         }
       }
@@ -525,8 +536,84 @@ export const GET = async (req: NextRequest) => {
     }
   }
 
+  // Helper: UUID shape diagnostics
+  function getUuidShapeDetails(value: unknown): { uuidLike: boolean; type: string; length?: number; sample?: string } {
+    const type = typeof value;
+    const sample = type === "string" && value ? `${(value as string).substring(0, 8)}...${(value as string).substring(Math.max(0, (value as string).length - 4))}` : undefined;
+    const length = type === "string" ? (value as string).length : undefined;
+    const uuidLike = type === "string" && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(value as string);
+    return { type, length, uuidLike, sample };
+  }
+
+  // TASK B: Add workspaceId shape diagnostics
+  const workspaceIdShape = getUuidShapeDetails(workspaceId);
+  const workspaceIdDiagnostic = {
+    name: "workspace_id_shape_diagnostic",
+    status: "info" as const,
+    data: {
+      workspaceId_from_probe_var: workspaceIdShape,
+      note: "workspaceId used for all Prisma filter operations in this probe",
+    },
+  };
+  results.push(workspaceIdDiagnostic as any);
+
+  // TASK C: Add raw SQL tests using actual workspaceId value
+  if (workspaceIdShape.uuidLike) {
+    // workspaceId is UUID-like, run raw SQL test
+    const rawPool = new Pool({ connectionString: databaseUrl });
+    try {
+      const rawCountResult = await rawPool.query(
+        `SELECT COUNT(*)::int AS count FROM public.engagements WHERE workspace_id = $1::uuid`,
+        [workspaceId]
+      );
+      rawCatalogResults.push({
+        name: "raw_07_raw_count_workspace_id_uuid_param",
+        status: "pass",
+        data: { count: rawCountResult.rows[0]?.count || 0 },
+      });
+    } catch (error) {
+      rawCatalogResults.push({
+        name: "raw_07_raw_count_workspace_id_uuid_param",
+        status: "fail",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+    await rawPool.end();
+  } else {
+    // workspaceId is not UUID-like, cannot use ::uuid cast
+    rawCatalogResults.push({
+      name: "raw_07_raw_count_workspace_id_uuid_param",
+      status: "fail",
+      data: {
+        reason: "workspaceId_not_uuid_like",
+        workspaceIdType: workspaceIdShape.type,
+        workspaceIdLength: workspaceIdShape.length,
+      },
+    });
+  }
+
+  // Count all workspace_ids (including NULL) to understand data shape
+  const catPool = new Pool({ connectionString: databaseUrl });
+  try {
+    const allWorkspaceIdsResult = await catPool.query(
+      `SELECT COUNT(*)::int AS count FROM public.engagements WHERE workspace_id IS NOT NULL`
+    );
+    rawCatalogResults.push({
+      name: "raw_08_count_non_null_workspace_ids",
+      status: "pass",
+      data: { countWithWorkspaceId: allWorkspaceIdsResult.rows[0]?.count || 0 },
+    });
+  } catch (error) {
+    rawCatalogResults.push({
+      name: "raw_08_count_non_null_workspace_ids",
+      status: "fail",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+  await catPool.end();
+
   // Log results
-  logger.info("P2007 probe results", { results, rawCatalogResults });
+  logger.info("P2007 probe results with workspaceId diagnostics", { results, rawCatalogResults });
 
   return NextResponse.json({
     diagnostic: "P2007 engagement probes with raw catalog",

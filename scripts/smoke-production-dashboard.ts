@@ -446,7 +446,7 @@ async function smokeTest(): Promise<void> {
                     console.log("");
                   }
 
-                  // TASK E: Enhanced decision tree analysis
+                  // TASK E: Enhanced decision tree analysis with workspaceIdShape
                   const noWhereCountFailed = probes.find(
                     (p) => p.name === "probe_00a_count_no_where"
                   )?.status === "fail";
@@ -463,6 +463,12 @@ async function smokeTest(): Promise<void> {
                     (p) => p.name === "probe_01_count_minimal"
                   )?.status === "fail";
 
+                  // Extract workspaceIdShape from diagnostic probe
+                  const workspaceIdShapeProbe = probes.find(
+                    (p) => p.name === "workspace_id_shape_diagnostic"
+                  ) as any;
+                  const workspaceIdShape = workspaceIdShapeProbe?.data?.workspaceId_from_probe_var;
+
                   // Check raw catalog results
                   const hasEngagementTable = rawCatalog.some(
                     (r) => r.name === "raw_02_find_engagement_tables" && r.status === "pass"
@@ -473,13 +479,61 @@ async function smokeTest(): Promise<void> {
                   const workspaceIdMissing = rawCatalog.find(
                     (r) => r.name === "raw_05_workspaceId_column_check"
                   )?.status === "fail";
+                  const rawRequiredColumnsCheck = rawCatalog.find(
+                    (r) => r.name === "raw_06_required_columns_check"
+                  ) as any;
+                  const rawWorkspaceIdUuidParam = rawCatalog.find(
+                    (r) => r.name === "raw_07_raw_count_workspace_id_uuid_param"
+                  ) as any;
+
+                  console.log("WorkspaceID Diagnostics:");
+                  if (workspaceIdShape) {
+                    console.log(`  UUID-like: ${workspaceIdShape.uuidLike ? "✅" : "❌"}`);
+                    console.log(`  Type: ${workspaceIdShape.type}`);
+                    console.log(`  Length: ${workspaceIdShape.length}`);
+                    if (workspaceIdShape.sample) {
+                      console.log(`  Sample: ${workspaceIdShape.sample}`);
+                    }
+                  }
+                  console.log("");
+
+                  if (rawRequiredColumnsCheck?.data?.checkedTable) {
+                    console.log(`Raw Catalog - Checked Table: ${rawRequiredColumnsCheck.data.checkedTable}`);
+                    if (rawRequiredColumnsCheck.data.missingColumns && (rawRequiredColumnsCheck.data.missingColumns as string[]).length > 0) {
+                      console.log(`  Missing columns: ${(rawRequiredColumnsCheck.data.missingColumns as string[]).join(", ")}`);
+                    } else {
+                      console.log("  All expected columns present");
+                    }
+                  }
+                  if (rawWorkspaceIdUuidParam) {
+                    console.log(`Raw SQL with workspaceId UUID param: ${rawWorkspaceIdUuidParam.status === "pass" ? "✅ PASS" : "❌ FAIL"}`);
+                    if (rawWorkspaceIdUuidParam.status === "fail" && rawWorkspaceIdUuidParam.data?.reason) {
+                      console.log(`  Reason: ${rawWorkspaceIdUuidParam.data.reason}`);
+                    }
+                  }
+                  console.log("");
 
                   console.log("Decision Tree Analysis:");
                   console.log("");
 
                   let classification = "unknown_p2007_pattern";
 
-                  if (noWhereCountFailed && hasEngagementTable) {
+                  // First check: workspaceId must be UUID-like
+                  if (workspaceIdShape && !workspaceIdShape.uuidLike) {
+                    classification = "workspace_context_id_not_uuid";
+                    console.log(
+                      "❌ CLASSIFICATION: workspace_context_id_not_uuid"
+                    );
+                    console.log(
+                      "   workspaceId from probe is not a valid UUID format"
+                    );
+                    console.log(
+                      "   Issue: ctx.verifiedWorkspaceId stores wrong value type (slug, name, or demo string instead of UUID)"
+                    );
+                    console.log(
+                      "   Fix: Trace auth/session creation and ensure verifiedWorkspaceId is Workspace.id UUID"
+                    );
+                  } else if (noWhereCountFailed && hasEngagementTable) {
                     classification = "base_engagement_model_or_adapter_failure";
                     console.log(
                       "❌ CLASSIFICATION: base_engagement_model_or_adapter_failure"
@@ -499,22 +553,7 @@ async function smokeTest(): Promise<void> {
                     console.log(
                       "   Issue: Engagement table missing or @@map annotation wrong in schema"
                     );
-                  } else if (
-                    !noWhereCountFailed &&
-                    !emptyWhereCountFailed &&
-                    countFailed
-                  ) {
-                    classification = "workspaceId_column_mapping_or_type_failure";
-                    console.log(
-                      "❌ CLASSIFICATION: workspaceId_column_mapping_or_type_failure"
-                    );
-                    console.log(
-                      "   No-where count passes but workspaceId filter count fails"
-                    );
-                    console.log(
-                      "   Issue: workspaceId column mapping, type, or value mismatch"
-                    );
-                  } else if (missingRequiredColumns) {
+                  } else if (rawRequiredColumnsCheck?.status === "fail") {
                     classification = "production_schema_missing_columns";
                     console.log(
                       "❌ CLASSIFICATION: production_schema_missing_columns"
@@ -523,8 +562,39 @@ async function smokeTest(): Promise<void> {
                       "   Raw catalog found missing required columns in Engagement table"
                     );
                     console.log(
-                      "   Issue: Run migrations or seed script to create missing columns"
+                      `   Missing: ${(rawRequiredColumnsCheck.data?.missingColumns || []).join(", ")}`
                     );
+                  } else if (
+                    !noWhereCountFailed &&
+                    !emptyWhereCountFailed &&
+                    countFailed &&
+                    workspaceIdShape?.uuidLike
+                  ) {
+                    // workspaceId is UUID-like, but raw SQL test will tell us if it's a DB type issue
+                    if (rawWorkspaceIdUuidParam?.status === "pass") {
+                      classification = "prisma_adapter_or_generated_mapping_failure";
+                      console.log(
+                        "❌ CLASSIFICATION: prisma_adapter_or_generated_mapping_failure"
+                      );
+                      console.log(
+                        "   Raw SQL with workspace_id UUID param PASSES"
+                      );
+                      console.log("   Prisma with workspaceId filter FAILS");
+                      console.log(
+                        "   Issue: Prisma adapter or generated client cannot map workspaceId field"
+                      );
+                    } else {
+                      classification = "workspace_id_value_or_db_type_failure";
+                      console.log(
+                        "❌ CLASSIFICATION: workspace_id_value_or_db_type_failure"
+                      );
+                      console.log(
+                        "   Both raw SQL and Prisma with workspaceId FAIL"
+                      );
+                      console.log(
+                        "   Issue: DB workspace_id column type mismatch or NULL value"
+                      );
+                    }
                   } else if (
                     !noWhereCountFailed &&
                     !countFailed &&
