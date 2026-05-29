@@ -544,7 +544,13 @@ export async function listEngagements(
 
     // Stage 6: Map response
     stage = "map_response";
-    return { engagements, total, limit, offset };
+    return {
+      engagements,
+      total,
+      limit,
+      offset,
+      _engagementsServiceVersion: "v1-2026-05-29"
+    };
   } catch (error) {
     // Catch ANY error that escaped inner handlers
     // Ensure it's always ClassifiedApiError before throwing

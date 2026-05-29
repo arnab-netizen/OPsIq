@@ -17,6 +17,7 @@ export class ClassifiedApiError extends Error {
   public readonly stage: string;
   public readonly statusCode: number;
   public readonly cause?: unknown;
+  public safeDetails?: Record<string, unknown>;
 
   constructor(
     message: string,
