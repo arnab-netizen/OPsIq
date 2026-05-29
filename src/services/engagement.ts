@@ -4,7 +4,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError, PlanLimitError } from "@/infra/errors";
-import { ClassifiedApiError } from "@/infra/classified-error";
+import { ClassifiedApiError, hasClassification } from "@/infra/classified-error";
 import {
   optimisticUpdate,
   withVersionCheck,
@@ -534,7 +534,7 @@ export async function listEngagements(
   } catch (error) {
     // Catch ANY error that escaped inner handlers
     // Ensure it's always ClassifiedApiError before throwing
-    if (error instanceof ClassifiedApiError) {
+    if (hasClassification(error)) {
       throw error;
     }
     // Wrap any unexpected raw error

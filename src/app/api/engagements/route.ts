@@ -14,7 +14,7 @@ import { SERVICE_TIERS, ENGAGEMENT_MODES, INTERVENTION_MODES } from "@/domain/co
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError, UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
-import { ClassifiedApiError } from "@/infra/classified-error";
+import { ClassifiedApiError, hasClassification } from "@/infra/classified-error";
 
 const createEngagementSchema = z.object({
   title: z.string().min(1),
@@ -73,8 +73,8 @@ export const GET = withCanonicalEnforcement(
         const hasAccess = ctx.policy ? hasInternalAccess(ctx.policy) : false;
         result = await listEngagements(workspaceId, params, hasAccess);
       } catch (error) {
-        // If service throws ClassifiedApiError, preserve it
-        if (error instanceof ClassifiedApiError) {
+        // If service throws classified error, preserve it
+        if (hasClassification(error)) {
           throw error;
         }
         // Otherwise wrap unknown error with service_call stage
@@ -122,7 +122,7 @@ export const GET = withCanonicalEnforcement(
     } catch (error) {
       // Catch ANY error that escaped the inner handlers
       // Ensure it's always ClassifiedApiError before throwing to wrapper
-      if (error instanceof ClassifiedApiError) {
+      if (hasClassification(error)) {
         // Preserve inner classification
         throw error;
       }

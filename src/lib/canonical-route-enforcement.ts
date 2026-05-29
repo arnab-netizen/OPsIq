@@ -41,7 +41,7 @@ import {
   RequestLifecycleStage,
   type RuntimeShadowReadEnforcer,
 } from "@/lib/runtime-shadow-read-enforcer";
-import { ClassifiedApiError, ensureClassification } from "@/infra/classified-error";
+import { ClassifiedApiError, ensureClassification, hasClassification } from "@/infra/classified-error";
 
 /**
  * Verified context passed to handler
@@ -496,8 +496,9 @@ export function withCanonicalEnforcement(
       });
     } catch (error) {
       // Ensure error is classified (never undefined classification/stage)
-      const classifiedError = error instanceof ClassifiedApiError
-        ? error
+      // Use hasClassification (structural) instead of instanceof to work across module boundaries
+      const classifiedError = hasClassification(error)
+        ? ensureClassification(error, "handler_invocation", "handler_invocation_failed")
         : ensureClassification(error, "handler_invocation", "handler_invocation_failed");
 
       try {
