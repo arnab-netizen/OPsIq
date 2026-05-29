@@ -42,6 +42,7 @@ import {
   type RuntimeShadowReadEnforcer,
 } from "@/lib/runtime-shadow-read-enforcer";
 import { ClassifiedApiError, ensureClassification, hasClassification } from "@/infra/classified-error";
+import { db } from "@/lib/db";
 
 /**
  * Verified context passed to handler
@@ -281,18 +282,93 @@ export function withCanonicalEnforcement(
       traceManager.recordStage("PIPELINE_STARTED", "success");
 
       // ========================================
-      // STEP 1: EXTRACT WORKSPACE ID
+      // STEP 1: GATHER AUTH FACTS (NO ERRORS THROWN)
       // ========================================
 
-      const workspaceId: string | undefined = req.headers.get("x-workspace-id") ?? undefined;
-      traceManager.recordStage("WORKSPACE_EXTRACTED", "success", workspaceId || "not_specified");
+      // Workspace ID extraction deferred until after session validation
+      // to ensure it can only be derived from authenticated user's membership
+      const sessionFact = await getSessionFact(undefined);
+      const policyFact = await getPolicyContextFact(undefined);
 
       // ========================================
-      // STEP 2: GATHER AUTH FACTS (NO ERRORS THROWN)
+      // STEP 1.5: RESOLVE WORKSPACE ID FROM MEMBERSHIP (FAIL-CLOSED)
       // ========================================
 
-      const sessionFact = await getSessionFact(workspaceId);
-      const policyFact = await getPolicyContextFact(workspaceId);
+      let workspaceId: string | undefined = undefined;
+
+      // Workspace ID MUST be server-derived from authenticated user's workspace membership
+      // It is NEVER trusted from request headers
+      if (sessionFact.valid && sessionFact.session?.user) {
+        try {
+          const membership = await db.workspaceMembership.findFirst({
+            where: {
+              userId: sessionFact.session.user.id,
+              isActive: true,
+            },
+            select: {
+              workspaceId: true,
+            },
+          });
+
+          if (!membership) {
+            throw new ClassifiedApiError(
+              "No active workspace membership found for user",
+              "workspace_context_invalid",
+              "workspace_membership_lookup",
+              403
+            );
+          }
+
+          if (!membership.workspaceId) {
+            throw new ClassifiedApiError(
+              "Workspace membership workspaceId is null or empty",
+              "workspace_context_invalid",
+              "workspace_membership_validation",
+              403
+            );
+          }
+
+          // Validate workspace ID is UUID-like format
+          const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+          if (!uuidRegex.test(membership.workspaceId)) {
+            throw new ClassifiedApiError(
+              "Workspace membership workspaceId is not a valid UUID format",
+              "workspace_context_invalid",
+              "workspace_id_format_validation",
+              403
+            );
+          }
+
+          workspaceId = membership.workspaceId;
+          traceManager.recordStage("WORKSPACE_EXTRACTED", "success", workspaceId);
+        } catch (error) {
+          // If error is already ClassifiedApiError, throw it
+          if (error instanceof ClassifiedApiError) {
+            throw error;
+          }
+          // Wrap unexpected errors as workspace context invalid
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          throw new ClassifiedApiError(
+            `Failed to derive verified workspace ID from membership: ${errorMsg}`,
+            "workspace_context_invalid",
+            "workspace_derivation_error",
+            500,
+            error
+          );
+        }
+      } else if (!sessionFact.valid) {
+        // Workspace resolution depends on valid session
+        // If session is invalid, workspace context is invalid
+        traceManager.recordStage("WORKSPACE_EXTRACTED", "failed", "no_valid_session");
+        // Continue to auth evaluation which will reject due to invalid session
+      } else {
+        throw new ClassifiedApiError(
+          "Session valid but user context missing",
+          "workspace_context_invalid",
+          "session_user_missing",
+          500
+        );
+      }
 
       // TELEMETRY: Facts gathered
       telemetry.emitFactsGathered({
