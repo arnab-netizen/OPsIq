@@ -203,6 +203,82 @@ async function smokeTest(): Promise<void> {
       process.exit(1);
     }
 
+    // Step 2.5: Verify and backfill demo user permission
+    console.log("2️⃣ ·5️⃣  GET /api/internal/demo-permission-proof (verify permissions)");
+    const permissionProofResponse = await fetch(
+      `${BASE_URL}/api/internal/demo-permission-proof`,
+      {
+        method: "GET",
+        headers: {
+          "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+        },
+      }
+    );
+
+    console.log(`   Status: ${permissionProofResponse.status}`);
+
+    if (permissionProofResponse.status === 404) {
+      console.log("❌ PERMISSION_PROOF_ENDPOINT_NOT_FOUND");
+      console.log("   Endpoint not deployed yet");
+      process.exit(1);
+    }
+
+    if (permissionProofResponse.status !== 200) {
+      console.log(`❌ PERMISSION_PROOF_ENDPOINT_FAILED (${permissionProofResponse.status})`);
+      process.exit(1);
+    }
+
+    const permissionProof = await permissionProofResponse.json();
+    console.log(`   User found: ${permissionProof.userFound ? "✓" : "✗"}`);
+    console.log(`   Membership active: ${permissionProof.membershipActive ? "✓" : "✗"}`);
+    console.log(`   Workspace UUID-like: ${permissionProof.workspaceIdUuidLike ? "✓" : "✗"}`);
+    console.log(
+      `   Role assignment found: ${permissionProof.roleAssignmentFound ? "✓" : "✗"}`
+    );
+    console.log(
+      `   Role grants engagement:view: ${permissionProof.roleGrantsEngagementView ? "✓" : "✗"}`
+    );
+    console.log(`   Classification: ${permissionProof.classification}`);
+
+    // If role assignment is missing, attempt backfill
+    if (permissionProof.classification === "role_assignment_missing") {
+      console.log("\n   Attempting to backfill missing role assignment...");
+      const backfillResponse = await fetch(
+        `${BASE_URL}/api/internal/demo-permission-proof`,
+        {
+          method: "POST",
+          headers: {
+            "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+          },
+        }
+      );
+
+      console.log(`   Backfill status: ${backfillResponse.status}`);
+
+      if (backfillResponse.status !== 200) {
+        console.log(`❌ PERMISSION_BACKFILL_FAILED (${backfillResponse.status})`);
+        const backfillError = await backfillResponse.json();
+        console.log(`   Reason: ${backfillError.reason || "unknown"}`);
+        process.exit(1);
+      }
+
+      const backfillResult = await backfillResponse.json();
+      console.log(`   Backfill result: ${backfillResult.status}`);
+      console.log(`   Role active: ${backfillResult.roleAssignmentActive ? "✓" : "✗"}`);
+      console.log(
+        `   Grants engagement:view: ${backfillResult.roleGrantsEngagementView ? "✓" : "✗"}`
+      );
+      console.log("   ✓ Role assignment backfilled\n");
+    } else if (permissionProof.classification === "permission_ready") {
+      console.log("   ✓ Permissions ready\n");
+    } else {
+      console.log(`❌ PERMISSION_STATE_INVALID (${permissionProof.classification})`);
+      console.log(`   User found: ${permissionProof.userFound}`);
+      console.log(`   Membership found: ${permissionProof.membershipFound}`);
+      console.log(`   Workspace ID valid: ${permissionProof.workspaceIdUuidLike}`);
+      process.exit(1);
+    }
+
     // Step 3: Verify demo data is accessible
     console.log("3️⃣  GET /api/engagements (verify demo data)");
     const engagementsResponse = await fetch(`${BASE_URL}/api/engagements`, {
