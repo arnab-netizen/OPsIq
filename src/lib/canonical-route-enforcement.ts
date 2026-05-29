@@ -156,6 +156,10 @@ export function withCanonicalEnforcement(
     skipReadinessCheck?: boolean;
     errorNamespace?: string;
     operationName?: string;
+    routeVersion?: string;
+    serviceImportPath?: string;
+    handlerName?: string;
+    serviceVersion?: string;
   }
 ): (req: NextRequest, context: { params: Promise<Record<string, string>> }) => Promise<NextResponse> {
   return async (req: NextRequest, context: { params: Promise<Record<string, string>> }) => {
@@ -525,6 +529,33 @@ export function withCanonicalEnforcement(
           500,
           error
         );
+
+        // Extract safe details from raw error (may be Prisma or other)
+        const { extractSafeKnownError } = await import("@/infra/classified-error");
+        const safeDetails = extractSafeKnownError(error);
+
+        // Add route context
+        if (options?.routeVersion) {
+          safeDetails.routeVersion = options.routeVersion;
+        }
+        if (options?.serviceImportPath) {
+          safeDetails.serviceImportPath = options.serviceImportPath;
+        }
+        if (options?.handlerName) {
+          safeDetails.handlerName = options.handlerName;
+        }
+        if (options?.serviceVersion) {
+          safeDetails.engagementsServiceVersion = options.serviceVersion;
+        }
+
+        // Mark the failing operation
+        if (safeDetails.prismaCode) {
+          safeDetails.failingOperation = "handler_invocation_raw_prisma";
+        } else {
+          safeDetails.failingOperation = "handler_invocation_unknown";
+        }
+
+        classifiedError.safeDetails = safeDetails;
       }
 
       try {

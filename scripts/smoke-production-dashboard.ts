@@ -338,6 +338,57 @@ async function smokeTest(): Promise<void> {
 
         // Route-specific handler invocation failure
         if (errorData.classification === "engagements_handler_invocation_failed") {
+          // Check if wrapper extracted Prisma code from raw error
+          if (
+            errorData.errorName === "PrismaClientKnownRequestError" &&
+            errorData.prismaCode
+          ) {
+            console.log("✅ WRAPPER_RAW_PRISMA_CODE_CAPTURED");
+            console.log("");
+            console.log("Wrapper successfully extracted Prisma code from raw error:");
+            console.log(`   PrismaCode: ${errorData.prismaCode}`);
+            console.log(`   SafeMessage: ${errorData.safeMessage || "n/a"}`);
+            console.log(`   SafeMetaKeys: ${JSON.stringify(errorData.safeMetaKeys) || "n/a"}`);
+            console.log(`   FailingOperation: ${errorData.failingOperation}`);
+            console.log(`   RouteVersion: ${errorData.routeVersion}`);
+            console.log(`   EngagementsServiceVersion: ${errorData.engagementsServiceVersion}`);
+            console.log("");
+            console.log("Next action: Fix the exact Prisma code.");
+            process.exit(1);
+          }
+
+          // If no prismaCode extracted from Prisma error, that's a failure
+          if (
+            errorData.errorName === "PrismaClientKnownRequestError" &&
+            !errorData.prismaCode
+          ) {
+            console.log("❌ WRAPPER_PRISMA_CODE_EXTRACTION_FAILED");
+            console.log("");
+            console.log(
+              "Wrapper received raw PrismaClientKnownRequestError but did not extract prismaCode."
+            );
+            console.log("Check wrapper fallback Prisma extraction logic.");
+            process.exit(1);
+          }
+
+          // Check for missing route metadata
+          if (!errorData.routeVersion) {
+            console.log("❌ ROUTE_VERSION_MISSING");
+            console.log(
+              "Wrapper fallback did not include routeVersion from options."
+            );
+            process.exit(1);
+          }
+
+          if (!errorData.engagementsServiceVersion) {
+            console.log("❌ ENGAGEMENTS_SERVICE_VERSION_MISSING");
+            console.log(
+              "Wrapper fallback did not include engagementsServiceVersion from options."
+            );
+            process.exit(1);
+          }
+
+          // Generic handler invocation failure (not Prisma)
           console.log("❌ ENGAGEMENTS_HANDLER_INVOCATION_FAILED");
           console.log("");
           console.log("Route-specific handler failure. Raw error escaped classification:");

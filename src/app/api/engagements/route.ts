@@ -5,7 +5,7 @@ import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { hasInternalAccess } from "@/policies/capability-check";
 import type { NextRequest } from "next/server";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
-import { createEngagement, listEngagements } from "@/services/engagement";
+import { createEngagement, listEngagements, ENGAGEMENTS_SERVICE_VERSION } from "@/services/engagement";
 import { parseRequestBody, parseSearchParams } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { z } from "zod/v4";
@@ -185,6 +185,10 @@ export const GET = withCanonicalEnforcement(engagementsGetHandler, {
   requireWorkspace: true,
   errorNamespace: "engagements",
   operationName: "list_engagements",
+  routeVersion: "engagements-route-debug-v2",
+  serviceImportPath: "@/services/engagement",
+  handlerName: "engagementsGetHandler",
+  serviceVersion: ENGAGEMENTS_SERVICE_VERSION,
 });
 
 export const POST = withCanonicalEnforcement(
