@@ -36,109 +36,120 @@ const listEngagementsSchema = paginationSchema.extend({
   search: z.string().optional(),
 });
 
-export const GET = withCanonicalEnforcement(
-  async (ctx: CanonicalAuthContext) => {
-    let stage = "route_start";
+// Explicit safe handler function
+// Must match wrapper signature: handler(ctx: CanonicalAuthContext, params: Record<string, string>)
+async function engagementsGetHandler(
+  ctx: CanonicalAuthContext,
+  params: Record<string, string>
+) {
+  let stage = "route_start";
+
+  try {
+    // Stage 1: Extract context
+    stage = "workspace_context";
+    const workspaceId = ctx.verifiedWorkspaceId;
+    if (!workspaceId) {
+      throw new ClassifiedApiError(
+        "workspace context missing",
+        "engagements_workspace_context_failed",
+        stage,
+        403
+      );
+    }
+
+    // Stage 2: Parse query parameters
+    stage = "parse_query";
+    let parsedParams;
     try {
-      // Stage 1: Extract context
-      stage = "workspace_context";
-      const workspaceId = ctx.verifiedWorkspaceId;
-      if (!workspaceId) {
-        throw new ClassifiedApiError(
-          "workspace context missing",
-          "engagements_workspace_context_failed",
-          stage,
-          403
-        );
-      }
-
-      // Stage 2: Parse query parameters
-      stage = "parse_query";
-      let params;
-      try {
-        params = parseSearchParams(ctx.request?.url || "", listEngagementsSchema);
-      } catch (error) {
-        throw new ClassifiedApiError(
-          error instanceof Error ? error.message : "invalid query parameters",
-          "engagements_parse_query_failed",
-          stage,
-          400
-        );
-      }
-
-      // Stage 3: Call service
-      stage = "service_call";
-      let result;
-      try {
-        const hasAccess = ctx.policy ? hasInternalAccess(ctx.policy) : false;
-        result = await listEngagements(workspaceId, params, hasAccess);
-      } catch (error) {
-        // If service throws classified error, preserve it
-        if (hasClassification(error)) {
-          throw error;
-        }
-        // Otherwise wrap unknown error with service_call stage
-        const errorMsg =
-          error instanceof Error ? error.message : String(error);
-        throw new ClassifiedApiError(
-          errorMsg,
-          "engagements_service_call_failed",
-          stage,
-          500,
-          error
-        );
-      }
-
-      // Stage 4: Validate response shape
-      stage = "response_validation";
-      if (!result || typeof result !== "object") {
-        throw new ClassifiedApiError(
-          "service returned invalid response shape",
-          "engagements_response_mapping_failed",
-          "response_mapping",
-          500
-        );
-      }
-      if (!Array.isArray(result.engagements)) {
-        throw new ClassifiedApiError(
-          "engagements must be array",
-          "engagements_response_validation_failed",
-          stage,
-          500
-        );
-      }
-      if (typeof result.total !== "number") {
-        throw new ClassifiedApiError(
-          "total must be number",
-          "engagements_response_validation_failed",
-          stage,
-          500
-        );
-      }
-
-      // Stage 5: Return response
-      stage = "response_return";
-      return Response.json(result);
+      parsedParams = parseSearchParams(
+        ctx.request?.url || "",
+        listEngagementsSchema
+      );
     } catch (error) {
-      // Catch ANY error that escaped the inner handlers
-      // Ensure it's always ClassifiedApiError before throwing to wrapper
+      throw new ClassifiedApiError(
+        error instanceof Error ? error.message : "invalid query parameters",
+        "engagements_parse_query_failed",
+        stage,
+        400
+      );
+    }
+
+    // Stage 3: Call service
+    stage = "service_call";
+    let result;
+    try {
+      const hasAccess = ctx.policy ? hasInternalAccess(ctx.policy) : false;
+      result = await listEngagements(workspaceId, parsedParams, hasAccess);
+    } catch (error) {
+      // If service throws classified error, preserve it
       if (hasClassification(error)) {
-        // Preserve inner classification
         throw error;
       }
-      // Wrap any unexpected raw error
-      const msg = error instanceof Error ? error.message : String(error);
+      // Otherwise wrap unknown error with service_call stage
+      const errorMsg =
+        error instanceof Error ? error.message : String(error);
       throw new ClassifiedApiError(
-        `GET /api/engagements failed at ${stage}: ${msg}`,
-        `engagements_${stage}_failed`,
+        errorMsg,
+        "engagements_service_call_failed",
         stage,
         500,
         error
       );
     }
-  },
-  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
-);
+
+    // Stage 4: Validate response shape
+    stage = "response_validation";
+    if (!result || typeof result !== "object") {
+      throw new ClassifiedApiError(
+        "service returned invalid response shape",
+        "engagements_response_mapping_failed",
+        "response_mapping",
+        500
+      );
+    }
+    if (!Array.isArray(result.engagements)) {
+      throw new ClassifiedApiError(
+        "engagements must be array",
+        "engagements_response_validation_failed",
+        stage,
+        500
+      );
+    }
+    if (typeof result.total !== "number") {
+      throw new ClassifiedApiError(
+        "total must be number",
+        "engagements_response_validation_failed",
+        stage,
+        500
+      );
+    }
+
+    // Stage 5: Return response
+    stage = "response_return";
+    return Response.json(result);
+  } catch (error) {
+    // Catch ANY error that escaped the inner handlers
+    // Ensure it's always ClassifiedApiError before throwing to wrapper
+    if (hasClassification(error)) {
+      // Preserve inner classification
+      throw error;
+    }
+    // Wrap any unexpected raw error
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new ClassifiedApiError(
+      `GET /api/engagements failed at ${stage}: ${msg}`,
+      `engagements_${stage}_failed`,
+      stage,
+      500,
+      error
+    );
+  }
+}
+
+export const GET = withCanonicalEnforcement(engagementsGetHandler, {
+  requireCapabilities: ["ENGAGEMENT_VIEW"],
+  requireWorkspace: true,
+});
 
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
