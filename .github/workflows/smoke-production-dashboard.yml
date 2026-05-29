@@ -75,6 +75,8 @@ jobs:
       - name: Run dashboard smoke test
         env:
           BASE_URL: ${{ github.event.inputs.base_url || 'https://o-ps-iq.vercel.app' }}
+          OPSIQ_DIAGNOSTIC_KEY: ${{ secrets.OPSIQ_DIAGNOSTIC_KEY }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           echo "Testing dashboard at: $BASE_URL"
           npx tsx scripts/smoke-production-dashboard.ts

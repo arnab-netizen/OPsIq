@@ -59,18 +59,28 @@ async function smokeTest(): Promise<void> {
 
     // Step 0B: Verify route and service proof
     console.log("0️⃣ B GET /api/internal/engagements-route-proof (verify route)");
+
+    // Check if diagnostic key is available
+    if (!OPSIQ_DIAGNOSTIC_KEY || OPSIQ_DIAGNOSTIC_KEY === "not-set") {
+      console.log("❌ MISSING_OPSIQ_DIAGNOSTIC_KEY_IN_GITHUB_ACTIONS_ENV");
+      console.log("   GitHub secret is not available to this workflow step.");
+      console.log("   Check workflow env mapping in .github/workflows/smoke-production-dashboard.yml");
+      process.exit(1);
+    }
+
     const routeProofResponse = await fetch(
-      `${BASE_URL}/api/internal/engagements-route-proof?key=${OPSIQ_DIAGNOSTIC_KEY}`
+      `${BASE_URL}/api/internal/engagements-route-proof`,
+      {
+        headers: {
+          "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+        },
+      }
     );
     console.log(`   Status: ${routeProofResponse.status}`);
 
     if (routeProofResponse.status === 404 || routeProofResponse.status === 403) {
       console.log("❌ ROUTE_PROOF_ENDPOINT_UNAUTHORIZED");
-      if (OPSIQ_DIAGNOSTIC_KEY === "not-set") {
-        console.log("   OPSIQ_DIAGNOSTIC_KEY not configured in environment");
-      } else {
-        console.log("   Key rejected by endpoint");
-      }
+      console.log("   Key rejected by endpoint");
       process.exit(1);
     }
 
