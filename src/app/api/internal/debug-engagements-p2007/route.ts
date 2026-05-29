@@ -472,25 +472,42 @@ export const GET = async (req: NextRequest) => {
             [mainTable]
           );
           const columnNames = colsResult.rows.map((r) => r.column_name as string);
-          const requiredFields = [
+          // Expected DB column names (snake_case) after Prisma @map translation
+          const expectedDbColumns = [
             "id",
-            "workspaceId",
-            "clientId",
+            "workspace_id",
+            "client_id",
             "code",
             "title",
             "status",
-            "healthStatus",
-            "interventionMode",
-            "serviceTier",
-            "createdAt",
+            "health_status",
+            "intervention_mode",
+            "service_tier",
+            "created_at",
+            "updated_at",
+            "engagement_mode",
+            "intervention_phase",
+            "start_date",
+            "target_end_date",
+            "actual_end_date",
+            "owner_id",
+            "assigned_consultant_id",
+            "current_scope_version_id",
+            "parent_engagement_id",
+            "version",
+            "visibility",
+            "created_by",
+            "is_blocked",
+            "blocker_reason",
+            "blocked_at",
           ];
-          const missing = requiredFields.filter((f) => !columnNames.includes(f));
+          const missing = expectedDbColumns.filter((f) => !columnNames.includes(f));
           rawCatalogResults.push({
             name: "raw_06_required_columns_check",
             status: missing.length === 0 ? "pass" : "fail",
             data: {
               table: mainTable,
-              required: requiredFields,
+              expectedDbColumns,
               missing,
               actual: columnNames,
             },
