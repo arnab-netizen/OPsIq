@@ -10,6 +10,10 @@ on:
         required: false
         default: "https://o-ps-iq.vercel.app"
 
+concurrency:
+  group: smoke-production-dashboard-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   smoke:
     name: Test Production Dashboard

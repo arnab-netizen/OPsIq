@@ -64,6 +64,40 @@ export function hasClassification(error: unknown): boolean {
   );
 }
 
+/**
+ * Extract safe Prisma error details for safe response.
+ * Only includes: errorName, code, first line of message.
+ * Never includes: query values, DATABASE_URL, stack, secrets.
+ */
+export function extractSafePrismaError(error: unknown): Record<string, unknown> {
+  if (!error || typeof error !== "object") {
+    return {};
+  }
+
+  const obj = error as any;
+  const result: Record<string, unknown> = {};
+
+  // PrismaClientKnownRequestError has a 'code' field (P2000, P2001, etc.)
+  if (typeof obj.code === "string") {
+    result.prismaCode = obj.code;
+  }
+
+  // Get first line of message only
+  if (typeof obj.message === "string") {
+    const firstLine = obj.message.split("\n")[0];
+    // Remove query details if present
+    const safeMessage = firstLine
+      .replace(/Unknown arg `\w+` in.*/, "Unknown field in query")
+      .replace(/`\w+` doesn't exist/, "Field doesn't exist")
+      .replace(/Unknown field name/, "Unknown field");
+    if (safeMessage.length > 0) {
+      result.safeMessage = safeMessage;
+    }
+  }
+
+  return result;
+}
+
 export function ensureClassification(
   error: unknown,
   defaultStage: string = "unclassified_error_boundary",

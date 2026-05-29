@@ -579,6 +579,17 @@ export function withCanonicalEnforcement(
         responseBody.operation = operationName;
       }
 
+      // Include safe Prisma details if available
+      const safeDetails = (classifiedError as any).safeDetails;
+      if (safeDetails && typeof safeDetails === "object") {
+        if (safeDetails.prismaCode) {
+          responseBody.prismaCode = safeDetails.prismaCode;
+        }
+        if (safeDetails.safeMessage) {
+          responseBody.safeMessage = safeDetails.safeMessage;
+        }
+      }
+
       return new NextResponse(JSON.stringify(responseBody), {
         status: 500,
         headers: { "content-type": "application/json" },

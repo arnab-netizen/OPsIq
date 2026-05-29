@@ -4,7 +4,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { withIdempotency } from "@/infra/idempotency";
 import { NotFoundError, ValidationError, PlanLimitError } from "@/infra/errors";
-import { ClassifiedApiError, hasClassification } from "@/infra/classified-error";
+import { ClassifiedApiError, hasClassification, extractSafePrismaError } from "@/infra/classified-error";
 import {
   optimisticUpdate,
   withVersionCheck,
@@ -475,18 +475,25 @@ export async function listEngagements(
       });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
+      const safeDetails = extractSafePrismaError(error);
       logger.error("listEngagements findMany failed", {
         workspaceId,
         errorName: error instanceof Error ? error.name : "unknown",
         errorMessage: msg,
+        ...safeDetails,
       });
-      throw new ClassifiedApiError(
+      const classifiedError = new ClassifiedApiError(
         msg,
         "engagements_find_many_failed",
         stage,
         500,
         error
       );
+      // Add safe Prisma details for diagnostics
+      if (Object.keys(safeDetails).length > 0) {
+        (classifiedError as any).safeDetails = safeDetails;
+      }
+      throw classifiedError;
     }
 
     // Stage 3: Validate findMany result
@@ -505,18 +512,25 @@ export async function listEngagements(
       total = await db.engagement.count({ where });
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
+      const safeDetails = extractSafePrismaError(error);
       logger.error("listEngagements count failed", {
         workspaceId,
         errorName: error instanceof Error ? error.name : "unknown",
         errorMessage: msg,
+        ...safeDetails,
       });
-      throw new ClassifiedApiError(
+      const classifiedError = new ClassifiedApiError(
         msg,
         "engagements_count_failed",
         stage,
         500,
         error
       );
+      // Add safe Prisma details for diagnostics
+      if (Object.keys(safeDetails).length > 0) {
+        (classifiedError as any).safeDetails = safeDetails;
+      }
+      throw classifiedError;
     }
 
     // Stage 5: Validate count result

@@ -189,6 +189,12 @@ async function smokeTest(): Promise<void> {
         if (errorData.errorName) {
           console.log(`   ErrorName: ${errorData.errorName}`);
         }
+        if (errorData.prismaCode) {
+          console.log(`   PrismaCode: ${errorData.prismaCode}`);
+        }
+        if (errorData.safeMessage) {
+          console.log(`   SafeMessage: ${errorData.safeMessage}`);
+        }
         console.log(`   Error: ${errorData.error}`);
         console.log("");
 
