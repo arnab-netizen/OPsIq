@@ -90,6 +90,33 @@ async function seedDemoData(db: PrismaClient) {
     console.log("✓ Created workspace membership");
   }
 
+  // Create UserRoleAssignment for demo user with admin role
+  // This is required for capability resolution in getPolicyContext
+  let roleAssignment = await db.userRoleAssignment.findFirst({
+    where: {
+      userId: user.id,
+      scope: "workspace",
+      scopeId: workspace.id,
+      role: "admin_or_portfolio_manager",
+    },
+  });
+
+  if (!roleAssignment) {
+    const roleAssignmentId = randomUUID();
+    roleAssignment = await db.userRoleAssignment.create({
+      data: {
+        id: roleAssignmentId,
+        userId: user.id,
+        role: "admin_or_portfolio_manager",
+        scope: "workspace",
+        scopeId: workspace.id,
+        grantedAt: new Date(),
+        isActive: true,
+      },
+    });
+    console.log("✓ Created admin role assignment");
+  }
+
   // Create demo client
   let client = await db.clientAccount.findFirst({
     where: { name: "Demo Manufacturing Corp" },
