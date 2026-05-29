@@ -13,5 +13,6 @@ export const GET = async (req: NextRequest) => {
     commit: process.env.VERCEL_GIT_COMMIT_SHA ?? "unknown",
     environment: process.env.VERCEL_ENV ?? "unknown",
     timestamp: new Date().toISOString(),
+    routeVersion: "build-info-v1",
   });
 };

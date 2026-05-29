@@ -11,6 +11,10 @@
 const BASE_URL = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
 const DEMO_EMAIL = "operator@demo.local";
 const DEMO_PASSWORD = "demo-password-123";
+const OPSIQ_DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY || "not-set";
+
+// Get GitHub SHA from environment (set by workflow)
+const GITHUB_SHA = process.env.GITHUB_SHA || "unknown";
 
 interface DashboardResponse {
   activeEngagements?: number;
@@ -27,6 +31,88 @@ async function smokeTest(): Promise<void> {
   let sessionCookie = "";
 
   try {
+    // Step 0A: Verify deployment commit matches GitHub SHA
+    console.log("0️⃣ A GET /api/internal/build-info (verify deployment)");
+    const buildInfoResponse = await fetch(`${BASE_URL}/api/internal/build-info`);
+    console.log(`   Status: ${buildInfoResponse.status}`);
+
+    if (buildInfoResponse.status !== 200) {
+      console.log("❌ BUILD_INFO_ENDPOINT_FAILED");
+      process.exit(1);
+    }
+
+    const buildInfo = await buildInfoResponse.json();
+    console.log(`   GitHub SHA: ${GITHUB_SHA}`);
+    console.log(`   Deployed Commit: ${buildInfo.commit}`);
+    console.log(`   Environment: ${buildInfo.environment}`);
+    console.log(`   RouteVersion: ${buildInfo.routeVersion}`);
+    console.log("");
+
+    if (buildInfo.commit !== GITHUB_SHA) {
+      console.log("❌ DEPLOYMENT_COMMIT_MISMATCH");
+      console.log(`   Expected: ${GITHUB_SHA}`);
+      console.log(`   Got: ${buildInfo.commit}`);
+      console.log("");
+      console.log("Vercel has not deployed the latest commit yet.");
+      process.exit(1);
+    }
+
+    // Step 0B: Verify route and service proof
+    console.log("0️⃣ B GET /api/internal/engagements-route-proof (verify route)");
+    const routeProofResponse = await fetch(
+      `${BASE_URL}/api/internal/engagements-route-proof?key=${OPSIQ_DIAGNOSTIC_KEY}`
+    );
+    console.log(`   Status: ${routeProofResponse.status}`);
+
+    if (routeProofResponse.status === 404 || routeProofResponse.status === 403) {
+      console.log("❌ ROUTE_PROOF_ENDPOINT_UNAUTHORIZED");
+      if (OPSIQ_DIAGNOSTIC_KEY === "not-set") {
+        console.log("   OPSIQ_DIAGNOSTIC_KEY not configured in environment");
+      } else {
+        console.log("   Key rejected by endpoint");
+      }
+      process.exit(1);
+    }
+
+    if (routeProofResponse.status !== 200) {
+      console.log("❌ ROUTE_PROOF_ENDPOINT_FAILED");
+      console.log(`   Status: ${routeProofResponse.status}`);
+      process.exit(1);
+    }
+
+    const routeProof = await routeProofResponse.json();
+    console.log(`   RouteVersion: ${routeProof.routeVersion}`);
+    console.log(`   ServiceImportPath: ${routeProof.serviceImportPath}`);
+    console.log(`   HandlerName: ${routeProof.handlerName}`);
+    console.log(`   ServiceVersion: ${routeProof.serviceVersion}`);
+    console.log(`   DeployedCommit: ${routeProof.deployedCommit}`);
+    console.log("");
+
+    // Validate proof values
+    if (routeProof.routeVersion !== "engagements-route-debug-v2") {
+      console.log("❌ ROUTE_VERSION_MISMATCH");
+      console.log(`   Expected: engagements-route-debug-v2`);
+      console.log(`   Got: ${routeProof.routeVersion}`);
+      process.exit(1);
+    }
+
+    if (routeProof.serviceVersion !== "engagements-service-prisma-debug-v2") {
+      console.log("❌ SERVICE_VERSION_MISMATCH");
+      console.log(`   Expected: engagements-service-prisma-debug-v2`);
+      console.log(`   Got: ${routeProof.serviceVersion}`);
+      process.exit(1);
+    }
+
+    if (routeProof.deployedCommit !== GITHUB_SHA) {
+      console.log("❌ PROOF_COMMIT_MISMATCH");
+      console.log(`   Expected: ${GITHUB_SHA}`);
+      console.log(`   Got: ${routeProof.deployedCommit}`);
+      process.exit(1);
+    }
+
+    console.log("✅ Deployment and route proof verified");
+    console.log("");
+
     // Step 1: Login to get session
     console.log("1️⃣  POST /api/auth/login");
     const loginResponse = await fetch(`${BASE_URL}/api/auth/login`, {

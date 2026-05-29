@@ -43,11 +43,12 @@ describe("Error Propagation: Prisma Details", () => {
       expect(safe.safeMessage).toContain("Unknown field");
     });
 
-    it("returns empty object for non-Prisma errors", () => {
+    it("returns safe details for non-Prisma errors", () => {
       const genericError = new Error("Something went wrong");
       const safe = extractSafePrismaError(genericError);
 
-      expect(Object.keys(safe)).toHaveLength(1); // Only safeMessage
+      expect(safe.errorName).toBe("Error");
+      expect(safe.safeMessage).toBe("Something went wrong");
       expect(safe.prismaCode).toBeUndefined();
     });
   });

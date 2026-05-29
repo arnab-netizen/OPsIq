@@ -78,6 +78,12 @@ export function extractSafePrismaError(error: unknown): Record<string, unknown> 
   const obj = error as any;
   const result: Record<string, unknown> = {};
 
+  // Error name (for diagnostic identification)
+  result.errorName =
+    typeof obj.name === "string"
+      ? obj.name
+      : error?.constructor?.name ?? "UnknownError";
+
   // PrismaClientKnownRequestError has a 'code' field (P2000, P2001, etc.)
   if (typeof obj.code === "string") {
     result.prismaCode = obj.code;
@@ -93,8 +99,25 @@ export function extractSafePrismaError(error: unknown): Record<string, unknown> 
       .replace(/`[^`]*` doesn't exist/, "Field doesn't exist")
       .replace(/Unknown field name.*/, "Unknown field");
     if (safeMessage.length > 0) {
-      result.safeMessage = safeMessage;
+      result.safeMessage = safeMessage.slice(0, 300); // Limit length
     }
+  }
+
+  // Safe meta keys (without values to avoid data exposure)
+  if (
+    obj.meta &&
+    typeof obj.meta === "object" &&
+    !Array.isArray(obj.meta)
+  ) {
+    const keys = Object.keys(obj.meta as Record<string, unknown>);
+    if (keys.length > 0) {
+      result.safeMetaKeys = keys.slice(0, 10); // Limit to 10 keys
+    }
+  }
+
+  // Prisma client version
+  if (typeof obj.clientVersion === "string") {
+    result.prismaClientVersion = obj.clientVersion;
   }
 
   return result;

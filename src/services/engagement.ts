@@ -22,8 +22,8 @@ import { requireServiceContext } from "@/lib/service-auth";
 import { assertCapability } from "@/services/entitlement.service";
 import { recordEngagementCreationUsage } from "@/services/usage.service";
 
-// Service version for diagnostics
-const ENGAGEMENTS_SERVICE_VERSION = "engagements-service-prisma-debug-v1";
+// Service version for diagnostics - exported for route proof endpoint
+export const ENGAGEMENTS_SERVICE_VERSION = "engagements-service-prisma-debug-v2";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 

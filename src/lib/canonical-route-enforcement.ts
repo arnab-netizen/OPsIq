@@ -585,6 +585,9 @@ export function withCanonicalEnforcement(
         const allowlistedKeys = [
           "prismaCode",
           "safeMessage",
+          "safeMetaKeys",
+          "prismaClientVersion",
+          "errorName",
           "failingOperation",
           "engagementsServiceVersion",
           "routeVersion",
