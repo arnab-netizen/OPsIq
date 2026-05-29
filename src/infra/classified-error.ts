@@ -104,7 +104,12 @@ export function ensureClassification(
   defaultStage: string = "unclassified_error_boundary",
   defaultClassification: string = "unclassified_internal_error"
 ): ClassifiedApiError {
-  // Check structural classification first (works across module boundaries)
+  // Check instanceof first (preserves exact object and safeDetails)
+  if (error instanceof ClassifiedApiError) {
+    return error;
+  }
+
+  // Check structural classification (works across module boundaries)
   if (hasClassification(error)) {
     const obj = error as any;
     const statusCode = typeof obj.statusCode === "number" ? obj.statusCode : 500;
@@ -115,12 +120,11 @@ export function ensureClassification(
       statusCode,
       error
     );
+    // Preserve safeDetails if present
+    if (obj.safeDetails && typeof obj.safeDetails === "object") {
+      apiError.safeDetails = obj.safeDetails;
+    }
     return apiError;
-  }
-
-  // Fallback: instanceof check
-  if (error instanceof ClassifiedApiError) {
-    return error;
   }
 
   const message =
