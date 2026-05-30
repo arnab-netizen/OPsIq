@@ -136,6 +136,7 @@ async function seedDemoData(db: PrismaClient) {
         description: "Comprehensive intervention to improve operational efficiency and profitability",
         startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         targetEndDate: new Date(Date.now() + 150 * 24 * 60 * 60 * 1000),
+        visibility: "client_visible",
         updatedAt: new Date(),
       },
     });
