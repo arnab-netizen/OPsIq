@@ -195,7 +195,7 @@ async function engagementsGetHandler(
 }
 
 export const GET = withCanonicalEnforcement(engagementsGetHandler, {
-  requireCapabilities: ["ENGAGEMENT_VIEW"],
+  requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
   requireWorkspace: true,
   errorNamespace: "engagements",
   operationName: "list_engagements",

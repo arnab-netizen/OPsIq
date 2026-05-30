@@ -286,6 +286,7 @@ async function smokeTest(): Promise<void> {
       headers: {
         Cookie: sessionCookie,
         "x-workspace-id": "demo", // This will be validated by the API
+        "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
       },
     });
 
@@ -763,6 +764,64 @@ async function smokeTest(): Promise<void> {
 
         console.log("This indicates an internal crash in the engagements API.");
         console.log("Use the correlationId and stage to locate the issue in production logs.");
+      } catch {
+        const text = await engagementsResponse.text();
+        console.log(`   Response: ${text.substring(0, 200)}`);
+      }
+      process.exit(1);
+    } else if (engagementsResponse.status === 403) {
+      console.log("❌ FORBIDDEN (403)");
+      try {
+        const errorData = await engagementsResponse.json();
+        console.log(`   CorrelationId: ${errorData.correlationId}`);
+
+        if (errorData.classification === "canonical_permission_denied") {
+          console.log("\n🔍 CANONICAL_PERMISSION_DENIED_WITH_DETAILS");
+          console.log("");
+          console.log("Authorization Details:");
+          console.log(`   Stage: ${errorData.stage}`);
+          console.log(`   Required Capabilities: ${JSON.stringify(errorData.requiredCapabilities)}`);
+          console.log(`   Policy Roles: ${JSON.stringify(errorData.policyRoles)}`);
+          console.log(`   Policy Capabilities: ${JSON.stringify(errorData.policyCapabilities)}`);
+          console.log(`   Missing Capabilities: ${JSON.stringify(errorData.missingCapabilities)}`);
+          console.log(`   Membership Found: ${errorData.membershipFound}`);
+          console.log(`   Role Assignment Found: ${errorData.roleAssignmentFound}`);
+
+          if (errorData.verifiedWorkspaceIdShape) {
+            console.log("\nWorkspace ID:");
+            console.log(`   Present: ${errorData.verifiedWorkspaceIdShape.present}`);
+            console.log(`   UUID-Like: ${errorData.verifiedWorkspaceIdShape.uuidLike}`);
+            if (errorData.verifiedWorkspaceIdShape.sample) {
+              console.log(`   Sample: ${errorData.verifiedWorkspaceIdShape.sample}`);
+            }
+          }
+
+          console.log(`   Source: ${errorData.capabilityDecisionSource}`);
+          console.log("");
+
+          // Analysis
+          if (errorData.policyRoles && errorData.policyRoles.length > 0) {
+            console.log("Analysis:");
+            console.log(`  ✓ User has roles: ${errorData.policyRoles.join(", ")}`);
+
+            if (errorData.missingCapabilities && errorData.missingCapabilities.length > 0) {
+              console.log(`  ✗ Missing capabilities: ${errorData.missingCapabilities.join(", ")}`);
+              console.log("");
+              console.log("Fix: Check if required capabilities are in ROLE_CAPABILITIES registry");
+              console.log("and if they match exactly (case-sensitive string comparison).");
+            } else if (errorData.requiredCapabilities && errorData.requiredCapabilities.length > 0) {
+              console.log(`  ✗ Required but not found: ${errorData.requiredCapabilities.join(", ")}`);
+              console.log("     in policy capabilities");
+            }
+          } else {
+            console.log("Analysis:");
+            console.log("  ✗ User has no roles in policy context");
+            console.log("     Check if UserRoleAssignment exists for this workspace");
+          }
+        } else {
+          console.log(`   Error: ${errorData.error}`);
+          console.log(`   Detail: ${errorData.detail}`);
+        }
       } catch {
         const text = await engagementsResponse.text();
         console.log(`   Response: ${text.substring(0, 200)}`);

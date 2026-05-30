@@ -450,6 +450,66 @@ export function withCanonicalEnforcement(
         // ONLY this layer generates HTTP error responses
         const errorResponse = translateAuthDecisionToResponse(decision, correlationId);
 
+        // Add safe diagnostic details if diagnostic key is valid and status is 403
+        const diagnosticKey = req.headers.get("x-opsiq-diagnostic-key");
+        const expectedDiagnosticKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
+        const hasDiagnosticAccess =
+          diagnosticKey &&
+          expectedDiagnosticKey &&
+          diagnosticKey === expectedDiagnosticKey;
+
+        if (hasDiagnosticAccess && errorResponse.status === 403) {
+          const requiredCaps = options?.requireCapabilities || [];
+          const verifiedCapArray = decision.context?.verifiedCapabilities
+            ? Array.from(decision.context.verifiedCapabilities)
+            : [];
+
+          const missingCapabilities: string[] = [];
+          for (const cap of requiredCaps) {
+            if (!verifiedCapArray.includes(cap)) {
+              missingCapabilities.push(cap);
+            }
+          }
+
+          const policyRoles = decision.context?.policy?.roles?.map((r) => r.role) || [];
+          const policyCapabilities: string[] = [];
+          if (decision.context?.policy?.roles) {
+            const { getCapabilitiesForRole } = require("@/policies/capability-check");
+            for (const role of decision.context.policy.roles) {
+              const caps = getCapabilitiesForRole(role.role);
+              policyCapabilities.push(...caps);
+            }
+          }
+
+          const workspaceId = decision.context?.verifiedWorkspaceId;
+          const workspaceIdSample = workspaceId
+            ? workspaceId.length < 8
+              ? "***"
+              : `${workspaceId.substring(0, 4)}...${workspaceId.substring(workspaceId.length - 4)}`
+            : undefined;
+
+          (errorResponse.body as any) = {
+            ...errorResponse.body,
+            classification: "canonical_permission_denied",
+            stage: "authorization",
+            requiredCapabilities: requiredCaps,
+            policyRoles,
+            policyCapabilities: Array.from(new Set(policyCapabilities)),
+            missingCapabilities,
+            membershipFound: !!decision.context?.policy,
+            roleAssignmentFound:
+              (decision.context?.policy?.roles?.length || 0) > 0,
+            verifiedWorkspaceIdShape: {
+              present: !!workspaceId,
+              uuidLike: workspaceId
+                ? /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(workspaceId)
+                : false,
+              sample: workspaceIdSample,
+            },
+            capabilityDecisionSource: "withCanonicalEnforcement",
+          };
+        }
+
         return new NextResponse(JSON.stringify(errorResponse.body), {
           status: errorResponse.status,
           headers: { "x-correlation-id": correlationId, "content-type": "application/json" },
