@@ -422,6 +422,75 @@ async function smokeTest(): Promise<void> {
         if (dashboardResponse.status !== 200) {
           console.log("❌ DASHBOARD_ROUTE_FAILED");
           console.log(`   Status: ${dashboardResponse.status}`);
+          console.log("   Calling diagnostic endpoint to trace root cause...\n");
+
+          // TASK B: Call diagnostic endpoint before exiting
+          try {
+            const diagnosticResponse = await fetch(
+              `${BASE_URL}/api/internal/engagement-dashboard-route-proof`,
+              {
+                headers: {
+                  "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+                },
+              }
+            );
+
+            console.log(`   Diagnostic Status: ${diagnosticResponse.status}`);
+
+            if (diagnosticResponse.status === 200) {
+              const diagnostic = await diagnosticResponse.json();
+
+              console.log("   Diagnostic Output:");
+              console.log(`     userFound: ${diagnostic.userFound}`);
+              console.log(`     membershipFound: ${diagnostic.membershipFound}`);
+              console.log(
+                `     workspaceIdUuidLike: ${diagnostic.workspaceIdUuidLike}`
+              );
+              console.log(`     engagementFound: ${diagnostic.engagementFound}`);
+              console.log(
+                `     engagementWorkspaceMatches: ${diagnostic.engagementWorkspaceMatches}`
+              );
+              console.log(
+                `     engagementVisibility: ${diagnostic.engagementVisibility}`
+              );
+              console.log(`     hasClientId: ${diagnostic.hasClientId}`);
+              console.log(
+                `     serviceCallSucceeded: ${diagnostic.serviceCallSucceeded}`
+              );
+              console.log(
+                `     dashboardTopLevelKeys: ${(diagnostic.dashboardTopLevelKeys || []).length}`
+              );
+              console.log(
+                `     dashboardEmptyObject: ${diagnostic.dashboardEmptyObject}`
+              );
+              console.log(`     errorName: ${diagnostic.errorName}`);
+              console.log(`     safeErrorMessage: ${diagnostic.safeErrorMessage}`);
+              console.log(`     stackFileLine: ${diagnostic.stackFileLine}`);
+              console.log(`     classification: ${diagnostic.classification}`);
+            } else if (diagnosticResponse.status === 404) {
+              console.log("   ❌ Diagnostic endpoint not found (404)");
+              console.log(
+                "   Possible causes: OPSIQ_DIAGNOSTIC_KEY missing or endpoint not deployed"
+              );
+              console.log("   Please verify:");
+              console.log(
+                "   1. OPSIQ_DIAGNOSTIC_KEY is set as GitHub Actions secret"
+              );
+              console.log(
+                "   2. Diagnostic endpoint is deployed with current commit"
+              );
+            } else {
+              console.log(
+                `   ⚠️  Diagnostic endpoint returned unexpected status: ${diagnosticResponse.status}`
+              );
+            }
+          } catch (diagnosticError) {
+            console.log(
+              `   ⚠️  Diagnostic call failed: ${diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError)}`
+            );
+          }
+
+          console.log("");
           process.exit(1);
         }
 
@@ -460,6 +529,68 @@ async function smokeTest(): Promise<void> {
         if (driftResponse.status !== 200) {
           console.log("❌ DRIFT_ROUTE_FAILED");
           console.log(`   Status: ${driftResponse.status}`);
+          console.log("   Calling diagnostic endpoint to trace root cause...\n");
+
+          // Call diagnostic endpoint before exiting (same logic as dashboard)
+          try {
+            const diagnosticResponse = await fetch(
+              `${BASE_URL}/api/internal/engagement-dashboard-route-proof`,
+              {
+                headers: {
+                  "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+                },
+              }
+            );
+
+            console.log(`   Diagnostic Status: ${diagnosticResponse.status}`);
+
+            if (diagnosticResponse.status === 200) {
+              const diagnostic = await diagnosticResponse.json();
+
+              console.log("   Diagnostic Output:");
+              console.log(`     userFound: ${diagnostic.userFound}`);
+              console.log(`     membershipFound: ${diagnostic.membershipFound}`);
+              console.log(
+                `     workspaceIdUuidLike: ${diagnostic.workspaceIdUuidLike}`
+              );
+              console.log(`     engagementFound: ${diagnostic.engagementFound}`);
+              console.log(
+                `     engagementWorkspaceMatches: ${diagnostic.engagementWorkspaceMatches}`
+              );
+              console.log(
+                `     engagementVisibility: ${diagnostic.engagementVisibility}`
+              );
+              console.log(`     hasClientId: ${diagnostic.hasClientId}`);
+              console.log(
+                `     serviceCallSucceeded: ${diagnostic.serviceCallSucceeded}`
+              );
+              console.log(
+                `     dashboardTopLevelKeys: ${(diagnostic.dashboardTopLevelKeys || []).length}`
+              );
+              console.log(
+                `     dashboardEmptyObject: ${diagnostic.dashboardEmptyObject}`
+              );
+              console.log(`     errorName: ${diagnostic.errorName}`);
+              console.log(`     safeErrorMessage: ${diagnostic.safeErrorMessage}`);
+              console.log(`     stackFileLine: ${diagnostic.stackFileLine}`);
+              console.log(`     classification: ${diagnostic.classification}`);
+            } else if (diagnosticResponse.status === 404) {
+              console.log("   ❌ Diagnostic endpoint not found (404)");
+              console.log(
+                "   Possible causes: OPSIQ_DIAGNOSTIC_KEY missing or endpoint not deployed"
+              );
+            } else {
+              console.log(
+                `   ⚠️  Diagnostic endpoint returned unexpected status: ${diagnosticResponse.status}`
+              );
+            }
+          } catch (diagnosticError) {
+            console.log(
+              `   ⚠️  Diagnostic call failed: ${diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError)}`
+            );
+          }
+
+          console.log("");
           process.exit(1);
         }
 
