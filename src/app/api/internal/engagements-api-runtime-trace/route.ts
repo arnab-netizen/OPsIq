@@ -2,10 +2,10 @@
  * ENGAGEMENTS API RUNTIME TRACE
  *
  * Protected endpoint (requires OPSIQ_DIAGNOSTIC_KEY) that compares:
- * 1. Demo engagement proof query result
- * 2. Raw Prisma queries with different filters
- * 3. listEngagements service call
- * 4. /api/engagements route response
+ * 1. Demo engagement proof query result (raw count)
+ * 2. Raw Prisma queries with filters
+ * 3. listEngagements service call result
+ * 4. Policy context (hasInternalAccess)
  *
  * Purpose: Identify exact point where demo engagement is filtered out
  */
@@ -14,8 +14,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { listEngagements } from "@/services/engagement";
-import { hasInternalAccess } from "@/policies/capability-check";
-import { CAPABILITIES } from "@/domain/constants/capabilities";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
 const DEMO_ENGAGEMENT_CODE = "ENG-001";
@@ -75,12 +73,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const workspaceId = membership.workspaceId;
     const workspaceIdSample = maskId(workspaceId);
 
-    // 3. Run proof query (same as demo-engagement-proof GET)
+    // 3. Run proof query (raw count)
     const proofCount = await db.engagement.count({
       where: { workspaceId },
     });
 
-    // 4. Check raw engagement data
+    // 4. Check raw engagement data with visibility field
     const rawEngagements = await db.engagement.findMany({
       where: { workspaceId },
       select: {
@@ -98,27 +96,49 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       take: 3,
     });
 
-    // 5. Try to call listEngagements service directly
-    let serviceCount = 0;
-    let serviceEngagements: any[] = [];
+    const demoEngagementRaw = rawEngagements.find((e: any) => e.code === DEMO_ENGAGEMENT_CODE);
+
+    // 5. Check user role assignments to understand access level
+    let userRoleAssignments: any[] = [];
+    let hasAdminRole = false;
+
+    const roleAssignments = await db.userRoleAssignment.findMany({
+      where: {
+        userId: user.id,
+        scope: "workspace",
+        scopeId: workspaceId,
+        isActive: true,
+      },
+    });
+
+    userRoleAssignments = roleAssignments.map((r: any) => ({
+      role: r.role,
+      scope: r.scope,
+    }));
+
+    // Check if user has admin or portfolio manager role (non-client role = internal access)
+    const clientOnlyRoles = ["client_user", "client_stakeholder"];
+    hasAdminRole = roleAssignments.some((r: any) => !clientOnlyRoles.includes(r.role));
+
+    // 6. Call listEngagements service (same as /api/engagements does)
+    let serviceResult: any = null;
     let serviceError = null;
+    let serviceEngagementCount = 0;
 
     try {
-      // Simulate non-admin access (same as demo user without internal access)
-      const result = await listEngagements(workspaceId, {}, false);
-      if (Array.isArray(result)) {
-        serviceCount = result.length;
-        serviceEngagements = result.slice(0, 3);
+      serviceResult = await listEngagements(workspaceId, {}, hasAdminRole);
+      if (serviceResult && typeof serviceResult === "object" && Array.isArray(serviceResult.engagements)) {
+        serviceEngagementCount = serviceResult.engagements.length;
       }
     } catch (error) {
       serviceError = error instanceof Error ? error.message : String(error);
     }
 
-    // 6. Analyze the data
-    const proofEngagement = rawEngagements.find((e: any) => e.code === DEMO_ENGAGEMENT_CODE);
-
+    // 7. Analyze the data
     const analysis = {
       workspaceIdSample,
+
+      // Raw data state
       proofCount,
       rawEngagementsCount: rawEngagements.length,
       rawEngagements: rawEngagements.map((e: any) => ({
@@ -126,24 +146,34 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         status: e.status,
         visibility: e.visibility,
         serviceTier: e.serviceTier,
-        healthStatus: e.healthStatus,
       })),
-      demoEngagementInRaw: !!proofEngagement,
-      demoEngagementVisibility: proofEngagement?.visibility || null,
-      serviceCountResult: serviceCount,
+      demoEngagementInRaw: !!demoEngagementRaw,
+      demoEngagementVisibility: demoEngagementRaw?.visibility || null,
+
+      // Policy context
+      userHasAdminRole: hasAdminRole,
+      userRoleAssignments,
+
+      // Service result
+      serviceResultReceived: !!serviceResult,
       serviceError,
-      serviceEngagementsCount: serviceEngagements.length,
-      serviceEngagementsSample: serviceEngagements.slice(0, 2).map((e: any) => ({
-        code: e.code || e.engagement?.code,
-        status: e.status || e.engagement?.status,
-      })),
+      serviceEngagementCount,
+      serviceResponseShape: serviceResult ? Object.keys(serviceResult).sort() : null,
+
+      // Classification
       rootCauseClassification:
         proofCount === 0
           ? "no_engagement_in_database"
-          : proofCount > 0 && serviceCount === 0 && rawEngagements.length > 0
-          ? "service_filter_excludes_engagement"
-          : proofCount > 0 && serviceCount > 0
-          ? "response_or_parser_issue"
+          : proofCount > 0 && rawEngagements.length === 0
+          ? "raw_query_returns_empty"
+          : proofCount > 0 && rawEngagements.length > 0 && demoEngagementRaw && demoEngagementRaw.visibility !== "client_visible" && !hasAdminRole
+          ? "visibility_filter_excludes_demo_engagement"
+          : serviceError
+          ? "service_call_failed"
+          : serviceEngagementCount === 0 && proofCount > 0 && rawEngagements.length > 0
+          ? "service_filters_out_all_engagements"
+          : serviceEngagementCount > 0 && proofCount > 0
+          ? "service_returns_data_check_response_shape"
           : "unknown",
     };
 
@@ -170,3 +200,4 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
