@@ -313,9 +313,10 @@ async function smokeTest(): Promise<void> {
     if (
       engagementProof.classification === "demo_engagement_missing" ||
       engagementProof.classification === "demo_engagement_wrong_workspace" ||
-      engagementProof.classification === "demo_client_missing"
+      engagementProof.classification === "demo_client_missing" ||
+      engagementProof.classification === "demo_engagement_visibility_wrong"
     ) {
-      console.log("\n   🔧 Demo data missing or mislinked - backfilling...");
+      console.log("\n   🔧 Demo data missing, mislinked, or visibility incorrect - backfilling...");
       const engagementBackfillResponse = await fetch(
         `${BASE_URL}/api/internal/demo-engagement-proof`,
         {
@@ -425,7 +426,7 @@ async function smokeTest(): Promise<void> {
         console.log("");
         console.log("Possible causes:");
         console.log(
-          "  - Seed Staging Database workflow has not been run on staging"
+          "  - Demo data has not been backfilled to database"
         );
         console.log(
           "  - Demo data exists but is not linked to workspace (engagement.workspaceId = NULL)"
@@ -592,219 +593,49 @@ async function smokeTest(): Promise<void> {
                   console.log("└─────────────────────────────────┴────────┘");
                   console.log("");
 
-                  // Print raw catalog results
-                  const rawCatalog = probeData.rawCatalog || [];
-                  if (rawCatalog.length > 0) {
-                    console.log("Raw SQL Catalog Results:");
-                    console.log("");
-                    for (const result of rawCatalog) {
-                      const status = result.status === "pass" ? "✅" : "❌";
-                      console.log(`${status} ${result.name}`);
-                      if (result.message) {
-                        console.log(`   └─ ${result.message}`);
-                      }
-                      if (result.data) {
-                        if (result.data.database) {
-                          console.log(`   └─ database: ${result.data.database}`);
-                        }
-                        if (result.data.tables) {
-                          console.log(
-                            `   └─ tables: ${(result.data.tables as string[]).join(", ")}`
-                          );
-                        }
-                        if (result.data.columns) {
-                          const cols = result.data.columns as Array<{ name: string; type: string }>;
-                          console.log(
-                            `   └─ columns: ${cols.map((c) => `${c.name}:${c.type}`).join(", ")}`
-                          );
-                        }
-                        if (result.data.count !== undefined) {
-                          console.log(`   └─ count: ${result.data.count}`);
-                        }
-                        if (result.data.found) {
-                          console.log(`   └─ found: ${(result.data.found as string[]).join(", ")}`);
-                        }
-                        if (result.data.missing && (result.data.missing as string[]).length > 0) {
-                          console.log(
-                            `   └─ missing columns: ${(result.data.missing as string[]).join(", ")}`
-                          );
-                        }
-                      }
-                    }
-                    console.log("");
-                  }
-
-                  // TASK E: Enhanced decision tree analysis with workspaceIdShape
-                  const noWhereCountFailed = probes.find(
-                    (p) => p.name === "probe_00a_count_no_where"
-                  )?.status === "fail";
-                  const emptyWhereCountFailed = probes.find(
-                    (p) => p.name === "probe_00b_count_empty_where"
-                  )?.status === "fail";
-                  const noWhereFindFirstIdFailed = probes.find(
-                    (p) => p.name === "probe_00c_findFirst_id_no_where"
-                  )?.status === "fail";
-                  const noWhereFindManyIdFailed = probes.find(
-                    (p) => p.name === "probe_00d_findMany_id_no_where"
-                  )?.status === "fail";
+                  // TASK E: Decision tree analysis
                   const countFailed = probes.find(
                     (p) => p.name === "probe_01_count_minimal"
                   )?.status === "fail";
-
-                  // Extract workspaceIdShape from diagnostic probe
-                  const workspaceIdShapeProbe = probes.find(
-                    (p) => p.name === "workspace_id_shape_diagnostic"
-                  ) as any;
-                  const workspaceIdShape = workspaceIdShapeProbe?.data?.workspaceId_from_probe_var;
-
-                  // Check raw catalog results
-                  const hasEngagementTable = rawCatalog.some(
-                    (r) => r.name === "raw_02_find_engagement_tables" && r.status === "pass"
-                  );
-                  const missingRequiredColumns = rawCatalog.find(
-                    (r) => r.name === "raw_06_required_columns_check"
+                  const findFirstIdFailed = probes.find(
+                    (p) => p.name === "probe_02_findFirst_id_only"
                   )?.status === "fail";
-                  const workspaceIdMissing = rawCatalog.find(
-                    (r) => r.name === "raw_05_workspaceId_column_check"
+                  const findManyIdFailed = probes.find(
+                    (p) => p.name === "probe_03_findMany_id_only"
                   )?.status === "fail";
-                  const rawRequiredColumnsCheck = rawCatalog.find(
-                    (r) => r.name === "raw_06_required_columns_check"
-                  ) as any;
-                  const rawWorkspaceIdUuidParam = rawCatalog.find(
-                    (r) => r.name === "raw_07_raw_count_workspace_id_uuid_param"
-                  ) as any;
+                  const relationFailed = probes.find(
+                    (p) => p.name === "probe_06_relation_only"
+                  )?.status === "fail";
 
-                  console.log("WorkspaceID Diagnostics:");
-                  if (workspaceIdShape) {
-                    console.log(`  UUID-like: ${workspaceIdShape.uuidLike ? "✅" : "❌"}`);
-                    console.log(`  Type: ${workspaceIdShape.type}`);
-                    console.log(`  Length: ${workspaceIdShape.length}`);
-                    if (workspaceIdShape.sample) {
-                      console.log(`  Sample: ${workspaceIdShape.sample}`);
-                    }
-                  }
-                  console.log("");
-
-                  if (rawRequiredColumnsCheck?.data?.checkedTable) {
-                    console.log(`Raw Catalog - Checked Table: ${rawRequiredColumnsCheck.data.checkedTable}`);
-                    if (rawRequiredColumnsCheck.data.missingColumns && (rawRequiredColumnsCheck.data.missingColumns as string[]).length > 0) {
-                      console.log(`  Missing columns: ${(rawRequiredColumnsCheck.data.missingColumns as string[]).join(", ")}`);
-                    } else {
-                      console.log("  All expected columns present");
-                    }
-                  }
-                  if (rawWorkspaceIdUuidParam) {
-                    console.log(`Raw SQL with workspaceId UUID param: ${rawWorkspaceIdUuidParam.status === "pass" ? "✅ PASS" : "❌ FAIL"}`);
-                    if (rawWorkspaceIdUuidParam.status === "fail" && rawWorkspaceIdUuidParam.data?.reason) {
-                      console.log(`  Reason: ${rawWorkspaceIdUuidParam.data.reason}`);
-                    }
-                  }
-                  console.log("");
-
-                  console.log("Decision Tree Analysis:");
-                  console.log("");
-
-                  let classification = "unknown_p2007_pattern";
-
-                  // First check: workspaceId must be UUID-like
-                  if (workspaceIdShape && !workspaceIdShape.uuidLike) {
-                    classification = "workspace_context_id_not_uuid";
+                  console.log("Diagnosis:");
+                  if (countFailed && findFirstIdFailed && findManyIdFailed) {
                     console.log(
-                      "❌ CLASSIFICATION: workspace_context_id_not_uuid"
+                      "   ❌ Basic model/where clause broken (affects count, findFirst, findMany)"
                     );
                     console.log(
-                      "   workspaceId from probe is not a valid UUID format"
-                    );
-                    console.log(
-                      "   Issue: ctx.verifiedWorkspaceId stores wrong value type (slug, name, or demo string instead of UUID)"
-                    );
-                    console.log(
-                      "   Fix: Trace auth/session creation and ensure verifiedWorkspaceId is Workspace.id UUID"
-                    );
-                  } else if (noWhereCountFailed && hasEngagementTable) {
-                    classification = "base_engagement_model_or_adapter_failure";
-                    console.log(
-                      "❌ CLASSIFICATION: base_engagement_model_or_adapter_failure"
-                    );
-                    console.log(
-                      "   No-where count fails but table exists in raw catalog"
-                    );
-                    console.log(
-                      "   Issue: Prisma model/adapter cannot read base Engagement table"
-                    );
-                  } else if (noWhereCountFailed && !hasEngagementTable) {
-                    classification = "engagement_table_missing_or_mapping_wrong";
-                    console.log(
-                      "❌ CLASSIFICATION: engagement_table_missing_or_mapping_wrong"
-                    );
-                    console.log("   No-where count fails AND table missing in raw catalog");
-                    console.log(
-                      "   Issue: Engagement table missing or @@map annotation wrong in schema"
-                    );
-                  } else if (rawRequiredColumnsCheck?.status === "fail") {
-                    classification = "production_schema_missing_columns";
-                    console.log(
-                      "❌ CLASSIFICATION: production_schema_missing_columns"
-                    );
-                    console.log(
-                      "   Raw catalog found missing required columns in Engagement table"
-                    );
-                    console.log(
-                      `   Missing: ${(rawRequiredColumnsCheck.data?.missingColumns || []).join(", ")}`
+                      "   Issue: workspaceId filter or base engagement model issue"
                     );
                   } else if (
-                    !noWhereCountFailed &&
-                    !emptyWhereCountFailed &&
-                    countFailed &&
-                    workspaceIdShape?.uuidLike
-                  ) {
-                    // workspaceId is UUID-like, but raw SQL test will tell us if it's a DB type issue
-                    if (rawWorkspaceIdUuidParam?.status === "pass") {
-                      classification = "prisma_adapter_or_generated_mapping_failure";
-                      console.log(
-                        "❌ CLASSIFICATION: prisma_adapter_or_generated_mapping_failure"
-                      );
-                      console.log(
-                        "   Raw SQL with workspace_id UUID param PASSES"
-                      );
-                      console.log("   Prisma with workspaceId filter FAILS");
-                      console.log(
-                        "   Issue: Prisma adapter or generated client cannot map workspaceId field"
-                      );
-                    } else {
-                      classification = "workspace_id_value_or_db_type_failure";
-                      console.log(
-                        "❌ CLASSIFICATION: workspace_id_value_or_db_type_failure"
-                      );
-                      console.log(
-                        "   Both raw SQL and Prisma with workspaceId FAIL"
-                      );
-                      console.log(
-                        "   Issue: DB workspace_id column type mismatch or NULL value"
-                      );
-                    }
-                  } else if (
-                    !noWhereCountFailed &&
                     !countFailed &&
-                    noWhereFindFirstIdFailed
+                    !findFirstIdFailed &&
+                    !findManyIdFailed &&
+                    relationFailed
                   ) {
-                    classification = "prisma_adapter_or_generated_client_mapping_failure";
-                    console.log(
-                      "❌ CLASSIFICATION: prisma_adapter_or_generated_client_mapping_failure"
-                    );
-                    console.log(
-                      "   Count passes but findFirst with id-only select fails"
-                    );
-                    console.log(
-                      "   Issue: Prisma adapter cannot decode row into id field"
-                    );
+                    console.log("   ❌ Relation failed but basic queries work");
+                    console.log("   Issue: clientAccount relation issue");
+                  } else if (!relationFailed && probes.some((p) => p.name.includes("select") && p.status === "fail")) {
+                    console.log("   ❌ Specific field in select failing");
+                    console.log("   Issue: One of these fields invalid: healthStatus, interventionMode, serviceTier");
+                  } else if (
+                    probes.find((p) => p.name === "probe_07_full_select")
+                      ?.status === "fail"
+                  ) {
+                    console.log("   ❌ Full select fails but parts work");
+                    console.log("   Issue: Service mapper combining valid fields incorrectly");
                   } else {
-                    console.log("❌ CLASSIFICATION: unexpected_p2007_pattern");
-                    console.log("   Probe pattern does not match known classifications");
+                    console.log("   ❌ Unexpected probe pattern");
                   }
 
-                  console.log("");
-                  console.log(`Result: ${classification}`);
                   process.exit(1);
                 } else {
                   console.log(
@@ -875,64 +706,6 @@ async function smokeTest(): Promise<void> {
 
         console.log("This indicates an internal crash in the engagements API.");
         console.log("Use the correlationId and stage to locate the issue in production logs.");
-      } catch {
-        const text = await engagementsResponse.text();
-        console.log(`   Response: ${text.substring(0, 200)}`);
-      }
-      process.exit(1);
-    } else if (engagementsResponse.status === 403) {
-      console.log("❌ FORBIDDEN (403)");
-      try {
-        const errorData = await engagementsResponse.json();
-        console.log(`   CorrelationId: ${errorData.correlationId}`);
-
-        if (errorData.classification === "canonical_permission_denied") {
-          console.log("\n🔍 CANONICAL_PERMISSION_DENIED_WITH_DETAILS");
-          console.log("");
-          console.log("Authorization Details:");
-          console.log(`   Stage: ${errorData.stage}`);
-          console.log(`   Required Capabilities: ${JSON.stringify(errorData.requiredCapabilities)}`);
-          console.log(`   Policy Roles: ${JSON.stringify(errorData.policyRoles)}`);
-          console.log(`   Policy Capabilities: ${JSON.stringify(errorData.policyCapabilities)}`);
-          console.log(`   Missing Capabilities: ${JSON.stringify(errorData.missingCapabilities)}`);
-          console.log(`   Membership Found: ${errorData.membershipFound}`);
-          console.log(`   Role Assignment Found: ${errorData.roleAssignmentFound}`);
-
-          if (errorData.verifiedWorkspaceIdShape) {
-            console.log("\nWorkspace ID:");
-            console.log(`   Present: ${errorData.verifiedWorkspaceIdShape.present}`);
-            console.log(`   UUID-Like: ${errorData.verifiedWorkspaceIdShape.uuidLike}`);
-            if (errorData.verifiedWorkspaceIdShape.sample) {
-              console.log(`   Sample: ${errorData.verifiedWorkspaceIdShape.sample}`);
-            }
-          }
-
-          console.log(`   Source: ${errorData.capabilityDecisionSource}`);
-          console.log("");
-
-          // Analysis
-          if (errorData.policyRoles && errorData.policyRoles.length > 0) {
-            console.log("Analysis:");
-            console.log(`  ✓ User has roles: ${errorData.policyRoles.join(", ")}`);
-
-            if (errorData.missingCapabilities && errorData.missingCapabilities.length > 0) {
-              console.log(`  ✗ Missing capabilities: ${errorData.missingCapabilities.join(", ")}`);
-              console.log("");
-              console.log("Fix: Check if required capabilities are in ROLE_CAPABILITIES registry");
-              console.log("and if they match exactly (case-sensitive string comparison).");
-            } else if (errorData.requiredCapabilities && errorData.requiredCapabilities.length > 0) {
-              console.log(`  ✗ Required but not found: ${errorData.requiredCapabilities.join(", ")}`);
-              console.log("     in policy capabilities");
-            }
-          } else {
-            console.log("Analysis:");
-            console.log("  ✗ User has no roles in policy context");
-            console.log("     Check if UserRoleAssignment exists for this workspace");
-          }
-        } else {
-          console.log(`   Error: ${errorData.error}`);
-          console.log(`   Detail: ${errorData.detail}`);
-        }
       } catch {
         const text = await engagementsResponse.text();
         console.log(`   Response: ${text.substring(0, 200)}`);
