@@ -1,5 +1,5 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
-import { ForbiddenError } from "@/infra/errors";
+import { BadRequestError, AppError } from "@/infra/errors";
 import { requireCapability } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getQueuedItems } from "@/services/operator/store";
@@ -36,20 +36,12 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
 
     // Validate limit
     if (isNaN(limit)) {
-      return Response.json(
-        { error: "Invalid limit: must be a number between 1 and 1000" },
-        { status: 400 }
-      );
+      throw new BadRequestError("Invalid limit: must be a number between 1 and 1000");
     }
 
     // Validate status if provided
     if (status && !["pending", "in_progress", "blocked"].includes(status)) {
-      return Response.json(
-        {
-          error: "Invalid status: must be one of pending, in_progress, blocked",
-        },
-        { status: 400 }
-      );
+      throw new BadRequestError("Invalid status: must be one of pending, in_progress, blocked");
     }
 
     // Fetch queued items
@@ -69,24 +61,33 @@ export const GET = withCanonicalEnforcement(async (ctx) => {
       },
     });
 
-    return Response.json(
-      {
-        workspaceId,
-        items,
-        count: items.length,
-        status: status || "all",
-        limit,
-      },
-      { status: 200 }
-    );
+    return {
+      workspaceId,
+      items,
+      count: items.length,
+      status: status || "all",
+      limit,
+    };
   } catch (error) {
     if (error instanceof Error) {
-      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
+      throw new BadRequestError(classifyOperatorError(error, { context: "load" }).operatorMessage);
     }
 
-    return Response.json(
-      { error: "Internal server error" },
-      { status: 500 }
+    throw new AppError(
+      "INTERNAL_ERROR",
+      "Internal server error",
+      500,
+      {
+        telemetryClass: "INTERNAL_ERROR",
+        auditClass: "INTERNAL_ERROR",
+        severity: "HIGH",
+        retryable: false,
+        securityRelevant: false,
+        infrastructureRelevant: true,
+        abuseRelevant: false,
+        handlerAllowed: true,
+        mutationAllowed: false,
+      }
     );
   }
 });

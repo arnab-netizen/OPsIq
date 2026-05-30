@@ -1,6 +1,6 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
-import { ForbiddenError } from "@/infra/errors";
+import { ForbiddenError, NotFoundError, AppError } from "@/infra/errors";
 import { getFirstValue } from "@/services/first-value.service";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
@@ -18,29 +18,35 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   try {
     const firstValue = await getFirstValue(ctx, workspaceId);
 
-    return Response.json(firstValue, { status: 200 });
+    return firstValue;
   } catch (error) {
     if (
       error instanceof Error &&
       error.message.includes("Workspace not found")
     ) {
-      return Response.json(
-        { error: "Workspace not found" },
-        { status: 404 }
-      );
+      throw new NotFoundError("Workspace", workspaceId);
     }
 
     if (error instanceof ForbiddenError) {
-      return Response.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      throw error;
     }
 
     console.error("First-value API error:", error);
-    return Response.json(
-      { error: "Internal server error" },
-      { status: 500 }
+    throw new AppError(
+      "INTERNAL_ERROR",
+      "Internal server error",
+      500,
+      {
+        telemetryClass: "INTERNAL_ERROR",
+        auditClass: "INTERNAL_ERROR",
+        severity: "HIGH",
+        retryable: false,
+        securityRelevant: false,
+        infrastructureRelevant: true,
+        abuseRelevant: false,
+        handlerAllowed: true,
+        mutationAllowed: false,
+      }
     );
   }
 });
