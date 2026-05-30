@@ -1,7 +1,7 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { generateReport } from "@/services/report/engine";
-import { UnauthorizedError } from "@/infra/errors";
+import { UnauthorizedError, BadRequestError } from "@/infra/errors";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export const GET = withCanonicalEnforcement(
@@ -13,10 +13,10 @@ export const GET = withCanonicalEnforcement(
 
     try {
       const report = await generateReport();
-      return Response.json(report);
+      return report;
     } catch (error) {
       const governed = classifyOperatorError(error instanceof Error ? error : new Error(String(error)), { context: 'load' });
-      return Response.json({ details: governed.operatorMessage }, { status: 400 });
+      throw new BadRequestError(governed.operatorMessage);
     }
   },
   { requireCapabilities: ["SYSTEM_VIEW_AUDIT"], requireWorkspace: true }
