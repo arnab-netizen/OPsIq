@@ -412,6 +412,7 @@ async function smokeTest(): Promise<void> {
           method: "GET",
           headers: {
             Cookie: sessionCookie,
+            "x-workspace-id": "demo",
             "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
           },
         });
@@ -449,6 +450,7 @@ async function smokeTest(): Promise<void> {
           method: "GET",
           headers: {
             Cookie: sessionCookie,
+            "x-workspace-id": "demo",
             "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
           },
         });
@@ -485,6 +487,7 @@ async function smokeTest(): Promise<void> {
           method: "GET",
           headers: {
             Cookie: sessionCookie,
+            "x-workspace-id": "demo",
             "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
           },
         });
