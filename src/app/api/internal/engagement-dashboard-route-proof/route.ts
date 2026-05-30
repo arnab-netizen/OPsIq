@@ -111,6 +111,24 @@ export async function GET(request: NextRequest) {
     response.engagementVisibility = engagement.visibility || "unknown";
     response.hasClientId = Boolean(engagement.clientId);
 
+    // Step 6.5: Check engagementMembership (required by route's assertEngagementAccess call)
+    const engagementMembership = await db.engagementMembership.findFirst({
+      where: {
+        userId: demoUser.id,
+        engagementId: engagement.id,
+        isActive: true,
+      },
+    });
+
+    const hasEngagementMembership = !!engagementMembership;
+
+    if (!hasEngagementMembership) {
+      response.classification = "engagement_membership_missing";
+      response.errorName = "EngagementMembershipMissing";
+      response.safeErrorMessage = "Demo user has no active membership in this engagement (required by assertEngagementAccess) - real route will return 403 before service call";
+      return NextResponse.json(response, { status: 200 });
+    }
+
     // Step 7: Call dashboard service (same path as route handler)
     // Create synthetic auth context mimicking the wrapped handler
     const syntheticContext = {

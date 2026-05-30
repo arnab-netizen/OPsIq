@@ -367,19 +367,77 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       getCapabilitiesForRole(ra.role as any).includes(CAPABILITIES.ENGAGEMENT_VIEW)
     );
 
+    // 6. Backfill engagementMembership for ENG-001 (required by dashboard route's assertEngagementAccess)
+    const engagement = await db.engagement.findFirst({
+      where: {
+        code: "ENG-001",
+        workspaceId: membership.workspaceId,
+      },
+    });
+
+    let engagementMembershipBackfilled = false;
+    if (engagement) {
+      let engagementMembership = await db.engagementMembership.findFirst({
+        where: {
+          userId: user.id,
+          engagementId: engagement.id,
+        },
+      });
+
+      if (!engagementMembership) {
+        // Create new membership
+        engagementMembership = await db.engagementMembership.create({
+          data: {
+            id: require("crypto").randomUUID(),
+            userId: user.id,
+            engagementId: engagement.id,
+            role: "member",
+            joinedAt: new Date(),
+            isActive: true,
+          },
+        });
+        logger.info("[DEMO_PERMISSION_BACKFILL] Created engagement membership", {
+          correlationId,
+          userId: user.id,
+          engagementId: engagement.id,
+        });
+        engagementMembershipBackfilled = true;
+      } else if (!engagementMembership.isActive) {
+        // Reactivate if deactivated
+        await db.engagementMembership.update({
+          where: { id: engagementMembership.id },
+          data: { isActive: true },
+        });
+        logger.info("[DEMO_PERMISSION_BACKFILL] Reactivated engagement membership", {
+          correlationId,
+          userId: user.id,
+          engagementId: engagement.id,
+        });
+        engagementMembershipBackfilled = true;
+      } else {
+        logger.debug("[DEMO_PERMISSION_BACKFILL] Engagement membership already exists and active", {
+          correlationId,
+          userId: user.id,
+          engagementId: engagement.id,
+        });
+      }
+    }
+
     logger.info("[DEMO_PERMISSION_BACKFILL] Backfill complete", {
       correlationId,
       roleAssignmentExists: true,
       roleAssignmentActive: true,
       hasEngagementView,
+      engagementMembershipBackfilled,
     });
 
     return NextResponse.json(
       {
         status: "success",
-        message: "Role assignment backfilled or already present",
+        message: "Role assignment and engagement membership backfilled or already present",
         roleAssignmentActive: true,
         roleGrantsEngagementView: hasEngagementView,
+        engagementMembershipBackfilled,
       },
       { status: 200 }
     );
