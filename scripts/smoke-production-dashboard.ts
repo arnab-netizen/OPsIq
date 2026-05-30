@@ -333,6 +333,11 @@ async function smokeTest(): Promise<void> {
         console.log(`❌ DEMO_ENGAGEMENT_BACKFILL_FAILED (${engagementBackfillResponse.status})`);
         const backfillError = await engagementBackfillResponse.json();
         console.log(`   Reason: ${backfillError.reason || "unknown"}`);
+        console.log(`   BackfillStage: ${backfillError.backfillStage || "unknown"}`);
+        console.log(`   ErrorName: ${backfillError.errorName || "unknown"}`);
+        console.log(`   SafeErrorMessage: ${backfillError.safeErrorMessage || "unknown"}`);
+        console.log(`   StackFileLine: ${backfillError.stackFileLine || "unknown"}`);
+        console.log(`   Classification: ${backfillError.classification || "unknown"}`);
         process.exit(1);
       }
 
