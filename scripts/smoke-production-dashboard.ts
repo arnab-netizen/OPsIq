@@ -390,10 +390,131 @@ async function smokeTest(): Promise<void> {
       if (engagementCount > 0) {
         console.log(`   ✓ Found ${engagementCount} engagement(s)\n`);
 
+        // TASK B: Extract first engagement ID and test fixed routes
+        let firstEngagementId: string | null = null;
+        const engagementArray = Array.isArray(data) ? data : data.engagements || data.data || data.items || data.results || [];
+
+        if (Array.isArray(engagementArray) && engagementArray.length > 0) {
+          firstEngagementId = engagementArray[0]?.id;
+        }
+
+        if (!firstEngagementId) {
+          console.log("❌ ENGAGEMENT_ID_EXTRACTION_FAILED");
+          console.log("   Could not extract engagement ID from response");
+          process.exit(1);
+        }
+
+        // Mask ID for safe logging: first 4 + ... + last 4
+        const maskedId = firstEngagementId.substring(0, 4) + "..." + firstEngagementId.substring(firstEngagementId.length - 4);
+        console.log(`4️⃣  GET /api/engagements/{${maskedId}}/dashboard (Phase 2 fixed route)`);
+
+        const dashboardResponse = await fetch(`${BASE_URL}/api/engagements/${firstEngagementId}/dashboard`, {
+          method: "GET",
+          headers: {
+            Cookie: sessionCookie,
+            "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+          },
+        });
+
+        console.log(`   Status: ${dashboardResponse.status}`);
+
+        if (dashboardResponse.status !== 200) {
+          console.log("❌ DASHBOARD_ROUTE_FAILED");
+          console.log(`   Status: ${dashboardResponse.status}`);
+          process.exit(1);
+        }
+
+        const dashboardData = await dashboardResponse.json();
+        const dashboardTopLevelType = typeof dashboardData;
+        const dashboardTopLevelKeys = dashboardTopLevelType === "object" && dashboardData !== null ? Object.keys(dashboardData).length : 0;
+
+        if (JSON.stringify(dashboardData) === "{}") {
+          console.log("❌ DASHBOARD_RESPONSE_EMPTY_OBJECT");
+          console.log("   Response is empty object: {}");
+          process.exit(1);
+        }
+
+        if (dashboardTopLevelKeys === 0) {
+          console.log("❌ DASHBOARD_NO_TOP_LEVEL_KEYS");
+          console.log("   Response has no top-level keys");
+          process.exit(1);
+        }
+
+        console.log(`   ✓ Response is object with ${dashboardTopLevelKeys} top-level keys\n`);
+
+        // Test drift route
+        console.log(`5️⃣  GET /api/engagements/{${maskedId}}/drift (Phase 2 fixed route)`);
+
+        const driftResponse = await fetch(`${BASE_URL}/api/engagements/${firstEngagementId}/drift`, {
+          method: "GET",
+          headers: {
+            Cookie: sessionCookie,
+            "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+          },
+        });
+
+        console.log(`   Status: ${driftResponse.status}`);
+
+        if (driftResponse.status !== 200) {
+          console.log("❌ DRIFT_ROUTE_FAILED");
+          console.log(`   Status: ${driftResponse.status}`);
+          process.exit(1);
+        }
+
+        const driftData = await driftResponse.json();
+        const driftTopLevelType = typeof driftData;
+        const driftTopLevelKeys = driftTopLevelType === "object" && driftData !== null ? Object.keys(driftData).length : 0;
+
+        if (JSON.stringify(driftData) === "{}") {
+          console.log("❌ DRIFT_RESPONSE_EMPTY_OBJECT");
+          console.log("   Response is empty object: {}");
+          process.exit(1);
+        }
+
+        if (driftTopLevelKeys === 0) {
+          console.log("❌ DRIFT_NO_TOP_LEVEL_KEYS");
+          console.log("   Response has no top-level keys");
+          process.exit(1);
+        }
+
+        console.log(`   ✓ Response is object with ${driftTopLevelKeys} top-level keys\n`);
+
+        // TASK C: Optional safe 404 check for dashboard route
+        console.log("6️⃣  GET /api/engagements/00000000-0000-0000-0000-000000000000/dashboard (404 safety check)");
+        const notFoundResponse = await fetch(`${BASE_URL}/api/engagements/00000000-0000-0000-0000-000000000000/dashboard`, {
+          method: "GET",
+          headers: {
+            Cookie: sessionCookie,
+            "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+          },
+        });
+
+        console.log(`   Status: ${notFoundResponse.status}`);
+
+        if (notFoundResponse.status === 404) {
+          const errorData = await notFoundResponse.json();
+          const errorJson = JSON.stringify(errorData);
+
+          if (errorJson === "{}") {
+            console.log("   ⚠️  404 returned empty object (acceptable but not ideal)");
+          } else {
+            const isSafe = !errorJson.includes("stack") && !errorJson.toLowerCase().includes("secret") && !errorJson.toLowerCase().includes("password");
+            if (isSafe) {
+              console.log("   ✓ 404 returned safe JSON body\n");
+            } else {
+              console.log("   ⚠️  404 response may contain unsafe data\n");
+            }
+          }
+        } else {
+          console.log("   ⚠️  Unexpected status for 404 check (not 404)\n");
+        }
+
         console.log("✅ DASHBOARD VERIFICATION SUCCESS");
         console.log("");
-        console.log("Dashboard is accessible and demo data is loading:");
+        console.log("Dashboard and Phase 2 fixed routes verified:");
         console.log(`   - Engagements: ${engagementCount} found`);
+        console.log(`   - Dashboard route: ✓ 200, ${dashboardTopLevelKeys} keys`);
+        console.log(`   - Drift route: ✓ 200, ${driftTopLevelKeys} keys`);
         console.log("   - Authentication: working");
         console.log("   - Data layer: accessible");
         process.exit(0);
