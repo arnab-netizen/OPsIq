@@ -651,6 +651,21 @@ export function withCanonicalEnforcement(
           "handler_invocation",
           "handler_invocation_failed"
         );
+      } else if (error && typeof error === "object" && "statusCode" in error && "code" in error) {
+        // AppError subclass (NotFoundError, ForbiddenError, etc.)
+        // Has statusCode and code properties - convert to ClassifiedApiError
+        const appError = error as any;
+        const statusCode = typeof appError.statusCode === "number" ? appError.statusCode : 500;
+        const errorCode = typeof appError.code === "string" ? appError.code : "INTERNAL_ERROR";
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        classifiedError = new ClassifiedApiError(
+          errorMessage,
+          `handler_invocation_${errorCode.toLowerCase()}`,
+          "handler_invocation",
+          statusCode,
+          error
+        );
       } else {
         // Raw unclassified error - use namespace-specific fallback
         const fallbackClassification = errorNamespace
