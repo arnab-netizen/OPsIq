@@ -23,5 +23,5 @@ export const GET = withCanonicalEnforcement(
       throw error;
     }
   },
-  { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
+  { requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW], requireWorkspace: true }
 );
