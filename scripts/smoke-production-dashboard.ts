@@ -314,9 +314,12 @@ async function smokeTest(): Promise<void> {
       engagementProof.classification === "demo_engagement_missing" ||
       engagementProof.classification === "demo_engagement_wrong_workspace" ||
       engagementProof.classification === "demo_client_missing" ||
-      engagementProof.classification === "demo_engagement_visibility_wrong"
+      engagementProof.classification === "demo_engagement_visibility_wrong" ||
+      engagementProof.classification === "demo_engagement_membership_missing" ||
+      engagementProof.classification === "demo_engagement_membership_inactive" ||
+      engagementProof.classification === "demo_engagement_membership_wrong_workspace"
     ) {
-      console.log("\n   🔧 Demo data missing, mislinked, or visibility incorrect - backfilling...");
+      console.log("\n   🔧 Demo data missing, mislinked, or access insufficient - backfilling...");
       const engagementBackfillResponse = await fetch(
         `${BASE_URL}/api/internal/demo-engagement-proof`,
         {
@@ -360,13 +363,16 @@ async function smokeTest(): Promise<void> {
           process.exit(1);
         }
       }
-      console.log("   ✓ Demo engagement backfilled\n");
+      console.log("   ✓ Demo data backfilled\n");
     } else if (engagementProof.classification === "demo_data_ready") {
       console.log("   ✓ Demo data ready\n");
     } else {
       console.log(`❌ DEMO_DATA_STATE_INVALID (${engagementProof.classification})`);
       console.log(`   Membership found: ${engagementProof.membershipFound}`);
       console.log(`   Workspace ID valid: ${engagementProof.workspaceIdUuidLike}`);
+      console.log(`   Demo engagement found: ${engagementProof.demoEngagementFound}`);
+      console.log(`   Demo engagement membership: ${engagementProof.demoEngagementMembershipFound ? "found" : "missing"}`);
+      console.log(`   Demo engagement membership active: ${engagementProof.demoEngagementMembershipActive ? "yes" : "no"}`);
       process.exit(1);
     }
 
