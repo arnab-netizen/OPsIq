@@ -313,9 +313,10 @@ async function smokeTest(): Promise<void> {
     if (
       engagementProof.classification === "demo_engagement_missing" ||
       engagementProof.classification === "demo_engagement_wrong_workspace" ||
-      engagementProof.classification === "demo_client_missing"
+      engagementProof.classification === "demo_client_missing" ||
+      engagementProof.classification === "demo_engagement_visibility_wrong"
     ) {
-      console.log("\n   🔧 Demo data missing or mislinked - backfilling...");
+      console.log("\n   🔧 Demo data missing, mislinked, or visibility incorrect - backfilling...");
       const engagementBackfillResponse = await fetch(
         `${BASE_URL}/api/internal/demo-engagement-proof`,
         {

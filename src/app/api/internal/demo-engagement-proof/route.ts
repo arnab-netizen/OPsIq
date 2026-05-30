@@ -47,12 +47,15 @@ interface DemoEngagementProofResponse {
   demoEngagementFound: boolean;
   duplicateDemoEngagementCandidates: boolean;
   demoEngagementWorkspaceMatches: boolean;
+  demoEngagementVisibility?: string;
+  demoEngagementVisibilityCorrect?: boolean;
   demoClientFound: boolean;
   demoClientWorkspaceMatches: boolean;
   classification:
     | "demo_data_ready"
     | "demo_engagement_missing"
     | "demo_engagement_wrong_workspace"
+    | "demo_engagement_visibility_wrong"
     | "demo_client_missing"
     | "duplicate_demo_engagement_candidates"
     | "membership_missing"
@@ -177,6 +180,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const demoEngagementWorkspaceMatches =
       !!demoEngagement && demoEngagement.workspaceId === membership.workspaceId;
 
+    // 6.5 Check if demo engagement has correct visibility for API access
+    const demoEngagementVisibilityCorrect =
+      !!demoEngagement && demoEngagement.visibility === "client_visible";
+
     // 7. Check demo client
     const demoClient = await db.clientAccount.findFirst({
       where: {
@@ -201,6 +208,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       classification = "demo_engagement_missing";
     } else if (!demoEngagementWorkspaceMatches) {
       classification = "demo_engagement_wrong_workspace";
+    } else if (!demoEngagementVisibilityCorrect) {
+      classification = "demo_engagement_visibility_wrong";
     } else {
       classification = "demo_data_ready";
     }
@@ -231,6 +240,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         demoEngagementFound: !!demoEngagement,
         duplicateDemoEngagementCandidates: duplicateCandidates,
         demoEngagementWorkspaceMatches,
+        demoEngagementVisibility: demoEngagement?.visibility,
+        demoEngagementVisibilityCorrect: demoEngagementVisibilityCorrect,
         demoClientFound: !!demoClient,
         demoClientWorkspaceMatches,
         classification,
@@ -411,6 +422,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           correlationId,
         });
         return { action: "relinked_known_demo", engagement: demoEngagement };
+      } else if (demoEngagement.visibility !== "client_visible") {
+        // Engagement is scoped correctly but has wrong visibility
+        demoEngagement = await tx.engagement.update({
+          where: { id: demoEngagement.id },
+          data: {
+            visibility: "client_visible",
+            updatedAt: new Date(),
+          },
+        });
+        logger.info("[DEMO_ENGAGEMENT_BACKFILL] Fixed demo engagement visibility", {
+          correlationId,
+        });
+        return { action: "fixed_visibility", engagement: demoEngagement };
       } else {
         // Already correct
         logger.debug("[DEMO_ENGAGEMENT_BACKFILL] Demo engagement already ready", {

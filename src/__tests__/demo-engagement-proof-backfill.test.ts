@@ -141,6 +141,7 @@ describe("Demo Engagement Proof & Backfill Endpoint", () => {
         code: "ENG-001",
         workspaceId: validUUID,
         clientId: "client-1",
+        visibility: "client_visible",
       };
       const mockClient = { id: "client-1", name: "Demo Manufacturing Corp" };
 
@@ -189,6 +190,40 @@ describe("Demo Engagement Proof & Backfill Endpoint", () => {
 
       expect(data.classification).toBe("demo_engagement_wrong_workspace");
       expect(data.demoEngagementWorkspaceMatches).toBe(false);
+    });
+
+    it("returns demo_engagement_visibility_wrong when visibility is incorrect", async () => {
+      const mockUser = { id: "user-1", email: demoUserEmail };
+      const mockMembership = {
+        workspaceId: validUUID,
+        userId: "user-1",
+        isActive: true,
+      };
+      const mockDemoEngagement = {
+        id: "eng-1",
+        code: "ENG-001",
+        workspaceId: validUUID,
+        clientId: "client-1",
+        visibility: "internal", // Wrong visibility
+      };
+      const mockClient = { id: "client-1", name: "Demo Manufacturing Corp" };
+
+      vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
+      vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+      vi.mocked(db.engagement.findMany).mockResolvedValueOnce([mockDemoEngagement] as any);
+      vi.mocked(db.engagement.count).mockResolvedValueOnce(1); // Scoped count
+      vi.mocked(db.engagement.count).mockResolvedValueOnce(1); // Total count
+      vi.mocked(db.clientAccount.findFirst).mockResolvedValueOnce(mockClient as any);
+
+      const request = createMockRequest("GET", diagnosticKey);
+      const response = await demoEngagementRoute.GET(request);
+      const data = await response.json();
+
+      expect(data.classification).toBe("demo_engagement_visibility_wrong");
+      expect(data.demoEngagementFound).toBe(true);
+      expect(data.demoEngagementWorkspaceMatches).toBe(true);
+      expect(data.demoEngagementVisibility).toBe("internal");
+      expect(data.demoEngagementVisibilityCorrect).toBe(false);
     });
 
     it("returns duplicate_demo_engagement_candidates when multiple exist", async () => {
@@ -330,6 +365,8 @@ describe("Demo Engagement Proof & Backfill Endpoint", () => {
         id: "eng-1",
         code: "ENG-001",
         workspaceId: validUUID,
+        visibility: "client_visible",
+        clientId: "client-1",
       };
 
       vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
@@ -403,6 +440,56 @@ describe("Demo Engagement Proof & Backfill Endpoint", () => {
       expect(response.status).toBe(400);
       const data = await response.json();
       expect(data.reason).toBe("duplicate_demo_engagement_candidates");
+    });
+
+    it("fixes visibility when engagement is scoped correctly but visibility is wrong", async () => {
+      const mockUser = { id: "user-1", email: demoUserEmail };
+      const mockMembership = {
+        workspaceId: validUUID,
+        userId: "user-1",
+        isActive: true,
+      };
+      const mockExistingEngagement = {
+        id: "eng-1",
+        code: "ENG-001",
+        workspaceId: validUUID,
+        clientId: "client-1",
+        visibility: "internal", // Wrong visibility
+      };
+
+      vi.mocked(db.user.findUnique).mockResolvedValueOnce(mockUser as any);
+      vi.mocked(db.workspaceMembership.findFirst).mockResolvedValueOnce(mockMembership as any);
+
+      const txMock = {
+        engagement: {
+          findMany: vi.fn().mockResolvedValueOnce([mockExistingEngagement] as any),
+          update: vi.fn().mockResolvedValueOnce({
+            ...mockExistingEngagement,
+            visibility: "client_visible",
+          } as any),
+        },
+        clientAccount: {
+          findFirst: vi.fn().mockResolvedValueOnce({ id: "client-1" } as any),
+        },
+      };
+
+      vi.mocked(db.$transaction).mockImplementation(async (callback: any) => {
+        return callback(txMock);
+      });
+
+      const request = createMockRequest("POST", diagnosticKey);
+      const response = await demoEngagementRoute.POST(request);
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.backfillAction).toBe("fixed_visibility");
+      expect(txMock.engagement.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            visibility: "client_visible",
+          }),
+        })
+      );
     });
   });
 
