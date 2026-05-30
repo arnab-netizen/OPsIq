@@ -311,6 +311,55 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 }
 
+// Helper: Sanitize error message (replace UUIDs and secrets)
+function sanitizeErrorMessage(msg: string): string {
+  let sanitized = msg.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "UUID");
+  const diagnosticKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
+  if (diagnosticKey && diagnosticKey.length > 0) {
+    sanitized = sanitized.replace(new RegExp(diagnosticKey, "g"), "DIAGNOSTIC_KEY");
+  }
+  return sanitized;
+}
+
+// Helper: Extract stack file:line
+function extractStackFileLine(stack: string): string {
+  const lines = stack.split("\n");
+  for (const line of lines) {
+    const match = line.match(/\(([^)]+):(\d+):(\d+)\)/);
+    if (match) {
+      return `${match[1]}:${match[2]}`;
+    }
+  }
+  return "unknown";
+}
+
+// Helper: Classify Prisma error code
+function classifyPrismaError(code: string, errorMsg: string): string {
+  if (code === "P2002") {
+    return "duplicate_unique_constraint";
+  }
+  if (code === "P2025") {
+    return "not_found";
+  }
+  if (code === "P2014") {
+    return "wrong_relation_connect";
+  }
+  if (code === "P2012") {
+    return "missing_required_field";
+  }
+  const lowerMsg = errorMsg.toLowerCase();
+  if (lowerMsg.includes("unknown argument") || lowerMsg.includes("unknown field")) {
+    return "invalid_field_name";
+  }
+  if (lowerMsg.includes("missing the required argument")) {
+    return "missing_required_field";
+  }
+  if (lowerMsg.includes("relation")) {
+    return "wrong_relation_connect";
+  }
+  return "cannot_determine";
+}
+
 // POST: Idempotently backfill missing/mislinked demo engagement
 export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!verifyDiagnosticKey(request)) {
@@ -318,9 +367,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const correlationId = `demo-eng-backfill-${Date.now()}`;
+  let backfillStage = "initial";
 
   try {
-
+    backfillStage = "resolve_demo_user";
     // 1. Find demo user
     const user = await db.user.findUnique({
       where: { email: DEMO_USER_EMAIL },
@@ -338,6 +388,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    backfillStage = "resolve_workspace_membership";
     // 2. Find active workspace membership
     const membership = await db.workspaceMembership.findFirst({
       where: {
@@ -362,6 +413,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    backfillStage = "resolve_demo_engagement";
     // 3. Validate workspace ID is UUID-like
     const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
     if (!uuidRegex.test(membership.workspaceId)) {
@@ -480,8 +532,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         logger.debug("[DEMO_ENGAGEMENT_BACKFILL] Demo engagement already ready", {
           correlationId,
         });
+        demoEngagement = demoEngagementCandidates[0];
       }
 
+      backfillStage = "inspect_existing_engagement_membership";
       // 5. Ensure engagement membership exists (required by assertEngagementAccess)
       const engagementMembership = await tx.engagementMembership.findFirst({
         where: {
@@ -492,6 +546,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
 
       if (!engagementMembership) {
+        backfillStage = "create_engagement_membership";
         // Create engagement membership with specific role
         await tx.engagementMembership.create({
           data: {
@@ -510,6 +565,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           engagementId: demoEngagement.id,
         });
       } else if (!engagementMembership.isActive) {
+        backfillStage = "activate_engagement_membership";
         // Reactivate if was deactivated
         await tx.engagementMembership.update({
           where: { id: engagementMembership.id },
@@ -522,9 +578,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         });
       }
 
-      return { action: result.action, engagement: demoEngagement };
+      return { action: "already_ready", engagement: demoEngagement };
     });
 
+    backfillStage = "verify_after_backfill";
     logger.info("[DEMO_ENGAGEMENT_BACKFILL] Backfill complete", {
       correlationId,
       action: result.action,
@@ -544,7 +601,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (errorMsg === "DUPLICATE_DEMO_ENGAGEMENT_CANDIDATES") {
       logger.warn("[DEMO_ENGAGEMENT_BACKFILL] Duplicate demo engagement candidates", {
-        correlationId: `demo-eng-backfill-${Date.now()}`,
+        correlationId,
       });
       return NextResponse.json(
         {
@@ -556,27 +613,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Classify Prisma errors
-    let safeErrorMessage = errorMsg.slice(0, 200);
-    let backfillStage = "engagement_membership_backfill";
-    let classification = "internal_error";
+    // Build safe error response
+    let safeErrorMessage = sanitizeErrorMessage(errorMsg);
+    let stackFileLine = "unknown";
+    let classification = "cannot_determine";
 
-    // Check for unique constraint violation on engagement membership
+    if (error instanceof Error && error.stack) {
+      stackFileLine = extractStackFileLine(error.stack);
+    }
+
+    // Classify error
     if (errorName === "PrismaClientKnownRequestError") {
       const prismaError = error as any;
-      if (prismaError.code === "P2002") {
-        classification = "engagement_membership_unique_constraint_violation";
-        safeErrorMessage = "Engagement membership already exists for this user and engagement";
-        backfillStage = "engagement_membership_create_unique_constraint";
-      } else if (prismaError.code === "P2025") {
-        classification = "engagement_membership_not_found_for_update";
-        safeErrorMessage = "Failed to find engagement membership for update";
-        backfillStage = "engagement_membership_update";
-      } else {
-        classification = "prisma_error";
-        safeErrorMessage = `Prisma error ${prismaError.code}`;
-        backfillStage = "engagement_membership_transaction";
-      }
+      classification = classifyPrismaError(prismaError.code, errorMsg);
+    } else if (errorName === "PrismaClientValidationError") {
+      classification = "invalid_field_name";
+    } else if (errorMsg.includes("DUPLICATE_DEMO_ENGAGEMENT_CANDIDATES")) {
+      classification = "duplicate_unique_constraint";
     }
 
     logger.error(
@@ -593,10 +646,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       {
         status: "failed",
         reason: "internal_error",
-        message: "Failed to backfill demo engagement",
         backfillStage,
         errorName,
-        safeErrorMessage,
+        safeErrorMessage: safeErrorMessage.slice(0, 500),
+        stackFileLine,
         classification,
       },
       { status: 500 }
