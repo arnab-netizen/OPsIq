@@ -681,8 +681,11 @@ export function withCanonicalEnforcement(
       }
 
       return new NextResponse(JSON.stringify(responseBody), {
-        status: 500,
-        headers: { "content-type": "application/json" },
+        status: classifiedError.statusCode,
+        headers: {
+          "x-correlation-id": finalCorrelationId,
+          "content-type": "application/json",
+        },
       });
     }
   };
