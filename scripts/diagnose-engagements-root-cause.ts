@@ -18,6 +18,8 @@
  */
 
 import * as https from "https";
+import type { IncomingMessage } from "node:http";
+import * as http from "http";
 
 const DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY || "demo-key-12345";
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
@@ -48,11 +50,11 @@ async function fetchDiagnostic(
       headers,
     };
 
-    const protocol = url.protocol === "https:" ? https : require("http");
-    const req = protocol.request(fetchOptions, (res) => {
+    const protocol = url.protocol === "https:" ? https : http;
+    const req = protocol.request(fetchOptions, (res: IncomingMessage) => {
       let data = "";
-      res.on("data", (chunk) => {
-        data += chunk;
+      res.on("data", (chunk: Buffer | string) => {
+        data += chunk.toString();
       });
       res.on("end", () => {
         try {
