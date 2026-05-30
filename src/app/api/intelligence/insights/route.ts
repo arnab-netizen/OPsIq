@@ -93,7 +93,7 @@ export const GET = withCanonicalEnforcement(
       bestPerforming: insights.bestPerformingType,
     });
 
-    return Response.json(response);
+    return response;
   },
   { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
 );

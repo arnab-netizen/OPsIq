@@ -221,7 +221,7 @@ export const GET = withCanonicalEnforcement(
       payloadSize: itemCount,
     });
 
-    return Response.json(response);
+    return response;
   },
   { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
 );

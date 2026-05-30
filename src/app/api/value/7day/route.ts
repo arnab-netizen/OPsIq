@@ -134,7 +134,7 @@ export const GET = withCanonicalEnforcement(
       },
     };
 
-    return Response.json(summary);
+    return summary;
   },
   { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
 );

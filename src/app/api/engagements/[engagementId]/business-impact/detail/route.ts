@@ -234,7 +234,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, pa
     },
   };
 
-  return Response.json(response);
+  return response;
 }, {
   requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
   requireWorkspace: true,

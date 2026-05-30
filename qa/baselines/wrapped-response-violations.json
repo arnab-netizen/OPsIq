@@ -1,546 +1,490 @@
 {
-  "generated_at": "2026-05-30T05:23:46.437Z",
+  "generated_at": "2026-05-30T05:57:22.160Z",
   "scanner_version": "1.0.0",
-  "total_known_violations": 77,
+  "total_known_violations": 69,
   "violations": [
     {
       "file": "app/api/actions/[actionId]/complete/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
-    },
-    {
-      "file": "app/api/actions/[actionId]/impact-delta/route.ts",
-      "violation_type": "wrapped_handler_returns_response_json",
-      "wrapper_detected": true,
-      "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/actions/[actionId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/actions/[actionId]/start/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/actions/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/auth/logout/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/clients/[clientId]/contacts/[contactId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/clients/[clientId]/contacts/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/clients/[clientId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/deliverables/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/diagnosis/archetype/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/diagnosis/bottleneck/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/diagnosis/maturity/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/diagnosis/root-cause/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/acknowledge/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/actions/[actionId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
-    },
-    {
-      "file": "app/api/engagements/[engagementId]/business-impact/detail/route.ts",
-      "violation_type": "wrapped_handler_returns_response_json",
-      "wrapper_detected": true,
-      "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/condition/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/constraint-checks/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/dashboard/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/drift/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/escalation-checks/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/execution-certainty/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/intervention-state/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/intervention/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/recommendations/rerank/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/review-cycles/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/shock-events/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/evidence-bundles/[bundleId]/items/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/evidence-bundles/[bundleId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/evidence-bundles/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/evidence/[evidenceId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/evidence/[evidenceId]/validate/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/evidence/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/execute/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/export/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/findings/[findingId]/evidence/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/findings/[findingId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/findings/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/growth/acquisition-metrics/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/growth/offers/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/growth/pricing-tiers/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/growth/retention-metrics/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/growth/revenue-streams/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/growth/sales-pipeline/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/growth/unit-economics/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
-    },
-    {
-      "file": "app/api/intelligence/insights/route.ts",
-      "violation_type": "wrapped_handler_returns_response_json",
-      "wrapper_detected": true,
-      "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
-    },
-    {
-      "file": "app/api/intelligence/patterns/route.ts",
-      "violation_type": "wrapped_handler_returns_response_json",
-      "wrapper_detected": true,
-      "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
-    },
-    {
-      "file": "app/api/intelligence/recommendations/route.ts",
-      "violation_type": "wrapped_handler_returns_response_json",
-      "wrapper_detected": true,
-      "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
-    },
-    {
-      "file": "app/api/intelligence/summary/route.ts",
-      "violation_type": "wrapped_handler_returns_response_json",
-      "wrapper_detected": true,
-      "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/leads/[leadId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/operator/my-day/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/operator/queue/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/opsiq/consulting-engine/run/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/owner/config/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/owner/dashboard/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/owner/first-value/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/public/actions/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/public/engagements/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/public/kpis/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/recommendations/[recommendationId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/recommendations/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/report/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/users/[userId]/memberships/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/users/[userId]/roles/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/users/[userId]/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/users/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
-    },
-    {
-      "file": "app/api/value/7day/route.ts",
-      "violation_type": "wrapped_handler_returns_response_json",
-      "wrapper_detected": true,
-      "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
-    },
-    {
-      "file": "app/api/value/summary/route.ts",
-      "violation_type": "wrapped_handler_returns_response_json",
-      "wrapper_detected": true,
-      "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     },
     {
       "file": "app/api/webhooks/stripe/route.ts",
       "violation_type": "wrapped_handler_returns_response_json",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-30T05:23:46.437Z"
+      "discovered_at": "2026-05-30T05:57:22.161Z"
     }
   ]
 }

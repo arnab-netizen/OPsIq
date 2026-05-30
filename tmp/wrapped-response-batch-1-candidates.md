@@ -2,13 +2,16 @@
 
 ## Batch Overview
 - **Total candidates**: 18 routes
+- **Phase 1 COMPLETE**: 8 single-violation routes fixed ✅
+- **Phase 2 PENDING**: 10 multi-violation routes (2-6 violations each)
 - **All GET-only**: ✅
 - **No side effects**: ✅
 - **No custom headers/cookies**: ✅
 - **No special response handling**: ✅
-- **Total violations to fix**: 48 Response.json() return statements
+- **Total violations in Phase 1 (FIXED)**: 8 Response.json() return statements
+- **Remaining in Phase 2**: 40 Response.json() return statements
 - **Priority**: HIGH (first safe batch to remediate)
-- **Timeline**: Week 1
+- **Timeline**: Phase 1 complete, Phase 2 pending
 - **Risk profile**: LOW
 
 ## Route Breakdown by Violation Count
@@ -304,9 +307,25 @@ See list above with file paths
 
 ---
 
-**Batch 1 Status**: READY TO IMPLEMENT ✅
+**Batch 1 Phase 1 Status**: ✅ COMPLETE
 - Plan: Complete
 - Candidates: Identified and validated
 - Risk: Low
-- Timeline: 1 week
-- Next action: Implement Phase 1 (single-violation routes)
+- Timeline: Phase 1 complete, Phase 2 pending
+- Phase 1 results:
+  - 8 single-violation routes fixed
+  - Baseline reduced: 77 → 69 violations
+  - 8 violations resolved
+  - 0 new violations introduced
+  - Ratchet gate: PASSING
+- Phase 1 routes fixed:
+  1. app/api/actions/[actionId]/impact-delta/route.ts ✅
+  2. app/api/engagements/[engagementId]/business-impact/detail/route.ts ✅
+  3. app/api/intelligence/insights/route.ts ✅
+  4. app/api/intelligence/patterns/route.ts ✅
+  5. app/api/intelligence/recommendations/route.ts ✅
+  6. app/api/intelligence/summary/route.ts ✅
+  7. app/api/value/7day/route.ts ✅
+  8. app/api/value/summary/route.ts ✅
+- Tests added: src/__tests__/batch-1-wrapped-response-contract.test.ts (13 tests, all passing)
+- Next action: Implement Phase 2 (10 multi-violation routes with 2-6 violations each)

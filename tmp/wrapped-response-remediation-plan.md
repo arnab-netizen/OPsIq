@@ -3,7 +3,7 @@
 ## Overview
 77 wrapped routes return `Response.json()` to the canonical wrapper expecting plain serializable objects. This causes double-serialization: `JSON.stringify(Response)` serializes the Response object's properties instead of its body.
 
-**Status**: Baseline established. Ratchet gate active. Remediation planned in 5 batches.
+**Status**: Baseline established. Ratchet gate active. **Batch 1 Phase 1 COMPLETE** - 8 single-violation GET routes fixed. Baseline reduced: 77 → 69 violations remaining.
 
 ## Fix Pattern (Applied to All 77 Routes)
 ```typescript
