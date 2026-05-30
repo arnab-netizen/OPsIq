@@ -105,6 +105,9 @@ Status: These are special cases - may not be wrapped or need special handling
 - Single violation
 - Simple data structure
 - No complex error handling
+- **Status**: 2 routes FIXED in Phase 2 Sub-batch 1 ✅
+  - ✅ GET /api/engagements/:id/dashboard (2 violations resolved)
+  - ✅ GET /api/engagements/:id/drift (2 violations resolved)
 
 ### Sub-batch 2b: Medium-Confidence Success-Only (15-20 routes)
 - Single violation
@@ -256,4 +259,43 @@ export const DELETE = withCanonicalEnforcement(
 
 ---
 
-**Document status**: COMPLETE - Ready for TASK E validation
+---
+
+## Phase 2 Sub-batch 1: Execution Complete ✅
+
+**Executed**: May 30, 2026
+
+**Routes Fixed** (2):
+1. GET /api/engagements/:id/dashboard
+   - File: app/api/engagements/[engagementId]/dashboard/route.ts
+   - Violations fixed: 2
+   - Changes: Response.json → plain object, throw NotFoundError for 404
+
+2. GET /api/engagements/:id/drift
+   - File: app/api/engagements/[engagementId]/drift/route.ts
+   - Violations fixed: 2
+   - Changes: Response.json → plain object, throw NotFoundError for 404
+
+**Baseline Impact**:
+- Before: 69 violations
+- After: 67 violations
+- Resolved: 2 routes (4 violations total)
+- New violations: 0
+
+**Tests Added**:
+- src/__tests__/batch-1-phase-2-subbatch-1.test.ts (14 tests)
+  - Success path returns plain object
+  - Error path throws NotFoundError (404)
+  - Tenant isolation preserved
+  - x-workspace-id not trusted
+  - Capability checks enforced
+
+**Validation Results**:
+✅ TypeScript: no errors
+✅ Build: successful
+✅ Tests: 14/14 pass (sub-batch 1)
+✅ Tests: 14/14 pass (canonical error contract)
+✅ Tests: 23/23 pass (wrapped handlers scanner)
+✅ Ratchet: passed (67/67, no new violations)
+
+**Document status**: COMPLETE - Phase 2 Sub-batch 1 EXECUTED
