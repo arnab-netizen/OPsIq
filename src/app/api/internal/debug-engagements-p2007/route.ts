@@ -14,6 +14,12 @@ import { logger } from "@/infra/logger";
 
 const DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY;
 
+// Type narrowing helper: safely cast unknown to string | number | undefined
+function asSafeStringNumber(value: unknown): string | number | undefined {
+  if (typeof value === "string" || typeof value === "number") return value;
+  return undefined;
+}
+
 interface ProbeResult {
   name: string;
   status: "pass" | "fail";
@@ -51,7 +57,7 @@ export const GET = async (req: NextRequest) => {
       prismaCode: safe.prismaCode as string | undefined,
       errorName: safe.errorName as string | undefined,
       driverAdapterErrorName: safe.driverAdapterErrorName as string | undefined,
-      driverAdapterErrorCode: safe.driverAdapterErrorCode,
+      driverAdapterErrorCode: asSafeStringNumber(safe.driverAdapterErrorCode),
       driverAdapterErrorMessage: safe.driverAdapterErrorMessage as string | undefined,
       safeMessage: safe.safeMessage as string | undefined,
       safeMetaKeys: safe.safeMetaKeys as unknown[] | undefined,
@@ -73,7 +79,7 @@ export const GET = async (req: NextRequest) => {
       prismaCode: safe.prismaCode as string | undefined,
       errorName: safe.errorName as string | undefined,
       driverAdapterErrorName: safe.driverAdapterErrorName as string | undefined,
-      driverAdapterErrorCode: safe.driverAdapterErrorCode,
+      driverAdapterErrorCode: asSafeStringNumber(safe.driverAdapterErrorCode),
       driverAdapterErrorMessage: safe.driverAdapterErrorMessage as string | undefined,
       safeMessage: safe.safeMessage as string | undefined,
       safeMetaKeys: safe.safeMetaKeys as unknown[] | undefined,
@@ -96,7 +102,7 @@ export const GET = async (req: NextRequest) => {
       prismaCode: safe.prismaCode as string | undefined,
       errorName: safe.errorName as string | undefined,
       driverAdapterErrorName: safe.driverAdapterErrorName as string | undefined,
-      driverAdapterErrorCode: safe.driverAdapterErrorCode,
+      driverAdapterErrorCode: asSafeStringNumber(safe.driverAdapterErrorCode),
       driverAdapterErrorMessage: safe.driverAdapterErrorMessage as string | undefined,
       safeMessage: safe.safeMessage as string | undefined,
       safeMetaKeys: safe.safeMetaKeys as unknown[] | undefined,
@@ -127,7 +133,7 @@ export const GET = async (req: NextRequest) => {
       prismaCode: safe.prismaCode as string | undefined,
       errorName: safe.errorName as string | undefined,
       driverAdapterErrorName: safe.driverAdapterErrorName as string | undefined,
-      driverAdapterErrorCode: safe.driverAdapterErrorCode,
+      driverAdapterErrorCode: asSafeStringNumber(safe.driverAdapterErrorCode),
       driverAdapterErrorMessage: safe.driverAdapterErrorMessage as string | undefined,
       safeMessage: safe.safeMessage as string | undefined,
       safeMetaKeys: safe.safeMetaKeys as unknown[] | undefined,
@@ -159,7 +165,7 @@ export const GET = async (req: NextRequest) => {
       prismaCode: safe.prismaCode as string | undefined,
       errorName: safe.errorName as string | undefined,
       driverAdapterErrorName: safe.driverAdapterErrorName as string | undefined,
-      driverAdapterErrorCode: safe.driverAdapterErrorCode,
+      driverAdapterErrorCode: asSafeStringNumber(safe.driverAdapterErrorCode),
       driverAdapterErrorMessage: safe.driverAdapterErrorMessage as string | undefined,
       safeMessage: safe.safeMessage as string | undefined,
       safeMetaKeys: safe.safeMetaKeys as unknown[] | undefined,
@@ -185,7 +191,7 @@ export const GET = async (req: NextRequest) => {
       prismaCode: safe.prismaCode as string | undefined,
       errorName: safe.errorName as string | undefined,
       driverAdapterErrorName: safe.driverAdapterErrorName as string | undefined,
-      driverAdapterErrorCode: safe.driverAdapterErrorCode,
+      driverAdapterErrorCode: asSafeStringNumber(safe.driverAdapterErrorCode),
       driverAdapterErrorMessage: safe.driverAdapterErrorMessage as string | undefined,
       safeMessage: safe.safeMessage as string | undefined,
       safeMetaKeys: safe.safeMetaKeys as unknown[] | undefined,
@@ -218,7 +224,7 @@ export const GET = async (req: NextRequest) => {
       prismaCode: safe.prismaCode as string | undefined,
       errorName: safe.errorName as string | undefined,
       driverAdapterErrorName: safe.driverAdapterErrorName as string | undefined,
-      driverAdapterErrorCode: safe.driverAdapterErrorCode,
+      driverAdapterErrorCode: asSafeStringNumber(safe.driverAdapterErrorCode),
       driverAdapterErrorMessage: safe.driverAdapterErrorMessage as string | undefined,
       safeMessage: safe.safeMessage as string | undefined,
       safeMetaKeys: safe.safeMetaKeys as unknown[] | undefined,
