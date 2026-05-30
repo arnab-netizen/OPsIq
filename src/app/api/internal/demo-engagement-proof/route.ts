@@ -317,8 +317,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return new NextResponse(null, { status: 404 });
   }
 
+  const correlationId = `demo-eng-backfill-${Date.now()}`;
+
   try {
-    const correlationId = `demo-eng-backfill-${Date.now()}`;
 
     // 1. Find demo user
     const user = await db.user.findUnique({
@@ -486,11 +487,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         where: {
           userId: user.id,
           engagementId: demoEngagement.id,
+          role: "lead",
         },
       });
 
       if (!engagementMembership) {
-        // Create engagement membership
+        // Create engagement membership with specific role
         await tx.engagementMembership.create({
           data: {
             id: randomUUID(),
@@ -538,6 +540,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
+    const errorName = error instanceof Error ? error.name : typeof error;
 
     if (errorMsg === "DUPLICATE_DEMO_ENGAGEMENT_CANDIDATES") {
       logger.warn("[DEMO_ENGAGEMENT_BACKFILL] Duplicate demo engagement candidates", {
@@ -553,15 +556,48 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // Classify Prisma errors
+    let safeErrorMessage = errorMsg.slice(0, 200);
+    let backfillStage = "engagement_membership_backfill";
+    let classification = "internal_error";
+
+    // Check for unique constraint violation on engagement membership
+    if (errorName === "PrismaClientKnownRequestError") {
+      const prismaError = error as any;
+      if (prismaError.code === "P2002") {
+        classification = "engagement_membership_unique_constraint_violation";
+        safeErrorMessage = "Engagement membership already exists for this user and engagement";
+        backfillStage = "engagement_membership_create_unique_constraint";
+      } else if (prismaError.code === "P2025") {
+        classification = "engagement_membership_not_found_for_update";
+        safeErrorMessage = "Failed to find engagement membership for update";
+        backfillStage = "engagement_membership_update";
+      } else {
+        classification = "prisma_error";
+        safeErrorMessage = `Prisma error ${prismaError.code}`;
+        backfillStage = "engagement_membership_transaction";
+      }
+    }
+
     logger.error(
       "[DEMO_ENGAGEMENT_BACKFILL] POST failed",
-      error instanceof Error ? error : new Error(String(error))
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        correlationId,
+        stage: backfillStage,
+        classification,
+      }
     );
+
     return NextResponse.json(
       {
         status: "failed",
         reason: "internal_error",
         message: "Failed to backfill demo engagement",
+        backfillStage,
+        errorName,
+        safeErrorMessage,
+        classification,
       },
       { status: 500 }
     );
