@@ -31,7 +31,7 @@ export const GET = withCanonicalEnforcement(
     const params = parseSearchParams(ctx.request?.url || "", listUsersSchema);
     const result = await listUsers(workspaceId, params);
 
-    return Response.json(result);
+    return result;
   },
   { requireCapabilities: ["USER_VIEW"], requireWorkspace: true }
 );
