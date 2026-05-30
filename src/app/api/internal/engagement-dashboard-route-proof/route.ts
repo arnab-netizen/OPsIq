@@ -53,23 +53,23 @@ export async function GET(request: NextRequest) {
     response.userFound = true;
 
     // Step 2: Find active workspace membership for demo user
-    const membership = await db.engagementMembership.findFirst({
+    const membership = await db.workspaceMembership.findFirst({
       where: {
         userId: demoUser.id,
         isActive: true,
       },
-      include: { engagement: true },
+      orderBy: { addedAt: "asc" },
     });
 
     if (!membership) {
       response.classification = "membership_not_found";
       response.errorName = "MembershipNotFound";
-      response.safeErrorMessage = "Demo user has no active engagement membership";
+      response.safeErrorMessage = "Demo user has no active workspace membership";
       return NextResponse.json(response, { status: 200 });
     }
     response.membershipFound = true;
 
-    const workspaceId = membership.engagement.workspaceId;
+    const workspaceId = membership.workspaceId;
 
     // Step 3: Validate workspaceId is UUID-like
     const uuidRegex =
