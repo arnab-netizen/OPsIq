@@ -46,6 +46,38 @@ const SAFE_DIRECT_ROUTES = [
 
 let violations = [];
 let checked = [];
+let violationClassifications = {}; // Map file to classification
+
+/**
+ * Classify violation type based on response pattern:
+ * - success_only_response_return: Response.json without status code in error path
+ * - custom_status_response_return: Response.json with custom status code
+ * - custom_header_or_cookie_response_return: Response with Set-Cookie or custom headers
+ * - redirect_stream_file_response_return: Redirect, streaming, or file response
+ * - uncertain_manual_review: Pattern unclear
+ */
+function classifyViolation(content, fileName) {
+  // Check for custom status code patterns
+  if (/Response\.json\([^)]*\)\s*,\s*{\s*status\s*:\s*\d+/m.test(content) ||
+      /NextResponse\.json\([^)]*\)\s*,\s*{\s*status\s*:\s*\d+/m.test(content)) {
+    return "custom_status_response_return";
+  }
+
+  // Check for cookie or custom header patterns
+  if (/Response\.json\([^)]*\)\s*,\s*{\s*headers\s*:/.test(content) ||
+      /Set-Cookie/.test(content) ||
+      /"[a-z-]*"\s*:\s*"/.test(content)) {
+    return "custom_header_or_cookie_response_return";
+  }
+
+  // Check for redirect/stream/file patterns
+  if (/Response\.redirect|stream|sendFile|piping/i.test(content)) {
+    return "redirect_stream_file_response_return";
+  }
+
+  // Default: success-only response return (no custom status detected)
+  return "success_only_response_return";
+}
 
 function scanFile(filePath) {
   const content = fs.readFileSync(filePath, "utf-8");
@@ -77,6 +109,7 @@ function scanFile(filePath) {
 
   if (violations_found.length > 0) {
     violations.push(fileName);
+    violationClassifications[fileName] = classifyViolation(content, fileName);
   }
 }
 
@@ -195,11 +228,12 @@ function updateBaseline() {
 
   const baselineData = {
     generated_at: new Date().toISOString(),
-    scanner_version: "1.0.0",
+    scanner_version: "2.0.0",
     total_known_violations: violations.length,
     violations: violations.map((v) => ({
       file: v,
       violation_type: "wrapped_handler_returns_response_json",
+      classification: violationClassifications[v] || "uncertain_manual_review",
       wrapper_detected: true,
       remediation_status: "legacy_pending",
       discovered_at: new Date().toISOString(),
@@ -215,6 +249,19 @@ function updateBaseline() {
 
   console.log(`✅ Baseline updated: ${BASELINE_PATH}`);
   console.log(`Total violations: ${violations.length}`);
+
+  // Summary by classification
+  const classifications = {};
+  violations.forEach(v => {
+    const cls = violationClassifications[v] || "uncertain_manual_review";
+    classifications[cls] = (classifications[cls] || 0) + 1;
+  });
+
+  console.log("\nClassification summary:");
+  Object.entries(classifications).forEach(([cls, count]) => {
+    console.log(`  ${cls}: ${count}`);
+  });
+
   process.exit(0);
 }
 
