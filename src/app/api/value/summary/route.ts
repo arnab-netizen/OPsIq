@@ -126,7 +126,7 @@ export const GET = withCanonicalEnforcement(
     items: timeToValueMetrics,
   };
 
-    return Response.json(summary);
+    return summary;
   },
   { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
 );

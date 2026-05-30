@@ -29,10 +29,10 @@ export const GET = withCanonicalEnforcement(
       ctx.verifiedWorkspaceId
     );
 
-    return Response.json({
+    return {
       success: true,
       data: delta,
-    });
+    };
   },
   {
     requireWorkspace: true,

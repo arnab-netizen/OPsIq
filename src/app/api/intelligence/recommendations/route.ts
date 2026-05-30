@@ -207,7 +207,7 @@ export const GET = withCanonicalEnforcement(
       alternativesCount: alternatives.length,
     });
 
-    return Response.json(response);
+    return response;
   },
   { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
 );

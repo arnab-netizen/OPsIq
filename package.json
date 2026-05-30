@@ -37,7 +37,10 @@
     "deployment:preflight": "node scripts/deployment-preflight.mjs",
     "deployment:smoke": "node scripts/production-smoke.mjs",
     "support:diagnostics": "node scripts/support-diagnostics.mjs",
-    "demo:seed": "node scripts/seed-demo-workspace.mjs"
+    "demo:seed": "node scripts/seed-demo-workspace.mjs",
+    "audit:wrapped-handlers": "node scripts/audit-wrapped-handlers.js audit",
+    "audit:wrapped-handlers:ratchet": "node scripts/audit-wrapped-handlers.js ratchet",
+    "audit:wrapped-handlers:update-baseline": "node scripts/audit-wrapped-handlers.js update-baseline"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.0",

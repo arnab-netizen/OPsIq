@@ -81,6 +81,10 @@ jobs:
           NODE_ENV: test
         continue-on-error: false
 
+      - name: Wrapped handlers ratchet (prevent new violations)
+        run: npm run audit:wrapped-handlers:ratchet
+        continue-on-error: false
+
       - name: Run full test suite
         run: npm run test:ci
         env:
