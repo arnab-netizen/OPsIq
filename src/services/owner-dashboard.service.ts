@@ -268,7 +268,7 @@ export async function getOwnerDashboard(
   // Compute decision confidence, financial normalization, and primary decision in parallel
   const [decisionConfidence, businessImpactResult, primaryDecision] = await Promise.all([
     computeDecisionConfidence({ engagementId, workspaceId }),
-    generateBusinessImpact(engagementId, engagement.id, workspaceId),
+    generateBusinessImpact(engagementId, authContext.verifiedActorId, workspaceId),
     getPrimaryDecision(engagementId, workspaceId),
   ]);
 
