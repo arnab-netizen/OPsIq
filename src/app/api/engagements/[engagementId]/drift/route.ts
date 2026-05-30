@@ -3,6 +3,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { detectExecutionDrift } from "@/services/execution-drift/execution-drift.service";
 import { assertEngagementAccess } from "@/lib/visibility";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
+import { NotFoundError } from "@/infra/errors";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
   const { engagementId } = params;
@@ -12,13 +13,10 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, pa
 
   try {
     const drift = await detectExecutionDrift(engagementId, ctx.verifiedWorkspaceId);
-    return Response.json(drift);
+    return drift;
   } catch (error) {
     if (error instanceof Error && error.message.includes("Engagement")) {
-      return Response.json(
-        { error: "Engagement not found" },
-        { status: 404 }
-      );
+      throw new NotFoundError("Engagement", engagementId);
     }
     throw error;
   }
