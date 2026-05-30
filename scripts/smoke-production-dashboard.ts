@@ -279,8 +279,98 @@ async function smokeTest(): Promise<void> {
       process.exit(1);
     }
 
-    // Step 3: Verify demo data is accessible
-    console.log("3️⃣  GET /api/engagements (verify demo data)");
+    // Step 2.6: Verify demo engagement data is accessible and backfill if needed
+    console.log("2️⃣.6️⃣ GET /api/internal/demo-engagement-proof (verify demo data)");
+    const engagementProofResponse = await fetch(
+      `${BASE_URL}/api/internal/demo-engagement-proof`,
+      {
+        method: "GET",
+        headers: {
+          "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+        },
+      }
+    );
+
+    console.log(`   Status: ${engagementProofResponse.status}`);
+
+    if (engagementProofResponse.status !== 200) {
+      console.log("❌ DEMO_ENGAGEMENT_PROOF_FAILED");
+      process.exit(1);
+    }
+
+    const engagementProof = await engagementProofResponse.json();
+    console.log(`   Scoped engagements: ${engagementProof.scopedEngagementCount}`);
+    console.log(`   Total engagements: ${engagementProof.totalEngagementCount}`);
+    console.log(`   Demo engagement found: ${engagementProof.demoEngagementFound ? "✓" : "✗"}`);
+    console.log(
+      `   Demo engagement workspace matches: ${engagementProof.demoEngagementWorkspaceMatches ? "✓" : "✗"}`
+    );
+    console.log(`   Demo client found: ${engagementProof.demoClientFound ? "✓" : "✗"}`);
+    console.log(
+      `   Classification: ${engagementProof.classification}`
+    );
+
+    if (
+      engagementProof.classification === "demo_engagement_missing" ||
+      engagementProof.classification === "demo_engagement_wrong_workspace" ||
+      engagementProof.classification === "demo_client_missing"
+    ) {
+      console.log("\n   🔧 Demo data missing or mislinked - backfilling...");
+      const engagementBackfillResponse = await fetch(
+        `${BASE_URL}/api/internal/demo-engagement-proof`,
+        {
+          method: "POST",
+          headers: {
+            "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+          },
+        }
+      );
+
+      console.log(`   Backfill status: ${engagementBackfillResponse.status}`);
+
+      if (engagementBackfillResponse.status !== 200) {
+        console.log(`❌ DEMO_ENGAGEMENT_BACKFILL_FAILED (${engagementBackfillResponse.status})`);
+        const backfillError = await engagementBackfillResponse.json();
+        console.log(`   Reason: ${backfillError.reason || "unknown"}`);
+        process.exit(1);
+      }
+
+      const backfillResult = await engagementBackfillResponse.json();
+      console.log(`   Backfill result: ${backfillResult.status}`);
+      console.log(`   Action: ${backfillResult.backfillAction}`);
+
+      // Verify again after backfill
+      const verifyResponse = await fetch(
+        `${BASE_URL}/api/internal/demo-engagement-proof`,
+        {
+          method: "GET",
+          headers: {
+            "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+          },
+        }
+      );
+
+      if (verifyResponse.status === 200) {
+        const verifyProof = await verifyResponse.json();
+        console.log(`   After backfill: ${verifyProof.classification}`);
+
+        if (verifyProof.classification !== "demo_data_ready") {
+          console.log(`❌ DEMO_DATA_NOT_READY_AFTER_BACKFILL (${verifyProof.classification})`);
+          process.exit(1);
+        }
+      }
+      console.log("   ✓ Demo engagement backfilled\n");
+    } else if (engagementProof.classification === "demo_data_ready") {
+      console.log("   ✓ Demo data ready\n");
+    } else {
+      console.log(`❌ DEMO_DATA_STATE_INVALID (${engagementProof.classification})`);
+      console.log(`   Membership found: ${engagementProof.membershipFound}`);
+      console.log(`   Workspace ID valid: ${engagementProof.workspaceIdUuidLike}`);
+      process.exit(1);
+    }
+
+    // Step 3: Verify demo data is accessible via API
+    console.log("3️⃣  GET /api/engagements (verify demo data via API)");
     const engagementsResponse = await fetch(`${BASE_URL}/api/engagements`, {
       method: "GET",
       headers: {
