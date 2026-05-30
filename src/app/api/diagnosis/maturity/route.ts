@@ -7,6 +7,7 @@ import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { logger } from "@/infra/logger";
 import { RuntimeError } from "@/runtime/runtime-errors";
+import { BadRequestError, AppError } from "@/infra/errors";
 import { z } from "zod/v4";
 
 const maturitySchema = z.object({
@@ -33,10 +34,7 @@ export const POST = withEnforcementFull(async (request) => {
 
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!idempotencyKey) {
-    return Response.json(
-      { error: "idempotency-key header required" },
-      { status: 400 }
-    );
+    throw new BadRequestError("idempotency-key header required");
   }
 
   const body = await parseRequestBody(request, maturitySchema);
@@ -50,9 +48,7 @@ export const POST = withEnforcementFull(async (request) => {
   });
 
   if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
-      status: idempotencyCheck.cachedResponse.status,
-    });
+    return idempotencyCheck.cachedResponse.body;
   }
 
   try {
@@ -70,10 +66,7 @@ export const POST = withEnforcementFull(async (request) => {
 
     if (!result) {
       await recordIdempotencyError(idempotencyKey, new Error("Insufficient data for maturity analysis"));
-      return Response.json(
-        { error: "Analysis failed: insufficient data" },
-        { status: 400 }
-      );
+      throw new BadRequestError("Analysis failed: insufficient data");
     }
 
     logger.info("Maturity analysis complete", {
@@ -83,22 +76,31 @@ export const POST = withEnforcementFull(async (request) => {
     });
 
     await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>);
-    return Response.json(result, { status: 201 });
+    return result;
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
     await recordIdempotencyError(idempotencyKey, err);
     logger.error("Maturity analysis error", err.message);
 
     if (error instanceof RuntimeError) {
-      return Response.json(
-        error.toOperatorSafeJSON(),
-        { status: error.metadata.http_status }
-      );
+      throw error;
     }
 
-    return Response.json(
-      { error: "Maturity analysis failed" },
-      { status: 500 }
+    throw new AppError(
+      "INTERNAL_ERROR",
+      "Maturity analysis failed",
+      500,
+      {
+        telemetryClass: "INTERNAL_ERROR",
+        auditClass: "INTERNAL_ERROR",
+        severity: "HIGH",
+        retryable: false,
+        securityRelevant: false,
+        infrastructureRelevant: true,
+        abuseRelevant: false,
+        handlerAllowed: true,
+        mutationAllowed: false,
+      }
     );
   }
 });
