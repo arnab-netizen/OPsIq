@@ -26,7 +26,7 @@ export const GET = withCanonicalEnforcement(
     parseOrThrow(uuidSchema, evidenceId);
 
     const evidence = await getEvidenceById(evidenceId, workspaceId);
-    return Response.json(evidence);
+    return evidence;
   },
   { requireCapabilities: [CAPABILITIES.EVIDENCE_VIEW], requireWorkspace: true }
 );

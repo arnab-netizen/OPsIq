@@ -26,7 +26,7 @@ export const GET = withCanonicalEnforcement(
     const workspaceId = ctx.verifiedWorkspaceId;
     const params = parseSearchParams(ctx.request!.url, listEvidenceSchema);
     const result = await listEvidence(workspaceId, params);
-    return Response.json(result);
+    return result;
   },
   { requireWorkspace: true, requireCapabilities: ['EVIDENCE_VIEW'] }
 );
