@@ -398,8 +398,29 @@ async function smokeTest(): Promise<void> {
         process.exit(0);
       } else {
         console.log("   ⚠️  No engagements found\n");
+
+        // Check if demo engagement proof shows data exists
+        if (engagementProof.classification === "demo_data_ready") {
+          console.log(
+            "❌ ENGAGEMENTS_API_FILTER_OR_RESPONSE_SHAPE_MISMATCH"
+          );
+          console.log("");
+          console.log(
+            "Runtime DB proof shows demo_data_ready but /api/engagements returned empty."
+          );
+          console.log("This indicates a mismatch in:");
+          console.log("  - Route workspace resolution");
+          console.log("  - Service query filters (visibility, status, etc.)");
+          console.log("  - Response mapper/DTO logic");
+          console.log("  - Smoke parser logic");
+          console.log("");
+          console.log(`Proof shows: ${engagementProof.scopedEngagementCount} scoped engagement(s)`);
+          console.log(`API returned: ${engagementCount} engagement(s)`);
+          process.exit(1);
+        }
+
         console.log(
-          "⚠️  DASHBOARD LOADS but no demo data (check Seed Staging Database status)"
+          "⚠️  DASHBOARD LOADS but no demo data"
         );
         console.log("");
         console.log("Possible causes:");
