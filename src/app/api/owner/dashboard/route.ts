@@ -5,7 +5,7 @@
  */
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { ForbiddenError } from "@/infra/errors";
+import { ForbiddenError, BadRequestError, AppError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -137,28 +137,34 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       },
     });
 
-    return Response.json(toOwnerDashboardDTO(dashboard), { status: 200 });
+    return toOwnerDashboardDTO(dashboard);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return Response.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
+      throw new BadRequestError("Validation error: " + error.issues.map(i => i.message).join(", "));
     }
     if (error instanceof DashboardServiceError) {
       const governed = classifyOperatorError(error, { context: "load" });
-      return Response.json(
-        { details: governed.operatorMessage },
-        { status: 400 }
-      );
+      throw new BadRequestError(governed.operatorMessage);
     }
     if (error instanceof Error) {
       const governed = classifyOperatorError(error, { context: "load" });
-      return Response.json({ details: governed.operatorMessage }, { status: 400 });
+      throw new BadRequestError(governed.operatorMessage);
     }
-    return Response.json(
-      { error: "Internal server error" },
-      { status: 500 }
+    throw new AppError(
+      "INTERNAL_ERROR",
+      "Internal server error",
+      500,
+      {
+        telemetryClass: "INTERNAL_ERROR",
+        auditClass: "INTERNAL_ERROR",
+        severity: "HIGH",
+        retryable: false,
+        securityRelevant: false,
+        infrastructureRelevant: true,
+        abuseRelevant: false,
+        handlerAllowed: true,
+        mutationAllowed: false,
+      }
     );
   }
 }, { requireCapabilities: ["OWNER_VIEW"] });
