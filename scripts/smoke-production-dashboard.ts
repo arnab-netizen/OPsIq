@@ -417,6 +417,46 @@ async function smokeTest(): Promise<void> {
           console.log("");
           console.log(`Proof shows: ${engagementProof.scopedEngagementCount} scoped engagement(s)`);
           console.log(`API returned: ${engagementCount} engagement(s)`);
+
+          // Safe response dump for diagnostics
+          console.log("\n📋 SAFE RESPONSE STRUCTURE DUMP:");
+          console.log("─────────────────────────────────────────────");
+          const topLevelType = Array.isArray(data) ? "array" : typeof data;
+          const topLevelKeys = !Array.isArray(data) && typeof data === "object" ? Object.keys(data || {}).sort() : [];
+          console.log(`   topLevelType: ${topLevelType}`);
+          console.log(`   topLevelKeys: [${topLevelKeys.join(", ")}]`);
+
+          if (Array.isArray(data)) {
+            console.log(`   rootArrayLength: ${data.length}`);
+          } else if (typeof data === "object" && data !== null) {
+            const dataArray = data.data as any;
+            const engagementsArray = data.engagements as any;
+            const itemsArray = data.items as any;
+            const resultsArray = data.results as any;
+
+            if (Array.isArray(dataArray)) console.log(`   dataArrayLength: ${dataArray.length}`);
+            if (Array.isArray(engagementsArray)) console.log(`   dataEngagementsLength: ${engagementsArray.length}`);
+            if (Array.isArray(itemsArray)) console.log(`   itemsLength: ${itemsArray.length}`);
+            if (Array.isArray(resultsArray)) console.log(`   resultsLength: ${resultsArray.length}`);
+
+            // Detect array path
+            let detectedPath = "none";
+            if (Array.isArray(data)) detectedPath = "root";
+            else if (Array.isArray(dataArray)) detectedPath = "data";
+            else if (Array.isArray(engagementsArray)) detectedPath = "engagements";
+            else if (Array.isArray(itemsArray)) detectedPath = "items";
+            else if (Array.isArray(resultsArray)) detectedPath = "results";
+            console.log(`   detectedArrayPath: ${detectedPath}`);
+
+            // First item keys if any
+            const arrayToInspect = Array.isArray(data) ? data : engagementsArray || dataArray || itemsArray || resultsArray || [];
+            if (arrayToInspect.length > 0 && typeof arrayToInspect[0] === "object") {
+              const firstItemKeys = Object.keys(arrayToInspect[0]).sort();
+              console.log(`   firstItemKeys: [${firstItemKeys.slice(0, 5).join(", ")}${firstItemKeys.length > 5 ? ", ..." : ""}]`);
+            }
+          }
+          console.log("─────────────────────────────────────────────\n");
+
           process.exit(1);
         }
 

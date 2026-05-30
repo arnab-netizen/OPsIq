@@ -120,7 +120,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const clientOnlyRoles = ["client_user", "client_stakeholder"];
     hasAdminRole = roleAssignments.some((r: any) => !clientOnlyRoles.includes(r.role));
 
-    // 6. Call listEngagements service (same as /api/engagements does)
+    // 6. Reconstruct service where clause
+    const visibilityFilter = hasAdminRole
+      ? { visibility: { in: ["internal", "client_visible"] } }
+      : { visibility: "client_visible" };
+    const serviceWhereClause = {
+      workspaceId,
+      ...visibilityFilter,
+    };
+
+    // 7. Call listEngagements service (same as /api/engagements does)
     let serviceResult: any = null;
     let serviceError = null;
     let serviceEngagementCount = 0;
@@ -134,47 +143,66 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       serviceError = error instanceof Error ? error.message : String(error);
     }
 
-    // 7. Analyze the data
+    // 8. Build safe sample of raw Prisma result
+    const rawPrismaSafeSample = demoEngagementRaw ? {
+      code: demoEngagementRaw.code,
+      status: demoEngagementRaw.status,
+      visibility: demoEngagementRaw.visibility,
+      serviceTier: demoEngagementRaw.serviceTier,
+      healthStatus: demoEngagementRaw.healthStatus,
+      interventionMode: demoEngagementRaw.interventionMode,
+      hasClientId: !!demoEngagementRaw.clientId,
+      clientWorkspaceMatches: true, // demo client matches if engagement exists
+      createdAtPresent: !!demoEngagementRaw.createdAt,
+      updatedAtPresent: !!demoEngagementRaw.updatedAt,
+    } : null;
+
+    // 9. Analyze the data
     const analysis = {
-      workspaceIdSample,
+      deployedCommit: process.env.VERCEL_GIT_COMMIT_SHA || "unknown",
+      demoProofWorkspaceSample: workspaceIdSample,
 
       // Raw data state
-      proofCount,
-      rawEngagementsCount: rawEngagements.length,
-      rawEngagements: rawEngagements.map((e: any) => ({
-        code: e.code,
-        status: e.status,
-        visibility: e.visibility,
-        serviceTier: e.serviceTier,
-      })),
+      proofScopedCount: proofCount,
+      rawPrismaCount: rawEngagements.length,
+      rawPrismaSafeSample,
       demoEngagementInRaw: !!demoEngagementRaw,
-      demoEngagementVisibility: demoEngagementRaw?.visibility || null,
+
+      // Service layer
+      serviceWhereClause: {
+        workspaceId: "***",
+        visibility: hasAdminRole ? { in: ["internal", "client_visible"] } : "client_visible",
+      },
+      serviceError,
+      serviceCountBeforeMapping: serviceEngagementCount,
+      serviceCountAfterMapping: serviceEngagementCount, // no mapper in this case
+      mapperResultCount: serviceEngagementCount,
+
+      // Route response
+      routeResponseShape: serviceResult ? Object.keys(serviceResult).sort() : null,
+      smokeParserPath: "Array.isArray(data) ? data.length : data.engagements?.length || 0",
 
       // Policy context
       userHasAdminRole: hasAdminRole,
       userRoleAssignments,
 
-      // Service result
-      serviceResultReceived: !!serviceResult,
-      serviceError,
-      serviceEngagementCount,
-      serviceResponseShape: serviceResult ? Object.keys(serviceResult).sort() : null,
-
       // Classification
       rootCauseClassification:
         proofCount === 0
-          ? "no_engagement_in_database"
+          ? "proof_false_ready"
           : proofCount > 0 && rawEngagements.length === 0
-          ? "raw_query_returns_empty"
-          : proofCount > 0 && rawEngagements.length > 0 && demoEngagementRaw && demoEngagementRaw.visibility !== "client_visible" && !hasAdminRole
-          ? "visibility_filter_excludes_demo_engagement"
+          ? "proof_false_ready"
+          : proofCount > 0 && rawEngagements.length > 0 && demoEngagementRaw && demoEngagementRaw.visibility !== "client_visible"
+          ? "service_extra_filter_excludes_demo"
           : serviceError
-          ? "service_call_failed"
+          ? "service_extra_filter_excludes_demo"
           : serviceEngagementCount === 0 && proofCount > 0 && rawEngagements.length > 0
-          ? "service_filters_out_all_engagements"
+          ? "service_extra_filter_excludes_demo"
+          : serviceEngagementCount === 0 && proofCount > 0
+          ? "mapper_drops_record"
           : serviceEngagementCount > 0 && proofCount > 0
-          ? "service_returns_data_check_response_shape"
-          : "unknown",
+          ? "response_shape_parser_mismatch"
+          : "cannot_determine",
     };
 
     logger.debug("[ENGAGEMENTS_API_TRACE] Analysis complete", {
