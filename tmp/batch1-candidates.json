@@ -1,0 +1,146 @@
+[
+  {
+    "file": "app/api/actions/[actionId]/impact-delta/route.ts",
+    "route": "//actions/:id/impact-delta",
+    "method": "GET",
+    "violations": 1,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/engagements/[engagementId]/business-impact/detail/route.ts",
+    "route": "//engagements/:id/business-impact/detail",
+    "method": "GET",
+    "violations": 1,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/intelligence/insights/route.ts",
+    "route": "//intelligence/insights",
+    "method": "GET",
+    "violations": 1,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/intelligence/patterns/route.ts",
+    "route": "//intelligence/patterns",
+    "method": "GET",
+    "violations": 1,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/intelligence/recommendations/route.ts",
+    "route": "//intelligence/recommendations",
+    "method": "GET",
+    "violations": 1,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/intelligence/summary/route.ts",
+    "route": "//intelligence/summary",
+    "method": "GET",
+    "violations": 1,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/value/7day/route.ts",
+    "route": "//value/7day",
+    "method": "GET",
+    "violations": 1,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/value/summary/route.ts",
+    "route": "//value/summary",
+    "method": "GET",
+    "violations": 1,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/engagements/[engagementId]/dashboard/route.ts",
+    "route": "//engagements/:id/dashboard",
+    "method": "GET",
+    "violations": 2,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/engagements/[engagementId]/drift/route.ts",
+    "route": "//engagements/:id/drift",
+    "method": "GET",
+    "violations": 2,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/report/route.ts",
+    "route": "//report",
+    "method": "GET",
+    "violations": 2,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/operator/my-day/route.ts",
+    "route": "//operator/my-day",
+    "method": "GET",
+    "violations": 3,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/owner/first-value/route.ts",
+    "route": "//owner/first-value",
+    "method": "GET",
+    "violations": 4,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/operator/queue/route.ts",
+    "route": "//operator/queue",
+    "method": "GET",
+    "violations": 5,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/owner/dashboard/route.ts",
+    "route": "//owner/dashboard",
+    "method": "GET",
+    "violations": 5,
+    "handlerName": "async",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/public/actions/route.ts",
+    "route": "//public/actions",
+    "method": "GET",
+    "violations": 6,
+    "handlerName": "handler",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/public/engagements/route.ts",
+    "route": "//public/engagements",
+    "method": "GET",
+    "violations": 6,
+    "handlerName": "handler",
+    "risk": "low"
+  },
+  {
+    "file": "app/api/public/kpis/route.ts",
+    "route": "//public/kpis",
+    "method": "GET",
+    "violations": 6,
+    "handlerName": "handler",
+    "risk": "low"
+  }
+]
