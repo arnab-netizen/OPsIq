@@ -455,7 +455,41 @@ async function smokeTest(): Promise<void> {
               console.log(`   firstItemKeys: [${firstItemKeys.slice(0, 5).join(", ")}${firstItemKeys.length > 5 ? ", ..." : ""}]`);
             }
           }
-          console.log("─────────────────────────────────────────────\n");
+          console.log("─────────────────────────────────────────────");
+
+          // Auto-call runtime trace to identify exact filter point
+          console.log("\n🔍 AUTO-CALLING RUNTIME TRACE...");
+          const traceResponse = await fetch(`${BASE_URL}/api/internal/engagements-api-runtime-trace`, {
+            method: "GET",
+            headers: {
+              "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+            },
+          });
+
+          if (traceResponse.status === 200) {
+            const trace = await traceResponse.json();
+            console.log("\n📊 RUNTIME TRACE RESULTS:");
+            console.log("─────────────────────────────────────────────");
+            console.log(`   proofScopedCount: ${trace.proofScopedCount}`);
+            console.log(`   rawPrismaCount: ${trace.rawPrismaCount}`);
+            if (trace.rawPrismaSafeSample) {
+              console.log(`   rawPrismaSafeSample:`);
+              console.log(`      code: ${trace.rawPrismaSafeSample.code}`);
+              console.log(`      status: ${trace.rawPrismaSafeSample.status}`);
+              console.log(`      visibility: ${trace.rawPrismaSafeSample.visibility}`);
+              console.log(`      serviceTier: ${trace.rawPrismaSafeSample.serviceTier}`);
+              console.log(`      healthStatus: ${trace.rawPrismaSafeSample.healthStatus}`);
+              console.log(`      interventionMode: ${trace.rawPrismaSafeSample.interventionMode}`);
+              console.log(`      hasClientId: ${trace.rawPrismaSafeSample.hasClientId}`);
+            }
+            console.log(`   serviceWhereClause: { workspaceId: ***, visibility: ${JSON.stringify(trace.serviceWhereClause?.visibility)} }`);
+            console.log(`   serviceCountBeforeMapping: ${trace.serviceCountBeforeMapping}`);
+            console.log(`   serviceCountAfterMapping: ${trace.serviceCountAfterMapping}`);
+            console.log(`   mapperResultCount: ${trace.mapperResultCount}`);
+            console.log(`   routeResponseShape: [${trace.routeResponseShape?.join(", ") || "none"}]`);
+            console.log(`   rootCauseClassification: ${trace.rootCauseClassification}`);
+            console.log("─────────────────────────────────────────────\n");
+          }
 
           process.exit(1);
         }

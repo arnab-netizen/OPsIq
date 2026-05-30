@@ -154,10 +154,10 @@ async function engagementsGetHandler(
 
     // Stage 6: Return response
     stage = "response_return";
-    return Response.json({
+    return {
       ...result,
       _routeVersion: ROUTE_VERSION,
-    });
+    };
   } catch (error) {
     // Catch ANY error that escaped the inner handlers
     // Ensure it's always ClassifiedApiError before throwing to wrapper
