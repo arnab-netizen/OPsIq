@@ -19,6 +19,42 @@ const querySchema = z.object({
   daysOfHistory: z.string().optional().default("30"),
 });
 
+type DashboardEngagement = {
+  id: string;
+  workspaceId: string;
+  title: string;
+  status: string;
+  healthStatus: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  kpis: DashboardKpi[];
+  actions: DashboardAction[];
+};
+
+type DashboardKpi = {
+  id: string;
+  engagementId: string;
+  name: string;
+  status: string;
+  currentValue: number | null;
+  targetValue: number | null;
+  direction: string | null;
+  trend: string | null;
+  updatedAt: Date;
+  engagement?: { id: string };
+};
+
+type DashboardAction = {
+  id: string;
+  engagementId: string | null;
+  title: string;
+  status: string | null;
+  priority: string | null;
+  dueAt: Date | null;
+  assignedTo: { id: string; name: string | null; email: string } | null;
+  engagement?: { id: string; title: string };
+};
+
 function toOwnerDashboardDTO(data: any) {
   return {
     workspaceId: data.workspaceId,
@@ -72,7 +108,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     });
 
     // QUERY 2: Get real actions for workspace
-    const engagementIds = engagements.map((e: any) => e.id);
+    const engagementIds = engagements.map((e: DashboardEngagement) => e.id);
     const actions = await db.action.findMany({
       where: { engagementId: { in: engagementIds } },
       include: {
@@ -90,9 +126,9 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     });
 
     // Transform real data into expected format for health calculation
-    const engagementSnapshots = engagements.map((engagement) => {
-      const engagementKPIs = kpis.filter((k) => k.engagementId === engagement.id);
-      const onTrackCount = engagementKPIs.filter((k) => k.status === "on_track").length;
+    const engagementSnapshots = engagements.map((engagement: DashboardEngagement) => {
+      const engagementKPIs = kpis.filter((k: DashboardKpi) => k.engagementId === engagement.id);
+      const onTrackCount = engagementKPIs.filter((k: DashboardKpi) => k.status === "on_track").length;
       return {
         engagementId: engagement.id,
         status: (engagement.healthStatus?.toLowerCase() || "healthy") as
@@ -106,7 +142,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     });
 
     // Transform real actions into expected format
-    const actionData = actions.map((action) => ({
+    const actionData = actions.map((action: DashboardAction) => ({
       id: action.id,
       engagementId: action.engagementId,
       name: action.title,
@@ -135,7 +171,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     };
 
     // Transform real KPIs into dashboard format
-    const realKPIs = kpis.map((kpi) => ({
+    const realKPIs = kpis.map((kpi: DashboardKpi) => ({
       id: kpi.id,
       name: kpi.name,
       currentValue: kpi.currentValue || 0,
@@ -173,7 +209,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     return toOwnerDashboardDTO(dashboard);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new BadRequestError("Validation error: " + error.issues.map(i => i.message).join(", "));
+      throw new BadRequestError("Validation error: " + error.issues.map((i) => i.message).join(", "));
     }
     if (error instanceof DashboardServiceError) {
       const governed = classifyOperatorError(error, { context: "load" });
