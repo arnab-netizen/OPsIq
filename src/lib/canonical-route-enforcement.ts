@@ -42,6 +42,7 @@ import {
   type RuntimeShadowReadEnforcer,
 } from "@/lib/runtime-shadow-read-enforcer";
 import { ClassifiedApiError, ensureClassification, hasClassification } from "@/infra/classified-error";
+import { isCanonicalJsonResponse } from "@/lib/canonical-json-response";
 import { db } from "@/lib/db";
 
 /**
@@ -613,10 +614,23 @@ export function withCanonicalEnforcement(
       traceManager.recordStage("HANDLER_SUCCESS", "success");
       telemetry.emitHandlerCompleted();
 
+      // Extract status and headers from result if it's a canonical JSON response envelope
+      let responseBody = result;
+      let responseStatus = 200;
+      let responseHeaders: Record<string, string> = {};
+
+      if (isCanonicalJsonResponse(result)) {
+        responseBody = result.body;
+        responseStatus = result.status;
+        if (result.headers) {
+          responseHeaders = { ...result.headers };
+        }
+      }
+
       // PHASE D: Finalize trace (becomes immutable)
       const finalTrace = traceManager.finalize({
         allowed: true,
-        statusCode: 200,
+        statusCode: responseStatus,
         sessionSnapshotId: session?.sessionId,
       });
 
@@ -628,9 +642,10 @@ export function withCanonicalEnforcement(
 
       popExecutionContext(finalTrace.traceId);
 
-      return new NextResponse(JSON.stringify(result), {
-        status: 200,
+      return new NextResponse(JSON.stringify(responseBody), {
+        status: responseStatus,
         headers: {
+          ...responseHeaders,
           "x-correlation-id": correlationId,
           "x-trace-id": finalTrace.traceId,
           "content-type": "application/json",
