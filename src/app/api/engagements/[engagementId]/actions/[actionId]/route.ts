@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -35,7 +36,7 @@ export const PATCH = withCanonicalEnforcement(
     await assertEngagementAccess(ctx.verifiedActorId, action.engagementId, ctx.verifiedWorkspaceId);
 
     const updated = await updateActionStatus(actionId, body, ctx, ctx.verifiedWorkspaceId);
-    return Response.json(updated);
+    return updated;
   },
   {
     requireCapabilities: [CAPABILITIES.ACTION_UPDATE],

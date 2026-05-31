@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { checkWorkspaceRateLimit } from "@/middleware/rate-limit";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createAction, listActions } from "@/services/action";
@@ -33,7 +34,7 @@ export const GET = withCanonicalEnforcement(
     const workspaceId = ctx.verifiedWorkspaceId;
     const params = parseSearchParams(ctx.request!.url, listActionsSchema);
     const result = await listActions(workspaceId, params);
-    return Response.json(result);
+    return result;
   },
   { requireWorkspace: true, requireCapabilities: ['ACTION_VIEW'] }
 );
