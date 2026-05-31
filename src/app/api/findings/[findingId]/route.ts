@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext, type ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { hasInternalAccess } from "@/policies/capability-check";
 
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -35,7 +36,7 @@ export const GET = withCanonicalEnforcement(
     parseOrThrow(uuidSchema, findingId);
 
     const finding = await getFindingDetail(findingId, undefined, undefined, workspaceId);
-    return Response.json(finding);
+    return finding;
   },
   { requireCapabilities: ["FINDING_VIEW"], requireWorkspace: true }
 );
@@ -66,7 +67,7 @@ export const PATCH = withCanonicalEnforcement(
       undefined,
       ctx.verifiedWorkspaceId
     );
-    return Response.json(updated);
+    return updated;
   },
   {
     requireCapabilities: [CAPABILITIES.FINDING_UPDATE],
