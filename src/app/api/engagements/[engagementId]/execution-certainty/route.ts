@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { calculateExecutionCertainty } from "@/services/execution-certainty";
 import { assertEngagementAccess } from "@/lib/visibility";
@@ -20,7 +21,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, pa
   });
 
   if (!engagement) {
-    return Response.json(
+    return canonicalJson(
       { error: "Engagement not found" },
       { status: 404 }
     );
@@ -82,13 +83,13 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, pa
     }
   );
 
-  return Response.json({
+  return canonicalJson({
     score: result.score,
     level: result.level,
     blockers: result.blockers,
     risks: result.risks,
     reasons: result.reasons,
-  });
+  }, { status: 200 });
 }, {
   requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
   requireWorkspace: true,

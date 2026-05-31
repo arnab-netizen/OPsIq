@@ -314,9 +314,12 @@ async function smokeTest(): Promise<void> {
       engagementProof.classification === "demo_engagement_missing" ||
       engagementProof.classification === "demo_engagement_wrong_workspace" ||
       engagementProof.classification === "demo_client_missing" ||
-      engagementProof.classification === "demo_engagement_visibility_wrong"
+      engagementProof.classification === "demo_engagement_visibility_wrong" ||
+      engagementProof.classification === "demo_engagement_membership_missing" ||
+      engagementProof.classification === "demo_engagement_membership_inactive" ||
+      engagementProof.classification === "demo_engagement_membership_wrong_workspace"
     ) {
-      console.log("\n   🔧 Demo data missing, mislinked, or visibility incorrect - backfilling...");
+      console.log("\n   🔧 Demo data missing, mislinked, or access insufficient - backfilling...");
       const engagementBackfillResponse = await fetch(
         `${BASE_URL}/api/internal/demo-engagement-proof`,
         {
@@ -365,13 +368,16 @@ async function smokeTest(): Promise<void> {
           process.exit(1);
         }
       }
-      console.log("   ✓ Demo engagement backfilled\n");
+      console.log("   ✓ Demo data backfilled\n");
     } else if (engagementProof.classification === "demo_data_ready") {
       console.log("   ✓ Demo data ready\n");
     } else {
       console.log(`❌ DEMO_DATA_STATE_INVALID (${engagementProof.classification})`);
       console.log(`   Membership found: ${engagementProof.membershipFound}`);
       console.log(`   Workspace ID valid: ${engagementProof.workspaceIdUuidLike}`);
+      console.log(`   Demo engagement found: ${engagementProof.demoEngagementFound}`);
+      console.log(`   Demo engagement membership: ${engagementProof.demoEngagementMembershipFound ? "found" : "missing"}`);
+      console.log(`   Demo engagement membership active: ${engagementProof.demoEngagementMembershipActive ? "yes" : "no"}`);
       process.exit(1);
     }
 
@@ -427,6 +433,75 @@ async function smokeTest(): Promise<void> {
         if (dashboardResponse.status !== 200) {
           console.log("❌ DASHBOARD_ROUTE_FAILED");
           console.log(`   Status: ${dashboardResponse.status}`);
+          console.log("   Calling diagnostic endpoint to trace root cause...\n");
+
+          // TASK B: Call diagnostic endpoint before exiting
+          try {
+            const diagnosticResponse = await fetch(
+              `${BASE_URL}/api/internal/engagement-dashboard-route-proof`,
+              {
+                headers: {
+                  "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
+                },
+              }
+            );
+
+            console.log(`   Diagnostic Status: ${diagnosticResponse.status}`);
+
+            if (diagnosticResponse.status === 200) {
+              const diagnostic = await diagnosticResponse.json();
+
+              console.log("   Diagnostic Output:");
+              console.log(`     userFound: ${diagnostic.userFound}`);
+              console.log(`     membershipFound: ${diagnostic.membershipFound}`);
+              console.log(
+                `     workspaceIdUuidLike: ${diagnostic.workspaceIdUuidLike}`
+              );
+              console.log(`     engagementFound: ${diagnostic.engagementFound}`);
+              console.log(
+                `     engagementWorkspaceMatches: ${diagnostic.engagementWorkspaceMatches}`
+              );
+              console.log(
+                `     engagementVisibility: ${diagnostic.engagementVisibility}`
+              );
+              console.log(`     hasClientId: ${diagnostic.hasClientId}`);
+              console.log(
+                `     serviceCallSucceeded: ${diagnostic.serviceCallSucceeded}`
+              );
+              console.log(
+                `     dashboardTopLevelKeys: ${(diagnostic.dashboardTopLevelKeys || []).length}`
+              );
+              console.log(
+                `     dashboardEmptyObject: ${diagnostic.dashboardEmptyObject}`
+              );
+              console.log(`     errorName: ${diagnostic.errorName}`);
+              console.log(`     safeErrorMessage: ${diagnostic.safeErrorMessage}`);
+              console.log(`     stackFileLine: ${diagnostic.stackFileLine}`);
+              console.log(`     classification: ${diagnostic.classification}`);
+            } else if (diagnosticResponse.status === 404) {
+              console.log("   ❌ Diagnostic endpoint not found (404)");
+              console.log(
+                "   Possible causes: OPSIQ_DIAGNOSTIC_KEY missing or endpoint not deployed"
+              );
+              console.log("   Please verify:");
+              console.log(
+                "   1. OPSIQ_DIAGNOSTIC_KEY is set as GitHub Actions secret"
+              );
+              console.log(
+                "   2. Diagnostic endpoint is deployed with current commit"
+              );
+            } else {
+              console.log(
+                `   ⚠️  Diagnostic endpoint returned unexpected status: ${diagnosticResponse.status}`
+              );
+            }
+          } catch (diagnosticError) {
+            console.log(
+              `   ⚠️  Diagnostic call failed: ${diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError)}`
+            );
+          }
+
+          console.log("");
           process.exit(1);
         }
 
@@ -465,6 +540,65 @@ async function smokeTest(): Promise<void> {
         if (driftResponse.status !== 200) {
           console.log("❌ DRIFT_ROUTE_FAILED");
           console.log(`   Status: ${driftResponse.status}`);
+          console.log("   Calling drift-specific diagnostic endpoint to trace root cause...\n");
+
+          // Call drift-specific diagnostic endpoint (not dashboard diagnostic)
+          try {
+            const diagnosticResponse = await fetch(
+              `${BASE_URL}/api/internal/engagement-drift-route-proof?key=${encodeURIComponent(OPSIQ_DIAGNOSTIC_KEY)}`,
+              {
+                method: "GET",
+              }
+            );
+
+            console.log(`   Diagnostic Status: ${diagnosticResponse.status}`);
+
+            if (diagnosticResponse.status === 200) {
+              const diagnostic = await diagnosticResponse.json();
+
+              console.log("   Drift Diagnostic Output:");
+              console.log(`     demoUserFound: ${diagnostic.demoUserFound}`);
+              console.log(`     workspaceMembershipFound: ${diagnostic.workspaceMembershipFound}`);
+              console.log(
+                `     workspaceUuidLike: ${diagnostic.workspaceUuidLike}`
+              );
+              console.log(`     demoEngagementFound: ${diagnostic.demoEngagementFound}`);
+              console.log(
+                `     engagementWorkspaceMatch: ${diagnostic.engagementWorkspaceMatch}`
+              );
+              console.log(
+                `     engagementAccessible: ${diagnostic.engagementAccessible}`
+              );
+              console.log(
+                `     serviceCallSucceeded: ${diagnostic.serviceCallSucceeded}`
+              );
+              console.log(
+                `     returnedTopLevelKeysCount: ${diagnostic.returnedTopLevelKeysCount}`
+              );
+              console.log(
+                `     returnedEmptyObject: ${diagnostic.returnedEmptyObject}`
+              );
+              console.log(`     errorName: ${diagnostic.errorName}`);
+              console.log(`     safeErrorMessage: ${diagnostic.safeErrorMessage}`);
+              console.log(`     stackFileLine: ${diagnostic.stackFileLine}`);
+              console.log(`     classification: ${diagnostic.classification}`);
+            } else if (diagnosticResponse.status === 404) {
+              console.log("   ❌ Drift diagnostic endpoint not found (404)");
+              console.log(
+                "   Endpoint may not be deployed or OPSIQ_DIAGNOSTIC_KEY missing"
+              );
+            } else {
+              console.log(
+                `   ⚠️  Drift diagnostic endpoint returned status: ${diagnosticResponse.status}`
+              );
+            }
+          } catch (diagnosticError) {
+            console.log(
+              `   ⚠️  Drift diagnostic call failed: ${diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError)}`
+            );
+          }
+
+          console.log("");
           process.exit(1);
         }
 

@@ -74,7 +74,7 @@ export const GET = withCanonicalEnforcement(
     const workspaceId = ctx.verifiedWorkspaceId;
     const params = parseSearchParams(ctx.request!.url, listBundlesSchema);
     const result = await listEvidenceBundles(params.engagementId, workspaceId);
-    return Response.json({ bundles: result });
+    return { bundles: result };
   },
   { requireWorkspace: true, requireCapabilities: ['EVIDENCE_VIEW'] }
 );

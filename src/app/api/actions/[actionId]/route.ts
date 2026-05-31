@@ -25,7 +25,7 @@ export const GET = withCanonicalEnforcement(
     parseOrThrow(uuidSchema, actionId);
 
     const action = await getActionById(actionId, ctx.verifiedWorkspaceId);
-    return Response.json(action);
+    return action;
   },
   {
     requireWorkspace: true,
@@ -43,7 +43,7 @@ export const PATCH = withCanonicalEnforcement(
     await updateAction(actionId, body, ctx, ctx.verifiedWorkspaceId);
 
     const updated = await getActionById(actionId, ctx.verifiedWorkspaceId);
-    return Response.json(updated);
+    return updated;
   },
   {
     requireCapabilities: [CAPABILITIES.ACTION_UPDATE],

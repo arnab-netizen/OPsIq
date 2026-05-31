@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { ForbiddenError } from "@/infra/errors";
 import { requireCapability } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -40,7 +41,7 @@ export const GET = withCanonicalEnforcement(async (ctx, params) => {
   parseOrThrow(uuidSchema, recommendationId);
 
   const recommendation = await getRecommendation(recommendationId, workspaceId);
-  return Response.json(recommendation);
+  return canonicalJson(recommendation, { status: 200 });
 });
 
 export const PATCH = withCanonicalEnforcement(async (ctx, params) => {
@@ -66,5 +67,5 @@ export const PATCH = withCanonicalEnforcement(async (ctx, params) => {
   await updateRecommendation(recommendationId, body, authContext, workspaceId);
 
   const updated = await getRecommendation(recommendationId, workspaceId);
-  return Response.json(updated);
+  return canonicalJson(updated, { status: 200 });
 });

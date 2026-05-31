@@ -5,7 +5,7 @@
  */
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { ForbiddenError } from "@/infra/errors";
+import { ForbiddenError, BadRequestError, AppError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
@@ -71,15 +71,27 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     const stored = configStore.get(`${workspaceId}:${userId}`);
     const config = stored || defaultConfig(workspaceId, userId);
 
-    return Response.json(toConfigDTO(config), { status: 200 });
+    return toConfigDTO(config);
   } catch (error) {
     if (error instanceof Error) {
       const governed = classifyOperatorError(error, { context: "load" });
-      return Response.json({ details: governed.operatorMessage }, { status: 400 });
+      throw new BadRequestError(governed.operatorMessage);
     }
-    return Response.json(
-      { error: "Internal server error" },
-      { status: 500 }
+    throw new AppError(
+      "INTERNAL_ERROR",
+      "Internal server error",
+      500,
+      {
+        telemetryClass: "INTERNAL_ERROR",
+        auditClass: "INTERNAL_ERROR",
+        severity: "HIGH",
+        retryable: false,
+        securityRelevant: false,
+        infrastructureRelevant: true,
+        abuseRelevant: false,
+        handlerAllowed: true,
+        mutationAllowed: false,
+      }
     );
   }
 }, { requireCapabilities: ["OWNER_VIEW"] });
@@ -138,10 +150,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
     const validationErrors = validateOwnerDashboardConfig(updated);
     if (validationErrors.length > 0) {
-      return Response.json(
-        { error: "Validation failed", details: validationErrors },
-        { status: 400 }
-      );
+      throw new BadRequestError("Validation failed: " + validationErrors.join(", "));
     }
 
     configStore.set(`${workspaceId}:${userId}`, updated);
@@ -155,21 +164,30 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       payload: validated,
     });
 
-    return Response.json(toConfigDTO(updated), { status: 201 });
+    return toConfigDTO(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return Response.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
+      throw new BadRequestError("Validation error: " + error.issues.map(i => i.message).join(", "));
     }
     if (error instanceof Error) {
       const governed = classifyOperatorError(error, { context: "form" });
-      return Response.json({ details: governed.operatorMessage }, { status: 400 });
+      throw new BadRequestError(governed.operatorMessage);
     }
-    return Response.json(
-      { error: "Internal server error" },
-      { status: 500 }
+    throw new AppError(
+      "INTERNAL_ERROR",
+      "Internal server error",
+      500,
+      {
+        telemetryClass: "INTERNAL_ERROR",
+        auditClass: "INTERNAL_ERROR",
+        severity: "HIGH",
+        retryable: false,
+        securityRelevant: false,
+        infrastructureRelevant: true,
+        abuseRelevant: false,
+        handlerAllowed: true,
+        mutationAllowed: false,
+      }
     );
   }
 }, { requireCapabilities: ["OWNER_MANAGE"] });

@@ -37,7 +37,7 @@ export async function computeDecisionConfidence(input: {
         where: { engagementId, engagement: { workspaceId } },
       }),
       db.businessConditionProfile.findFirst({
-        where: { engagementId, isCurrent: true, workspaceId },
+        where: { engagementId, isCurrent: true, engagement: { workspaceId } },
         orderBy: { createdAt: "desc" },
       }),
     ]);

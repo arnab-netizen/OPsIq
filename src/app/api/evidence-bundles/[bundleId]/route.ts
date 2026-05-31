@@ -19,7 +19,7 @@ export const GET = withCanonicalEnforcement(
 
       const result = await getEvidenceBundleById(bundleId, workspaceId);
 
-      return Response.json(result);
+      return result;
     } catch (error) {
       logger.error("Error getting evidence bundle", error);
       return errorToResponse(error);

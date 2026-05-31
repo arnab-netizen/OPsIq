@@ -5,6 +5,7 @@ import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { logger } from "@/infra/logger";
 import { RuntimeError } from "@/runtime/runtime-errors";
+import { BadRequestError, AppError } from "@/infra/errors";
 import { z } from "zod/v4";
 
 const archetypeSchema = z.object({
@@ -27,10 +28,7 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {
-      return Response.json(
-        { error: "idempotency-key header required" },
-        { status: 400 }
-      );
+      throw new BadRequestError("idempotency-key header required");
     }
 
     const body = await parseRequestBody(ctx.request!, archetypeSchema);
@@ -44,9 +42,7 @@ export const POST = withCanonicalEnforcement(
     });
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-      return Response.json(idempotencyCheck.cachedResponse.body, {
-        status: idempotencyCheck.cachedResponse.status,
-      });
+      return idempotencyCheck.cachedResponse.body;
     }
 
     try {
@@ -62,39 +58,45 @@ export const POST = withCanonicalEnforcement(
         body.indicators
       );
 
-    if (!result) {
-      await recordIdempotencyError(idempotencyKey, new Error("Insufficient data for archetype analysis"));
-      return Response.json(
-        { error: "Analysis failed: insufficient data" },
-        { status: 400 }
+      if (!result) {
+        await recordIdempotencyError(idempotencyKey, new Error("Insufficient data for archetype analysis"));
+        throw new BadRequestError("Analysis failed: insufficient data");
+      }
+
+      logger.info("Archetype analysis complete", {
+        analysisId: result.analysisId,
+        archetype: result.selectedArchetype.archetyppe,
+        riskProfile: result.selectedArchetype.riskProfile,
+        confidence: result.overallConfidence,
+      });
+
+      await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>);
+      return result;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error("Unknown error");
+      await recordIdempotencyError(idempotencyKey, err);
+      logger.error("Archetype analysis error", err.message);
+
+      if (error instanceof RuntimeError) {
+        throw error;
+      }
+
+      throw new AppError(
+        "INTERNAL_ERROR",
+        "Archetype analysis failed",
+        500,
+        {
+          telemetryClass: "INTERNAL_ERROR",
+          auditClass: "INTERNAL_ERROR",
+          severity: "HIGH",
+          retryable: false,
+          securityRelevant: false,
+          infrastructureRelevant: true,
+          abuseRelevant: false,
+          handlerAllowed: true,
+          mutationAllowed: false,
+        }
       );
-    }
-
-    logger.info("Archetype analysis complete", {
-      analysisId: result.analysisId,
-      archetype: result.selectedArchetype.archetyppe,
-      riskProfile: result.selectedArchetype.riskProfile,
-      confidence: result.overallConfidence,
-    });
-
-    await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>);
-    return Response.json(result, { status: 201 });
-  } catch (error) {
-    const err = error instanceof Error ? error : new Error("Unknown error");
-    await recordIdempotencyError(idempotencyKey, err);
-    logger.error("Archetype analysis error", err.message);
-
-    if (error instanceof RuntimeError) {
-      return Response.json(
-        error.toOperatorSafeJSON(),
-        { status: error.metadata.http_status }
-      );
-    }
-
-    return Response.json(
-      { error: "Archetype analysis failed" },
-      { status: 500 }
-    );
     }
   },
   { requireWorkspace: true, requireCapabilities: [CAPABILITIES.DIAGNOSIS_READ] }

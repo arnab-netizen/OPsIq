@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { parseOrThrow, uuidSchema } from "@/lib/validation";
 import { db } from "@/lib/db";
@@ -13,7 +14,7 @@ export const runtime = "nodejs";
 export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
   const idempotencyKey = ctx.request?.headers.get("idempotency-key");
   if (!idempotencyKey) {
-    return Response.json(
+    return canonicalJson(
       { error: "idempotency-key header required" },
       { status: 400 }
     );
@@ -30,7 +31,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
   });
 
   if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-    return Response.json(idempotencyCheck.cachedResponse.body, {
+    return canonicalJson(idempotencyCheck.cachedResponse.body, {
       status: idempotencyCheck.cachedResponse.status,
     });
   }
@@ -61,7 +62,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
       acknowledgedAt,
     };
     await recordIdempotencyResponse(idempotencyKey, 200, result);
-    return Response.json(result);
+    return result;
   } catch (error) {
     const err = error instanceof Error ? error : new Error("Unknown error");
     await recordIdempotencyError(idempotencyKey, err);

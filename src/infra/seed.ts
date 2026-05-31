@@ -170,6 +170,31 @@ async function seedDemoData(db: PrismaClient) {
     console.log("✓ Created demo engagement");
   }
 
+  // Create engagement membership for demo user (required by assertEngagementAccess)
+  let engagementMembership = await db.engagementMembership.findFirst({
+    where: {
+      userId: user.id,
+      engagementId: engagement.id,
+      role: "lead",
+    },
+  });
+
+  if (!engagementMembership) {
+    const membershipId = randomUUID();
+    engagementMembership = await db.engagementMembership.create({
+      data: {
+        id: membershipId,
+        userId: user.id,
+        engagementId: engagement.id,
+        role: "lead",
+        addedBy: user.id,
+        addedAt: new Date(),
+        isActive: true,
+      },
+    });
+    console.log("✓ Created engagement membership");
+  }
+
   // Create business condition profile
   let condition = await db.businessConditionProfile.findFirst({
     where: { engagementId: engagement.id, isCurrent: true },

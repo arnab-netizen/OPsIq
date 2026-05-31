@@ -53,23 +53,23 @@ export async function GET(request: NextRequest) {
     response.userFound = true;
 
     // Step 2: Find active workspace membership for demo user
-    const membership = await db.engagementMembership.findFirst({
+    const membership = await db.workspaceMembership.findFirst({
       where: {
         userId: demoUser.id,
         isActive: true,
       },
-      include: { engagement: true },
+      orderBy: { addedAt: "asc" },
     });
 
     if (!membership) {
       response.classification = "membership_not_found";
       response.errorName = "MembershipNotFound";
-      response.safeErrorMessage = "Demo user has no active engagement membership";
+      response.safeErrorMessage = "Demo user has no active workspace membership";
       return NextResponse.json(response, { status: 200 });
     }
     response.membershipFound = true;
 
-    const workspaceId = membership.engagement.workspaceId;
+    const workspaceId = membership.workspaceId;
 
     // Step 3: Validate workspaceId is UUID-like
     const uuidRegex =
@@ -110,6 +110,24 @@ export async function GET(request: NextRequest) {
     // Step 6: Check visibility and clientId
     response.engagementVisibility = engagement.visibility || "unknown";
     response.hasClientId = Boolean(engagement.clientId);
+
+    // Step 6.5: Check engagementMembership (required by route's assertEngagementAccess call)
+    const engagementMembership = await db.engagementMembership.findFirst({
+      where: {
+        userId: demoUser.id,
+        engagementId: engagement.id,
+        isActive: true,
+      },
+    });
+
+    const hasEngagementMembership = !!engagementMembership;
+
+    if (!hasEngagementMembership) {
+      response.classification = "engagement_membership_missing";
+      response.errorName = "EngagementMembershipMissing";
+      response.safeErrorMessage = "Demo user has no active membership in this engagement (required by assertEngagementAccess) - real route will return 403 before service call";
+      return NextResponse.json(response, { status: 200 });
+    }
 
     // Step 7: Call dashboard service (same path as route handler)
     // Create synthetic auth context mimicking the wrapped handler

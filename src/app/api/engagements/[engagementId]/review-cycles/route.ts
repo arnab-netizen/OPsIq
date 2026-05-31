@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { generateReviewCycle } from "@/services/review-cycle";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -21,7 +22,7 @@ export const POST = withCanonicalEnforcement(
       const { engagementId } = params;
 
       if (!engagementId) {
-        return Response.json(
+        return canonicalJson(
           { error: "Engagement ID required in path" },
           { status: 400 }
         );
@@ -35,20 +36,20 @@ export const POST = withCanonicalEnforcement(
         ctx.verifiedWorkspaceId
       );
 
-      return Response.json(reviewCycle, { status: 201 });
+      return canonicalJson(reviewCycle, { status: 201 });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return Response.json(
+        return canonicalJson(
           { error: "Validation error", details: error.issues },
           { status: 400 }
         );
       }
 
       if (error instanceof Error) {
-        return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
+        return canonicalJson({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
       }
 
-      return Response.json(
+      return canonicalJson(
         { error: "Internal server error" },
         { status: 500 }
       );
@@ -68,10 +69,10 @@ export const POST = withCanonicalEnforcement(
  */
 export const GET = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
-    return Response.json({
+    return {
       cycles: [],
       note: "Review cycle history not yet implemented - cycles are generated on-demand",
-    });
+    };
   },
   {
     requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],

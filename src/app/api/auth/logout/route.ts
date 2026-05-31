@@ -26,7 +26,7 @@ export const POST = withCanonicalEnforcement(
     const cookieStore = await cookies();
     cookieStore.delete(getSessionCookieName());
 
-    return Response.json({ success: true });
+    return { success: true };
   },
   { skipReadinessCheck: true }
 );

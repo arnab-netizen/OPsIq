@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getInterventionState, transitionPhase } from "@/services/intervention-state";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -16,7 +17,7 @@ export const GET = withCanonicalEnforcement(
     parseOrThrow(uuidSchema, engagementId);
 
     const state = await getInterventionState(engagementId, ctx.verifiedWorkspaceId);
-    return Response.json(state);
+    return state;
   },
   {
     requireCapabilities: [CAPABILITIES.INTERVENTION_VIEW],
@@ -31,7 +32,7 @@ export const PUT = withCanonicalEnforcement(
 
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {
-      return Response.json(
+      return canonicalJson(
         { error: "idempotency-key header required" },
         { status: 400 }
       );
@@ -48,7 +49,7 @@ export const PUT = withCanonicalEnforcement(
     });
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-      return Response.json(idempotencyCheck.cachedResponse.body, {
+      return canonicalJson(idempotencyCheck.cachedResponse.body, {
         status: idempotencyCheck.cachedResponse.status,
       });
     }
@@ -56,7 +57,7 @@ export const PUT = withCanonicalEnforcement(
     try {
       const result = await transitionPhase(engagementId, body.targetPhase, ctx, ctx.verifiedWorkspaceId);
       await recordIdempotencyResponse(idempotencyKey, 200, result, ctx.verifiedWorkspaceId);
-      return Response.json(result);
+      return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
       await recordIdempotencyError(idempotencyKey, err, ctx.verifiedWorkspaceId);

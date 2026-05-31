@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
@@ -44,7 +45,7 @@ export const GET = withCanonicalEnforcement(
     await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
     const engagement = await getEngagementById(engagementId, workspaceId, ctx.policy ? hasInternalAccess(ctx.policy) : false);
-    return Response.json(engagement);
+    return engagement;
   },
   { requireCapabilities: ["ENGAGEMENT_VIEW"], requireWorkspace: true }
 );
@@ -59,7 +60,7 @@ export const PATCH = withCanonicalEnforcement(
     // Check for interventionPhase in raw request body to provide clear error
     const rawBody = await ctx.request!.clone().json().catch(() => ({}));
     if ("interventionPhase" in rawBody) {
-      return Response.json(
+      return canonicalJson(
         {
           error: "interventionPhase updates are not allowed here. Use PATCH /engagements/[id]/intervention instead.",
         },
@@ -69,7 +70,7 @@ export const PATCH = withCanonicalEnforcement(
 
     const idempotencyKey = ctx.request!.headers.get("idempotency-key");
     if (!idempotencyKey) {
-      return Response.json(
+      return canonicalJson(
         { error: "idempotency-key header required" },
         { status: 400 }
       );
@@ -86,7 +87,7 @@ export const PATCH = withCanonicalEnforcement(
     });
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-      return Response.json(idempotencyCheck.cachedResponse.body, {
+      return canonicalJson(idempotencyCheck.cachedResponse.body, {
         status: idempotencyCheck.cachedResponse.status,
       });
     }
@@ -95,7 +96,7 @@ export const PATCH = withCanonicalEnforcement(
       await updateEngagement(engagementId, body, ctx, ctx.verifiedWorkspaceId);
       const updated = await getEngagementById(engagementId, ctx.verifiedWorkspaceId, ctx.policy ? hasInternalAccess(ctx.policy) : false);
       await recordIdempotencyResponse(idempotencyKey, 200, updated);
-      return Response.json(updated);
+      return updated;
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
       await recordIdempotencyError(idempotencyKey, err);
