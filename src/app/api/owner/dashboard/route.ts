@@ -61,40 +61,65 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
 
     const context = { workspaceId, userId };
 
-    const mockEngagementSnapshots = [
-      {
-        engagementId: "550e8400-e29b-41d4-a716-446655440000",
-        status: "healthy" as const,
-        kpiOnTrackCount: 8,
-        kpiTotalCount: 10,
+    // QUERY 1: Get real engagements for workspace
+    const { db } = await import("@/lib/db");
+    const engagements = await db.engagement.findMany({
+      where: { workspaceId },
+      include: {
+        kpis: true,
+        actions: true,
       },
-    ];
+    });
 
-    const mockActions = [
-      {
-        id: "550e8400-e29b-41d4-a716-446655440001",
-        engagementId: "550e8400-e29b-41d4-a716-446655440000",
-        name: "Complete market analysis",
-        status: "in_progress",
-        priority: "high",
-        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        assignee: "john@example.com",
-        blockerCount: 0,
+    // QUERY 2: Get real actions for workspace
+    const engagementIds = engagements.map((e: any) => e.id);
+    const actions = await db.action.findMany({
+      where: { engagementId: { in: engagementIds } },
+      include: {
+        engagement: { select: { id: true, title: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
       },
-      {
-        id: "550e8400-e29b-41d4-a716-446655440002",
-        engagementId: "550e8400-e29b-41d4-a716-446655440000",
-        name: "Implement pricing strategy",
-        status: "pending",
-        priority: "critical",
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        assignee: "jane@example.com",
-        blockerCount: 1,
-      },
-    ];
+    });
 
-    const health = await calculateWorkspaceHealth(context, mockEngagementSnapshots);
-    const actionQueue = await summarizeActionQueue(context, mockActions);
+    // QUERY 3: Get real KPIs for workspace
+    const kpis = await db.kpi.findMany({
+      where: { engagementId: { in: engagementIds } },
+      include: {
+        engagement: { select: { id: true } },
+      },
+    });
+
+    // Transform real data into expected format for health calculation
+    const engagementSnapshots = engagements.map((engagement) => {
+      const engagementKPIs = kpis.filter((k) => k.engagementId === engagement.id);
+      const onTrackCount = engagementKPIs.filter((k) => k.status === "on_track").length;
+      return {
+        engagementId: engagement.id,
+        status: (engagement.healthStatus?.toLowerCase() || "healthy") as
+          | "healthy"
+          | "at_risk"
+          | "critical"
+          | "improving",
+        kpiOnTrackCount: onTrackCount,
+        kpiTotalCount: engagementKPIs.length,
+      };
+    });
+
+    // Transform real actions into expected format
+    const actionData = actions.map((action) => ({
+      id: action.id,
+      engagementId: action.engagementId,
+      name: action.title,
+      status: action.status || "draft",
+      priority: action.priority || "medium",
+      dueDate: action.dueAt?.toISOString(),
+      assignee: action.assignedTo?.email,
+      blockerCount: 0, // Would query separately if needed
+    }));
+
+    // Calculate health from REAL data (empty if no engagements)
+    const health = await calculateWorkspaceHealth(context, engagementSnapshots);
+    const actionQueue = await summarizeActionQueue(context, actionData);
 
     const config: OwnerDashboardConfig = {
       workspaceId,
@@ -109,20 +134,28 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       enableAdvancedFiltering: true,
     };
 
-    const mockKPIs = [
-      {
-        id: "kpi-001",
-        name: "Revenue Growth",
-        currentValue: 120000,
-        targetValue: 150000,
-        direction: "increase" as const,
-        trend: "improving" as const,
-        percentOfTarget: 80,
-        lastUpdated: new Date().toISOString(),
-      },
-    ];
+    // Transform real KPIs into dashboard format
+    const realKPIs = kpis.map((kpi) => ({
+      id: kpi.id,
+      name: kpi.name,
+      currentValue: kpi.currentValue || 0,
+      targetValue: kpi.targetValue || 0,
+      direction: (kpi.direction as "increase" | "decrease") || "increase",
+      trend: (kpi.trend as "improving" | "stable" | "declining") || "stable",
+      percentOfTarget:
+        kpi.targetValue && kpi.targetValue > 0
+          ? Math.round((((kpi.currentValue || 0) / kpi.targetValue) * 100))
+          : 0,
+      lastUpdated: kpi.updatedAt?.toISOString() || new Date().toISOString(),
+    }));
 
-    const dashboard = await buildOwnerDashboardView(context, config, health, actionQueue, queryParams.includeKPIs === "true" ? mockKPIs : []);
+    const dashboard = await buildOwnerDashboardView(
+      context,
+      config,
+      health,
+      actionQueue,
+      queryParams.includeKPIs === "true" ? realKPIs : []
+    );
 
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OWNER_DASHBOARD_VIEWED,
