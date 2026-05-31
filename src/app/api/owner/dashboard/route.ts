@@ -9,6 +9,7 @@ import { ForbiddenError, BadRequestError, AppError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { calculateWorkspaceHealth, summarizeActionQueue, buildOwnerDashboardView, DashboardServiceError } from "@/services/owner-mode/dashboard.service";
 import { OwnerDashboardConfig, HealthStatus, ActionQueuePriority } from "@/domain/owner-mode/owner-dashboard";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
@@ -236,4 +237,4 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       }
     );
   }
-}, { requireCapabilities: ["OWNER_VIEW"] });
+}, { requireCapabilities: [CAPABILITIES.OWNER_VIEW] });
