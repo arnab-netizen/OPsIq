@@ -138,8 +138,10 @@ export const GET = async (request: NextRequest) => {
       const count = await db.auditLog.count();
       result.audit_table_accessible = true;
     } catch (e) {
-      // Audit table may not exist, not critical
       result.audit_table_accessible = false;
+      result.first_failing_step = "audit_table_access";
+      result.error_name = e instanceof Error ? e.name : "UnknownError";
+      result.safe_error_message = e instanceof Error ? e.message : "Audit table not accessible";
     }
 
     // STEP 7: Bcrypt functionality
@@ -159,8 +161,12 @@ export const GET = async (request: NextRequest) => {
       return NextResponse.json(result, { status: 200 });
     }
 
-    // All checks passed
-    result.classification = "all_systems_ok";
+    // All checks passed - adjust classification if audit is unavailable
+    if (result.first_failing_step === "audit_table_access") {
+      result.classification = "audit_unavailable";
+    } else if (!result.first_failing_step) {
+      result.classification = "all_systems_ok";
+    }
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
     result.first_failing_step = "unhandled_error";
