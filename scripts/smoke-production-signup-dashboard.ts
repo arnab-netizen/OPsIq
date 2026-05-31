@@ -43,11 +43,34 @@ async function smokeTest(): Promise<void> {
   console.log(`📧 Test Email: ${testEmail}`);
   console.log("");
 
+  // Verify diagnostic key is available
+  const diagnosticKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
+  if (!diagnosticKey || diagnosticKey === "not-set") {
+    console.log("⚠️  OPSIQ_DIAGNOSTIC_KEY not available in environment");
+    console.log("   Diagnostic output will be limited");
+  }
+
   let userId: string | null = null;
   let workspaceId: string | null = null;
   let sessionCookie: string = "";
 
   try {
+    // STEP 0: Verify deployment is healthy
+    console.log("0️⃣  GET /api/internal/build-info (verify deployment)");
+    const buildInfoResponse = await fetch(`${baseUrl}/api/internal/build-info`);
+    console.log(`   Status: ${buildInfoResponse.status}`);
+
+    if (buildInfoResponse.status !== 200) {
+      console.log("❌ BUILD_INFO_ENDPOINT_FAILED");
+      console.log("   Deployment may not be ready yet");
+      process.exit(1);
+    }
+
+    const buildInfo = await buildInfoResponse.json();
+    console.log(`   Environment: ${buildInfo.environment}`);
+    console.log(`   Deployed commit: ${buildInfo.commit?.substring(0, 7) || "unknown"}`);
+    console.log("");
+
     // STEP 1: Sign up new user
     console.log("1️⃣  POST /api/auth/signup");
     const signupResponse = await fetch(`${baseUrl}/api/auth/signup`, {
@@ -72,10 +95,9 @@ async function smokeTest(): Promise<void> {
       console.log("\n🔍 CALLING DIAGNOSTIC ENDPOINT");
       console.log("GET /api/internal/signup-proof");
 
-      const diagnosticKey = process.env.OPSIQ_DIAGNOSTIC_KEY || "not-set";
       const diagnosticResponse = await fetch(`${baseUrl}/api/internal/signup-proof`, {
         method: "GET",
-        headers: { "x-opsiq-diagnostic-key": diagnosticKey },
+        headers: { "x-opsiq-diagnostic-key": diagnosticKey || "not-set" },
       });
 
       if (diagnosticResponse.status === 200) {

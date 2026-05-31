@@ -12,11 +12,7 @@ jobs:
   smoke-test:
     name: Signup → Real Dashboard
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-
-    env:
-      BASE_URL: ${{ inputs.base_url || 'https://o-ps-iq.vercel.app' }}
-      OPSIQ_DIAGNOSTIC_KEY: ${{ secrets.OPSIQ_DIAGNOSTIC_KEY }}
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -31,7 +27,45 @@ jobs:
       - name: Install dependencies
         run: npm ci --omit=dev
 
+      - name: Get current commit SHA
+        id: commit
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Wait for Vercel deployment
+        run: |
+          BASE_URL="${{ inputs.base_url || 'https://o-ps-iq.vercel.app' }}"
+          TARGET_COMMIT="${{ steps.commit.outputs.sha }}"
+          MAX_RETRIES=30
+          RETRY_INTERVAL=10
+
+          echo "Waiting for Vercel to deploy commit ${TARGET_COMMIT:0:7}..."
+
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Attempt $i/$MAX_RETRIES..."
+
+            RESPONSE=$(curl -s "$BASE_URL/api/internal/build-info" 2>/dev/null || echo '{}')
+            DEPLOYED_COMMIT=$(echo "$RESPONSE" | jq -r '.commit // "unknown"' 2>/dev/null)
+
+            if [ "$DEPLOYED_COMMIT" = "$TARGET_COMMIT" ]; then
+              echo "✓ Vercel deployed commit $TARGET_COMMIT"
+              exit 0
+            fi
+
+            echo "  Current: ${DEPLOYED_COMMIT:0:7}, Target: ${TARGET_COMMIT:0:7}"
+
+            if [ $i -lt $MAX_RETRIES ]; then
+              sleep $RETRY_INTERVAL
+            fi
+          done
+
+          echo "❌ Timeout waiting for Vercel deployment"
+          exit 1
+
       - name: Run smoke test
+        env:
+          BASE_URL: ${{ inputs.base_url || 'https://o-ps-iq.vercel.app' }}
+          OPSIQ_DIAGNOSTIC_KEY: ${{ secrets.OPSIQ_DIAGNOSTIC_KEY }}
         run: npx tsx scripts/smoke-production-signup-dashboard.ts
         timeout-minutes: 2
 
