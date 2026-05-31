@@ -106,7 +106,6 @@ export const GET = async (request: NextRequest) => {
       where: { engagementId: { in: engagementIds } },
       include: {
         engagement: { select: { id: true, title: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
       },
     });
     stages[4].succeeded = true;
@@ -184,7 +183,7 @@ export const GET = async (request: NextRequest) => {
       status: action.status || "draft",
       priority: action.priority || "medium",
       dueDate: action.dueAt?.toISOString(),
-      assignee: action.assignedTo?.email,
+      assignee: undefined,
       blockerCount: 0,
     }));
     stages[7].succeeded = true;

@@ -113,7 +113,6 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       where: { engagementId: { in: engagementIds } },
       include: {
         engagement: { select: { id: true, title: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
       },
     });
 
@@ -149,7 +148,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       status: action.status || "draft",
       priority: action.priority || "medium",
       dueDate: action.dueAt?.toISOString(),
-      assignee: action.assignedTo?.email,
+      assignee: undefined,
       blockerCount: 0, // Would query separately if needed
     }));
 
