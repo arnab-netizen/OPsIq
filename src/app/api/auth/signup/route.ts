@@ -130,7 +130,47 @@ export const POST = async (request: NextRequest) => {
   } catch (error) {
     const errorName = error instanceof Error ? error.name : "UnknownError";
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error(`[SIGNUP_FAILURE] stage=${currentStage} errorName=${errorName} safeMessage=${errorMessage}`);
+    let prismaCode: string | null = null;
+    let classification = "unknown_error";
+
+    // Extract Prisma error code if present
+    const prismaError = error as any;
+    if (prismaError.code) {
+      prismaCode = prismaError.code;
+      if (prismaError.code === "P2002") {
+        classification = "unique_constraint_violation";
+      } else if (prismaError.code === "P2014") {
+        classification = "required_relation_violation";
+      } else if (prismaError.code.startsWith("P2")) {
+        classification = "database_error";
+      }
+    }
+
+    console.error(`[SIGNUP_FAILURE] stage=${currentStage} errorName=${errorName} safeMessage=${errorMessage} prismaCode=${prismaCode || "none"} classification=${classification}`);
+
+    // Check if request has diagnostic key for protected detailed response
+    const providedKey =
+      request.headers.get("x-opsiq-diagnostic-key") ||
+      new URL(request.url).searchParams.get("key");
+    const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
+    const hasDiagnosticAccess = expectedKey && providedKey && providedKey === expectedKey;
+
+    // If diagnostic key is valid, return protected diagnostic response
+    if (hasDiagnosticAccess) {
+      return Response.json(
+        {
+          reason: "signup_failed",
+          stage: currentStage,
+          errorName,
+          prismaCode,
+          safeMessage: errorMessage,
+          classification,
+        },
+        { status: 500 }
+      );
+    }
+
+    // Otherwise return normal safe error response
     if (error instanceof z.ZodError) {
       throw new BadRequestError(
         `Validation error: ${error.issues.map((i) => i.message).join(", ")}`

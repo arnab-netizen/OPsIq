@@ -73,9 +73,15 @@ async function smokeTest(): Promise<void> {
 
     // STEP 1: Sign up new user
     console.log("1️⃣  POST /api/auth/signup");
+    const signupHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (diagnosticKey) {
+      signupHeaders["x-opsiq-diagnostic-key"] = diagnosticKey;
+    }
     const signupResponse = await fetch(`${baseUrl}/api/auth/signup`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: signupHeaders,
       body: JSON.stringify({
         email: testEmail,
         password: testPassword,
@@ -88,10 +94,26 @@ async function smokeTest(): Promise<void> {
 
     if (signupStatus !== 201) {
       console.log("❌ SIGNUP_FAILED");
-      const signupText = await signupResponse.text();
-      console.log(`   Response: ${signupText.substring(0, 200)}`);
 
-      // Call diagnostic endpoint to identify root cause
+      // Try to parse diagnostic response
+      let signupDiagnostic: any = null;
+      try {
+        signupDiagnostic = await signupResponse.json();
+      } catch {
+        const signupText = await signupResponse.text();
+        console.log(`   Response: ${signupText.substring(0, 200)}`);
+      }
+
+      if (signupDiagnostic && signupDiagnostic.reason === "signup_failed") {
+        console.log("\n📋 SIGNUP DIAGNOSTIC RESPONSE:");
+        console.log(`   stage: ${signupDiagnostic.stage}`);
+        console.log(`   errorName: ${signupDiagnostic.errorName}`);
+        console.log(`   prismaCode: ${signupDiagnostic.prismaCode || "none"}`);
+        console.log(`   safeMessage: ${signupDiagnostic.safeMessage}`);
+        console.log(`   classification: ${signupDiagnostic.classification}`);
+      }
+
+      // Call diagnostic endpoint as secondary context
       console.log("\n🔍 CALLING DIAGNOSTIC ENDPOINT");
       console.log("GET /api/internal/signup-proof");
 
@@ -102,7 +124,7 @@ async function smokeTest(): Promise<void> {
 
       if (diagnosticResponse.status === 200) {
         const diagnostic = await diagnosticResponse.json();
-        console.log("\n📋 SIGNUP DIAGNOSTIC RESULTS:");
+        console.log("\n📋 SIGNUP-PROOF DIAGNOSTIC RESULTS:");
         console.log(`   validation_ok: ${diagnostic.validation_ok}`);
         console.log(`   user_table_accessible: ${diagnostic.user_table_accessible}`);
         console.log(`   workspace_table_accessible: ${diagnostic.workspace_table_accessible}`);
