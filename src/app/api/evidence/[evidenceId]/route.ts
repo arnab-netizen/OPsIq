@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { getEvidenceById, updateEvidence } from "@/services/evidence";
 import { parseRequestBody, parseOrThrow, uuidSchema } from "@/lib/validation";
@@ -41,7 +42,7 @@ export const PATCH = withCanonicalEnforcement(
     await updateEvidence(evidenceId, body, ctx, workspaceId);
 
     const updated = await getEvidenceById(evidenceId, workspaceId);
-    return Response.json(updated);
+    return canonicalJson(updated, { status: 200 });
   },
   { requireCapabilities: [CAPABILITIES.EVIDENCE_VALIDATE], requireWorkspace: true }
 );

@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -40,7 +41,7 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
     if (!workspaceId) {
-      return Response.json(
+      return canonicalJson(
         { error: "Workspace ID required" },
         { status: 400 }
       );
@@ -69,7 +70,7 @@ export const POST = withCanonicalEnforcement(
           validated.newCustomersAcquired
         );
 
-        return Response.json(result, { status: 201 });
+        return canonicalJson(result, { status: 201 });
       } else if (action === "ltv" || body.avgMonthlyRevenue !== undefined) {
         const validated = calculateLTVSchema.parse(body);
         const result = UnitEconomicsEngine.calculateLTV(
@@ -79,7 +80,7 @@ export const POST = withCanonicalEnforcement(
           validated.grossMargin
         );
 
-        return Response.json(result, { status: 201 });
+        return canonicalJson(result, { status: 201 });
       } else if (action === "payback" || body.cac !== undefined) {
         const validated = calculateCACPaybackSchema.parse(body);
         const result = UnitEconomicsEngine.calculateCACPayback(
@@ -88,7 +89,7 @@ export const POST = withCanonicalEnforcement(
           validated.monthlyProfit
         );
 
-        return Response.json(result, { status: 201 });
+        return canonicalJson(result, { status: 201 });
       } else {
         const validated = assessHealthSchema.parse(body);
         const result = UnitEconomicsEngine.assessUnitEconomicsHealth(
@@ -99,21 +100,21 @@ export const POST = withCanonicalEnforcement(
           validated.monthlyProfit
         );
 
-        return Response.json(result, { status: 201 });
+        return canonicalJson(result, { status: 201 });
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return Response.json(
+        return canonicalJson(
           { error: "Validation error", details: error.issues },
           { status: 400 }
         );
       }
 
       if (error instanceof Error) {
-        return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
+        return canonicalJson({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
       }
 
-      return Response.json(
+      return canonicalJson(
         { error: "Internal server error" },
         { status: 500 }
       );
