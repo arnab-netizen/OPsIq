@@ -5,7 +5,7 @@ import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { BadRequestError, ConflictError } from "@/infra/errors";
 import { getSessionCookieName, getSessionDurationMs } from "@/services/auth";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 import { z } from "zod/v4";
 import { cookies } from "next/headers";
 import * as bcrypt from "bcryptjs";
@@ -40,10 +40,14 @@ export const POST = async (request: NextRequest) => {
     currentStage = "bcrypt_hash";
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Generate user ID
+    const userId = randomUUID();
+
     // Create user
     currentStage = "user_create";
     const user = await db.user.create({
       data: {
+        id: userId,
         email,
         hashedPassword,
         isActive: true,
@@ -78,7 +82,7 @@ export const POST = async (request: NextRequest) => {
 
     // Create session
     currentStage = "session_create";
-    const sessionId = uuidv4();
+    const sessionId = randomUUID();
     const expiresAt = new Date(
       Date.now() + getSessionDurationMs()
     );
