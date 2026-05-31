@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-31T05:19:04.133Z",
+  "generated_at": "2026-05-31T05:27:00.143Z",
   "scanner_version": "2.0.0",
-  "total_known_violations": 34,
+  "total_known_violations": 33,
   "violations": [
     {
       "file": "app/api/clients/[clientId]/contacts/[contactId]/route.ts",
@@ -9,7 +9,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/constraint-checks/route.ts",
@@ -17,7 +17,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts",
@@ -25,7 +25,7 @@
       "classification": "custom_status_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts",
@@ -33,7 +33,7 @@
       "classification": "custom_status_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts",
@@ -41,7 +41,7 @@
       "classification": "custom_status_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts",
@@ -49,7 +49,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts",
@@ -57,7 +57,7 @@
       "classification": "custom_status_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/experiments/route.ts",
@@ -65,7 +65,7 @@
       "classification": "custom_status_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/intervention/route.ts",
@@ -73,7 +73,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/engagements/[engagementId]/shock-events/route.ts",
@@ -81,7 +81,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/evidence-bundles/[bundleId]/items/route.ts",
@@ -89,7 +89,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/evidence-bundles/[bundleId]/route.ts",
@@ -97,7 +97,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/evidence-bundles/route.ts",
@@ -105,7 +105,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/evidence/[evidenceId]/route.ts",
@@ -113,7 +113,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/evidence/[evidenceId]/validate/route.ts",
@@ -121,7 +121,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/execute/route.ts",
@@ -129,7 +129,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/export/route.ts",
@@ -137,15 +137,7 @@
       "classification": "custom_header_or_cookie_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
-    },
-    {
-      "file": "app/api/growth/acquisition-metrics/route.ts",
-      "violation_type": "wrapped_handler_returns_response_json",
-      "classification": "success_only_response_return",
-      "wrapper_detected": true,
-      "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/growth/offers/route.ts",
@@ -153,7 +145,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/growth/pricing-tiers/route.ts",
@@ -161,7 +153,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/growth/retention-metrics/route.ts",
@@ -169,7 +161,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/growth/revenue-streams/route.ts",
@@ -177,7 +169,7 @@
       "classification": "redirect_stream_file_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/growth/sales-pipeline/route.ts",
@@ -185,7 +177,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/growth/unit-economics/route.ts",
@@ -193,7 +185,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/leads/[leadId]/route.ts",
@@ -201,7 +193,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/opsiq/consulting-engine/run/route.ts",
@@ -209,7 +201,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/public/actions/route.ts",
@@ -217,7 +209,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/public/engagements/route.ts",
@@ -225,7 +217,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/public/kpis/route.ts",
@@ -233,7 +225,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/recommendations/[recommendationId]/route.ts",
@@ -241,7 +233,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/users/[userId]/memberships/route.ts",
@@ -249,7 +241,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/users/[userId]/roles/route.ts",
@@ -257,7 +249,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/users/[userId]/route.ts",
@@ -265,7 +257,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     },
     {
       "file": "app/api/webhooks/stripe/route.ts",
@@ -273,7 +265,7 @@
       "classification": "success_only_response_return",
       "wrapper_detected": true,
       "remediation_status": "legacy_pending",
-      "discovered_at": "2026-05-31T05:19:04.133Z"
+      "discovered_at": "2026-05-31T05:27:00.143Z"
     }
   ]
 }
