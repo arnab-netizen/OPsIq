@@ -540,16 +540,14 @@ async function smokeTest(): Promise<void> {
         if (driftResponse.status !== 200) {
           console.log("❌ DRIFT_ROUTE_FAILED");
           console.log(`   Status: ${driftResponse.status}`);
-          console.log("   Calling diagnostic endpoint to trace root cause...\n");
+          console.log("   Calling drift-specific diagnostic endpoint to trace root cause...\n");
 
-          // Call diagnostic endpoint before exiting (same logic as dashboard)
+          // Call drift-specific diagnostic endpoint (not dashboard diagnostic)
           try {
             const diagnosticResponse = await fetch(
-              `${BASE_URL}/api/internal/engagement-dashboard-route-proof`,
+              `${BASE_URL}/api/internal/engagement-drift-route-proof?key=${encodeURIComponent(OPSIQ_DIAGNOSTIC_KEY)}`,
               {
-                headers: {
-                  "x-opsiq-diagnostic-key": OPSIQ_DIAGNOSTIC_KEY,
-                },
+                method: "GET",
               }
             );
 
@@ -558,46 +556,45 @@ async function smokeTest(): Promise<void> {
             if (diagnosticResponse.status === 200) {
               const diagnostic = await diagnosticResponse.json();
 
-              console.log("   Diagnostic Output:");
-              console.log(`     userFound: ${diagnostic.userFound}`);
-              console.log(`     membershipFound: ${diagnostic.membershipFound}`);
+              console.log("   Drift Diagnostic Output:");
+              console.log(`     demoUserFound: ${diagnostic.demoUserFound}`);
+              console.log(`     workspaceMembershipFound: ${diagnostic.workspaceMembershipFound}`);
               console.log(
-                `     workspaceIdUuidLike: ${diagnostic.workspaceIdUuidLike}`
+                `     workspaceUuidLike: ${diagnostic.workspaceUuidLike}`
               );
-              console.log(`     engagementFound: ${diagnostic.engagementFound}`);
+              console.log(`     demoEngagementFound: ${diagnostic.demoEngagementFound}`);
               console.log(
-                `     engagementWorkspaceMatches: ${diagnostic.engagementWorkspaceMatches}`
+                `     engagementWorkspaceMatch: ${diagnostic.engagementWorkspaceMatch}`
               );
               console.log(
-                `     engagementVisibility: ${diagnostic.engagementVisibility}`
+                `     engagementAccessible: ${diagnostic.engagementAccessible}`
               );
-              console.log(`     hasClientId: ${diagnostic.hasClientId}`);
               console.log(
                 `     serviceCallSucceeded: ${diagnostic.serviceCallSucceeded}`
               );
               console.log(
-                `     dashboardTopLevelKeys: ${(diagnostic.dashboardTopLevelKeys || []).length}`
+                `     returnedTopLevelKeysCount: ${diagnostic.returnedTopLevelKeysCount}`
               );
               console.log(
-                `     dashboardEmptyObject: ${diagnostic.dashboardEmptyObject}`
+                `     returnedEmptyObject: ${diagnostic.returnedEmptyObject}`
               );
               console.log(`     errorName: ${diagnostic.errorName}`);
               console.log(`     safeErrorMessage: ${diagnostic.safeErrorMessage}`);
               console.log(`     stackFileLine: ${diagnostic.stackFileLine}`);
               console.log(`     classification: ${diagnostic.classification}`);
             } else if (diagnosticResponse.status === 404) {
-              console.log("   ❌ Diagnostic endpoint not found (404)");
+              console.log("   ❌ Drift diagnostic endpoint not found (404)");
               console.log(
-                "   Possible causes: OPSIQ_DIAGNOSTIC_KEY missing or endpoint not deployed"
+                "   Endpoint may not be deployed or OPSIQ_DIAGNOSTIC_KEY missing"
               );
             } else {
               console.log(
-                `   ⚠️  Diagnostic endpoint returned unexpected status: ${diagnosticResponse.status}`
+                `   ⚠️  Drift diagnostic endpoint returned status: ${diagnosticResponse.status}`
               );
             }
           } catch (diagnosticError) {
             console.log(
-              `   ⚠️  Diagnostic call failed: ${diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError)}`
+              `   ⚠️  Drift diagnostic call failed: ${diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError)}`
             );
           }
 
