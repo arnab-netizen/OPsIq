@@ -1,5 +1,6 @@
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -48,7 +49,7 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext) => {
     const workspaceId = ctx.verifiedWorkspaceId;
     if (!workspaceId) {
-      return Response.json(
+      return canonicalJson(
         { error: "Workspace ID required" },
         { status: 400 }
       );
@@ -68,23 +69,23 @@ export const POST = withCanonicalEnforcement(
       const result = SalesPipelineEngine.recordDeal(workspaceId, validated);
 
       if (result.error) {
-        return Response.json({ error: result.error }, { status: 400 });
+        return canonicalJson({ error: result.error }, { status: 400 });
       }
 
-      return Response.json(result.deal, { status: 201 });
+      return canonicalJson(result.deal, { status: 201 });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return Response.json(
+        return canonicalJson(
           { error: "Validation error", details: error.issues },
           { status: 400 }
         );
       }
 
       if (error instanceof Error) {
-        return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
+        return canonicalJson({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
       }
 
-      return Response.json(
+      return canonicalJson(
         { error: "Internal server error" },
         { status: 500 }
       );
