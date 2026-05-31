@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { BadRequestError } from "@/infra/errors";
 import * as bcrypt from "bcryptjs";
@@ -7,6 +8,7 @@ import * as bcrypt from "bcryptjs";
  * GET /api/internal/signup-proof
  * Diagnostic endpoint for signup path health check
  * Tests database connectivity and bcrypt without mutations
+ * Protected by OPSIQ_DIAGNOSTIC_KEY
  *
  * Returns:
  * {
@@ -24,6 +26,19 @@ import * as bcrypt from "bcryptjs";
  */
 
 export const GET = async (request: NextRequest) => {
+  // Verify diagnostic key
+  const providedKey =
+    request.headers.get("x-opsiq-diagnostic-key") ||
+    new URL(request.url).searchParams.get("key");
+
+  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
+
+  if (!expectedKey || !providedKey || providedKey !== expectedKey) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 404 }
+    );
+  }
   const result = {
     validation_ok: false,
     user_table_accessible: false,
@@ -35,6 +50,17 @@ export const GET = async (request: NextRequest) => {
     first_failing_step: null as string | null,
     error_name: null as string | null,
     safe_error_message: null as string | null,
+    classification: "unknown" as string,
+  };
+
+  // Helper to classify the failure
+  const classify = (failingStep: string, errorName: string): string => {
+    if (!failingStep) return "all_systems_ok";
+    if (failingStep === "validation") return "client_error";
+    if (failingStep.includes("table_access"))
+      return "database_unreachable";
+    if (failingStep === "bcrypt_hash") return "bcrypt_failure";
+    return "unknown_failure";
   };
 
   try {
@@ -55,7 +81,8 @@ export const GET = async (request: NextRequest) => {
       result.first_failing_step = "validation";
       result.error_name = e instanceof Error ? e.name : "UnknownError";
       result.safe_error_message = e instanceof Error ? e.message : "Validation failed";
-      return Response.json(result, { status: 200 });
+      result.classification = "client_error";
+      return NextResponse.json(result, { status: 200 });
     }
 
     // STEP 2: User table accessibility
@@ -66,7 +93,8 @@ export const GET = async (request: NextRequest) => {
       result.first_failing_step = "user_table_access";
       result.error_name = e instanceof Error ? e.name : "UnknownError";
       result.safe_error_message = e instanceof Error ? e.message : "User table not accessible";
-      return Response.json(result, { status: 200 });
+      result.classification = "database_unreachable";
+      return NextResponse.json(result, { status: 200 });
     }
 
     // STEP 3: Workspace table accessibility
@@ -77,7 +105,8 @@ export const GET = async (request: NextRequest) => {
       result.first_failing_step = "workspace_table_access";
       result.error_name = e instanceof Error ? e.name : "UnknownError";
       result.safe_error_message = e instanceof Error ? e.message : "Workspace table not accessible";
-      return Response.json(result, { status: 200 });
+      result.classification = "database_unreachable";
+      return NextResponse.json(result, { status: 200 });
     }
 
     // STEP 4: WorkspaceMembership table accessibility
@@ -88,7 +117,8 @@ export const GET = async (request: NextRequest) => {
       result.first_failing_step = "membership_table_access";
       result.error_name = e instanceof Error ? e.name : "UnknownError";
       result.safe_error_message = e instanceof Error ? e.message : "Membership table not accessible";
-      return Response.json(result, { status: 200 });
+      result.classification = "database_unreachable";
+      return NextResponse.json(result, { status: 200 });
     }
 
     // STEP 5: Session table accessibility
@@ -99,7 +129,8 @@ export const GET = async (request: NextRequest) => {
       result.first_failing_step = "session_table_access";
       result.error_name = e instanceof Error ? e.name : "UnknownError";
       result.safe_error_message = e instanceof Error ? e.message : "Session table not accessible";
-      return Response.json(result, { status: 200 });
+      result.classification = "database_unreachable";
+      return NextResponse.json(result, { status: 200 });
     }
 
     // STEP 6: Audit table accessibility (if exists)
@@ -124,15 +155,18 @@ export const GET = async (request: NextRequest) => {
       result.first_failing_step = "bcrypt_hash";
       result.error_name = e instanceof Error ? e.name : "UnknownError";
       result.safe_error_message = e instanceof Error ? e.message : "Bcrypt failed";
-      return Response.json(result, { status: 200 });
+      result.classification = "bcrypt_failure";
+      return NextResponse.json(result, { status: 200 });
     }
 
     // All checks passed
-    return Response.json(result, { status: 200 });
+    result.classification = "all_systems_ok";
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
     result.first_failing_step = "unhandled_error";
     result.error_name = error instanceof Error ? error.name : "UnknownError";
     result.safe_error_message = error instanceof Error ? error.message : "Unknown error";
-    return Response.json(result, { status: 200 });
+    result.classification = classify(result.first_failing_step, result.error_name);
+    return NextResponse.json(result, { status: 200 });
   }
 };

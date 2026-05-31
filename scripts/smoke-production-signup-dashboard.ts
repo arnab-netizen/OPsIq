@@ -67,6 +67,38 @@ async function smokeTest(): Promise<void> {
       console.log("❌ SIGNUP_FAILED");
       const signupText = await signupResponse.text();
       console.log(`   Response: ${signupText.substring(0, 200)}`);
+
+      // Call diagnostic endpoint to identify root cause
+      console.log("\n🔍 CALLING DIAGNOSTIC ENDPOINT");
+      console.log("GET /api/internal/signup-proof");
+
+      const diagnosticKey = process.env.OPSIQ_DIAGNOSTIC_KEY || "not-set";
+      const diagnosticResponse = await fetch(`${baseUrl}/api/internal/signup-proof`, {
+        method: "GET",
+        headers: { "x-opsiq-diagnostic-key": diagnosticKey },
+      });
+
+      if (diagnosticResponse.status === 200) {
+        const diagnostic = await diagnosticResponse.json();
+        console.log("\n📋 SIGNUP DIAGNOSTIC RESULTS:");
+        console.log(`   validation_ok: ${diagnostic.validation_ok}`);
+        console.log(`   user_table_accessible: ${diagnostic.user_table_accessible}`);
+        console.log(`   workspace_table_accessible: ${diagnostic.workspace_table_accessible}`);
+        console.log(`   membership_table_accessible: ${diagnostic.membership_table_accessible}`);
+        console.log(`   session_table_accessible: ${diagnostic.session_table_accessible}`);
+        console.log(`   audit_table_accessible: ${diagnostic.audit_table_accessible}`);
+        console.log(`   bcrypt_ok: ${diagnostic.bcrypt_ok}`);
+        console.log(`   first_failing_step: ${diagnostic.first_failing_step}`);
+        console.log(`   error_name: ${diagnostic.error_name}`);
+        console.log(`   safe_error_message: ${diagnostic.safe_error_message}`);
+        console.log(`   classification: ${diagnostic.classification}`);
+      } else if (diagnosticResponse.status === 404) {
+        console.log("\n⚠️  Diagnostic endpoint not available (404)");
+        console.log("   Make sure OPSIQ_DIAGNOSTIC_KEY is set");
+      } else {
+        console.log(`\n⚠️  Diagnostic endpoint returned status ${diagnosticResponse.status}`);
+      }
+
       process.exit(1);
     }
 
