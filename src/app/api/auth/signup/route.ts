@@ -40,8 +40,9 @@ export const POST = async (request: NextRequest) => {
     currentStage = "bcrypt_hash";
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate user ID
+    // Generate user ID and timestamps
     const userId = randomUUID();
+    const now = new Date();
 
     // Create user
     currentStage = "user_create";
@@ -51,6 +52,7 @@ export const POST = async (request: NextRequest) => {
         email,
         hashedPassword,
         isActive: true,
+        updatedAt: now,
       },
     });
 
