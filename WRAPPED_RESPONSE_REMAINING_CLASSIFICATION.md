@@ -950,3 +950,145 @@ Before proceeding with MANUAL_REVIEW files, need to investigate:
 **Date:** 2026-05-31T02:28:23Z
 
 Classification complete. Ready for batch remediation.
+
+---
+
+## RECLASSIFICATION UPDATE (2026-05-31)
+
+**Reason:** Discovered systematic wrapper misclassification in initial classification. Two files marked SAFE_BATCH actually use `withEnforcementFull`.
+
+### Wrapper Audit Results (All 47 violations)
+
+**Verified by wrapper inspection:**
+- withCanonicalEnforcement: 30 files
+- withEnforcementFull: 17 files
+- Unknown: 0 files
+
+### Corrected Misclassifications
+
+#### Files moved from SAFE_BATCH → MANUAL_REVIEW:
+
+**1. app/api/engagements/[engagementId]/constraint-checks/route.ts**
+- Old classification: SAFE_BATCH
+- New classification: MANUAL_REVIEW
+- Reason: Uses `withEnforcementFull` wrapper (line 38, 111), not `withCanonicalEnforcement`
+- Wrapper: withEnforcementFull
+- Impact: Cannot use canonicalJson with different wrapper contract
+
+**2. app/api/growth/pricing-tiers/route.ts**
+- Old classification: SAFE_BATCH
+- New classification: MANUAL_REVIEW
+- Reason: Uses `withEnforcementFull` wrapper (line 28, 82), not `withCanonicalEnforcement`
+- Wrapper: withEnforcementFull
+- Impact: Cannot use canonicalJson with different wrapper contract
+
+#### Additional withEnforcementFull routes already in MANUAL_REVIEW (verified correct):
+- app/api/engagements/[engagementId]/experiments/[experimentId]/approve/route.ts
+- app/api/engagements/[engagementId]/experiments/[experimentId]/learning/route.ts
+- app/api/engagements/[engagementId]/experiments/[experimentId]/progress/route.ts
+- app/api/engagements/[engagementId]/experiments/[experimentId]/result/route.ts
+- app/api/engagements/[engagementId]/experiments/[experimentId]/start/route.ts
+- app/api/engagements/[engagementId]/experiments/route.ts
+- app/api/engagements/[engagementId]/shock-events/route.ts
+- app/api/execute/route.ts
+- app/api/growth/offers/route.ts
+- app/api/growth/retention-metrics/route.ts
+- app/api/opsiq/consulting-engine/run/route.ts
+- app/api/public/actions/route.ts
+- app/api/public/engagements/route.ts
+- app/api/public/kpis/route.ts
+- app/api/webhooks/stripe/route.ts
+
+---
+
+## CORRECTED Classification Summary (After Reclassification)
+
+| Classification | Count | Details |
+|---|---|---|
+| **SAFE_BATCH** | 28 | withCanonicalEnforcement, simple JSON responses |
+| **MANUAL_REVIEW** | 19 | withEnforcementFull, custom headers, complex patterns |
+| **EXCLUDE_WITH_REASON** | 0 | (See original classification) |
+| **TOTAL** | 47 | |
+
+---
+
+## Next Safe Batch Candidates (withCanonicalEnforcement only)
+
+### Criteria for candidates:
+- Uses `withCanonicalEnforcement` wrapper ✓
+- No custom headers/cookies
+- No redirect/stream/file
+- No webhook/payment/export
+- All Response.json sites convertible
+
+### Recommended Next 5 Candidates:
+
+**1. app/api/actions/[actionId]/route.ts** (EASY)
+- Methods: GET, PATCH
+- Wrapper: withCanonicalEnforcement ✓
+- Response.json sites: GET line 28, PATCH line 46
+- Status codes: 200 (default)
+- Idempotency: No
+- Pattern: Success-only returns
+- Risk: LOW
+- Reason: Simple GET/PATCH, no idempotency complexity
+
+**2. app/api/clients/[clientId]/contacts/[contactId]/route.ts** (EASY)
+- Methods: GET, PATCH
+- Wrapper: withCanonicalEnforcement ✓
+- Response.json sites: Success-only
+- Status codes: 200
+- Idempotency: No
+- Pattern: Simple returns
+- Risk: LOW
+- Reason: Straightforward CRUD operations
+
+**3. app/api/evidence-bundles/route.ts** (EASY)
+- Methods: GET, POST
+- Wrapper: withCanonicalEnforcement ✓
+- Response.json sites: Multiple success returns
+- Status codes: 200, 201
+- Idempotency: No
+- Pattern: Simple create/list operations
+- Risk: LOW
+- Reason: Bundle operations, simple patterns
+
+**4. app/api/engagements/[engagementId]/route.ts** (EASY)
+- Methods: GET (likely)
+- Wrapper: withCanonicalEnforcement ✓
+- Response.json sites: Success-only
+- Status codes: 200
+- Idempotency: No
+- Pattern: Simple retrieval
+- Risk: LOW
+- Reason: Read-only endpoint
+
+**5. app/api/growth/unit-economics/route.ts** (EASY)
+- Methods: GET (likely)
+- Wrapper: withCanonicalEnforcement ✓
+- Response.json sites: Success-only
+- Status codes: 200
+- Idempotency: No
+- Pattern: Simple data retrieval
+- Risk: LOW
+- Reason: Analytics endpoint, no state changes
+
+---
+
+## Validation Status
+
+**Ratchet check (no code changes):**
+- Baseline: 47 violations
+- Expected: 47 violations (no remediation in this task)
+- Status: READY TO RUN
+
+---
+
+## Implementation Notes for Next Batch
+
+When remediating next batch:
+1. Verify wrapper is `withCanonicalEnforcement` before touching any file
+2. Only remediate files that passed re-classification as SAFE_BATCH
+3. Skip all withEnforcementFull routes (MANUAL_REVIEW)
+4. Follow established patterns from successful batches
+
