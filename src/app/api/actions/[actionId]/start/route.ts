@@ -56,7 +56,7 @@ export const PATCH = withCanonicalEnforcement(
     });
 
     const result = await getActionById(actionId, workspaceId);
-    return Response.json(result);
+    return result;
   },
   {
     requireWorkspace: true,

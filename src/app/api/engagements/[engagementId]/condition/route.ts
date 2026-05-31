@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   assessCondition,
@@ -40,7 +41,7 @@ export const GET = withCanonicalEnforcement(
     await assertEngagementAccess(ctx.verifiedActorId, engagementId, ctx.verifiedWorkspaceId);
 
     const history = await getConditionHistory(engagementId, ctx.verifiedWorkspaceId);
-    return Response.json({ profiles: history });
+    return { profiles: history };
   },
   {
     requireCapabilities: [CAPABILITIES.CONDITION_VIEW],
@@ -57,7 +58,7 @@ export const POST = withCanonicalEnforcement(
 
     const idempotencyKey = ctx.request!.headers.get("idempotency-key");
     if (!idempotencyKey) {
-      return Response.json(
+      return canonicalJson(
         { error: "idempotency-key header required" },
         { status: 400 }
       );
@@ -73,7 +74,7 @@ export const POST = withCanonicalEnforcement(
     });
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-      return Response.json(idempotencyCheck.cachedResponse.body, {
+      return canonicalJson(idempotencyCheck.cachedResponse.body, {
         status: idempotencyCheck.cachedResponse.status,
       });
     }
@@ -84,7 +85,7 @@ export const POST = withCanonicalEnforcement(
         ctx
       );
       await recordIdempotencyResponse(idempotencyKey, 201, result);
-      return Response.json(result, { status: 201 });
+      return canonicalJson(result, { status: 201 });
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
       await recordIdempotencyError(idempotencyKey, err);

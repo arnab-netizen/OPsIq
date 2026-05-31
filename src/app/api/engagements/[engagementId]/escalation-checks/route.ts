@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import {
   detectHighPriorityOverdueActions,
@@ -40,7 +41,7 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
     if (overdueAlert) alerts.push(overdueAlert);
     if (deteriorationAlert) alerts.push(deteriorationAlert);
 
-    return Response.json(
+    return canonicalJson(
       {
         engagementId: validated.engagementId,
         alerts,
@@ -51,17 +52,17 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
     );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return Response.json(
+      return canonicalJson(
         { error: "Validation error", details: error.issues },
         { status: 400 }
       );
     }
 
     if (error instanceof Error) {
-      return Response.json({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
+      return canonicalJson({ error: classifyOperatorError(error, { context: "load" }).operatorMessage }, { status: 400 });
     }
 
-    return Response.json(
+    return canonicalJson(
       { error: "Internal server error" },
       { status: 500 }
     );
@@ -79,10 +80,10 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, p
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
   // TODO: Implement persistent escalation check history when schema is available
   // For now, return current status indicating no history available
-  return Response.json({
+  return {
     note: "Escalation check history not yet persisted",
     lastCheck: null,
-  });
+  };
 }, {
   requireCapabilities: [CAPABILITIES.ENGAGEMENT_VIEW],
   requireWorkspace: true,
