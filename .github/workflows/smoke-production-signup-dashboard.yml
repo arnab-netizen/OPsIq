@@ -16,6 +16,7 @@ jobs:
 
     env:
       BASE_URL: ${{ inputs.base_url || 'https://o-ps-iq.vercel.app' }}
+      OPSIQ_DIAGNOSTIC_KEY: ${{ secrets.OPSIQ_DIAGNOSTIC_KEY }}
 
     steps:
       - name: Checkout
