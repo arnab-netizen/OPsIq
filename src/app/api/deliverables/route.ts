@@ -1,5 +1,6 @@
 import { withCanonicalEnforcement } from "@/lib/canonical-route-enforcement";
 import type { CanonicalAuthContext, ServiceAuthEnvelope } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { createDeliverable, getDeliverablesForEngagement } from "@/services/deliverable";
 import { assertEngagementAccess } from "@/lib/visibility";
@@ -21,7 +22,7 @@ export const GET = withCanonicalEnforcement(
     const engagementId = url.searchParams.get("engagementId");
 
     if (!engagementId) {
-      return Response.json(
+      return canonicalJson(
         { error: "engagementId is required" },
         { status: 400 }
       );
@@ -32,7 +33,7 @@ export const GET = withCanonicalEnforcement(
     await assertEngagementAccess(ctx.verifiedActorId, engagementId, workspaceId);
 
     const deliverables = await getDeliverablesForEngagement(engagementId, workspaceId);
-    return Response.json(deliverables);
+    return deliverables;
   },
   { requireWorkspace: true, requireCapabilities: ['DELIVERABLE_VIEW'] }
 );
@@ -41,7 +42,7 @@ export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const idempotencyKey = ctx.request!.headers.get("Idempotency-Key");
     if (!idempotencyKey) {
-      return Response.json(
+      return canonicalJson(
         { error: "Idempotency-Key header required" },
         { status: 400 }
       );
@@ -71,7 +72,7 @@ export const POST = withCanonicalEnforcement(
       ctx.verifiedActorId
     );
 
-    return Response.json(result, { status: isNew ? 201 : 200 });
+    return canonicalJson(result, { status: isNew ? 201 : 200 });
   },
   {
     requireCapabilities: [CAPABILITIES.DELIVERABLE_CREATE],
