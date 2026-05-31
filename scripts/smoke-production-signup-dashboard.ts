@@ -207,6 +207,41 @@ async function smokeTest(): Promise<void> {
       console.log(`❌ DASHBOARD_API_FAILED (${dashboardApiStatus})`);
       const errorText = await dashboardApiResponse.text();
       console.log(`   Response: ${errorText.substring(0, 200)}`);
+
+      // Call diagnostic endpoint to understand permission state
+      if (dashboardApiStatus === 403) {
+        console.log("\n🔍 CALLING PERMISSION DIAGNOSTIC ENDPOINT");
+        const diagnosticHeaders: Record<string, string> = {};
+        if (diagnosticKey) {
+          diagnosticHeaders["x-opsiq-diagnostic-key"] = diagnosticKey;
+        }
+        const diagnosticResponse = await fetch(`${baseUrl}/api/internal/signup-owner-permission-proof`, {
+          method: "GET",
+          headers: diagnosticHeaders,
+        });
+
+        if (diagnosticResponse.status === 200) {
+          const diagnostic = await diagnosticResponse.json();
+          console.log("📋 PERMISSION DIAGNOSTIC RESULTS:");
+          console.log(`   userFound: ${diagnostic.userFound}`);
+          console.log(`   workspaceFound: ${diagnostic.workspaceFound}`);
+          console.log(`   workspaceMembershipFound: ${diagnostic.workspaceMembershipFound}`);
+          console.log(`   userRoleAssignmentFound: ${diagnostic.userRoleAssignmentFound}`);
+          if (diagnostic.userRoleAssignmentCount !== undefined) {
+            console.log(`   userRoleAssignmentCount: ${diagnostic.userRoleAssignmentCount}`);
+          }
+          if (diagnostic.userRoleAssignments) {
+            console.log(`   roleAssignments: ${JSON.stringify(diagnostic.userRoleAssignments, null, 2)}`);
+          }
+          console.log(`   OWNER_VIEW_in_capability_map: ${diagnostic.OWNER_VIEW_in_role_capability_map}`);
+          console.log(`   has_OWNER_VIEW: ${diagnostic.has_OWNER_VIEW}`);
+          console.log(`   firstMissingRequirement: ${diagnostic.firstMissingRequirement}`);
+          console.log(`   classification: ${diagnostic.classification}`);
+        } else {
+          console.log(`   Diagnostic endpoint returned status ${diagnosticResponse.status}`);
+        }
+      }
+
       process.exit(1);
     }
 
