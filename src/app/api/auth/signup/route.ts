@@ -9,6 +9,7 @@ import { randomUUID } from "crypto";
 import { z } from "zod/v4";
 import { cookies } from "next/headers";
 import * as bcrypt from "bcryptjs";
+import { ROLES } from "@/domain/constants/roles";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -78,6 +79,20 @@ export const POST = async (request: NextRequest) => {
         userId: user.id,
         role: "owner",
         addedBy: user.id,
+        isActive: true,
+      },
+    });
+
+    // Grant owner permissions via UserRoleAssignment
+    currentStage = "role_assignment_create";
+    await db.userRoleAssignment.create({
+      data: {
+        id: randomUUID(),
+        userId: user.id,
+        role: ROLES.ADMIN_OR_PORTFOLIO_MANAGER,
+        scope: "workspace",
+        scopeId: workspace.id,
+        grantedAt: now,
         isActive: true,
       },
     });

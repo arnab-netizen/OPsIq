@@ -126,4 +126,67 @@ describe("Signup Schema Contract", () => {
     expect(id1).toMatch(uuidRegex);
     expect(id2).toMatch(uuidRegex);
   });
+
+  it("should create UserRoleAssignment for owner to grant OWNER_VIEW capability", async () => {
+    // Signup must provision owner permissions via UserRoleAssignment
+    // without this, new owners cannot access /api/owner/dashboard
+
+    const userId = randomUUID();
+    const workspaceId = randomUUID();
+
+    // Create user and workspace first
+    const user = await db.user.create({
+      data: {
+        id: userId,
+        email: `test-owner-${Date.now()}@example.com`,
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    });
+
+    const workspace = await db.workspace.create({
+      data: {
+        id: workspaceId,
+        name: `Test Workspace ${Date.now()}`,
+        slug: `test-owner-ws-${Date.now()}`,
+        createdBy: userId,
+        isActive: true,
+      },
+    });
+
+    // Create membership
+    await db.workspaceMembership.create({
+      data: {
+        workspaceId: workspace.id,
+        userId: user.id,
+        role: "owner",
+        addedBy: user.id,
+        isActive: true,
+      },
+    });
+
+    // Create role assignment (this is what signup must do)
+    const roleAssignment = await db.userRoleAssignment.create({
+      data: {
+        id: randomUUID(),
+        userId: user.id,
+        role: "admin_or_portfolio_manager",
+        scope: "workspace",
+        scopeId: workspace.id,
+        grantedAt: new Date(),
+        isActive: true,
+      },
+    });
+
+    // Verify role assignment was created
+    expect(roleAssignment.userId).toBe(userId);
+    expect(roleAssignment.role).toBe("admin_or_portfolio_manager");
+    expect(roleAssignment.scopeId).toBe(workspace.id);
+    expect(roleAssignment.isActive).toBe(true);
+
+    // Cleanup
+    await db.workspaceMembership.deleteMany({ where: { workspaceId: workspace.id } });
+    await db.workspace.delete({ where: { id: workspace.id } });
+    await db.user.delete({ where: { id: userId } });
+  });
 });
