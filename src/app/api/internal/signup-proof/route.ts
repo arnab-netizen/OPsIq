@@ -133,9 +133,9 @@ export const GET = async (request: NextRequest) => {
       return NextResponse.json(result, { status: 200 });
     }
 
-    // STEP 6: Audit table accessibility (if exists)
+    // STEP 6: Audit table accessibility
     try {
-      const count = await db.auditLog.count();
+      const count = await db.auditEvent.count();
       result.audit_table_accessible = true;
     } catch (e) {
       result.audit_table_accessible = false;
