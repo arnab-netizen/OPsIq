@@ -1,4 +1,5 @@
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { withEnforcementFull } from "@/lib/enforced-route";
 import { ForbiddenError } from "@/infra/errors";
 import { withAuth, canonicalizeAuthContext } from "@/lib/auth-guard";
@@ -37,7 +38,7 @@ export const GET = withCanonicalEnforcement(
     parseOrThrow(uuidSchema, clientId);
 
     const client = await getClientById(clientId, workspaceId);
-    return Response.json(client);
+    return client;
   },
   { requireWorkspace: true, requireCapabilities: ['CLIENT_VIEW'] }
 );
@@ -52,7 +53,7 @@ export const PATCH = withCanonicalEnforcement(
     await updateClient(clientId, body, ctx, ctx.verifiedWorkspaceId);
 
     const updated = await getClientById(clientId, ctx.verifiedWorkspaceId);
-    return Response.json(updated);
+    return updated;
   },
   {
     requireCapabilities: [CAPABILITIES.CLIENT_UPDATE],
@@ -68,7 +69,7 @@ export const POST = withCanonicalEnforcement(
 
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {
-      return Response.json(
+      return canonicalJson(
         { error: "idempotency-key header required" },
         { status: 400 }
       );
@@ -84,7 +85,7 @@ export const POST = withCanonicalEnforcement(
     });
 
     if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-      return Response.json(idempotencyCheck.cachedResponse.body, {
+      return canonicalJson(idempotencyCheck.cachedResponse.body, {
         status: idempotencyCheck.cachedResponse.status,
       });
     }
@@ -93,7 +94,7 @@ export const POST = withCanonicalEnforcement(
       await archiveClient(clientId, ctx, body.version, workspaceId);
       const result = { status: "archived" };
       await recordIdempotencyResponse(idempotencyKey, 200, result);
-      return Response.json(result);
+      return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
       await recordIdempotencyError(idempotencyKey, err);
