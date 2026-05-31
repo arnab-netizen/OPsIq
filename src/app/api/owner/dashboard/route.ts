@@ -5,8 +5,7 @@
  */
 
 import { withCanonicalEnforcement, type CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
-import { ForbiddenError, BadRequestError, AppError } from "@/infra/errors";
-import { enforceWorkspaceScoping } from "@/middleware/workspace-enforcement";
+import { BadRequestError, AppError } from "@/infra/errors";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
@@ -84,10 +83,10 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   const workspaceId = ctx.verifiedWorkspaceId;
   const userId = ctx.verifiedActorId;
 
-  const membership = await enforceWorkspaceScoping(ctx.request, workspaceId);
-  if (!membership) {
-    throw new ForbiddenError("Unauthorized");
-  }
+  // Workspace membership already verified by canonical auth wrapper
+  // ctx.verifiedWorkspaceId is derived from user's active membership
+  // ctx.verifiedActorId is authenticated user
+  // No redundant database check needed
 
   try {
     const url = new URL(ctx.request.url);
