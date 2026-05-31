@@ -82,9 +82,10 @@ export const POST = async (request: NextRequest) => {
       },
     });
 
-    // Create session
+    // Create session (token is a separate unique identifier required by schema)
     currentStage = "session_create";
     const sessionId = randomUUID();
+    const sessionToken = randomUUID();
     const expiresAt = new Date(
       Date.now() + getSessionDurationMs()
     );
@@ -93,17 +94,18 @@ export const POST = async (request: NextRequest) => {
       data: {
         id: sessionId,
         userId: user.id,
+        token: sessionToken,
         expiresAt,
         ipAddress: request.headers.get("x-forwarded-for") ?? "unknown",
         userAgent: request.headers.get("user-agent") ?? "unknown",
       },
     });
 
-    // Set session cookie
+    // Set session cookie (use token, not id, matching auth/login pattern)
     currentStage = "cookie_set";
     const cookieStore = await cookies();
     const sessionCookieName = getSessionCookieName();
-    cookieStore.set(sessionCookieName, session.id, {
+    cookieStore.set(sessionCookieName, sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
