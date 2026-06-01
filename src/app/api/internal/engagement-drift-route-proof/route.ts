@@ -1,6 +1,8 @@
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { detectExecutionDrift } from "@/services/execution-drift/execution-drift.service";
 import { logger } from "@/infra/logger";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 interface DiagnosticResult {
   endpoint: string;
@@ -20,14 +22,10 @@ interface DiagnosticResult {
   classification: string;
 }
 
-export async function GET(request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const diagnosticKey = url.searchParams.get("key");
-
-  // Strict key check
-  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-  if (!diagnosticKey || !expectedKey || diagnosticKey !== expectedKey) {
-    return new Response(null, { status: 404 });
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  // Verify diagnostic key using timing-safe comparison
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }
 
   const result: DiagnosticResult = {
@@ -57,7 +55,7 @@ export async function GET(request: Request): Promise<Response> {
 
     if (!demoUser) {
       result.classification = "demo_user_not_found";
-      return Response.json(result);
+      return NextResponse.json(result);
     }
 
     // Find active workspace membership
@@ -72,7 +70,7 @@ export async function GET(request: Request): Promise<Response> {
 
     if (!workspaceMembership) {
       result.classification = "no_active_workspace";
-      return Response.json(result);
+      return NextResponse.json(result);
     }
 
     // Check workspace UUID format
@@ -90,7 +88,7 @@ export async function GET(request: Request): Promise<Response> {
 
     if (!demoEngagement) {
       result.classification = "demo_engagement_not_found";
-      return Response.json(result);
+      return NextResponse.json(result);
     }
 
     // Verify workspace match
@@ -135,13 +133,13 @@ export async function GET(request: Request): Promise<Response> {
       result.classification = "service_error";
     }
 
-    return Response.json(result);
+    return NextResponse.json(result);
   } catch (error) {
     result.classification = "diagnostic_error";
     if (error instanceof Error) {
       result.errorName = error.name;
       result.safeErrorMessage = error.message.substring(0, 200);
     }
-    return Response.json(result);
+    return NextResponse.json(result);
   }
 }

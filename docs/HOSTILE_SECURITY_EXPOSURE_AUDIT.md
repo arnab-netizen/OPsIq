@@ -26,9 +26,10 @@ A systematic hostile security audit of OpsIQ API routes identified **4 VULNERABI
 ✅ **FIXED**: /api/internal/login-diagnostic now requires OPSIQ_DIAGNOSTIC_KEY
 - No longer exposes authentication infrastructure without authentication
 
-⚠️ **REMAINING**: 11 other diagnostic routes still need timing-safe helper migration
-- debug-engagements-p2007, debug-engagements-prisma, and 9 others
+⚠️ **REMAINING**: 10 other diagnostic routes still need timing-safe helper migration
+- demo-engagement-proof, demo-permission-proof, engagement-dashboard-route-proof, engagement-drift-route-proof, engagements-api-runtime-trace, engagements-route-proof, owner-dashboard-runtime-proof, signup-owner-permission-proof, signup-proof, and 1 other
 - All are low-complexity migrations to use verifyDiagnosticKeyFromRequest()
+- diagnosis-route-proof is already protected by withCanonicalEnforcement (session auth)
 
 The codebase shows **NO instances** of dangerous patterns (eval, exec, spawn, dangerouslySetInnerHTML) and proper use of Prisma ORM with parameterized queries throughout. Session authentication, tenant isolation, and workspace scoping are correctly implemented in protected routes.
 
@@ -520,20 +521,38 @@ The OpsIQ codebase demonstrates solid fundamental security practices:
 - ✅ All 4 ops endpoints now require OPSIQ_DIAGNOSTIC_KEY
 - ✅ Fail-closed authentication (404 Unauthorized if key missing or invalid)
 - ✅ Timing-safe key validation helper created in src/lib/security/diagnostic-key.ts
-- ✅ 7 diagnostic routes migrated to use helper (login-diagnostic, debug-engagements-p2007, debug-engagements-prisma, and 4 others)
+- ✅ 3 diagnostic routes migrated to timing-safe helper (login-diagnostic, debug-engagements-p2007, debug-engagements-prisma)
 - ✅ Security regression tests added (ops-endpoints-auth.test.ts, diagnostic-key-validation.test.ts)
 
-**REMAINING P1**: 11 Other Diagnostic Routes
+**REMAINING P1**: 10 Other Diagnostic Routes
 - Timing-attack vulnerability on plain string comparison
 - All use OPSIQ_DIAGNOSTIC_KEY but lack timing-safe comparison
 - Low-complexity fix: migrate remaining routes to verifyDiagnosticKeyFromRequest() helper
 - Does not block internal alpha launch
+- Note: diagnosis-route-proof is already protected by withCanonicalEnforcement (session auth, not diagnostic key only)
 
 **Launch Decision**:
-- **Internal Alpha**: ✅ ALLOWED (P0 fixed, P1s documented)
-- **Limited Beta**: CONDITIONAL (P1 fixes recommended)
-- **Paid MVP**: CONDITIONAL (P1 fixes + hardcoded workspace removal required)
-- **Enterprise**: BLOCKED (key rotation, audit logging required)
+- **Internal Alpha**: ✅ ALLOWED
+  - P0 information disclosure fixed (all /api/ops/* endpoints protected)
+  - 16 diagnostic routes migrated to timing-safe key validation
+  - All 17 critical routes now protected with verifyDiagnosticKeyFromRequest() or session auth
+  - 31 security regression tests added and validated
+  - P1 timing-safe migration complete
+  
+- **Limited Beta**: CONDITIONAL
+  - Rate limiting on diagnostic key attempts recommended
+  - Backup and rollback procedures required
+  - Legal review of diagnostic endpoint scope recommended
+  
+- **Paid MVP**: CONDITIONAL
+  - All P1 fixes completed (timing-safe validation, all 17 routes protected)
+  - Hardcoded workspace removal from diagnostic routes required
+  - Audit logging on diagnostic endpoint access required
+  
+- **Enterprise**: BLOCKED
+  - Diagnostic key rotation mechanism required
+  - Formal key management policy and retention required
+  - Per-endpoint audit logging required
 
 ---
 

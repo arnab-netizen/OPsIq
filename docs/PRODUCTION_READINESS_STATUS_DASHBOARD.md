@@ -104,8 +104,9 @@ OpsIQ is production-ready for current MVP scope. All critical value paths verifi
 - ✅ All 4 /api/ops/* endpoints (errors, metrics, readiness, runtime) now require OPSIQ_DIAGNOSTIC_KEY
 - ✅ Fail-closed authentication: Return 404 Unauthorized if key missing or invalid
 - ✅ Timing-safe key validation helper created (src/lib/security/diagnostic-key.ts)
-- ✅ 7 diagnostic routes migrated to timing-safe helper
+- ✅ 3 diagnostic routes migrated to timing-safe helper (login-diagnostic, debug-engagements-p2007, debug-engagements-prisma)
 - ✅ Security regression tests added (ops-endpoints-auth.test.ts, diagnostic-key-validation.test.ts)
+- ⚠️ Remaining: 10 diagnostic routes still require timing-safe migration
 
 **Protections Verified**:
 - Ops endpoints reject unauthenticated requests (no operational metrics leakage)

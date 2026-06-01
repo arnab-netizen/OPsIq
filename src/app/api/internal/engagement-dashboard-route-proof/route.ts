@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/infra/logger";
 import { getOwnerDashboard } from "@/services/owner-dashboard.service";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -13,11 +14,8 @@ export const runtime = "nodejs";
  * Returns only safe diagnostic data, no full IDs or secrets
  */
 export async function GET(request: NextRequest) {
-  const providedKey = request.headers.get("x-opsiq-diagnostic-key");
-  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-
-  // Key must be provided and match
-  if (!providedKey || !expectedKey || providedKey !== expectedKey) {
+  // Verify diagnostic key using timing-safe comparison
+  if (!verifyDiagnosticKeyFromRequest(request)) {
     return NextResponse.json({ error: "Not Found" }, { status: 404 });
   }
 

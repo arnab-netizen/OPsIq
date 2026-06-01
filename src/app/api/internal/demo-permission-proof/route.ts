@@ -17,20 +17,9 @@ import { ROLES } from "@/domain/constants/roles";
 import { getCapabilitiesForRole } from "@/policies/capability-check";
 import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { logger } from "@/infra/logger";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
-
-// Verify diagnostic key matches environment secret
-function verifyDiagnosticKey(request: NextRequest): boolean {
-  const providedKey = request.headers.get("x-opsiq-diagnostic-key");
-  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-
-  if (!providedKey || !expectedKey) {
-    return false;
-  }
-
-  return providedKey === expectedKey;
-}
 
 // Helper: Check if role grants engagement:view capability
 function roleGrantsEngagementView(role: string): boolean {
@@ -65,8 +54,8 @@ interface PermissionProofResponse {
 
 // GET: Prove current permission state
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!verifyDiagnosticKey(request)) {
-    return new NextResponse(null, { status: 404 });
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }
 
   try {
@@ -241,8 +230,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 // POST: Idempotently backfill missing UserRoleAssignment
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!verifyDiagnosticKey(request)) {
-    return new NextResponse(null, { status: 404 });
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }
 
   try {

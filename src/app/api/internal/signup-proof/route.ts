@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { BadRequestError } from "@/infra/errors";
 import * as bcrypt from "bcryptjs";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 /**
  * GET /api/internal/signup-proof
@@ -26,14 +27,8 @@ import * as bcrypt from "bcryptjs";
  */
 
 export const GET = async (request: NextRequest) => {
-  // Verify diagnostic key
-  const providedKey =
-    request.headers.get("x-opsiq-diagnostic-key") ||
-    new URL(request.url).searchParams.get("key");
-
-  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-
-  if (!expectedKey || !providedKey || providedKey !== expectedKey) {
+  // Verify diagnostic key using timing-safe comparison
+  if (!verifyDiagnosticKeyFromRequest(request)) {
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 404 }

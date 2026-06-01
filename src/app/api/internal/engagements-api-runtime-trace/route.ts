@@ -14,20 +14,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { listEngagements } from "@/services/engagement";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
 const DEMO_ENGAGEMENT_CODE = "ENG-001";
-
-function verifyDiagnosticKey(request: NextRequest): boolean {
-  const providedKey = request.headers.get("x-opsiq-diagnostic-key");
-  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-
-  if (!providedKey || !expectedKey) {
-    return false;
-  }
-
-  return providedKey === expectedKey;
-}
 
 function maskId(id: string): string {
   if (id.length < 8) return "***";
@@ -35,8 +25,8 @@ function maskId(id: string): string {
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!verifyDiagnosticKey(request)) {
-    return new NextResponse(null, { status: 404 });
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }
 
   try {

@@ -17,6 +17,7 @@ import type { PolicyContext } from "@/policies/capability-check";
 import type { UserRoleAssignment } from "@/generated/prisma/client";
 import type { RoleName } from "@/domain/constants/roles";
 import { ROLES } from "@/domain/constants/roles";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 function maskId(id: string): string {
   if (!id || id.length < 8) return "***";
@@ -24,14 +25,9 @@ function maskId(id: string): string {
 }
 
 export const GET = async (request: NextRequest) => {
-  // Verify diagnostic key
-  const diagnosticKey = request.headers.get("x-opsiq-diagnostic-key");
-  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-
-  if (!diagnosticKey || !expectedKey || diagnosticKey !== expectedKey) {
-    return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
-      status: 404, // 404 instead of 401 to keep diagnostic endpoint opaque
-    });
+  // Verify diagnostic key using timing-safe comparison
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }
 
   try {

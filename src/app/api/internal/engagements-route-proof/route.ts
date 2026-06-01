@@ -9,20 +9,15 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { ENGAGEMENTS_SERVICE_VERSION } from "@/services/engagement";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 const ROUTE_VERSION = "engagements-route-debug-v2";
 const SERVICE_IMPORT_PATH = "@/services/engagement";
 const HANDLER_NAME = "engagementsGetHandler";
 
 export const GET = async (req: NextRequest) => {
-  // Verify diagnostic key
-  const providedKey =
-    req.headers.get("x-opsiq-diagnostic-key") ||
-    new URL(req.url).searchParams.get("key");
-
-  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-
-  if (!expectedKey || !providedKey || providedKey !== expectedKey) {
+  // Verify diagnostic key using timing-safe comparison
+  if (!verifyDiagnosticKeyFromRequest(req)) {
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 404 }

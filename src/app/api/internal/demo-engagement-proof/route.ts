@@ -14,22 +14,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { randomUUID } from "crypto";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 const DEMO_USER_EMAIL = "operator@demo.local";
 const DEMO_ENGAGEMENT_CODE = "ENG-001";
 const DEMO_CLIENT_NAME = "Demo Manufacturing Corp";
-
-// Verify diagnostic key matches environment secret
-function verifyDiagnosticKey(request: NextRequest): boolean {
-  const providedKey = request.headers.get("x-opsiq-diagnostic-key");
-  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-
-  if (!providedKey || !expectedKey) {
-    return false;
-  }
-
-  return providedKey === expectedKey;
-}
 
 // Helper: Mask ID for safe output
 function maskId(id: string): string {
@@ -71,8 +60,8 @@ interface DemoEngagementProofResponse {
 
 // GET: Prove current demo engagement state
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!verifyDiagnosticKey(request)) {
-    return new NextResponse(null, { status: 404 });
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }
 
   try {
@@ -362,8 +351,8 @@ function classifyPrismaError(code: string, errorMsg: string): string {
 
 // POST: Idempotently backfill missing/mislinked demo engagement
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!verifyDiagnosticKey(request)) {
-    return new NextResponse(null, { status: 404 });
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }
 
   const correlationId = `demo-eng-backfill-${Date.now()}`;

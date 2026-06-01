@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 import { buildOwnerDashboardPayload } from "@/app/api/owner/dashboard/route";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 async function buildDiagnosticContext(latestUser: any, workspace: any): Promise<CanonicalAuthContext | null> {
   const membership = await db.workspaceMembership.findFirst({
@@ -43,14 +44,9 @@ async function buildDiagnosticContext(latestUser: any, workspace: any): Promise<
 }
 
 export const GET = async (request: NextRequest) => {
-  // Verify diagnostic key
-  const diagnosticKey = request.headers.get("x-opsiq-diagnostic-key");
-  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-
-  if (!diagnosticKey || !expectedKey || diagnosticKey !== expectedKey) {
-    return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
-      status: 404,
-    });
+  // Verify diagnostic key using timing-safe comparison
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }
 
   try {
