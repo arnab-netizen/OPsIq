@@ -730,8 +730,25 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     verifiedActor: authContext.verifiedActor,
   };
 
-  const createdFindings = await Promise.all(
+  // Create Evidence records first (required for Finding.primaryEvidenceId)
+  const createdEvidenceItems = await Promise.all(
     findingsData.map((f) =>
+      db.evidence.create({
+        data: {
+          id: randomUUID(),
+          engagementId: engagement.id,
+          title: f.title,
+          description: f.description,
+          source: "diagnosis",
+          status: "identified",
+          updatedAt: new Date(),
+        },
+      })
+    )
+  );
+
+  const createdFindings = await Promise.all(
+    findingsData.map((f, index) =>
       createFinding(
         {
           engagementId: engagement.id,
@@ -746,6 +763,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
                 ? "revenue"
                 : "execution",
           findingType: "operational",
+          primaryEvidenceId: createdEvidenceItems[index].id,
         },
         authEnvelope
       )
