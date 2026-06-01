@@ -33,7 +33,7 @@ export interface CreateConditionProfileInput {
   processMaturityLevel: string;
   managementMaturityLevel: string;
   executionCapacityLevel: string;
-  moraleFragilityLevel: string;
+  moralFragilityLevel: string;
   resilienceLevel: string;
   growthReadinessLevel: string;
   notes?: string;
@@ -84,7 +84,7 @@ function validateConditionInput(input: CreateConditionProfileInput): void {
     "processMaturityLevel",
     "managementMaturityLevel",
     "executionCapacityLevel",
-    "moraleFragilityLevel",
+    "moralFragilityLevel",
     "resilienceLevel",
     "growthReadinessLevel",
   ] as const;
@@ -151,7 +151,7 @@ export async function assessCondition(
             processMaturityLevel: input.processMaturityLevel,
             managementMaturityLevel: input.managementMaturityLevel,
             executionCapacityLevel: input.executionCapacityLevel,
-            moraleFragilityLevel: input.moraleFragilityLevel,
+            moralFragilityLevel: input.moralFragilityLevel,
             resilienceLevel: input.resilienceLevel,
             growthReadinessLevel: input.growthReadinessLevel,
             notes: input.notes ?? null,

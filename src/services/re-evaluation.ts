@@ -194,7 +194,7 @@ async function evaluateBusinessConditionImpact(engagementId: string, workspaceId
     current.cashPressureLevel === "critical" ? "critical_cash_pressure" : null,
     current.marginPressureLevel === "critical" ? "critical_margin_pressure" : null,
     current.ownerDependencyRisk === "critical" ? "owner_dependency_critical" : null,
-    current.moraleFragilityLevel === "critical" ? "morale_fragility_critical" : null,
+    current.moralFragilityLevel === "critical" ? "morale_fragility_critical" : null,
   ].filter(Boolean);
 
   // Evaluate KPI trends (improved or deteriorated)
@@ -425,7 +425,7 @@ async function evaluateHealthStatusImpact(
     recommendedStatus = "healthy";
   }
 
-  if (condition.moraleFragilityLevel === "critical") {
+  if (condition.moralFragilityLevel === "critical") {
     healthScore = Math.max(healthScore - 20, 0);
   }
 

@@ -711,7 +711,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     processMaturityLevel: category === "operational_efficiency" ? "low" : "medium",
     managementMaturityLevel: "medium",
     executionCapacityLevel: "medium",
-    moraleFragilityLevel: "low",
+    moralFragilityLevel: "low",
     resilienceLevel: "low",
     growthReadinessLevel: category === "revenue_generation" ? "high" : "medium",
     notes: summary,

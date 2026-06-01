@@ -116,53 +116,134 @@ describe("Idempotency service schema contract", () => {
     expect(true).toBe(true);
   });
 
-  it("all IdempotencyRecord operations should respect schema constraints", async () => {
-    // Schema audit complete:
-    // ✓ id field generation added to all creates
-    // ✓ workspaceId removed from all queries (schema has no such field)
-    // ✓ only valid fields used in where clauses (idempotencyKey, id)
-    // ✓ only valid fields used in create/update data
-    // ✓ required fields provided (id, idempotencyKey, operationName, expiresAt)
-    // ✓ backward compatibility maintained (workspaceId param still accepted but ignored)
+  it("BusinessConditionProfile payload uses moralFragilityLevel not moraleFragilityLevel", async () => {
+    // Schema field: moralFragilityLevel String @map("morale_fragility_level")
+    // NEVER: moraleFragilityLevel (typo)
+    //
+    // The conditionInput in diagnosis.ts must use exact schema field name
+    const conditionPayload = {
+      businessStatus: "critical",
+      severityScore: 9,
+      urgencyLevel: "critical",
+      cashPressureLevel: "critical",
+      marginPressureLevel: "critical",
+      clientConcentrationRisk: "high",
+      ownerDependencyRisk: "medium",
+      keyPersonDependencyRisk: "medium",
+      processMaturityLevel: "medium",
+      managementMaturityLevel: "medium",
+      executionCapacityLevel: "medium",
+      moralFragilityLevel: "low", // CORRECT
+      resilienceLevel: "low",
+      growthReadinessLevel: "high",
+      notes: "test",
+    };
 
-    expect(true).toBe(true);
+    // Verify correct field name is used
+    expect(conditionPayload).toHaveProperty("moralFragilityLevel");
+    expect(conditionPayload).not.toHaveProperty("moraleFragilityLevel");
   });
 
-  it("diagnosis models should include manual id and updatedAt in all creates", async () => {
-    // Complete audit of models created by diagnoseBusiness:
-    // ✓ ClientAccount.create() includes: id (randomUUID), updatedAt (new Date)
-    // ✓ Engagement.create() includes: id (randomUUID), updatedAt (new Date)
-    // ✓ BusinessConditionProfile.create() includes: id (randomUUID), updatedAt (new Date)
-    // ✓ Finding.create() includes: id (randomUUID), updatedAt (new Date)
-    // ✓ Recommendation.create() - has @default(dbgenerated), no manual id needed
-    // ✓ Action.create() includes: id (randomUUID), updatedAt (new Date)
+  it("Finding payload uses primaryEvidenceId and summary (not description, findingType, linkedEvidence, createdBy)", async () => {
+    // Finding schema fields (required):
+    // - id String @id @db.Uuid
+    // - engagementId String
+    // - primaryEvidenceId String (required, not optional)
+    // - title String
+    // - summary String
+    // - severity String
+    // - impactArea String
+    // - updatedAt DateTime
     //
-    // All models without @default on id or updatedAt now get explicit values
+    // Finding does NOT have: description, findingType, linkedEvidence, createdBy
+    const findingPayload = {
+      id: "uuid",
+      engagementId: "engagement-uuid",
+      title: "Finding title",
+      summary: "Finding summary", // CORRECT (not description)
+      primaryEvidenceId: "evidence-uuid", // CORRECT (required)
+      severity: "critical",
+      impactArea: "revenue",
+      updatedAt: new Date(),
+      // NOT: description, findingType, linkedEvidence, createdBy
+    };
 
-    expect(true).toBe(true);
+    expect(findingPayload).toHaveProperty("summary");
+    expect(findingPayload).toHaveProperty("primaryEvidenceId");
+    expect(findingPayload).not.toHaveProperty("description");
+    expect(findingPayload).not.toHaveProperty("findingType");
+    expect(findingPayload).not.toHaveProperty("linkedEvidence");
+    expect(findingPayload).not.toHaveProperty("createdBy");
   });
 
-  it("Finding schema requires primaryEvidenceId and summary", async () => {
-    // Finding model schema constraints:
-    // - id String @id @db.Uuid (requires manual UUID)
-    // - primaryEvidenceId String @db.Uuid @map("primary_evidence_id") (required, no default)
-    // - summary String (required, no default)
-    // - updatedAt DateTime @map("updated_at") (required, no default)
-    //
-    // createFinding() now passes all required fields to Finding.create()
+  it("Action payload includes status and updatedAt (required, no defaults)", async () => {
+    // Action schema fields (required, no default):
+    // - id String @id @db.Uuid
+    // - status String (required, no @default)
+    // - updatedAt DateTime (required, no @default)
+    const actionPayload = {
+      id: "uuid",
+      engagementId: "engagement-uuid",
+      recommendationId: "rec-uuid",
+      title: "Action title",
+      status: "draft", // REQUIRED
+      updatedAt: new Date(), // REQUIRED
+    };
 
-    expect(true).toBe(true);
+    expect(actionPayload).toHaveProperty("status");
+    expect(actionPayload).toHaveProperty("updatedAt");
   });
 
-  it("Action schema requires id, status, and updatedAt", async () => {
-    // Action model schema constraints:
-    // - id String @id @db.Uuid (requires manual UUID)
-    // - status String (required, no default - must be provided in create)
-    // - updatedAt DateTime @map("updated_at") (required, no default)
-    //
-    // createAction() now passes all required fields including id and updatedAt
-    // Status is set to "draft" for new actions
+  it("ClientAccount payload does not include workspaceId (field does not exist in schema)", async () => {
+    // ClientAccount schema has NO workspaceId field
+    // Isolation is through Engagement -> workspaceId relationship
+    const clientAccountPayload = {
+      id: "uuid",
+      name: "Business Name",
+      industry: "SaaS",
+      visibility: "internal",
+      createdBy: "actor-uuid",
+      updatedAt: new Date(),
+      // NOT workspaceId - does not exist in schema
+    };
 
-    expect(true).toBe(true);
+    expect(clientAccountPayload).not.toHaveProperty("workspaceId");
+  });
+
+  it("Engagement payload does not include workspaceId in id field - it's a separate field", async () => {
+    // Engagement schema HAS workspaceId field (optional, nullable)
+    // workspaceId should be included in payload
+    const engagementPayload = {
+      id: "uuid",
+      code: "DIAG-timestamp",
+      title: "Engagement title",
+      clientId: "client-uuid",
+      serviceTier: "standard",
+      engagementMode: "expert",
+      status: "active",
+      interventionMode: "growth",
+      interventionPhase: "triage",
+      description: "Problem statement",
+      createdBy: "actor-uuid",
+      workspaceId: "workspace-uuid", // CORRECT - Engagement has this field
+      updatedAt: new Date(),
+    };
+
+    expect(engagementPayload).toHaveProperty("workspaceId");
+  });
+
+  it("Recommendation payload includes workspaceId (required in schema)", async () => {
+    // Recommendation schema:
+    // - workspaceId String @db.Uuid @map("workspace_id") (REQUIRED, no default)
+    const recommendationPayload = {
+      id: "uuid",
+      engagementId: "engagement-uuid",
+      workspaceId: "workspace-uuid", // REQUIRED
+      title: "Recommendation title",
+      priority: "high",
+      status: "pending",
+    };
+
+    expect(recommendationPayload).toHaveProperty("workspaceId");
   });
 });

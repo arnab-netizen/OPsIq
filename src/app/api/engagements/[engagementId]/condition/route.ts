@@ -27,7 +27,7 @@ const assessConditionSchema = z.object({
   processMaturityLevel: z.enum(MATURITY_LEVELS),
   managementMaturityLevel: z.enum(MATURITY_LEVELS),
   executionCapacityLevel: z.enum(MATURITY_LEVELS),
-  moraleFragilityLevel: z.enum(MATURITY_LEVELS),
+  moralFragilityLevel: z.enum(MATURITY_LEVELS),
   resilienceLevel: z.enum(MATURITY_LEVELS),
   growthReadinessLevel: z.enum(MATURITY_LEVELS),
   notes: z.string().optional(),
