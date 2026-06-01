@@ -71,6 +71,18 @@ export const POST = withCanonicalEnforcement(
         safeMessage: err.message,
       };
 
+      // Extract Prisma-specific details if available
+      const errorObj = err as any;
+      if (errorObj.code) {
+        errorResponse.prismaCode = errorObj.code;
+      }
+      if (errorObj.meta) {
+        errorResponse.prismaMeta = errorObj.meta;
+      }
+      if (errorObj.clientVersion) {
+        errorResponse.prismaClientVersion = errorObj.clientVersion;
+      }
+
       // If diagnostic key is valid, include detailed diagnostic fields
       if (hasDiagnosticAccess) {
         errorResponse.diagnostics = {
@@ -108,6 +120,9 @@ export const POST = withCanonicalEnforcement(
           errorDetails: {
             errorName: err.name,
             errorMessage: err.message,
+            prismaCode: errorObj.code || null,
+            prismaClientVersion: errorObj.clientVersion || null,
+            prismaMeta: errorObj.meta || null,
           },
         };
       }

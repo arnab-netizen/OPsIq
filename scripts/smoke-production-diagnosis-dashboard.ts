@@ -192,6 +192,9 @@ async function smokeTest(): Promise<void> {
         if (diagnosisDiagnostic.stage) console.log(`   stage: ${diagnosisDiagnostic.stage}`);
         if (diagnosisDiagnostic.errorName) console.log(`   errorName: ${diagnosisDiagnostic.errorName}`);
         if (diagnosisDiagnostic.safeMessage) console.log(`   safeMessage: ${diagnosisDiagnostic.safeMessage}`);
+        if (diagnosisDiagnostic.prismaCode) console.log(`   prismaCode: ${diagnosisDiagnostic.prismaCode}`);
+        if (diagnosisDiagnostic.prismaClientVersion) console.log(`   prismaClientVersion: ${diagnosisDiagnostic.prismaClientVersion}`);
+        if (diagnosisDiagnostic.prismaMeta) console.log(`   prismaMeta: ${JSON.stringify(diagnosisDiagnostic.prismaMeta).substring(0, 200)}`);
 
         if (diagnosisDiagnostic.diagnostics) {
           console.log("\n📋 ROUTE DIAGNOSTICS:");
@@ -236,6 +239,11 @@ async function smokeTest(): Promise<void> {
             console.log("\n   Error Details:");
             console.log(`     errorName: ${d.errorDetails.errorName}`);
             console.log(`     safeErrorMessage: ${d.errorDetails.safeErrorMessage}`);
+            if (d.errorDetails.prismaCode) console.log(`     prismaCode: ${d.errorDetails.prismaCode}`);
+            if (d.errorDetails.prismaClientVersion) console.log(`     prismaClientVersion: ${d.errorDetails.prismaClientVersion}`);
+            if (d.errorDetails.prismaMeta) {
+              console.log(`     prismaMeta:`, JSON.stringify(d.errorDetails.prismaMeta).substring(0, 200));
+            }
           }
         }
       }
