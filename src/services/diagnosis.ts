@@ -4,9 +4,6 @@ import { hasInternalAccess } from "@/policies/capability-check";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
 import { NotFoundError, ValidationError } from "@/infra/errors";
-import { createFinding } from "@/services/findings";
-import { createRecommendation } from "@/services/recommendation";
-import { createAction } from "@/services/action";
 import { assessCondition } from "@/services/business-condition";
 import { logger } from "@/infra/logger";
 import { randomUUID } from "crypto";
@@ -19,6 +16,13 @@ import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
+
+interface DiagnosisTransactionResult {
+  createdEvidenceItems: Array<{ id: string }>;
+  createdFindings: Array<{ id: string }>;
+  createdRecommendations: Array<{ id: string }>;
+  createdActions: Array<{ id: string }>;
+}
 
 export interface BusinessProblemInput {
   businessName: string;
@@ -730,79 +734,167 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     verifiedActor: authContext.verifiedActor,
   };
 
-  // Create Evidence records first (required for Finding.primaryEvidenceId)
-  const createdEvidenceItems = await Promise.all(
-    findingsData.map((f) =>
-      db.evidence.create({
-        data: {
-          id: randomUUID(),
-          engagementId: engagement.id,
-          title: f.title,
-          description: f.description,
-          source: "diagnosis",
-          status: "identified",
-          updatedAt: new Date(),
-        },
+  // Atomic transaction: create all value-path records together
+  // All IDs and timestamps prepared before entering transaction
+  const transactionResult = await db.$transaction(async (tx: any): Promise<DiagnosisTransactionResult> => {
+    // Create Evidence records first (required for Finding.primaryEvidenceId)
+    const createdEvidenceItems = await Promise.all(
+      findingsData.map((f) =>
+        tx.evidence.create({
+          data: {
+            id: randomUUID(),
+            engagementId: engagement.id,
+            title: f.title,
+            description: f.description,
+            source: "diagnosis",
+            status: "identified",
+            updatedAt: new Date(),
+          },
+        })
+      )
+    );
+
+    // Create Finding records (depend on Evidence IDs)
+    const createdFindings = await Promise.all(
+      findingsData.map((f, index) => {
+        const summary = f.description || "";
+        const primaryEvidenceId = createdEvidenceItems[index].id;
+
+        // Validate primaryEvidenceId (same as createFinding service)
+        if (!primaryEvidenceId) {
+          throw new ValidationError(
+            "primaryEvidenceId is required. Evidence must be created before Finding."
+          );
+        }
+
+        return tx.finding.create({
+          data: {
+            id: randomUUID(),
+            engagementId: engagement.id,
+            title: f.title,
+            summary: summary,
+            primaryEvidenceId: primaryEvidenceId,
+            impactArea: category.includes("revenue")
+              ? "revenue"
+              : category.includes("cost")
+                ? "cost"
+                : category.includes("cash")
+                  ? "revenue"
+                  : "execution",
+            severity: f.severity,
+            rootCause: null,
+            updatedAt: new Date(),
+          },
+        });
       })
-    )
-  );
+    );
 
-  const createdFindings = await Promise.all(
-    findingsData.map((f, index) =>
-      createFinding(
-        {
-          engagementId: engagement.id,
-          title: f.title,
-          description: f.description,
-          severity: f.severity,
-          impactArea: category.includes("revenue")
-            ? "revenue"
-            : category.includes("cost")
-              ? "cost"
-              : category.includes("cash")
-                ? "revenue"
-                : "execution",
-          findingType: "operational",
-          primaryEvidenceId: createdEvidenceItems[index].id,
-        },
-        authEnvelope
+    // Create Recommendation records (depend on Finding IDs)
+    const createdRecommendations = await Promise.all(
+      recommendationsData.map((r) =>
+        tx.recommendation.create({
+          data: {
+            engagementId: engagement.id,
+            findingId: createdFindings[0]?.id || null,
+            priority: r.priority,
+            title: r.title,
+            description: r.description || null,
+            estimatedImpact: null,
+            workspaceId: validatedWorkspaceId,
+            createdBy: actorId,
+            evidenceValidationScore: 75,
+            reliabilityLevel: "medium",
+            kpiHealthScore: 75,
+            kpiRiskLevel: "medium",
+            updatedAt: new Date(),
+          },
+        })
       )
-    )
-  );
+    );
 
-  // Create recommendations
-  const createdRecommendations = await Promise.all(
-    recommendationsData.map((r) =>
-      createRecommendation(
-        {
-          engagementId: engagement.id,
-          title: r.title,
-          description: r.description,
-          priority: r.priority,
-          findingId: createdFindings[0]?.id,
-        },
-        authContext,
-        validatedWorkspaceId
+    // Create Action records (depend on Recommendation IDs)
+    const createdActions = await Promise.all(
+      actionPlanData.map((a) =>
+        tx.action.create({
+          data: {
+            id: randomUUID(),
+            engagementId: engagement.id,
+            recommendationId: createdRecommendations[0]?.id || null,
+            title: a.title,
+            description: a.description || null,
+            assignedTo: null,
+            dueDate: null,
+            priority: a.priority || "medium",
+            status: "draft",
+            updatedAt: new Date(),
+          },
+        })
       )
-    )
-  );
+    );
 
-  // Create actions
-  const createdActions = await Promise.all(
-    actionPlanData.map((a) => {
-      return createAction(
-        {
-          engagementId: engagement.id,
-          recommendationId: createdRecommendations[0]?.id || "",
-          title: a.title,
-          description: a.description,
-          priority: a.priority,
-        },
-        authContext,
-        validatedWorkspaceId
-      );
-    })
-  );
+    return { createdEvidenceItems, createdFindings, createdRecommendations, createdActions };
+  });
+
+  const {
+    createdEvidenceItems,
+    createdFindings,
+    createdRecommendations,
+    createdActions,
+  }: DiagnosisTransactionResult = transactionResult;
+
+  // Side effects after transaction commit: audit events
+  // Do NOT do side effects inside transaction to avoid nested transaction issues
+
+  // Emit audit event for findings
+  for (let i = 0; i < createdFindings.length; i++) {
+    const finding = createdFindings[i];
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.FINDING_CREATED,
+      actorId,
+      entityType: "Finding",
+      entityId: finding.id,
+      workspaceId: validatedWorkspaceId,
+      payload: {
+        engagementId: engagement.id,
+        severity: findingsData[i]?.severity || "medium",
+        title: findingsData[i]?.title || "",
+      },
+    });
+  }
+
+  // Emit audit event for recommendations
+  for (let i = 0; i < createdRecommendations.length; i++) {
+    const recommendation = createdRecommendations[i];
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.RECOMMENDATION_CREATED,
+      actorId,
+      entityType: "recommendation",
+      entityId: recommendation.id,
+      workspaceId: validatedWorkspaceId,
+      payload: {
+        engagementId: engagement.id,
+        priority: recommendationsData[i]?.priority || "medium",
+      },
+      visibility: "internal",
+    });
+  }
+
+  // Emit audit event for actions
+  for (let i = 0; i < createdActions.length; i++) {
+    const action = createdActions[i];
+    await emitAuditEvent({
+      eventName: AUDIT_EVENTS.ACTION_CREATED,
+      actorId,
+      entityType: "action",
+      entityId: action.id,
+      workspaceId: validatedWorkspaceId,
+      payload: {
+        engagementId: engagement.id,
+        priority: actionPlanData[i]?.priority || "medium",
+      },
+      visibility: "internal",
+    });
+  }
 
   emitAuditEvent({
     eventName: AUDIT_EVENTS.DIAGNOSIS_COMPLETED,

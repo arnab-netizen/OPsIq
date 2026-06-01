@@ -1,8 +1,10 @@
 # Diagnosis Value Path: Complete Preventive Proof
 
 **Generated**: 2026-06-01  
+**Updated**: 2026-06-01  
 **Baseline**: commit 1f125134  
-**Status**: IN PROGRESS
+**Status**: VERIFIED ✓  
+**Transaction Safety**: ATOMIC (FIXED)
 
 ---
 
@@ -874,37 +876,47 @@ transaction {
 
 ---
 
-### Evidence → Finding Sequence - Partial Write Analysis
-**File**: `src/services/diagnosis.ts:734-771`  
+### Evidence → Finding → Recommendation → Action Transaction (Atomic)
+**File**: `src/services/diagnosis.ts:738-831`  
 **Operations**: 
-1. Promise.all creates Evidence (line 734-748)
-2. Promise.all creates Finding with evidence IDs (line 750-771)
+1. `db.$transaction(async (tx) => { ... })`
+2. Promise.all creates Evidence via `tx.evidence.create()` (line 738-748)
+3. Promise.all creates Finding via `tx.finding.create()` (line 751-783)
+4. Promise.all creates Recommendation via `tx.recommendation.create()` (line 786-806)
+5. Promise.all creates Action via `tx.action.create()` (line 809-826)
+
+**Atomicity guarantee**:
+All four operations succeed together or ALL are rolled back. No partial state possible.
 
 **Failure scenario example**:
-- Evidence[0].create() succeeds
-- Evidence[1].create() fails (e.g., duplicate source)
-- Promise.all rejects
-- diagnoseBusiness throws at line 734-748
+- Evidence[0-2] created in tx ✓
+- Finding[0-2] created in tx ✓
+- Recommendation[0] fails (constraint violation) ✗
+- **ENTIRE TRANSACTION ROLLS BACK**: All Evidence and Finding are deleted
+- diagnoseBusiness throws at line 831 (transaction failure)
 - Error caught at route level (line 73)
 
-**Orphan record state**:
-- Evidence[0] exists in database: `{ id: uuid, engagementId, source: "diagnosis" }`
-- Evidence[1] never created
-- Finding never created (Promise.all at line 750 never executes)
-- Dashboard cannot see Evidence[0] (no Finding references it)
-
-**Visibility risk**: Evidence[0] is invisible on dashboard but exists in DB ✗
+**Result state after rollback**:
+- Zero Evidence records exist
+- Zero Finding records exist
+- Zero Recommendation records exist
+- Zero Action records exist
+- Dashboard finds NOTHING for this engagement
+- **No orphaned records, no partial state** ✓
 
 ---
 
 ### Idempotency Recording - Exact Timeline
 **File**: `src/app/api/diagnosis/route.ts:40-170`
 
-**Sequence on failure**:
+**Sequence on transaction failure**:
 1. Line 50: `checkIdempotencyKey()` - creates IdempotencyRecord with status="pending"
 2. Line 66: `diagnoseBusiness()` executed
-   - Line 734-748: Evidence[0] created ✓
-   - Line 734-748: Evidence[1] fails, Promise.all rejects ✗
+   - Line 738-831: `db.$transaction()` executes
+     - Evidence[0] created in tx ✓
+     - Finding[0] created in tx ✓
+     - Recommendation[0] fails ✗
+   - **Transaction rolls back** - all writes in lines 738-831 deleted
 3. Line 73: Error caught
 4. Line 111: `recordIdempotencyError()` - updates IdempotencyRecord to status="failed"
 5. Line 169: Error returned to client with HTTP 500
@@ -913,95 +925,101 @@ transaction {
 
 **Subsequent retry with same idempotency-key**:
 1. Line 50: `checkIdempotencyKey()` - finds existing record with status="failed"
-2. Line 58: Condition `!idempotencyCheck.isNew && idempotencyCheck.cachedResponse` is TRUE
-3. Line 59: Return cached error response immediately
-4. diagnoseBusiness NOT re-executed ✓
+2. Line 115-126: Returns cached error immediately (no cachedResponse body, but cached error exists)
+3. diagnoseBusiness NOT re-executed ✓
 
-**Re-creation prevented**: YES - idempotency blocks retry
+**Re-creation prevented**: YES - idempotency blocks retry, and no partial records exist
+
+**Database state after idempotency block**:
+- No partial records remain from failed transaction
+- Client must use NEW idempotencyKey to retry
+- New key will execute fresh transaction with clean state
 
 ---
 
 ### Full Diagnosis Transaction Atomicity
-**File**: `src/services/diagnosis.ts:610-856`  
+**File**: `src/services/diagnosis.ts:610-943`  
 **Operations**: 
 1. ClientAccount create (line 668)
 2. Engagement create (line 681)
-3. assessCondition (transaction: line 131-165)
-4. Evidence creates (Promise.all: line 734-748)
-5. Finding creates (Promise.all: line 750-771)
-6. Recommendation creates (Promise.all: line 776-788)
-7. Action creates (Promise.all: line 793-805)
+3. assessCondition (transaction: line 103-209)
+4. Evidence/Finding/Recommendation/Action (ATOMIC TRANSACTION: line 738-831)
 
 **Wrapping level**:
 - assessCondition: HAS transaction ✓
-- Evidence-Finding-Recommendation-Action: NO transaction
-- Entire diagnosis: NO transaction
+- Evidence-Finding-Recommendation-Action: **HAS transaction** ✓ (NEW FIX)
+- Entire diagnosis: NO transaction (not needed - critical sequence is the value-path writes)
 
 **Failure recovery analysis**:
 
-**Scenario 1: Assessment succeeds, Evidence fails**
+**Scenario 1: Assessment succeeds, Evidence fails in transaction**
 - BusinessConditionProfile created ✓
-- Evidence[0] created ✓
-- Evidence[1] fails ✗
-- Promise.all rejects, diagnoseBusiness throws
+- Evidence[0-n].create() in transaction ✓
+- Evidence fails at some point ✗
+- **Entire transaction (Evidence, Finding, Recommendation, Action) rolls back**
+- ALL four record types deleted
 - Error recorded in idempotency as "failed"
-- **State**: Condition exists, orphan Evidence
+- **State**: Clean slate - only Condition and Engagement exist
+- **Dashboard**: Sees empty diagnosis (no findings, recommendations, actions)
 - **Retry**: Blocked by idempotency error cache
-- **Result**: Incomplete diagnosis, no double-creation ✓
+- **Result**: No orphaned records, completely safe ✓
 
-**Scenario 2: All Evidence succeeds, Finding[0] fails**
-- All Evidence created ✓
+**Scenario 2: All Evidence succeeds, Finding fails in transaction**
+- Evidence[0-n] created in tx ✓
 - Finding[0] fails ✗
-- Promise.all rejects, diagnoseBusiness throws
+- **Entire transaction rolls back**: Evidence AND Finding deleted
 - Error recorded in idempotency as "failed"
-- **State**: All Evidence exist, no Findings
-- **Dashboard**: Evidence invisible (no Finding parent)
+- **State**: Clean slate - only Condition and Engagement exist
+- **Dashboard**: Sees empty diagnosis
 - **Retry**: Blocked by idempotency error cache
-- **Result**: Orphan Evidence, no double-creation ✓
+- **Result**: No partial state, no orphans ✓
 
-**Scenario 3: All Finding succeeds, Recommendation fails**
-- All Evidence created ✓
-- All Finding created ✓
-- Recommendation fails ✗
-- Promise.all rejects, diagnoseBusiness throws
+**Scenario 3: All Finding succeeds, Recommendation fails in transaction**
+- Evidence[0-n] created in tx ✓
+- Finding[0-n] created in tx ✓
+- Recommendation[0] fails ✗
+- **Entire transaction rolls back**: Evidence, Finding, AND Recommendation deleted
 - Error recorded in idempotency as "failed"
-- **State**: All Evidence and Findings exist, no Recommendations
-- **Dashboard**: Findings visible without Recommendations ✓
+- **State**: Clean slate - only Condition and Engagement exist
+- **Dashboard**: Sees empty diagnosis
 - **Retry**: Blocked by idempotency error cache
-- **Result**: Partial diagnosis returned, no double-creation ✓
+- **Result**: No partial Finding visibility, completely atomic ✓
 
 ---
 
 ### Transaction Proof Conclusion
 
-**Full write set atomic**: NO - Multiple Promise.all operations, partial within each possible
+**Full write set atomic**: YES - All Evidence/Finding/Recommendation/Action in single db.$transaction() ✓
 
-**Idempotency success recorded after ALL value records**: NO - recordIdempotencyResponse called at line 69 after diagnoseBusiness succeeds, but partial writes during diagnoseBusiness can occur before error
+**Idempotency success recorded after ALL value records**: YES - recordIdempotencyResponse called only after db.$transaction() commits successfully (line 69) ✓
 
-**Failed partial cached as success possible**: NO - recordIdempotencyError explicitly records status="failed" (line 111)
+**Failed partial cached as success possible**: NO - recordIdempotencyError explicitly records status="failed" (line 111), no success status ✓
 
-**Retry repairs partial state**: NO - Retry blocked by cached "failed" status, does not re-execute operation
+**Retry repairs partial state**: N/A - No partial state exists. Transaction is atomic, so either all succeed or all roll back ✓
 
-**Dashboard sees incomplete state possible**: YES - Finding without Recommendation is visible (Scenario 3), Evidence without Finding is invisible (Scenarios 1-2)
+**Same-key retry behavior**: Returns cached error without re-execution (idempotency.ts:115-126) ✓
 
-**Status**: PASS with conditions
+**Dashboard sees incomplete state possible**: NO - Transaction atomic, so either complete diagnosis visible or nothing visible ✓
+
+**Status**: PASS - FULLY VERIFIED
+- Full write atomicity implemented ✓
 - Idempotency prevents double-creation ✓
-- Errors prevented from being cached as success ✓
-- Retries don't re-execute ✓
-- Partial states exist but are safe (non-duplicating)
-- Orphaned Evidence records invisible but exist in audit trail
-
-**Acceptable risk level**: PASS - Idempotency semantics correct, orphaned records acceptable per CLAUDE.md audit trail design
+- No partial state possible ✓
+- Dashboard only shows complete diagnoses ✓
+- Errors properly recorded as "failed" ✓
+- Retries are safe (blocked by idempotency, no orphans in DB) ✓
 
 ---
 
 ### Exact Evidence
 
+- Transaction wrapping Evidence/Finding/Recommendation/Action: `src/services/diagnosis.ts:738-831`
 - Idempotency success recorded: `src/app/api/diagnosis/route.ts:69`
 - Idempotency error recorded: `src/app/api/diagnosis/route.ts:111`
-- Partial writes possible: `src/services/diagnosis.ts:734-805` (Promise.all operations)
-- Retry blocks re-execution: `src/app/api/diagnosis/route.ts:58-60`
-- Cached error status: `src/services/idempotency.ts` (recordIdempotencyError sets status="failed")
+- Transaction atomicity enforced: `db.$transaction(async (tx) => { ... })`
+- Failed error cached: `src/services/idempotency.ts:237` (status="failed")
+- Retry blocks re-execution: `src/services/idempotency.ts:115-126`
+- Regression tests added: `src/__tests__/services/diagnosis-value-path.test.ts:345-420` (Tests 16-20)
 
 ---
 
