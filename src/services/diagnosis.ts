@@ -658,9 +658,9 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
     warnings: dataWarnings,
   };
 
-  // Get or create client
+  // Get or create client (ClientAccount does not have workspaceId; isolation via Engagement)
   let client = await db.clientAccount.findFirst({
-    where: { name: input.businessName, workspaceId: validatedWorkspaceId },
+    where: { name: input.businessName },
   });
 
   if (!client) {
@@ -670,7 +670,6 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
         industry: input.businessType,
         visibility: "internal",
         createdBy: actorId,
-        workspaceId: validatedWorkspaceId,
       },
     });
   }

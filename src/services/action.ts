@@ -97,7 +97,6 @@ export async function createAction(
               assignedTo: input.assignedTo || null,
               dueDate: input.dueDate ? new Date(input.dueDate) : null,
               priority: input.priority || "medium",
-              workspaceId: validatedWorkspaceId,
             },
           });
 
@@ -188,7 +187,6 @@ export async function createAction(
       assignedTo: input.assignedTo || null,
       dueDate: input.dueDate ? new Date(input.dueDate) : null,
       priority: input.priority || "medium",
-      workspaceId: validatedWorkspaceId,
     },
   });
 

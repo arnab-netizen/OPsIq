@@ -111,7 +111,6 @@ export async function createFinding(
       rootCause: input.rootCause || null,
       linkedEvidence: primaryEvidenceId ? [primaryEvidenceId] : [],
       createdBy: auth.verifiedActorId,
-      workspaceId: auth.verifiedWorkspaceId,
     },
     select: { id: true, engagementId: true },
   });
