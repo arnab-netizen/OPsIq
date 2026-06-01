@@ -55,7 +55,17 @@ type DashboardAction = {
   engagement?: { id: string; title: string };
 };
 
-function toOwnerDashboardDTO(data: any) {
+function toOwnerDashboardDTO(data: any, realRecommendations?: any[]) {
+  const recommendedActions = realRecommendations && realRecommendations.length > 0
+    ? realRecommendations.map((rec: any) => ({
+        id: rec.id,
+        title: rec.title,
+        description: rec.description,
+        priority: rec.priority,
+        source: "diagnosis",
+      }))
+    : data.health?.recommendedActions || [];
+
   return {
     workspaceId: data.workspaceId,
     assessedAt: data.config?.createdAt || new Date().toISOString(),
@@ -69,7 +79,7 @@ function toOwnerDashboardDTO(data: any) {
     actionsByStatus: data.actionQueue?.byStatus || {},
     actionsByPriority: data.actionQueue?.byPriority || {},
     topRisks: data.health?.topRisks || [],
-    recommendedActions: data.health?.recommendedActions || [],
+    recommendedActions,
     criticalActions: data.actionQueue?.criticalActions || [],
     dueThisWeek: data.actionQueue?.dueThisWeek || [],
   };
@@ -118,6 +128,18 @@ export async function buildOwnerDashboardPayload(
       engagement: { select: { id: true } },
     },
   });
+
+  // QUERY 4: Get real recommendations for workspace
+  const recommendations = engagementIds.length > 0
+    ? await db.recommendation.findMany({
+        where: {
+          engagementId: { in: engagementIds },
+          workspaceId: workspaceId,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      })
+    : [];
 
   // Transform real data into expected format for health calculation
   type DashboardEngagement = {
@@ -222,7 +244,7 @@ export async function buildOwnerDashboardPayload(
     queryParams.includeKPIs === "true" ? realKPIs : []
   );
 
-  return toOwnerDashboardDTO(dashboard);
+  return toOwnerDashboardDTO(dashboard, recommendations);
 }
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
