@@ -30,19 +30,16 @@ function hashPayload(payload: Record<string, unknown>): string {
 export async function checkIdempotencyKey(
   options: IdempotencyOptions
 ): Promise<IdempotencyCheckResult> {
-  const { idempotencyKey, operationName, payload, workspaceId, expirationMinutes = 24 * 60 } = options;
-
-  if (!workspaceId) {
-    throw new Error("workspaceId is required for workspace-scoped idempotency");
-  }
+  const { idempotencyKey, operationName, payload, expirationMinutes = 24 * 60 } = options;
 
   const payloadHash = hashPayload(payload);
   const expiresAt = new Date(Date.now() + expirationMinutes * 60 * 1000);
 
   // Atomically create or fetch existing record
-  // Using upsert to prevent TOCTOU race condition
+  // IdempotencyRecord uses idempotencyKey as UNIQUE constraint
+  // No workspace scoping in schema - idempotencyKey itself provides global uniqueness
   const existing = await db.idempotencyRecord.findFirst({
-    where: { idempotencyKey, workspaceId },
+    where: { idempotencyKey },
   });
 
   if (existing) {
@@ -70,7 +67,6 @@ export async function checkIdempotencyKey(
         await db.idempotencyRecord.create({
           data: {
             idempotencyKey,
-            workspaceId,
             operationName,
             payload: payloadHash,
             status: "pending",
@@ -82,7 +78,7 @@ export async function checkIdempotencyKey(
           // Unique constraint violation due to concurrent request
           // Fetch the newly created record from concurrent request
           const concurrent = await db.idempotencyRecord.findFirst({
-            where: { idempotencyKey, workspaceId },
+            where: { idempotencyKey },
           });
           if (concurrent && concurrent.status === "pending") {
             throw new ValidationError(
@@ -134,7 +130,6 @@ export async function checkIdempotencyKey(
     await db.idempotencyRecord.create({
       data: {
         idempotencyKey,
-        workspaceId,
         operationName,
         payload: payloadHash,
         status: "pending",
@@ -146,7 +141,7 @@ export async function checkIdempotencyKey(
     if (err.code === "P2002") {
       // Another request won the race - fetch and check its status
       const concurrent = await db.idempotencyRecord.findFirst({
-        where: { idempotencyKey, workspaceId },
+        where: { idempotencyKey },
       });
       if (concurrent) {
         // Verify operation name matches
@@ -208,12 +203,12 @@ export async function recordIdempotencyResponse(
   responseBody: Record<string, unknown>,
   workspaceId?: string
 ): Promise<void> {
-  if (!workspaceId) {
-    throw new Error("workspaceId is required for workspace-scoped idempotency");
-  }
+  // workspaceId parameter accepted for backward compatibility but not used
+  // IdempotencyRecord schema does not have workspaceId field
+  // Clients must ensure idempotencyKey is globally unique
 
   await db.idempotencyRecord.updateMany({
-    where: { idempotencyKey, workspaceId },
+    where: { idempotencyKey },
     data: {
       status: "completed",
       responseCode: statusCode,
@@ -228,13 +223,13 @@ export async function recordIdempotencyError(
   error: Error,
   workspaceId?: string
 ): Promise<void> {
-  if (!workspaceId) {
-    throw new Error("workspaceId is required for workspace-scoped idempotency");
-  }
+  // workspaceId parameter accepted for backward compatibility but not used
+  // IdempotencyRecord schema does not have workspaceId field
+  // Clients must ensure idempotencyKey is globally unique
 
   const governed = classifyOperatorError(error, { context: "load" });
   await db.idempotencyRecord.updateMany({
-    where: { idempotencyKey, workspaceId },
+    where: { idempotencyKey },
     data: {
       status: "failed",
       responseBody: {

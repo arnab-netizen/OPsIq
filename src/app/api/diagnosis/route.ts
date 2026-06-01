@@ -6,6 +6,7 @@ import { CAPABILITIES } from "@/domain/constants/capabilities";
 import { diagnoseBusiness, validateBusinessProblem } from "@/services/diagnosis";
 import { parseRequestBody } from "@/lib/validation";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
+import { canonicalJson } from "@/lib/canonical-json-response";
 import { z } from "zod/v4";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
 
@@ -164,11 +165,8 @@ export const POST = withCanonicalEnforcement(
         };
       }
 
-      // Return error response with 500 status
-      return {
-        status: 500,
-        body: errorResponse,
-      };
+      // Return error response with proper HTTP 500 status (not HTTP 200 with body.status=500)
+      return canonicalJson(errorResponse, { status: 500 });
     }
   },
   {
