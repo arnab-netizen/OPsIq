@@ -75,7 +75,7 @@ function toOwnerDashboardDTO(data: any) {
   };
 }
 
-async function buildOwnerDashboardPayload(
+export async function buildOwnerDashboardPayload(
   ctx: CanonicalAuthContext,
   workspaceId: string,
   userId: string
