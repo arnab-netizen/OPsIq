@@ -75,6 +75,152 @@ function toOwnerDashboardDTO(data: any) {
   };
 }
 
+async function buildOwnerDashboardPayload(
+  ctx: CanonicalAuthContext,
+  workspaceId: string,
+  userId: string
+) {
+  const url = new URL(ctx.request!.url);
+  const queryParams = querySchema.parse({
+    includeKPIs: url.searchParams.get("includeKPIs"),
+    daysOfHistory: url.searchParams.get("daysOfHistory"),
+  });
+
+  const context = { workspaceId, userId };
+
+  // QUERY 1: Get real engagements for workspace
+  const { db } = await import("@/lib/db");
+  const engagements = await db.engagement.findMany({
+    where: { workspaceId },
+    include: {
+      kpis: true,
+      actions: true,
+    },
+  });
+
+  // QUERY 2: Get real actions for workspace
+  const engagementIds = engagements.map((e: DashboardEngagement) => e.id);
+  const actions = await db.action.findMany({
+    where: { engagementId: { in: engagementIds } },
+    include: {
+      engagement: { select: { id: true, title: true } },
+    },
+  });
+
+  // QUERY 3: Get real KPIs for workspace
+  const kpis = await db.KPI.findMany({
+    where: { engagementId: { in: engagementIds } },
+    include: {
+      engagement: { select: { id: true } },
+    },
+  });
+
+  // Transform real data into expected format for health calculation
+  type DashboardEngagement = {
+    id: string;
+    workspaceId: string;
+    title: string;
+    status: string;
+    healthStatus: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    kpis: any[];
+    actions: any[];
+  };
+  type DashboardKpi = {
+    id: string;
+    engagementId: string;
+    name: string;
+    status: string;
+    currentValue: number | null;
+    targetValue: number | null;
+    direction: string | null;
+    trend: string | null;
+    updatedAt: Date;
+    engagement?: { id: string };
+  };
+
+  const engagementSnapshots = engagements.map((engagement: DashboardEngagement) => {
+    const engagementKPIs = kpis.filter((k: DashboardKpi) => k.engagementId === engagement.id);
+    const onTrackCount = engagementKPIs.filter((k: DashboardKpi) => k.status === "on_track").length;
+    return {
+      engagementId: engagement.id,
+      status: (engagement.healthStatus?.toLowerCase() || "healthy") as
+        | "healthy"
+        | "at_risk"
+        | "critical"
+        | "improving",
+      kpiOnTrackCount: onTrackCount,
+      kpiTotalCount: engagementKPIs.length,
+    };
+  });
+
+  // Transform real actions into expected format
+  type DashboardAction = {
+    id: string;
+    engagementId: string | null;
+    title: string;
+    status: string | null;
+    priority: string | null;
+    dueAt: Date | null;
+    assignedTo: { id: string; name: string | null; email: string } | null;
+    engagement?: { id: string; title: string };
+  };
+
+  const actionData = actions.map((action: DashboardAction) => ({
+    id: action.id,
+    engagementId: action.engagementId,
+    name: action.title,
+    status: action.status || "draft",
+    priority: action.priority || "medium",
+    dueDate: action.dueAt?.toISOString(),
+    assignee: undefined,
+    blockerCount: 0,
+  }));
+
+  // Calculate health from REAL data (empty if no engagements)
+  const health = await calculateWorkspaceHealth(context, engagementSnapshots);
+  const actionQueue = await summarizeActionQueue(context, actionData);
+
+  const config: OwnerDashboardConfig = {
+    workspaceId,
+    ownerId: userId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    showCompletedActions: true,
+    daysOfHistoryVisible: parseInt(queryParams.daysOfHistory),
+    actionPriorityThreshold: ActionQueuePriority.MEDIUM,
+    healthStatusThreshold: HealthStatus.AT_RISK,
+    enableBulkActions: true,
+    enableAdvancedFiltering: true,
+  };
+
+  // Transform real KPIs into dashboard format
+  const realKPIs = kpis.map((kpi: DashboardKpi) => ({
+    id: kpi.id,
+    name: kpi.name,
+    currentValue: kpi.currentValue || 0,
+    targetValue: kpi.targetValue || 0,
+    direction: (kpi.direction as "increase" | "decrease") || "increase",
+    trend: (kpi.trend as "improving" | "stable" | "declining") || "stable",
+    percentOfTarget:
+      kpi.targetValue && kpi.targetValue > 0
+        ? Math.round((((kpi.currentValue || 0) / kpi.targetValue) * 100))
+        : 0,
+    lastUpdated: kpi.updatedAt?.toISOString() || new Date().toISOString(),
+  }));
+
+  const dashboard = await buildOwnerDashboardView(
+    context,
+    config,
+    health,
+    actionQueue,
+    queryParams.includeKPIs === "true" ? realKPIs : []
+  );
+
+  return toOwnerDashboardDTO(dashboard);
+}
+
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   if (!ctx.request) {
     throw new Error("Request object not available");
@@ -89,109 +235,10 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
   // No redundant database check needed
 
   try {
-    const url = new URL(ctx.request.url);
-    const queryParams = querySchema.parse({
-      includeKPIs: url.searchParams.get("includeKPIs"),
-      daysOfHistory: url.searchParams.get("daysOfHistory"),
-    });
+    const payload = await buildOwnerDashboardPayload(ctx, workspaceId, userId);
 
-    const context = { workspaceId, userId };
-
-    // QUERY 1: Get real engagements for workspace
+    // Emit audit event for dashboard view
     const { db } = await import("@/lib/db");
-    const engagements = await db.engagement.findMany({
-      where: { workspaceId },
-      include: {
-        kpis: true,
-        actions: true,
-      },
-    });
-
-    // QUERY 2: Get real actions for workspace
-    const engagementIds = engagements.map((e: DashboardEngagement) => e.id);
-    const actions = await db.action.findMany({
-      where: { engagementId: { in: engagementIds } },
-      include: {
-        engagement: { select: { id: true, title: true } },
-      },
-    });
-
-    // QUERY 3: Get real KPIs for workspace
-    const kpis = await db.KPI.findMany({
-      where: { engagementId: { in: engagementIds } },
-      include: {
-        engagement: { select: { id: true } },
-      },
-    });
-
-    // Transform real data into expected format for health calculation
-    const engagementSnapshots = engagements.map((engagement: DashboardEngagement) => {
-      const engagementKPIs = kpis.filter((k: DashboardKpi) => k.engagementId === engagement.id);
-      const onTrackCount = engagementKPIs.filter((k: DashboardKpi) => k.status === "on_track").length;
-      return {
-        engagementId: engagement.id,
-        status: (engagement.healthStatus?.toLowerCase() || "healthy") as
-          | "healthy"
-          | "at_risk"
-          | "critical"
-          | "improving",
-        kpiOnTrackCount: onTrackCount,
-        kpiTotalCount: engagementKPIs.length,
-      };
-    });
-
-    // Transform real actions into expected format
-    const actionData = actions.map((action: DashboardAction) => ({
-      id: action.id,
-      engagementId: action.engagementId,
-      name: action.title,
-      status: action.status || "draft",
-      priority: action.priority || "medium",
-      dueDate: action.dueAt?.toISOString(),
-      assignee: undefined,
-      blockerCount: 0, // Would query separately if needed
-    }));
-
-    // Calculate health from REAL data (empty if no engagements)
-    const health = await calculateWorkspaceHealth(context, engagementSnapshots);
-    const actionQueue = await summarizeActionQueue(context, actionData);
-
-    const config: OwnerDashboardConfig = {
-      workspaceId,
-      ownerId: userId,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      showCompletedActions: true,
-      daysOfHistoryVisible: parseInt(queryParams.daysOfHistory),
-      actionPriorityThreshold: ActionQueuePriority.MEDIUM,
-      healthStatusThreshold: HealthStatus.AT_RISK,
-      enableBulkActions: true,
-      enableAdvancedFiltering: true,
-    };
-
-    // Transform real KPIs into dashboard format
-    const realKPIs = kpis.map((kpi: DashboardKpi) => ({
-      id: kpi.id,
-      name: kpi.name,
-      currentValue: kpi.currentValue || 0,
-      targetValue: kpi.targetValue || 0,
-      direction: (kpi.direction as "increase" | "decrease") || "increase",
-      trend: (kpi.trend as "improving" | "stable" | "declining") || "stable",
-      percentOfTarget:
-        kpi.targetValue && kpi.targetValue > 0
-          ? Math.round((((kpi.currentValue || 0) / kpi.targetValue) * 100))
-          : 0,
-      lastUpdated: kpi.updatedAt?.toISOString() || new Date().toISOString(),
-    }));
-
-    const dashboard = await buildOwnerDashboardView(
-      context,
-      config,
-      health,
-      actionQueue,
-      queryParams.includeKPIs === "true" ? realKPIs : []
-    );
-
     await emitAuditEvent({
       eventName: AUDIT_EVENTS.OWNER_DASHBOARD_VIEWED,
       workspaceId,
@@ -199,13 +246,13 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
       entityType: "dashboard",
       entityId: workspaceId,
       payload: {
-        engagementCount: health.engagementCount,
-        criticalCount: health.criticalEngagements,
-        actionQueueSize: actionQueue.totalCount,
+        engagementCount: payload.engagementCount,
+        criticalCount: payload.criticalEngagements,
+        actionQueueSize: payload.actionQueueSize,
       },
     });
 
-    return toOwnerDashboardDTO(dashboard);
+    return payload;
   } catch (error) {
     if (error instanceof z.ZodError) {
       throw new BadRequestError("Validation error: " + error.issues.map((i) => i.message).join(", "));
