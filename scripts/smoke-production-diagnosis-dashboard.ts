@@ -126,13 +126,17 @@ async function smokeTest(): Promise<void> {
 
     // STEP 2: Create diagnosis
     console.log("2️⃣  POST /api/diagnosis (business analysis)");
+    const diagnosisHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      "idempotency-key": `diag-${timestamp}`,
+      Cookie: sessionCookie,
+    };
+    if (diagnosticKey) {
+      diagnosisHeaders["x-opsiq-diagnostic-key"] = diagnosticKey;
+    }
     const diagnosisResponse = await fetch(`${baseUrl}/api/diagnosis`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "idempotency-key": `diag-${timestamp}`,
-        Cookie: sessionCookie,
-      },
+      headers: diagnosisHeaders,
       body: JSON.stringify({
         businessName: "Smoke Test Business",
         businessType: "SaaS",
@@ -149,8 +153,44 @@ async function smokeTest(): Promise<void> {
 
     if (diagnosisStatus !== 201) {
       console.log("❌ DIAGNOSIS_FAILED");
-      const errorText = await diagnosisResponse.text();
-      console.log(`   Response: ${errorText.substring(0, 200)}`);
+
+      // Try to parse diagnostic response
+      let diagnosisDiagnostic: any = null;
+      try {
+        diagnosisDiagnostic = await diagnosisResponse.json();
+      } catch {
+        const diagnosisText = await diagnosisResponse.text();
+        console.log(`   Response: ${diagnosisText.substring(0, 200)}`);
+      }
+
+      if (diagnosisDiagnostic && diagnosisDiagnostic.diagnostics) {
+        console.log("\n📋 DIAGNOSIS ROUTE DIAGNOSTIC OUTPUT:");
+        console.log(`   routeWrapper: ${diagnosisDiagnostic.diagnostics.routeWrapper}`);
+        console.log(`   requireWorkspaceConfigured: ${diagnosisDiagnostic.diagnostics.requireWorkspaceConfigured}`);
+
+        console.log("\n   Context Keys:");
+        console.log(`     verifiedActorIdPresent: ${diagnosisDiagnostic.diagnostics.ctxKeys.verifiedActorIdPresent}`);
+        console.log(`     verifiedWorkspaceIdPresent: ${diagnosisDiagnostic.diagnostics.ctxKeys.verifiedWorkspaceIdPresent}`);
+        console.log(`     requestPresent: ${diagnosisDiagnostic.diagnostics.ctxKeys.requestPresent}`);
+        console.log(`     sessionPresent: ${diagnosisDiagnostic.diagnostics.ctxKeys.sessionPresent}`);
+
+        console.log("\n   Workspace ID Source:");
+        console.log(`     verifiedWorkspaceIdPresent: ${diagnosisDiagnostic.diagnostics.workspaceIdSource.verifiedWorkspaceIdPresent}`);
+        console.log(`     verifiedWorkspaceIdValue: ${diagnosisDiagnostic.diagnostics.workspaceIdSource.verifiedWorkspaceIdValue}`);
+
+        console.log("\n   Actor ID Source:");
+        console.log(`     verifiedActorIdPresent: ${diagnosisDiagnostic.diagnostics.actorIdSource.verifiedActorIdPresent}`);
+        console.log(`     verifiedActorIdValue: ${diagnosisDiagnostic.diagnostics.actorIdSource.verifiedActorIdValue}`);
+
+        console.log("\n   Service Input Context:");
+        console.log(`     willReceiveWorkspaceId: ${diagnosisDiagnostic.diagnostics.diagnosisServiceInputContext.willReceiveWorkspaceId}`);
+        console.log(`     workspaceIdValueWillBePassed: ${diagnosisDiagnostic.diagnostics.diagnosisServiceInputContext.workspaceIdValueWillBePassed}`);
+
+        console.log("\n   Error Details:");
+        console.log(`     errorName: ${diagnosisDiagnostic.diagnostics.errorDetails.errorName}`);
+        console.log(`     safeErrorMessage: ${diagnosisDiagnostic.diagnostics.errorDetails.safeErrorMessage}`);
+      }
+
       process.exit(1);
     }
 
