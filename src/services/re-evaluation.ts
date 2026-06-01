@@ -201,7 +201,7 @@ async function evaluateBusinessConditionImpact(engagementId: string, workspaceId
   const kpis = await db.kPI.findMany({
     where: {
       engagementId,
-      workspaceId,
+      engagement: { workspaceId },
     },
     select: { target: true, currentValue: true, direction: true },
   });

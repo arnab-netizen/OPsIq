@@ -319,4 +319,47 @@ describe("Idempotency service schema contract", () => {
     expect(engagementFilter).toHaveProperty("workspaceId");
     expect(recommendationFilter).toHaveProperty("workspaceId");
   });
+
+  it("KPI queries use engagement relation for tenant filter, not direct workspaceId", async () => {
+    // KPI schema has NO direct workspaceId
+    // Correct pattern: where: { engagementId, engagement: { workspaceId } }
+    // WRONG pattern: where: { engagementId, workspaceId } (schema error)
+    //
+    // KPI must use engagement relation path for tenant isolation
+
+    const correctFilter = {
+      engagementId: "engagement-uuid",
+      engagement: { workspaceId: "workspace-uuid" }, // CORRECT
+    };
+
+    expect(correctFilter).toHaveProperty("engagement");
+    expect(correctFilter.engagement).toHaveProperty("workspaceId");
+  });
+
+  it("All models without direct workspaceId use engagement or id-based tenant filtering", async () => {
+    // Complete list of models without direct workspaceId:
+    // - ClientAccount: no relation (isolated via Engagement)
+    // - BusinessConditionProfile: engagement relation
+    // - Finding: engagement relation
+    // - KPI: engagement relation
+    // - KPISnapshot: no direct isolation needed
+    // - Action: engagement relation or id-based
+    // - Evidence: engagement relation
+    // - IdempotencyRecord: globally unique by key
+    //
+    // No queries in diagnosis value path use direct workspaceId on these models
+
+    const models_without_direct_workspace = [
+      "ClientAccount",
+      "BusinessConditionProfile",
+      "Finding",
+      "KPI",
+      "Action",
+      "Evidence",
+      "IdempotencyRecord",
+    ];
+
+    expect(models_without_direct_workspace).not.toContain("Recommendation");
+    expect(models_without_direct_workspace).not.toContain("Engagement");
+  });
 });

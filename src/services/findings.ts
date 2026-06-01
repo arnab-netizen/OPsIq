@@ -194,7 +194,7 @@ export async function updateFinding(
   data.version = existing.version + 1;
 
   const updated = await db.finding.update({
-    where: { id: findingId, workspaceId: auth.verifiedWorkspaceId },
+    where: { id: findingId },
     data,
     select: { id: true, engagementId: true },
   });

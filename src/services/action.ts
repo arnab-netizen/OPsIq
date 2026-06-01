@@ -268,7 +268,7 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
   await assertEngagementAccess(userId, engagementId, workspaceId);
 
   return db.action.findMany({
-    where: { engagementId, workspaceId },
+    where: { engagementId, engagement: { workspaceId } },
     orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
   });
 }
@@ -282,7 +282,7 @@ export async function updateActionStatus(
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const action = await db.action.findUnique({
-    where: { id: actionId, workspaceId: validatedWorkspaceId },
+    where: { id: actionId },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -420,7 +420,7 @@ export async function detectOverdueActions(engagementId: string, authContext: Ca
     if (action.priority !== "critical") {
       const newPriority = action.priority === "high" ? "critical" : "high";
       await db.action.update({
-        where: { id: action.id, workspaceId },
+        where: { id: action.id },
         data: {
           priority: newPriority,
           version: { increment: 1 },
@@ -471,7 +471,7 @@ export async function getActionById(actionId: string, workspaceId: string) {
   enforceWorkspaceId(workspaceId, "getActionById", "action");
 
   const action = await db.action.findUnique({
-    where: { id: actionId, workspaceId },
+    where: { id: actionId },
   });
   if (!action) throw new NotFoundError("Action", actionId);
   return action;
@@ -486,7 +486,7 @@ export async function updateAction(
   const [actorId, validatedWorkspaceId] = requireServiceContext(authContext, workspaceId);
 
   const action = await db.action.findUnique({
-    where: { id: actionId, workspaceId: validatedWorkspaceId },
+    where: { id: actionId },
   });
   if (!action) throw new NotFoundError("Action", actionId);
 
@@ -537,8 +537,15 @@ export async function updateAction(
 export async function listActions(workspaceId: string, params: any) {
   enforceWorkspaceId(workspaceId, "listActions", "action");
 
-  const where: any = { workspaceId };
-  if (params.engagementId) where.engagementId = params.engagementId;
+  const where: any = {};
+  if (params.engagementId) {
+    where.engagementId = params.engagementId;
+    where.engagement = { workspaceId };
+  } else {
+    // If no engagementId, action model has no way to filter by workspaceId directly
+    // This requires the caller to provide engagementId for workspace scoping
+    throw new ValidationError("engagementId is required to list actions");
+  }
   if (params.status) where.status = params.status;
   if (params.assignedTo) where.owner = params.assignedTo;
 
