@@ -11,6 +11,7 @@
  * FAIL FAST on any reentry attempt.
  */
 
+import { AsyncLocalStorage } from "async_hooks";
 import { CanonicalExecutionTraceManager } from "@/lib/canonical-execution-trace";
 
 export type ReentryClassification =
@@ -28,10 +29,20 @@ interface ExecutionContext {
 }
 
 /**
- * Thread-local execution context stack.
- * Detects nested wrapper attempts.
+ * Async-local execution context stack.
+ * Each request gets its own isolated stack, preventing concurrency issues.
+ * Detects nested wrapper attempts within a single request.
  */
-const executionStack: ExecutionContext[] = [];
+const executionStackALS = new AsyncLocalStorage<ExecutionContext[]>();
+
+function getExecutionStack(): ExecutionContext[] {
+  let stack = executionStackALS.getStore();
+  if (!stack) {
+    stack = [];
+    executionStackALS.enterWith(stack);
+  }
+  return stack;
+}
 
 /**
  * Classify execution attempt
@@ -41,9 +52,11 @@ export function classifyExecution(input: {
   correlationId: string;
   requestId: string;
 }): ReentryClassification {
+  const stack = getExecutionStack();
+
   // Check for nested wrapper
-  if (executionStack.length > 0) {
-    const current = executionStack[executionStack.length - 1];
+  if (stack.length > 0) {
+    const current = stack[stack.length - 1];
 
     // Same correlation ID in stack = nested wrapper
     if (current.correlationId === input.correlationId) {
@@ -62,7 +75,7 @@ export function classifyExecution(input: {
   }
 
   // Check for duplicate in entire stack
-  for (const context of executionStack) {
+  for (const context of stack) {
     if (context.traceId === input.traceId) {
       return "DUPLICATE_CONTEXT";
     }
@@ -90,7 +103,8 @@ export function pushExecutionContext(input: {
     );
   }
 
-  executionStack.push({
+  const stack = getExecutionStack();
+  stack.push({
     traceId: input.traceId,
     correlationId: input.correlationId,
     requestId: input.requestId,
@@ -103,11 +117,13 @@ export function pushExecutionContext(input: {
  * Called at wrapper exit
  */
 export function popExecutionContext(traceId: string): void {
-  if (executionStack.length === 0) {
+  const stack = getExecutionStack();
+
+  if (stack.length === 0) {
     throw new Error("EXECUTION STACK UNDERFLOW: No active execution context");
   }
 
-  const popped = executionStack.pop();
+  const popped = stack.pop();
 
   if (popped?.traceId !== traceId) {
     throw new Error(
@@ -120,30 +136,35 @@ export function popExecutionContext(traceId: string): void {
  * Get current execution context
  */
 export function getCurrentExecutionContext(): ExecutionContext | undefined {
-  if (executionStack.length === 0) {
+  const stack = getExecutionStack();
+
+  if (stack.length === 0) {
     return undefined;
   }
 
-  return executionStack[executionStack.length - 1];
+  return stack[stack.length - 1];
 }
 
 /**
  * Verify no active execution contexts
  */
 export function verifyNoActiveContexts(): boolean {
-  return executionStack.length === 0;
+  const stack = getExecutionStack();
+  return stack.length === 0;
 }
 
 /**
  * Get execution stack depth
  */
 export function getExecutionStackDepth(): number {
-  return executionStack.length;
+  const stack = getExecutionStack();
+  return stack.length;
 }
 
 /**
  * Clear execution stack (for testing only)
  */
 export function clearExecutionStack(): void {
-  executionStack.length = 0;
+  const stack = getExecutionStack();
+  stack.length = 0;
 }

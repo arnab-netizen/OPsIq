@@ -1658,4 +1658,110 @@ npm run lint:ratchet: ✓ PASS (changed files lint-clean)
 
 ---
 
-**Ready for production smoke retry** (After main contains c2e63170)
+**Safe to proceed to production smoke** (After fix from Section 16 deployed)
+
+---
+
+## 17. PRODUCTION FAILURE: EXECUTION STACK CONCURRENCY MISMATCH (2026-06-01)
+
+### Deployment Details
+- **Deployed Commit**: f49b216 (includes Section 16 fix)
+- **Smoke Test Run**: Production Diagnosis → Dashboard
+- **Failed Operation**: `POST /api/diagnosis`
+- **Error**: EXECUTION STACK MISMATCH
+
+### Root Cause Analysis
+
+**Failure Condition**:
+```
+POST /api/diagnosis status: 500
+failingOperation: handler_invocation_unknown
+safeMessage: EXECUTION STACK MISMATCH: Expected trace f26b99ac-929f-4f60-9241-5503629e826e, got b3bb9a17-2668-4487-bed7-a3087e0bd820
+```
+
+**Root Cause**: Shared execution stack across concurrent requests
+
+**Code Issue**: `src/lib/execution-reentry-detector.ts` line 34
+```typescript
+// BEFORE (BROKEN - shared across all concurrent requests)
+const executionStack: ExecutionContext[] = [];
+```
+
+The executionStack is a module-level array shared across ALL concurrent requests. In Node.js/Next.js with async/await:
+
+**Concurrency Scenario**:
+1. Request A: `pushExecutionContext({traceId: f26b99ac...})` → stack = [f26b99ac...]
+2. Request B: `pushExecutionContext({traceId: b3bb9a17...})` → stack = [f26b99ac..., b3bb9a17...]
+3. Request A finishes: `popExecutionContext(f26b99ac...)` → expects f26b99ac but pops b3bb9a17
+4. EXECUTION STACK MISMATCH thrown
+5. Request A reports error; Request B's trace remains on shared stack
+6. Next request enters same corrupted state
+
+**Why Missed in Preventive Proof**: Comment said "Thread-local execution context stack" but was not actually thread-local. No AsyncLocalStorage was used.
+
+### Fix Applied
+
+**File Changed**: `src/lib/execution-reentry-detector.ts`
+
+**Root Cause Fix**: Replace module-level array with AsyncLocalStorage
+
+```diff
++import { AsyncLocalStorage } from "async_hooks";
+
+-const executionStack: ExecutionContext[] = [];
++const executionStackALS = new AsyncLocalStorage<ExecutionContext[]>();
+
++function getExecutionStack(): ExecutionContext[] {
++  let stack = executionStackALS.getStore();
++  if (!stack) {
++    stack = [];
++    executionStackALS.enterWith(stack);
++  }
++  return stack;
++}
+```
+
+**Why This Fix is Correct**:
+1. AsyncLocalStorage isolates state per async context (per request in Next.js)
+2. Each request gets its own array instance, no sharing
+3. Concurrency-safe by design (Node.js async context isolation)
+4. No code changes needed in calling code (transparent getter)
+5. All existing functions updated to use `getExecutionStack()` instead of direct array access
+
+**Functions Updated**:
+- `classifyExecution()`: line 55
+- `pushExecutionContext()`: line 106  
+- `popExecutionContext()`: line 120
+- `getCurrentExecutionContext()`: line 139
+- `verifyNoActiveContexts()`: line 152
+- `getExecutionStackDepth()`: line 160
+- `clearExecutionStack()`: line 167
+
+**Validation After Fix**:
+```
+npx tsc --noEmit: ✓ PASS
+npm run build: ✓ PASS
+npm test -- diagnosis-value-path: ✓ PASS (20/20)
+npm test -- action: ✓ PASS (83/83)
+npm test -- idempotency: ✓ PASS (23/23)
+npm test -- canonical-trace-adversarial: ✓ PASS (19/19)
+npm run lint:ratchet: ✓ PASS (changed files lint-clean)
+```
+
+### Why AsyncLocalStorage Works
+
+**AsyncLocalStorage behavior in Next.js**:
+- Each HTTP request gets a unique async context
+- Any AsyncLocalStorage.getStore() within that request returns the same instance
+- Different requests get different instances automatically
+- No explicit request passing or context propagation needed
+- Standard Node.js pattern (async_hooks module)
+
+### Merged to Main
+
+**Commit**: To be committed as "fix: preserve diagnosis canonical execution stack"  
+**Status**: Ready to commit and push
+
+---
+
+**Ready for production smoke retry** (After AsyncLocalStorage fix deployed)
