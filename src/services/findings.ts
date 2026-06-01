@@ -59,7 +59,7 @@ export async function createFinding(
 ): Promise<{ id: string; engagementId: string }> {
   // Map backward compatibility fields
   const summary = input.summary || input.description || input.statement || "";
-  const primaryEvidenceId = input.primaryEvidenceId || (input.linkedEvidenceIds?.[0]) || null;
+  const primaryEvidenceId = input.primaryEvidenceId || (input.linkedEvidenceIds?.[0]);
 
   // Validate engagement exists
   const engagement = await db.engagement.findUnique({
@@ -67,6 +67,13 @@ export async function createFinding(
     select: { id: true },
   });
   if (!engagement) throw new NotFoundError("Engagement", input.engagementId);
+
+  // Validate primaryEvidenceId is provided (required by schema)
+  if (!primaryEvidenceId) {
+    throw new ValidationError(
+      "primaryEvidenceId is required. Evidence must be created before Finding."
+    );
+  }
 
   // Validate severity
   const validSeverities = ["low", "medium", "high", "critical"];
@@ -107,7 +114,7 @@ export async function createFinding(
       engagementId: input.engagementId,
       title: input.title,
       summary: summary,
-      primaryEvidenceId: primaryEvidenceId || "",
+      primaryEvidenceId: primaryEvidenceId,
       impactArea: input.impactArea,
       severity: input.severity,
       rootCause: input.rootCause || null,
