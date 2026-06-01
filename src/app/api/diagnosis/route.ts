@@ -69,7 +69,7 @@ export const POST = withCanonicalEnforcement(
       await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>, workspaceId);
 
       currentOperation = "response_return";
-      return result;
+      return canonicalJson(result, { status: 201 });
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
 
