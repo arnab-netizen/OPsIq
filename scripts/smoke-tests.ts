@@ -12,6 +12,8 @@
 
 import https from "https";
 
+export {};
+
 interface TestResult {
   name: string;
   status: "PASS" | "FAIL" | "WARN";

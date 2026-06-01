@@ -8,6 +8,8 @@
  *   BASE_URL=https://o-ps-iq.vercel.app npx tsx scripts/smoke-production-diagnosis-dashboard.ts
  */
 
+export {};
+
 const baseUrl = process.env.BASE_URL || "https://o-ps-iq.vercel.app";
 const timestamp = Date.now();
 const testEmail = `opsiq-smoke+${timestamp}@example.com`;
