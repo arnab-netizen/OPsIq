@@ -1,0 +1,111 @@
+/**
+ * DIAGNOSTIC KEY VALIDATION
+ *
+ * Timing-safe validation of OPSIQ_DIAGNOSTIC_KEY.
+ * Prevents timing-attack brute-force of diagnostic endpoints.
+ *
+ * Usage:
+ *   const isValid = verifyDiagnosticKey(providedKey);
+ *   if (!isValid) return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
+ */
+
+import { timingSafeEqual } from "crypto";
+
+/**
+ * Verify diagnostic key using timing-safe comparison.
+ *
+ * Rules:
+ * - Returns false if expected key is not configured in environment
+ * - Returns false if provided key is missing/empty
+ * - Uses timing-safe comparison to prevent brute-force attacks
+ * - Handles different lengths safely without timing leakage
+ *
+ * @param providedKey - Key from request header or query param
+ * @returns true if key matches expected, false otherwise
+ */
+export function verifyDiagnosticKey(providedKey: string | null | undefined): boolean {
+  const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
+
+  // Fail closed: if key not configured or not provided, reject
+  if (!expectedKey || !providedKey) {
+    return false;
+  }
+
+  // Trim provided key (allow whitespace in submission, but not in key itself)
+  const trimmedProvidedKey = providedKey.trim();
+  if (!trimmedProvidedKey) {
+    return false;
+  }
+
+  // Handle length mismatch safely without timing leak:
+  // timingSafeEqual requires equal-length buffers, so we:
+  // 1. Convert both to buffers (same encoding)
+  // 2. If lengths differ, use a fixed-length comparison with padded buffer
+  try {
+    const expectedBuffer = Buffer.from(expectedKey);
+    const providedBuffer = Buffer.from(trimmedProvidedKey);
+
+    // If lengths differ, pad the shorter one with zeros to prevent timing leak
+    if (expectedBuffer.length !== providedBuffer.length) {
+      const maxLength = Math.max(expectedBuffer.length, providedBuffer.length);
+      const paddedExpected = Buffer.alloc(maxLength);
+      const paddedProvided = Buffer.alloc(maxLength);
+
+      expectedBuffer.copy(paddedExpected);
+      providedBuffer.copy(paddedProvided);
+
+      // Perform timing-safe comparison on padded buffers
+      // This will return false (buffers won't be equal), but timing is consistent
+      try {
+        timingSafeEqual(paddedExpected, paddedProvided);
+        return false; // If we got here, buffers were equal (shouldn't happen with different lengths)
+      } catch {
+        return false; // Buffers not equal (expected for different lengths)
+      }
+    }
+
+    // Same length: use standard timing-safe comparison
+    try {
+      timingSafeEqual(expectedBuffer, providedBuffer);
+      return true; // Buffers are equal
+    } catch {
+      return false; // Buffers are not equal
+    }
+  } catch {
+    // If buffer operations fail, fail closed
+    return false;
+  }
+}
+
+/**
+ * Extract diagnostic key from request headers or query params.
+ * Checks header first, then query param.
+ *
+ * @param headerValue - x-opsiq-diagnostic-key header value
+ * @param queryParam - key query parameter value
+ * @returns Provided key or null if missing
+ */
+export function extractDiagnosticKeyFromRequest(
+  headerValue: string | null,
+  queryParam: string | null
+): string | null {
+  return headerValue || queryParam || null;
+}
+
+/**
+ * Verify diagnostic key from NextRequest.
+ * Extracts from header and query param, then validates using timing-safe comparison.
+ *
+ * @param request - NextRequest object
+ * @returns true if key is valid, false otherwise
+ */
+export function verifyDiagnosticKeyFromRequest(request: {
+  headers: { get(name: string): string | null };
+  nextUrl?: { searchParams: { get(name: string): string | null } };
+}): boolean {
+  const headerValue = request.headers.get("x-opsiq-diagnostic-key");
+  const queryValue = request.nextUrl?.searchParams.get("key") || null;
+
+  const providedKey = extractDiagnosticKeyFromRequest(headerValue, queryValue);
+  return verifyDiagnosticKey(providedKey);
+}

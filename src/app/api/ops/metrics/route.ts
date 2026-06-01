@@ -1,14 +1,26 @@
 /**
  * GET /api/ops/metrics
  * Real-time operational metrics in Prometheus-compatible format
+ *
+ * SECURITY: Requires OPSIQ_DIAGNOSTIC_KEY
+ * This endpoint exposes internal metrics and should only be accessible
+ * to operators with the diagnostic key.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getMetrics, getActiveRequests } from "@/infra/structured-logger";
 import { getTraceHistory, getTracesWithError } from "@/infra/request-tracer";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 export async function GET(request: NextRequest) {
+  // Require diagnostic key for operational metrics access
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 404 }
+    );
+  }
   try {
     const metrics = getMetrics();
     const traceHistory = getTraceHistory(100);

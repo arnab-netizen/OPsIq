@@ -11,8 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { extractSafeKnownError } from "@/infra/classified-error";
 import { logger } from "@/infra/logger";
-
-const DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY;
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 // Type narrowing helper: safely cast unknown to string | number | undefined
 function asSafeStringNumber(value: unknown): string | number | undefined {
@@ -33,12 +32,8 @@ interface ProbeResult {
 }
 
 export const GET = async (req: NextRequest) => {
-  // Verify diagnostic key
-  const providedKey =
-    req.headers.get("x-opsiq-diagnostic-key") ||
-    new URL(req.url).searchParams.get("key");
-
-  if (!DIAGNOSTIC_KEY || !providedKey || providedKey !== DIAGNOSTIC_KEY) {
+  // Verify diagnostic key using timing-safe comparison
+  if (!verifyDiagnosticKeyFromRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 404 });
   }
 

@@ -1,13 +1,25 @@
 /**
  * GET /api/ops/readiness
  * Readiness state history and current status
+ *
+ * SECURITY: Requires OPSIQ_DIAGNOSTIC_KEY
+ * This endpoint exposes internal readiness state and should only be accessible
+ * to operators with the diagnostic key.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 export async function GET(request: NextRequest) {
+  // Require diagnostic key for readiness status access
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 404 }
+    );
+  }
   try {
     // Get current readiness status
     const startupStatus = await db.startup_status.findFirst({

@@ -1,20 +1,15 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import * as bcrypt from "bcryptjs";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 const DEMO_EMAIL = "operator@demo.local";
 const DEMO_PASSWORD = "demo-password-123";
-const DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY;
 
 export async function GET(request: NextRequest) {
-  // Verify diagnostic key from query param (mobile-friendly)
-  const { searchParams } = new URL(request.url);
-  const queryKey = searchParams.get("key");
-  const headerKey = request.headers.get("x-opsiq-diagnostic-key");
-
-  const providedKey = queryKey || headerKey;
-  if (!DIAGNOSTIC_KEY || providedKey !== DIAGNOSTIC_KEY) {
-    return Response.json({ error: "Unauthorized" }, { status: 403 });
+  // Verify diagnostic key using timing-safe comparison
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return Response.json({ error: "Unauthorized" }, { status: 404 });
   }
 
   try {

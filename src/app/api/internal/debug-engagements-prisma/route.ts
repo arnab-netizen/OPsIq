@@ -11,21 +11,17 @@ import { db } from "@/lib/db";
 import { extractSafePrismaError } from "@/infra/classified-error";
 import { logger } from "@/infra/logger";
 import { listEngagements } from "@/services/engagement";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
-const DIAGNOSTIC_KEY = process.env.OPSIQ_DIAGNOSTIC_KEY;
 const ROUTE_VERSION = "engagements-route-debug-v1";
 const SERVICE_IMPORT_PATH = "@/services/engagement";
 
 export const GET = async (req: NextRequest) => {
-  // Verify diagnostic key
-  const providedKey =
-    req.headers.get("x-diagnostic-key") ||
-    new URL(req.url).searchParams.get("diagnostic_key");
-
-  if (!DIAGNOSTIC_KEY || !providedKey || providedKey !== DIAGNOSTIC_KEY) {
+  // Verify diagnostic key using timing-safe comparison
+  if (!verifyDiagnosticKeyFromRequest(req)) {
     return NextResponse.json(
-      { error: "Unauthorized: invalid or missing diagnostic key" },
-      { status: 401 }
+      { error: "Unauthorized" },
+      { status: 404 }
     );
   }
 

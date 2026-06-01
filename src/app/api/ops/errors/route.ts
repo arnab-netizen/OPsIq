@@ -1,6 +1,10 @@
 /**
  * GET /api/ops/errors
  * Recent error history with classification
+ *
+ * SECURITY: Requires OPSIQ_DIAGNOSTIC_KEY
+ * This endpoint exposes internal operation metrics and should only be accessible
+ * to operators with the diagnostic key.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -10,8 +14,16 @@ import {
   getSlowRequests,
 } from "@/infra/request-tracer";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 export async function GET(request: NextRequest) {
+  // Require diagnostic key for operational metrics access
+  if (!verifyDiagnosticKeyFromRequest(request)) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 404 }
+    );
+  }
   try {
     const searchParams = request.nextUrl.searchParams;
     const classification = searchParams.get("classification");
