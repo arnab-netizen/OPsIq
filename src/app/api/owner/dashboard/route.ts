@@ -75,16 +75,20 @@ function toOwnerDashboardDTO(data: any) {
   };
 }
 
+function parseOwnerDashboardQuery(searchParams: URLSearchParams) {
+  return querySchema.parse({
+    includeKPIs: searchParams.get("includeKPIs") || undefined,
+    daysOfHistory: searchParams.get("daysOfHistory") || undefined,
+  });
+}
+
 export async function buildOwnerDashboardPayload(
   ctx: CanonicalAuthContext,
   workspaceId: string,
   userId: string
 ) {
   const url = new URL(ctx.request!.url);
-  const queryParams = querySchema.parse({
-    includeKPIs: url.searchParams.get("includeKPIs"),
-    daysOfHistory: url.searchParams.get("daysOfHistory"),
-  });
+  const queryParams = parseOwnerDashboardQuery(url.searchParams);
 
   const context = { workspaceId, userId };
 
