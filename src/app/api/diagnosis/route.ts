@@ -33,42 +33,61 @@ export const POST = withCanonicalEnforcement(
     const expectedDiagnosticKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
     const hasDiagnosticAccess = diagnosticKey && expectedDiagnosticKey && diagnosticKey === expectedDiagnosticKey;
 
-    const idempotencyKey = ctx.request?.headers.get("idempotency-key");
-    if (!idempotencyKey) {
-      throw new UnauthorizedError("idempotency-key header required");
-    }
-
-    const body = await parseRequestBody(ctx.request!, diagnosisSchema);
-
-    // Check idempotency with verified workspace and actor context
-    const idempotencyCheck = await checkIdempotencyKey({
-      idempotencyKey,
-      operationName: "diagnoseBusiness",
-      actorId: ctx.verifiedActorId,
-      workspaceId: ctx.verifiedWorkspaceId,
-      payload: body,
-    });
-
-    if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
-      return idempotencyCheck.cachedResponse.body;
-    }
+    let currentOperation = "parse_request";
+    let body: any = {};
 
     try {
+      const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+      if (!idempotencyKey) {
+        throw new UnauthorizedError("idempotency-key header required");
+      }
+
+      body = await parseRequestBody(ctx.request!, diagnosisSchema);
+
+      // Check idempotency with verified workspace and actor context
+      currentOperation = "idempotency_check";
+      const idempotencyCheck = await checkIdempotencyKey({
+        idempotencyKey,
+        operationName: "diagnoseBusiness",
+        actorId: ctx.verifiedActorId,
+        workspaceId: ctx.verifiedWorkspaceId,
+        payload: body,
+      });
+
+      if (!idempotencyCheck.isNew && idempotencyCheck.cachedResponse) {
+        return idempotencyCheck.cachedResponse.body;
+      }
+
+      currentOperation = "validateBusinessProblem";
       validateBusinessProblem(body);
+
+      currentOperation = "diagnoseBusiness";
       const result = await diagnoseBusiness(body, ctx, workspaceId);
+
+      currentOperation = "idempotency_record_success";
       await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>, workspaceId);
+
+      currentOperation = "response_return";
       return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err, workspaceId);
 
-      // Build error response
+      // Always include full error message (sanitize secrets if needed)
+      const fullMessage = err.message;
+      const sanitizedMessage = fullMessage
+        .replace(/postgres:\/\/[^\s]+/g, "postgres://***")
+        .replace(/password[=:]\S+/gi, "password=***")
+        .replace(/token[=:]\S+/gi, "token=***")
+        .replace(/key[=:]\S+/gi, "key=***");
+
+      // Build error response with guaranteed safeMessage
       const errorResponse: any = {
         error: "Diagnosis request failed",
         stage: "handler_invocation",
         classification: "diagnosis_handler_failed",
         errorName: err.name,
-        safeMessage: err.message,
+        failingOperation: currentOperation,
+        safeMessage: sanitizedMessage || "(empty error message)",
       };
 
       // Extract Prisma-specific details if available
@@ -81,6 +100,22 @@ export const POST = withCanonicalEnforcement(
       }
       if (errorObj.clientVersion) {
         errorResponse.prismaClientVersion = errorObj.clientVersion;
+      }
+
+      // Try to record idempotency error, but don't let it block error response
+      const idempotencyKey = ctx.request?.headers.get("idempotency-key");
+      if (idempotencyKey) {
+        try {
+          currentOperation = "idempotency_record_error";
+          await recordIdempotencyError(idempotencyKey, err, workspaceId);
+        } catch (idempotencyError) {
+          // Log but don't throw - user should see the primary error, not idempotency infrastructure failure
+          const idempotencyErr = idempotencyError instanceof Error ? idempotencyError : new Error(String(idempotencyError));
+          errorResponse.idempotencyRecordingFailed = {
+            errorName: idempotencyErr.name,
+            errorMessage: idempotencyErr.message.substring(0, 200),
+          };
+        }
       }
 
       // If diagnostic key is valid, include detailed diagnostic fields
@@ -119,10 +154,12 @@ export const POST = withCanonicalEnforcement(
           },
           errorDetails: {
             errorName: err.name,
-            errorMessage: err.message,
+            errorMessage: fullMessage,
+            sanitizedMessage: sanitizedMessage,
             prismaCode: errorObj.code || null,
             prismaClientVersion: errorObj.clientVersion || null,
             prismaMeta: errorObj.meta || null,
+            failingOperation: currentOperation,
           },
         };
       }

@@ -227,9 +227,17 @@ async function smokeTest(): Promise<void> {
         if (diagnosisDiagnostic.classification) console.log(`   classification: ${diagnosisDiagnostic.classification}`);
         if (diagnosisDiagnostic.stage) console.log(`   stage: ${diagnosisDiagnostic.stage}`);
         if (diagnosisDiagnostic.errorName) console.log(`   errorName: ${diagnosisDiagnostic.errorName}`);
-        if (diagnosisDiagnostic.safeMessage) console.log(`   safeMessage: ${diagnosisDiagnostic.safeMessage}`);
+        if (diagnosisDiagnostic.failingOperation) console.log(`   failingOperation: ${diagnosisDiagnostic.failingOperation}`);
         if (diagnosisDiagnostic.prismaCode) console.log(`   prismaCode: ${diagnosisDiagnostic.prismaCode}`);
         if (diagnosisDiagnostic.prismaClientVersion) console.log(`   prismaClientVersion: ${diagnosisDiagnostic.prismaClientVersion}`);
+
+        // CRITICAL: Check for missing safeMessage
+        if (!diagnosisDiagnostic.safeMessage) {
+          console.log(`   ⚠️  DIAGNOSTIC_INCOMPLETE_SAFE_MESSAGE_MISSING`);
+        } else {
+          console.log(`   safeMessage: ${diagnosisDiagnostic.safeMessage}`);
+        }
+
         if (diagnosisDiagnostic.prismaMeta) console.log(`   prismaMeta: ${JSON.stringify(diagnosisDiagnostic.prismaMeta).substring(0, 200)}`);
 
         if (diagnosisDiagnostic.diagnostics) {
