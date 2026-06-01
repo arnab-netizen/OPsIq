@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
 import { ValidationError } from "@/infra/errors";
 import crypto from "crypto";
+import { randomUUID } from "crypto";
 import { classifyOperatorError } from "@/lib/operator-error-governance";
 
 export interface IdempotencyOptions {
@@ -66,6 +67,7 @@ export async function checkIdempotencyKey(
       try {
         await db.idempotencyRecord.create({
           data: {
+            id: randomUUID(),
             idempotencyKey,
             operationName,
             payload: payloadHash,
@@ -129,6 +131,7 @@ export async function checkIdempotencyKey(
   try {
     await db.idempotencyRecord.create({
       data: {
+        id: randomUUID(),
         idempotencyKey,
         operationName,
         payload: payloadHash,
