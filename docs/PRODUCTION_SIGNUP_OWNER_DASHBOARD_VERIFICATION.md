@@ -1,10 +1,11 @@
 # Production Signup → Owner Dashboard Value Path: Verification
 
-**Status**: VERIFIED WITH EXISTING SMOKE TEST ✓  
-**Verified Date**: 2026-06-01  
+**Status**: PENDING GITHUB ACTIONS WORKFLOW EXECUTION  
+**Verification Date**: 2026-06-01  
 **Prerequisite**: DIAGNOSIS_TO_DASHBOARD_VALUE_PATH_PRODUCTION_VERIFIED (confirmed)  
 **Base Script**: scripts/smoke-production-signup-dashboard.ts  
-**Test Framework**: TypeScript + Fetch API (Node.js)
+**Test Framework**: TypeScript + Fetch API (Node.js)  
+**Execution Method**: GitHub Actions Workflow (Local environment blocked on /api/internal/build-info access)
 
 ---
 
@@ -151,9 +152,51 @@ The signup-production-signup-dashboard.ts script comprehensively verifies:
 
 ---
 
+## Execution Status
+
+### Local Environment Blocked on Deployment Verification
+
+When running locally:
+```
+GET /api/internal/build-info
+  Status: 403 Forbidden
+  Error: x-deny-reason: host_not_allowed
+  Reason: Production Vercel deployment restricts /api/internal routes to allowlisted hosts
+```
+
+This is NOT a product issue - it's expected security behavior for a production deployment.
+
+### GitHub Actions Workflow Execution Required
+
+The smoke test must be run via GitHub Actions workflow which has authorized access to the production Vercel deployment:
+
+**Workflow File**: `.github/workflows/smoke-production-signup-dashboard.yml`  
+**Trigger Type**: `workflow_dispatch` (manual trigger available)  
+**Branch**: main  
+**Environment**: ubuntu-latest with Node.js 20
+
+**To Execute**:
+1. Go to GitHub Actions tab in arnab-netizen/OPsIq repository
+2. Select "Production Signup Dashboard Smoke Test" workflow
+3. Click "Run workflow"
+4. Branch: main (default)
+5. Base URL: https://o-ps-iq.vercel.app (default)
+6. Click green "Run workflow" button
+7. Wait for completion (typically 2-5 minutes)
+
+**Workflow Steps** (what GitHub Actions will execute):
+1. Verify deployment commit matches main branch
+2. Run smoke test script: `npx tsx scripts/smoke-production-signup-dashboard.ts`
+3. Report signup status (user/workspace creation)
+4. Report dashboard status (200 + real data validation)
+5. Validate no mock/fallback data
+6. Exit with code 0 (success) or 1 (failure)
+
+---
+
 ## Decision
 
-### ✅ SIGNUP_TO_OWNER_DASHBOARD_VALUE_PATH_VERIFIED
+### ⏳ BLOCKED_WITH_MANUAL_WORKFLOW_TRIGGER_REQUIRED
 
 **Evidence**:
 - Existing smoke test: scripts/smoke-production-signup-dashboard.ts
@@ -183,5 +226,7 @@ The signup-production-signup-dashboard.ts script comprehensively verifies:
 
 **Closure Date**: 2026-06-01  
 **Prerequisite Met**: DIAGNOSIS_TO_DASHBOARD_VALUE_PATH_PRODUCTION_VERIFIED  
-**Status**: VERIFIED ✓  
-**Next**: Monitor for regressions; smoke test is part of production deployment workflow
+**Status**: PENDING GITHUB ACTIONS WORKFLOW EXECUTION  
+**Blocking Reason**: Local environment blocked on /api/internal/build-info (403 host_not_allowed)  
+**Resolution Path**: Manual trigger of GitHub Actions workflow from GitHub  
+**Next**: Execute workflow; verify production smoke output confirms signup and dashboard work
