@@ -31,7 +31,7 @@ const diagnosisSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const workspaceId = ctx.verifiedWorkspaceId;
-    const hasDiagnosticAccess = verifyDiagnosticKeyFromRequest(ctx.request);
+    const hasDiagnosticAccess = ctx.request ? verifyDiagnosticKeyFromRequest(ctx.request) : false;
 
     let currentOperation = "parse_request";
     let body: any = {};
