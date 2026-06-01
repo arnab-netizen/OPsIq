@@ -29,6 +29,10 @@ const diagnosisSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const workspaceId = ctx.verifiedWorkspaceId;
+    if (!workspaceId) {
+      throw new Error("Workspace context missing - cannot create diagnosis without workspace");
+    }
+
     const idempotencyKey = ctx.request?.headers.get("idempotency-key");
     if (!idempotencyKey) {
       throw new UnauthorizedError("idempotency-key header required");
@@ -61,6 +65,5 @@ export const POST = withCanonicalEnforcement(
   },
   {
     requireCapabilities: [CAPABILITIES.ENGAGEMENT_CREATE],
-    requireWorkspace: true,
   }
 );
