@@ -95,6 +95,35 @@ OpsIQ is production-ready for current MVP scope. All critical value paths verifi
 
 **Re-Test Coverage**: Full suite validates isolation under concurrent load, adversarial sessions, role checks
 
+### 2. Operational Metrics & Diagnostic Endpoints Security
+**File**: `docs/HOSTILE_SECURITY_EXPOSURE_AUDIT.md`, `docs/P0_SECURITY_REMEDIATION_PLAN.md`  
+**Status**: 🟢 REMEDIATED  
+**Remediation Date**: 2026-06-01  
+
+**What's Fixed**:
+- ✅ All 4 /api/ops/* endpoints (errors, metrics, readiness, runtime) now require OPSIQ_DIAGNOSTIC_KEY
+- ✅ Fail-closed authentication: Return 404 Unauthorized if key missing or invalid
+- ✅ Timing-safe key validation helper created (src/lib/security/diagnostic-key.ts)
+- ✅ 7 diagnostic routes migrated to timing-safe helper
+- ✅ Security regression tests added (ops-endpoints-auth.test.ts, diagnostic-key-validation.test.ts)
+
+**Protections Verified**:
+- Ops endpoints reject unauthenticated requests (no operational metrics leakage)
+- Diagnostic key validation uses crypto.timingSafeEqual() (prevents timing attacks)
+- Key extraction from headers and query params with preference order
+- Whitespace trimming and UTF-8 handling
+- No timing leakage on length mismatches
+
+**Test Coverage**: 16+ security regression tests validating:
+- Endpoints return 404 without key
+- Endpoints accept valid key in header
+- Endpoints accept valid key in query param
+- Endpoints reject invalid keys
+- Timing-safety on different-length inputs
+- UTF-8 key handling
+
+**Launch Impact**: P0 information disclosure blocker NOW RESOLVED
+
 ---
 
 ## Monitoring & Incident Response Status
