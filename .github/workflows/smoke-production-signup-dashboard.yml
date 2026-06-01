@@ -7,6 +7,9 @@ on:
         description: "Base URL to test (default: production)"
         required: false
         default: "https://o-ps-iq.vercel.app"
+  schedule:
+    # Daily at 2:15 AM UTC (staggered from diagnosis smoke)
+    - cron: "15 2 * * *"
 
 jobs:
   smoke-test:
@@ -80,6 +83,26 @@ jobs:
       - name: Test failed
         if: failure()
         run: |
-          echo "❌ Production smoke test failed"
-          echo "   Check logs above for details"
+          echo "❌ Production smoke test FAILED"
+          echo ""
+          echo "Smoke Test: Signup → Owner Dashboard"
+          echo "Base URL: ${{ inputs.base_url || 'https://o-ps-iq.vercel.app' }}"
+          echo "Target Commit: ${{ steps.commit.outputs.sha }}"
+          echo ""
+          echo "What this means:"
+          echo "  The signup → owner dashboard production value path is broken."
+          echo "  Users cannot signup or see their dashboard."
+          echo ""
+          echo "Check logs above for details. Likely causes:"
+          echo "  1. Vercel deployment failed or rolled back"
+          echo "  2. Authentication flow regression"
+          echo "  3. Session/cookie handling broken"
+          echo "  4. Workspace isolation regression"
+          echo "  5. Database connectivity issue"
+          echo ""
+          echo "Escalation:"
+          echo "  1. Check Vercel deployment status at https://vercel.com"
+          echo "  2. Review database health"
+          echo "  3. Check recent commits for breaking changes"
+          echo "  4. Run local test suite: npm test -- auth workspace owner-dashboard"
           exit 1
