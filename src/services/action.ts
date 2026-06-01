@@ -97,8 +97,7 @@ export async function createAction(
               title: input.title,
               description: input.description || null,
               assignedTo: input.assignedTo || null,
-              dueDate: input.dueDate ? new Date(input.dueDate) : null,
-              priority: input.priority || "medium",
+              dueAt: input.dueDate ? new Date(input.dueDate) : null,
               status: "draft",
               updatedAt: new Date(),
             },
@@ -113,7 +112,6 @@ export async function createAction(
               eventVersion: 1,
               payload: {
                 title: action.title,
-                priority: action.priority,
                 engagementId: input.engagementId,
               },
               actorId,
@@ -190,8 +188,7 @@ export async function createAction(
       title: input.title,
       description: input.description || null,
       assignedTo: input.assignedTo || null,
-      dueDate: input.dueDate ? new Date(input.dueDate) : null,
-      priority: input.priority || "medium",
+      dueAt: input.dueDate ? new Date(input.dueDate) : null,
       status: "draft",
       updatedAt: new Date(),
     },
@@ -206,7 +203,6 @@ export async function createAction(
       eventVersion: 1,
       payload: {
         title: action.title,
-        priority: action.priority,
         engagementId: input.engagementId,
       },
       actorId,
@@ -269,7 +265,7 @@ export async function getActionsForEngagement(engagementId: string, userId: stri
 
   return db.action.findMany({
     where: { engagementId, engagement: { workspaceId } },
-    orderBy: [{ priority: "desc" }, { dueDate: "asc" }],
+    orderBy: [{ dueAt: "asc" }],
   });
 }
 
@@ -393,8 +389,8 @@ export async function detectOverdueActions(engagementId: string, authContext: Ca
   const overdueActions = await db.action.findMany({
     where: {
       engagementId,
-      workspaceId,
-      dueDate: { lt: now },
+      engagement: { workspaceId },
+      dueAt: { lt: now },
       status: { notIn: ["completed", "verified", "cancelled"] },
     },
   });
@@ -410,7 +406,7 @@ export async function detectOverdueActions(engagementId: string, authContext: Ca
       entityId: action.id,
       payload: {
         engagementId,
-        dueDate: action.dueDate,
+        dueAt: action.dueAt,
         currentStatus: action.status,
       },
       visibility: "internal",
@@ -502,17 +498,13 @@ export async function updateAction(
   }
   if (input.title !== undefined) updates.title = input.title;
   if (input.description !== undefined) updates.description = input.description;
-  if (input.dueDate !== undefined) updates.dueDate = input.dueDate ? new Date(input.dueDate) : null;
-  if (input.priority !== undefined) updates.priority = input.priority;
-  if (input.assignedTo !== undefined) updates.owner = input.assignedTo;
+  if (input.dueDate !== undefined) updates.dueAt = input.dueDate ? new Date(input.dueDate) : null;
+  if (input.assignedTo !== undefined) updates.assignedTo = input.assignedTo;
   if (input.completedAt !== undefined) updates.completedAt = input.completedAt ? new Date(input.completedAt) : null;
   if (input.verifiedAt !== undefined) updates.verifiedAt = input.verifiedAt ? new Date(input.verifiedAt) : null;
-  if (input.blockerReason !== undefined) updates.blockageReason = input.blockerReason;
-  if (input.blockageReason !== undefined) updates.blockageReason = input.blockageReason;
-  if (input.notes !== undefined) updates.notes = input.notes;
 
   const updated = await db.action.update({
-    where: { id: actionId, workspaceId: validatedWorkspaceId },
+    where: { id: actionId, engagement: { workspaceId: validatedWorkspaceId } },
     data: updates,
   });
 

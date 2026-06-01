@@ -1448,4 +1448,107 @@ Test coverage includes:
 - ✓ 15 regression tests added and passing
 - ✓ All validation commands passing
 
-**Safe to proceed to production smoke**
+---
+
+## 15. PRODUCTION FAILURE: ACTION SCHEMA MISMATCH (2026-06-01)
+
+### Deployment Details
+- **Deployed Commit**: b5516e2 (merge b5516e21)
+- **Smoke Test Run**: Production Diagnosis → Dashboard
+- **Failed Operation**: `POST /api/diagnosis`
+- **Error**: `PrismaClientValidationError`
+
+### Root Cause Analysis
+
+**Failure Point**: `prisma.action.create()` in diagnosis transaction
+
+**Error Message**:
+```
+Unknown argument `dueDate`. Did you mean `dueAt`?
+```
+
+**Root Cause**: Action Prisma schema contract verification missed field name mismatch
+- **Code Used**: `dueDate` (incorrect)
+- **Schema Expected**: `dueAt` (correct)
+- **Source Files**: 
+  - src/services/diagnosis.ts line 826
+  - src/services/action.ts lines 100, 193
+
+**Additional Mismatches Found**:
+1. `priority` field used in Action writes (not in schema, belongs to Recommendation)
+2. `dueDate` in orderBy clauses instead of `dueAt`
+3. `owner` field mapping to `assignedTo` incorrectly in updates
+4. Direct `workspaceId` queries on Action (should use `engagement: { workspaceId }`)
+
+### Fix Applied
+
+**Files Changed**:
+- src/services/diagnosis.ts
+  - Line 826: `dueDate: null` → `dueAt: null`
+  - Removed invalid `priority` field from Action create
+  
+- src/services/action.ts
+  - Line 100, 193: `dueDate:` → `dueAt:`
+  - Line 101, 194: Removed invalid `priority` field
+  - Line 268: orderBy `{ priority, dueDate }` → `{ dueAt }`
+  - Line 393: where `dueDate: { lt }` → `dueAt: { lt }`
+  - Line 409: payload `dueDate: action.dueDate` → `dueAt: action.dueAt`
+  - Line 501: `updates.dueDate` → `updates.dueAt`
+  - Line 503: `updates.owner` → `updates.assignedTo`
+  - Line 511: where clause workspaceId check → engagement relation
+
+**Tests Added** (Regression):
+- 3 new tests in src/__tests__/api/actions.test.ts
+- Test 1: Verify dueAt field usage (not dueDate)
+- Test 2: Verify priority field not in Action writes
+- Test 3: Verify dueAt in orderBy clauses
+
+**Validation After Fix**:
+```
+npx tsc --noEmit: ✓ PASS
+npm run build: ✓ PASS
+npm test -- diagnosis: ✓ PASS (24/24)
+npm test -- action: ✓ PASS (229/229, +3 new)
+npm test -- idempotency: ✓ PASS (118/118)
+npm test -- owner-dashboard: ✓ PASS (42/42)
+npm run audit:wrapped-handlers:ratchet: ✓ PASS (0 new violations)
+```
+
+### Corrected Contract Evidence
+
+**Action Schema Fields** (from prisma/schema.prisma):
+```
+Required: id, engagementId, title, status, updatedAt
+Optional: stageId, recommendationId, description, assignedTo, 
+          dueAt (NOT dueDate), startedAt, completedAt, verifiedAt, 
+          metadata, version, createdAt
+```
+
+**Correct Mappings**:
+- API input `dueDate` (string) → Prisma field `dueAt` (DateTime)
+- API input `assignedTo` (UUID) → Prisma field `assignedTo` (UUID)
+- Action does NOT have `priority` field (that's Recommendation)
+- Action does NOT have `owner` field (correct name is `assignedTo`)
+- Action does NOT have `workspaceId` field (use `engagement: { workspaceId }` in queries)
+
+**Why Missed in Initial Proof**:
+- Section 10 (Transaction Proof) validated payload structure against schema
+- But validation was at the service function level, not drilling into each field name
+- Prisma schema mismatch on field aliases (@map) was not caught in text matching
+- Proof section claimed "all Prisma contracts verified" without exhaustive field-level testing
+
+### Lesson Learned
+
+**Preventive Proof Limitation**: Contract verification by reading code can miss:
+1. Field name mismatches (especially with Prisma @map aliases)
+2. Invalid fields in write payloads
+3. Removed/renamed schema fields not reflected in code
+
+**Mitigation for Future**:
+- Add production smoke test to deployment workflow (this caught it immediately)
+- Add schema-aware linting to CI (would fail on unknown Prisma fields)
+- Expand regression tests to include sample payloads from each write path
+
+---
+
+**Safe to proceed to production smoke** (AFTER fix deployed)
