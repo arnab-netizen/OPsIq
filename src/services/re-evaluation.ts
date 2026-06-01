@@ -175,7 +175,7 @@ function determineReEvaluationTargets(
 
 async function evaluateBusinessConditionImpact(engagementId: string, workspaceId: string) {
   const current = await db.businessConditionProfile.findFirst({
-    where: { engagementId, workspaceId, isCurrent: true },
+    where: { engagementId, engagement: { workspaceId }, isCurrent: true },
   });
 
   if (!current) {
@@ -265,7 +265,7 @@ async function evaluateInterventionModeImpact(engagementId: string, workspaceId:
 
   const factors: string[] = [];
   const condition = await db.businessConditionProfile.findFirst({
-    where: { engagementId, workspaceId, isCurrent: true },
+    where: { engagementId, engagement: { workspaceId }, isCurrent: true },
   });
 
   if (!condition) {
@@ -404,7 +404,7 @@ async function evaluateHealthStatusImpact(
   let recommendedStatus: "healthy" | "at_risk" | "critical" | "unknown" = "healthy";
 
   const condition = await db.businessConditionProfile.findFirst({
-    where: { engagementId, workspaceId, isCurrent: true },
+    where: { engagementId, engagement: { workspaceId }, isCurrent: true },
   });
 
   if (!condition) {
@@ -599,7 +599,7 @@ export async function triggerReEvaluation(event: SignificantChangeEvent): Promis
     });
 
     const condition = await tx.businessConditionProfile.findFirst({
-      where: { engagementId: event.engagementId, isCurrent: true, workspaceId: event.workspaceId },
+      where: { engagementId: event.engagementId, isCurrent: true, engagement: { workspaceId: event.workspaceId } },
       select: { id: true, businessStatus: true },
     });
 

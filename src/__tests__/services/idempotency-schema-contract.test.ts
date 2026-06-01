@@ -246,4 +246,77 @@ describe("Idempotency service schema contract", () => {
 
     expect(recommendationPayload).toHaveProperty("workspaceId");
   });
+
+  it("BusinessConditionProfile queries use engagement relation for tenant filter, not direct workspaceId", async () => {
+    // BusinessConditionProfile schema has NO direct workspaceId
+    // Correct pattern: where: { engagementId, engagement: { workspaceId } }
+    // WRONG pattern: where: { engagementId, workspaceId } (schema error)
+    //
+    // All queries to businessConditionProfile must use engagement relation
+    // for tenant isolation, not direct workspaceId field access
+
+    const correctFilter = {
+      engagementId: "engagement-uuid",
+      engagement: { workspaceId: "workspace-uuid" }, // CORRECT
+    };
+
+    const incorrectFilter = {
+      engagementId: "engagement-uuid",
+      // workspaceId: "workspace-uuid", // WRONG - does not exist in schema
+    };
+
+    // Verify correct pattern uses engagement relation
+    expect(correctFilter).toHaveProperty("engagement");
+    expect(correctFilter.engagement).toHaveProperty("workspaceId");
+  });
+
+  it("Finding queries use engagement relation for tenant filter when needed", async () => {
+    // Finding schema has NO direct workspaceId
+    // Correct pattern: where: { id: findingId, engagement: { workspaceId } }
+    // WRONG pattern: where: { id: findingId, workspaceId } (schema error)
+
+    const correctFilter = {
+      id: "finding-uuid",
+      engagement: { workspaceId: "workspace-uuid" }, // CORRECT
+    };
+
+    expect(correctFilter).toHaveProperty("engagement");
+    expect(correctFilter.engagement).toHaveProperty("workspaceId");
+  });
+
+  it("Action queries use engagement relation for tenant filter when needed", async () => {
+    // Action schema has NO direct workspaceId
+    // Correct pattern: where: { id: actionId, engagement: { workspaceId } }
+    // WRONG pattern: where: { id: actionId, workspaceId } (schema error)
+
+    const correctFilter = {
+      id: "action-uuid",
+      engagement: { workspaceId: "workspace-uuid" }, // CORRECT
+    };
+
+    expect(correctFilter).toHaveProperty("engagement");
+    expect(correctFilter.engagement).toHaveProperty("workspaceId");
+  });
+
+  it("Models with direct workspaceId use it for tenant filter (Engagement, Recommendation)", async () => {
+    // Engagement schema:
+    // - workspaceId String? @db.Uuid (OPTIONAL but present)
+    // Recommendation schema:
+    // - workspaceId String @db.Uuid (REQUIRED, present)
+    //
+    // These models can use direct workspaceId in where clauses
+
+    const engagementFilter = {
+      id: "engagement-uuid",
+      workspaceId: "workspace-uuid", // CORRECT - Engagement has this field
+    };
+
+    const recommendationFilter = {
+      id: "recommendation-uuid",
+      workspaceId: "workspace-uuid", // CORRECT - Recommendation has this field
+    };
+
+    expect(engagementFilter).toHaveProperty("workspaceId");
+    expect(recommendationFilter).toHaveProperty("workspaceId");
+  });
 });

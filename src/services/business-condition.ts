@@ -217,7 +217,7 @@ export async function getConditionHistory(engagementId: string, workspaceId: str
   if (!engagement) throw new NotFoundError("Engagement", engagementId);
 
   return db.businessConditionProfile.findMany({
-    where: { engagementId, workspaceId },
+    where: { engagementId, engagement: { workspaceId } },
     orderBy: { createdAt: "desc" },
   });
 }
@@ -229,7 +229,7 @@ export async function getCurrentCondition(engagementId: string, workspaceId: str
     where: {
       engagementId,
       isCurrent: true,
-      workspaceId,
+      engagement: { workspaceId },
     },
     orderBy: { createdAt: "desc" },
   });

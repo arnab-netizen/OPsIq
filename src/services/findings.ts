@@ -152,7 +152,7 @@ export async function updateFinding(
 ): Promise<{ id: string }> {
   // Validate finding exists and check version
   const existing = await db.finding.findUnique({
-    where: { id: findingId, workspaceId: auth.verifiedWorkspaceId },
+    where: { id: findingId, engagement: { workspaceId: auth.verifiedWorkspaceId } },
     select: { id: true, engagementId: true, version: true },
   });
   if (!existing) throw new NotFoundError("Finding", findingId);
