@@ -61,59 +61,61 @@ export const POST = withCanonicalEnforcement(
       const err = error instanceof Error ? error : new Error("Unknown error");
       await recordIdempotencyError(idempotencyKey, err);
 
-      // If diagnostic key is valid, include safe diagnostic fields in error response
+      // Build error response
+      const errorResponse: any = {
+        error: "Diagnosis request failed",
+        stage: "handler_invocation",
+        classification: "diagnosis_handler_failed",
+        errorName: err.name,
+        safeMessage: err.message,
+      };
+
+      // If diagnostic key is valid, include detailed diagnostic fields
       if (hasDiagnosticAccess) {
-        const diagnosticResponse = {
-          error: "Diagnosis request failed",
-          stage: "handler_invocation",
-          classification: "diagnosis_handler_failed",
-          diagnostics: {
-            routeWrapper: "withCanonicalEnforcement",
-            requireWorkspaceConfigured: false,
-            ctxKeys: {
-              verifiedActorIdPresent: !!ctx.verifiedActorId,
-              verifiedActorType: ctx.verifiedActorType,
-              verifiedWorkspaceIdPresent: !!ctx.verifiedWorkspaceId,
-              verifiedCapabilitiesPresent: !!(ctx.verifiedCapabilities && ctx.verifiedCapabilities.size > 0),
-              requestPresent: !!ctx.request,
-              sessionPresent: !!ctx.session,
-              policyPresent: !!ctx.policy,
-            },
-            workspaceIdSource: {
-              verifiedWorkspaceIdValue: workspaceId ? `${workspaceId.substring(0, 4)}...${workspaceId.substring(workspaceId.length - 4)}` : null,
-              verifiedWorkspaceIdPresent: !!workspaceId,
-              verifiedWorkspaceIdType: workspaceId ? typeof workspaceId : "missing",
-            },
-            actorIdSource: {
-              verifiedActorIdValue: ctx.verifiedActorId ? `${ctx.verifiedActorId.substring(0, 4)}...${ctx.verifiedActorId.substring(ctx.verifiedActorId.length - 4)}` : null,
-              verifiedActorIdPresent: !!ctx.verifiedActorId,
-              verifiedActorIdType: ctx.verifiedActorId ? typeof ctx.verifiedActorId : "missing",
-            },
-            bodyContext: {
-              bodyPresent: !!body,
-              bodyHasWorkspaceId: !!(body && "workspaceId" in body),
-              bodyHasClientAccountId: !!(body && "clientAccountId" in body),
-            },
-            diagnosisServiceInputContext: {
-              willReceiveBody: !!body,
-              willReceiveCtx: !!ctx,
-              willReceiveWorkspaceId: !!workspaceId,
-              workspaceIdValueWillBePassed: workspaceId ? `${workspaceId.substring(0, 4)}...` : null,
-            },
-            errorDetails: {
-              errorName: err.name,
-              errorMessage: err.message,
-              safeErrorMessage: err instanceof Error ? err.message : String(error),
-            },
+        errorResponse.diagnostics = {
+          routeWrapper: "withCanonicalEnforcement",
+          requireWorkspaceConfigured: false,
+          ctxKeys: {
+            verifiedActorIdPresent: !!ctx.verifiedActorId,
+            verifiedActorType: ctx.verifiedActorType,
+            verifiedWorkspaceIdPresent: !!ctx.verifiedWorkspaceId,
+            verifiedCapabilitiesPresent: !!(ctx.verifiedCapabilities && ctx.verifiedCapabilities.size > 0),
+            requestPresent: !!ctx.request,
+            sessionPresent: !!ctx.session,
+            policyPresent: !!ctx.policy,
           },
-        };
-        throw {
-          ...err,
-          diagnosticResponse,
+          workspaceIdSource: {
+            verifiedWorkspaceIdValue: workspaceId ? `${workspaceId.substring(0, 4)}...${workspaceId.substring(workspaceId.length - 4)}` : null,
+            verifiedWorkspaceIdPresent: !!workspaceId,
+            verifiedWorkspaceIdType: workspaceId ? typeof workspaceId : "missing",
+          },
+          actorIdSource: {
+            verifiedActorIdValue: ctx.verifiedActorId ? `${ctx.verifiedActorId.substring(0, 4)}...${ctx.verifiedActorId.substring(ctx.verifiedActorId.length - 4)}` : null,
+            verifiedActorIdPresent: !!ctx.verifiedActorId,
+            verifiedActorIdType: ctx.verifiedActorId ? typeof ctx.verifiedActorId : "missing",
+          },
+          bodyContext: {
+            bodyPresent: !!body,
+            bodyHasWorkspaceId: !!(body && "workspaceId" in body),
+          },
+          diagnosisServiceInputContext: {
+            willReceiveBody: !!body,
+            willReceiveCtx: !!ctx,
+            willReceiveWorkspaceId: !!workspaceId,
+            workspaceIdValueWillBePassed: workspaceId ? `${workspaceId.substring(0, 4)}...` : null,
+          },
+          errorDetails: {
+            errorName: err.name,
+            errorMessage: err.message,
+          },
         };
       }
 
-      throw error;
+      // Return error response with 500 status
+      return {
+        status: 500,
+        body: errorResponse,
+      };
     }
   },
   {

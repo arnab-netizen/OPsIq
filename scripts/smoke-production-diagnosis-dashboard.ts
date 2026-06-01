@@ -133,7 +133,11 @@ async function smokeTest(): Promise<void> {
     };
     if (diagnosticKey) {
       diagnosisHeaders["x-opsiq-diagnostic-key"] = diagnosticKey;
+      console.log("   ✓ Diagnostic key included in request");
+    } else {
+      console.log("   ⚠️  No diagnostic key in request");
     }
+
     const diagnosisResponse = await fetch(`${baseUrl}/api/diagnosis`, {
       method: "POST",
       headers: diagnosisHeaders,
@@ -154,41 +158,86 @@ async function smokeTest(): Promise<void> {
     if (diagnosisStatus !== 201) {
       console.log("❌ DIAGNOSIS_FAILED");
 
-      // Try to parse diagnostic response
-      let diagnosisDiagnostic: any = null;
+      // Always print raw response
+      let responseText = "";
       try {
-        diagnosisDiagnostic = await diagnosisResponse.json();
-      } catch {
-        const diagnosisText = await diagnosisResponse.text();
-        console.log(`   Response: ${diagnosisText.substring(0, 200)}`);
+        responseText = await diagnosisResponse.text();
+      } catch (e) {
+        responseText = "(failed to read response text)";
       }
 
-      if (diagnosisDiagnostic && diagnosisDiagnostic.diagnostics) {
-        console.log("\n📋 DIAGNOSIS ROUTE DIAGNOSTIC OUTPUT:");
-        console.log(`   routeWrapper: ${diagnosisDiagnostic.diagnostics.routeWrapper}`);
-        console.log(`   requireWorkspaceConfigured: ${diagnosisDiagnostic.diagnostics.requireWorkspaceConfigured}`);
+      if (!responseText || responseText.length === 0) {
+        console.log("   EMPTY_RESPONSE_BODY");
+      } else {
+        console.log(`   Raw response: ${responseText.substring(0, 500)}`);
+      }
 
-        console.log("\n   Context Keys:");
-        console.log(`     verifiedActorIdPresent: ${diagnosisDiagnostic.diagnostics.ctxKeys.verifiedActorIdPresent}`);
-        console.log(`     verifiedWorkspaceIdPresent: ${diagnosisDiagnostic.diagnostics.ctxKeys.verifiedWorkspaceIdPresent}`);
-        console.log(`     requestPresent: ${diagnosisDiagnostic.diagnostics.ctxKeys.requestPresent}`);
-        console.log(`     sessionPresent: ${diagnosisDiagnostic.diagnostics.ctxKeys.sessionPresent}`);
+      // Try to parse as JSON and extract diagnostic fields
+      let diagnosisDiagnostic: any = null;
+      if (responseText) {
+        try {
+          diagnosisDiagnostic = JSON.parse(responseText);
+        } catch (e) {
+          console.log(`   (Not valid JSON: ${String(e).substring(0, 100)})`);
+        }
+      }
 
-        console.log("\n   Workspace ID Source:");
-        console.log(`     verifiedWorkspaceIdPresent: ${diagnosisDiagnostic.diagnostics.workspaceIdSource.verifiedWorkspaceIdPresent}`);
-        console.log(`     verifiedWorkspaceIdValue: ${diagnosisDiagnostic.diagnostics.workspaceIdSource.verifiedWorkspaceIdValue}`);
+      if (diagnosisDiagnostic) {
+        console.log("\n📋 DIAGNOSIS FAILURE DETAILS:");
+        console.log(`   status: ${diagnosisStatus}`);
 
-        console.log("\n   Actor ID Source:");
-        console.log(`     verifiedActorIdPresent: ${diagnosisDiagnostic.diagnostics.actorIdSource.verifiedActorIdPresent}`);
-        console.log(`     verifiedActorIdValue: ${diagnosisDiagnostic.diagnostics.actorIdSource.verifiedActorIdValue}`);
+        if (diagnosisDiagnostic.error) console.log(`   error: ${diagnosisDiagnostic.error}`);
+        if (diagnosisDiagnostic.correlationId) console.log(`   correlationId: ${diagnosisDiagnostic.correlationId}`);
+        if (diagnosisDiagnostic.classification) console.log(`   classification: ${diagnosisDiagnostic.classification}`);
+        if (diagnosisDiagnostic.stage) console.log(`   stage: ${diagnosisDiagnostic.stage}`);
+        if (diagnosisDiagnostic.errorName) console.log(`   errorName: ${diagnosisDiagnostic.errorName}`);
+        if (diagnosisDiagnostic.safeMessage) console.log(`   safeMessage: ${diagnosisDiagnostic.safeMessage}`);
 
-        console.log("\n   Service Input Context:");
-        console.log(`     willReceiveWorkspaceId: ${diagnosisDiagnostic.diagnostics.diagnosisServiceInputContext.willReceiveWorkspaceId}`);
-        console.log(`     workspaceIdValueWillBePassed: ${diagnosisDiagnostic.diagnostics.diagnosisServiceInputContext.workspaceIdValueWillBePassed}`);
+        if (diagnosisDiagnostic.diagnostics) {
+          console.log("\n📋 ROUTE DIAGNOSTICS:");
+          const d = diagnosisDiagnostic.diagnostics;
 
-        console.log("\n   Error Details:");
-        console.log(`     errorName: ${diagnosisDiagnostic.diagnostics.errorDetails.errorName}`);
-        console.log(`     safeErrorMessage: ${diagnosisDiagnostic.diagnostics.errorDetails.safeErrorMessage}`);
+          if (d.routeWrapper) console.log(`   routeWrapper: ${d.routeWrapper}`);
+          if (d.requireWorkspaceConfigured !== undefined) console.log(`   requireWorkspaceConfigured: ${d.requireWorkspaceConfigured}`);
+
+          if (d.ctxKeys) {
+            console.log("\n   Context Keys:");
+            console.log(`     verifiedActorIdPresent: ${d.ctxKeys.verifiedActorIdPresent}`);
+            console.log(`     verifiedWorkspaceIdPresent: ${d.ctxKeys.verifiedWorkspaceIdPresent}`);
+            if (d.ctxKeys.requestPresent !== undefined) console.log(`     requestPresent: ${d.ctxKeys.requestPresent}`);
+            if (d.ctxKeys.sessionPresent !== undefined) console.log(`     sessionPresent: ${d.ctxKeys.sessionPresent}`);
+          }
+
+          if (d.workspaceIdSource) {
+            console.log("\n   Workspace ID Source:");
+            console.log(`     verifiedWorkspaceIdPresent: ${d.workspaceIdSource.verifiedWorkspaceIdPresent}`);
+            if (d.workspaceIdSource.verifiedWorkspaceIdValue) {
+              console.log(`     verifiedWorkspaceIdValue: ${d.workspaceIdSource.verifiedWorkspaceIdValue}`);
+            }
+          }
+
+          if (d.actorIdSource) {
+            console.log("\n   Actor ID Source:");
+            console.log(`     verifiedActorIdPresent: ${d.actorIdSource.verifiedActorIdPresent}`);
+            if (d.actorIdSource.verifiedActorIdValue) {
+              console.log(`     verifiedActorIdValue: ${d.actorIdSource.verifiedActorIdValue}`);
+            }
+          }
+
+          if (d.diagnosisServiceInputContext) {
+            console.log("\n   Service Input Context:");
+            console.log(`     willReceiveWorkspaceId: ${d.diagnosisServiceInputContext.willReceiveWorkspaceId}`);
+            if (d.diagnosisServiceInputContext.workspaceIdValueWillBePassed) {
+              console.log(`     workspaceIdValueWillBePassed: ${d.diagnosisServiceInputContext.workspaceIdValueWillBePassed}`);
+            }
+          }
+
+          if (d.errorDetails) {
+            console.log("\n   Error Details:");
+            console.log(`     errorName: ${d.errorDetails.errorName}`);
+            console.log(`     safeErrorMessage: ${d.errorDetails.safeErrorMessage}`);
+          }
+        }
       }
 
       process.exit(1);
