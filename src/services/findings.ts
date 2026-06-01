@@ -137,17 +137,25 @@ export async function createFinding(
     },
   });
 
-  // Trigger re-evaluation as side effect
-  await triggerReEvaluation({
-    changeType: "new_critical_evidence",
-    entityType: "Finding",
-    entityId: finding.id,
-    engagementId: input.engagementId,
-    workspaceId: auth.verifiedWorkspaceId,
-    severity: (input.severity === "critical" ? "critical" : input.severity === "high" ? "high" : "medium") as "low" | "medium" | "high" | "critical",
-    description: `Finding created: ${input.title}`,
-    triggeredBy: auth.verifiedActorId,
+  // Check if this is the first finding for the engagement (indicates initial diagnosis)
+  const previousFindingsCount = await db.finding.count({
+    where: { engagementId: input.engagementId },
   });
+
+  // Only trigger re-evaluation if there are already findings
+  // First finding creation is part of initial diagnosis, which should not re-evaluate
+  if (previousFindingsCount > 1) {
+    await triggerReEvaluation({
+      changeType: "new_critical_evidence",
+      entityType: "Finding",
+      entityId: finding.id,
+      engagementId: input.engagementId,
+      workspaceId: auth.verifiedWorkspaceId,
+      severity: (input.severity === "critical" ? "critical" : input.severity === "high" ? "high" : "medium") as "low" | "medium" | "high" | "critical",
+      description: `Finding created: ${input.title}`,
+      triggeredBy: auth.verifiedActorId,
+    });
+  }
 
   return finding;
 }

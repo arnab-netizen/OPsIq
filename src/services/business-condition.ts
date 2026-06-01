@@ -186,17 +186,25 @@ export async function assessCondition(
     visibility: "internal",
   });
 
-  // Trigger V3 re-evaluation — condition assessment is always significant
-  await triggerReEvaluation({
-    changeType: "new_critical_evidence",
-    entityType: "business_condition_profile",
-    entityId: result.result.id,
-    engagementId: input.engagementId,
-    workspaceId: input.workspaceId,
-    severity: result.result.severityScore >= 7 ? "high" : "medium",
-    description: `Business condition assessed: ${input.businessStatus} (severity ${result.result.severityScore}/10)`,
-    triggeredBy: actorId,
+  // Count previous profiles to determine if this is initial diagnosis
+  const previousProfiles = await db.businessConditionProfile.count({
+    where: { engagementId: input.engagementId },
   });
+
+  // Only trigger re-evaluation if this is NOT the first condition assessment
+  // Initial diagnosis establishes the baseline and should not re-evaluate
+  if (previousProfiles > 1) {
+    await triggerReEvaluation({
+      changeType: "new_critical_evidence",
+      entityType: "business_condition_profile",
+      entityId: result.result.id,
+      engagementId: input.engagementId,
+      workspaceId: input.workspaceId,
+      severity: result.result.severityScore >= 7 ? "high" : "medium",
+      description: `Business condition assessed: ${input.businessStatus} (severity ${result.result.severityScore}/10)`,
+      triggeredBy: actorId,
+    });
+  }
 
   logger.info("Business condition assessed", {
     profileId: result.result.id,
