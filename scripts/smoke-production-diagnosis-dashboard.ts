@@ -75,6 +75,42 @@ async function smokeTest(): Promise<void> {
 
     if (buildInfoResponse.status !== 200) {
       console.log("❌ BUILD_INFO_ENDPOINT_FAILED");
+
+      // Enhanced diagnostics for build-info failure
+      console.log("\n📋 BUILD_INFO FAILURE DIAGNOSTICS:");
+      console.log(`   status: ${buildInfoResponse.status}`);
+      console.log(`   url: ${baseUrl}/api/internal/build-info`);
+
+      // Try to read response body
+      let responseBody = "";
+      try {
+        responseBody = await buildInfoResponse.text();
+        if (responseBody) {
+          console.log(`   response_body: ${responseBody.substring(0, 300)}`);
+        } else {
+          console.log(`   response_body: (empty)`);
+        }
+      } catch (e) {
+        console.log(`   response_body: (failed to read: ${String(e).substring(0, 100)})`);
+      }
+
+      // Print response headers that might indicate protection
+      const protectionHeaders = ["x-middleware-response", "cf-ray", "x-vercel-id", "server"];
+      console.log(`   headers:`);
+      for (const header of protectionHeaders) {
+        const value = buildInfoResponse.headers.get(header);
+        if (value) {
+          console.log(`     ${header}: ${value}`);
+        }
+      }
+
+      // Environment context
+      console.log(`   context:`);
+      console.log(`     BASE_URL: ${baseUrl}`);
+      console.log(`     CI: ${process.env.CI || "false"}`);
+      console.log(`     GITHUB_ACTIONS: ${process.env.GITHUB_ACTIONS || "false"}`);
+      console.log(`     GITHUB_SHA: ${process.env.GITHUB_SHA || "not-set"}`);
+
       process.exit(1);
     }
 
