@@ -10,6 +10,7 @@ import { z } from "zod/v4";
 import { cookies } from "next/headers";
 import * as bcrypt from "bcryptjs";
 import { ROLES } from "@/domain/constants/roles";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -172,11 +173,7 @@ export const POST = async (request: NextRequest) => {
     console.error(`[SIGNUP_FAILURE] stage=${currentStage} errorName=${errorName} safeMessage=${errorMessage} prismaCode=${prismaCode || "none"} classification=${classification}`);
 
     // Check if request has diagnostic key for protected detailed response
-    const providedKey =
-      request.headers.get("x-opsiq-diagnostic-key") ||
-      new URL(request.url).searchParams.get("key");
-    const expectedKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-    const hasDiagnosticAccess = expectedKey && providedKey && providedKey === expectedKey;
+    const hasDiagnosticAccess = verifyDiagnosticKeyFromRequest(request);
 
     // If diagnostic key is valid, return protected diagnostic response
     if (hasDiagnosticAccess) {

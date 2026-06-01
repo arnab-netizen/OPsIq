@@ -9,6 +9,7 @@ import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError 
 import { canonicalJson } from "@/lib/canonical-json-response";
 import { z } from "zod/v4";
 import { UnauthorizedError, ForbiddenError } from "@/infra/errors";
+import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
 
 const diagnosisSchema = z.object({
   businessName: z.string().min(1, "Business name is required"),
@@ -30,9 +31,7 @@ const diagnosisSchema = z.object({
 export const POST = withCanonicalEnforcement(
   async (ctx: CanonicalAuthContext, params: Record<string, string>) => {
     const workspaceId = ctx.verifiedWorkspaceId;
-    const diagnosticKey = ctx.request?.headers.get("x-opsiq-diagnostic-key");
-    const expectedDiagnosticKey = process.env.OPSIQ_DIAGNOSTIC_KEY;
-    const hasDiagnosticAccess = diagnosticKey && expectedDiagnosticKey && diagnosticKey === expectedDiagnosticKey;
+    const hasDiagnosticAccess = verifyDiagnosticKeyFromRequest(ctx.request);
 
     let currentOperation = "parse_request";
     let body: any = {};

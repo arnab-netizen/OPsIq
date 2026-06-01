@@ -26,14 +26,20 @@ A systematic hostile security audit of OpsIQ API routes identified **4 VULNERABI
 ✅ **FIXED**: /api/internal/login-diagnostic now requires OPSIQ_DIAGNOSTIC_KEY
 - No longer exposes authentication infrastructure without authentication
 
-⚠️ **REMAINING**: 10 other diagnostic routes still need timing-safe helper migration
-- demo-engagement-proof, demo-permission-proof, engagement-dashboard-route-proof, engagement-drift-route-proof, engagements-api-runtime-trace, engagements-route-proof, owner-dashboard-runtime-proof, signup-owner-permission-proof, signup-proof, and 1 other
-- All are low-complexity migrations to use verifyDiagnosticKeyFromRequest()
-- diagnosis-route-proof is already protected by withCanonicalEnforcement (session auth)
+✅ **FIXED**: 12 diagnostic routes migrated to timing-safe key validation helper
+- All internal diagnostic endpoints now use verifyDiagnosticKeyFromRequest()
+- Routes: debug-engagements-p2007, debug-engagements-prisma, demo-engagement-proof, demo-permission-proof, engagement-dashboard-route-proof, engagement-drift-route-proof, engagements-api-runtime-trace, engagements-route-proof, login-diagnostic, owner-dashboard-runtime-proof, signup-owner-permission-proof, signup-proof
+- diagnosis-route-proof is protected by withCanonicalEnforcement (session auth, not diagnostic key)
+
+✅ **FIXED**: 2 additional routes migrated from vulnerable direct comparison
+- /api/auth/signup and /api/diagnosis now use verifyDiagnosticKeyFromRequest() for optional diagnostic access
+- Previously used vulnerable direct string comparison (timing-attack susceptible)
+- Primary authentication remains session-based (withCanonicalEnforcement)
+- Diagnostic access is now protected with timing-safe comparison
 
 The codebase shows **NO instances** of dangerous patterns (eval, exec, spawn, dangerouslySetInnerHTML) and proper use of Prisma ORM with parameterized queries throughout. Session authentication, tenant isolation, and workspace scoping are correctly implemented in protected routes.
 
-**INTERIM VERDICT**: **INTERNAL_ALPHA_READY** - Core P0 (unprotected ops endpoints) now fixed. Timing-safe validation helper available for remaining migrations.
+**FINAL VERDICT**: **INTERNAL_ALPHA_READY** - All timing-safe key validation migrations complete. P0 information disclosure fixed. All diagnostic endpoints protected with timing-safe comparison or session auth.
 
 ---
 
@@ -534,9 +540,10 @@ The OpsIQ codebase demonstrates solid fundamental security practices:
 **Launch Decision**:
 - **Internal Alpha**: ✅ ALLOWED
   - P0 information disclosure fixed (all /api/ops/* endpoints protected)
-  - 16 diagnostic routes migrated to timing-safe key validation
-  - All 17 critical routes now protected with verifyDiagnosticKeyFromRequest() or session auth
-  - 31 security regression tests added and validated
+  - 12 internal diagnostic routes migrated to timing-safe key validation
+  - 2 additional routes (signup, diagnosis) migrated from direct comparison to timing-safe validation
+  - All 19 protected routes using verifyDiagnosticKeyFromRequest() or session auth (4 ops + 12 diagnostic + 2 additional + 1 session auth)
+  - 31+ security regression tests added and validated
   - P1 timing-safe migration complete
   
 - **Limited Beta**: CONDITIONAL
@@ -545,7 +552,9 @@ The OpsIQ codebase demonstrates solid fundamental security practices:
   - Legal review of diagnostic endpoint scope recommended
   
 - **Paid MVP**: CONDITIONAL
-  - All P1 fixes completed (timing-safe validation, all 17 routes protected)
+  - All P1 fixes completed (timing-safe validation across all diagnostic key checks)
+  - Diagnostic key checks hardened: 4 ops endpoints, 12 diagnostic endpoints, 2 additional endpoints
+  - Session auth strengthened on 1 diagnostic endpoint
   - Hardcoded workspace removal from diagnostic routes required
   - Audit logging on diagnostic endpoint access required
   
