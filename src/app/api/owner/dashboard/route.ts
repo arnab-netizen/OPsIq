@@ -117,7 +117,7 @@ export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =>
     });
 
     // QUERY 3: Get real KPIs for workspace
-    const kpis = await db.kpi.findMany({
+    const kpis = await db.KPI.findMany({
       where: { engagementId: { in: engagementIds } },
       include: {
         engagement: { select: { id: true } },

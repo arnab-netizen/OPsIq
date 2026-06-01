@@ -113,7 +113,7 @@ export const GET = async (request: NextRequest) => {
 
     // Stage 6: Query KPIs
     stages.push({ stage: "query_kpis", succeeded: false });
-    const kpis = await db.kpi.findMany({
+    const kpis = await db.KPI.findMany({
       where: { engagementId: { in: engagementIds } },
       include: { engagement: { select: { id: true } } },
     });
