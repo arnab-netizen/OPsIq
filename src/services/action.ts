@@ -14,6 +14,7 @@ import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
 import { recordActionUsage } from "@/services/usage.service";
 import { EventEmitterService } from "@/services/event-emitter";
+import { randomUUID } from "crypto";
 
 export interface CreateActionInput {
   engagementId: string;
@@ -90,6 +91,7 @@ export async function createAction(
         return await db.$transaction(async (tx: any) => {
           const action = await tx.action.create({
             data: {
+              id: randomUUID(),
               engagementId: input.engagementId,
               recommendationId: input.recommendationId,
               title: input.title,
@@ -97,6 +99,8 @@ export async function createAction(
               assignedTo: input.assignedTo || null,
               dueDate: input.dueDate ? new Date(input.dueDate) : null,
               priority: input.priority || "medium",
+              status: "draft",
+              updatedAt: new Date(),
             },
           });
 
@@ -180,6 +184,7 @@ export async function createAction(
 
   const action = await db.action.create({
     data: {
+      id: randomUUID(),
       engagementId: input.engagementId,
       recommendationId: input.recommendationId,
       title: input.title,
@@ -187,6 +192,8 @@ export async function createAction(
       assignedTo: input.assignedTo || null,
       dueDate: input.dueDate ? new Date(input.dueDate) : null,
       priority: input.priority || "medium",
+      status: "draft",
+      updatedAt: new Date(),
     },
   });
 
