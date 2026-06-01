@@ -1551,4 +1551,111 @@ Optional: stageId, recommendationId, description, assignedTo,
 
 ---
 
-**Safe to proceed to production smoke** (AFTER fix deployed)
+## 16. PRODUCTION FAILURE: HTTP STATUS CODE MISMATCH (2026-06-01)
+
+### Deployment Details
+- **Deployed Commit**: ef5bc6c (fix for dueAt schema mismatch)
+- **Smoke Test Run**: Production Diagnosis → Dashboard
+- **Failed Operation**: `POST /api/diagnosis`
+- **Error**: DIAGNOSTIC_INCOMPLETE_SAFE_MESSAGE_MISSING
+
+### Root Cause Analysis
+
+**Failure Point**: Diagnosis endpoint response status mismatch
+
+**Symptoms**:
+```
+1. API returned HTTP 200 (success)
+2. Smoke script checked for HTTP 201 (line 194)
+3. Smoke treated 200 as failure (entered error path, lines 195-295)
+4. Smoke parsed success response as error response
+5. Looked for safeMessage field (line 235) - only in error responses
+6. Emitted DIAGNOSTIC_INCOMPLETE_SAFE_MESSAGE_MISSING
+```
+
+**Root Cause**: Diagnosis route contract mismatch
+- **Recorded in Idempotency**: 201 (line 69 of diagnosis/route.ts)
+- **Actual HTTP Response**: 200 (implicit default when no status set)
+- **Expected by Smoke**: 201 (line 194 of smoke-production-diagnosis-dashboard.ts)
+
+**Code Issue**: `src/app/api/diagnosis/route.ts`
+- Line 69: `await recordIdempotencyResponse(idempotencyKey, 201, result...)`
+- Line 72: `return result;` (no explicit HTTP status, defaults to 200)
+- Error case (line 169): Uses `canonicalJson(errorResponse, { status: 500 })`
+- Success case was missing explicit status code
+
+### Smoke Script Logic (Correct)
+
+**File**: `scripts/smoke-production-diagnosis-dashboard.ts`
+
+**Lines 194-196** (Correct expectation):
+```typescript
+if (diagnosisStatus !== 201) {
+  console.log("❌ DIAGNOSIS_FAILED");
+```
+
+**Lines 235-236** (Correct error validation):
+```typescript
+if (!diagnosisDiagnostic.safeMessage) {
+  console.log(`   ⚠️  DIAGNOSTIC_INCOMPLETE_SAFE_MESSAGE_MISSING`);
+}
+```
+
+**Why Smoke Logic is Correct**:
+- Success response must return 201 (Created status per HTTP semantics)
+- Error response MUST include `safeMessage` (guaranteed by route error handler, line 91)
+- When treating response as error, safeMessage validation is required
+- Smoke script logic was not the problem
+
+### Fix Applied
+
+**File Changed**: `src/app/api/diagnosis/route.ts`
+
+**Change**:
+```diff
+  currentOperation = "idempotency_record_success";
+  await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>, workspaceId);
+
+  currentOperation = "response_return";
+- return result;
++ return canonicalJson(result, { status: 201 });
+```
+
+**Why This Fix is Correct**:
+1. Uses `canonicalJson()` helper (already imported, line 9)
+2. Matches the pattern used for error responses (line 169)
+3. Aligns recorded idempotency status (201) with actual HTTP response (201)
+4. Aligns with smoke script expectations (line 194)
+5. Follows HTTP semantics (201 Created for resource creation)
+
+**Validation After Fix**:
+```
+npx tsc --noEmit: ✓ PASS
+npm run build: ✓ PASS
+npm test -- diagnosis-value-path: ✓ PASS (20/20)
+npm test -- action: ✓ PASS (83/83)
+npm test -- idempotency: ✓ PASS (23/23)
+npm run lint:ratchet: ✓ PASS (changed files lint-clean)
+```
+
+### Merged to Main
+
+**Merge Commit**: c2e63170  
+**Merged**: 2026-06-01  
+**Status**: Pushed to origin/main
+
+### Why Missed in Initial Proof
+
+**Section 11 (Response Contract)**: Documented idempotencyResponse recording as 201, but did not verify the actual HTTP response status returned by the route.
+
+**Gap in Proof Methodology**:
+1. Verified internal idempotency recording
+2. Did NOT trace through to actual HTTP status returned to client
+3. Assumed `return result` would use recorded status (incorrect assumption)
+4. `canonicalJson()` pattern only observed in error path, not success path
+
+**Lesson Learned**: Response status verification must trace from idempotency record → route handler → HTTP response, not just code inspection.
+
+---
+
+**Ready for production smoke retry** (After main contains c2e63170)
