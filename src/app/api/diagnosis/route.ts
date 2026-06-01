@@ -40,11 +40,12 @@ export const POST = withCanonicalEnforcement(
 
     const body = await parseRequestBody(ctx.request!, diagnosisSchema);
 
-    // Check idempotency
+    // Check idempotency with verified workspace and actor context
     const idempotencyCheck = await checkIdempotencyKey({
       idempotencyKey,
       operationName: "diagnoseBusiness",
-      authContext: ctx,
+      actorId: ctx.verifiedActorId,
+      workspaceId: ctx.verifiedWorkspaceId,
       payload: body,
     });
 
@@ -55,11 +56,11 @@ export const POST = withCanonicalEnforcement(
     try {
       validateBusinessProblem(body);
       const result = await diagnoseBusiness(body, ctx, workspaceId);
-      await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>);
+      await recordIdempotencyResponse(idempotencyKey, 201, result as unknown as Record<string, unknown>, workspaceId);
       return result;
     } catch (error) {
       const err = error instanceof Error ? error : new Error("Unknown error");
-      await recordIdempotencyError(idempotencyKey, err);
+      await recordIdempotencyError(idempotencyKey, err, workspaceId);
 
       // Build error response
       const errorResponse: any = {
