@@ -12,6 +12,7 @@ import { triggerReEvaluation } from "@/services/re-evaluation";
 import { withIdempotency } from "@/infra/idempotency";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { randomUUID } from "crypto";
 import type {
   FindingStatus,
 } from "@/domain/constants/statuses";
@@ -102,15 +103,15 @@ export async function createFinding(
 
   const finding = await db.finding.create({
     data: {
+      id: randomUUID(),
       engagementId: input.engagementId,
       title: input.title,
-      description: summary,
-      findingType: findingType,
+      summary: summary,
+      primaryEvidenceId: primaryEvidenceId || "",
       impactArea: input.impactArea,
       severity: input.severity,
       rootCause: input.rootCause || null,
-      linkedEvidence: primaryEvidenceId ? [primaryEvidenceId] : [],
-      createdBy: auth.verifiedActorId,
+      updatedAt: new Date(),
     },
     select: { id: true, engagementId: true },
   });

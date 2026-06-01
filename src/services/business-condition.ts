@@ -7,6 +7,7 @@ import { NotFoundError, ValidationError } from "@/infra/errors";
 import { triggerReEvaluation } from "@/services/re-evaluation";
 import { logger } from "@/infra/logger";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
+import { randomUUID } from "crypto";
 import {
   BUSINESS_CONDITION_RATINGS,
   PRESSURE_LEVELS,
@@ -137,6 +138,7 @@ export async function assessCondition(
         // Create new profile as current
         const newProfile = await tx.businessConditionProfile.create({
           data: {
+            id: randomUUID(),
             engagementId: input.engagementId,
             businessStatus: input.businessStatus,
             severityScore: input.severityScore,
@@ -155,6 +157,7 @@ export async function assessCondition(
             notes: input.notes ?? null,
             assessedBy: actorId,
             isCurrent: true,
+            updatedAt: new Date(),
           },
         });
 

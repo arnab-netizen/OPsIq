@@ -9,6 +9,7 @@ import { createRecommendation } from "@/services/recommendation";
 import { createAction } from "@/services/action";
 import { assessCondition } from "@/services/business-condition";
 import { logger } from "@/infra/logger";
+import { randomUUID } from "crypto";
 import type { InterventionPhase } from "@/domain/constants/statuses";
 import { DataValidationEngine } from "@/engines/DataValidationEngine";
 import { FinancialEngine } from "@/engines/FinancialEngine";
@@ -666,10 +667,12 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
   if (!client) {
     client = await db.clientAccount.create({
       data: {
+        id: randomUUID(),
         name: input.businessName,
         industry: input.businessType,
         visibility: "internal",
         createdBy: actorId,
+        updatedAt: new Date(),
       },
     });
   }
@@ -677,6 +680,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
   // Create engagement
   const engagement = await db.engagement.create({
     data: {
+      id: randomUUID(),
       code: `DIAG-${Date.now()}`,
       title: `${input.businessName} - ${input.mainIssue.replace(/_/g, " ")}`,
       clientId: client.id,
@@ -688,6 +692,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
       description: input.problemStatement,
       createdBy: actorId,
       workspaceId: validatedWorkspaceId,
+      updatedAt: new Date(),
     },
   });
 
