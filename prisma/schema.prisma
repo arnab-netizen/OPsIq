@@ -670,6 +670,7 @@ model OperatorItem {
   createdByUser          User?               @relation("operator_items_created_by_user_idTousers", fields: [createdByUserId], references: [id], onDelete: Restrict, map: "operator_items_created_by_fkey")
   verifiedByUser         User?               @relation("operator_items_verified_byTousers", fields: [verifiedBy], references: [id])
   recommendation         Recommendation?     @relation(fields: [recommendationId], references: [id])
+  approvalRequests       ApprovalRequest[]
   overrideRecords        OverrideRecord[]
   webhookDeliveries      WebhookDelivery[]
 
@@ -1088,6 +1089,8 @@ model User {
   sessions                                                  Session[]
   userRoleAssignments                                       UserRoleAssignment[]
   workspaceMemberships                                      WorkspaceMembership[]
+  approvalRequestsRequested                                 ApprovalRequest[]      @relation("approval_requests_requested_by")
+  approvalRequestsAsApprover                                ApprovalRequest[]      @relation("approval_requests_approver")
 
   @@map("users")
 }
@@ -1218,6 +1221,27 @@ enum evidence_visibility {
   INTERNAL
   CLIENT_VISIBLE
   RESTRICTED
+}
+
+model ApprovalRequest {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  operatorItemId    String       @db.Uuid @map("operator_item_id")
+  requestedBy       String       @db.Uuid @map("requested_by")
+  requestedAt       DateTime     @default(now()) @map("requested_at")
+  approverUserId    String       @db.Uuid @map("approver_user_id")
+  approvalStatus    String       @default("pending") @map("approval_status")
+  approvalDecision  String?      @map("approval_decision")
+  approvedAt        DateTime?    @map("approved_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  operatorItem      OperatorItem @relation(fields: [operatorItemId], references: [id], onDelete: Cascade)
+  requester         User         @relation("approval_requests_requested_by", fields: [requestedBy], references: [id])
+  approver          User         @relation("approval_requests_approver", fields: [approverUserId], references: [id])
+
+  @@unique([operatorItemId, approverUserId])
+  @@index([approvalStatus])
+  @@index([approverUserId, approvalStatus])
+  @@index([requestedAt])
+  @@map("approval_requests")
 }
 
 model AggregateLock {

@@ -20,6 +20,7 @@ import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError 
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 import { captureOutcomeVerificationMetadata } from "@/services/outcome/verification";
+import { canCompleteWithApprovalStatus, enforceApprovalRequirement } from "@/services/approval/workflow";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   const workspaceId = ctx.verifiedWorkspaceId;
@@ -125,6 +126,26 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
 
       if (typeof actualOutcome !== "number") {
         throw new Error("Missing or invalid field: actualOutcome must be a number");
+      }
+
+      // Check if approval is required for high-impact decisions
+      const approvalCheck = await canCompleteWithApprovalStatus(
+        id,
+        item.impactExpected
+      );
+      if (!approvalCheck.allowed) {
+        throw new Error(approvalCheck.reason);
+      }
+
+      // If approval is required but not yet created, create it now
+      const adminUserId = actorId;
+      if (item.impactExpected > 100000 && adminUserId) {
+        await enforceApprovalRequirement(
+          id,
+          item.impactExpected,
+          actorId || "unknown",
+          adminUserId
+        );
       }
 
       addCalibrationRecord(
