@@ -129,6 +129,12 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         throw new Error("Missing or invalid field: actualOutcome must be a number");
       }
 
+      // Unit validation: actualOutcome must be numeric and non-negative
+      // ASSUMPTION: impactExpected and actualOutcome use identical business units (recommended: USD)
+      if (actualOutcome < 0) {
+        throw new Error("Invalid field: actualOutcome cannot be negative");
+      }
+
       // Check if approval is required for high-impact decisions
       const approvalCheck = await canCompleteWithApprovalStatus(
         id,

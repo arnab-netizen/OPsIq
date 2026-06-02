@@ -347,6 +347,12 @@ export async function recordDecisionOutcome(
 
   // Classify outcome if actualOutcomeValue provided
   if (outcomeData.actualOutcomeValue !== undefined && outcomeData.actualOutcomeValue !== null) {
+    // Unit validation: actualOutcomeValue must be numeric and non-negative
+    // ASSUMPTION: impactExpected and actualOutcomeValue use identical business units (recommended: USD)
+    if (typeof outcomeData.actualOutcomeValue !== "number" || outcomeData.actualOutcomeValue < 0) {
+      throw new ValidationError("Invalid field: actualOutcomeValue must be a non-negative number");
+    }
+
     const classification = classifyOutcome(outcomeData.actualOutcomeValue, decision.impactExpected ?? null);
     updateData.actualOutcome = classification.category;
 
