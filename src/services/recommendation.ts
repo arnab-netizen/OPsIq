@@ -141,80 +141,6 @@ type AuditTrailEvent = {
   payload: unknown;
 };
 
-interface ExpectationValidationResult {
-  valid: boolean;
-  errors: string[];
-}
-
-function validateExpectationFields(input: {
-  why_now?: string;
-  cost_of_inaction?: string;
-  expected_metric?: string;
-  expected_direction?: string;
-  expected_target?: string;
-}): ExpectationValidationResult {
-  const errors: string[] = [];
-  const ALLOWED_METRICS = [
-    "approval_rate",
-    "processing_time",
-    "customer_satisfaction",
-    "error_rate",
-    "throughput",
-    "latency",
-    "uptime",
-    "cost_reduction",
-  ];
-
-  if (!input.why_now) {
-    errors.push("why_now is required");
-  } else if (typeof input.why_now !== "string") {
-    errors.push("why_now must be a string");
-  } else if (input.why_now.length < 10) {
-    errors.push("why_now must be at least 10 characters");
-  } else if (input.why_now.length > 500) {
-    errors.push("why_now must be at most 500 characters");
-  }
-
-  if (!input.cost_of_inaction) {
-    errors.push("cost_of_inaction is required");
-  } else if (typeof input.cost_of_inaction !== "string") {
-    errors.push("cost_of_inaction must be a string");
-  } else if (input.cost_of_inaction.length < 10) {
-    errors.push("cost_of_inaction must be at least 10 characters");
-  } else if (input.cost_of_inaction.length > 500) {
-    errors.push("cost_of_inaction must be at most 500 characters");
-  }
-
-  if (!input.expected_metric) {
-    errors.push("expected_metric is required");
-  } else if (typeof input.expected_metric !== "string") {
-    errors.push("expected_metric must be a string");
-  } else if (!ALLOWED_METRICS.includes(input.expected_metric)) {
-    errors.push(`expected_metric must be one of: ${ALLOWED_METRICS.join(", ")}`);
-  }
-
-  if (!input.expected_direction) {
-    errors.push("expected_direction is required");
-  } else if (typeof input.expected_direction !== "string") {
-    errors.push("expected_direction must be a string");
-  } else if (!["INCREASE", "DECREASE", "STABILIZE"].includes(input.expected_direction)) {
-    errors.push("expected_direction must be one of: INCREASE, DECREASE, STABILIZE");
-  }
-
-  if (!input.expected_target) {
-    errors.push("expected_target is required");
-  } else if (typeof input.expected_target !== "string") {
-    errors.push("expected_target must be a string");
-  } else if (input.expected_target.trim().length === 0) {
-    errors.push("expected_target must not be empty");
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
-}
-
 function normalizeValue(value: number, min: number, max: number): number {
   if (value < min) return 0;
   if (value > max) return 1;
@@ -540,6 +466,11 @@ export async function createRecommendation(
             payload: {
               engagementId: input.engagementId,
               priority: input.priority,
+              why_now: input.why_now,
+              cost_of_inaction: input.cost_of_inaction,
+              expected_metric: input.expected_metric,
+              expected_direction: input.expected_direction,
+              expected_target: input.expected_target,
             },
             visibility: "internal",
           });
@@ -623,6 +554,11 @@ export async function createRecommendation(
     payload: {
       engagementId: input.engagementId,
       priority: input.priority,
+      why_now: input.why_now,
+      cost_of_inaction: input.cost_of_inaction,
+      expected_metric: input.expected_metric,
+      expected_direction: input.expected_direction,
+      expected_target: input.expected_target,
     },
     visibility: "internal",
   });
@@ -1324,12 +1260,27 @@ export async function updateRecommendation(
   });
 
   // Emit canonical event to maintain event sourcing trail
-  const eventPayload: Record<string, string | undefined> = {};
+  const eventPayload: Record<string, unknown> = {};
   if (input.status) {
     eventPayload.status = input.status;
   }
   if (input.priority) {
     eventPayload.priority = input.priority;
+  }
+  if (input.why_now !== undefined) {
+    eventPayload.why_now = input.why_now;
+  }
+  if (input.cost_of_inaction !== undefined) {
+    eventPayload.cost_of_inaction = input.cost_of_inaction;
+  }
+  if (input.expected_metric !== undefined) {
+    eventPayload.expected_metric = input.expected_metric;
+  }
+  if (input.expected_direction !== undefined) {
+    eventPayload.expected_direction = input.expected_direction;
+  }
+  if (input.expected_target !== undefined) {
+    eventPayload.expected_target = input.expected_target;
   }
 
   if (Object.keys(eventPayload).length > 0) {
