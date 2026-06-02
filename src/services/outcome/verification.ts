@@ -1,4 +1,4 @@
-import type { OperatorItem } from "@/generated/prisma";
+import type { OperatorItem } from "@/generated/prisma/client";
 
 export interface VerificationResult {
   allowed: boolean;

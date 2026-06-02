@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { ApprovalRequest } from "@/generated/prisma";
+import type { ApprovalRequest } from "@/generated/prisma/client";
 
 export interface ApprovalStatus {
   approved: boolean;
@@ -135,9 +135,9 @@ export async function getApprovalStatus(
     };
   }
 
-  const approved = requests.filter((r) => r.approvalStatus === "approved");
-  const pending = requests.filter((r) => r.approvalStatus === "pending");
-  const rejected = requests.filter((r) => r.approvalStatus === "rejected");
+  const approved = requests.filter((r: ApprovalRequest) => r.approvalStatus === "approved");
+  const pending = requests.filter((r: ApprovalRequest) => r.approvalStatus === "pending");
+  const rejected = requests.filter((r: ApprovalRequest) => r.approvalStatus === "rejected");
 
   return {
     approved: approved.length > 0,
@@ -147,7 +147,7 @@ export async function getApprovalStatus(
   };
 }
 
-export async function requiresApproval(impactExpected: number): boolean {
+export async function requiresApproval(impactExpected: number): Promise<boolean> {
   return impactExpected > APPROVAL_THRESHOLD;
 }
 

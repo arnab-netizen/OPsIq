@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { OperatorItem, Recommendation } from "@/generated/prisma";
+import type { OperatorItem, Recommendation } from "@/generated/prisma/client";
 
 export interface RecommendationOutcomeTrace {
   operatorItemId: string;
@@ -89,9 +89,9 @@ export async function getRecommendationExecutionMetrics(
     where: { recommendationId },
   });
 
-  const itemsCompleted = items.filter((i) => i.status === "done");
-  const itemsVerified = itemsCompleted.filter((i) => i.verificationStatus === "verified");
-  const totalOutcomeValue = itemsCompleted.reduce((sum, i) => sum + (i.actualOutcomeValue || 0), 0);
+  const itemsCompleted = items.filter((i: OperatorItem) => i.status === "done");
+  const itemsVerified = itemsCompleted.filter((i: OperatorItem) => i.verificationStatus === "verified");
+  const totalOutcomeValue = itemsCompleted.reduce((sum: number, i: OperatorItem) => sum + (i.actualOutcomeValue || 0), 0);
 
   return {
     recommendationId,
@@ -134,11 +134,11 @@ export async function getRecommendationAttributionSummary(
     if (accepted) totalAccepted++;
 
     const withOutcomes = rec.operatorItems.filter(
-      (i) => i.status === "done" && i.actualOutcomeValue !== null
+      (i: OperatorItem) => i.status === "done" && i.actualOutcomeValue !== null
     );
     if (withOutcomes.length > 0) {
       totalWithOutcomes++;
-      totalOutcomeValue += withOutcomes.reduce((sum, i) => sum + (i.actualOutcomeValue || 0), 0);
+      totalOutcomeValue += withOutcomes.reduce((sum: number, i: OperatorItem) => sum + (i.actualOutcomeValue || 0), 0);
       totalCompleted += withOutcomes.length;
     }
   }
