@@ -144,7 +144,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
 
     // 1. Parse body
     const body = await request.json();
-    const { revenue, cost, currency, confidence, revenueChange, costChange, fxRates } = body;
+    const { revenue, cost, currency, confidence, revenueChange, costChange, fxRates, recommendationId } = body;
 
     // Capture inputs snapshot for replay
     const inputsSnapshot = {
@@ -154,6 +154,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       confidence,
       revenueChange,
       costChange,
+      recommendationId,
       timestamp: new Date().toISOString(),
     };
 
@@ -1000,7 +1001,8 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       userId,
       userId,
       problemType,
-      baselineMetrics
+      baselineMetrics,
+      recommendationId
     );
     await addItems(operatorItems);
 

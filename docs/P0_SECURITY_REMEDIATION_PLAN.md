@@ -269,58 +269,34 @@ This is reconnaissance, not exploitation. The actual attack requires the diagnos
 
 ---
 
-## FINDING 4: OPERATIONAL METRICS EXPOSURE (/api/ops/*) — ✅ REMEDIATED
+## FINDING 4: OPERATIONAL METRICS EXPOSURE (/api/ops/*)
 
 ### Original Claim
 P0 | /api/ops/* endpoints expose internal metrics without authentication
 
-### Evidence Verification - BEFORE REMEDIATION
+### Evidence Verification
 
 **Files**: 
-- `/home/user/OPsIq/src/app/api/ops/errors/route.ts:14` (FIXED)
-- `/home/user/OPsIq/src/app/api/ops/metrics/route.ts:11` (FIXED)
-- `/home/user/OPsIq/src/app/api/ops/readiness/route.ts:10` (FIXED)
-- `/home/user/OPsIq/src/app/api/ops/runtime/route.ts:16` (FIXED)
+- `/home/user/OPsIq/src/app/api/ops/errors/route.ts:14`
+- `/home/user/OPsIq/src/app/api/ops/metrics/route.ts:11`
+- `/home/user/OPsIq/src/app/api/ops/readiness/route.ts:10`
+- `/home/user/OPsIq/src/app/api/ops/runtime/route.ts:16`
 
-**Previous Status - No Auth Wrapper**:
-All 4 endpoints were exported as raw handlers without authentication checks.
+**Verification - No Auth Wrapper**:
+```bash
+$ grep -i "withEnforcement\|withAuth\|withCanonical\|requireAuth" /home/user/OPsIq/src/app/api/ops/*/route.ts
+# Result: No matches
+```
 
-### Remediation Applied
-
-**Fix Type**: Add authentication requirement to all 4 endpoints
-**Implementation**: Added fail-closed diagnostic key validation check at handler entry
-**Helper Used**: `verifyDiagnosticKeyFromRequest()` from `src/lib/security/diagnostic-key.ts`
-
-**Example Fix** (ops/errors/route.ts):
+**Verification - Exported as Raw Handler**:
 ```typescript
-// BEFORE (VULNERABLE):
+// ops/errors/route.ts
 export async function GET(request: NextRequest) {
-  // Direct access, no authentication
+  // Direct access, no wrapper
   const errorTraces = getTracesWithError(...);
   return NextResponse.json({ errors: errorTraces, ... });
 }
-
-// AFTER (FIXED):
-import { verifyDiagnosticKeyFromRequest } from "@/lib/security/diagnostic-key";
-
-export async function GET(request: NextRequest) {
-  // Require diagnostic key for operational metrics access
-  if (!verifyDiagnosticKeyFromRequest(request)) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 404 }
-    );
-  }
-  try {
-    const errorTraces = getTracesWithError(...);
-    return NextResponse.json({ errors: errorTraces, ... });
-  } catch (error) {
-    // ...
-  }
-}
 ```
-
-**Status**: ✅ REMEDIATED - All 4 ops endpoints now protected
 
 ### What is Exposed
 
@@ -394,17 +370,12 @@ These endpoints should be protected but are not critical:
 
 ### Verdict
 
-**Status**: ✅ REMEDIATED
-
-**Before**: Proven VULNERABLE (no auth wrapper)
-**After**: FIXED (verifyDiagnosticKeyFromRequest() check added to all 4 endpoints)
-**Verification**: 
-- ✅ All 4 endpoints now import verifyDiagnosticKeyFromRequest
-- ✅ All 4 endpoints check diagnostic key before handler logic
-- ✅ Fail-closed: Return 404 Unauthorized if key missing or invalid
-- ✅ Security regression tests added (src/__tests__/security/ops-endpoints-auth.test.ts)
-
-**Remediation Impact**: P0 BLOCKER NOW RESOLVED
+**Proven**: YES (confirmed no auth wrapper)  
+**Exploitable**: PARTIALLY (reconnaissance only, no data breach)  
+**Launch-Blocking**: YES (information disclosure is unacceptable at scale)  
+**Severity**: P1 (not P0 - concerning but not immediate data breach risk)  
+**Fix Required**: YES (add authentication requirement)  
+**Complexity**: LOW (wrap with withCanonicalEnforcement)
 
 ---
 

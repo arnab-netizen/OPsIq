@@ -26,6 +26,20 @@ const updateRecommendationSchema = z.object({
   dueAt: z.string().optional(),
   status: z.enum(RECOMMENDATION_STATUSES).optional(),
   version: z.number().int().min(1),
+  why_now: z.string().min(10).max(500).optional(),
+  cost_of_inaction: z.string().min(10).max(500).optional(),
+  expected_metric: z.enum([
+    "approval_rate",
+    "processing_time",
+    "customer_satisfaction",
+    "error_rate",
+    "throughput",
+    "latency",
+    "uptime",
+    "cost_reduction",
+  ]).optional(),
+  expected_direction: z.enum(["INCREASE", "DECREASE", "STABILIZE"]).optional(),
+  expected_target: z.string().min(1).optional(),
 });
 
 export const GET = withCanonicalEnforcement(async (ctx, params) => {

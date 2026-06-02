@@ -19,6 +19,9 @@ import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
+import { captureOutcomeVerificationMetadata } from "@/services/outcome/verification";
+import { canCompleteWithApprovalStatus, enforceApprovalRequirement } from "@/services/approval/workflow";
+import { classifyOutcome } from "@/services/operator/outcome-classifier";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   const workspaceId = ctx.verifiedWorkspaceId;
@@ -126,6 +129,32 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
         throw new Error("Missing or invalid field: actualOutcome must be a number");
       }
 
+      // Unit validation: actualOutcome must be numeric and non-negative
+      // ASSUMPTION: impactExpected and actualOutcome use identical business units (recommended: USD)
+      if (actualOutcome < 0) {
+        throw new Error("Invalid field: actualOutcome cannot be negative");
+      }
+
+      // Check if approval is required for high-impact decisions
+      const approvalCheck = await canCompleteWithApprovalStatus(
+        id,
+        item.impactExpected
+      );
+      if (!approvalCheck.allowed) {
+        throw new Error(approvalCheck.reason);
+      }
+
+      // If approval is required but not yet created, create it now
+      const adminUserId = actorId;
+      if (item.impactExpected > 100000 && adminUserId) {
+        await enforceApprovalRequirement(
+          id,
+          item.impactExpected,
+          actorId || "unknown",
+          adminUserId
+        );
+      }
+
       addCalibrationRecord(
         id,
         item.impactExpected,
@@ -143,6 +172,24 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     updatePayload.actualOutcomeValue = actualOutcome;
     updatePayload.completedAt = new Date().toISOString();
     updatePayload.executionStatus = 'completed';
+    updatePayload.completedBy = actorId;
+
+    // Classify outcome (success|failure|partial|uncertain)
+    const classification = classifyOutcome(actualOutcome, beforeItem?.impactExpected ?? null);
+    updatePayload.actualOutcome = classification.category;
+
+    // Capture outcome verification metadata
+    const verificationMetadata = captureOutcomeVerificationMetadata(
+      actualOutcome,
+      beforeItem?.impactExpected ?? 0,
+      beforeItem?.actualOutcomeValue ?? null,
+      actorId || "unknown"
+    );
+    updatePayload.verificationStatus = verificationMetadata.verificationStatus;
+    updatePayload.verificationMethod = verificationMetadata.verificationMethod;
+    updatePayload.verificationConfidence = verificationMetadata.verificationConfidence;
+    updatePayload.verificationEvidence = verificationMetadata.verificationEvidence;
+    updatePayload.auditTrail = verificationMetadata.auditTrail;
 
     // Calculate outcome delta
     const expectedImpact = beforeItem?.impactExpected ?? null;
@@ -160,6 +207,15 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       if (accuracyResult.error !== null) {
         updatePayload.decisionError = accuracyResult.error;
       }
+    }
+
+    // Require outcomeNotes for failure or uncertain outcomes
+    if (classification.category === "failure" || classification.category === "uncertain") {
+      const outcomeNotes = body.outcomeNotes || "";
+      if (!outcomeNotes.trim()) {
+        throw new Error(`Outcome notes required for ${classification.category} outcome: ${classification.reason}`);
+      }
+      updatePayload.outcomeNotes = outcomeNotes.trim();
     }
   } else if (status === 'in_progress') {
     updatePayload.startedAt = new Date().toISOString();

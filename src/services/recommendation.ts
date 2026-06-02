@@ -38,6 +38,11 @@ export interface CreateRecommendationInput {
   implementationPhase?: string;
   class?: RecommendationClass;
   scoringInput?: RecommendationScoringInput;
+  why_now?: string;
+  cost_of_inaction?: string;
+  expected_metric?: string;
+  expected_direction?: string;
+  expected_target?: string;
 }
 
 export interface UpdateRecommendationInput {
@@ -48,6 +53,11 @@ export interface UpdateRecommendationInput {
     reason: string;
     approvedBy: string;
   };
+  why_now?: string;
+  cost_of_inaction?: string;
+  expected_metric?: string;
+  expected_direction?: string;
+  expected_target?: string;
 }
 
 export interface RecommendationScoringInput {
@@ -406,7 +416,18 @@ export async function createRecommendation(
       derivedPriority = mapScoreToPriority(scoreBreakdown.finalScore);
     }
 
-    return { derivedPriority };
+    const expectations = {
+      why_now: input.why_now,
+      cost_of_inaction: input.cost_of_inaction,
+      expected_metric: input.expected_metric,
+      expected_direction: input.expected_direction,
+      expected_target: input.expected_target,
+    };
+
+    const hasAnyExpectation = Object.values(expectations).some(v => v !== undefined);
+    const constraintsConsidered = hasAnyExpectation ? expectations : undefined;
+
+    return { derivedPriority, constraintsConsidered };
   };
 
   if (idempotencyKey) {
@@ -415,7 +436,7 @@ export async function createRecommendation(
       "recommendation.create",
       async () => {
         return db.$transaction(async (tx: TransactionClient) => {
-          const { derivedPriority } = buildRecommendationPayload();
+          const { derivedPriority, constraintsConsidered } = buildRecommendationPayload();
 
           const recommendation = await tx.recommendation.create({
             data: {
@@ -433,6 +454,7 @@ export async function createRecommendation(
               reliabilityLevel: evidenceAssessment.reliabilityLevel,
               kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
               kpiRiskLevel: kpiAssessment.riskLevel,
+              ...(constraintsConsidered && { constraintsConsidered }),
             },
           });
 
@@ -444,6 +466,11 @@ export async function createRecommendation(
             payload: {
               engagementId: input.engagementId,
               priority: input.priority,
+              why_now: input.why_now,
+              cost_of_inaction: input.cost_of_inaction,
+              expected_metric: input.expected_metric,
+              expected_direction: input.expected_direction,
+              expected_target: input.expected_target,
             },
             visibility: "internal",
           });
@@ -497,7 +524,7 @@ export async function createRecommendation(
     return result.result;
   }
 
-  const { derivedPriority } = buildRecommendationPayload();
+  const { derivedPriority, constraintsConsidered } = buildRecommendationPayload();
 
   const recommendation = await db.recommendation.create({
     data: {
@@ -515,6 +542,7 @@ export async function createRecommendation(
       reliabilityLevel: evidenceAssessment.reliabilityLevel,
       kpiHealthScore: Math.round(kpiAssessment.healthScore * 100),
       kpiRiskLevel: kpiAssessment.riskLevel,
+      ...(constraintsConsidered && { constraintsConsidered }),
     },
   });
 
@@ -526,6 +554,11 @@ export async function createRecommendation(
     payload: {
       engagementId: input.engagementId,
       priority: input.priority,
+      why_now: input.why_now,
+      cost_of_inaction: input.cost_of_inaction,
+      expected_metric: input.expected_metric,
+      expected_direction: input.expected_direction,
+      expected_target: input.expected_target,
     },
     visibility: "internal",
   });
@@ -1132,6 +1165,7 @@ export async function getRecommendation(
       scoreBreakdown: true,
       version: true,
       createdAt: true,
+      constraintsConsidered: true,
       engagement: {
         select: {
           id: true,
@@ -1189,6 +1223,27 @@ export async function updateRecommendation(
     updates.priority = input.priority;
   }
 
+  const hasExpectationField = [
+    input.why_now,
+    input.cost_of_inaction,
+    input.expected_metric,
+    input.expected_direction,
+    input.expected_target,
+  ].some(v => v !== undefined);
+
+  if (hasExpectationField) {
+    const currentConstraints = (rec.constraintsConsidered as Record<string, unknown> | null) || {};
+    const mergedConstraints = {
+      ...currentConstraints,
+      ...(input.why_now !== undefined && { why_now: input.why_now }),
+      ...(input.cost_of_inaction !== undefined && { cost_of_inaction: input.cost_of_inaction }),
+      ...(input.expected_metric !== undefined && { expected_metric: input.expected_metric }),
+      ...(input.expected_direction !== undefined && { expected_direction: input.expected_direction }),
+      ...(input.expected_target !== undefined && { expected_target: input.expected_target }),
+    };
+    updates.constraintsConsidered = mergedConstraints;
+  }
+
   const updated = await db.recommendation.update({
     where: { id: recommendationId, workspaceId: validatedWorkspaceId },
     data: updates,
@@ -1205,12 +1260,27 @@ export async function updateRecommendation(
   });
 
   // Emit canonical event to maintain event sourcing trail
-  const eventPayload: Record<string, string | undefined> = {};
+  const eventPayload: Record<string, unknown> = {};
   if (input.status) {
     eventPayload.status = input.status;
   }
   if (input.priority) {
     eventPayload.priority = input.priority;
+  }
+  if (input.why_now !== undefined) {
+    eventPayload.why_now = input.why_now;
+  }
+  if (input.cost_of_inaction !== undefined) {
+    eventPayload.cost_of_inaction = input.cost_of_inaction;
+  }
+  if (input.expected_metric !== undefined) {
+    eventPayload.expected_metric = input.expected_metric;
+  }
+  if (input.expected_direction !== undefined) {
+    eventPayload.expected_direction = input.expected_direction;
+  }
+  if (input.expected_target !== undefined) {
+    eventPayload.expected_target = input.expected_target;
   }
 
   if (Object.keys(eventPayload).length > 0) {

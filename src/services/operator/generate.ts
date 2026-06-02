@@ -16,7 +16,8 @@ export function generateOperatorItems(
   ownerUserId: string,
   createdBy: string,
   problemType?: ProblemType,
-  baselineMetrics?: BaselineMetrics
+  baselineMetrics?: BaselineMetrics,
+  recommendationId?: string
 ): OperatorItem[] {
   return decisions.map((decision) => {
     const item: OperatorItem = {
@@ -25,6 +26,7 @@ export function generateOperatorItems(
       ownerUserId,
       createdBy,
       lastUpdatedBy: null,
+      recommendationId,
       problem: decision.problem,
       action: decision.action,
 

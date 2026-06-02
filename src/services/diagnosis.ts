@@ -14,6 +14,7 @@ import { DiagnosisOrchestrator } from "@/engines/DiagnosisOrchestrator";
 import type { BusinessAssessment, OrchestratedDiagnosis } from "@/engines/contracts";
 import { enforceWorkspaceId } from "@/lib/workspace-validation";
 import { requireServiceContext } from "@/lib/service-auth";
+import { generatePersonalizedRecommendations } from "@/services/recommendation/engine";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -282,76 +283,24 @@ function generateFindings(input: BusinessProblemInput, category: string, severit
 }
 
 function generateRecommendations(
-  category: string,
-  severity: string
-): Array<{ title: string; description: string; priority: string }> {
-  const recs: Array<{ title: string; description: string; priority: string }> = [];
-  const priority = severity === "critical" ? "high" : severity === "high" ? "high" : "medium";
+  input: BusinessProblemInput
+): Array<{ title: string; description: string; priority: string; estimatedImpact?: string }> {
+  const assessment = {
+    businessName: input.businessName,
+    businessType: input.businessType,
+    revenue: input.monthlyRevenue || 0,
+    costs: input.monthlyCosts || 0,
+    customers: input.customerCount || 0,
+  };
 
-  if (category === "revenue_generation") {
-    recs.push({
-      title: "Implement Sales Process",
-      description: "Design and document a repeatable sales process with clear pipeline stages.",
-      priority,
-    });
-    recs.push({
-      title: "Expand Marketing Efforts",
-      description: "Launch targeted marketing campaigns to reach new customer segments.",
-      priority,
-    });
-  } else if (category === "cost_control") {
-    recs.push({
-      title: "Conduct Cost Audit",
-      description: "Perform a comprehensive audit of all cost categories to identify reduction opportunities.",
-      priority,
-    });
-    recs.push({
-      title: "Implement Cost Controls",
-      description: "Establish cost control policies and approval workflows.",
-      priority,
-    });
-  } else if (category === "cash_flow_stability") {
-    recs.push({
-      title: "Optimize Payment Terms",
-      description: "Negotiate better payment terms with customers and vendors.",
-      priority,
-    });
-    recs.push({
-      title: "Establish Cash Reserves",
-      description: "Build a cash reserve buffer (3-6 months of operating expenses).",
-      priority,
-    });
-  } else if (category === "customer_retention") {
-    recs.push({
-      title: "Develop Retention Strategy",
-      description: "Create a customer retention and engagement strategy.",
-      priority,
-    });
-    recs.push({
-      title: "Improve Customer Support",
-      description: "Enhance customer support processes and responsiveness.",
-      priority,
-    });
-  } else if (category === "operational_efficiency") {
-    recs.push({
-      title: "Document Core Processes",
-      description: "Document all critical business processes and create process manuals.",
-      priority,
-    });
-    recs.push({
-      title: "Identify Automation Opportunities",
-      description: "Review operations for tasks that can be automated.",
-      priority,
-    });
-  } else {
-    recs.push({
-      title: "Gather Detailed Business Information",
-      description: "Conduct thorough assessment to clarify business challenges.",
-      priority,
-    });
-  }
+  const personalized = generatePersonalizedRecommendations(assessment);
 
-  return recs;
+  return personalized.map((rec) => ({
+    title: rec.recommendation.title,
+    description: rec.recommendation.description,
+    priority: rec.recommendation.priority as "high" | "medium" | "low",
+    estimatedImpact: rec.recommendation.estimatedImpact,
+  }));
 }
 
 function generateActionPlan(category: string, severity: string): ActionPlanItem[] {
@@ -644,7 +593,7 @@ export async function diagnoseBusiness(input: BusinessProblemInput, authContext:
   // Generate outputs based on orchestrated diagnosis
   const summary = generateDiagnosisSummary(input, category, severity);
   const findingsData = generateFindings(input, category, severity);
-  const recommendationsData = generateRecommendations(category, severity);
+  const recommendationsData = generateRecommendations(input);
   const actionPlanData = generateActionPlan(category, severity);
 
   // V2 enhancements - merge with engine findings

@@ -6,6 +6,7 @@ export type OperatorItem = {
   ownerUserId: string;
   createdBy: string;
   lastUpdatedBy: string | null;
+  recommendationId?: string | null;
   problem: string;
   action: string;
 
