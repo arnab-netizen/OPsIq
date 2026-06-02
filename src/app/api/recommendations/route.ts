@@ -27,6 +27,11 @@ const createRecommendationSchema = z.object({
   targetMetric: z.string().optional(),
   ownerId: z.string().uuid().optional(),
   dueAt: z.string().optional(),
+  why_now: z.string().min(10).max(500).optional(),
+  cost_of_inaction: z.string().min(10).max(500).optional(),
+  expected_metric: z.string().optional(),
+  expected_direction: z.enum(["INCREASE", "DECREASE", "STABILIZE"]).optional(),
+  expected_target: z.string().min(1).optional(),
 });
 
 export const POST = withCanonicalEnforcement(
