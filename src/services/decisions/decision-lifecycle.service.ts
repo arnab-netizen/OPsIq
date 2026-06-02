@@ -10,6 +10,8 @@ import { db } from "@/lib/db";
 import { logger } from "@/infra/logger";
 import { emitAuditEvent } from "@/infra/audit";
 import { AUDIT_EVENTS } from "@/domain/constants/audit-events";
+import { captureOutcomeVerificationMetadata } from "@/services/outcome/verification";
+import { classifyOutcome } from "@/services/operator/outcome-classifier";
 import {
   DecisionState,
   requireTransitionAllowed,
@@ -340,11 +342,38 @@ export async function recordDecisionOutcome(
     throw new ValidationError(governed.operatorMessage);
   }
 
+  // Apply canonical outcome classification and verification
+  const updateData: any = { ...outcomeData };
+
+  // Classify outcome if actualOutcomeValue provided
+  if (outcomeData.actualOutcomeValue !== undefined && outcomeData.actualOutcomeValue !== null) {
+    const classification = classifyOutcome(outcomeData.actualOutcomeValue, decision.impactExpected ?? null);
+    updateData.actualOutcome = classification.category;
+
+    // Require notes for failure/uncertain
+    if ((classification.category === "failure" || classification.category === "uncertain") && !outcomeData.outcomeNotes?.trim()) {
+      throw new ValidationError(`Outcome notes required for ${classification.category} outcome: ${classification.reason}`);
+    }
+
+    // Capture verification metadata (same as operator route)
+    const verificationMetadata = captureOutcomeVerificationMetadata(
+      outcomeData.actualOutcomeValue,
+      decision.impactExpected ?? 0,
+      decision.actualOutcomeValue ?? null,
+      actorId
+    );
+    updateData.verificationStatus = verificationMetadata.verificationStatus;
+    updateData.verificationMethod = verificationMetadata.verificationMethod;
+    updateData.verificationConfidence = verificationMetadata.verificationConfidence;
+    updateData.verificationEvidence = verificationMetadata.verificationEvidence;
+    updateData.auditTrail = verificationMetadata.auditTrail;
+  }
+
   // Update with outcome data
   const updated = await db.operatorItem.update({
     where: { id: decisionId },
     data: {
-      ...outcomeData,
+      ...updateData,
       status: mapStateToStatus("OUTCOME_RECORDED"),
       updatedAt: new Date(),
       lastUpdatedBy: actorId,

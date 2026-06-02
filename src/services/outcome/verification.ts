@@ -146,8 +146,11 @@ export function captureOutcomeVerificationMetadata(
     "unverified"
   );
 
+  // Auto-flag if fraud risk is high
+  const verificationStatus = fraudRisk.riskLevel === "high" ? "flagged" : "unverified";
+
   return {
-    verificationStatus: "unverified",
+    verificationStatus,
     verificationMethod: verificationResult.verificationMethod,
     verificationConfidence: verificationResult.confidence,
     verificationEvidence: {

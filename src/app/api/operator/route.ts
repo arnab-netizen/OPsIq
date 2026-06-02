@@ -21,6 +21,7 @@ import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
 import { captureOutcomeVerificationMetadata } from "@/services/outcome/verification";
 import { canCompleteWithApprovalStatus, enforceApprovalRequirement } from "@/services/approval/workflow";
+import { classifyOutcome } from "@/services/operator/outcome-classifier";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   const workspaceId = ctx.verifiedWorkspaceId;
@@ -167,6 +168,10 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     updatePayload.executionStatus = 'completed';
     updatePayload.completedBy = actorId;
 
+    // Classify outcome (success|failure|partial|uncertain)
+    const classification = classifyOutcome(actualOutcome, beforeItem?.impactExpected ?? null);
+    updatePayload.actualOutcome = classification.category;
+
     // Capture outcome verification metadata
     const verificationMetadata = captureOutcomeVerificationMetadata(
       actualOutcome,
@@ -196,6 +201,15 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
       if (accuracyResult.error !== null) {
         updatePayload.decisionError = accuracyResult.error;
       }
+    }
+
+    // Require outcomeNotes for failure or uncertain outcomes
+    if (classification.category === "failure" || classification.category === "uncertain") {
+      const outcomeNotes = body.outcomeNotes || "";
+      if (!outcomeNotes.trim()) {
+        throw new Error(`Outcome notes required for ${classification.category} outcome: ${classification.reason}`);
+      }
+      updatePayload.outcomeNotes = outcomeNotes.trim();
     }
   } else if (status === 'in_progress') {
     updatePayload.startedAt = new Date().toISOString();
