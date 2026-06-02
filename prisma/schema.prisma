@@ -623,6 +623,7 @@ model OperatorItem {
   lastUpdatedByUserId    String?             @db.Uuid @map("last_updated_by_user_id")
   assignedToUserId       String?             @db.Uuid @map("assigned_to_user_id")
   reviewedByUserId       String?             @db.Uuid @map("reviewed_by_user_id")
+  recommendationId       String?             @db.Uuid @map("recommendation_id")
   problem                String
   action                 String
   impactExpected         Float
@@ -668,6 +669,7 @@ model OperatorItem {
   completedByUser        User?               @relation("operator_items_completed_byTousers", fields: [completedBy], references: [id])
   createdByUser          User?               @relation("operator_items_created_by_user_idTousers", fields: [createdByUserId], references: [id], onDelete: Restrict, map: "operator_items_created_by_fkey")
   verifiedByUser         User?               @relation("operator_items_verified_byTousers", fields: [verifiedBy], references: [id])
+  recommendation         Recommendation?     @relation(fields: [recommendationId], references: [id])
   overrideRecords        OverrideRecord[]
   webhookDeliveries      WebhookDelivery[]
 
@@ -779,6 +781,7 @@ model Recommendation {
   createdBy               String?     @db.Uuid @map("created_by")
   engagement              Engagement @relation(fields: [engagementId], references: [id])
   finding                 Finding?   @relation(fields: [findingId], references: [id])
+  operatorItems           OperatorItem[]
 
   @@unique([findingId, title], where: raw("(finding_id IS NOT NULL)"))
   @@index([engagementId])

@@ -24,6 +24,8 @@ interface SevenDayImpact {
     successRate: number;
     verifiedCount: number;
     unverifiedCount: number;
+    recommendationAttributedCount: number;
+    recommendationExecutionRate: number;
   };
 }
 
@@ -68,6 +70,7 @@ export const GET = withCanonicalEnforcement(
     let totalActualImpact = 0;
     let verifiedCount = 0;
     let unverifiedCount = 0;
+    let recommendationAttributedCount = 0;
 
     for (const item of approvedItems) {
     // Use actualOutcomeValue if available, otherwise try to infer from delta
@@ -99,6 +102,11 @@ export const GET = withCanonicalEnforcement(
     } else {
       unverifiedCount++;
     }
+
+    // Track recommendation attribution
+    if (item.recommendationId) {
+      recommendationAttributedCount++;
+    }
   }
 
     // Calculate blocked metrics
@@ -121,6 +129,8 @@ export const GET = withCanonicalEnforcement(
       approvedCount > 0 ? totalApprovedConfidence / approvedCount : 0;
     const avgConfidenceBlocked =
       blockedCount > 0 ? totalBlockedConfidence / blockedCount : 0;
+    const recommendationExecutionRate =
+      approvedCount > 0 ? (recommendationAttributedCount / approvedCount) * 100 : 0;
 
     const summary: SevenDayImpact = {
       workspace: {
@@ -144,6 +154,8 @@ export const GET = withCanonicalEnforcement(
         successRate: Math.round(successRate * 100) / 100,
         verifiedCount,
         unverifiedCount,
+        recommendationAttributedCount,
+        recommendationExecutionRate: Math.round(recommendationExecutionRate * 100) / 100,
       },
     };
 

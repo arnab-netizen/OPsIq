@@ -13,6 +13,7 @@ const IntakeSchema = z.object({
   description: z.string().max(2000).optional().default(""),
   confidence: z.number().min(0).max(1).optional().default(0.5),
   risk: z.enum(["low", "medium", "high"]).optional().default("medium"),
+  recommendationId: z.string().uuid().optional(),
 });
 
 type IntakeInput = z.infer<typeof IntakeSchema>;
@@ -70,6 +71,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
       workspaceId,
       createdBy: userId,
       ownerUserId: userId,
+      recommendationId: input.recommendationId,
       problem: input.title,
       action: input.description,
       confidence: input.confidence,
@@ -86,6 +88,7 @@ export const POST = withEnforcementFull(async (request: NextRequest) => {
         description: input.description,
         confidence: input.confidence,
         risk: input.risk,
+        recommendationId: input.recommendationId,
         createdAt: new Date().toISOString(),
       },
       priorityScore: 0.5,
