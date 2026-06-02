@@ -18,6 +18,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomUUID } from "crypto";
+import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { POST as operatorPost } from "@/app/api/operator/route";
 import { recordDecisionOutcome } from "@/services/decisions/decision-lifecycle.service";
@@ -71,7 +72,7 @@ describe("P2B: REAL Operator Route Integration", () => {
   describe("SUCCESS PATH: 100% achievement", () => {
     it("REAL: route invocation → classifier → verification → database", async () => {
       /**
-       * STEP 1: Create mock request (simulating HTTP request)
+       * STEP 1: Create NextRequest (simulating HTTP request)
        */
       const requestBody = {
         id: testItemId,
@@ -80,26 +81,24 @@ describe("P2B: REAL Operator Route Integration", () => {
       };
 
       /**
-       * STEP 2 & 3: Invoke route with canonical context
-       * (This is the REAL route invocation, not service call)
+       * STEP 2: Create proper NextRequest with required headers
        */
-      const mockRequest = {
-        headers: new Map([
-          ["content-type", "application/json"],
-          ["idempotency-key", randomUUID()],
-        ]),
-        json: async () => requestBody,
-        method: "POST",
-      };
+      const headers = new Headers({
+        "content-type": "application/json",
+        "idempotency-key": randomUUID(),
+      });
 
-      const canonicalContext: Partial<CanonicalAuthContext> = {
-        verifiedActorId: testActorId,
-        verifiedWorkspaceId: testWorkspaceId,
-        request: mockRequest as any,
-      };
+      const req = new NextRequest(
+        new URL("http://localhost:3000/api/operator"),
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify(requestBody),
+        }
+      );
 
       /**
-       * STEP 2: Route handler invoked (REAL invocation, not service call)
+       * STEP 3: Route handler invoked with NextRequest and context
        * Route internally executes:
        *   - Validation of request
        *   - classifyOutcome(50000, 50000) → "success"
@@ -107,7 +106,7 @@ describe("P2B: REAL Operator Route Integration", () => {
        *   - db.operatorItem.update(...) → database write
        */
       try {
-        const response = await operatorPost(canonicalContext as CanonicalAuthContext);
+        const response = await operatorPost(req, { params: Promise.resolve({}) });
         const result = typeof response === "object" && "success" in response
           ? response
           : await response.json?.();
@@ -149,28 +148,33 @@ describe("P2B: REAL Operator Route Integration", () => {
         actualOutcome: 0, // Failure (no notes)
       };
 
-      const mockRequest = {
-        headers: new Map([["idempotency-key", randomUUID()]]),
-        json: async () => requestBody,
-        method: "POST",
-      };
+      /**
+       * STEP 2: Create NextRequest for route invocation
+       */
+      const headers = new Headers({
+        "content-type": "application/json",
+        "idempotency-key": randomUUID(),
+      });
+
+      const req = new NextRequest(
+        new URL("http://localhost:3000/api/operator"),
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify(requestBody),
+        }
+      );
 
       /**
-       * STEP 2: Invoke route (REAL invocation)
+       * STEP 3: Invoke route (REAL invocation)
        * Route executes:
        *   - classifyOutcome(0, ...) → "failure"
        *   - Route validation check: if failure, require notes
        *   - Route throws error before database write
        */
-      const canonicalContext: Partial<CanonicalAuthContext> = {
-        verifiedActorId: testActorId,
-        verifiedWorkspaceId: testWorkspaceId,
-        request: mockRequest as any,
-      };
-
       let validationError: Error | null = null;
       try {
-        await operatorPost(canonicalContext as CanonicalAuthContext);
+        await operatorPost(req, { params: Promise.resolve({}) });
       } catch (e) {
         validationError = e as Error;
       }
@@ -208,28 +212,33 @@ describe("P2B: REAL Operator Route Integration", () => {
         outcomeNotes: "Correction",
       };
 
-      const mockRequest = {
-        headers: new Map([["idempotency-key", randomUUID()]]),
-        json: async () => requestBody,
-        method: "POST",
-      };
+      /**
+       * STEP 2: Create NextRequest for route invocation
+       */
+      const headers = new Headers({
+        "content-type": "application/json",
+        "idempotency-key": randomUUID(),
+      });
+
+      const req = new NextRequest(
+        new URL("http://localhost:3000/api/operator"),
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify(requestBody),
+        }
+      );
 
       /**
-       * STEP 2: Invoke route (REAL invocation)
+       * STEP 3: Invoke route (REAL invocation)
        * Route executes:
        *   - classifyOutcome(100000, 50000) → "success"
        *   - checkFraudRisk(100000, 50000, 50000) → riskLevel: "high"
        *   - verificationStatus = "disputed" (mapped from "flagged")
        *   - db.operatorItem.update(...) → write with disputed
        */
-      const canonicalContext: Partial<CanonicalAuthContext> = {
-        verifiedActorId: testActorId,
-        verifiedWorkspaceId: testWorkspaceId,
-        request: mockRequest as any,
-      };
-
       try {
-        await operatorPost(canonicalContext as CanonicalAuthContext);
+        await operatorPost(req, { params: Promise.resolve({}) });
       } catch (e) {
         // Capture route errors
       }
