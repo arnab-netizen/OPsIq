@@ -65,7 +65,7 @@ export async function acceptDecision(input: VerifiedAcceptanceInput): Promise<Ac
     where: { id: input.decisionId },
     data: {
       status: "in_progress",
-      lastUpdatedBy: input.verifiedActorId,
+      lastUpdatedByUserId: input.verifiedActorId,
       updatedAt: now,
     },
   });
@@ -133,7 +133,7 @@ export async function rejectDecision(input: VerifiedRejectionInput): Promise<Rej
       status: "blocked",
       blockStage: "decision_gate",
       blockReason: input.reason,
-      lastUpdatedBy: input.verifiedActorId,
+      lastUpdatedByUserId: input.verifiedActorId,
       updatedAt: now,
     },
   });

@@ -382,7 +382,7 @@ export async function recordDecisionOutcome(
       ...updateData,
       status: mapStateToStatus("OUTCOME_RECORDED"),
       updatedAt: new Date(),
-      lastUpdatedBy: actorId,
+      lastUpdatedByUserId: actorId,
     },
   });
 

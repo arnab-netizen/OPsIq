@@ -37,7 +37,7 @@ export async function executeDecision(
         data: {
           executionStatus: "running",
           startedAt: now,
-          lastUpdatedBy: userId,
+          lastUpdatedByUserId: userId,
           updatedAt: now,
         },
       });
@@ -114,7 +114,7 @@ export async function markSuccess(
         actualOutcomeValue: outcomeValue,
         decisionAccuracy: calculatedAccuracy,
         completedAt: now,
-        lastUpdatedBy: userId,
+        lastUpdatedByUserId: userId,
         updatedAt: now,
       },
     });
@@ -204,7 +204,7 @@ export async function markFailure(
         executedBy: userId,
         blockReason: reason,
         completedAt: now,
-        lastUpdatedBy: userId,
+        lastUpdatedByUserId: userId,
         updatedAt: now,
       },
     });

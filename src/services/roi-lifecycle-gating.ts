@@ -207,7 +207,7 @@ export async function recordImpactWithGating(
         data: {
           impactExpected: request.expectedOutcomeValue || null,
           updatedAt: new Date(),
-          lastUpdatedBy: authContext.verifiedActorId,
+          lastUpdatedByUserId: authContext.verifiedActorId,
         },
       });
 
@@ -256,7 +256,7 @@ export async function recordImpactWithGating(
           actualOutcomeValue: actualOutcomeValue || null,
           actualOutcome: actualOutcome || null,
           updatedAt: new Date(),
-          lastUpdatedBy: authContext.verifiedActorId,
+          lastUpdatedByUserId: authContext.verifiedActorId,
         },
       });
 
@@ -352,7 +352,7 @@ export async function recordROIWithGating(
         impactActual: roiValue,
         isROIFinal: markFinal ? true : false,
         updatedAt: new Date(),
-        lastUpdatedBy: authContext.verifiedActorId,
+        lastUpdatedByUserId: authContext.verifiedActorId,
       },
     });
 

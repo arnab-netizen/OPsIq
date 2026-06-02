@@ -73,7 +73,7 @@ export async function createDecision(
         status: "pending",
         ownerUserId: userId,
         createdBy: userId,
-        lastUpdatedBy: userId,
+        lastUpdatedByUserId: userId,
       },
     });
 
