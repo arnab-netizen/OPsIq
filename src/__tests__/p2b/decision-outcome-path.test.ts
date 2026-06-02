@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { recordDecisionOutcome } from "@/services/decisions/decision-lifecycle.service";
 import { classifyOutcome } from "@/services/operator/outcome-classifier";
@@ -6,14 +7,14 @@ import { classifyOutcome } from "@/services/operator/outcome-classifier";
 describe("P2B: Decision Lifecycle Outcome Path Integration", () => {
   let testDecisionId: string;
   let testWorkspaceId: string;
-  const testActorId = "test-actor-" + Date.now();
+  const testActorId = randomUUID();
 
   beforeEach(async () => {
-    testWorkspaceId = "test-workspace-" + Date.now();
+    testWorkspaceId = randomUUID();
     // Create test decision in EXECUTED state
     const decision = await db.operatorItem.create({
       data: {
-        id: "test-decision-" + Date.now(),
+        id: randomUUID(),
         workspaceId: testWorkspaceId,
         problem: "Test problem",
         action: "Test action",

@@ -17,6 +17,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { POST as operatorPost } from "@/app/api/operator/route";
 import { recordDecisionOutcome } from "@/services/decisions/decision-lifecycle.service";
@@ -38,13 +39,13 @@ import type { CanonicalAuthContext } from "@/lib/canonical-route-enforcement";
 describe("P2B: REAL Operator Route Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
-  const testActorId = "test-actor-" + Date.now();
+  const testActorId = randomUUID();
 
   beforeEach(async () => {
-    testWorkspaceId = "test-workspace-" + Date.now();
+    testWorkspaceId = randomUUID();
     const item = await db.operatorItem.create({
       data: {
-        id: "test-item-" + Date.now(),
+        id: randomUUID(),
         workspaceId: testWorkspaceId,
         problem: "Test problem",
         action: "Test action",
@@ -85,7 +86,7 @@ describe("P2B: REAL Operator Route Integration", () => {
       const mockRequest = {
         headers: new Map([
           ["content-type", "application/json"],
-          ["idempotency-key", "test-" + Date.now()],
+          ["idempotency-key", randomUUID()],
         ]),
         json: async () => requestBody,
         method: "POST",
@@ -149,7 +150,7 @@ describe("P2B: REAL Operator Route Integration", () => {
       };
 
       const mockRequest = {
-        headers: new Map([["idempotency-key", "test-" + Date.now()]]),
+        headers: new Map([["idempotency-key", randomUUID()]]),
         json: async () => requestBody,
         method: "POST",
       };
@@ -208,7 +209,7 @@ describe("P2B: REAL Operator Route Integration", () => {
       };
 
       const mockRequest = {
-        headers: new Map([["idempotency-key", "test-" + Date.now()]]),
+        headers: new Map([["idempotency-key", randomUUID()]]),
         json: async () => requestBody,
         method: "POST",
       };
@@ -267,13 +268,13 @@ describe("P2B: REAL Operator Route Integration", () => {
 describe("P2B: REAL Decision Lifecycle Integration", () => {
   let testDecisionId: string;
   let testWorkspaceId: string;
-  const testActorId = "test-actor-" + Date.now();
+  const testActorId = randomUUID();
 
   beforeEach(async () => {
-    testWorkspaceId = "test-workspace-" + Date.now();
+    testWorkspaceId = randomUUID();
     const decision = await db.operatorItem.create({
       data: {
-        id: "test-decision-" + Date.now(),
+        id: randomUUID(),
         workspaceId: testWorkspaceId,
         problem: "Test problem",
         action: "Test action",

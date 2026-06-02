@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { POST as operatorPost } from "@/app/api/operator/route";
 import { classifyOutcome } from "@/services/operator/outcome-classifier";
@@ -8,11 +9,11 @@ describe("P2B: Operator Outcome Path Integration", () => {
   let testWorkspaceId: string;
 
   beforeEach(async () => {
-    testWorkspaceId = "test-workspace-" + Date.now();
+    testWorkspaceId = randomUUID();
     // Create test item
     const item = await db.operatorItem.create({
       data: {
-        id: "test-item-" + Date.now(),
+        id: randomUUID(),
         workspaceId: testWorkspaceId,
         problem: "Test problem",
         action: "Test action",
