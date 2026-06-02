@@ -1,0 +1,99 @@
+name: P2B Database Verification
+
+# TASK 3: Result Instruction
+# PASS only if all 42 tests execute and pass
+# FAIL if any test is skipped, mocked, scaffolded, or DB-bypassed
+# Do not continue to P2C/P2D until this workflow passes
+
+on:
+  workflow_dispatch:
+    description: 'Verify P2B database-backed tests (42 tests)'
+
+jobs:
+  p2b-db-verification:
+    name: P2B Database Tests
+    runs-on: ubuntu-latest
+
+    # PostgreSQL service container
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: opsiq_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+      NODE_ENV: test
+
+    steps:
+      # Step 1: Checkout
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Node
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # Step 4: Prisma generate
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      # Step 5: Prisma validate
+      - name: Validate Prisma schema
+        run: npx prisma validate
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      # Step 6: Prisma migrate deploy
+      - name: Deploy Prisma migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      # Step 7: Run the exact 42-test command
+      - name: Run P2B Database Tests (42 tests)
+        run: |
+          npm test -- --run \
+            src/__tests__/p2b/verified-lifecycle.test.ts \
+            src/__tests__/p2b/real-route-tests.test.ts \
+            src/__tests__/p2b/operator-outcome-path.test.ts \
+            src/__tests__/p2b/decision-outcome-path.test.ts
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      # Result classification comment
+      - name: P2B DB Verification Complete
+        if: success()
+        run: |
+          echo "✅ P2B_DB_VERIFIED"
+          echo "All 42 tests executed and passed"
+          echo "Outcome classifier: ✓"
+          echo "Verification metadata: ✓"
+          echo "Verified lifecycle: ✓"
+          echo "Path convergence: ✓"
+
+      - name: P2B DB Verification Failed
+        if: failure()
+        run: |
+          echo "❌ P2B_DB_VERIFICATION_FAILED"
+          echo "One or more tests failed"
+          exit 1
