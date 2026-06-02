@@ -103,6 +103,7 @@ export const AUDIT_EVENTS = {
   DECISION_FAILED: "decision.failed",
   DECISION_CLOSED: "decision.closed",
   OUTCOME_RECORDED: "outcome.recorded",
+  OUTCOME_VERIFIED: "outcome.verified",
   DECISION_IMPACT_PROJECTED: "decision.impact_projected",
   DECISION_IMPACT_REALIZED: "decision.impact_realized",
   DECISION_ROI_RECORDED: "decision.roi_recorded",

@@ -10,7 +10,7 @@ type VerificationStatus = typeof ALLOWED_VERIFICATION_STATUSES[number];
 
 const ALLOWED_TRANSITIONS: Record<string, VerificationStatus[]> = {
   unverified: ["verified", "disputed"],
-  disputed: ["verified", "unverified"],
+  disputed: ["verified"],
   verified: ["disputed"],
 };
 
