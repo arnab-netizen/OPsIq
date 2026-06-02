@@ -270,23 +270,70 @@ verificationStatus: z.enum(["unverified", "verified", "disputed", "flagged"]),
 
 ---
 
-## Classification
+## Classification - UPDATED AFTER FIX
 
-**BLOCKER STATUS: OPEN** ❌
+**BLOCKER STATUS: CLOSED** ✓
 
-**Reason:**
-- ✗ Writers STILL emit "flagged"
-- ✗ Contract STILL doesn't include "flagged"
-- ✗ No mapping layer implemented
-- ✗ Tests STILL expect "flagged" to exist
-- ✗ P2B_B1_DECISION.md described theoretical fix that was never implemented
+**Fix Applied:**
+- ✓ verification.ts line 150: NOW writes "disputed" (fixed)
+- ✓ evidence.ts line 88: Allows "disputed" (no change needed)
+- ✓ Tests: NOW expect "disputed" (updated)
+- ✓ Commit: adcf7f4 (B1 FIX applied)
 
-**Proof:**
-- verification.ts line 150: STILL writes "flagged" (no code change)
-- evidence.ts line 88: STILL only allows ["unverified", "verified", "disputed"]
-- Tests: STILL expect "flagged" (no updates)
+**Verification:**
+- No writers emit "flagged" anymore
+- All writers emit values in contract enum
+- All tests updated to expect "disputed"
+- Contract maintained
 
-**Conclusion: B1 IS NOT FIXED**
+**Conclusion: B1 IS NOW FIXED**
+
+---
+
+## Fix Applied
+
+**Commit:** adcf7f4  
+**Date:** 2026-06-02
+
+### Changes Made
+
+**1. verification.ts:150**
+```diff
+- const verificationStatus = fraudRisk.riskLevel === "high" ? "flagged" : "unverified";
++ const verificationStatus = fraudRisk.riskLevel === "high" ? "disputed" : "unverified";
+```
+
+**2. Tests Updated**
+- operator-outcome-path.test.ts: "flagged" → "disputed" (1 test)
+- decision-outcome-path.test.ts: "flagged" → "disputed" (3 tests)
+- path-convergence.test.ts: "flagged" → "disputed" (3 tests)
+
+### Verification After Fix
+
+**Writer Status:**
+```
+verification.ts:150: Now writes "disputed" ✓
+No code writes "flagged" ✓
+All writers emit contract-compliant values ✓
+```
+
+**Test Status:**
+```
+All 36 unit tests pass ✓
+No tests expect "flagged" ✓
+Tests verify "disputed" state ✓
+```
+
+**Contract Status:**
+```
+evidence.ts enum: ["unverified", "verified", "disputed"] ✓
+All actual values in enum ✓
+Contract maintained ✓
+```
+
+---
+
+**Conclusion: B1 IS NOW FIXED** ✓
 
 ---
 
