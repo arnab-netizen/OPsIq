@@ -19,6 +19,7 @@ import { emitWebhookAsync } from "@/lib/integrations/webhook";
 import { checkIdempotencyKey, recordIdempotencyResponse, recordIdempotencyError } from "@/services/idempotency";
 import { assertCapability } from "@/services/entitlement.service";
 import { PlanLimitError } from "@/infra/errors";
+import { captureOutcomeVerificationMetadata } from "@/services/outcome/verification";
 
 export const GET = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) => {
   const workspaceId = ctx.verifiedWorkspaceId;
@@ -143,6 +144,20 @@ export const POST = withCanonicalEnforcement(async (ctx: CanonicalAuthContext) =
     updatePayload.actualOutcomeValue = actualOutcome;
     updatePayload.completedAt = new Date().toISOString();
     updatePayload.executionStatus = 'completed';
+    updatePayload.completedBy = actorId;
+
+    // Capture outcome verification metadata
+    const verificationMetadata = captureOutcomeVerificationMetadata(
+      actualOutcome,
+      beforeItem?.impactExpected ?? 0,
+      beforeItem?.actualOutcomeValue ?? null,
+      actorId || "unknown"
+    );
+    updatePayload.verificationStatus = verificationMetadata.verificationStatus;
+    updatePayload.verificationMethod = verificationMetadata.verificationMethod;
+    updatePayload.verificationConfidence = verificationMetadata.verificationConfidence;
+    updatePayload.verificationEvidence = verificationMetadata.verificationEvidence;
+    updatePayload.auditTrail = verificationMetadata.auditTrail;
 
     // Calculate outcome delta
     const expectedImpact = beforeItem?.impactExpected ?? null;

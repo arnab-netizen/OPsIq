@@ -22,6 +22,8 @@ interface SevenDayImpact {
     avgConfidenceApproved: number;
     avgConfidenceBlocked: number;
     successRate: number;
+    verifiedCount: number;
+    unverifiedCount: number;
   };
 }
 
@@ -64,6 +66,8 @@ export const GET = withCanonicalEnforcement(
     let successCount = 0;
     let totalApprovedConfidence = 0;
     let totalActualImpact = 0;
+    let verifiedCount = 0;
+    let unverifiedCount = 0;
 
     for (const item of approvedItems) {
     // Use actualOutcomeValue if available, otherwise try to infer from delta
@@ -88,6 +92,13 @@ export const GET = withCanonicalEnforcement(
     }
 
     totalApprovedConfidence += Number(item.confidence || 0);
+
+    // Track verification status
+    if (item.verificationStatus === "verified") {
+      verifiedCount++;
+    } else {
+      unverifiedCount++;
+    }
   }
 
     // Calculate blocked metrics
@@ -131,6 +142,8 @@ export const GET = withCanonicalEnforcement(
         avgConfidenceApproved: Math.round(avgConfidenceApproved * 100) / 100,
         avgConfidenceBlocked: Math.round(avgConfidenceBlocked * 100) / 100,
         successRate: Math.round(successRate * 100) / 100,
+        verifiedCount,
+        unverifiedCount,
       },
     };
 

@@ -657,6 +657,12 @@ model OperatorItem {
   controlLayerViolations Json?               @map("control_layer_violations")
   gateResult             Json?               @map("gate_result")
   guardrailResult        Json?               @map("guardrail_result")
+  verificationStatus     String              @default("unverified") @map("verification_status")
+  verificationMethod     String?             @map("verification_method")
+  verificationEvidence   Json?               @map("verification_evidence")
+  verificationConfidence Float?              @map("verification_confidence")
+  verifiedAt             DateTime?           @map("verified_at")
+  auditTrail             Json?               @map("audit_trail")
   calibrationRecords     CalibrationRecord[]
   entityLinks            EntityLink[]
   completedByUser        User?               @relation("operator_items_completed_byTousers", fields: [completedBy], references: [id])
