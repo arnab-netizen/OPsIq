@@ -14,6 +14,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { approveOutcomeVerification } from "@/services/outcome/verification-approval.service";
 import { ValidationError } from "@/infra/errors";
@@ -21,14 +22,14 @@ import { ValidationError } from "@/infra/errors";
 describe("P2B: REAL Verified Lifecycle Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
-  const testActorId = "test-actor-verify-" + Date.now();
-  const testAdminId = "test-admin-verify-" + Date.now();
+  const testActorId = randomUUID();
+  const testAdminId = randomUUID();
 
   beforeEach(async () => {
-    testWorkspaceId = "test-workspace-verify-" + Date.now();
+    testWorkspaceId = randomUUID();
     const item = await db.operatorItem.create({
       data: {
-        id: "test-item-verify-" + Date.now(),
+        id: randomUUID(),
         workspaceId: testWorkspaceId,
         problem: "Test problem",
         action: "Test action",
@@ -317,7 +318,7 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
        */
       const emptyItem = await db.operatorItem.create({
         data: {
-          id: "test-empty-" + Date.now(),
+          id: randomUUID(),
           workspaceId: testWorkspaceId,
           problem: "Test",
           action: "Test",
