@@ -41,7 +41,14 @@ export type OperatorItem = {
 
   startedAt?: string | null;
   completedAt?: string | null;
+  completedBy?: string | null;
   executionStatus?: "not_started" | "started" | "completed";
+
+  verificationStatus?: string;
+  verificationMethod?: string | null;
+  verificationConfidence?: number | null;
+  verificationEvidence?: Record<string, unknown> | null;
+  auditTrail?: Array<Record<string, unknown>> | null;
 
   firstCompletedAt?: string | null;
   firstPositiveOutcomeAt?: string | null;
