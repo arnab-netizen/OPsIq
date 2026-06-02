@@ -51,6 +51,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Step 3.5: Override .env.local with CI PostgreSQL service URL
+      # Fix: prisma.config.ts loads .env.local with override: true, so we must
+      # provide correct DATABASE_URL in .env.local to prevent placeholder values
+      # from overriding GitHub Actions environment variables
+      - name: Configure CI PostgreSQL environment
+        run: |
+          cat > .env.local <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/opsiq_test?schema=public
+          NODE_ENV=test
+          EOF
+          echo "✓ .env.local configured for CI PostgreSQL service"
+          echo "Verification:"
+          grep -E 'DATABASE_URL|DATABASE_URL_TEST|NODE_ENV' .env.local | sed 's/postgres:postgres@/postgres:****@/g'
+
       # Step 4: Prisma generate
       - name: Generate Prisma client
         run: npx prisma generate
