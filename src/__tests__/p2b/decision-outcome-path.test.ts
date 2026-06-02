@@ -152,7 +152,7 @@ describe("P2B: Decision Lifecycle Outcome Path Integration", () => {
       });
 
       expect(updated?.actualOutcome).toBe("uncertain");
-      expect(updated?.verificationStatus).toBe("flagged");
+      expect(updated?.verificationStatus).toBe("disputed");
       expect(updated?.outcomeNotes).toBe("Exceptional result");
     });
   });
@@ -235,8 +235,8 @@ describe("P2B: Decision Lifecycle Outcome Path Integration", () => {
         where: { id: testDecisionId },
       });
 
-      // High variance triggers high fraud risk which triggers flagged status
-      expect(decision?.verificationStatus).toBe("flagged");
+      // High variance triggers high fraud risk which triggers disputed status
+      expect(decision?.verificationStatus).toBe("disputed");
     });
 
     it("should not flag normal variances", async () => {
@@ -283,7 +283,7 @@ describe("P2B: Decision Lifecycle Outcome Path Integration", () => {
         where: { id: testDecisionId },
       });
 
-      expect(decision?.verificationStatus).toBe("flagged");
+      expect(decision?.verificationStatus).toBe("disputed");
     });
   });
 

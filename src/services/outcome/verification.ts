@@ -146,8 +146,8 @@ export function captureOutcomeVerificationMetadata(
     "unverified"
   );
 
-  // Auto-flag if fraud risk is high
-  const verificationStatus = fraudRisk.riskLevel === "high" ? "flagged" : "unverified";
+  // Mark as disputed if fraud risk is high (contract-compliant state)
+  const verificationStatus = fraudRisk.riskLevel === "high" ? "disputed" : "unverified";
 
   return {
     verificationStatus,

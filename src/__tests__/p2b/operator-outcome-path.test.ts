@@ -215,14 +215,14 @@ describe("P2B: Operator Outcome Path Integration", () => {
       expect(updated?.verificationMethod).toBe("customer_reported_unverified");
     });
 
-    it("should populate verificationStatus as flagged for suspicious outcomes", async () => {
+    it("should populate verificationStatus as disputed for suspicious outcomes", async () => {
       // Extremely high variance = fraud risk high
       await db.operatorItem.update({
         where: { id: testItemId },
         data: {
           actualOutcomeValue: 500000,
           actualOutcome: "uncertain",
-          verificationStatus: "flagged",
+          verificationStatus: "disputed",
           verificationMethod: "customer_reported_unverified",
           outcomeNotes: "Verification required",
           status: "done",
@@ -233,7 +233,7 @@ describe("P2B: Operator Outcome Path Integration", () => {
         where: { id: testItemId },
       });
 
-      expect(updated?.verificationStatus).toBe("flagged");
+      expect(updated?.verificationStatus).toBe("disputed");
     });
   });
 

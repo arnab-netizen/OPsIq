@@ -71,19 +71,19 @@ describe("P2B: Path Convergence Verification", () => {
     it("should auto-flag when fraud risk is high", () => {
       // Retroactive modification = high fraud risk
       const fraudRisk = checkFraudRisk(100000, 50000, 25000);
-      const verificationStatus = fraudRisk.riskLevel === "high" ? "flagged" : "unverified";
-      expect(verificationStatus).toBe("flagged");
+      const verificationStatus = fraudRisk.riskLevel === "high" ? "disputed" : "unverified";
+      expect(verificationStatus).toBe("disputed");
     });
 
     it("should not auto-flag when fraud risk is low", () => {
       const fraudRisk = checkFraudRisk(50000, 50000, null);
-      const verificationStatus = fraudRisk.riskLevel === "high" ? "flagged" : "unverified";
+      const verificationStatus = fraudRisk.riskLevel === "high" ? "disputed" : "unverified";
       expect(verificationStatus).toBe("unverified");
     });
 
     it("should not auto-flag when fraud risk is medium", () => {
       const fraudRisk = checkFraudRisk(150000, 50000, null);
-      const verificationStatus = fraudRisk.riskLevel === "high" ? "flagged" : "unverified";
+      const verificationStatus = fraudRisk.riskLevel === "high" ? "disputed" : "unverified";
       expect(verificationStatus).toBe("unverified");
     });
   });
