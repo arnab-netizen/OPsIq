@@ -190,6 +190,12 @@ export async function updateItem(
   if (updates.startedAt !== undefined) updateData.startedAt = updates.startedAt ? new Date(updates.startedAt) : null;
   if (updates.completedAt !== undefined) updateData.completedAt = updates.completedAt ? new Date(updates.completedAt) : null;
   if (updates.executionStatus !== undefined) updateData.executionStatus = updates.executionStatus;
+  if (updates.completedBy !== undefined) updateData.completedBy = updates.completedBy;
+  if (updates.verificationStatus !== undefined) updateData.verificationStatus = updates.verificationStatus;
+  if (updates.verificationMethod !== undefined) updateData.verificationMethod = updates.verificationMethod;
+  if (updates.verificationConfidence !== undefined) updateData.verificationConfidence = updates.verificationConfidence;
+  if (updates.verificationEvidence !== undefined) updateData.verificationEvidence = updates.verificationEvidence;
+  if (updates.auditTrail !== undefined) updateData.auditTrail = updates.auditTrail;
   if (updates.blockingDependencies !== undefined) updateData.blockingDependencies = updates.blockingDependencies && updates.blockingDependencies.length > 0 ? updates.blockingDependencies : null;
 
   // Fetch current item first to verify workspace and capture state
