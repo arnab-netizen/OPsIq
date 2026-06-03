@@ -210,35 +210,6 @@ export async function updateItem(
   });
   if (!item) throw new NotFoundError("OperatorItem", id);
 
-  // Auto-capture firstCompletedAt on first completion
-  if (updates.status === "done" && updates.completedAt) {
-    if (item && !item.firstCompletedAt) {
-      updateData.firstCompletedAt = new Date(updates.completedAt);
-    }
-  }
-
-  // Auto-capture firstPositiveOutcomeAt when positive outcome first detected
-  if (updates.actualOutcomeValue !== undefined && updates.actualOutcomeValue !== null && updates.actualOutcomeValue > 0) {
-    if (item && !item.firstPositiveOutcomeAt) {
-      updateData.firstPositiveOutcomeAt = new Date();
-    }
-  }
-
-  // Auto-detect first win achievement
-  if ((updates.actualOutcomeValue !== undefined || updates.outcomeDelta !== undefined) && !updateData.firstWinAchieved) {
-    if (item && !item.firstWinAchieved) {
-      const isFirstWin = isFirstWinConditionMet({
-        expectedImpact: updates.actualOutcomeValue ?? updates.outcomeDelta ?? item.actualOutcomeValue ?? 0,
-        actualOutcomeValue: updates.actualOutcomeValue ?? item.actualOutcomeValue,
-        outcomeDelta: updates.outcomeDelta ?? item.outcomeDelta,
-        impactExpected: item.impactExpected,
-      });
-      if (isFirstWin) {
-        updateData.firstWinAchieved = true;
-      }
-    }
-  }
-
   await db.operatorItem.update({
     where: { id },
     data: updateData,
