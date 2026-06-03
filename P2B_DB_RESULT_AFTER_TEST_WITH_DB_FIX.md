@@ -4,7 +4,7 @@
 **Workflow Run ID:** 26868092116  
 **Commit Tested:** 8ad8070d (Enable TEST_WITH_DB for P2B DB workflow tests)  
 **Fix Applied:** `TEST_WITH_DB: "true"` added to step 11 env  
-**Status:** **Tests Executable But Failing**
+**Status:** **Tests Executed — 31/42 Passed, 11/42 Failed**
 
 ---
 
@@ -22,15 +22,15 @@
 | 8 | Generate Prisma client | 06:38:56-06:38:59 | 3s | ✓ SUCCESS |
 | 9 | Validate Prisma schema | 06:38:59-06:39:01 | 2s | ✓ SUCCESS |
 | 10 | Deploy Prisma migrations | 06:39:01-06:39:03 | 2s | ✓ SUCCESS |
-| **11** | **Run P2B Database Tests (42)** | **06:39:03-06:39:17** | **14s** | **❌ FAILURE** |
+| **11** | **Run P2B Database Tests (42)** | **06:39:03-06:39:16** | **11.96s** | **❌ FAILURE** |
 | 12 | P2B DB Verification Complete | 06:39:17-06:39:17 | 0s | ⊘ SKIPPED |
 | 13 | P2B DB Verification Failed | 06:39:17-06:39:17 | 0s | ❌ FAILURE |
 
-**Total Execution Time:** 1 minute 26 seconds (86s)
+**Total Execution Time:** 1 minute 39 seconds (99s)
 
 ---
 
-## Critical Finding: TEST_WITH_DB Fix Is Working
+## Critical Finding: TEST_WITH_DB Fix Enabled Test Execution
 
 ### Before Fix (Workflow 26867403437):
 - Step 11 failed at **beforeEach fixture setup** (database initialization)
@@ -39,48 +39,92 @@
 - Execution time: **14 seconds** (hung waiting for lazy init)
 
 ### After Fix (Workflow 26868092116):
-- Step 11 **executed tests** (no longer blocked at initialization)
-- All steps 1-10 completed successfully
-- Test execution: **RUNNING** (vitest-global-setup enabled eager initialization)
-- Execution time: **14 seconds** (tests ran but failed)
+- Step 11 **executed ALL 42 tests** (no longer blocked at initialization)
+- Test Results: **31 passed, 11 failed** ✓
+- Database accessibility: **VERIFIED** (migrations deployed, tests ran)
+- Test execution time: **11.96 seconds** (includes setup 242ms + tests 2.83s)
 
-**Proof:** Steps 6-10 completed AFTER step 10 migration (06:39:01-06:39:03), proving database is accessible and prepared. Step 11 then ran tests immediately without getting stuck at initialization.
+**Proof:** Tests executed for 11.96 seconds with actual vitest summary showing 31/42 passed. This proves database was accessible, initialization succeeded, and tests ran to completion.
 
 ---
 
 ## Test Execution Results
 
-**Executed:** Yes (vitest ran tests)  
-**Pass/Fail Count:** Unable to determine from workflow metadata (requires log inspection)  
-**Remaining Failures:** Tests failed (step 11 conclusion: failure)  
-**First Failure:** Unknown (requires logs at step 11)
+**Executed:** ✓ Yes (all 42 tests ran)  
+**Total Tests:** 42  
+**Passed:** 31 (73.8%)  
+**Failed:** 11 (26.2%)  
+**Test Files:** 4 total, 3 with failures, 1 fully passed  
+**Vitest Summary:** "Test Files 3 failed | 1 passed (4)" and "Tests 11 failed | 31 passed (42)"
+
+---
+
+## Failed Tests Breakdown
+
+**From decision-outcome-path.test.ts (3 failures):**
+1. "should accept uncertain with outcomeNotes and auto-flag" 
+   - AssertionError: expected 'unverified' to be 'disputed'
+2. "should auto-flag when variance exceeds 500%"
+   - AssertionError: expected 'unverified' to be 'disputed'
+3. "should flag retroactive modifications"
+   - ValidationError: Couldn't load that data
+
+**From real-route-tests.test.ts Operator Routes (3 failures):**
+4. "REAL: route invocation → classifier → verification → database"
+   - PrismaClientKnownRequestError (foreign key constraint)
+5. "REAL: route validation rejects failure without notes"
+   - PrismaClientKnownRequestError
+6. "REAL: route fraud detection auto-flags as disputed"
+   - PrismaClientKnownRequestError (foreign key constraint)
+
+**From real-route-tests.test.ts Decision Lifecycle (3 failures):**
+7. "REAL: recordDecisionOutcome → classifier → verification → database"
+   - PrismaClientKnownRequestError
+8. "REAL: recordDecisionOutcome validation rejects uncertain without notes"
+   - PrismaClientKnownRequestError
+9. "REAL: recordDecisionOutcome auto-flags high fraud risk as disputed"
+   - PrismaClientKnownRequestError
+
+**From verified-lifecycle.test.ts (2 failures):**
+10. "REAL: invalid transition rejected (verified → unverified)"
+    - AssertionError: expected 'Invalid verification status. Allowed:…' to contain 'Cannot transition'
+11. "REAL: multiple verifications appended to trail"
+    - PrismaClientKnownRequestError (foreign key constraint)
+
+---
+
+## Root Cause of Failures
+
+**Primary Issue:** Foreign key constraint violations on `audit_events.actor_id`
+- Tests create users with ID "test-actor"
+- Route handlers attempt to create audit events with different actor_id (UUID 4ac5f6c5-ff69-4bcf-b3da-4d2a5fffcf5f)
+- This actor_id doesn't exist in users table → FK constraint fails
+- Indicates issue in route handler or verification service actor context
+
+**Secondary Issue:** Outcome verification status mismatch
+- Tests expect verification_status to be 'disputed' for certain conditions
+- Actual status is 'unverified'
+- Indicates logic issue in approval service or verification classifier
+
+**Tertiary Issue:** Error message text mismatch
+- Test expects error message containing "Cannot transition"
+- Actual message: "Invalid verification status. Allowed:…"
+- Schema validation message doesn't match test expectation
 
 ---
 
 ## Classification
 
-**Result:** **P2B_DB_VERIFICATION_BLOCKED** ⚠️
+**Result:** **P2B_DB_VERIFICATION_FAILED** ✗
 
 **Reason:**
 - ✓ Database initialization now works (TEST_WITH_DB=true enabled eager init)
-- ✓ Tests are executable (step 11 runs without hanging)
-- ❌ Tests still failing (step 11 conclusion: failure)
-- ⚠️ Cannot determine pass/fail counts without log inspection
+- ✓ Tests are executable (step 11 ran for 11.96s, all 42 tests executed)
+- ✓ Database is accessible (migrations deployed, 31 tests passed)
+- ❌ Tests are failing (11 failures in application logic/routes)
+- ✓ Real test counts obtained from vitest summary
 
-The TEST_WITH_DB fix solved the **environment initialization problem** but tests are still failing for another reason.
-
----
-
-## What This Means
-
-**Hypothesis:** TEST_WITH_DB=true fix resolved the root cause (Classification D), BUT there may be additional failures in:
-1. Test logic itself
-2. Database state/schema
-3. Test fixtures
-4. Application code being tested
-5. Dependency issues
-
-**Next Action:** Inspect detailed logs from step 11 to identify actual test failures (not initialization failures).
+The TEST_WITH_DB fix solved the **environment initialization problem** (Classification D). Remaining failures are **application logic issues**, not environmental issues.
 
 ---
 
@@ -88,12 +132,12 @@ The TEST_WITH_DB fix solved the **environment initialization problem** but tests
 
 | Aspect | Status | Evidence |
 |--------|--------|----------|
-| **TEST_WITH_DB fix** | ✓ Working | Step 11 executed vs previous hung at init |
-| **Database accessibility** | ✓ Verified | Step 10 migrations completed |
-| **Test execution** | ✓ Running | Step 11 ran for 14s (not instant failure) |
-| **Test passing** | ❌ Failing | Step 11 conclusion: failure |
+| **TEST_WITH_DB fix** | ✓ Working | Tests ran for 11.96s instead of hanging |
+| **Database accessibility** | ✓ Verified | Step 10 migrations completed, 31/42 tests passed |
+| **Test execution** | ✓ Complete | All 42 tests executed (vitest summary: "Tests 11 failed \| 31 passed") |
+| **Test results** | ❌ Mixed | 31 passed (73.8%), 11 failed (26.2%) |
 | **Root cause fixed** | ✓ Yes | Classification D (env variable) resolved |
-| **Tests passing** | ❌ No | Different issue remains |
+| **Tests passing** | ❌ No | Application logic issues remain (FK constraints, status mismatch, error messages) |
 
 ---
 
@@ -101,9 +145,9 @@ The TEST_WITH_DB fix solved the **environment initialization problem** but tests
 
 **Commit 8ad8070d applies:**
 - Added `TEST_WITH_DB: "true"` to workflow step 11 environment
-- This enables vitest-global-setup.ts to initialize database eagerly (line 54)
+- This enables vitest-global-setup.ts to initialize database eagerly
 - vitest no longer skips initialization
 - Tests can now execute instead of hanging
 
-**Result:** Environment initialization fixed, tests executable. Further debugging needed for test failures.
+**Result:** Environment initialization fixed, tests executable. Tests ARE executing and 73.8% pass rate achieved. Remaining 11 failures are code/logic issues, not initialization failures.
 
