@@ -2,12 +2,7 @@ import { db } from "@/lib/db";
 import { ValidationError, NotFoundError } from "@/infra/errors";
 import { logger } from "@/infra/logger";
 import { checkFraudRisk } from "./verification";
-import {
-  DecisionState,
-  requireTransitionAllowed,
-  mapStatusToState,
-  mapStateToStatus,
-} from "@/domain/decision-lifecycle";
+import { DecisionState, requireTransitionAllowed } from "@/domain/decision-lifecycle";
 
 /**
  * Request to modify a recorded outcome
