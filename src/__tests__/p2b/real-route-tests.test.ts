@@ -47,6 +47,16 @@ vi.mock("@/services/auth", () => ({
     },
     invalidReason: undefined,
   })),
+  getSession: vi.fn(async () => ({
+    user: {
+      id: testActorIdForMock,
+      email: "test@example.com",
+      name: "Test User",
+      isActive: true,
+    },
+    sessionId: "test-session",
+    expiresAt: new Date(Date.now() + 86400000),
+  })),
   getPolicyContextFact: vi.fn(async () => ({
     valid: true,
     policy: {
