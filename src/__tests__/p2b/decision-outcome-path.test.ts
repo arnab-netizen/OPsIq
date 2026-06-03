@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { recordDecisionOutcome } from "@/services/decisions/decision-lifecycle.service";
 import { classifyOutcome } from "@/services/operator/outcome-classifier";
+import { requestOutcomeModification, approveOutcomeModification } from "@/services/outcome/outcome-modification.service";
 
 describe("P2B: Decision Lifecycle Outcome Path Integration", () => {
   let testDecisionId: string;
@@ -289,15 +290,33 @@ describe("P2B: Decision Lifecycle Outcome Path Integration", () => {
         testActorId
       );
 
-      // Second record with different value (retroactive modification)
-      await recordDecisionOutcome(
+      // Request modification to different value
+      const testApproverId = randomUUID();
+      await db.user.create({
+        data: {
+          id: testApproverId,
+          email: `test-approver-${testApproverId}@example.com`,
+          updatedAt: new Date(),
+        },
+      });
+
+      await requestOutcomeModification(
         testDecisionId,
         testWorkspaceId,
-        {
-          actualOutcomeValue: 100000,
-          outcomeNotes: "Correction",
-        },
-        testActorId
+        100000,
+        "Correction",
+        testActorId,
+        testApproverId
+      );
+
+      // Approve modification (retroactive modification detected as fraud signal)
+      await approveOutcomeModification(
+        testDecisionId,
+        testWorkspaceId,
+        testApproverId,
+        "APPROVE",
+        "Reasonable adjustment",
+        100000
       );
 
       const decision = await db.operatorItem.findUnique({
