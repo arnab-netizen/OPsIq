@@ -190,7 +190,13 @@ export async function updateItem(
   if (updates.startedAt !== undefined) updateData.startedAt = updates.startedAt ? new Date(updates.startedAt) : null;
   if (updates.completedAt !== undefined) updateData.completedAt = updates.completedAt ? new Date(updates.completedAt) : null;
   if (updates.executionStatus !== undefined) updateData.executionStatus = updates.executionStatus;
-  if (updates.completedBy !== undefined) updateData.completedBy = updates.completedBy;
+  if (updates.completedBy !== undefined) {
+    if (updates.completedBy === null) {
+      updateData.completedByUser = null;
+    } else {
+      updateData.completedByUser = { connect: { id: updates.completedBy } };
+    }
+  }
   if (updates.verificationStatus !== undefined) updateData.verificationStatus = updates.verificationStatus;
   if (updates.verificationMethod !== undefined) updateData.verificationMethod = updates.verificationMethod;
   if (updates.verificationConfidence !== undefined) updateData.verificationConfidence = updates.verificationConfidence;
