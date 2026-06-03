@@ -7,10 +7,21 @@ import { classifyOutcome } from "@/services/operator/outcome-classifier";
 describe("P2B: Decision Lifecycle Outcome Path Integration", () => {
   let testDecisionId: string;
   let testWorkspaceId: string;
-  const testActorId = randomUUID();
+  let testActorId: string;
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
+    testActorId = randomUUID();
+
+    // Create User for audit events (required by audit_events_actor_id_fkey)
+    await db.user.create({
+      data: {
+        id: testActorId,
+        email: `test-actor-${testActorId}@example.com`,
+        updatedAt: new Date(),
+      },
+    });
+
     // Create test decision in EXECUTED state
     const decision = await db.operatorItem.create({
       data: {
@@ -32,9 +43,18 @@ describe("P2B: Decision Lifecycle Outcome Path Integration", () => {
   });
 
   afterEach(async () => {
-    // Cleanup
+    // Delete in FK dependency order
+    await db.auditEvent.deleteMany({
+      where: {
+        actorId: testActorId,
+        workspaceId: testWorkspaceId,
+      },
+    });
     await db.operatorItem.deleteMany({
       where: { workspaceId: testWorkspaceId },
+    });
+    await db.user.delete({
+      where: { id: testActorId },
     });
   });
 
