@@ -59,9 +59,15 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      # Step 3: Install dependencies
+      # Step 3: Install dependencies (with optional deps for rolldown binding)
       - name: Install dependencies
-        run: npm ci
+        run: |
+          rm -rf node_modules
+          npm ci --include=optional
+
+      # Step 3.1: Verify rolldown native binding
+      - name: Verify rolldown native binding
+        run: node -e "require.resolve('@rolldown/binding-linux-x64-gnu'); console.log('✓ rolldown native binding present')"
 
       # Step 3.5: Override .env.local with CI PostgreSQL service URL
       # Fix: prisma.config.ts loads .env.local with override: true, so we must
