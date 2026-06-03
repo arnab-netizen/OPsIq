@@ -437,9 +437,6 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
     });
 
     it("REAL: multiple verifications appended to trail", async () => {
-      const admin1Id = `admin-1-${testWorkspaceId.slice(0, 8)}`;
-      const admin2Id = `admin-2-${testWorkspaceId.slice(0, 8)}`;
-
       /**
        * STEP 1: First verification
        */
