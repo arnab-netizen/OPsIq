@@ -166,6 +166,7 @@ describe("P2B: REAL Operator Route Integration", () => {
         priceMonthly: 99,
         priceYearly: 990,
         active: true,
+        updatedAt: new Date(),
         planCapabilities: {
           create: {
             id: planCapabilityId,
@@ -184,6 +185,7 @@ describe("P2B: REAL Operator Route Integration", () => {
         provider: "stripe",
         providerCustomerId: `test_${testWorkspaceId.substring(0, 8)}`,
         status: "active",
+        updatedAt: new Date(),
       },
     });
 
@@ -196,6 +198,7 @@ describe("P2B: REAL Operator Route Integration", () => {
         status: "active",
         currentPeriodStart: new Date(),
         currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        updatedAt: new Date(),
       },
     });
   });
