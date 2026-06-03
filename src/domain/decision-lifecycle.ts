@@ -184,6 +184,7 @@ export function describeState(state: DecisionState): string {
     APPROVED: "Approved - ready for execution",
     EXECUTED: "Executed - action taken, awaiting outcome measurement",
     OUTCOME_RECORDED: "Outcome Recorded - impact measured and recorded",
+    PENDING_MODIFICATION: "Pending Modification - awaiting approval of outcome change",
     CLOSED: "Closed - decision completed successfully",
     REJECTED: "Rejected - decision was rejected during approval",
     CANCELLED: "Cancelled - decision was cancelled before execution",
@@ -208,6 +209,7 @@ export function describeTerminalReason(state: DecisionState): string {
     APPROVED: "",
     EXECUTED: "",
     OUTCOME_RECORDED: "",
+    PENDING_MODIFICATION: "",
   };
 
   return reasons[state] ?? "";

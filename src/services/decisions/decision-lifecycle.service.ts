@@ -542,6 +542,7 @@ function mapStatusToState(status: string): DecisionState {
     approved: "APPROVED",
     executed: "EXECUTED",
     outcome_recorded: "OUTCOME_RECORDED",
+    pending_modification: "PENDING_MODIFICATION",
     closed: "CLOSED",
     rejected: "REJECTED",
     cancelled: "CANCELLED",
@@ -561,6 +562,7 @@ function mapStateToStatus(state: DecisionState): string {
     APPROVED: "approved",
     EXECUTED: "in_progress", // Legacy: in_progress = executing
     OUTCOME_RECORDED: "outcome_recorded",
+    PENDING_MODIFICATION: "pending_modification",
     CLOSED: "closed",
     REJECTED: "blocked",
     CANCELLED: "cancelled",
