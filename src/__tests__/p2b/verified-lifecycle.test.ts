@@ -27,6 +27,13 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
+    // Create User record required by verifiedBy foreign key constraint
+    await db.user.create({
+      data: {
+        id: testAdminId,
+        email: `admin-${testAdminId}@test.example.com`,
+      },
+    });
     const item = await db.operatorItem.create({
       data: {
         id: randomUUID(),
@@ -49,8 +56,12 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
   });
 
   afterEach(async () => {
+    // Delete in dependency order: operatorItem before User
     await db.operatorItem.deleteMany({
       where: { workspaceId: testWorkspaceId },
+    });
+    await db.user.delete({
+      where: { id: testAdminId },
     });
   });
 
