@@ -22,14 +22,18 @@ import { ValidationError } from "@/infra/errors";
 describe("P2B: REAL Verified Lifecycle Integration", () => {
   let testItemId: string;
   let testWorkspaceId: string;
-  const testActorId = randomUUID();
-  const testAdminId = randomUUID();
+  let testActorId: string;
+  let testAdminId: string;
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
+    testAdminId = randomUUID();
 
     // Create User records required by audit_events_actor_id_fkey
-    // (testAdminId for main verification, admin-1 and admin-2 for multi-verification test)
+    // Use workspace-scoped IDs for additional test users to avoid conflicts
+    const admin1Id = `admin-1-${testWorkspaceId.slice(0, 8)}`;
+    const admin2Id = `admin-2-${testWorkspaceId.slice(0, 8)}`;
+
     await db.user.createMany({
       data: [
         {
@@ -38,13 +42,13 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
           updatedAt: new Date(),
         },
         {
-          id: "admin-1",
-          email: "admin-1@test.example.com",
+          id: admin1Id,
+          email: `admin-1-${testWorkspaceId.slice(0, 8)}@test.example.com`,
           updatedAt: new Date(),
         },
         {
-          id: "admin-2",
-          email: "admin-2@test.example.com",
+          id: admin2Id,
+          email: `admin-2-${testWorkspaceId.slice(0, 8)}@test.example.com`,
           updatedAt: new Date(),
         },
       ],
@@ -72,12 +76,16 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
   });
 
   afterEach(async () => {
+    // Use same IDs as created in beforeEach
+    const admin1Id = `admin-1-${testWorkspaceId.slice(0, 8)}`;
+    const admin2Id = `admin-2-${testWorkspaceId.slice(0, 8)}`;
+
     // Delete in FK dependency order: audit events first, then operatorItems, then Users
     // AuditEvent.actorId → User.id (FK constraint: audit_events_actor_id_fkey)
     // OperatorItem.verifiedBy → User.id (FK constraint: operator_items_verified_by_fkey)
     await db.auditEvent.deleteMany({
       where: {
-        actorId: { in: [testAdminId, "admin-1", "admin-2"] },
+        actorId: { in: [testAdminId, admin1Id, admin2Id] },
         workspaceId: testWorkspaceId,
       },
     });
@@ -86,7 +94,7 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
     });
     await db.user.deleteMany({
       where: {
-        id: { in: [testAdminId, "admin-1", "admin-2"] },
+        id: { in: [testAdminId, admin1Id, admin2Id] },
       },
     });
   });
@@ -434,6 +442,9 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
     });
 
     it("REAL: multiple verifications appended to trail", async () => {
+      const admin1Id = `admin-1-${testWorkspaceId.slice(0, 8)}`;
+      const admin2Id = `admin-2-${testWorkspaceId.slice(0, 8)}`;
+
       /**
        * STEP 1: First verification
        */
@@ -444,7 +455,7 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
           verificationStatus: "verified",
           reason: "First verification",
         },
-        "admin-1"
+        admin1Id
       );
 
       /**
@@ -457,7 +468,7 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
           verificationStatus: "disputed",
           reason: "New evidence found",
         },
-        "admin-2"
+        admin2Id
       );
 
       /**
@@ -475,8 +486,8 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
       expect(verificationEntries.length).toBe(2);
 
       // Verify order preserved
-      expect(verificationEntries[0]?.actorId).toBe("admin-1");
-      expect(verificationEntries[1]?.actorId).toBe("admin-2");
+      expect(verificationEntries[0]?.actorId).toBe(admin1Id);
+      expect(verificationEntries[1]?.actorId).toBe(admin2Id);
     });
   });
 
