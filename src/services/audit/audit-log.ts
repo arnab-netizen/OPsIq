@@ -30,20 +30,25 @@ export async function logAuditEvent(params: AuditEventParams): Promise<void> {
       throw new Error("Audit event workspaceId is required for workspace isolation");
     }
 
+    const auditData: any = {
+      id: randomUUID(),
+      workspaceId,
+      eventName: params.eventName,
+      entityType: params.entityType,
+      entityId: params.entityId,
+      role: params.role,
+      before: JSON.stringify(params.before),
+      after: JSON.stringify(params.after),
+      metadata: JSON.stringify(params.metadata),
+      occurredAt: new Date(),
+    };
+
+    if (params.actorId) {
+      auditData.actor = { connect: { id: params.actorId } };
+    }
+
     await db.auditEvent.create({
-      data: {
-        id: randomUUID(),
-        workspaceId,
-        eventName: params.eventName,
-        entityType: params.entityType,
-        entityId: params.entityId,
-        actorId: params.actorId,
-        role: params.role,
-        before: JSON.stringify(params.before),
-        after: JSON.stringify(params.after),
-        metadata: JSON.stringify(params.metadata),
-        timestamp: new Date(),
-      },
+      data: auditData,
     });
   } catch (error) {
     console.error("Audit logging failed:", error);
