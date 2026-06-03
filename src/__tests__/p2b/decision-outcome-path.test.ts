@@ -163,7 +163,7 @@ describe("P2B: Decision Lifecycle Outcome Path Integration", () => {
         testDecisionId,
         testWorkspaceId,
         {
-          actualOutcomeValue: 250000,
+          actualOutcomeValue: 200000,
           outcomeNotes: "Exceptional result",
         },
         testActorId

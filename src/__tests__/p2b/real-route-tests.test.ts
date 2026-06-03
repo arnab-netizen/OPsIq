@@ -138,6 +138,11 @@ describe("P2B: REAL Operator Route Integration", () => {
       },
     });
     testItemId = item.id;
+
+    // Set subscription tier to enable decision_engine capability
+    // Required by route handler assertCapability(workspaceId, "decision_engine") check
+    const { setSubscriptionTier, SubscriptionTier } = await import("@/services/entitlement");
+    await setSubscriptionTier(testWorkspaceId, SubscriptionTier.PRO);
   });
 
   afterEach(async () => {
