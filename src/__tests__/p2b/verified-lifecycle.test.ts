@@ -27,14 +27,29 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
 
   beforeEach(async () => {
     testWorkspaceId = randomUUID();
-    // Create User record required by verifiedBy foreign key constraint
-    await db.user.create({
-      data: {
-        id: testAdminId,
-        email: `admin-${testAdminId}@test.example.com`,
-        updatedAt: new Date(),
-      },
+
+    // Create User records required by audit_events_actor_id_fkey
+    // (testAdminId for main verification, admin-1 and admin-2 for multi-verification test)
+    await db.user.createMany({
+      data: [
+        {
+          id: testAdminId,
+          email: `admin-${testAdminId}@test.example.com`,
+          updatedAt: new Date(),
+        },
+        {
+          id: "admin-1",
+          email: "admin-1@test.example.com",
+          updatedAt: new Date(),
+        },
+        {
+          id: "admin-2",
+          email: "admin-2@test.example.com",
+          updatedAt: new Date(),
+        },
+      ],
     });
+
     const item = await db.operatorItem.create({
       data: {
         id: randomUUID(),
@@ -57,20 +72,22 @@ describe("P2B: REAL Verified Lifecycle Integration", () => {
   });
 
   afterEach(async () => {
-    // Delete in dependency order: audit events first, then operatorItem, then User
+    // Delete in FK dependency order: audit events first, then operatorItems, then Users
     // AuditEvent.actorId → User.id (FK constraint: audit_events_actor_id_fkey)
     // OperatorItem.verifiedBy → User.id (FK constraint: operator_items_verified_by_fkey)
     await db.auditEvent.deleteMany({
       where: {
-        actorId: testAdminId,
+        actorId: { in: [testAdminId, "admin-1", "admin-2"] },
         workspaceId: testWorkspaceId,
       },
     });
     await db.operatorItem.deleteMany({
       where: { workspaceId: testWorkspaceId },
     });
-    await db.user.delete({
-      where: { id: testAdminId },
+    await db.user.deleteMany({
+      where: {
+        id: { in: [testAdminId, "admin-1", "admin-2"] },
+      },
     });
   });
 
